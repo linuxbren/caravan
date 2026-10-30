@@ -195,7 +195,7 @@ class ProxyWiringTest(unittest.TestCase):
                 sys.modules.pop("slot_pin_proxy", None)
                 with contextlib.redirect_stderr(io.StringIO()):
                     import slot_pin_proxy as spp
-                    spp._restored_this_run.add("aaaa")
+                    spp._warm_this_run.add("aaaa")
                     # A request is "in flight": hold the FIFO gate.
                     ticket, _, _ = spp.completion_fifo.acquire()
                     thread = spp.start_slot_cleanup()
@@ -205,7 +205,7 @@ class ProxyWiringTest(unittest.TestCase):
                     thread.join(timeout=5)
                 self.assertFalse(old.exists())
                 self.assertEqual(json.loads(state.read_text())["assignments"], {"bbbb": 1})
-                self.assertNotIn("aaaa", spp._restored_this_run)
+                self.assertNotIn("aaaa", spp._warm_this_run)
                 sys.modules.pop("slot_pin_proxy", None)
 
 

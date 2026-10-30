@@ -16,8 +16,9 @@ import time
 import config
 
 
-def build_head_command(model_blob_path: str, peer_rpc_addrs: list[str]) -> list[str]:
-    """`peer_rpc_addrs` like ["100.90.134.95:50052"] -- Tailscale IPs
+def build_head_command(model_blob_path: str, peer_rpc_addrs: list,
+                       settings: "config.LlamaSettings | None" = None) -> list:
+    """`peer_rpc_addrs` like ["100.64.0.2:50052"] -- Tailscale IPs
     preferred, per discovery.py and tonight's EHOSTUNREACH findings.
 
     Flags below match the production config proven live on 2026-09-06
@@ -28,9 +29,16 @@ def build_head_command(model_blob_path: str, peer_rpc_addrs: list[str]) -> list[
     ignored"), and -c must be n_slots * ctx_per_slot, not a flat
     ctx-per-slot value, or every slot silently gets a much smaller window
     than intended.
+
+    2026-10-30: slot count, per-slot context, -ngl, -fa, -ctk/-ctv,
+    --cache-ram and -b/-ub come from `settings` (default:
+    config.resolve_llama_settings(), i.e. flag > env > config file >
+    default). The launchd plist is rendered from this same function by
+    render_llama_plist.py, so the two can't drift.
     """
+    if settings is None:
+        settings = config.resolve_llama_settings()
     tensor_split = ",".join("1" for _ in range(len(peer_rpc_addrs) + 1))
-    total_ctx = config.LLAMA_SERVER_N_SLOTS * config.LLAMA_SERVER_CTX_PER_SLOT
     cmd = [
         str(config.LLAMA_SERVER_BIN),
         "-m", model_blob_path,
@@ -46,10 +54,17 @@ def build_head_command(model_blob_path: str, peer_rpc_addrs: list[str]) -> list[
     cmd += [
         "--tensor-split", tensor_split,
         "--port", str(config.LLAMA_SERVER_PORT),
-        "-c", str(total_ctx),
+        "-c", str(settings.total_ctx),
         "--slot-save-path", str(config.SLOT_SAVE_DIR) + "/",
-        "--parallel", str(config.LLAMA_SERVER_N_SLOTS),
+        "--parallel", str(settings.n_slots),
         "--no-kv-unified",
+        "-ngl", settings.n_gpu_layers,
+        "-fa", settings.flash_attn,
+        "-ctk", settings.cache_type_k,
+        "-ctv", settings.cache_type_v,
+        "--cache-ram", str(settings.cache_ram_mib),
+        "-b", str(settings.batch_size),
+        "-ub", str(settings.ubatch_size),
     ]
     return cmd
 

@@ -45,7 +45,7 @@ def _agent_health(ip: str, timeout: float = 1.5) -> dict | None:
     be reachable" from being trusted as a real tail. Without this,
     Tailscale discovery in particular will find every peer in the
     tailnet, Caravan or not -- confirmed directly: a dry run tonight
-    found an unrelated tailnet machine (prf-hays-mgmt) and would have
+    found an unrelated tailnet machine (a management box) and would have
     wired it into --rpc as if it were a tail. See health_server.py.
 
     Returns the full body (not just True/False) so callers can read a
@@ -89,7 +89,7 @@ def _resolve_candidates(hostname: str) -> list[str]:
     resolver returns them. Used instead of connecting to the ambiguous
     hostname directly -- confirmed 2026-09-08 (see docs/LOG.md, "mDNS
     resolution ambiguity under launchd") that a multi-homed mDNS hostname
-    like "prf-hays-exo02.local" (which resolves to both a Thunderbolt
+    like "node-b.local" (which resolves to both a Thunderbolt
     link-local address and a LAN address) can land on an unreachable
     candidate specifically under launchd ("No route to host"), even
     though the exact same hostname resolves and connects fine
@@ -180,8 +180,8 @@ def discover_peers(agent_id: str, self_hostname: str | None = None) -> list[dict
 
 def _normalize_hostname(hostname: str) -> str:
     """Best-effort node-identity match across sources: strips a trailing
-    ".local"/domain suffix and lowercases, so "prf-hays-exo02" (Tailscale)
-    and "prf-hays-exo02.local" (mDNS) are recognized as the same node.
+    ".local"/domain suffix and lowercases, so "node-b" (Tailscale)
+    and "node-b.local" (mDNS) are recognized as the same node.
     Not true identity reconciliation (no shared node_id yet -- see
     discover_peers) but good enough to avoid double-counting the same
     peer as two --rpc targets when both sources find it.
@@ -251,10 +251,15 @@ def main() -> int:
              "node's dry run see this one as alive. For testing discovery "
              "across two machines; --apply implies staying up already.",
     )
+    config.add_llama_cli_args(parser)
     args = parser.parse_args()
-    args.model = config.resolve_target_model(
-        args.model, Path(args.config) if args.config else None
-    )
+    config_path = Path(args.config) if args.config else None
+    args.model = config.resolve_target_model(args.model, config_path)
+    try:
+        llama_settings = config.resolve_llama_settings(
+            config.llama_overrides_from_args(args), config_path)
+    except ValueError as e:
+        parser.error(str(e))
 
     me = identity.load_or_create()
     print(f"[caravan-agent] node_id={me['node_id']} hostname={me['hostname']}")
@@ -293,7 +298,7 @@ def main() -> int:
                 return 1
 
             rpc_addrs = _rpc_addrs_from_peers(peers)
-            cmd = supervisor.build_head_command(str(blob_path), rpc_addrs)
+            cmd = supervisor.build_head_command(str(blob_path), rpc_addrs, llama_settings)
             print(f"[caravan-agent] role: HEAD for {args.model}")
             print(f"[caravan-agent] would run: {' '.join(cmd)}")
 

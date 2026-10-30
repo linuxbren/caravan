@@ -91,6 +91,25 @@ while it removes so it can't race a save/restore, and forgets those
 sessions' slot assignments. Configure with --slot-cleanup /
 --slot-max-age-days / --slot-archive-dir / --slot-cleanup-interval-hours
 or the matching CARAVAN_SLOT_* env vars; see slot_cleanup.py.
+
+2026-10-30 performance pass (see docs/LOG.md for the full list):
+  * new sessions get the least-recently-used slot, not round-robin
+    (SessionSlotAssigner);
+  * disk saves are skipped when a slot hasn't grown, can be thinned to
+    every N turns, or moved off the response path entirely by an
+    optional idle saver (save_slot / SaveTracker / start_idle_saver);
+  * no disk restore over a slot llama-server already holds warm;
+  * streaming uses read1() so SSE tokens aren't held back in 4 KB
+    batches, and responses without Content-Length are re-chunked
+    instead of being sent unframed on a keep-alive connection;
+  * prompt-style calls are fingerprinted by a stable prompt prefix
+    (short prompts are unpinned one-shots, never saved to disk);
+  * the per-request /slots idle check and the TEMP prompt-logging debug
+    block are gone.
+Settings: --n-slots, --slot-save-every, --slot-idle-save-seconds,
+--prompt-fingerprint-chars (or CARAVAN_N_SLOTS, CARAVAN_SLOT_SAVE_EVERY,
+CARAVAN_SLOT_IDLE_SAVE_SECONDS, CARAVAN_PROMPT_FINGERPRINT_CHARS, or
+~/.caravan/config.json) -- see main().
 """
 import argparse
 import contextlib
@@ -106,6 +125,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import NamedTuple
 
 try:
     import slot_cleanup  # run as a script: proxy/ is sys.path[0]
@@ -115,10 +135,83 @@ except ImportError:  # imported as proxy.slot_pin_proxy from the repo root
 UPSTREAM_HOST = os.environ.get("CARAVAN_UPSTREAM_HOST", "127.0.0.1")
 UPSTREAM_PORT = int(os.environ.get("CARAVAN_UPSTREAM_PORT", "8080"))
 LISTEN_PORT = int(os.environ.get("CARAVAN_PROXY_PORT", "8090"))
-N_SLOTS = int(os.environ.get("CARAVAN_N_SLOTS", "4"))
 
 # Paths that take a JSON completion-shaped body and accept `id_slot`.
 COMPLETION_PATHS = {"/v1/chat/completions", "/v1/completions", "/completion"}
+
+
+# --- Settings (2026-10-30) -------------------------------------------------
+# Precedence everywhere: CLI flag > env var > ~/.caravan/config.json
+# ($CARAVAN_CONFIG) > default. n_slots lives under "llama_server" in the
+# config file because llama-server's --parallel must match it; the rest
+# under "proxy".
+class ProxySettings(NamedTuple):
+    n_slots: int                  # must equal llama-server --parallel
+    save_every_n_turns: int       # inline disk save every N completed turns per session
+    idle_save_seconds: float      # >0: save after a session's slot is idle this long, instead of inline
+    prompt_fingerprint_chars: int  # prompt-style calls: prefix length that identifies a session
+
+
+PROXY_SETTING_SOURCES = {
+    # key: (env var, config section, config key, default, cast, minimum)
+    "n_slots": ("CARAVAN_N_SLOTS", "llama_server", "n_slots", 4, int, 1),
+    "save_every_n_turns": ("CARAVAN_SLOT_SAVE_EVERY", "proxy", "slot_save_every", 1, int, 1),
+    "idle_save_seconds": ("CARAVAN_SLOT_IDLE_SAVE_SECONDS", "proxy", "slot_idle_save_seconds", 0.0, float, 0),
+    "prompt_fingerprint_chars": ("CARAVAN_PROMPT_FINGERPRINT_CHARS", "proxy",
+                                 "prompt_fingerprint_chars", 2048, int, 64),
+}
+
+
+def _config_file_path() -> Path:
+    return Path(os.environ.get(
+        "CARAVAN_CONFIG", str(Path.home() / ".caravan" / "config.json")
+    )).expanduser()
+
+
+def _load_config_file(path: "Path | None" = None) -> dict:
+    path = path or _config_file_path()
+    try:
+        data = json.loads(Path(path).read_text())
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as e:
+        sys.stderr.write(f"[slot-pin-proxy] ignoring unreadable config {path}: {e}\n")
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def resolve_proxy_settings(overrides: "dict | None" = None,
+                           config_path: "Path | None" = None) -> ProxySettings:
+    overrides = {k: v for k, v in (overrides or {}).items() if v is not None}
+    cfg = _load_config_file(config_path)
+    out = {}
+    for key, (env, section, ckey, default, cast, minimum) in PROXY_SETTING_SOURCES.items():
+        sec = cfg.get(section)
+        file_val = sec.get(ckey) if isinstance(sec, dict) else None
+        if key in overrides:
+            raw = overrides[key]
+        elif os.environ.get(env, "").strip():
+            raw = os.environ[env].strip()
+        elif file_val not in (None, ""):
+            raw = file_val
+        else:
+            raw = default
+        try:
+            val = cast(raw)
+        except (TypeError, ValueError):
+            raise ValueError(f"{key} must be a number, got {raw!r}")
+        if val < minimum:
+            raise ValueError(f"{key} must be >= {minimum}, got {val}")
+        out[key] = val
+    return ProxySettings(**out)
+
+
+try:
+    SETTINGS = resolve_proxy_settings()
+except ValueError as _e:  # never crash-loop a KeepAlive'd proxy over a bad setting
+    sys.stderr.write(f"[slot-pin-proxy] invalid setting ({_e}); using defaults\n")
+    SETTINGS = ProxySettings(**{k: v[3] for k, v in PROXY_SETTING_SOURCES.items()})
+N_SLOTS = SETTINGS.n_slots
 
 
 class FifoGate:
@@ -158,32 +251,32 @@ completion_fifo = FifoGate()
 
 
 class SessionSlotAssigner:
-    """Maps a stable per-session fingerprint to a dedicated slot, assigned
-    round-robin the first time each session is seen -- so distinct
-    sessions keep their own cache instead of evicting each other via a
-    single shared preferred slot. See module docstring, update #3.
+    """Tracks which session (fingerprint) currently occupies each
+    llama-server slot, and when each slot was last used.
 
-    With only N_SLOTS physical slots, more concurrently-active sessions
-    than that can't all stay warm -- the (N_SLOTS+1)th distinct session
-    reuses an assignment round-robin and may evict whoever's there. Real
-    usage here is nowhere near that ceiling; not solved further than this.
+    A session that's still sitting in a slot gets that slot back (warm,
+    llama-server's prompt cache reuses the shared prefix). A session that
+    isn't in any slot -- new, or evicted since -- gets the least-recently-
+    used slot (empty slots first), so the slot given up is always the
+    coldest one rather than whichever came next round-robin.
 
-    2026-09-06 update: persisted to disk (STATE_FILE below). Restarting
-    *this proxy process* used to lose the whole mapping even though
-    llama-server itself, and every slot's actual cache, was untouched --
-    confirmed live tonight, a proxy-only restart caused a needless full
-    cold reprocess that a still-warm slot could have served. This is
-    deliberately a tiny fingerprint->slot number mapping, not the KV
-    cache itself -- persisting the actual cache across an llama-server
-    restart is the separate, much bigger issue #4.
+    History: 2026-09-06 update #3 introduced per-session slots (assigned
+    round-robin on first sight, persisted to STATE_FILE so a proxy-only
+    restart doesn't forget them -- the KV cache itself is issue #4, see
+    below). 2026-10-30: round-robin -> LRU (#7 in the perf review), and
+    the state is now "occupant + last-used per slot" rather than an
+    ever-growing fingerprint->slot map (so session_slots.json is bounded
+    by N_SLOTS). The legacy {"assignments": {...}} format is still read.
     """
 
-    def __init__(self, n_slots: int, state_file: "Path | None" = None):
+    def __init__(self, n_slots: int, state_file: "Path | None" = None,
+                 clock=time.time):
         self._n_slots = n_slots
-        self._lock = threading.Lock()
-        self._assignments: dict[str, int] = {}
-        self._next_slot = 0
+        self._lock = threading.RLock()
+        self._occupant: list = [None] * n_slots
+        self._last_used: list = [0.0] * n_slots
         self._state_file = state_file
+        self._clock = clock
         self._load()
 
     def _load(self) -> None:
@@ -191,17 +284,29 @@ class SessionSlotAssigner:
             return
         try:
             data = json.loads(self._state_file.read_text())
-            assignments = data.get("assignments", {})
-            self._assignments = {
-                k: v for k, v in assignments.items()
-                if isinstance(v, int) and 0 <= v < self._n_slots
-            }
-            self._next_slot = int(data.get("next_slot", 0)) % self._n_slots
+            slots = data.get("slots")
+            if isinstance(slots, list):
+                for i, entry in enumerate(slots[: self._n_slots]):
+                    if not isinstance(entry, dict):
+                        continue
+                    fp = entry.get("fingerprint")
+                    self._occupant[i] = fp if isinstance(fp, str) else None
+                    try:
+                        self._last_used[i] = float(entry.get("last_used", 0.0))
+                    except (TypeError, ValueError):
+                        pass
+            else:
+                # Legacy format: fingerprint -> slot, insertion-ordered by
+                # first sight, so the last fingerprint mapped to a slot is
+                # the one most likely still in it.
+                for fp, slot in data.get("assignments", {}).items():
+                    if isinstance(slot, int) and 0 <= slot < self._n_slots:
+                        self._occupant[slot] = fp
             sys.stderr.write(
-                f"[slot-pin-proxy] restored {len(self._assignments)} session->slot "
-                f"assignment(s) from {self._state_file}\n"
+                f"[slot-pin-proxy] restored slot occupancy for "
+                f"{sum(1 for o in self._occupant if o)} slot(s) from {self._state_file}\n"
             )
-        except (OSError, ValueError, json.JSONDecodeError) as e:
+        except (OSError, ValueError, AttributeError, json.JSONDecodeError) as e:
             # Corrupt or unreadable -- fine, just start fresh rather than
             # crash the proxy over a cache of a cache.
             sys.stderr.write(f"[slot-pin-proxy] could not restore slot assignments: {e}\n")
@@ -213,33 +318,74 @@ class SessionSlotAssigner:
             self._state_file.parent.mkdir(parents=True, exist_ok=True)
             tmp = self._state_file.with_suffix(".tmp")
             tmp.write_text(json.dumps({
-                "assignments": self._assignments,
-                "next_slot": self._next_slot,
+                "version": 2,
+                "slots": [
+                    {"fingerprint": fp, "last_used": t}
+                    for fp, t in zip(self._occupant, self._last_used)
+                ],
+                # Kept for anything that reads the old shape (and for
+                # slot_cleanup.prune_state_file).
+                "assignments": {fp: i for i, fp in enumerate(self._occupant) if fp},
             }))
             tmp.replace(self._state_file)  # atomic on the same filesystem
         except OSError as e:
             sys.stderr.write(f"[slot-pin-proxy] could not persist slot assignments: {e}\n")
 
-    def slot_for(self, fingerprint: str) -> int:
+    def lookup(self, fingerprint: str) -> "int | None":
         with self._lock:
-            slot = self._assignments.get(fingerprint)
+            for i, fp in enumerate(self._occupant):
+                if fp == fingerprint:
+                    return i
+            return None
+
+    def occupant(self, slot: int) -> "str | None":
+        with self._lock:
+            return self._occupant[slot]
+
+    def lru_slot(self) -> int:
+        """Empty slots first (lowest last-used, then lowest id), then the
+        least recently used occupied slot."""
+        with self._lock:
+            return min(
+                range(self._n_slots),
+                key=lambda i: (self._occupant[i] is not None, self._last_used[i], i),
+            )
+
+    def slot_for(self, fingerprint: str) -> tuple:
+        """(slot, already_there, evicted_fingerprint). Doesn't change any
+        state -- call mark_used() once the request is committed to it."""
+        with self._lock:
+            slot = self.lookup(fingerprint)
             if slot is not None:
-                return slot
-            slot = self._next_slot % self._n_slots
-            self._next_slot += 1
-            self._assignments[fingerprint] = slot
+                return slot, True, None
+            slot = self.lru_slot()
+            return slot, False, self._occupant[slot]
+
+    def mark_used(self, slot: int, fingerprint: "str | None") -> None:
+        """Records that `slot` now holds `fingerprint`'s context (None for
+        an ephemeral, unpinned request -- the slot's content is then
+        nobody's, and it's the first to be reused)."""
+        with self._lock:
+            if fingerprint is not None:
+                for i, fp in enumerate(self._occupant):
+                    if fp == fingerprint and i != slot:
+                        self._occupant[i] = None
+            self._occupant[slot] = fingerprint
+            self._last_used[slot] = self._clock()
             self._save()
-            return slot
 
     def forget(self, fingerprints) -> list:
-        """Drops assignments for sessions whose disk cache was cleaned up
-        (slot_cleanup). Returns the fingerprints actually dropped. Done
-        here, on the live map, rather than by editing the JSON file --
-        otherwise the next _save() would write them straight back."""
+        """Drops sessions whose disk cache was cleaned up (slot_cleanup):
+        their slots become free for the next new session. Done here, on
+        the live state, rather than by editing the JSON file -- otherwise
+        the next _save() would write them straight back."""
         with self._lock:
-            dropped = [fp for fp in fingerprints if fp in self._assignments]
-            for fp in dropped:
-                del self._assignments[fp]
+            wanted = set(fingerprints)
+            dropped = []
+            for i, fp in enumerate(self._occupant):
+                if fp is not None and fp in wanted:
+                    self._occupant[i] = None
+                    dropped.append(fp)
             if dropped:
                 self._save()
             return dropped
@@ -263,29 +409,34 @@ session_slots = SessionSlotAssigner(N_SLOTS, STATE_FILE)
 _BOOTSTRAP_MARKER_RE = re.compile(r"^\[.*?\]\s*\(session bootstrap\)\s*$")
 
 
-def session_fingerprint(body: dict) -> str:
-    """Stable per-session key derived from the first *real* non-system,
+def session_fingerprint(body: dict) -> "str | None":
+    """Stable per-session key, or None for a request that shouldn't get a
+    persistent slot or a disk save ("ephemeral").
+
+    Chat-style (`messages`): hash of the first *real* non-system,
     non-bootstrap-marker message -- fixed for a session's lifetime (that
     message never changes once sent), distinct across sessions, with no
     cooperation needed from openclaw (no session id is present in the
-    OpenAI-compatible wire format)."""
+    OpenAI-compatible wire format).
+
+    Prompt-style (`prompt`, /completion and /v1/completions; 2026-10-30):
+    a raw prompt grows by appending, so its first
+    SETTINGS.prompt_fingerprint_chars characters stay fixed for a
+    continuing conversation -- hash that prefix. Prompts no longer than
+    that are treated as ephemeral one-shots: previously the whole-body
+    fallback hash gave every such call its own fingerprint, its own slot
+    and its own ~1 GB disk save, none of which could ever be reused.
+    Batched prompts (a list of strings) are ephemeral too.
+
+    Anything else (no usable message/prompt) is ephemeral -- same
+    reasoning.
+
+    2026-10-30: the TEMP sys-debug/fp-debug logging (system-prompt hash
+    and message previews on every request) was removed -- it wrote the
+    start of every prompt into the proxy log.
+    """
     messages = body.get("messages")
     if isinstance(messages, list):
-        # TEMP diagnostic (2026-09-06): testing whether different
-        # openclaw invocation paths (CLI one-shot vs real session) send
-        # identical static system-prompt content -- see docs/LOG.md,
-        # "Seed caching... benefit not yet verified".
-        system_texts = [
-            m.get("content", "") for m in messages
-            if isinstance(m, dict) and m.get("role") == "system"
-        ]
-        system_blob = "".join(t if isinstance(t, str) else json.dumps(t, sort_keys=True) for t in system_texts)
-        system_hash = hashlib.sha256(system_blob.encode("utf-8")).hexdigest()[:16]
-        sys.stderr.write(
-            f"[slot-pin-proxy][sys-debug] n_system_msgs={len(system_texts)} "
-            f"system_len={len(system_blob)} system_hash={system_hash}\n"
-        )
-        skipped = []
         for m in messages:
             if not isinstance(m, dict) or m.get("role") == "system":
                 continue
@@ -293,65 +444,60 @@ def session_fingerprint(body: dict) -> str:
             if not isinstance(content, str):
                 content = json.dumps(content, sort_keys=True)
             if _BOOTSTRAP_MARKER_RE.match(content.strip()):
-                skipped.append(content[:60])
                 continue
-            fp = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
-            sys.stderr.write(
-                f"[slot-pin-proxy][fp-debug] n_messages={len(messages)} "
-                f"skipped_bootstrap_markers={len(skipped)} "
-                f"used_role={m.get('role')!r} content_len={len(content)} "
-                f"content_preview={content[:120]!r} fingerprint={fp}\n"
-            )
-            return fp
-    # No usable message found (unusual) -- fall back to hashing the whole
-    # body so it's at least stable within one retried request.
-    fp = hashlib.sha256(json.dumps(body, sort_keys=True).encode("utf-8")).hexdigest()[:16]
-    sys.stderr.write(
-        f"[slot-pin-proxy][fp-debug] no usable non-system message found, "
-        f"hashed whole body, fingerprint={fp}\n"
-    )
-    return fp
+            return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
+        return None
+
+    prompt = body.get("prompt")
+    if isinstance(prompt, list) and prompt and all(isinstance(t, int) for t in prompt):
+        text = json.dumps(prompt)  # token ids: appending keeps the prefix stable
+    elif isinstance(prompt, str):
+        text = prompt
+    else:
+        return None
+    n = SETTINGS.prompt_fingerprint_chars
+    if len(text) <= n:
+        return None
+    return hashlib.sha256(("prompt:" + text[:n]).encode("utf-8")).hexdigest()[:16]
 
 
-def pick_slot(fingerprint: str) -> int:
-    """Prefer this session's assigned slot for cache reuse, but don't
-    steal a busy slot from an in-flight request -- route to any other
-    idle slot instead."""
-    preferred = session_slots.slot_for(fingerprint)
-    try:
-        conn = http.client.HTTPConnection(UPSTREAM_HOST, UPSTREAM_PORT, timeout=2)
-        conn.request("GET", "/slots")
-        resp = conn.getresponse()
-        slots = json.loads(resp.read())
-        conn.close()
-    except Exception:
-        return preferred
-
-    by_id = {s.get("id"): s for s in slots if isinstance(s, dict)}
-    pinned = by_id.get(preferred)
-    if pinned is not None and not pinned.get("is_processing"):
-        return preferred
-    for s in slots:
-        if isinstance(s, dict) and not s.get("is_processing"):
-            return s.get("id", preferred)
-    return preferred
+# 2026-10-30: pick_slot()'s per-request GET /slots "is the preferred slot
+# idle?" check is gone (#12 in the perf review). Every completion already
+# goes through completion_fifo one at a time, so the target slot is idle
+# by construction; the one exception (a just-cancelled request still
+# winding down) is handled by llama-server itself, which defers a task
+# aimed at a busy id_slot until that slot frees up rather than clobbering
+# it. The extra round trip on every request bought nothing.
 
 
 # --- Disk-persisted slot cache (issue #4) ---------------------------------
 # Requires llama-server to be started with --slot-save-path (see
 # ../launchd/com.caravan.llama-server.plist). Saves a slot's actual KV
-# cache to disk after each successful reply and restores it on first use
-# after a restart -- unlike SessionSlotAssigner's persistence above
-# (which only remembers *which* slot a session prefers), this persists
-# the cache *content* itself, so it survives an llama-server restart, not
-# just a proxy restart. See docs/LOG.md and GitHub issue #4.
+# cache to disk and restores it on first use after a restart -- unlike
+# SessionSlotAssigner's persistence above (which only remembers *which*
+# slot a session is in), this persists the cache *content* itself, so it
+# survives an llama-server restart, not just a proxy restart. See
+# docs/LOG.md and GitHub issue #4.
+#
+# 2026-10-30 (perf review #1 and #8):
+#  * A save (up to ~1 GB, blocking, under the FIFO gate so the next
+#    request waits) is skipped when the slot's token count hasn't grown
+#    since the last save/restore of that session, and can be thinned to
+#    every N turns (SETTINGS.save_every_n_turns, default 1 = every turn).
+#  * Optional idle saver (SETTINGS.idle_save_seconds > 0, off by
+#    default): no inline saves at all; a background thread saves a
+#    session once its slot has been idle that long, taking the FIFO gate
+#    like a request so it can't race a restore or a completion.
+#  * A session with unsaved turns is always saved before its slot is
+#    handed to a different session (otherwise those turns would be lost).
+#  * A restore is skipped when llama-server already holds that session
+#    warm in that slot (checked via GET /slots, once per session per
+#    proxy run) -- e.g. after a proxy-only restart, which used to
+#    overwrite a warm slot with an older disk copy.
 SLOT_SAVE_DIR = Path(os.environ.get(
     "CARAVAN_SLOT_SAVE_DIR",
     str(Path.home() / ".caravan" / "llama-server" / "slots"),
 ))
-
-_restored_this_run: set = set()
-_restore_lock = threading.Lock()
 
 
 def _slot_save_filename(fingerprint: str) -> str:
@@ -378,102 +524,267 @@ def _post_json_to_upstream(path: str, body: dict, timeout: float):
         return None
 
 
-_last_saved_fingerprint: str = ""
-_last_saved_lock = threading.Lock()
+def get_slot_info(slot_id: int) -> "dict | None":
+    """llama-server's GET /slots entry for one slot (metrics-only view:
+    id, n_ctx, is_processing, and n_prompt_tokens -- tokens currently
+    held, prompt + generated -- once the slot has run a task), or None."""
+    try:
+        conn = http.client.HTTPConnection(UPSTREAM_HOST, UPSTREAM_PORT, timeout=5)
+        conn.request("GET", "/slots")
+        resp = conn.getresponse()
+        raw = resp.read()
+        conn.close()
+        if resp.status != 200:
+            return None
+        for s in json.loads(raw):
+            if isinstance(s, dict) and s.get("id") == slot_id:
+                return s
+    except Exception:
+        return None
+    return None
 
 
-def maybe_restore_slot(slot_id: int, fingerprint: str) -> None:
-    """If this fingerprint has a saved cache on disk and we haven't
-    already tried restoring it in this proxy process's lifetime, restore
-    it into slot_id before the real request uses it. Once-per-fingerprint
-    guard exists so a session that's already warm in memory (the common
-    case after the first request) doesn't pay a disk round-trip on every
-    single turn -- only right after a restart, when it matters.
+class SaveTracker:
+    """Per-session bookkeeping for when a disk save is actually needed."""
 
-    2026-09-06 addition, DISABLED same day: tried seeding a session with
-    no saved file of its own from the most recently saved *other*
-    session's file, on the theory that llama-server's prefix matching
-    would safely reuse whatever actually matches (the shared static
-    prefix) and ignore the rest. Confirmed live this breaks: llama-server
-    here runs with kv_unified=true, meaning the KV cache is one shared
-    pool across all N_SLOTS, not independent per-slot buffers. Restoring
-    a large (~38K token) seed into an idle slot while another slot is
-    concurrently holding a large real context can exceed the pool's
-    actual available space -- hit directly: "Unable to restore slot: No
-    available space in KV cache", which then cascaded into a real
-    retry-cancel storm, actively worse than doing nothing. Disabled by
-    always skipping the seed branch below; own-file restore (the
-    issue #4 mechanism, proven safe) is unaffected. See docs/LOG.md
-    before ever re-enabling this -- needs a real fix (e.g. checking
-    available pool space first, or only seeding when other slots are
-    idle), not just turning it back on.
+    def __init__(self, clock=time.monotonic):
+        self._lock = threading.Lock()
+        self._clock = clock
+        self._turns_unsaved: dict = {}
+        self._saved_tokens: dict = {}
+        self._last_activity: dict = {}
+        self._slot: dict = {}
+
+    def on_turn_complete(self, fingerprint: str, slot: int, save_every: int,
+                         idle_mode: bool) -> bool:
+        """Records a completed turn; True if an inline save is due now."""
+        with self._lock:
+            n = self._turns_unsaved.get(fingerprint, 0) + 1
+            self._turns_unsaved[fingerprint] = n
+            self._last_activity[fingerprint] = self._clock()
+            self._slot[fingerprint] = slot
+            return (not idle_mode) and n >= save_every
+
+    def on_saved(self, fingerprint: str, n_tokens: "int | None") -> None:
+        with self._lock:
+            self._turns_unsaved[fingerprint] = 0
+            if n_tokens is not None:
+                self._saved_tokens[fingerprint] = n_tokens
+
+    on_restored = on_saved
+
+    def saved_tokens(self, fingerprint: str) -> "int | None":
+        with self._lock:
+            return self._saved_tokens.get(fingerprint)
+
+    def dirty(self, fingerprint: str) -> bool:
+        with self._lock:
+            return self._turns_unsaved.get(fingerprint, 0) > 0
+
+    def idle_dirty(self, idle_seconds: float) -> list:
+        """[(fingerprint, slot)] with unsaved turns, idle >= idle_seconds."""
+        now = self._clock()
+        with self._lock:
+            return [
+                (fp, self._slot[fp]) for fp, n in self._turns_unsaved.items()
+                if n > 0 and now - self._last_activity.get(fp, now) >= idle_seconds
+            ]
+
+    def forget(self, fingerprints) -> None:
+        with self._lock:
+            for fp in fingerprints:
+                for d in (self._turns_unsaved, self._saved_tokens,
+                          self._last_activity, self._slot):
+                    d.pop(fp, None)
+
+
+save_tracker = SaveTracker()
+
+# Sessions seen warm (completed a turn, or verified via /slots) in their
+# current slot during this proxy run -- skips the /slots warm check.
+# Cleared when llama-server looks like it went away (upstream
+# unreachable), since a restarted llama-server comes back with empty slots.
+_warm_this_run: set = set()
+_restore_failed: set = set()
+_restore_lock = threading.Lock()
+
+
+def maybe_restore_slot(slot_id: int, fingerprint: str, already_there: bool) -> str:
+    """Restores `fingerprint`'s saved KV cache into slot_id if it has one
+    and the slot isn't already holding it warm. Returns what happened:
+    "no-file", "warm", "failed-before", "restored" or "failed".
+
+    History: a 2026-09-06 "seed a new session from the most recently
+    saved other session" fallback was disabled the same day (restoring a
+    big seed could exhaust the then-unified KV pool: "Unable to restore
+    slot: No available space in KV cache") and its dead code was removed
+    2026-10-30. See docs/LOG.md before ever reviving it.
     """
+    path = SLOT_SAVE_DIR / _slot_save_filename(fingerprint)
     with _restore_lock:
-        if fingerprint in _restored_this_run:
-            return
-        _restored_this_run.add(fingerprint)
-
-    own_path = SLOT_SAVE_DIR / _slot_save_filename(fingerprint)
-    if own_path.exists():
-        filename = _slot_save_filename(fingerprint)
-        seed = False
-    else:
-        return  # seed fallback disabled -- see docstring above
-        with _last_saved_lock:
-            seed_fingerprint = _last_saved_fingerprint
-        seed_path = SLOT_SAVE_DIR / _slot_save_filename(seed_fingerprint) if seed_fingerprint else None
-        if not seed_fingerprint or not seed_path.exists():
-            # _last_saved_fingerprint is pure in-memory and doesn't
-            # survive a proxy restart -- confirmed live: it was empty
-            # right after deploying this code even though a real,
-            # already-proven-good save file existed on disk from before
-            # the restart. Fall back to whatever's actually on disk
-            # (most recently modified .bin) rather than only trusting
-            # in-process state.
-            candidates = sorted(
-                (p for p in SLOT_SAVE_DIR.glob("*.bin") if p.stem != fingerprint),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
-            if not candidates:
-                return
-            seed_path = candidates[0]
-        filename = seed_path.name
-        seed = True
+        if already_there and fingerprint in _warm_this_run:
+            return "warm"
+        if fingerprint in _restore_failed:
+            return "failed-before"
+    if not path.exists():
+        return "no-file"
+    if already_there:
+        info = get_slot_info(slot_id)
+        if info is None or int(info.get("n_prompt_tokens") or 0) > 0:
+            # Either llama-server still holds this session's context (a
+            # proxy-only restart), or /slots isn't answering -- in which
+            # case a restore wouldn't work either. Don't clobber the slot.
+            with _restore_lock:
+                _warm_this_run.add(fingerprint)
+            return "warm"
 
     result = _post_json_to_upstream(
         f"/slots/{slot_id}?action=restore",
-        {"filename": filename},
+        {"filename": path.name},
         timeout=120.0,
     )
     if result is not None:
-        kind = f"seed from {filename}" if seed else "own cache"
+        n = result.get("n_restored")
+        save_tracker.on_restored(fingerprint, n if isinstance(n, int) else None)
         sys.stderr.write(
-            f"[slot-pin-proxy] restored slot {slot_id} from disk for fingerprint {fingerprint} ({kind})\n"
+            f"[slot-pin-proxy] restored slot {slot_id} from disk for fingerprint "
+            f"{fingerprint} ({n} tokens)\n"
         )
-    else:
-        sys.stderr.write(
-            f"[slot-pin-proxy] restore failed for slot {slot_id}, fingerprint {fingerprint} "
-            "(continuing cold, not fatal)\n"
-        )
+        return "restored"
+    with _restore_lock:
+        _restore_failed.add(fingerprint)
+    sys.stderr.write(
+        f"[slot-pin-proxy] restore failed for slot {slot_id}, fingerprint {fingerprint} "
+        "-- continuing cold (won't retry this run)\n"
+    )
+    return "failed"
 
 
-def save_slot(slot_id: int, fingerprint: str) -> None:
-    """Best-effort save after a successful completion. Never raises --
-    a failed save just means the next restart pays the cold cost again,
-    not a broken response for the request that triggered it."""
+def save_slot(slot_id: int, fingerprint: str) -> str:
+    """Saves slot_id's KV cache to disk as `fingerprint`'s file, unless its
+    token count hasn't grown since the last save/restore. Must be called
+    while holding completion_fifo. Returns "saved", "unchanged",
+    "not-occupant" or "failed"."""
+    if session_slots.occupant(slot_id) != fingerprint:
+        return "not-occupant"
+    info = get_slot_info(slot_id)
+    n_tokens = None
+    if info is not None and isinstance(info.get("n_prompt_tokens"), int):
+        n_tokens = info["n_prompt_tokens"]
+        last = save_tracker.saved_tokens(fingerprint)
+        if last is not None and n_tokens == last:
+            save_tracker.on_saved(fingerprint, last)
+            sys.stderr.write(
+                f"[slot-pin-proxy] skip save: slot {slot_id} unchanged since last save "
+                f"({n_tokens} tokens), fingerprint {fingerprint}\n"
+            )
+            return "unchanged"
     result = _post_json_to_upstream(
         f"/slots/{slot_id}?action=save",
         {"filename": _slot_save_filename(fingerprint)},
         timeout=120.0,
     )
-    if result is not None:
-        sys.stderr.write(f"[slot-pin-proxy] saved slot {slot_id} to disk for fingerprint {fingerprint}\n")
-        with _last_saved_lock:
-            global _last_saved_fingerprint
-            _last_saved_fingerprint = fingerprint
-    else:
+    if result is None:
         sys.stderr.write(f"[slot-pin-proxy] save failed for slot {slot_id}, fingerprint {fingerprint}\n")
+        return "failed"
+    saved = result.get("n_saved")
+    save_tracker.on_saved(fingerprint, saved if isinstance(saved, int) else n_tokens)
+    sys.stderr.write(f"[slot-pin-proxy] saved slot {slot_id} to disk for fingerprint {fingerprint}\n")
+    return "saved"
+
+
+def flush_if_dirty(fingerprint: "str | None", slot_id: int) -> "str | None":
+    """Before slot_id is handed to another session: save its current
+    occupant if it has unsaved turns. Caller holds completion_fifo."""
+    if fingerprint is None or not save_tracker.dirty(fingerprint):
+        return None
+    return save_slot(slot_id, fingerprint)
+
+
+def start_idle_saver(idle_seconds: float, gate=None, poll_seconds: "float | None" = None):
+    """Background saver (SETTINGS.idle_save_seconds > 0): saves sessions
+    with unsaved turns once they've been idle `idle_seconds`, taking the
+    FIFO gate (a context-manager factory, default _exclusive_slot_io) so
+    it never overlaps a request, restore or cleanup."""
+    if idle_seconds <= 0:
+        return None
+    gate = gate or _exclusive_slot_io
+    poll = poll_seconds if poll_seconds is not None else max(1.0, min(15.0, idle_seconds / 4))
+
+    def _loop():
+        while True:
+            time.sleep(poll)
+            try:
+                for fp, slot in save_tracker.idle_dirty(idle_seconds):
+                    with gate():
+                        # Re-check under the gate: a request may have run
+                        # (or moved the session) while we waited.
+                        if (fp, slot) in save_tracker.idle_dirty(idle_seconds) \
+                                and session_slots.occupant(slot) == fp:
+                            save_slot(slot, fp)
+            except Exception as e:  # never let the saver kill the proxy
+                sys.stderr.write(f"[slot-pin-proxy] idle saver error: {e!r}\n")
+
+    sys.stderr.write(f"[slot-pin-proxy] idle saver on: save after {idle_seconds:g}s idle "
+                     "(inline saves disabled)\n")
+    t = threading.Thread(target=_loop, name="idle-slot-saver", daemon=True)
+    t.start()
+    return t
+
+
+@contextlib.contextmanager
+def _exclusive_slot_io():
+    """Holds the completion FIFO gate -- every slot save/restore happens
+    while it's held, so while cleanup (or the idle saver) holds it nothing
+    else can be mid save/restore. Waits its turn behind queued requests
+    like any other caller."""
+    ticket, _, _ = completion_fifo.acquire()
+    try:
+        yield
+    finally:
+        completion_fifo.release(ticket)
+
+
+def prepare_completion(data: dict) -> tuple:
+    """Assigns a slot to a parsed completion body and restores its disk
+    cache if needed. Caller holds completion_fifo. Returns
+    (slot, fingerprint_or_None, note-for-the-log)."""
+    fingerprint = session_fingerprint(data)
+    if fingerprint is None:
+        slot = session_slots.lru_slot()
+        flush_if_dirty(session_slots.occupant(slot), slot)
+        session_slots.mark_used(slot, None)
+        return slot, None, f" id_slot={slot} ephemeral"
+    slot, already_there, evicted = session_slots.slot_for(fingerprint)
+    if evicted is not None and evicted != fingerprint:
+        flush_if_dirty(evicted, slot)
+        with _restore_lock:
+            _warm_this_run.discard(evicted)
+    restore = maybe_restore_slot(slot, fingerprint, already_there)
+    session_slots.mark_used(slot, fingerprint)
+    return slot, fingerprint, f" id_slot={slot} fp={fingerprint} cache={restore}"
+
+
+def finish_completion(slot: int, fingerprint: "str | None") -> "str | None":
+    """After a complete 200 response: record the turn and save inline if
+    due. Caller holds completion_fifo -- so the next queued request waits
+    for the save, the latency cost accepted for surviving restarts (see
+    docs/LOG.md, issue #4)."""
+    if fingerprint is None:
+        return None
+    with _restore_lock:
+        _warm_this_run.add(fingerprint)
+    due = save_tracker.on_turn_complete(
+        fingerprint, slot, SETTINGS.save_every_n_turns, SETTINGS.idle_save_seconds > 0)
+    return save_slot(slot, fingerprint) if due else None
+
+
+def note_upstream_down() -> None:
+    """llama-server unreachable: it may be restarting, and will come back
+    with empty slots -- forget what we believed was warm."""
+    with _restore_lock:
+        _warm_this_run.clear()
+        _restore_failed.clear()
 
 
 class ProxyHandler(BaseHTTPRequestHandler):
@@ -542,12 +853,9 @@ class ProxyHandler(BaseHTTPRequestHandler):
             except ValueError:
                 data = None
             if isinstance(data, dict):
-                fingerprint = session_fingerprint(data)
-                slot = pick_slot(fingerprint)
-                maybe_restore_slot(slot, fingerprint)
+                slot, fingerprint, slot_note = prepare_completion(data)
                 data["id_slot"] = slot
                 raw_body = json.dumps(data).encode("utf-8")
-                slot_note = f" id_slot={slot}"
                 slot_for_save = slot
                 fingerprint_for_save = fingerprint
 
@@ -589,6 +897,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
                         "%s %s -- client gone, cancelling upstream (was waiting on response)",
                         method, self.path,
                     )
+                    self.close_connection = True
                     if conn.sock is not None:
                         try:
                             conn.sock.shutdown(socket.SHUT_RDWR)
@@ -604,6 +913,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
                     raise exc
                 # llama-server isn't up yet/crashed -- common right after
                 # a launchd (re)start race, not worth a traceback.
+                note_upstream_down()
                 self.log_message("%s %s -> upstream unreachable (%s)", method, self.path, exc)
                 body = b"llama-server upstream unreachable\n"
                 self.send_response(502)
@@ -618,40 +928,70 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 "%s %s -> %s%s", method, self.path, upstream_resp.status, slot_note
             )
 
-            self.send_response(upstream_resp.status)
+            # Response framing (2026-10-30, perf review #2). http.client
+            # has already de-chunked upstream's body, so the original
+            # Transfer-Encoding can't be passed through -- and dropping it
+            # while keeping the connection alive (as before) left a
+            # streaming response with neither Content-Length nor chunked
+            # framing, i.e. no way for the client to tell where it ends
+            # short of the connection closing. Now:
+            #   * upstream sent Content-Length -> pass it through, stream as-is;
+            #   * no length, HTTP/1.1 client -> re-chunk (keeps keep-alive,
+            #     which openclaw uses, and is exactly what upstream did);
+            #   * no length, HTTP/1.0 client -> Connection: close (chunked
+            #     isn't allowed for 1.0).
+            status = upstream_resp.status
+            has_length = upstream_resp.getheader("Content-Length") is not None
+            no_body = method == "HEAD" or status in (204, 304) or 100 <= status < 200
+            chunked = not no_body and not has_length and self.request_version == "HTTP/1.1"
+            if not no_body and not has_length and not chunked:
+                self.close_connection = True
+
+            self.send_response(status)
             for k, v in upstream_resp.getheaders():
                 if k.lower() in ("transfer-encoding", "connection"):
                     continue
                 self.send_header(k, v)
+            if chunked:
+                self.send_header("Transfer-Encoding", "chunked")
+            elif self.close_connection:
+                self.send_header("Connection", "close")
             self.end_headers()
 
             # Stream the response back as it arrives -- required for SSE
-            # (stream: true) so tokens still show up incrementally. Also
-            # watched for disconnect here: generation alone can run
-            # minutes at this hardware's ~4 tok/s, same reasoning as above.
-            while True:
+            # (stream: true) so tokens still show up incrementally. read1()
+            # (not read(4096), which blocks until 4096 bytes have arrived
+            # and made SSE token streams bursty) returns whatever upstream
+            # has sent so far. Also watched for disconnect here:
+            # generation alone can run minutes at this hardware's
+            # ~4 tok/s, same reasoning as above.
+            while not no_body:
                 if self._client_gone():
                     self.log_message(
                         "%s %s -- client gone, cancelling upstream (was streaming)",
                         method, self.path,
                     )
+                    self.close_connection = True
                     return
-                chunk = upstream_resp.read(4096)
+                chunk = upstream_resp.read1(65536)
                 if not chunk:
                     break
-                self.wfile.write(chunk)
+                if chunked:
+                    self.wfile.write(b"%x\r\n%s\r\n" % (len(chunk), chunk))
+                else:
+                    self.wfile.write(chunk)
+                self.wfile.flush()
+            if chunked:
+                self.wfile.write(b"0\r\n\r\n")
                 self.wfile.flush()
 
             # Reached only on a genuinely complete response (loop above
             # exited via the normal "no more chunks" path, not an early
-            # return) -- save this slot's cache now so a future restart
-            # can restore it instead of reprocessing from scratch. Runs
-            # while still holding the FIFO gate, so the next queued
-            # request waits for this too -- the latency cost users
-            # explicitly signed up for in exchange for surviving restarts,
-            # see docs/LOG.md, issue #4.
-            if upstream_resp.status == 200 and slot_for_save is not None:
-                save_slot(slot_for_save, fingerprint_for_save)
+            # return) -- record the turn, and save this slot's cache now if
+            # it's due (see finish_completion / save_slot). Runs while
+            # still holding the FIFO gate.
+            if status == 200 and slot_for_save is not None:
+                finish_completion(slot_for_save, fingerprint_for_save)
         except (BrokenPipeError, ConnectionResetError, http.client.HTTPException):
             # http.client.HTTPException (e.g. IncompleteRead) added
             # 2026-09-06: caught live during the --slot-save-path restart
@@ -663,7 +1003,9 @@ class ProxyHandler(BaseHTTPRequestHandler):
             # fatal (each request is its own thread, and openclaw's own
             # retry recovered), but noisy and worth treating the same as
             # any other "upstream connection didn't behave" case.
-            pass
+            # The response may be half-written: never reuse this
+            # connection (a missing terminal chunk must look like an error).
+            self.close_connection = True
         finally:
             conn.close()
 
@@ -680,23 +1022,13 @@ class ProxyHandler(BaseHTTPRequestHandler):
         self._forward("DELETE")
 
 
-@contextlib.contextmanager
-def _exclusive_slot_io():
-    """Holds the completion FIFO gate -- every slot save/restore happens
-    inside a request that holds it, so while cleanup holds it nothing can
-    be mid save/restore. Waits its turn behind queued requests like any
-    other caller."""
-    ticket, _, _ = completion_fifo.acquire()
-    try:
-        yield
-    finally:
-        completion_fifo.release(ticket)
-
-
 def _forget_cleaned_sessions(fingerprints) -> list:
+    fingerprints = list(fingerprints)
+    save_tracker.forget(fingerprints)
     with _restore_lock:
         for fp in fingerprints:
-            _restored_this_run.discard(fp)
+            _warm_this_run.discard(fp)
+            _restore_failed.discard(fp)
     return session_slots.forget(fingerprints)
 
 
@@ -717,19 +1049,52 @@ def start_slot_cleanup(overrides: "dict | None" = None):
     )
 
 
+def configure(settings: ProxySettings) -> None:
+    """Applies resolved settings (main() after parsing flags; tests)."""
+    global SETTINGS, N_SLOTS, session_slots
+    if settings.n_slots != N_SLOTS:
+        session_slots = SessionSlotAssigner(settings.n_slots, STATE_FILE)
+    SETTINGS = settings
+    N_SLOTS = settings.n_slots
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Caravan slot-pin proxy (ports/upstream via CARAVAN_* env vars).")
+        description="Caravan slot-pin proxy (ports/upstream via CARAVAN_* env vars). "
+                    "Settings: flag > env > ~/.caravan/config.json > default.")
+    parser.add_argument("--n-slots", type=int, default=None,
+                        help="llama-server slot count, must match its --parallel "
+                             "(env CARAVAN_N_SLOTS, config llama_server.n_slots, default 4)")
+    parser.add_argument("--slot-save-every", dest="save_every_n_turns", type=int, default=None,
+                        help="save a session's KV cache to disk every N completed turns "
+                             "(env CARAVAN_SLOT_SAVE_EVERY, config proxy.slot_save_every, default 1)")
+    parser.add_argument("--slot-idle-save-seconds", dest="idle_save_seconds", type=float, default=None,
+                        help="if >0, no inline saves: save once a session has been idle this long "
+                             "(env CARAVAN_SLOT_IDLE_SAVE_SECONDS, config proxy.slot_idle_save_seconds, "
+                             "default 0 = off)")
+    parser.add_argument("--prompt-fingerprint-chars", dest="prompt_fingerprint_chars", type=int,
+                        default=None,
+                        help="prompt-style calls: prefix length identifying a session; shorter "
+                             "prompts are unpinned one-shots (env CARAVAN_PROMPT_FINGERPRINT_CHARS, "
+                             "config proxy.prompt_fingerprint_chars, default 2048)")
     slot_cleanup.add_cli_args(parser, proxy=True)
     args = parser.parse_args(argv)
+    try:
+        configure(resolve_proxy_settings({k: getattr(args, k) for k in ProxySettings._fields}))
+    except ValueError as e:
+        parser.error(str(e))
 
     server = ThreadingHTTPServer(("127.0.0.1", LISTEN_PORT), ProxyHandler)
     print(
         f"[slot-pin-proxy] listening on 127.0.0.1:{LISTEN_PORT}, "
         f"forwarding to {UPSTREAM_HOST}:{UPSTREAM_PORT}, "
-        f"pinning completions per-session across {N_SLOTS} slot(s), FIFO-serialized"
+        f"pinning completions per-session across {N_SLOTS} slot(s) (LRU), FIFO-serialized; "
+        f"disk save every {SETTINGS.save_every_n_turns} turn(s)"
+        + (f", idle saver {SETTINGS.idle_save_seconds:g}s" if SETTINGS.idle_save_seconds > 0 else ""),
+        flush=True,
     )
     start_slot_cleanup(slot_cleanup.overrides_from_args(args))
+    start_idle_saver(SETTINGS.idle_save_seconds)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

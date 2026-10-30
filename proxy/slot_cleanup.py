@@ -208,6 +208,10 @@ def prune_state_file(state_file: Path, fingerprints: Iterable[str],
     if dropped and not dry_run:
         for fp in dropped:
             del assignments[fp]
+        # v2 state (2026-10-30): per-slot occupants too.
+        for entry in data.get("slots") or []:
+            if isinstance(entry, dict) and entry.get("fingerprint") in fingerprints:
+                entry["fingerprint"] = None
         tmp = state_file.with_suffix(".cleanup.tmp")
         tmp.write_text(json.dumps(data))
         tmp.replace(state_file)
