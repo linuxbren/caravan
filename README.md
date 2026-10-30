@@ -94,6 +94,82 @@ launchctl bootout gui/$(id -u)/com.caravan.<label>
 Removes it from launchd entirely — it will *not* come back on its own
 (no more `KeepAlive`) until bootstrapped again.
 
+### Configuration
+
+Nothing needs configuring -- every option below defaults to the current
+behavior (model `muse-glimmer`) plus automatic stale-slot cleanup.
+Precedence everywhere: **command-line flag > env var > config file >
+default**. The optional config file is JSON at `~/.caravan/config.json`
+(override the path with `CARAVAN_CONFIG`):
+
+```json
+{
+  "model": "qwen3:30b-a3b",
+  "slot_cleanup": {
+    "mode": "delete",
+    "max_age_days": 30,
+    "interval_hours": 6,
+    "archive_dir": "~/.caravan/llama-server/slots-archive"
+  }
+}
+```
+
+**Target model** (agent, `agent/ollama_store.py` helper):
+
+| flag | env | config key | default |
+|---|---|---|---|
+| `--model NAME` | `CARAVAN_MODEL` | `model` | `muse-glimmer` |
+
+Any model in the local Ollama store works: `name`, `name:tag`,
+`namespace/name:tag`, `hf.co/user/repo:tag`. List what's there and
+resolve a name to the GGUF blob `llama-server -m` needs:
+
+```sh
+python3 agent/ollama_store.py --list
+python3 agent/ollama_store.py qwen3:30b-a3b      # prints the blob path
+CARAVAN_MODEL=qwen3:30b-a3b python3 agent/caravan_agent.py   # dry run
+```
+
+The hand-written `launchd/com.caravan.llama-server.plist` still has a
+literal blob path after `-m` -- see
+[launchd/README.md](launchd/README.md#switching-the-model) for swapping it.
+
+**Disk KV slot cleanup** (`proxy/slot_cleanup.py`). The proxy saves a
+~1 GB `<fingerprint>.bin` per session into `~/.caravan/llama-server/slots/`
+after every reply; before this, nothing ever removed them (node-a reached
+~154 GB). The proxy now removes slot files not written for N days -- once
+at startup, then every few hours -- holding its FIFO gate so it never
+races a save/restore, and drops those sessions from
+`~/.caravan/proxy/session_slots.json`.
+
+| proxy flag | standalone flag | env | config key (`slot_cleanup.`) | default |
+|---|---|---|---|---|
+| `--slot-cleanup` | `--mode` | `CARAVAN_SLOT_CLEANUP` (`delete`/`archive`/`off`) | `mode` | `delete` |
+| `--slot-max-age-days` | `--max-age-days` | `CARAVAN_SLOT_MAX_AGE_DAYS` | `max_age_days` | `30` |
+| `--slot-archive-dir` | `--archive-dir` | `CARAVAN_SLOT_ARCHIVE_DIR` | `archive_dir` | `~/.caravan/llama-server/slots-archive` |
+| `--slot-cleanup-interval-hours` | `--interval-hours` | `CARAVAN_SLOT_CLEANUP_INTERVAL_HOURS` (`<=0` = startup only) | `interval_hours` | `6` |
+| -- | `--slot-dir` | `CARAVAN_SLOT_SAVE_DIR` | `slot_dir` | `~/.caravan/llama-server/slots` |
+
+"Last used" is the file's mtime (it's rewritten on every save). `archive`
+moves files instead of deleting them (archived files are never cleaned
+up automatically -- prune that dir yourself). Run it by hand, from the
+repo root:
+
+```sh
+python3 -m proxy.slot_cleanup --dry-run                    # what would go, total bytes
+python3 -m proxy.slot_cleanup --dry-run --max-age-days 7
+python3 -m proxy.slot_cleanup --mode archive --max-age-days 30
+python3 -m proxy.slot_cleanup                               # delete >30 days old
+```
+
+**Heads-up before the next proxy restart:** cleanup runs automatically
+the moment the proxy starts. If you want to review first, set
+`CARAVAN_SLOT_CLEANUP=off` (plist `EnvironmentVariables`) or
+`"slot_cleanup": {"mode": "off"}` in the config file, and use the
+`--dry-run` CLI.
+
+Tests (stdlib `unittest`, temp dirs only): `python3 -m unittest discover -s tests -v`
+
 ### First-time setup on a new machine
 
 See [launchd/README.md](launchd/README.md).

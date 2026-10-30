@@ -2047,3 +2047,29 @@ Confirmed the real production advertiser (a different pid, still
 running the whole time) was left untouched.
 
 Builds clean on both nodes.
+
+## 2026-10-30: configurable target model + stale slot-file cleanup
+
+Two gaps found while auditing node-a's disk:
+
+- **~154 GB of disk KV slot files** in `~/.caravan/llama-server/slots/`
+  (269 x ~1 GB `.bin`, all from Sep 6-18). The proxy saves one per
+  session fingerprint after every reply (issue #4) and nothing ever
+  removed them. New `proxy/slot_cleanup.py`: removes (or archives) slot
+  files whose mtime is older than N days (default 30), and forgets those
+  fingerprints in `session_slots.json`. The proxy runs it at startup and
+  every 6h on a daemon thread; removals happen while holding the FIFO
+  gate (every save/restore runs inside a request that holds it), and
+  each file's mtime is re-checked under the gate so a session that just
+  came back isn't touched. Mapping entries are dropped on the live
+  `SessionSlotAssigner` (new `forget()`), not by editing the JSON, or
+  the next save would write them back. Standalone CLI with `--dry-run`.
+- **Hardcoded `TARGET_MODEL = "muse-glimmer"`.** Now resolved
+  `--model` > `CARAVAN_MODEL` > `~/.caravan/config.json` `"model"` >
+  `muse-glimmer`. `ollama_store.py` also handles namespaced / `hf.co`
+  model names and doubles as a CLI that resolves a name to its blob
+  path, for regenerating the llama-server plist's `-m` argument. The C++
+  binary (`cpp/main.cpp`) still hardcodes the model -- not changed here.
+
+Tests: `tests/` (stdlib unittest, temp dirs), passing on 3.13 and 3.9.
+

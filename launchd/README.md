@@ -71,6 +71,41 @@ See the main [README's Usage section](../README.md#usage) for
 machine/service specifics and restart caveats (e.g. never restart
 `rpc-server` while `llama-server` is mid-load).
 
+## Switching the model
+
+`com.caravan.llama-server.plist` passes a literal Ollama blob path to
+`-m` (currently `muse-glimmer`'s). Nothing in the plist is templated, so
+to serve another model from the local Ollama store, resolve its blob path
+and put that in the plist, then re-bootstrap (see "Restart after editing
+a plist" above):
+
+```sh
+cd ~/dev/caravan
+python3 agent/ollama_store.py --list              # what's pulled locally
+python3 agent/ollama_store.py qwen3:30b-a3b       # -> /Users/brenden/.ollama/models/blobs/sha256-...
+# with no argument it resolves the configured model
+# (--model > $CARAVAN_MODEL > "model" in ~/.caravan/config.json > muse-glimmer)
+```
+
+`caravan_agent.py` (the eventual replacement for these plists) needs no
+plist edit -- it takes `--model` / `CARAVAN_MODEL` / the config file
+directly and resolves the blob itself.
+
+## Slot cleanup settings for the proxy
+
+`slot_pin_proxy.py` now cleans up stale disk KV slot files on startup and
+every 6 hours (see the main README, "Configuration"). To change that
+under launchd, add to `com.caravan.slot-pin-proxy.plist`'s
+`EnvironmentVariables` e.g.:
+
+```xml
+<key>CARAVAN_SLOT_CLEANUP</key>        <string>archive</string>  <!-- or delete / off -->
+<key>CARAVAN_SLOT_MAX_AGE_DAYS</key>   <string>30</string>
+```
+
+or put the same settings in `~/.caravan/config.json` (no plist edit or
+re-bootstrap needed, just a proxy kickstart).
+
 ## Uninstall
 
 ```sh

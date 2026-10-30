@@ -1,18 +1,68 @@
 """Tunables for the Caravan agent -- paths, ports, and the current target
 model. See docs/ARCHITECTURE.md for why these values are what they are.
 """
+import json
+import os
 from pathlib import Path
+from typing import Optional
 
 # Where each agent instance persists its own identity (see identity.py).
 # Deliberately outside the git repo -- this is runtime state, not source.
 STATE_DIR = Path.home() / ".caravan" / "agent"
 
-# The model this cluster currently serves. Hardcoded for now -- Caravan
-# supports one real conversation identity today (see openclaw.json), so
-# one target model is the correct-sized scaffold. Revisit if/when
-# multi-model support becomes real usage, not just a nice side effect of
-# the self-declaration design (see ARCHITECTURE.md).
-TARGET_MODEL = "muse-glimmer"
+# Optional shared config file (JSON, stdlib only). Read by both the agent
+# (this module) and proxy/slot_cleanup.py. Missing file == all defaults.
+# Example:
+#   {"model": "qwen3:30b",
+#    "slot_cleanup": {"mode": "delete", "max_age_days": 30,
+#                     "interval_hours": 6,
+#                     "archive_dir": "~/.caravan/llama-server/slots-archive"}}
+# Override the path with CARAVAN_CONFIG=/path/to/config.json.
+CONFIG_FILE = Path(os.environ.get(
+    "CARAVAN_CONFIG", str(Path.home() / ".caravan" / "config.json")
+)).expanduser()
+
+# The model this cluster serves when nothing else is configured. Kept as
+# the default so behavior is unchanged unless you opt in to another model.
+# Caravan supports one real conversation identity today (see
+# openclaw.json), so one target model at a time is still the right size;
+# it's just no longer hardcoded. Any Ollama-store model name works
+# ("name", "name:tag", "namespace/name:tag", "hf.co/user/repo:tag").
+DEFAULT_TARGET_MODEL = "muse-glimmer"
+
+
+def load_config_file(path: Optional[Path] = None) -> dict:
+    """Parsed CONFIG_FILE (or `path`), or {} if missing/unreadable. Never
+    raises -- a broken optional config shouldn't take the agent down."""
+    path = Path(path).expanduser() if path is not None else CONFIG_FILE
+    try:
+        data = json.loads(path.read_text())
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as e:
+        print(f"[caravan] warning: ignoring unreadable config {path}: {e}")
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def resolve_target_model(cli_value: Optional[str] = None,
+                         config_path: Optional[Path] = None) -> str:
+    """Target model, by precedence: --model flag > $CARAVAN_MODEL >
+    "model" in the config file > DEFAULT_TARGET_MODEL."""
+    if cli_value:
+        return cli_value
+    env_value = os.environ.get("CARAVAN_MODEL", "").strip()
+    if env_value:
+        return env_value
+    file_value = load_config_file(config_path).get("model")
+    if isinstance(file_value, str) and file_value.strip():
+        return file_value.strip()
+    return DEFAULT_TARGET_MODEL
+
+
+# Back-compat: the resolved value (env > config file > default) at import
+# time. New code should call resolve_target_model() so --model wins.
+TARGET_MODEL = resolve_target_model()
 
 # llama.cpp binaries -- same paths used by the hand-written launchd
 # plists in ../launchd/. Not yet unified with those plists; this agent is

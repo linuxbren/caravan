@@ -81,7 +81,19 @@ llama-server's own existing cancel-on-disconnect handling (the same
 "stop: cancel task" path already seen tonight whenever the proxy itself
 restarted mid-request) -- so an abandoned request now actually frees the
 slot and the queue instead of grinding on for nobody.
+
+2026-10-30 update: disk KV slot files (one ~1 GB .bin per session
+fingerprint, see "Disk-persisted slot cache" below) were never cleaned
+up -- node-a accumulated ~154 GB of them. slot_cleanup.py now removes (or
+archives) files not written for N days (default 30), once at startup and
+every few hours (default 6) on a background thread, holding the FIFO gate
+while it removes so it can't race a save/restore, and forgets those
+sessions' slot assignments. Configure with --slot-cleanup /
+--slot-max-age-days / --slot-archive-dir / --slot-cleanup-interval-hours
+or the matching CARAVAN_SLOT_* env vars; see slot_cleanup.py.
 """
+import argparse
+import contextlib
 import hashlib
 import http.client
 import json
@@ -94,6 +106,11 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+try:
+    import slot_cleanup  # run as a script: proxy/ is sys.path[0]
+except ImportError:  # imported as proxy.slot_pin_proxy from the repo root
+    from proxy import slot_cleanup
 
 UPSTREAM_HOST = os.environ.get("CARAVAN_UPSTREAM_HOST", "127.0.0.1")
 UPSTREAM_PORT = int(os.environ.get("CARAVAN_UPSTREAM_PORT", "8080"))
@@ -213,6 +230,19 @@ class SessionSlotAssigner:
             self._assignments[fingerprint] = slot
             self._save()
             return slot
+
+    def forget(self, fingerprints) -> list:
+        """Drops assignments for sessions whose disk cache was cleaned up
+        (slot_cleanup). Returns the fingerprints actually dropped. Done
+        here, on the live map, rather than by editing the JSON file --
+        otherwise the next _save() would write them straight back."""
+        with self._lock:
+            dropped = [fp for fp in fingerprints if fp in self._assignments]
+            for fp in dropped:
+                del self._assignments[fp]
+            if dropped:
+                self._save()
+            return dropped
 
 
 STATE_FILE = Path(os.environ.get(
@@ -650,13 +680,56 @@ class ProxyHandler(BaseHTTPRequestHandler):
         self._forward("DELETE")
 
 
-def main():
+@contextlib.contextmanager
+def _exclusive_slot_io():
+    """Holds the completion FIFO gate -- every slot save/restore happens
+    inside a request that holds it, so while cleanup holds it nothing can
+    be mid save/restore. Waits its turn behind queued requests like any
+    other caller."""
+    ticket, _, _ = completion_fifo.acquire()
+    try:
+        yield
+    finally:
+        completion_fifo.release(ticket)
+
+
+def _forget_cleaned_sessions(fingerprints) -> list:
+    with _restore_lock:
+        for fp in fingerprints:
+            _restored_this_run.discard(fp)
+    return session_slots.forget(fingerprints)
+
+
+def start_slot_cleanup(overrides: "dict | None" = None):
+    """Starts the automatic stale-slot cleanup thread. A bad setting
+    disables cleanup with a log line rather than crash-looping a
+    KeepAlive'd proxy."""
+    overrides = {k: v for k, v in (overrides or {}).items() if v is not None}
+    overrides.setdefault("slot_dir", str(SLOT_SAVE_DIR))
+    overrides.setdefault("state_file", str(STATE_FILE))
+    try:
+        settings = slot_cleanup.resolve_settings(overrides)
+    except ValueError as e:
+        sys.stderr.write(f"[slot-pin-proxy] slot cleanup disabled, bad setting: {e}\n")
+        return None
+    return slot_cleanup.start_background(
+        settings, gate=_exclusive_slot_io, forget=_forget_cleaned_sessions,
+    )
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Caravan slot-pin proxy (ports/upstream via CARAVAN_* env vars).")
+    slot_cleanup.add_cli_args(parser, proxy=True)
+    args = parser.parse_args(argv)
+
     server = ThreadingHTTPServer(("127.0.0.1", LISTEN_PORT), ProxyHandler)
     print(
         f"[slot-pin-proxy] listening on 127.0.0.1:{LISTEN_PORT}, "
         f"forwarding to {UPSTREAM_HOST}:{UPSTREAM_PORT}, "
         f"pinning completions per-session across {N_SLOTS} slot(s), FIFO-serialized"
     )
+    start_slot_cleanup(slot_cleanup.overrides_from_args(args))
     try:
         server.serve_forever()
     except KeyboardInterrupt:

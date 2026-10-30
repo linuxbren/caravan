@@ -54,7 +54,16 @@ Real and tested today:
 python3 caravan_agent.py                 # dry run: prints what it would do
 python3 caravan_agent.py --apply         # actually spawns+supervises (blocks)
 python3 caravan_agent.py --model llama3  # target a different model
+CARAVAN_MODEL=llama3 python3 caravan_agent.py   # same, via env var
+python3 ollama_store.py --list           # models in the local Ollama store
+python3 ollama_store.py llama3           # resolve a model to its GGUF blob path
 ```
+
+The target model is no longer hardcoded. Precedence: `--model` >
+`$CARAVAN_MODEL` > `"model"` in `~/.caravan/config.json` (path override:
+`--config` or `$CARAVAN_CONFIG`) > `muse-glimmer` (the default, so
+existing behavior is unchanged). Names follow Ollama's conventions --
+`name`, `name:tag`, `namespace/name:tag`, `hf.co/user/repo:tag`.
 
 Dry run is the safe default on purpose -- it's meant to be exercisable
 right now, on the live 2-node setup, without any risk to the

@@ -18,6 +18,10 @@ Usage:
     python3 caravan_agent.py                  # dry run, one pass
     python3 caravan_agent.py --apply           # actually spawn+supervise
     python3 caravan_agent.py --model llama3    # target a different model
+    CARAVAN_MODEL=llama3 python3 caravan_agent.py   # same, via env
+
+Model precedence: --model > $CARAVAN_MODEL > "model" in
+~/.caravan/config.json (or $CARAVAN_CONFIG / --config) > "muse-glimmer".
 """
 import argparse
 import json
@@ -226,7 +230,16 @@ def _rpc_addrs_from_peers(peers: list[dict]) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", default=config.TARGET_MODEL)
+    parser.add_argument(
+        "--model", default=None,
+        help="Ollama model name to serve as head (e.g. 'qwen3:30b'). "
+             "Default: $CARAVAN_MODEL, else \"model\" in the config file, "
+             f"else {config.DEFAULT_TARGET_MODEL!r}.",
+    )
+    parser.add_argument(
+        "--config", default=None, metavar="PATH",
+        help=f"JSON config file (default: $CARAVAN_CONFIG or {config.CONFIG_FILE}).",
+    )
     parser.add_argument(
         "--apply", action="store_true",
         help="Actually spawn+supervise the local process. Default is dry-run.",
@@ -239,6 +252,9 @@ def main() -> int:
              "across two machines; --apply implies staying up already.",
     )
     args = parser.parse_args()
+    args.model = config.resolve_target_model(
+        args.model, Path(args.config) if args.config else None
+    )
 
     me = identity.load_or_create()
     print(f"[caravan-agent] node_id={me['node_id']} hostname={me['hostname']}")
