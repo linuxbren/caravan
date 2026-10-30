@@ -56,7 +56,7 @@ const int agent_port = 8091;
 // Best-effort node-identity match, matching agent/caravan_agent.py's
 // _normalize_hostname: strips a trailing ".local"/domain suffix and
 // lowercases, so this node's own mDNS advertisement (e.g.
-// "prf-hays-exo01-2.local") is recognized as itself and not treated as
+// "node-a-2.local") is recognized as itself and not treated as
 // a peer -- the exact bug the Python port hit first (see docs/LOG.md,
 // "mDNS fallback").
 std::string normalize_hostname(const std::string & hostname) {

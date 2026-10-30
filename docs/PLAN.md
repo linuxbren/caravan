@@ -24,8 +24,18 @@ worthwhile:
    [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), worked out in the
    2026-09-06 design session logged in `docs/LOG.md`.
 
-We are currently starting **stage 3, phase 1** (the orchestration/robustness
-agent — see ARCHITECTURE.md).
+**Where things stand (2026-10-30):** stage 3, phase 1 is built and has run
+under launchd on both nodes (Python agent with automatic Thunderbolt path
+selection). Phase 2's shard cache turned out to be native
+(`rpc-server --cache`). Work continues on:
+
+- a C++ single binary that links llama.cpp directly (`cpp/`, experimental);
+- proxy and llama-server performance (LRU slots, fewer disk saves, 8-bit
+  KV cache, explicit flash attention);
+- packaging for anyone other than the original two-Mac setup. Not started:
+  the launchd plists still carry machine-specific paths.
+
+Caravan is public but unreleased.
 
 ## Known risks going in
 

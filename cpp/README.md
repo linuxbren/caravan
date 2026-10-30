@@ -37,8 +37,9 @@ Real, tested (not just compiles):
   `agent/discovery/tailscale.py`. Deliberately *not* an independent
   trust source yet -- no health server exists here to verify a Tailscale
   peer is really running Caravan, so it's only used to upgrade the
-  address of a peer mDNS already validated (matches
-  `docs/ARCHITECTURE.md`'s stated Tailscale-over-LAN preference).
+  address of a peer mDNS already validated (the Tailscale-over-LAN
+  preference the Python agent had before it gained Thunderbolt fast-path
+  selection).
   Verified live against a real, messy tailnet (an unrelated machine, an
   offline entry, the real peer): correctly upgraded the real peer's
   address to its Tailscale IP and correctly ignored the unrelated
@@ -52,7 +53,10 @@ Real, tested (not just compiles):
 
 **Not done yet** -- everything else `agent/` already does in Python:
 the `/health` + `fast_paths` server, `--cache` for the tail role,
-persistent node identity, crash supervision.
+persistent node identity, crash supervision, configurable settings. The
+target model is hardcoded (`target_model = "muse-glimmer"` in
+`main.cpp`), so `--model` / `CARAVAN_MODEL` / `~/.caravan/config.json`
+and the llama-server tuning settings don't apply to this binary yet.
 
 Ollama model detection (`ollama_store::has_model`/`resolve_blob_path`)
 is a straight port of `agent/ollama_store.py`'s logic, using the JSON

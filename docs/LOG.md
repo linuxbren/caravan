@@ -35,8 +35,8 @@
   node-a with `--rpc`, load a real GGUF model split across both, and
   benchmark actual tok/s against what we saw with exo/MLX.
 - Created the public GitHub repo:
-  [github.com/RookiOS72/llama-shard](https://github.com/RookiOS72/llama-shard)
-  (since renamed to [github.com/RookiOS72/caravan](https://github.com/RookiOS72/caravan)).
+  `llama-shard` (since renamed to Caravan, now at
+  [github.com/linuxbren/caravan](https://github.com/linuxbren/caravan)).
   `gh` was already installed and authenticated, so no extra setup needed.
 - First build attempt on node-b failed instantly (`nohup: cmake: No such
   file or directory`) — the background SSH command didn't have Homebrew's
@@ -84,8 +84,8 @@
   ```
   MTL0: Apple M4 (18186 MiB, 18185 MiB free)
   BLAS: Accelerate (0 MiB, 0 MiB free)
-  RPC0: 192.168.1.39:50052 (18186 MiB, 18185 MiB free)
-  RPC1: 192.168.1.39:50052 (0 MiB, 0 MiB free)
+  RPC0: <node-b-lan-ip>:50052 (18186 MiB, 18185 MiB free)
+  RPC1: <node-b-lan-ip>:50052 (0 MiB, 0 MiB free)
   ```
   Note the phantom `RPC1` entry reporting 0 MiB for the same endpoint —
   this is likely what caused the original run's
@@ -262,7 +262,7 @@ is ready).
   `KeepAlive`, logs under `~/Library/Logs/llama-shard/`.
 - **`llama-server`: blocked, reverted to a plain manual process for now.**
   Every launchd-launched attempt aborts near-instantly with
-  `ggml-rpc.cpp:547: Failed to connect to 192.168.1.39:50052`, even
+  `ggml-rpc.cpp:547: Failed to connect to <node-b-lan-ip>:50052`, even
   though node-b's `rpc-server` is confirmed up and reachable (`nc -z`
   succeeds from node-a both before and during the failure). Isolated the
   cause with two tests before giving up on it:
@@ -380,7 +380,7 @@ means patching `ggml-rpc.cpp` itself (add a local on-disk tensor cache
 keyed as above, checked before accepting a buffer from the client) rather
 than something buildable purely around the existing binaries the way the
 slot-pin-proxy was. Filed as
-[issue #3](https://github.com/RookiOS72/caravan/issues/3) for
+[issue #3](https://github.com/linuxbren/caravan/issues/3) for
 whenever this is worth picking up.
 
 ### Renamed: llama-shard → Caravan
@@ -419,7 +419,7 @@ hours (crashed earlier at 19:48 on an unrelated RPC error, and being an
 unsupervised manual process, never came back). Restarting it surfaced a
 new, deterministic failure that turned out to be much more interesting
 than the crash itself: `llama-server` could not connect to node-b's RPC
-port (`192.168.1.39:50052`) *at all* when launched from this Claude Code
+port (`<node-b-lan-ip>:50052`) *at all* when launched from this Claude Code
 CLI session's process tree -- `ggml-rpc.cpp`'s raw `connect()` call
 returned `EHOSTUNREACH` 15/15 times in a row, even though `ping` and `nc
 -z` to the exact same host/port succeeded every time from the same
@@ -428,8 +428,8 @@ the same tailnet, and for whatever reason (not fully root-caused --
 Tailscale's `RouteAll`/exit-node/netfilter prefs all looked inert, no
 subnet routes are advertised) some process contexts get their LAN-IP
 connections intercepted/dropped while others don't. The fix: address
-node-b by its **Tailscale IP** (`100.90.134.95`) instead of its LAN IP
-(`192.168.1.39`) for the `--rpc` flag. Verified with a raw Python socket
+node-b by its **Tailscale IP** (`<node-b-tailscale-ip>`) instead of its LAN IP
+(`<node-b-lan-ip>`) for the `--rpc` flag. Verified with a raw Python socket
 loop -- 0/15 success on the LAN IP, 3/3 success on the Tailscale IP, from
 the identical process.
 
@@ -583,7 +583,7 @@ whatever `python3` resolves to first on PATH.
 Found a real bug the moment discovery ran against live Tailscale peers:
 without a liveness check, `tailscale status --json` returns *every*
 tailnet peer, not just Caravan nodes -- node-a's dry run discovered an
-unrelated machine (`prf-hays-mgmt`) and would have wired it into
+unrelated machine (`mgmt-host`) and would have wired it into
 `llama-server --rpc` as an RPC device had it not been caught. This is
 exactly the gap ARCHITECTURE.md's open questions flagged ("what
 health-check surface"); turned out not optional the first time this ran
@@ -1389,7 +1389,7 @@ mid-cutover. Left unfixed for now, flagged as a real follow-up.
 
 **Reverted node-a to the manual `com.caravan.llama-server` plist**
 rather than leave it running degraded. Verified restored: real `--rpc
-100.90.134.95:50052 --device MTL0,RPC0 --tensor-split 1,1` command,
+<node-b-tailscale-ip>:50052 --device MTL0,RPC0 --tensor-split 1,1` command,
 warm-cache reload, and confirmed with an actual `/completion` request
 (not just `/health`, per the lesson from node-b's crash test above) --
 `200 OK`, all 4 slots at `n_ctx: 65536`.
@@ -1476,11 +1476,11 @@ live rather than waiting for a dedicated session.
 by checking rather than assuming: `openclaw.json`'s primary model is
 now `exo/mlx-community/gemma-4-31b-it-6bit`; every `com.caravan.*`
 launchd job was gone from node-a entirely (not stopped -- absent); and
-node-b's SSH at `192.168.1.39` timed out because its LAN IP had changed
-to `192.168.1.38` (an ordinary DHCP change, unrelated to anything else
+node-b's SSH at `<node-b-lan-ip>` timed out because its LAN IP had changed
+to `<node-b-new-lan-ip>` (an ordinary DHCP change, unrelated to anything else
 -- caught via Tailscale's `status` output showing the new address in
 its "direct" connection line, since node-b's Tailscale IP itself,
-`100.90.134.95`, hadn't changed). Node-b's `rpc-server` was also found
+`<node-b-tailscale-ip>`, hadn't changed). Node-b's `rpc-server` was also found
 running from the old stale `~/Library/LaunchAgents/` copy again, without
 `--cache` -- the file had reappeared despite being deleted earlier this
 week (cause not investigated; possibly a Time Machine/local-snapshot
@@ -1611,13 +1611,13 @@ node-a: bootstrapped `com.caravan.agent` for real -- and it fell back to
 single-node again, but for a *new* reason this time, not the already-
 known Tailscale-CLI-under-launchd issue (which is still present and
 still logged, confirmed unrelated). The mDNS path failed too:
-`_agent_health('prf-hays-exo02.local') failed: OSError(65, 'No route to
+`_agent_health('node-b.local') failed: OSError(65, 'No route to
 host')`.
 
-Diagnosed rather than assumed: `prf-hays-exo02.local` is multi-homed --
+Diagnosed rather than assumed: `node-b.local` is multi-homed --
 `dscacheutil -q host` shows it resolves to *both* the Thunderbolt
 link-local address (`169.254.72.237`) *and* node-b's LAN address
-(`192.168.1.38`), plus several IPv6 addresses. Interactively, resolving
+(`<node-b-new-lan-ip>`), plus several IPv6 addresses. Interactively, resolving
 and connecting to that hostname happens to land on the working
 Thunderbolt address and succeeds instantly (confirmed: `ping` and a
 plain `socket.gethostbyname()` both picked `169.254.72.237` first, 0%
@@ -1641,8 +1641,8 @@ recorded `"ip"` is now always a real resolved address that actually
 answered, not the ambiguous hostname string it used to be.
 
 Verified directly against the real failure before redeploying:
-`_resolve_candidates('prf-hays-exo02.local')` returns
-`['169.254.72.237', '192.168.1.38']`, and `_agent_health_any` correctly
+`_resolve_candidates('node-b.local')` returns
+`['169.254.72.237', '<node-b-new-lan-ip>']`, and `_agent_health_any` correctly
 picks the first one. Not yet re-verified live under launchd as of this
 entry -- redeploying next.
 
@@ -1650,7 +1650,7 @@ entry -- redeploying next.
 
 Redeployed the candidate-resolution fix above and re-tested live: still
 failed, and worse than expected -- *both* resolved candidates
-(`169.254.72.237` and `192.168.1.38`) failed with `OSError(65, 'No
+(`169.254.72.237` and `<node-b-new-lan-ip>`) failed with `OSError(65, 'No
 route to host')`, including the Thunderbolt address that had just
 worked fine moments earlier in an interactive test with the identical
 code. Not a DNS ambiguity problem after all; something more fundamental
@@ -1683,7 +1683,7 @@ before redeploying live.
 ## The real limit: llama-server itself can't reach Thunderbolt under launchd, at all
 
 With the curl fix, node-a's discovery finally worked correctly end to
-end: `discovered 1 peer(s): mdns prf-hays-exo02.local 169.254.72.237`,
+end: `discovered 1 peer(s): mdns node-b.local 169.254.72.237`,
 and the agent correctly built the full sharded command with the
 Thunderbolt address selected (`--rpc 169.254.72.237:50052 --device
 MTL0,RPC0 --tensor-split 1,1`) -- the auto-select-fastest-path feature's
@@ -1710,7 +1710,7 @@ earlier tonight worked correctly here too):
    compilation while that process was up, not just a healthy-looking
    PID.
 4. Ran the identical launchd-Python-subprocess pattern again, this time
-   targeting the Tailscale IP (`100.90.134.95`) instead of Thunderbolt --
+   targeting the Tailscale IP (`<node-b-tailscale-ip>`) instead of Thunderbolt --
    succeeded. Isolates the failure to the Thunderbolt link-local address
    specifically, not "launchd grandchild processes can't make RPC
    connections" in general.
@@ -1912,7 +1912,7 @@ correctly excluded itself from selection (`normalize_hostname` -- the
 same self-discovery bug the Python port hit first, caught here before
 it ever ran for real by porting the fix at the same time as the
 feature). Built the exact same head command production long ago proved
-correct, fully automatically: `--rpc prf-hays-exo02.local:50052
+correct, fully automatically: `--rpc node-b.local:50052
 --device MTL0,RPC0 --tensor-split 1,1`. `--peer` is no longer required
 at all, just kept as a manual override.
 
@@ -1961,7 +1961,7 @@ confirmed live via `nc -zv` against the Thunderbolt address before even
 starting node-a. Started head (node-a) second: it discovered *both*
 itself and node-b via mDNS, correctly excluded itself, and built the
 full sharded `llama_server()` argv automatically -- `--rpc
-prf-hays-exo02.local:50052 --device MTL0,RPC0 --tensor-split 1,1`, the
+node-b.local:50052 --device MTL0,RPC0 --tensor-split 1,1`, the
 exact production shape, entirely self-organized.
 
 **It worked completely.** Loaded in under 30 seconds -- genuinely
@@ -2012,7 +2012,7 @@ Tailscale in as an *address upgrade* for peers mDNS already validated
 (matches `ARCHITECTURE.md`'s stated Tailscale-over-LAN preference)
 rather than as an independent discovery source. Verified this is the
 right call live: real tailnet output included an unrelated machine
-(`prf-hays-mgmt`, the same one that showed up as a false positive in the
+(`mgmt-host`, the same one that showed up as a false positive in the
 original Python agent testing) -- correctly *not* trusted, since it was
 never found via mDNS.
 
@@ -2073,3 +2073,101 @@ Two gaps found while auditing node-a's disk:
 
 Tests: `tests/` (stdlib unittest, temp dirs), passing on 3.13 and 3.9.
 
+## 2026-10-30 (later): performance pass on the proxy and llama-server flags
+
+Thirteen items from a performance review, all configurable with the
+usual precedence (flag > env > `~/.caravan/config.json` > default).
+Nothing was restarted; the running services pick these up only on their
+next (re)start / re-bootstrap.
+
+Proxy (`proxy/slot_pin_proxy.py`):
+
+1. **Fewer slot saves.** A ~1 GB save after every reply, inside the FIFO
+   gate, delayed the next queued request. Now skipped when `GET /slots`
+   shows the slot's token count unchanged since that session's last
+   save/restore; `--slot-save-every N` thins saves to every N turns
+   (default 1 = old behavior); optional idle saver
+   (`--slot-idle-save-seconds`, off by default, ~60 suggested) moves
+   saves off the response path and takes the FIFO gate so it can't race
+   a request/restore. Unsaved sessions are flushed before eviction.
+2. **Streaming.** `read(4096)` waited for 4 KB per write, making SSE
+   bursty; now `read1()`. Framing fix: http.client de-chunks upstream
+   and the proxy stripped `Transfer-Encoding`, so streamed responses went
+   out on a keep-alive connection with no length and no chunking. Now
+   re-chunked for HTTP/1.1 clients (keeps keep-alive), `Connection:
+   close` for HTTP/1.0, Content-Length passed through when upstream sent
+   one.
+3. **Prompt-style fingerprints.** `/completion` and `/v1/completions`
+   previously fell back to a whole-body hash: a new fingerprint, slot
+   and disk save on every call. Now: hash of the first 2048 chars of the
+   prompt (configurable); shorter prompts are unpinned one-shots, never
+   saved. Chose prefix fingerprinting over always skipping because a
+   growing raw-prompt conversation keeps its prefix and benefits from
+   the slot cache like chat does.
+7. **LRU slot assignment** instead of round-robin; state file now holds
+   occupant + last-used per slot (v2; the old format still loads).
+8. **No restore over a warm slot** (e.g. after a proxy-only restart).
+11. **Slot count** from `--n-slots` / `CARAVAN_N_SLOTS` /
+    `llama_server.n_slots` (shared with the agent).
+12. Removed the per-request `GET /slots` idle check (FIFO already
+    serializes; llama-server defers a task for a busy slot) and the TEMP
+    debug block that logged a system-prompt hash and message previews.
+
+llama-server flags (`agent/config.py`, `agent/supervisor.py`,
+`launchd/com.caravan.llama-server.plist`, new
+`agent/render_llama_plist.py`):
+
+4. `-fa on` (was llama.cpp's `auto`).
+5. `-ctk q8_0 -ctv q8_0` (half the KV memory of f16). Old slot files
+   won't restore after the switch.
+6. `--cache-ram 0` (llama.cpp default 8192 MiB; duplicate of what
+   Caravan's slot pinning + disk persistence already does, and copied
+   every idle slot on each new task). Chose 0 over 1024 since even 1 GiB
+   holds less than one full slot of q8_0 KV and gets copied into on every
+   task.
+9. Fallback `--rpc` changed from Tailscale `<node-b-tailscale-ip>:50052` to
+   node-b's Thunderbolt-bridge link-local `169.254.104.38:50052`
+   (node-a's en2: 169.254.4.161). Link-local, so it can change;
+   `render_llama_plist.py --rpc auto` derives it via discovery instead.
+10. `-ngl 999` explicit.
+13. `-b 2048 -ub 512` explicit and configurable (unchanged defaults).
+
+Not validated yet (needs a restart and a benchmark): flash attention
+across the RPC backend, q8_0 KV speed/quality on this model, and any
+`-ub` above 512. Flags were checked against the caravan-patches fork's
+`common/arg.cpp`. `cpp/main.cpp` unchanged.
+
+Tests: `tests/test_proxy_perf.py` (fake llama-server on localhost:
+streaming/framing, save skipping, save-every-N, idle saver, eviction
+flush, warm-restore skip, LRU, fingerprints) and
+`tests/test_llama_settings.py` (settings precedence/validation, command
+flags, committed plist == `build_head_command()` output, render tool).
+
+## 2026-10-30: docs overhaul for the public repo
+
+The repo moved to [github.com/linuxbren/caravan](https://github.com/linuxbren/caravan).
+It's public but unannounced, so the docs were rewritten for readers who
+weren't there:
+
+- `README.md` is now a public introduction: what Caravan is and why, the
+  hardware, measured numbers (only ones recorded in this log), how it
+  works, requirements, quick start, the full configuration reference
+  (flag > env > `~/.caravan/config.json` > default), operations, known
+  limitations, and the status (early, unreleased, experimental).
+- `docs/ARCHITECTURE.md` now describes what's actually built. Discovery
+  picks the fastest live path (Thunderbolt, then Tailscale, then LAN)
+  instead of always preferring Tailscale. The agent passes
+  `rpc-server --cache`. New sections cover the proxy and the C++ binary.
+- `agent/README.md`, `launchd/README.md` and `docs/PLAN.md` updated to
+  match the code. The launchd README now covers the agent plist and the
+  Local Network permission, and notes that `CARAVAN_PINNED_SLOT` in the
+  proxy plist is ignored.
+- Personal details removed from docs and code comments: LAN and
+  Tailscale IP addresses and machine hostnames in this log are now
+  placeholders (`<node-b-lan-ip>`, `<node-b-tailscale-ip>`, `node-b`,
+  `mgmt-host`); old repo URLs point at the new location. Thunderbolt
+  link-local (169.254.x.x) addresses are kept, since they're
+  self-assigned and only meaningful on the cable. Still machine-specific:
+  absolute `/Users/...` paths in the launchd plists and the
+  `scripts/restart-rpc-server.sh` defaults (override with
+  `CARAVAN_NODE_B_HOST` / `CARAVAN_NODE_B_USER`).

@@ -1,22 +1,37 @@
 # launchd services
 
-Supervises the three plain background processes this project depends on, so
-they survive a crash or reboot instead of needing to be started by hand.
+Keeps Caravan's background processes running across crashes and reboots.
 See [docs/PLAN.md](../docs/PLAN.md) (stage 2) and
-[GitHub issue #1](https://github.com/RookiOS72/caravan/issues/1).
+[GitHub issue #1](https://github.com/linuxbren/caravan/issues/1).
+
+There are two ways to run the model processes. Use one or the other on a
+node, never both:
+
+- **Agent (recommended):** `com.caravan.agent.plist` on every node. The
+  agent works out its role and spawns `llama-server` or `rpc-server
+  --cache` itself. Spawning `llama-server` from the agent's Python also
+  avoids macOS's Local Network permission problem; see "Local Network
+  permission" below.
+- **Manual per role:** `com.caravan.llama-server.plist` on the head and
+  `com.caravan.rpc-server.plist` on the tail.
+
+The proxy plist is needed on the head in both cases.
 
 | plist | machine | what |
 |---|---|---|
-| `com.caravan.llama-server.plist` | node-a | the sharded `llama-server` |
+| `com.caravan.agent.plist` | every node | `agent/caravan_agent.py --apply` (Homebrew Python 3.10+) |
+| `com.caravan.llama-server.plist` | node-a (manual mode) | the sharded `llama-server` |
+| `com.caravan.rpc-server.plist` | node-b (manual mode) | `ggml-rpc-server --cache` |
 | `com.caravan.slot-pin-proxy.plist` | node-a | `proxy/slot_pin_proxy.py` |
-| `com.caravan.rpc-server.plist` | node-b | `ggml-rpc-server` |
 
 All are user-level LaunchAgents (not LaunchDaemons) -- they run in the
 logged-in user's session, matching how openclaw's own gateway is set up.
-Paths inside the plists are absolute and specific to this machine pair
-(both currently have user `brenden` at `/Users/brenden`); there's no
-templating since this project isn't at the "package it for other people"
-stage yet (see PLAN.md stage 3).
+Paths inside the plists are absolute and specific to the original machine
+pair (the same user name and home directory on both). launchd doesn't
+expand `~`, so **edit the `/Users/...` paths to match your home
+directory** before bootstrapping. Nothing is templated yet (see PLAN.md
+stage 3). Only `com.caravan.llama-server.plist` can be generated, with
+`agent/render_llama_plist.py` (below).
 
 Logs go to `~/Library/Logs/caravan/*.log` on each machine.
 
@@ -27,7 +42,16 @@ truth that could silently drift; the repo path is now the only one that
 matters on both nodes. Clone/place the repo at the same path
 (`~/dev/caravan`) on each machine, or adjust the paths below accordingly.
 
-## Install (node-a: llama-server + slot-pin-proxy)
+## Install with the agent (every node)
+
+```sh
+mkdir -p ~/Library/Logs/caravan
+launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.agent.plist
+# head only:
+launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.slot-pin-proxy.plist
+```
+
+## Install by hand (node-a: llama-server + slot-pin-proxy)
 
 ```sh
 mkdir -p ~/Library/Logs/caravan
@@ -35,12 +59,12 @@ launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.llama-server.
 launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.slot-pin-proxy.plist
 ```
 
-## Install (node-b: rpc-server)
+## Install by hand (node-b: rpc-server)
 
 ```sh
-ssh brenden@<node-b-ip> 'mkdir -p ~/Library/Logs/caravan'
+ssh <user>@<node-b-ip> 'mkdir -p ~/Library/Logs/caravan'
 # repo must already be checked out at ~/dev/caravan on node-b
-ssh brenden@<node-b-ip> 'launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.rpc-server.plist'
+ssh <user>@<node-b-ip> 'launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.rpc-server.plist'
 ```
 
 ## Check status / logs
@@ -67,9 +91,19 @@ plist), a plain kickstart is enough:
 launchctl kickstart -k gui/$(id -u)/com.caravan.<name>
 ```
 
-See the main [README's Usage section](../README.md#usage) for
-machine/service specifics and restart caveats (e.g. never restart
-`rpc-server` while `llama-server` is mid-load).
+See the main [README's Operations section](../README.md#operations) for
+restart caveats (for example, never restart `rpc-server` while
+`llama-server` is loading the model; restart the head after the tail).
+
+## Local Network permission (macOS)
+
+macOS blocks LAN connections from processes that don't have the "Local
+Network" privacy permission. A `llama-server` started directly by launchd
+can't be granted it, so it fails to reach a tail on a LAN or Thunderbolt
+address (Tailscale addresses aren't affected). The agent's Python can be
+granted the permission, and the `llama-server` it spawns inherits it. This
+is one reason the agent is the recommended setup. Background: docs/LOG.md,
+"The actual root cause".
 
 ## Switching the model
 
@@ -82,19 +116,61 @@ a plist" above):
 ```sh
 cd ~/dev/caravan
 python3 agent/ollama_store.py --list              # what's pulled locally
-python3 agent/ollama_store.py qwen3:30b-a3b       # -> /Users/brenden/.ollama/models/blobs/sha256-...
+python3 agent/ollama_store.py qwen3:30b-a3b       # -> ~/.ollama/models/blobs/sha256-...
 # with no argument it resolves the configured model
 # (--model > $CARAVAN_MODEL > "model" in ~/.caravan/config.json > muse-glimmer)
 ```
 
-`caravan_agent.py` (the eventual replacement for these plists) needs no
+`caravan_agent.py` needs no
 plist edit -- it takes `--model` / `CARAVAN_MODEL` / the config file
 directly and resolves the blob itself.
 
+## Regenerating the llama-server plist (flags, RPC address, model)
+
+As of 2026-10-30 the plist passes `-ngl 999 -fa on -ctk q8_0 -ctv q8_0
+--cache-ram 0 -b 2048 -ub 512` explicitly (see the main README's
+[llama-server settings](../README.md#llama-server-agent-render-tool) for
+why), and its `--rpc` points at node-b's Thunderbolt Bridge link-local
+address (`169.254.x.x:50052`) instead of a Tailscale address.
+
+**Link-local caveat:** `169.254.x.x` addresses are self-assigned by each
+Mac and can change (re-cabling, interface reset, macOS update). If
+llama-server starts failing to reach RPC0, check node-b's
+`ipconfig getifaddr en2` (or whichever bridge interface it is). Better:
+derive it instead of hand-editing --
+
+```sh
+cd ~/dev/caravan
+python3 agent/render_llama_plist.py --model-path <blob> --rpc auto     # print, review
+python3 agent/render_llama_plist.py --model-path <blob> --rpc auto \
+    --output launchd/com.caravan.llama-server.plist
+git diff launchd/com.caravan.llama-server.plist
+```
+
+`--rpc auto` runs caravan-agent's peer discovery (Tailscale + mDNS,
+upgraded to the Thunderbolt path when it answers) -- it needs
+caravan-agent's health endpoint running on node-b. Otherwise pass
+`--rpc host:port`, or set `CARAVAN_RPC_ADDR` / `"llama_server": {"rpc":
+...}`. Every tuning flag (`--n-slots`, `--ubatch-size`, ...) is accepted
+too, and the plist is rendered by the same `build_head_command()` the
+agent uses, so they can't drift. The tool never touches launchd or
+`~/Library/LaunchAgents`; after writing the file, re-bootstrap as in
+"Restart after editing a plist" above. Note that changing `-ctk/-ctv`
+makes existing disk slot files unrestorable (they're reprocessed cold
+once and re-saved).
+
+If you change the slot count, change it for both: `--n-slots` here and
+`CARAVAN_N_SLOTS` in `com.caravan.slot-pin-proxy.plist`'s
+`EnvironmentVariables` -- or set `"llama_server": {"n_slots": N}` in
+`~/.caravan/config.json`, which both read.
+
 ## Slot cleanup settings for the proxy
 
-`slot_pin_proxy.py` now cleans up stale disk KV slot files on startup and
-every 6 hours (see the main README, "Configuration"). To change that
+`slot_pin_proxy.py` cleans up stale disk KV slot files on startup and
+every 6 hours (see the main README, "Configuration").
+
+`com.caravan.slot-pin-proxy.plist` also sets `CARAVAN_PINNED_SLOT`. That's
+a leftover from the single-pinned-slot design; current code ignores it. To change that
 under launchd, add to `com.caravan.slot-pin-proxy.plist`'s
 `EnvironmentVariables` e.g.:
 
