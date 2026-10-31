@@ -1,4 +1,6 @@
-"""Starting mlx_lm.server for an MLX model (2026-10-30, MLX step a).
+"""Starting the MLX server for an MLX model (2026-10-30 step a: mlx_lm.server;
+2026-10-31 step b: the Caravan MLX worker, agent/mlx_worker.py, is the
+default -- mlx.server / CARAVAN_MLX_SERVER = "mlx_lm" for the old one).
 
 The proxy (proxy/slot_pin_proxy.py + proxy/backends.py) routes requests
 whose model is an MLX id to an mlx_lm.server on this Mini; this module is

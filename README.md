@@ -274,21 +274,30 @@ Other keys are under `"proxy"`.
 | -- | `CARAVAN_PROXY_STATE_FILE` | -- | `~/.caravan/proxy/session_slots.json` | slot occupancy |
 | -- | `CARAVAN_SLOT_SAVE_DIR` | -- | `~/.caravan/llama-server/slots` | must match `--slot-save-path` |
 
-MLX backend (since 2026-10-30, step a). Completions whose `model` is an
-MLX id go to an `mlx_lm.server` on the same Mini; everything else still
-goes to llama-server. Same FIFO, same session fingerprint, but no slot:
-the log says `backend=mlx … cache=mlx-noop` (MLX prompt-cache persistence
-is step b, see `proxy/backends.py`). Keys are under `"mlx"`.
+MLX backend (since 2026-10-30; step b 2026-10-31). Completions whose
+`model` is an MLX id go to the Caravan MLX worker (`agent/mlx_worker.py`)
+on the same Mini; everything else still goes to llama-server. Same FIFO
+and the same session fingerprint (sent as `X-Caravan-Session`), but no
+slot. Each session gets its own MLX prompt cache: kept in memory between
+messages, saved to `~/.caravan/mlx/prompt-cache/<fingerprint>.safetensors`
+after replies (`save_every_n_turns`) and loaded back on the first message
+after a restart. The log says `backend=mlx … cache=mlx-restored|mlx-warm|mlx-miss`.
+`slot_cleanup` ages out these files like slot files. Set `mlx.server` /
+`CARAVAN_MLX_SERVER` to `mlx_lm` to run plain `mlx_lm.server` instead
+(step a: no reuse for Gemma 4 / GPT-OSS, no saves, `cache=mlx-noop`).
+Keys are under `"mlx"`.
 
 | flag | env | config key | default | meaning |
 |---|---|---|---|---|
-| `--mlx-host` / `--mlx-port` | `CARAVAN_MLX_HOST` / `CARAVAN_MLX_PORT` | `mlx.host` / `mlx.port` | `127.0.0.1` / `8092` | mlx_lm.server |
+| `--mlx-host` / `--mlx-port` | `CARAVAN_MLX_HOST` / `CARAVAN_MLX_PORT` | `mlx.host` / `mlx.port` | `127.0.0.1` / `8092` | MLX worker |
 | `--mlx-prefixes` | `CARAVAN_MLX_PREFIXES` | `mlx.model_prefixes` | `mlx-community/` | model ids routed to MLX |
 | -- | -- | `mlx.models` | `{}` | explicit `{"alias-or-id": "/local/dir"}` (also routed to MLX) |
 | -- | `CARAVAN_MLX_MODEL_DIRS` | `mlx.model_dirs` | `~/.exo/models, ~/.caravan/models/mlx` | where `org/name` is looked up as `org--name/` |
 | `--no-mlx` | `CARAVAN_MLX_ENABLED=0` | `mlx.enabled` | on | route everything to llama-server |
+| -- | `CARAVAN_MLX_SERVER` | `mlx.server` | `caravan` | `caravan` (worker) or `mlx_lm` (plain mlx_lm.server) |
+| -- | `CARAVAN_MLX_CACHE_DIR` | `mlx.cache_dir` | `~/.caravan/mlx/prompt-cache` | where session caches are saved (also scanned by slot_cleanup) |
 
-The request's `model` is rewritten to the local directory, so mlx_lm never
+The request's `model` is rewritten to the local directory, so MLX never
 downloads anything. To start the server: `caravan_agent.py --model
 mlx-community/<name> --apply` (role MLX), or render a launchd job with
 `python3 agent/render_mlx_plist.py mlx-community/<name>` (writes
@@ -297,10 +306,23 @@ mlx-community/<name> --apply` (role MLX), or render a launchd job with
 `~/.caravan/venvs/mlx/bin/python` (`python3 -m venv ~/.caravan/venvs/mlx &&
 ~/.caravan/venvs/mlx/bin/pip install mlx-lm`).
 
-Known limits with mlx-lm 0.32.2 on a 24 GB Mini (measured 2026-10-30, see docs/LOG.md):
-- Qwen3-30B-A3B 4-bit needs `mlx.extra_args` such as `["--prompt-cache-size", "1", "--prompt-cache-bytes", "536870912", "--prefill-step-size", "512"]`. The default prompt cache keeps 10 sequences on the GPU and runs out of Metal memory.
-- GPT-OSS replies come back with raw harmony markup (`<|channel|>analysis…`) in `content`. Clients must send back only the final channel, or mlx_lm fails the next turn.
-- Gemma 4 and GPT-OSS (sliding-window models) got no in-memory reuse between chat turns. Qwen did (0.44 s turn 2).
+What the worker does (details in the docstring of `agent/mlx_worker.py`):
+it runs the prompt itself up to the last token, snapshots the
+sliding-window layers there, generates, then rewinds to that point, so the
+next message only reads what's new. GPT-OSS replies are parsed (harmony
+format): clean `content`, reasoning in `reasoning_content` (and
+`reasoning`), the way llama-server returns them; reasoning fields that a
+client sends back are not rendered, so the history still matches the
+cache. Worker flags (pass with `mlx.extra_args`): `--prompt-cache-size`
+(sessions in memory, 4), `--prompt-cache-bytes` (2 GiB),
+`--prefill-step-size` (2048), `--kv-bits 4|8` (quantized cache for
+full-attention layers), `--no-persist`, `--cache-limit-gb`.
+
+Measured 2026-10-31 on a 24 GB Mini (mlx-lm 0.32.2, see docs/LOG.md):
+- Turn 2 of a 4k chat: GPT-OSS 9.2 → 0.50 s, Gemma 4 10.8 → 0.49 s, Qwen3 0.44 → 0.56 s. 16k chat: GPT-OSS 37.3 → 0.59 s, Gemma 4 55.1 → 0.72 s.
+- First message after a restart (4k): 12.7 / 16.0 / 16.0 s → 0.52 / 0.64 / 0.59 s. Save files: GPT-OSS 109 MB (4k) / 412 MB (16k), Gemma 4 299 / 573 MB, Qwen3 433 MB (4k).
+- Qwen3-30B-A3B 4-bit still needs `["--prompt-cache-size", "1", "--prompt-cache-bytes", "536870912", "--prefill-step-size", "512"]`, and a 16k chat doesn't fit on MLX at all (Metal out of memory, same with mlx_lm.server and with `--kv-bits 8`). Use the GGUF on llama-server for long Qwen chats.
+- The worker loads eagerly and warms up, so it takes 6–9 s to start (mlx_lm.server: under 2 s, then pays it on the first message).
 
 How the proxy behaves:
 

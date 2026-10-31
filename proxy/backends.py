@@ -6,10 +6,13 @@ The proxy is the one front door. Each completion request is routed by its
   * "llama" -- llama-server (GGUF). Everything the proxy did before:
     per-session slot pinning (id_slot), FIFO serialization, disk slot
     save/restore. This is the default for anything not matched below.
-  * "mlx"   -- an `mlx_lm.server` on this Mini (MLX safetensors models).
-    Same FIFO and the same per-session fingerprint, but no id_slot and
-    no disk save/restore yet: both are logged as explicit no-ops
-    ("cache=mlx-noop") so nobody mistakes it for working persistence.
+  * "mlx"   -- the Caravan MLX worker (agent/mlx_worker.py, step b,
+    2026-10-31) on this Mini (MLX safetensors models). Same FIFO and the
+    same per-session fingerprint (sent as X-Caravan-Session), no id_slot;
+    restore before a session's first turn and save after replies go to
+    POST /caravan/cache/{restore,save}. A plain mlx_lm.server upstream
+    (mlx.server = "mlx_lm", step a) 404s those calls, logged as
+    "cache=mlx-noop" so nobody mistakes it for working persistence.
 
 Which models are MLX (precedence flag > env > ~/.caravan/config.json > default):
 
@@ -31,7 +34,7 @@ exo's own download layout), so mlx_lm.server never tries to fetch from
 Hugging Face. Non-completion requests (GET /v1/models, /slots, /health)
 still go to llama-server.
 
-Step (b), not built yet -- MLX prompt-cache persistence. Notes for it:
+Step (b), built 2026-10-31 in agent/mlx_worker.py -- the original notes:
   * mlx_lm.models.cache has make_prompt_cache / save_prompt_cache(file,
     cache, metadata) / load_prompt_cache(file, return_metadata=True);
     files are safetensors. The closed PR ml-explore/mlx-lm#1405 sketched

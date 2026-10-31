@@ -119,7 +119,13 @@ entry in the config) go to an mlx_lm.server on this Mini (default
 session fingerprint, but there's no id_slot and no disk save/restore yet
 -- logged as "cache=mlx-noop". Settings: --mlx-host / --mlx-port /
 --mlx-prefixes / --no-mlx, CARAVAN_MLX_* env vars, or the "mlx" object
-in ~/.caravan/config.json. Step (b) design notes live in backends.py.
+in ~/.caravan/config.json.
+
+2026-10-31 MLX step (b): the MLX upstream is the Caravan MLX worker
+(agent/mlx_worker.py). The proxy sends the session fingerprint as
+X-Caravan-Session, asks the worker to restore a session's cache from disk
+before its first turn, and to save it after replies (every
+save_every_n_turns); slot_cleanup ages out the .safetensors files too.
 """
 import argparse
 import contextlib

@@ -283,16 +283,21 @@ def main() -> int:
     cfg = config.load_config_file(config_path)
     mlx_s = mlx_backend.resolve(cfg)[0]
     if mlx_backend.is_mlx_model(args.model, mlx_s):
-        # MLX step (a): an MLX target runs mlx_lm.server on this Mini (no
-        # RPC peers, no slot files); the proxy routes MLX ids to it.
+        # MLX: an MLX target runs the Caravan MLX worker (step b; or
+        # mlx_lm.server with mlx.server = "mlx_lm") on this Mini, no RPC
+        # peers; the proxy routes MLX ids to it.
         try:
             cmd = mlx_backend.build_mlx_command(args.model, cfg)
         except FileNotFoundError as e:
             print(f"[caravan-agent] ERROR: {e}", file=sys.stderr)
             advertiser.terminate()
             return 1
-        print(f"[caravan-agent] role: MLX for {args.model} (mlx_lm.server on "
-              f"{mlx_s.host}:{mlx_s.port}; slot save/restore is a no-op for MLX)")
+        server = mlx_backend.resolve_server(cfg)
+        print(f"[caravan-agent] role: MLX for {args.model} ("
+              + ("Caravan MLX worker" if server == "caravan" else "mlx_lm.server")
+              + f" on {mlx_s.host}:{mlx_s.port}; "
+              + ("per-session prompt caches saved to disk)" if server == "caravan"
+                 else "no prompt-cache save/restore)"))
         print(f"[caravan-agent] would run: {' '.join(cmd)}")
         try:
             if args.apply:

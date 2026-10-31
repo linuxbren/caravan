@@ -2213,3 +2213,71 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
   - GPT-OSS returns raw harmony markup, so the bench sends back only the final channel.
   - Peak footprint: Qwen 19.0 GB, Gemma 18.6 GB, GPT-OSS 13.9 GB.
 - Step b (MLX prompt-cache save/restore) has not started. Design notes are in `proxy/backends.py`.
+
+## 2026-10-31
+
+- **MLX step b: the Caravan MLX worker** (`agent/mlx_worker.py`, branch
+  `caravan-v2-mlx-cache` off `improvements-1-3`, worktree `~/dev/caravan-v2`).
+  Why mlx-lm 0.32.2 (still the latest release) reused nothing for Gemma 4 /
+  GPT-OSS: `LRUPromptCache` stores the cache *after* generation (prompt +
+  reply tokens); the next prompt re-renders the reply differently, and a
+  wrapped `RotatingKVCache` can't be trimmed back, so every turn was cold.
+  Every hit was also a deepcopy (Qwen's OOM). The worker prefills up to the
+  last prompt token, snapshots the non-trimmable layers there, generates,
+  then rewinds; that checkpoint is what's saved
+  (`save_prompt_cache`, `<cache-dir>/<fingerprint>.safetensors`, the PR #1405
+  idea) and loaded after a restart. All mlx work runs on one thread with its
+  own stream (MLX streams are per-thread). The proxy sends
+  `X-Caravan-Session`, restores before a session's first turn and saves
+  every `save_every_n_turns`; `slot_cleanup` ages out the `.safetensors`
+  files (`mlx_dir`, archive to `archive_dir/mlx`).
+- **GPT-OSS harmony parsing in the worker**: a marker state machine
+  splits analysis/commentary (→ `reasoning_content` + `reasoning`) from the
+  final channel (→ `content`), robust to markers split across pieces.
+  Reasoning fields a client sends back are dropped before templating, so
+  the history renders to the cached tokens (unit-tested).
+- `--kv-bits 4|8` (QuantizedKVCache for full-attention layers) added and
+  tried for Qwen3 at 16k: still Metal OOM (footprint 19.3 GB), and 4k
+  reading got 15% slower (380 → 325 tok/s). Off by default.
+- Bench: `bench/v2/` (EXO1 `~/.caravan/bench-2026-10-31/v2/`), test ports
+  8190/8192, exo paused. v1 = `improvements-1-3` + mlx_lm.server.
+
+  | MLX, v1 → v2 | Qwen3 4-bit | Gemma 4 4-bit | GPT-OSS MXFP4-Q8 |
+  |---|---|---|---|
+  | turn 2, 4k chat (wait for first word) | 0.44 → 0.56 s | 10.76 → 0.49 s | 9.16 → 0.50 s |
+  | tokens re-read on turn 2 (4k) | (reused) → 46 | 4,034 → 36 | 4,041 → 32 |
+  | turn 2, 16k chat | OOM → OOM | 55.1 → 0.72 s | 37.3 → 0.59 s |
+  | after restart, 4k | 16.0 → 0.59 s | 16.0 → 0.64 s | 12.7 → 0.52 s |
+  | after restart, 16k | OOM → OOM | 60.3 → 0.84 s | 40.7 → 0.59 s |
+  | writing tg128 (tok/s) | 47.0 → 49.1 | 39.8 → 42.2 | 35.3 → 37.4 |
+  | reading pp512 / pp4096 | 439 / 396 → 438 / 380 | 427 / 384 → 397 / 393 | 434 / 441 → 433 / 442 |
+  | peak footprint (speed tests) | 18.97 → 18.71 GB | 18.6 → 18.41 GB | 13.93 → 13.72 GB |
+  | peak footprint (16k chat) | 19.41 (OOM) → 19.38 (OOM) | 18.28 → 17.67 GB | 14.25 → 14.09 GB |
+  | save file 4k / 16k | none → 433 MB / – | none → 299 / 573 MB | none → 109 / 412 MB |
+  | quality | 3/3 → 3/3 | 3/3 → 3/3 | 3/3 → 3/3, content clean |
+
+  GPT-OSS content in v1 carried `<|channel|>analysis…` markup; in v2
+  `markup_in_content` is false on every turn, and a 4th turn whose history
+  echoes `reasoning_content` back still hits (24 tokens re-read). Restore
+  itself takes 0.01–0.13 s (warm page cache); the worker takes 6–9 s to
+  start (eager load + warm-up) vs 1.6 s for mlx_lm.server.
+- **llama.cpp path regression check** (v2 proxy, rebased build, same commands
+  as v1's s-* / r-*-new): no regression.
+
+  | llama.cpp path, v1 → v2 | Qwen3 | Gemma 4 | GPT-OSS |
+  |---|---|---|---|
+  | reading pp512 (tok/s) | 401.9 → 438.1 | 399.9 → 408.3 | 436.8 → 437.4 |
+  | reading pp4096 (tok/s) | 356.4 → 366.5 | 379.7 → 404.9 | 453.6 → 453.9 |
+  | writing tg128 (tok/s) | 42.5 → 43.0 | 36.7 → 37.1 | 37.1 → 37.3 |
+  | 16k chat after restart (s) | 1.103 → 1.102 | 0.93 → 0.913 | 0.652 → 0.65 |
+
+  The `~/.caravan/models/gpt-oss-20b.gguf` symlink points at a removed
+  Ollama blob; `suite_v2_llama.sh` now defaults to the HF blob v1 used
+  (`GPT_OSS_GGUF` overrides). Symlink left as is.
+- **Limits still open (MLX):** Qwen3 30B at 16k doesn't fit in either
+  version (16.4 GB weights + ~3.2 GB KV; kv8 doesn't save it); the worker
+  starts 6–9 s vs 1.6 s; Gemma short-prompt reading is ~7% slower;
+  every one-turn request also writes a small save file (cleanup ages them
+  out); restore was measured on a warm disk, not a cold one.
+- Next: two-Mac MLX split, then per-model profiles, proxy overhead,
+  memory headroom, cold-disk restore.
