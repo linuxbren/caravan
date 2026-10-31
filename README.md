@@ -9,6 +9,15 @@ OpenAI-compatible assistant:
 
 - a session-pinning proxy that keeps each conversation's KV cache warm in
   its own llama-server slot and saves/restores it to disk;
+- an **MLX backend**: MLX models (`mlx-community/…`) go to Caravan's own
+  MLX worker on the same Mac, which keeps each conversation's cache between
+  messages and holds the model in GPU memory from startup;
+- **chat save/restore on both backends**: a conversation picks up where it
+  left off after a restart (llama.cpp slot files and MLX session caches);
+- a **per-Mac cap on saved chats** (count and GB, least recently used
+  first, never an active session) on top of the 30-day age cleanup;
+- an **automatic KV cache type**: full precision (f16) when it fits in GPU
+  memory, else 8-bit;
 - an agent that works out on each machine whether it should be the
   **head** (serves the model) or a **tail** (lends its GPU over RPC), and
   supervises the right process;
@@ -21,6 +30,19 @@ OpenAI-compatible assistant:
 > setup. Expect rough edges -- see [Limitations](#limitations-and-known-issues).
 
 *(Formerly "llama-shard"; see [docs/LOG.md](docs/LOG.md).)*
+
+## Status & roadmap
+
+Current version: **v2.1** (branch `caravan-v2.1`, 2026-10-31). v1 brought a
+rebased llama.cpp, MLX models through the proxy, and the automatic KV cache.
+v2 brought MLX chats kept and saved per session, clean GPT-OSS replies and
+the saved-chat cap. v2.1 holds the MLX wired limit from startup.
+
+- [docs/ROADMAP.md](docs/ROADMAP.md): what each version did, with its
+  measured numbers; what's next, in order; known limits; how benchmarks
+  are run.
+- [docs/LOG.md](docs/LOG.md): the dated engineering log with every
+  measurement and dead end.
 
 ## Why
 
@@ -474,5 +496,6 @@ that slots are idle and does the stop/restart/start sequence (set
 | `launchd/` | launchd plists and how to install them |
 | `cpp/` | experimental single-binary head/tail |
 | `scripts/` | operational scripts (safe tail restart) |
+| `bench/` | benchmark scripts (`improvements/` v1, `v2/`, `v2.1/` same-session A/B) |
 | `tests/` | stdlib `unittest` suite: `python3 -m unittest discover -s tests -v` |
-| `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md), [PLAN.md](docs/PLAN.md), and [LOG.md](docs/LOG.md), a dated engineering log with all the measurements and dead ends |
+| `docs/` | [ROADMAP.md](docs/ROADMAP.md) (done / next / limits), [ARCHITECTURE.md](docs/ARCHITECTURE.md), [PLAN.md](docs/PLAN.md), and [LOG.md](docs/LOG.md), a dated engineering log with all the measurements and dead ends |

@@ -2172,7 +2172,7 @@ weren't there:
   `scripts/restart-rpc-server.sh` defaults (override with
   `CARAVAN_NODE_B_HOST` / `CARAVAN_NODE_B_USER`).
 
-## 2026-10-30 (evening): improvements 1–3 measured (rebased llama.cpp, MLX step a, auto KV)
+## 2026-10-30 (evening, v1): improvements 1–3 measured (rebased llama.cpp, MLX step a, auto KV)
 
 All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and the same three models as the runtime compare. Scripts are in `bench/improvements/`.
 
@@ -2214,7 +2214,7 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
   - Peak footprint: Qwen 19.0 GB, Gemma 18.6 GB, GPT-OSS 13.9 GB.
 - Step b (MLX prompt-cache save/restore) has not started. Design notes are in `proxy/backends.py`.
 
-## 2026-10-31
+## 2026-10-31 (v2): MLX per-session caches saved to disk, GPT-OSS reasoning cleanup, saved-chat cap
 
 - **MLX step b: the Caravan MLX worker** (`agent/mlx_worker.py`, branch
   `caravan-v2-mlx-cache` off `improvements-1-3`, worktree `~/dev/caravan-v2`).
@@ -2310,7 +2310,7 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
 - Next: two-Mac MLX split, then per-model profiles, proxy overhead,
   memory headroom, cold-disk restore.
 
-## 2026-10-31 (v2.1, branch caravan-v2.1)
+## 2026-10-31 (v2.1): wired limit held from startup, optional deferred first save
 
 - **Wired limit at startup.** The MLX worker now raises the Metal wired
   limit to the recommended working set once, right after load, and holds
@@ -2351,4 +2351,5 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
   415/424.
 - Restart resume (Qwen, 4k, v2.1): t1 cold 11.6 s, t2 0.72 s, restart
   9.7 s, t3 0.52 s (re-read 31 of 4377 tokens), t4 0.53 s.
-
+- Commit b9ebeb7 on `caravan-v2.1`. Version summary and roadmap:
+  [ROADMAP.md](ROADMAP.md).

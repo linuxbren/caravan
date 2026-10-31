@@ -35,6 +35,11 @@ selection). Phase 2's shard cache turned out to be native
 - packaging for anyone other than the original two-Mac setup. Not started:
   the launchd plists still carry machine-specific paths.
 
+**Update (2026-10-31):** v1, v2 and v2.1 added a rebased llama.cpp, the
+automatic KV cache, an MLX backend with per-session chat caches saved to
+disk, and a per-Mac cap on saved chats. What's done and what's next, in
+order, is in [ROADMAP.md](ROADMAP.md).
+
 Caravan is public but unreleased.
 
 ## Known risks going in
