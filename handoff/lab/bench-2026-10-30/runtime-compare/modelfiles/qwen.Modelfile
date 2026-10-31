@@ -1,0 +1,3 @@
+FROM /Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf
+PARAMETER num_gpu 999
+PARAMETER num_ctx 8192

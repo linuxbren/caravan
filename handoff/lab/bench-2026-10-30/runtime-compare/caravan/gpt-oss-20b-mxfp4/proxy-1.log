@@ -1,0 +1,65 @@
+[slot-pin-proxy] listening on 127.0.0.1:8090, forwarding to 127.0.0.1:8080, pinning completions per-session across 2 slot(s) (LRU), FIFO-serialized; disk save every 1 turn(s)
+[slot-cleanup] automatic slot cleanup disabled (mode=off)
+[slot-pin-proxy] GET /health -> 200
+[slot-pin-proxy] "GET /health HTTP/1.1" 200 -
+[slot-pin-proxy] POST /completion -> 200 id_slot=0 ephemeral
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] POST /completion -> 200 id_slot=1 fp=af66a0a11679a9f6 cache=no-file
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 1 to disk for fingerprint af66a0a11679a9f6
+[slot-pin-proxy] POST /completion -- waited 0.0s behind 1 queued request(s)
+[slot-pin-proxy] POST /completion -> 200 id_slot=0 ephemeral
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] POST /completion -> 200 id_slot=0 ephemeral
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] POST /completion -> 200 id_slot=0 ephemeral
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] POST /completion -> 200 id_slot=0 fp=3cb39f0b447516d8 cache=no-file
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 0 to disk for fingerprint 3cb39f0b447516d8
+[slot-pin-proxy] POST /completion -- waited 0.0s behind 1 queued request(s)
+[slot-pin-proxy] POST /completion -> 200 id_slot=1 fp=76f5446b3b60d962 cache=no-file
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 1 to disk for fingerprint 76f5446b3b60d962
+[slot-pin-proxy] POST /completion -- waited 0.0s behind 1 queued request(s)
+[slot-pin-proxy] POST /completion -> 200 id_slot=0 fp=fa549b1430790507 cache=no-file
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 0 to disk for fingerprint fa549b1430790507
+[slot-pin-proxy] POST /completion -- waited 0.0s behind 1 queued request(s)
+[slot-pin-proxy] POST /completion -> 200 id_slot=1 ephemeral
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] POST /completion -> 200 id_slot=1 ephemeral
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] POST /completion -> 200 id_slot=1 ephemeral
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] POST /v1/chat/completions -> 200 id_slot=1 fp=c76991e2e6f394f2 cache=no-file
+[slot-pin-proxy] "POST /v1/chat/completions HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 1 to disk for fingerprint c76991e2e6f394f2
+[slot-pin-proxy] POST /v1/chat/completions -- waited 0.0s behind 1 queued request(s)
+[slot-pin-proxy] POST /v1/chat/completions -> 200 id_slot=0 fp=7845259d7efb6397 cache=no-file
+[slot-pin-proxy] "POST /v1/chat/completions HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 0 to disk for fingerprint 7845259d7efb6397
+[slot-pin-proxy] POST /completion -- waited 0.0s behind 1 queued request(s)
+[slot-pin-proxy] POST /completion -> 200 id_slot=1 fp=11c933df2074e157 cache=no-file
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 1 to disk for fingerprint 11c933df2074e157
+[slot-pin-proxy] POST /completion -- waited 0.0s behind 1 queued request(s)
+[slot-pin-proxy] POST /completion -> 200 id_slot=1 fp=11c933df2074e157 cache=warm
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 1 to disk for fingerprint 11c933df2074e157
+[slot-pin-proxy] POST /completion -- waited 0.1s behind 1 queued request(s)
+[slot-pin-proxy] POST /completion -> 200 id_slot=1 fp=11c933df2074e157 cache=warm
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 1 to disk for fingerprint 11c933df2074e157
+[slot-pin-proxy] POST /completion -- waited 0.1s behind 1 queued request(s)
+[slot-pin-proxy] POST /completion -> 200 id_slot=1 fp=11c933df2074e157 cache=warm
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 1 to disk for fingerprint 11c933df2074e157
+[slot-pin-proxy] POST /v1/chat/completions -- waited 0.1s behind 1 queued request(s)
+[slot-pin-proxy] POST /v1/chat/completions -> 200 id_slot=0 fp=cb58fd69b7afa5f1 cache=no-file
+[slot-pin-proxy] "POST /v1/chat/completions HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 0 to disk for fingerprint cb58fd69b7afa5f1
+[slot-pin-proxy] POST /v1/chat/completions -- waited 0.0s behind 1 queued request(s)
+[slot-pin-proxy] POST /v1/chat/completions -> 200 id_slot=0 fp=cb58fd69b7afa5f1 cache=warm
+[slot-pin-proxy] "POST /v1/chat/completions HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 0 to disk for fingerprint cb58fd69b7afa5f1

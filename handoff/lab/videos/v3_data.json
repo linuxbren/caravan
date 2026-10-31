@@ -1,0 +1,163 @@
+{
+ "TG": [
+  [
+   40.8,
+   45.4,
+   42.9,
+   49.6
+  ],
+  [
+   34.9,
+   37.6,
+   37.0,
+   41.5
+  ],
+  [
+   36.3,
+   36.7,
+   35.8,
+   37.1
+  ]
+ ],
+ "PP": [
+  [
+   336.7,
+   368.0,
+   325.4,
+   410.6
+  ],
+  [
+   357.0,
+   376.8,
+   344.5,
+   325.1
+  ],
+  [
+   429.5,
+   416.9,
+   373.6,
+   398.6
+  ]
+ ],
+ "PP16": [
+  [
+   121.7,
+   123.5,
+   123.7,
+   null
+  ],
+  [
+   206.9,
+   222.0,
+   218.8,
+   147
+  ],
+  [
+   253.0,
+   240.8,
+   247.3,
+   34
+  ]
+ ],
+ "TG16": [
+  [
+   20.0,
+   20.8,
+   21.2,
+   null
+  ],
+  [
+   26.6,
+   27.2,
+   28.1,
+   31.9
+  ],
+  [
+   28.9,
+   28.2,
+   28.6,
+   26.7
+  ]
+ ],
+ "MEM": [
+  [
+   18.7,
+   18.8,
+   19.4,
+   20.4
+  ],
+  [
+   16.3,
+   15.8,
+   15.5,
+   18.8
+  ],
+  [
+   12.9,
+   12.8,
+   12.8,
+   15.0
+  ]
+ ],
+ "RES": [
+  [
+   80.0,
+   1.01,
+   1.18
+  ],
+  [
+   55.6,
+   0.8,
+   56.1
+  ],
+  [
+   46.2,
+   0.75,
+   48.1
+  ]
+ ],
+ "LRES": [
+  79.8,
+  56.0,
+  49.1
+ ],
+ "res_xmax": 100,
+ "res_callout": "Caravan: 68\u00d7 faster (saved to disk, loaded back)",
+ "res_box": "Caravan saves the chat to disk. LocalAI keeps it only in memory, so a restart means re-reading it.",
+ "res_foot": "Restart = stop and start the server again. Caravan's save works for Qwen only so far: Gemma 4 and GPT-OSS use a different\nattention design that it can't reload yet. LocalAI's model reload (~4 s) is not counted. First-message bars are Caravan's runs.",
+ "deep_foot": "Caravan, LocalAI and llama.cpp use a memory-saving setting for long chats here. exo's Qwen3 30B crashed before this test.\nexo reading speeds are approximate. Qwen3 30B needed a single long chat slot to fit in memory.",
+ "mem_foot": "Highest memory used by each app during the tests (exo: its own peak figure). LocalAI's optional 8 GB prompt cache was switched off.",
+ "take": [
+  [
+   "caravan",
+   "Caravan picks a long Qwen chat back up in 1.2 s after a restart",
+   "LocalAI re-reads the whole 16,000-token chat: 80 s. Not yet working for Gemma 4 / GPT-OSS"
+  ],
+  [
+   "localai",
+   "LocalAI is quick and easy, but it doesn't add speed",
+   "Within a hair of Ollama: it runs llama.cpp underneath, like Caravan and Ollama"
+  ],
+  [
+   "exo",
+   "exo writes fastest on short chats, but struggles with long ones",
+   "Fastest writing on all three; slowest at reading long chats and uses the most memory"
+  ],
+  [
+   "red",
+   "Qwen3 30B barely fits on a 24 GB Mac mini",
+   "18.7\u201320.4 GB used against a ~19 GB GPU memory limit, whichever app runs it"
+  ]
+ ],
+ "caveat": "Caveats: one Mac mini, one run per setup. On the short tests Caravan used a memory-saving setting the others didn't.\nexo uses a different model format (MLX), so its models aren't byte-for-byte the same.",
+ "approx": [
+  [
+   1,
+   3
+  ],
+  [
+   2,
+   3
+  ]
+ ]
+}

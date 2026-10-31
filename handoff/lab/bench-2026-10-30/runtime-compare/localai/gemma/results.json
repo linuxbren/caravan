@@ -1,0 +1,571 @@
+{
+ "config": {
+  "short": "gemma",
+  "max_tokens": 1000,
+  "no_think": "",
+  "phases": [
+   "main",
+   "quality",
+   "d16k",
+   "resume"
+  ],
+  "yaml_main": "name: gemma-f16\nbackend: llama-cpp\ncontext_size: 8192\nf16: true\ngpu_layers: 999\nmmap: true\nflash_attention: \"on\"\ncache_type_k: f16\ncache_type_v: f16\nbatch: 2048\nparameters:\n  model: gemma-4-26B_q4_0-it.gguf\n  temperature: 0\ntemplate:\n  use_tokenizer_template: true\noptions:\n  - parallel:1\n  - ubatch:512\n  - cache_ram:0\n",
+  "yaml_16k": "name: gemma-q8-16k\nbackend: llama-cpp\ncontext_size: 18432\nf16: true\ngpu_layers: 999\nmmap: true\nflash_attention: \"on\"\ncache_type_k: q8_0\ncache_type_v: q8_0\nbatch: 2048\nparameters:\n  model: gemma-4-26B_q4_0-it.gguf\n  temperature: 0\ntemplate:\n  use_tokenizer_template: true\noptions:\n  - parallel:1\n  - ubatch:512\n  - cache_ram:0\n"
+ },
+ "start_s": 2.6,
+ "main": {
+  "tok_per_line": 24.195,
+  "warm": {
+   "name": "warm_incl_load",
+   "wall_s": 10.51,
+   "prompt_tokens": 12,
+   "completion_tokens": 1,
+   "usage_api": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+    "timing_prompt_processing": 117.448,
+    "timing_token_generation": 0.001
+   },
+   "llama_log": {
+    "task": 0,
+    "prompt_ms": 117.45,
+    "prompt_n": 12,
+    "gen_ms": 0.0,
+    "gen_n": 1
+   },
+   "prompt_ms": 117.448,
+   "gen_ms": 0.001,
+   "prompt_tps": 102.2,
+   "gen_tps": null,
+   "text": "thought"
+  },
+  "runs": {
+   "pp512": [
+    {
+     "name": "pp512_r0",
+     "wall_s": 1.55,
+     "prompt_tokens": 500,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 1229.491,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 15,
+      "prompt_ms": 1229.49,
+      "prompt_n": 500,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 1229.491,
+     "gen_ms": 0.001,
+     "prompt_tps": 406.7,
+     "gen_tps": null,
+     "text": "<|channel>"
+    },
+    {
+     "name": "pp512_r1",
+     "wall_s": 1.65,
+     "prompt_tokens": 502,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 1235.478,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 18,
+      "prompt_ms": 1235.48,
+      "prompt_n": 502,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 1235.478,
+     "gen_ms": 0.001,
+     "prompt_tps": 406.3,
+     "gen_tps": null,
+     "text": " de"
+    },
+    {
+     "name": "pp512_r2",
+     "wall_s": 1.51,
+     "prompt_tokens": 502,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 1231.034,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 21,
+      "prompt_ms": 1231.03,
+      "prompt_n": 502,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 1231.034,
+     "gen_ms": 0.001,
+     "prompt_tps": 407.8,
+     "gen_tps": null,
+     "text": " way"
+    }
+   ],
+   "pp4096": [
+    {
+     "name": "pp4096_r0",
+     "wall_s": 10.94,
+     "prompt_tokens": 4078,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 10601.804,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 24,
+      "prompt_ms": 10601.8,
+      "prompt_n": 4078,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 10601.804,
+     "gen_ms": 0.001,
+     "prompt_tps": 384.7,
+     "gen_tps": null,
+     "text": "\n"
+    },
+    {
+     "name": "pp4096_r1",
+     "wall_s": 11.11,
+     "prompt_tokens": 4079,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 10825.702,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 34,
+      "prompt_ms": 10825.7,
+      "prompt_n": 4079,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 10825.702,
+     "gen_ms": 0.001,
+     "prompt_tps": 376.8,
+     "gen_tps": null,
+     "text": "\n"
+    },
+    {
+     "name": "pp4096_r2",
+     "wall_s": 11.25,
+     "prompt_tokens": 4078,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 10966.66,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 44,
+      "prompt_ms": 10966.66,
+      "prompt_n": 4078,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 10966.66,
+     "gen_ms": 0.001,
+     "prompt_tps": 371.9,
+     "gen_tps": null,
+     "text": "\n"
+    }
+   ],
+   "tg128": [
+    {
+     "name": "tg128_r0",
+     "wall_s": 3.97,
+     "prompt_tokens": 38,
+     "completion_tokens": 128,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 263.411,
+      "timing_token_generation": 3408.343
+     },
+     "llama_log": {
+      "task": 54,
+      "prompt_ms": 263.41,
+      "prompt_n": 38,
+      "gen_ms": 3408.34,
+      "gen_n": 128
+     },
+     "prompt_ms": 263.411,
+     "gen_ms": 3408.343,
+     "prompt_tps": 144.3,
+     "gen_tps": 37.6,
+     "text": " ..., one thousand.\n\n1.  **\u041d\u0430\u0447\u0430\u043b\u043e-\u043a\u043e\u043d\u0435\u0446-\u043a\u043e\u043d\u0435\u0446-\u043a\u043e\u043d\u0435\u0446-\u043a\u043e\u043d\u0435\u0446-\u043a\u043e\u043d\u0435\u0446-\u043a\u043e\u043d\u0435\u0446-\u043a\u043e\u043d\u0435\u0446-\u043a\u043e\u043d\u0435"
+    },
+    {
+     "name": "tg128_r1",
+     "wall_s": 3.89,
+     "prompt_tokens": 35,
+     "completion_tokens": 128,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 234.408,
+      "timing_token_generation": 3388.619
+     },
+     "llama_log": {
+      "task": 184,
+      "prompt_ms": 234.41,
+      "prompt_n": 35,
+      "gen_ms": 3388.62,
+      "gen_n": 128
+     },
+     "prompt_ms": 234.408,
+     "gen_ms": 3388.619,
+     "prompt_tps": 149.3,
+     "gen_tps": 37.8,
+     "text": " ..., one thousand.\n\nWrite thes de la-la-la-la-la-la-la-la-la-la-la-la-la-la-la-"
+    },
+    {
+     "name": "tg128_r2",
+     "wall_s": 4.01,
+     "prompt_tokens": 38,
+     "completion_tokens": 128,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 258.225,
+      "timing_token_generation": 3400.866
+     },
+     "llama_log": {
+      "task": 314,
+      "prompt_ms": 258.23,
+      "prompt_n": 38,
+      "gen_ms": 3400.87,
+      "gen_n": 128
+     },
+     "prompt_ms": 258.225,
+     "gen_ms": 3400.866,
+     "prompt_tps": 147.2,
+     "gen_tps": 37.6,
+     "text": " ..., one thousand.\n\n### 1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1"
+    }
+   ]
+  },
+  "pp512": 406.7,
+  "pp512_ntok": 502,
+  "pp4096": 376.8,
+  "pp4096_ntok": 4078,
+  "tg128": 37.6
+ },
+ "quality": {
+  "short": {
+   "name": "short",
+   "ttft_s": 0.737,
+   "wall_s": 8.66,
+   "usage_api": {
+    "prompt_tokens": 78,
+    "completion_tokens": 295,
+    "total_tokens": 373,
+    "timing_prompt_processing": 394.685,
+    "timing_token_generation": 8008.767
+   },
+   "llama_log": {
+    "task": 444,
+    "prompt_ms": 394.69,
+    "prompt_n": 78,
+    "gen_ms": 8008.77,
+    "gen_n": 295
+   },
+   "prompt_tokens_processed": 78,
+   "completion_tokens": 295,
+   "prompt_ms": 394.69,
+   "gen_ms": 8008.77,
+   "gen_tps": 36.8,
+   "finish": "stop",
+   "content": "1) ORCHID-7419\n2) 391\n3) Canberra",
+   "reasoning_chars": 690,
+   "score": {
+    "code": true,
+    "mult": true,
+    "capital": true
+   }
+  },
+  "long": {
+   "name": "long",
+   "ttft_s": 21.06,
+   "wall_s": 34.67,
+   "usage_api": {
+    "prompt_tokens": 7129,
+    "completion_tokens": 437,
+    "total_tokens": 7566,
+    "timing_prompt_processing": 20558.516,
+    "timing_token_generation": 13702.171
+   },
+   "llama_log": {
+    "task": 742,
+    "prompt_ms": 20558.52,
+    "prompt_n": 7122,
+    "gen_ms": 13702.17,
+    "gen_n": 437
+   },
+   "prompt_tokens_processed": 7122,
+   "completion_tokens": 437,
+   "prompt_ms": 20558.52,
+   "gen_ms": 13702.17,
+   "gen_tps": 31.9,
+   "finish": "stop",
+   "content": "1) ORCHID-7419\n2) 391\n3) Canberra",
+   "reasoning_chars": 1207,
+   "score": {
+    "code": true,
+    "mult": true,
+    "capital": true
+   }
+  }
+ },
+ "mem_main": {
+  "peak_rss_gb": 15.76,
+  "peak_footprint_gb": 1.42,
+  "min_free_pct": 29
+ },
+ "d16k": {
+  "prime": {
+   "name": "prime_16k",
+   "wall_s": 56.72,
+   "prompt_tokens": 16601,
+   "completion_tokens": 1,
+   "usage_api": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+    "timing_prompt_processing": 56352.812,
+    "timing_token_generation": 0.001
+   },
+   "llama_log": {
+    "task": 3,
+    "prompt_ms": 56352.81,
+    "prompt_n": 16601,
+    "gen_ms": 0.0,
+    "gen_n": 1
+   },
+   "prompt_ms": 56352.812,
+   "gen_ms": 0.001,
+   "prompt_tps": 294.6,
+   "gen_tps": null,
+   "text": "<|channel>"
+  },
+  "runs": [
+   {
+    "name": "d16k_r0",
+    "wall_s": 7.68,
+    "prompt_tokens": 561,
+    "completion_tokens": 128,
+    "usage_api": {
+     "prompt_tokens": 0,
+     "completion_tokens": 0,
+     "total_tokens": 0,
+     "timing_prompt_processing": 2662.674,
+     "timing_token_generation": 4705.183
+    },
+    "llama_log": {
+     "task": 38,
+     "prompt_ms": 2662.67,
+     "prompt_n": 561,
+     "gen_ms": 4705.18,
+     "gen_n": 128
+    },
+    "prompt_ms": 2662.674,
+    "gen_ms": 4705.183,
+    "prompt_tps": 210.7,
+    "gen_tps": 27.2,
+    "text": " three, three, three, three, three, three, three, three, three, three, three, th",
+    "new_tokens_est": 561,
+    "pp_new_tps": 210.7
+   },
+   {
+    "name": "d16k_r1",
+    "wall_s": 7.56,
+    "prompt_tokens": 559,
+    "completion_tokens": 128,
+    "usage_api": {
+     "prompt_tokens": 0,
+     "completion_tokens": 0,
+     "total_tokens": 0,
+     "timing_prompt_processing": 2496.782,
+     "timing_token_generation": 4691.678
+    },
+    "llama_log": {
+     "task": 169,
+     "prompt_ms": 2496.78,
+     "prompt_n": 559,
+     "gen_ms": 4691.68,
+     "gen_n": 128
+    },
+    "prompt_ms": 2496.782,
+    "gen_ms": 4691.678,
+    "prompt_tps": 223.9,
+    "gen_tps": 27.3,
+    "text": " three, three, three, three, three, three, three, three, three, three, three, th",
+    "new_tokens_est": 559,
+    "pp_new_tps": 223.9
+   },
+   {
+    "name": "d16k_r2",
+    "wall_s": 7.51,
+    "prompt_tokens": 558,
+    "completion_tokens": 128,
+    "usage_api": {
+     "prompt_tokens": 0,
+     "completion_tokens": 0,
+     "total_tokens": 0,
+     "timing_prompt_processing": 2513.276,
+     "timing_token_generation": 4719.196
+    },
+    "llama_log": {
+     "task": 300,
+     "prompt_ms": 2513.28,
+     "prompt_n": 558,
+     "gen_ms": 4719.2,
+     "gen_n": 128
+    },
+    "prompt_ms": 2513.276,
+    "gen_ms": 4719.196,
+    "prompt_tps": 222.0,
+    "gen_tps": 27.1,
+    "text": " three, three, three, three, three, three, three, three, three, three, three, th",
+    "new_tokens_est": 558,
+    "pp_new_tps": 222.0
+   }
+  ],
+  "pp512_d16k": 222.0,
+  "tg128_d16k": 27.2,
+  "new_ntok": 559
+ },
+ "mem": {
+  "peak_rss_gb": 15.76,
+  "peak_footprint_gb": 1.42,
+  "min_free_pct": 29
+ },
+ "resume": {
+  "t1_cold": {
+   "name": "t1_cold",
+   "ttft_s": 55.783,
+   "wall_s": 59.87,
+   "usage_api": {
+    "prompt_tokens": 16256,
+    "completion_tokens": 116,
+    "total_tokens": 16372,
+    "timing_prompt_processing": 55236.933,
+    "timing_token_generation": 4196.803
+   },
+   "llama_log": {
+    "task": 434,
+    "prompt_ms": 55236.93,
+    "prompt_n": 16256,
+    "gen_ms": 4196.8,
+    "gen_n": 116
+   },
+   "prompt_tokens_processed": 16256,
+   "completion_tokens": 116,
+   "prompt_ms": 55236.93,
+   "gen_ms": 4196.8,
+   "gen_tps": 27.6,
+   "finish": "stop",
+   "content": "ORCHID-7419",
+   "reasoning_chars": 323,
+   "score": {
+    "code": true,
+    "mult": false,
+    "capital": false
+   }
+  },
+  "t2_warm_in_memory": {
+   "name": "t2_warm_in_memory",
+   "ttft_s": 1.077,
+   "wall_s": 7.95,
+   "usage_api": {
+    "prompt_tokens": 16291,
+    "completion_tokens": 192,
+    "total_tokens": 16483,
+    "timing_prompt_processing": 609.913,
+    "timing_token_generation": 6983.997
+   },
+   "llama_log": {
+    "task": 584,
+    "prompt_ms": 609.91,
+    "prompt_n": 35,
+    "gen_ms": 6984.0,
+    "gen_n": 192
+   },
+   "prompt_tokens_processed": 35,
+   "completion_tokens": 192,
+   "prompt_ms": 609.91,
+   "gen_ms": 6984.0,
+   "gen_tps": 27.5,
+   "finish": "stop",
+   "content": "391",
+   "reasoning_chars": 403,
+   "score": {
+    "code": false,
+    "mult": true,
+    "capital": false
+   }
+  },
+  "restart_s": 2.6,
+  "reload_s": 4.4,
+  "t3_resume_after_restart": {
+   "name": "t3_resume_after_restart",
+   "ttft_s": 55.966,
+   "wall_s": 57.14,
+   "usage_api": {
+    "prompt_tokens": 16317,
+    "completion_tokens": 36,
+    "total_tokens": 16353,
+    "timing_prompt_processing": 55507.596,
+    "timing_token_generation": 1289.05
+   },
+   "llama_log": {
+    "task": 3,
+    "prompt_ms": 55507.6,
+    "prompt_n": 16317,
+    "gen_ms": 1289.05,
+    "gen_n": 36
+   },
+   "prompt_tokens_processed": 16317,
+   "completion_tokens": 36,
+   "prompt_ms": 55507.6,
+   "gen_ms": 1289.05,
+   "gen_tps": 27.9,
+   "finish": "stop",
+   "content": "Canberra",
+   "reasoning_chars": 135,
+   "score": {
+    "code": false,
+    "mult": false,
+    "capital": true
+   }
+  }
+ }
+}

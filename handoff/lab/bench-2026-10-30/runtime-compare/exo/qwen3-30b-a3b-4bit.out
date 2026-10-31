@@ -1,0 +1,38 @@
+{"name": "warm", "ttft_s": 0.57, "wall_s": 0.57, "prompt_n": 9, "prompt_tps": 15.8, "gen_n": 1, "chunks": 1, "gen_tps": null}
+{"name": "calib200", "ttft_s": 12.343, "wall_s": 12.34, "prompt_n": 4702, "prompt_tps": 380.9, "gen_n": 1, "chunks": 1, "gen_tps": null}
+{"name": "calib_overhead", "ttft_s": 0.45, "wall_s": 0.45, "prompt_n": 20, "prompt_tps": 44.4, "gen_n": 1, "chunks": 1, "gen_tps": null}
+tokens/line 23.41 overhead 20
+{"name": "pp512_r0", "ttft_s": 1.597, "wall_s": 1.6, "prompt_n": 495, "prompt_tps": 309.9, "gen_n": 1, "chunks": 1, "gen_tps": null}
+{"name": "pp512_r1", "ttft_s": 1.526, "wall_s": 1.53, "prompt_n": 494, "prompt_tps": 323.8, "gen_n": 1, "chunks": 1, "gen_tps": null}
+{"name": "pp512_r2", "ttft_s": 1.546, "wall_s": 1.55, "prompt_n": 491, "prompt_tps": 317.5, "gen_n": 1, "chunks": 1, "gen_tps": null}
+{"name": "pp512_bench", "wall_s": 1.46, "prompt_n": 493, "prompt_tps": 382.5, "gen_n": 1, "gen_tps": 0.0, "peak_mem_gb": 19.86, "prefix_cache_hit": "none", "power": {"elapsed_seconds": 1.46256566606462, "nodes": [{"node_id": "12D3KooWJsP15BpLQ7RRfwW7w5BhwcqpjMeKG6hfdLziHkTRar4Y", "samples": 3, "avg_sys_power": 31.243696212768555}], "total_avg_sys_power_watts": 31.243696212768555, "total_energy_joules": 45.69595736174848}}
+{"name": "pp4096_r0", "ttft_s": 10.339, "wall_s": 10.34, "prompt_n": 4084, "prompt_tps": 395.0, "gen_n": 1, "chunks": 1, "gen_tps": null}
+{"name": "pp4096_r1", "ttft_s": 10.285, "wall_s": 10.29, "prompt_n": 4083, "prompt_tps": 397.0, "gen_n": 1, "chunks": 1, "gen_tps": null}
+{"name": "pp4096_r2", "ttft_s": 10.257, "wall_s": 10.26, "prompt_n": 4082, "prompt_tps": 398.0, "gen_n": 1, "chunks": 1, "gen_tps": null}
+{"name": "pp4096_bench", "wall_s": 10.2, "prompt_n": 4081, "prompt_tps": 410.6, "gen_n": 1, "gen_tps": 0.0, "peak_mem_gb": 20.42, "prefix_cache_hit": "none", "power": {"elapsed_seconds": 10.196443874854594, "nodes": [{"node_id": "12D3KooWJsP15BpLQ7RRfwW7w5BhwcqpjMeKG6hfdLziHkTRar4Y", "samples": 12, "avg_sys_power": 38.47357908884684}], "total_avg_sys_power_watts": 38.47357908884684, "total_energy_joules": 392.2936898442062}}
+{"name": "tg128_r0", "ttft_s": 0.709, "wall_s": 3.29, "prompt_n": 43, "prompt_tps": 60.7, "gen_n": 128, "chunks": 119, "gen_tps": 49.2}
+{"name": "tg128_r1", "ttft_s": 0.66, "wall_s": 3.21, "prompt_n": 45, "prompt_tps": 68.2, "gen_n": 128, "chunks": 120, "gen_tps": 49.7}
+{"name": "tg128_r2", "ttft_s": 0.712, "wall_s": 3.27, "prompt_n": 44, "prompt_tps": 61.8, "gen_n": 128, "chunks": 123, "gen_tps": 49.6}
+{"name": "tg128_bench", "wall_s": 3.21, "prompt_n": 43, "prompt_tps": 99.8, "gen_n": 128, "gen_tps": 49.3, "peak_mem_gb": 20.42, "prefix_cache_hit": "none", "power": {"elapsed_seconds": 3.208618249744177, "nodes": [{"node_id": "12D3KooWJsP15BpLQ7RRfwW7w5BhwcqpjMeKG6hfdLziHkTRar4Y", "samples": 5, "avg_sys_power": 27.456224060058595}], "total_avg_sys_power_watts": 27.456224060058595, "total_energy_joules": 88.09654158816917}}
+{"name": "short", "wall_s": 1.18, "usage": {"prompt_tokens": 73, "completion_tokens": 26, "total_tokens": 99, "prompt_tokens_details": {"cached_tokens": 3, "audio_tokens": 0}, "completion_tokens_details": {"reasoning_tokens": 1, "audio_tokens": 0, "accepted_prediction_tokens": 0, "rejected_prediction_tokens": 0}}, "finish": "stop", "content": "\n\n1) ORCHID-7419  \n2) 391  \n3) Canberra", "reasoning": "\n\n", "reasoning_chars": 2, "score": {"code": true, "mult": true, "capital": true}}
+Traceback (most recent call last):
+  File "/Users/brenden/.caravan/bench-2026-10-30/runtime-compare/exo_bench.py", line 85, in <module>
+    P = prompts(); res["quality"] = {k: chat(v, k) for k, v in P.items()}
+                                        ~~~~^^^^^^
+  File "/Users/brenden/.caravan/bench-2026-10-30/runtime-compare/exo_bench.py", line 55, in chat
+    t0 = time.time(); r = json.load(urllib.request.urlopen(req, timeout=3600)); dt = time.time() - t0
+                          ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py", line 298, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)

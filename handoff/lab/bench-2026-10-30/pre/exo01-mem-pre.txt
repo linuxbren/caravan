@@ -1,0 +1,16 @@
+Fri Oct 30 06:52:31 CDT 2026
+vm.swapusage: total = 5120.00M  used = 4042.50M  free = 1077.50M  (encrypted)
+System-wide memory free percentage: 36%
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                                     4095.
+Pages active:                                 283133.
+Pages inactive:                               279289.
+Pages speculative:                              3046.
+Pages throttled:                                   0.
+Pages wired down:                             136572.
+Pages purgeable:                                   4.
+692 /Applications/EXO.app/Contents/MacOS/EXO
+812 /Applications/EXO.app/Contents/Resources/exo/exo
+815 /Applications/EXO.app/Contents/Resources/exo/exo -B -S -I -c from multiprocessing.resource_tracker import main;main(7)
+881 /Applications/EXO.app/Contents/Resources/exo/_internal/macmon pipe --interval 1000
+9997 /Applications/EXO.app/Contents/Resources/exo/exo --multiprocessing-fork tracker_fd=8 pipe_handle=87

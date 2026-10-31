@@ -1,0 +1,224 @@
+{
+ "_stills": [
+  2.0,
+  9.0,
+  17.0,
+  26.0,
+  35.0,
+  44.0,
+  55.0,
+  64.0,
+  72.0
+ ],
+ "MEM": {
+  "v21": [
+   19.04,
+   17.14,
+   13.41
+  ],
+  "v3": [
+   10.49,
+   9.28,
+   7.05
+  ]
+ },
+ "TG": {
+  "v21": [
+   51.0,
+   41.3,
+   36.5
+  ],
+  "v3": [
+   29.5,
+   26.9,
+   26.1
+  ]
+ },
+ "PP4K": {
+  "v21": [
+   400.5,
+   399.1,
+   445.0
+  ],
+  "v3": [
+   332.5,
+   301.0,
+   338.1
+  ]
+ },
+ "C16K": {
+  "v21": [
+   null,
+   46.524,
+   41.386
+  ],
+  "v3": [
+   81.886,
+   61.309,
+   54.222
+  ]
+ },
+ "T2_16K": {
+  "v21": [
+   null,
+   0.419,
+   0.39
+  ],
+  "v3": [
+   0.723,
+   0.524,
+   0.491
+  ]
+ },
+ "RS4K": {
+  "v21": [
+   0.329,
+   0.462,
+   0.336
+  ],
+  "v3": [
+   0.736,
+   0.705,
+   0.5
+  ]
+ },
+ "TG_DROP": [
+  28,
+  42
+ ],
+ "COST": [
+  {
+   "whole": 19.6,
+   "front": 16.6,
+   "link": 0.72,
+   "head": 16.3
+  },
+  {
+   "whole": 24.2,
+   "front": 17.5,
+   "link": 0.78,
+   "head": 18.8
+  },
+  {
+   "whole": 27.4,
+   "front": 17.0,
+   "link": 0.89,
+   "head": 20.5
+  }
+ ],
+ "KB_MIN": 5.4,
+ "KB_MAX": 9.6,
+ "MB4K_MIN": 16.6,
+ "MB4K_MAX": 23.4,
+ "BB": [
+  {
+   "small": {
+    "label": "Qwen3 30B  4-bit",
+    "tg": 29.5,
+    "pp4k": 332.5,
+    "mem": 10.49,
+    "c16k": 81.886,
+    "q": 3
+   },
+   "big": {
+    "label": "Qwen3 30B  8-bit",
+    "tg": 20.6,
+    "pp4k": 319.6,
+    "mem": 18.12,
+    "c16k": 83.165,
+    "q": 3
+   }
+  },
+  {
+   "small": {
+    "label": "Gemma 4 26B  4-bit",
+    "tg": 26.9,
+    "pp4k": 301.0,
+    "mem": 9.28,
+    "c16k": 61.309,
+    "q": 3
+   },
+   "big": {
+    "label": "Gemma 4 26B  8-bit",
+    "tg": 18.1,
+    "pp4k": 281.6,
+    "mem": 15.58,
+    "c16k": 64.363,
+    "q": 3
+   }
+  },
+  {
+   "small": {
+    "label": "GPT-OSS 20B  MXFP4",
+    "tg": 26.1,
+    "pp4k": 338.1,
+    "mem": 7.05,
+    "c16k": 54.222,
+    "q": 3
+   },
+   "big": {
+    "label": "GPT-OSS 20B  8-bit",
+    "tg": 19.8,
+    "pp4k": 311.6,
+    "mem": 12.13,
+    "c16k": 57.524,
+    "q": 3
+   }
+  },
+  {
+   "small": {
+    "label": "Qwen3.6 35B  5-bit (extra)",
+    "tg": 25.7,
+    "pp4k": 361.6,
+    "mem": 14.33,
+    "c16k": 53.182,
+    "q": 3
+   },
+   "big": null
+  }
+ ],
+ "BB_NOTE": "8-bit versions run split on two Minis, 16,000-token chats included; none of them fits on one Mini. 3 of 3 test answers right on every model.\nGPT-OSS only comes in 20B and 120B. The smallest 120B build (2-bit, 36.6 GB) would fill both Minis with no room left for a chat,\nso it waits for a third Mini. Its bigger brother here is the same 20B at 8-bit. Qwen3.6 35B re-reads the whole chat every turn (see roadmap).",
+ "DL": [
+  {
+   "name": "Qwen3 30B 8-bit",
+   "full": 32.44,
+   "head": 16.65,
+   "front": 21.09
+  },
+  {
+   "name": "Gemma 4 26B 8-bit",
+   "full": 27.95,
+   "head": 22.75,
+   "front": 15.59
+  },
+  {
+   "name": "GPT-OSS 20B 8-bit",
+   "full": 22.23,
+   "head": 16.98,
+   "front": 15.8
+  }
+ ],
+ "DL_NOTE": "Each Mini reads the model's file index and fetches only the files holding its layers (+ settings). Files that straddle the cut go to both,\nso the saving depends on how the files are cut. Qwen3 30B 8-bit was really downloaded this way; for Gemma and GPT-OSS this is the plan\n(today Mini 1 downloaded them and copied Mini 2's files over the cable). Before: a full copy on each Mini.",
+ "TAKE": [
+  [
+   "V3",
+   "Two Minis = half the memory per Mini",
+   "Qwen3 30B: 19.0 \u2192 10.5 GB, and a 16,000-token chat now fits (it didn't on one Mini)"
+  ],
+  [
+   "BIG",
+   "Room for bigger models",
+   "8-bit Qwen3 30B, Gemma 4 26B and GPT-OSS 20B run split; none fits on one Mini"
+  ],
+  [
+   "RED",
+   "The cost: writing 28\u201342% slower",
+   "the halves take turns; the cable adds under 1 ms per token"
+  ],
+  [
+   "MUTED",
+   "Next: overlap the halves, wire in the split download",
+   "then GGUF: let the llama.cpp tail load its own part of the file"
+  ]
+ ]
+}

@@ -1,0 +1,359 @@
+{
+ "config": {
+  "model": "/Users/brenden/.caravan/models/gemma-4-26B_q4_0-it.gguf",
+  "n_slots": 2,
+  "ctx_per_slot": 18432,
+  "ubatch": 2048,
+  "batch": 2048,
+  "kv": "q8_0",
+  "fa": "on",
+  "ngl": 999,
+  "max_tokens": 1000,
+  "no_think": ""
+ },
+ "main": {
+  "tok_per_line": 24.19,
+  "runs": {
+   "pp512": [
+    {
+     "name": "pp512_r0",
+     "wall_s": 1.46,
+     "prompt_n": 502,
+     "cache_n": 0,
+     "prompt_tps": 352.1,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp512_r1",
+     "wall_s": 1.42,
+     "prompt_n": 501,
+     "cache_n": 0,
+     "prompt_tps": 353.5,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp512_r2",
+     "wall_s": 1.42,
+     "prompt_n": 501,
+     "cache_n": 0,
+     "prompt_tps": 353.1,
+     "gen_n": 1,
+     "gen_tps": null
+    }
+   ],
+   "pp4096": [
+    {
+     "name": "pp4096_r0",
+     "wall_s": 11.53,
+     "prompt_n": 4079,
+     "cache_n": 0,
+     "prompt_tps": 353.9,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp4096_r1",
+     "wall_s": 11.29,
+     "prompt_n": 4078,
+     "cache_n": 0,
+     "prompt_tps": 362.2,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp4096_r2",
+     "wall_s": 11.45,
+     "prompt_n": 4077,
+     "cache_n": 0,
+     "prompt_tps": 357.0,
+     "gen_n": 1,
+     "gen_tps": null
+    }
+   ],
+   "tg128": [
+    {
+     "name": "tg128_r0",
+     "wall_s": 4.06,
+     "prompt_n": 38,
+     "cache_n": 0,
+     "prompt_tps": 97.3,
+     "gen_n": 128,
+     "gen_tps": 34.9
+    },
+    {
+     "name": "tg128_r1",
+     "wall_s": 4.03,
+     "prompt_n": 38,
+     "cache_n": 0,
+     "prompt_tps": 101.2,
+     "gen_n": 128,
+     "gen_tps": 34.8
+    },
+    {
+     "name": "tg128_r2",
+     "wall_s": 3.98,
+     "prompt_n": 36,
+     "cache_n": 0,
+     "prompt_tps": 105.2,
+     "gen_n": 128,
+     "gen_tps": 35.0
+    }
+   ]
+  },
+  "pp512": 353.1,
+  "pp512_ntok": 501,
+  "pp4096": 357.0,
+  "pp4096_ntok": 4078,
+  "tg128": 34.9
+ },
+ "quality": {
+  "short": {
+   "name": "short",
+   "ttft_s": 0.673,
+   "wall_s": 8.39,
+   "prompt_n": 78,
+   "cache_n": 0,
+   "prompt_ms": 578.586,
+   "prompt_tps": 134.8,
+   "gen_n": 270,
+   "gen_tps": 34.5,
+   "usage": {
+    "completion_tokens": 270,
+    "prompt_tokens": 78,
+    "total_tokens": 348,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "finish": "stop",
+   "content": "1) ORCHID-7419\n2) 391\n3) Canberra",
+   "reasoning_chars": 643,
+   "score": {
+    "code": true,
+    "mult": true,
+    "capital": true
+   }
+  },
+  "long": {
+   "name": "long",
+   "ttft_s": 21.285,
+   "wall_s": 37.61,
+   "prompt_n": 7129,
+   "cache_n": 0,
+   "prompt_ms": 21167.456,
+   "prompt_tps": 336.8,
+   "gen_n": 494,
+   "gen_tps": 30.0,
+   "usage": {
+    "completion_tokens": 494,
+    "prompt_tokens": 7129,
+    "total_tokens": 7623,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "finish": "stop",
+   "content": "1) ORCHID-7419\n2) 391\n3) Canberra",
+   "reasoning_chars": 1409,
+   "score": {
+    "code": true,
+    "mult": true,
+    "capital": true
+   }
+  }
+ },
+ "d16k": {
+  "prime": {
+   "name": "prime_16k",
+   "wall_s": 56.88,
+   "prompt_n": 16601,
+   "cache_n": 0,
+   "prompt_tps": 292.2,
+   "gen_n": 1,
+   "gen_tps": null
+  },
+  "runs": [
+   {
+    "name": "d16k_r0",
+    "wall_s": 7.6,
+    "prompt_n": 559,
+    "cache_n": 16601,
+    "prompt_tps": 205.7,
+    "gen_n": 128,
+    "gen_tps": 26.4
+   },
+   {
+    "name": "d16k_r1",
+    "wall_s": 7.5,
+    "prompt_n": 552,
+    "cache_n": 16605,
+    "prompt_tps": 208.8,
+    "gen_n": 128,
+    "gen_tps": 26.6
+   },
+   {
+    "name": "d16k_r2",
+    "wall_s": 7.5,
+    "prompt_n": 549,
+    "cache_n": 16604,
+    "prompt_tps": 206.9,
+    "gen_n": 128,
+    "gen_tps": 26.7
+   }
+  ],
+  "pp512_d16k": 206.9,
+  "tg128_d16k": 26.6,
+  "new_ntok": 552
+ },
+ "mem": {
+  "peak_rss_gb": 16.33,
+  "peak_footprint_gb": 2.12,
+  "min_free_pct": 25
+ },
+ "resume": {
+  "t1_cold": {
+   "name": "t1_cold",
+   "ttft_s": 55.613,
+   "wall_s": 59.85,
+   "prompt_n": 16249,
+   "cache_n": 7,
+   "prompt_ms": 55422.369,
+   "prompt_tps": 293.2,
+   "gen_n": 116,
+   "gen_tps": 26.5,
+   "usage": {
+    "completion_tokens": 116,
+    "prompt_tokens": 16256,
+    "total_tokens": 16372,
+    "prompt_tokens_details": {
+     "cached_tokens": 7
+    }
+   },
+   "finish": "stop",
+   "content": "ORCHID-7419",
+   "reasoning_chars": 323,
+   "score": {
+    "code": true,
+    "mult": false,
+    "capital": false
+   }
+  },
+  "t2_warm_in_memory": {
+   "name": "t2_warm_in_memory",
+   "ttft_s": 0.797,
+   "wall_s": 7.69,
+   "prompt_n": 35,
+   "cache_n": 16256,
+   "prompt_ms": 585.857,
+   "prompt_tps": 59.7,
+   "gen_n": 192,
+   "gen_tps": 27.3,
+   "usage": {
+    "completion_tokens": 192,
+    "prompt_tokens": 16291,
+    "total_tokens": 16483,
+    "prompt_tokens_details": {
+     "cached_tokens": 16256
+    }
+   },
+   "finish": "stop",
+   "content": "391",
+   "reasoning_chars": 403,
+   "score": {
+    "code": false,
+    "mult": true,
+    "capital": false
+   }
+  },
+  "slot_files_after_t2": {
+   "53d6075dfcf7616d.bin": 291012148,
+   "e7a87200db413665.bin": 164139124,
+   "11c933df2074e157.bin": 299707156,
+   "7845259d7efb6397.bin": 194473588,
+   "45b284f6675a94d5.bin": 155869060,
+   "c76991e2e6f394f2.bin": 41539464,
+   "8ab07239525d8ee6.bin": 155858164,
+   "b926dfaac65b0882.bin": 155847268
+  },
+  "mem": {
+   "peak_rss_gb": 16.55,
+   "peak_footprint_gb": 2.34,
+   "min_free_pct": 26
+  },
+  "direct_save_slot0": {
+   "id_slot": 0,
+   "filename": "bench-timing-ref.bin",
+   "n_saved": 16482,
+   "n_written": 291012148,
+   "timings": {
+    "save_ms": 88.148
+   }
+  },
+  "direct_save_slot1": {
+   "id_slot": 1,
+   "filename": "bench-timing-ref1.bin",
+   "n_saved": 17280,
+   "n_written": 299707156,
+   "timings": {
+    "save_ms": 60.821
+   }
+  },
+  "restart_s": 2.1,
+  "t3_resume_after_restart": {
+   "name": "t3_resume_after_restart",
+   "ttft_s": 56.147,
+   "wall_s": 57.3,
+   "prompt_n": 16317,
+   "cache_n": 0,
+   "prompt_ms": 55916.15,
+   "prompt_tps": 291.8,
+   "gen_n": 36,
+   "gen_tps": 27.8,
+   "usage": {
+    "completion_tokens": 36,
+    "prompt_tokens": 16317,
+    "total_tokens": 16353,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "finish": "stop",
+   "content": "Canberra",
+   "reasoning_chars": 135,
+   "score": {
+    "code": false,
+    "mult": false,
+    "capital": true
+   }
+  },
+  "proxy_log_after_restart": [
+   "[slot-pin-proxy] restored slot occupancy for 2 slot(s) from /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/gemma4-26b-q4_0/session_slots.json",
+   "[slot-pin-proxy] listening on 127.0.0.1:8090, forwarding to 127.0.0.1:8080, pinning completions per-session across 2 slot(s) (LRU), FIFO-serialized; disk save every 1 turn(s)",
+   "[slot-pin-proxy] restored slot 0 from disk for fingerprint 53d6075dfcf7616d (16482 tokens)",
+   "[slot-pin-proxy] POST /v1/chat/completions -> 200 id_slot=0 fp=53d6075dfcf7616d cache=restored"
+  ],
+  "direct_restore_ref": {
+   "id_slot": 1,
+   "filename": "bench-timing-ref.bin",
+   "n_restored": 16482,
+   "n_read": 291012148,
+   "timings": {
+    "restore_ms": 113.647
+   }
+  },
+  "slot_files_end": {
+   "53d6075dfcf7616d.bin": 289595668,
+   "bench-timing-ref.bin": 291012148,
+   "e7a87200db413665.bin": 164139124,
+   "11c933df2074e157.bin": 299707156,
+   "7845259d7efb6397.bin": 194473588,
+   "45b284f6675a94d5.bin": 155869060,
+   "c76991e2e6f394f2.bin": 41539464,
+   "8ab07239525d8ee6.bin": 155858164,
+   "b926dfaac65b0882.bin": 155847268,
+   "bench-timing-ref1.bin": 299707156
+  }
+ }
+}

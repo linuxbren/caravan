@@ -227,6 +227,7 @@ tail -f ~/Library/Logs/caravan/*.log
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | what changed in each version (v0 → v3) |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | done by version, next in order, ideas, parked items, known limits |
 | [docs/LOG.md](docs/LOG.md) | the dated build log: every measurement and dead end |
+| [handoff/README.md](handoff/README.md) | handoff brief for a new assistant: lab setup, rules, current state, first steps |
 | [agent/README.md](agent/README.md), [launchd/README.md](launchd/README.md), [cpp/README.md](cpp/README.md), [bench/improvements/README.md](bench/improvements/README.md), [bench/v3/README.md](bench/v3/README.md), [bench/cable/README.md](bench/cable/README.md) | per-directory notes |
 
 ## Repository layout
@@ -241,5 +242,6 @@ tail -f ~/Library/Logs/caravan/*.log
 | `scripts/` | safe packer restart |
 | `tests/` | stdlib `unittest` suite |
 | `docs/` | the documentation above |
+| `handoff/` | handoff for a new assistant: brief, memory, routines, lab log, video scripts and videos |
 
 *(Formerly "llama-shard"; the early history is in [docs/LOG.md](docs/LOG.md).)*

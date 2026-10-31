@@ -1,0 +1,46 @@
+[serve f16] pid 18545
+{"name": "warm_load", "wall_s": 9.67, "load_s": 9.62, "prompt_n": 1, "prompt_tps": 28.3, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "calib200", "wall_s": 13.6, "load_s": 0.0, "prompt_n": 4696, "prompt_tps": 345.8, "gen_n": 1, "gen_tps": 1000000.0}
+tokens/line 23.48
+{"name": "pp512_r0", "wall_s": 1.25, "load_s": 0.0, "prompt_n": 487, "prompt_tps": 413.1, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r1", "wall_s": 1.11, "load_s": 0.0, "prompt_n": 490, "prompt_tps": 443.2, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r2", "wall_s": 1.11, "load_s": 0.0, "prompt_n": 490, "prompt_tps": 443.7, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r0", "wall_s": 11.11, "load_s": 0.0, "prompt_n": 4078, "prompt_tps": 367.6, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r1", "wall_s": 11.17, "load_s": 0.0, "prompt_n": 4077, "prompt_tps": 367.6, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r2", "wall_s": 11.25, "load_s": 0.0, "prompt_n": 4078, "prompt_tps": 367.3, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "tg128_r0", "wall_s": 3.16, "load_s": 0.0, "prompt_n": 36, "prompt_tps": 147.0, "gen_n": 128, "gen_tps": 45.2}
+{"name": "tg128_r1", "wall_s": 3.07, "load_s": 0.0, "prompt_n": 37, "prompt_tps": 162.6, "gen_n": 128, "gen_tps": 45.1}
+{"name": "tg128_r2", "wall_s": 3.06, "load_s": 0.0, "prompt_n": 36, "prompt_tps": 158.6, "gen_n": 128, "gen_tps": 45.2}
+{"name": "f16_short", "wall_s": 0.91, "prompt_n": 73, "prompt_tps": 215.8, "gen_n": 26, "gen_tps": 46.1, "done_reason": "stop", "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "thinking": "", "thinking_chars": 0, "score": {"code": true, "mult": true, "capital": true}}
+{"name": "f16_long", "wall_s": 22.79, "prompt_n": 6918, "prompt_tps": 314.6, "gen_n": 26, "gen_tps": 33.2, "done_reason": "stop", "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "thinking": "", "thinking_chars": 0, "score": {"code": true, "mult": true, "capital": true}}
+f16 mem {'peak_rss_gb': 0.04, 'peak_footprint_gb': 0.0, 'min_free_pct': 11}
+ps {"models":[{"name":"rc-qwen3-30b-a3b-q4ks:latest","model":"rc-qwen3-30b-a3b-q4ks:latest","size":17930785914,"digest":"f7968ead68b9e0e3b49c35bf84e5f8567b15d35a302e8d2ee5a940f64147c7ec","details":{"parent_model":"","format":"gguf","family":"qwen3moe","families":["qwen3moe"],"parameter_size":"30.5B","quantization_level":"Q4_K_S"},"expires_at":"2319-02-09T14:06:58.753197807-06:00","size_vram":17930785914,"context_length":8192,"runner":"llamacpp"}]}
+[serve] stopped rc=0
+[serve q8_0] pid 18797
+{"name": "warm_load", "wall_s": 1.35, "load_s": 1.31, "prompt_n": 1, "prompt_tps": 26.5, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "calib200", "wall_s": 13.42, "load_s": 0.0, "prompt_n": 4696, "prompt_tps": 350.2, "gen_n": 1, "gen_tps": 1000000.0}
+tokens/line 23.48
+{"name": "pp512_r0", "wall_s": 1.21, "load_s": 0.0, "prompt_n": 487, "prompt_tps": 409.1, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r1", "wall_s": 1.1, "load_s": 0.0, "prompt_n": 488, "prompt_tps": 446.8, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r2", "wall_s": 1.12, "load_s": 0.0, "prompt_n": 489, "prompt_tps": 437.6, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r0", "wall_s": 11.31, "load_s": 0.0, "prompt_n": 4077, "prompt_tps": 360.9, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r1", "wall_s": 11.54, "load_s": 0.0, "prompt_n": 4077, "prompt_tps": 354.0, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r2", "wall_s": 11.68, "load_s": 0.0, "prompt_n": 4078, "prompt_tps": 349.6, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "tg128_r0", "wall_s": 3.19, "load_s": 0.0, "prompt_n": 33, "prompt_tps": 133.2, "gen_n": 128, "gen_tps": 43.8}
+{"name": "tg128_r1", "wall_s": 3.13, "load_s": 0.0, "prompt_n": 35, "prompt_tps": 169.3, "gen_n": 128, "gen_tps": 43.8}
+{"name": "tg128_r2", "wall_s": 3.16, "load_s": 0.0, "prompt_n": 37, "prompt_tps": 161.2, "gen_n": 128, "gen_tps": 43.8}
+{"name": "q8_short", "wall_s": 0.92, "prompt_n": 73, "prompt_tps": 214.1, "gen_n": 26, "gen_tps": 45.0, "done_reason": "stop", "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "thinking": "", "thinking_chars": 0, "score": {"code": true, "mult": true, "capital": true}}
+{"name": "q8_long", "wall_s": 24.21, "prompt_n": 6918, "prompt_tps": 297.5, "gen_n": 26, "gen_tps": 27.5, "done_reason": "stop", "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "thinking": "", "thinking_chars": 0, "score": {"code": true, "mult": true, "capital": true}}
+q8 mem {'peak_rss_gb': 0.04, 'peak_footprint_gb': 0.0, 'min_free_pct': 16}
+ps {"models":[{"name":"rc-qwen3-30b-a3b-q4ks:latest","model":"rc-qwen3-30b-a3b-q4ks:latest","size":17552994467,"digest":"f7968ead68b9e0e3b49c35bf84e5f8567b15d35a302e8d2ee5a940f64147c7ec","details":{"parent_model":"","format":"gguf","family":"qwen3moe","families":["qwen3moe"],"parameter_size":"30.5B","quantization_level":"Q4_K_S"},"expires_at":"2319-02-09T14:08:30.276870807-06:00","size_vram":17552994467,"context_length":8192,"runner":"llamacpp"}]}
+[serve] stopped rc=0
+[serve q8_0] pid 19030
+{"name": "warm_load_18k", "wall_s": 1.08, "load_s": 1.05, "prompt_n": 1, "prompt_tps": 35.5, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "calib200", "wall_s": 13.83, "load_s": 0.0, "prompt_n": 4696, "prompt_tps": 339.7, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "prime_16k", "wall_s": 82.06, "load_s": 0.0, "prompt_n": 16602, "prompt_tps": 202.4, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "d16k_r0", "wall_s": 10.92, "load_s": 0.0, "prompt_n": 17170, "prompt_tps": 3648.3, "gen_n": 128, "gen_tps": 20.7}
+{"name": "d16k_r1", "wall_s": 10.8, "load_s": 0.0, "prompt_n": 17166, "prompt_tps": 3705.8, "gen_n": 128, "gen_tps": 20.8}
+{"name": "d16k_r2", "wall_s": 10.71, "load_s": 0.0, "prompt_n": 17163, "prompt_tps": 3745.3, "gen_n": 128, "gen_tps": 21.0}
+d16k mem {'peak_rss_gb': 0.04, 'peak_footprint_gb': 0.0, 'min_free_pct': 14}
+[serve] stopped rc=0
+DONE qwen3-30b-a3b-q4ks

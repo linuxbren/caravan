@@ -1,0 +1,33 @@
+0.00.029.229 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.029.387 W srv  llama_server: -----------------
+0.00.029.388 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.029.388 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.029.388 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.029.388 W srv  llama_server: -----------------
+0.00.030.952 I srv    load_model: loading model '/Users/brenden/.caravan/models/gemma-4-26B_q4_0-it.gguf'
+0.00.556.433 W load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.00.558.419 W load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.00.563.285 W load: special_eog_ids contains '<|tool_response>', removing '</s>' token from EOG list
+0.01.108.623 I cmn          init: llama threadpool init, n_threads = 4
+0.01.215.594 I srv    load_model: initializing, n_slots = 2, n_ctx_slot = 18432, kv_unified = 'false'
+0.01.215.633 W srv          init: --cache-idle-slots requires --cache-ram, disabling
+0.01.220.948 I srv  llama_server: model loaded
+0.01.220.952 I srv  llama_server: listening on http://127.0.0.1:8080
+0.01.220.952 W srv  llama_server: NOTICE: server default port will be changed to :9931 in a future release
+0.01.220.952 W srv  llama_server:         ref: https://github.com/ggml-org/llama.cpp/pull/26508
+0.02.117.936 I slot get_availabl: id  0 | task -1 | selected slot by id (0)
+0.02.117.963 I slot launch_slot_: id  0 | task 2 | processing task, is_child = 0
+0.07.344.425 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =   4096, progress = 0.24, t =   5.23 s / 783.71 tokens per second
+0.13.278.181 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =   6144, progress = 0.36, t =  11.16 s / 550.53 tokens per second
+0.19.627.950 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =   8192, progress = 0.48, t =  17.51 s / 467.85 tokens per second
+0.26.386.097 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  10240, progress = 0.60, t =  24.27 s / 421.95 tokens per second
+0.33.558.640 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  12288, progress = 0.72, t =  31.44 s / 390.83 tokens per second
+0.41.147.832 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  14336, progress = 0.83, t =  39.03 s / 367.31 tokens per second
+0.49.157.329 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  15127, progress = 0.88, t =  47.04 s / 321.58 tokens per second
+0.52.544.014 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  17171, progress = 1.00, t =  50.43 s / 340.52 tokens per second
+1.01.286.165 I slot print_timing: id  0 | task 2 | prompt eval time =   59168.19 ms / 17175 tokens (    3.45 ms per token,   290.27 tokens per second)
+1.01.286.167 I slot print_timing: id  0 | task 2 |        eval time =       0.00 ms /     1 tokens (    0.00 ms per token,     0.00 tokens per second)
+1.01.286.167 I slot print_timing: id  0 | task 2 |       total time =   59168.19 ms / 17176 tokens
+1.01.286.167 I slot print_timing: id  0 | task 2 |    graphs reused =          1
+1.01.286.515 I slot      release: id  0 | task 2 | stop processing: n_tokens = 17175, truncated = 0
+1.01.338.468 I srv    operator(): operator(): cleaning up before exit...

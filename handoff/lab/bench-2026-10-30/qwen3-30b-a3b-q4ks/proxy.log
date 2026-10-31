@@ -1,0 +1,13 @@
+[slot-pin-proxy] restored slot occupancy for 1 slot(s) from /Users/brenden/.caravan/bench-2026-10-30/qwen3-30b-a3b-q4ks/session_slots.json
+[slot-pin-proxy] listening on 127.0.0.1:8090, forwarding to 127.0.0.1:8080, pinning completions per-session across 2 slot(s) (LRU), FIFO-serialized; disk save every 1 turn(s)
+[slot-cleanup] automatic slot cleanup disabled (mode=off)
+[slot-pin-proxy] GET /health -> 200
+[slot-pin-proxy] "GET /health HTTP/1.1" 200 -
+[slot-pin-proxy] restored slot 0 from disk for fingerprint 5202f26dc9638beb (29 tokens)
+[slot-pin-proxy] POST /v1/chat/completions -> 200 id_slot=0 fp=5202f26dc9638beb cache=restored
+[slot-pin-proxy] "POST /v1/chat/completions HTTP/1.1" 200 -
+[slot-pin-proxy] skip save: slot 0 unchanged since last save (29 tokens), fingerprint 5202f26dc9638beb
+[slot-pin-proxy] POST /v1/chat/completions -- waited 0.0s behind 1 queued request(s)
+[slot-pin-proxy] POST /v1/chat/completions -> 200 id_slot=0 fp=5202f26dc9638beb cache=warm
+[slot-pin-proxy] "POST /v1/chat/completions HTTP/1.1" 200 -
+[slot-pin-proxy] skip save: slot 0 unchanged since last save (29 tokens), fingerprint 5202f26dc9638beb

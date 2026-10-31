@@ -1,0 +1,15 @@
+[q8] cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf --tensor-split 1 --port 8080 -c 16384 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/qwen3-30b-a3b-q4ks/slots/ --parallel 2 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 512
+[q8] ready in 1.0s pid 68689
+[proxy] ready in 1.0s
+{"name": "proxy_smoke", "wall_s": 0.31, "prompt_n": 1, "prompt_tps": 28.843380444188057, "gen_n": 12, "gen_tps": 42.3950914192335, "content": "Hello, how are you today?", "reasoning": ""}
+{"name": "proxy_smoke_repeat", "wall_s": 0.29, "prompt_n": 1, "prompt_tps": 40.998729039399784, "gen_n": 12, "gen_tps": 42.41160072947953, "content": "Hello, how are you today?", "reasoning": ""}
+{"name": "q8_short", "wall_s": 1.09, "prompt_n": 73, "prompt_tps": 152.30099684131903, "gen_n": 26, "gen_tps": 41.88818535354466, "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "reasoning": ""}
+{"name": "q8_long", "wall_s": 24.43, "prompt_n": 6915, "prompt_tps": 293.1482044131968, "gen_n": 26, "gen_tps": 29.872718321774585, "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "reasoning": ""}
+[proxy] stopped rc=-15
+[q8] stopped rc=0
+[f16] cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf --tensor-split 1 --port 8080 -c 8192 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/qwen3-30b-a3b-q4ks/slots/ --parallel 1 --no-kv-unified -ngl 999 -fa on -ctk f16 -ctv f16 --cache-ram 0 -b 2048 -ub 512
+[f16] ready in 1.0s pid 68691
+{"name": "f16_short", "wall_s": 1.16, "prompt_n": 73, "prompt_tps": 128.5285940908539, "gen_n": 26, "gen_tps": 42.81239778540029, "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "reasoning": ""}
+{"name": "f16_long", "wall_s": 24.46, "prompt_n": 6915, "prompt_tps": 292.19686065214114, "gen_n": 26, "gen_tps": 32.34140100361835, "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "reasoning": ""}
+[f16] stopped rc=0
+SMOKE DONE

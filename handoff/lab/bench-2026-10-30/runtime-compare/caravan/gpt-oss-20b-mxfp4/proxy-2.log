@@ -1,0 +1,9 @@
+[slot-pin-proxy] restored slot occupancy for 2 slot(s) from /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/gpt-oss-20b-mxfp4/session_slots.json
+[slot-pin-proxy] listening on 127.0.0.1:8090, forwarding to 127.0.0.1:8080, pinning completions per-session across 2 slot(s) (LRU), FIFO-serialized; disk save every 1 turn(s)
+[slot-cleanup] automatic slot cleanup disabled (mode=off)
+[slot-pin-proxy] GET /health -> 200
+[slot-pin-proxy] "GET /health HTTP/1.1" 200 -
+[slot-pin-proxy] restored slot 0 from disk for fingerprint cb58fd69b7afa5f1 (16137 tokens)
+[slot-pin-proxy] POST /v1/chat/completions -> 200 id_slot=0 fp=cb58fd69b7afa5f1 cache=restored
+[slot-pin-proxy] "POST /v1/chat/completions HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 0 to disk for fingerprint cb58fd69b7afa5f1

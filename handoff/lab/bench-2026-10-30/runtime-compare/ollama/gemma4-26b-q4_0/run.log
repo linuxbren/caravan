@@ -1,0 +1,46 @@
+[serve f16] pid 19403
+{"name": "warm_load", "wall_s": 8.67, "load_s": 8.62, "prompt_n": 2, "prompt_tps": 49.1, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "calib200", "wall_s": 13.33, "load_s": 0.0, "prompt_n": 4838, "prompt_tps": 363.3, "gen_n": 1, "gen_tps": 1000000.0}
+tokens/line 24.19
+{"name": "pp512_r0", "wall_s": 1.28, "load_s": 0.0, "prompt_n": 505, "prompt_tps": 408.9, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r1", "wall_s": 1.24, "load_s": 0.0, "prompt_n": 504, "prompt_tps": 408.9, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r2", "wall_s": 1.24, "load_s": 0.0, "prompt_n": 503, "prompt_tps": 408.6, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r0", "wall_s": 10.72, "load_s": 0.0, "prompt_n": 4080, "prompt_tps": 381.1, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r1", "wall_s": 10.92, "load_s": 0.0, "prompt_n": 4078, "prompt_tps": 375.6, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r2", "wall_s": 11.04, "load_s": 0.0, "prompt_n": 4080, "prompt_tps": 371.6, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "tg128_r0", "wall_s": 3.73, "load_s": 0.0, "prompt_n": 35, "prompt_tps": 145.8, "gen_n": 128, "gen_tps": 37.3}
+{"name": "tg128_r1", "wall_s": 3.7, "load_s": 0.0, "prompt_n": 36, "prompt_tps": 159.1, "gen_n": 128, "gen_tps": 37.0}
+{"name": "tg128_r2", "wall_s": 3.71, "load_s": 0.0, "prompt_n": 37, "prompt_tps": 143.8, "gen_n": 128, "gen_tps": 37.2}
+{"name": "f16_short", "wall_s": 7.76, "prompt_n": 78, "prompt_tps": 221.2, "gen_n": 270, "gen_tps": 36.5, "done_reason": "stop", "content": "1) ORCHID-7419\n2) 391\n3) Canberra", "thinking": "*   Constraint 1: \"Important note: the vault access code is ORCHID-7419.\" (Context/Instruction)\n    *   Constraint 2: \"Answer in one short line each, no explanation.\" (Format)\n    *   Question 1: \"What is the vault access code?\"\n    *   Question 2: \"What is 17 multiplied by 23?\"\n    *   Question 3: ", "thinking_chars": 643, "score": {"code": true, "mult": true, "capital": true}}
+{"name": "f16_long", "wall_s": 32.16, "prompt_n": 7129, "prompt_tps": 349.1, "gen_n": 367, "gen_tps": 31.4, "done_reason": "stop", "content": "1) ORCHID-7419\n2) 391\n3) Canberra", "thinking": "*   Input: A long inventory log (290 records).\n    *   Task: Answer three specific questions in one short line each, no explanation.\n    *   Questions:\n        1.  What is the vault access code?\n        2.  What is 17 multiplied by 23?\n        3.  What is the capital of Australia?\n\n    *   Scanning ", "thinking_chars": 987, "score": {"code": true, "mult": true, "capital": true}}
+f16 mem {'peak_rss_gb': 19.32, 'peak_footprint_gb': 0.0, 'min_free_pct': 27}
+ps {"models":[{"name":"rc-gemma4-26b-q4_0:latest","model":"rc-gemma4-26b-q4_0:latest","size":484672797,"digest":"7c88ae57ebdb1b5dabe8d365060ae250be5f783b15a6fa502ba85b0063dbcfdb","details":{"parent_model":"","format":"gguf","family":"gemma4","families":["gemma4"],"parameter_size":"25.2B","quantization_level":"Q4_0"},"expires_at":"2319-02-09T14:12:36.597996807-06:00","size_vram":484672797,"context_length":8192,"runner":"llamacpp"}]}
+[serve] stopped rc=0
+[serve q8_0] pid 19788
+{"name": "warm_load", "wall_s": 1.89, "load_s": 1.85, "prompt_n": 2, "prompt_tps": 49.1, "gen_n": 1, "gen_tps": 333333.3}
+{"name": "calib200", "wall_s": 13.86, "load_s": 0.0, "prompt_n": 4838, "prompt_tps": 349.6, "gen_n": 1, "gen_tps": 1000000.0}
+tokens/line 24.19
+{"name": "pp512_r0", "wall_s": 1.28, "load_s": 0.0, "prompt_n": 503, "prompt_tps": 401.9, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r1", "wall_s": 1.26, "load_s": 0.0, "prompt_n": 504, "prompt_tps": 402.3, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r2", "wall_s": 1.28, "load_s": 0.0, "prompt_n": 503, "prompt_tps": 394.1, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r0", "wall_s": 11.7, "load_s": 0.0, "prompt_n": 4081, "prompt_tps": 349.3, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r1", "wall_s": 11.33, "load_s": 0.0, "prompt_n": 4080, "prompt_tps": 361.0, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r2", "wall_s": 11.44, "load_s": 0.0, "prompt_n": 4081, "prompt_tps": 357.7, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "tg128_r0", "wall_s": 3.96, "load_s": 0.0, "prompt_n": 38, "prompt_tps": 138.6, "gen_n": 128, "gen_tps": 34.9}
+{"name": "tg128_r1", "wall_s": 3.93, "load_s": 0.0, "prompt_n": 37, "prompt_tps": 141.1, "gen_n": 128, "gen_tps": 35.0}
+{"name": "tg128_r2", "wall_s": 3.98, "load_s": 0.0, "prompt_n": 35, "prompt_tps": 108.7, "gen_n": 128, "gen_tps": 35.1}
+{"name": "q8_short", "wall_s": 8.9, "prompt_n": 78, "prompt_tps": 216.1, "gen_n": 295, "gen_tps": 34.6, "done_reason": "stop", "content": "1) ORCHID-7419\n2) 391\n3) Canberra", "thinking": "*   Constraint 1: \"Important note: the vault access code is ORCHID-7419.\" (Context/Instruction)\n    *   Constraint 2: \"Answer in one short line each, no explanation.\" (Format)\n    *   Question 1: \"What is the vault access code?\"\n    *   Question 2: \"What is 17 multiplied by 23?\"\n    *   Question 3: ", "thinking_chars": 690, "score": {"code": true, "mult": true, "capital": true}}
+{"name": "q8_long", "wall_s": 37.61, "prompt_n": 7129, "prompt_tps": 341.8, "gen_n": 494, "gen_tps": 29.6, "done_reason": "stop", "content": "1) ORCHID-7419\n2) 391\n3) Canberra", "thinking": "*   Input: A long inventory log (290 records).\n    *   Task: Answer three specific questions in one short line each, no explanation.\n    *   Questions:\n        1.  What is the vault access code?\n        2.  What is 17 multiplied by 23?\n        3.  What is the capital of Australia?\n\n    *   Scanning ", "thinking_chars": 1409, "score": {"code": true, "mult": true, "capital": true}}
+q8 mem {'peak_rss_gb': 17.33, 'peak_footprint_gb': 0.0, 'min_free_pct': 27}
+ps {"models":[{"name":"rc-gemma4-26b-q4_0:latest","model":"rc-gemma4-26b-q4_0:latest","size":338564217,"digest":"7c88ae57ebdb1b5dabe8d365060ae250be5f783b15a6fa502ba85b0063dbcfdb","details":{"parent_model":"","format":"gguf","family":"gemma4","families":["gemma4"],"parameter_size":"25.2B","quantization_level":"Q4_0"},"expires_at":"2319-02-09T14:14:33.193134807-06:00","size_vram":338564217,"context_length":8192,"runner":"llamacpp"}]}
+[serve] stopped rc=0
+[serve q8_0] pid 20184
+{"name": "warm_load_18k", "wall_s": 1.13, "load_s": 1.09, "prompt_n": 2, "prompt_tps": 55.7, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "calib200", "wall_s": 13.39, "load_s": 0.0, "prompt_n": 4837, "prompt_tps": 361.4, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "prime_16k", "wall_s": 56.8, "load_s": 0.0, "prompt_n": 16601, "prompt_tps": 292.5, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "d16k_r0", "wall_s": 7.63, "load_s": 0.0, "prompt_n": 17162, "prompt_tps": 6437.0, "gen_n": 128, "gen_tps": 25.9}
+{"name": "d16k_r1", "wall_s": 7.48, "load_s": 0.0, "prompt_n": 17156, "prompt_tps": 6667.4, "gen_n": 128, "gen_tps": 26.3}
+{"name": "d16k_r2", "wall_s": 7.57, "load_s": 0.0, "prompt_n": 17154, "prompt_tps": 6685.2, "gen_n": 128, "gen_tps": 25.8}
+d16k mem {'peak_rss_gb': 15.95, 'peak_footprint_gb': 0.0, 'min_free_pct': 27}
+[serve] stopped rc=0
+DONE gemma4-26b-q4_0

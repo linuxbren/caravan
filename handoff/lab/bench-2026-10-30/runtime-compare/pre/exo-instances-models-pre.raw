@@ -1,0 +1,4 @@
+$ curl -s -m 10 127.0.0.1:52415/instances; echo; echo ===; curl -s -m 10 127.0.0.1:52415/models
+{"detail":"Not Found"}
+ zsh:1: == not found
+ exit 1

@@ -1,0 +1,16 @@
+start Fri Oct 30 07:24:18 CDT 2026 steps=all
+>>> A_fa_f16 07:24:18: -r 3 -p 512,4096 -n 128 -fa 0,1 -ctk f16 -ctv f16
+<<< A_fa_f16 rc=0 07:26:30 maxrss=12230066176 peakfp=365307168
+>>> B_fa1_q8 07:26:30: -r 3 -p 512,4096 -n 128 -fa 1 -ctk q8_0 -ctv q8_0
+<<< B_fa1_q8 rc=0 07:27:31 maxrss=12370608128 peakfp=289318128
+>>> C_ub 07:27:31: -r 3 -p 512,4096 -n 128 -fa 1 -ctk q8_0 -ctv q8_0 -b 2048 -ub 512,1024,2048
+<<< C_ub rc=0 07:30:25 maxrss=12474138624 peakfp=399910224
+>>> C2_ub2048_v 07:30:25: -r 3 -p 512,4096 -n 128 -fa 1 -ctk q8_0 -ctv q8_0 -b 2048 -ub 2048 -v
+<<< C2_ub2048_v rc=0 07:31:21 maxrss=12469288960 peakfp=394290560
+>>> D_d8k_f16 07:31:21: -r 2 -p 512 -n 128 -d 8192 -fa 1 -ctk f16 -ctv f16
+<<< D_d8k_f16 rc=0 07:31:58 maxrss=12754239488 peakfp=671000128
+>>> D_d8k_q8 07:31:58: -r 2 -p 512 -n 128 -d 8192 -fa 1 -ctk q8_0 -ctv q8_0
+<<< D_d8k_q8 rc=0 07:32:35 maxrss=12548718592 peakfp=465315272
+>>> D_d16k_q8 07:32:35: -r 2 -p 512 -n 128 -d 16384 -fa 1 -ctk q8_0 -ctv q8_0
+<<< D_d16k_q8 rc=0 07:33:43 maxrss=12782043136 peakfp=698754672
+done Fri Oct 30 07:33:43 CDT 2026

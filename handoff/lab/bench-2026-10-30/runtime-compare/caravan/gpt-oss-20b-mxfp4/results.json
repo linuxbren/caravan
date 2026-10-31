@@ -1,0 +1,359 @@
+{
+ "config": {
+  "model": "/Users/brenden/.cache/huggingface/hub/models--ggml-org--gpt-oss-20b-GGUF/blobs/27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901",
+  "n_slots": 2,
+  "ctx_per_slot": 18432,
+  "ubatch": 2048,
+  "batch": 2048,
+  "kv": "q8_0",
+  "fa": "on",
+  "ngl": 999,
+  "max_tokens": 800,
+  "no_think": ""
+ },
+ "main": {
+  "tok_per_line": 19.295,
+  "runs": {
+   "pp512": [
+    {
+     "name": "pp512_r0",
+     "wall_s": 1.32,
+     "prompt_n": 509,
+     "cache_n": 0,
+     "prompt_tps": 390.6,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp512_r1",
+     "wall_s": 1.31,
+     "prompt_n": 510,
+     "cache_n": 0,
+     "prompt_tps": 390.2,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp512_r2",
+     "wall_s": 1.31,
+     "prompt_n": 511,
+     "cache_n": 0,
+     "prompt_tps": 389.6,
+     "gen_n": 1,
+     "gen_tps": null
+    }
+   ],
+   "pp4096": [
+    {
+     "name": "pp4096_r0",
+     "wall_s": 9.54,
+     "prompt_n": 4092,
+     "cache_n": 0,
+     "prompt_tps": 429.5,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp4096_r1",
+     "wall_s": 9.56,
+     "prompt_n": 4093,
+     "cache_n": 0,
+     "prompt_tps": 429.0,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp4096_r2",
+     "wall_s": 9.55,
+     "prompt_n": 4094,
+     "cache_n": 0,
+     "prompt_tps": 429.7,
+     "gen_n": 1,
+     "gen_tps": null
+    }
+   ],
+   "tg128": [
+    {
+     "name": "tg128_r0",
+     "wall_s": 4.02,
+     "prompt_n": 33,
+     "cache_n": 0,
+     "prompt_tps": 67.5,
+     "gen_n": 128,
+     "gen_tps": 36.1
+    },
+    {
+     "name": "tg128_r1",
+     "wall_s": 3.95,
+     "prompt_n": 34,
+     "cache_n": 0,
+     "prompt_tps": 76.0,
+     "gen_n": 128,
+     "gen_tps": 36.3
+    },
+    {
+     "name": "tg128_r2",
+     "wall_s": 3.93,
+     "prompt_n": 33,
+     "cache_n": 0,
+     "prompt_tps": 75.8,
+     "gen_n": 128,
+     "gen_tps": 36.3
+    }
+   ]
+  },
+  "pp512": 390.2,
+  "pp512_ntok": 510,
+  "pp4096": 429.5,
+  "pp4096_ntok": 4093,
+  "tg128": 36.3
+ },
+ "quality": {
+  "short": {
+   "name": "short",
+   "ttft_s": 0.844,
+   "wall_s": 7.15,
+   "prompt_n": 124,
+   "cache_n": 0,
+   "prompt_ms": 757.39,
+   "prompt_tps": 163.7,
+   "gen_n": 231,
+   "gen_tps": 36.0,
+   "usage": {
+    "completion_tokens": 231,
+    "prompt_tokens": 124,
+    "total_tokens": 355,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "finish": "stop",
+   "content": "ORCHID-7419\n391\nCanberra",
+   "reasoning_chars": 801,
+   "score": {
+    "code": true,
+    "mult": true,
+    "capital": true
+   }
+  },
+  "long": {
+   "name": "long",
+   "ttft_s": 14.098,
+   "wall_s": 16.6,
+   "prompt_n": 5713,
+   "cache_n": 0,
+   "prompt_ms": 13914.682,
+   "prompt_tps": 410.6,
+   "gen_n": 87,
+   "gen_tps": 32.4,
+   "usage": {
+    "completion_tokens": 87,
+    "prompt_tokens": 5713,
+    "total_tokens": 5800,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "finish": "stop",
+   "content": "ORCHID-7419  \n391  \nCanberra",
+   "reasoning_chars": 255,
+   "score": {
+    "code": true,
+    "mult": true,
+    "capital": true
+   }
+  }
+ },
+ "d16k": {
+  "prime": {
+   "name": "prime_16k",
+   "wall_s": 46.24,
+   "prompt_n": 16347,
+   "cache_n": 0,
+   "prompt_tps": 354.1,
+   "gen_n": 1,
+   "gen_tps": null
+  },
+  "runs": [
+   {
+    "name": "d16k_r0",
+    "wall_s": 6.64,
+    "prompt_n": 553,
+    "cache_n": 16346,
+    "prompt_tps": 253.4,
+    "gen_n": 128,
+    "gen_tps": 28.9
+   },
+   {
+    "name": "d16k_r1",
+    "wall_s": 6.67,
+    "prompt_n": 549,
+    "cache_n": 16349,
+    "prompt_tps": 253.0,
+    "gen_n": 128,
+    "gen_tps": 28.9
+   },
+   {
+    "name": "d16k_r2",
+    "wall_s": 6.69,
+    "prompt_n": 551,
+    "cache_n": 16349,
+    "prompt_tps": 252.8,
+    "gen_n": 128,
+    "gen_tps": 28.8
+   }
+  ],
+  "pp512_d16k": 253.0,
+  "tg128_d16k": 28.9,
+  "new_ntok": 551
+ },
+ "mem": {
+  "peak_rss_gb": 12.88,
+  "peak_footprint_gb": 0.91,
+  "min_free_pct": 38
+ },
+ "resume": {
+  "t1_cold": {
+   "name": "t1_cold",
+   "ttft_s": 46.23,
+   "wall_s": 49.68,
+   "prompt_n": 16000,
+   "cache_n": 60,
+   "prompt_ms": 46033.663,
+   "prompt_tps": 347.6,
+   "gen_n": 104,
+   "gen_tps": 29.0,
+   "usage": {
+    "completion_tokens": 104,
+    "prompt_tokens": 16060,
+    "total_tokens": 16164,
+    "prompt_tokens_details": {
+     "cached_tokens": 60
+    }
+   },
+   "finish": "stop",
+   "content": "ORCHID-7419",
+   "reasoning_chars": 337,
+   "score": {
+    "code": true,
+    "mult": false,
+    "capital": false
+   }
+  },
+  "t2_warm_in_memory": {
+   "name": "t2_warm_in_memory",
+   "ttft_s": 0.751,
+   "wall_s": 2.21,
+   "prompt_n": 30,
+   "cache_n": 16061,
+   "prompt_ms": 573.083,
+   "prompt_tps": 52.3,
+   "gen_n": 47,
+   "gen_tps": 29.5,
+   "usage": {
+    "completion_tokens": 47,
+    "prompt_tokens": 16091,
+    "total_tokens": 16138,
+    "prompt_tokens_details": {
+     "cached_tokens": 16061
+    }
+   },
+   "finish": "stop",
+   "content": "391",
+   "reasoning_chars": 125,
+   "score": {
+    "code": false,
+    "mult": true,
+    "capital": false
+   }
+  },
+  "slot_files_after_t2": {
+   "af66a0a11679a9f6.bin": 52118196,
+   "76f5446b3b60d962.bin": 55177044,
+   "fa549b1430790507.bin": 55190116,
+   "cb58fd69b7afa5f1.bin": 212616212,
+   "11c933df2074e157.bin": 224250292,
+   "7845259d7efb6397.bin": 77477876,
+   "3cb39f0b447516d8.bin": 55163972,
+   "c76991e2e6f394f2.bin": 6300836
+  },
+  "mem": {
+   "peak_rss_gb": 12.88,
+   "peak_footprint_gb": 0.92,
+   "min_free_pct": 38
+  },
+  "direct_save_slot0": {
+   "id_slot": 0,
+   "filename": "bench-timing-ref.bin",
+   "n_saved": 16137,
+   "n_written": 212616212,
+   "timings": {
+    "save_ms": 70.339
+   }
+  },
+  "direct_save_slot1": {
+   "id_slot": 1,
+   "filename": "bench-timing-ref1.bin",
+   "n_saved": 17027,
+   "n_written": 224250292,
+   "timings": {
+    "save_ms": 38.203
+   }
+  },
+  "restart_s": 1.5,
+  "t3_resume_after_restart": {
+   "name": "t3_resume_after_restart",
+   "ttft_s": 48.12,
+   "wall_s": 49.15,
+   "prompt_n": 16115,
+   "cache_n": 0,
+   "prompt_ms": 47921.946,
+   "prompt_tps": 336.3,
+   "gen_n": 34,
+   "gen_tps": 29.1,
+   "usage": {
+    "completion_tokens": 34,
+    "prompt_tokens": 16115,
+    "total_tokens": 16149,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   },
+   "finish": "stop",
+   "content": "Canberra.",
+   "reasoning_chars": 92,
+   "score": {
+    "code": false,
+    "mult": false,
+    "capital": true
+   }
+  },
+  "proxy_log_after_restart": [
+   "[slot-pin-proxy] restored slot occupancy for 2 slot(s) from /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/gpt-oss-20b-mxfp4/session_slots.json",
+   "[slot-pin-proxy] listening on 127.0.0.1:8090, forwarding to 127.0.0.1:8080, pinning completions per-session across 2 slot(s) (LRU), FIFO-serialized; disk save every 1 turn(s)",
+   "[slot-pin-proxy] restored slot 0 from disk for fingerprint cb58fd69b7afa5f1 (16137 tokens)",
+   "[slot-pin-proxy] POST /v1/chat/completions -> 200 id_slot=0 fp=cb58fd69b7afa5f1 cache=restored"
+  ],
+  "direct_restore_ref": {
+   "id_slot": 1,
+   "filename": "bench-timing-ref.bin",
+   "n_restored": 16137,
+   "n_read": 212616212,
+   "timings": {
+    "restore_ms": 56.397
+   }
+  },
+  "slot_files_end": {
+   "af66a0a11679a9f6.bin": 52118196,
+   "76f5446b3b60d962.bin": 55177044,
+   "fa549b1430790507.bin": 55190116,
+   "bench-timing-ref.bin": 212616212,
+   "cb58fd69b7afa5f1.bin": 212760004,
+   "11c933df2074e157.bin": 224250292,
+   "7845259d7efb6397.bin": 77477876,
+   "3cb39f0b447516d8.bin": 55163972,
+   "c76991e2e6f394f2.bin": 6300836,
+   "bench-timing-ref1.bin": 224250292
+  }
+ }
+}

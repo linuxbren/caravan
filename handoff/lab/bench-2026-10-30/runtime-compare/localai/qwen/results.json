@@ -1,0 +1,571 @@
+{
+ "config": {
+  "short": "qwen",
+  "max_tokens": 200,
+  "no_think": " /no_think",
+  "phases": [
+   "main",
+   "quality",
+   "d16k",
+   "resume"
+  ],
+  "yaml_main": "name: qwen-f16\nbackend: llama-cpp\ncontext_size: 8192\nf16: true\ngpu_layers: 999\nmmap: true\nflash_attention: \"on\"\ncache_type_k: f16\ncache_type_v: f16\nbatch: 2048\nparameters:\n  model: Qwen3-30B-A3B-Q4_K_S.gguf\n  temperature: 0\ntemplate:\n  use_tokenizer_template: true\noptions:\n  - parallel:1\n  - ubatch:512\n  - cache_ram:0\n",
+  "yaml_16k": "name: qwen-q8-16k\nbackend: llama-cpp\ncontext_size: 18432\nf16: true\ngpu_layers: 999\nmmap: true\nflash_attention: \"on\"\ncache_type_k: q8_0\ncache_type_v: q8_0\nbatch: 2048\nparameters:\n  model: Qwen3-30B-A3B-Q4_K_S.gguf\n  temperature: 0\ntemplate:\n  use_tokenizer_template: true\noptions:\n  - parallel:1\n  - ubatch:512\n  - cache_ram:0\n"
+ },
+ "start_s": 2.1,
+ "main": {
+  "tok_per_line": 23.485,
+  "warm": {
+   "name": "warm_incl_load",
+   "wall_s": 9.86,
+   "prompt_tokens": 10,
+   "completion_tokens": 1,
+   "usage_api": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+    "timing_prompt_processing": 119.536,
+    "timing_token_generation": 0.001
+   },
+   "llama_log": {
+    "task": 0,
+    "prompt_ms": 119.54,
+    "prompt_n": 10,
+    "gen_ms": 0.0,
+    "gen_n": 1
+   },
+   "prompt_ms": 119.536,
+   "gen_ms": 0.001,
+   "prompt_tps": 83.7,
+   "gen_tps": null,
+   "text": " I"
+  },
+  "runs": {
+   "pp512": [
+    {
+     "name": "pp512_r0",
+     "wall_s": 1.46,
+     "prompt_tokens": 484,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 1112.306,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 13,
+      "prompt_ms": 1112.31,
+      "prompt_n": 484,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 1112.306,
+     "gen_ms": 0.001,
+     "prompt_tps": 435.1,
+     "gen_tps": null,
+     "text": "\n"
+    },
+    {
+     "name": "pp512_r1",
+     "wall_s": 1.44,
+     "prompt_tokens": 481,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 1099.789,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 15,
+      "prompt_ms": 1099.79,
+      "prompt_n": 481,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 1099.789,
+     "gen_ms": 0.001,
+     "prompt_tps": 437.4,
+     "gen_tps": null,
+     "text": "\n"
+    },
+    {
+     "name": "pp512_r2",
+     "wall_s": 1.45,
+     "prompt_tokens": 481,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 1102.781,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 17,
+      "prompt_ms": 1102.78,
+      "prompt_n": 481,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 1102.781,
+     "gen_ms": 0.001,
+     "prompt_tps": 436.2,
+     "gen_tps": null,
+     "text": "\n"
+    }
+   ],
+   "pp4096": [
+    {
+     "name": "pp4096_r0",
+     "wall_s": 11.49,
+     "prompt_tokens": 4073,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 11073.802,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 19,
+      "prompt_ms": 11073.8,
+      "prompt_n": 4073,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 11073.802,
+     "gen_ms": 0.001,
+     "prompt_tps": 367.8,
+     "gen_tps": null,
+     "text": " \n"
+    },
+    {
+     "name": "pp4096_r1",
+     "wall_s": 11.38,
+     "prompt_tokens": 4068,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 11055.578,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 28,
+      "prompt_ms": 11055.58,
+      "prompt_n": 4068,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 11055.578,
+     "gen_ms": 0.001,
+     "prompt_tps": 368.0,
+     "gen_tps": null,
+     "text": " \n"
+    },
+    {
+     "name": "pp4096_r2",
+     "wall_s": 11.39,
+     "prompt_tokens": 4069,
+     "completion_tokens": 1,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 11050.481,
+      "timing_token_generation": 0.001
+     },
+     "llama_log": {
+      "task": 37,
+      "prompt_ms": 11050.48,
+      "prompt_n": 4069,
+      "gen_ms": 0.0,
+      "gen_n": 1
+     },
+     "prompt_ms": 11050.481,
+     "gen_ms": 0.001,
+     "prompt_tps": 368.2,
+     "gen_tps": null,
+     "text": " \n"
+    }
+   ],
+   "tg128": [
+    {
+     "name": "tg128_r0",
+     "wall_s": 3.48,
+     "prompt_tokens": 35,
+     "completion_tokens": 128,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 243.25,
+      "timing_token_generation": 2826.911
+     },
+     "llama_log": {
+      "task": 46,
+      "prompt_ms": 243.25,
+      "prompt_n": 35,
+      "gen_ms": 2826.91,
+      "gen_n": 128
+     },
+     "prompt_ms": 243.25,
+     "gen_ms": 2826.911,
+     "prompt_tps": 143.9,
+     "gen_tps": 45.3,
+     "text": " ..., one thousand.\n\nOkay, so I need to write all the numbers from 1 to 1000 in "
+    },
+    {
+     "name": "tg128_r1",
+     "wall_s": 3.37,
+     "prompt_tokens": 32,
+     "completion_tokens": 128,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 211.969,
+      "timing_token_generation": 2817.404
+     },
+     "llama_log": {
+      "task": 175,
+      "prompt_ms": 211.97,
+      "prompt_n": 32,
+      "gen_ms": 2817.4,
+      "gen_n": 128
+     },
+     "prompt_ms": 211.969,
+     "gen_ms": 2817.404,
+     "prompt_tps": 151.0,
+     "gen_tps": 45.4,
+     "text": " ..., one thousand.\n\nOkay, so I need to write all the numbers from 1 to 1000 in "
+    },
+    {
+     "name": "tg128_r2",
+     "wall_s": 3.39,
+     "prompt_tokens": 34,
+     "completion_tokens": 128,
+     "usage_api": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "timing_prompt_processing": 228.762,
+      "timing_token_generation": 2822.323
+     },
+     "llama_log": {
+      "task": 304,
+      "prompt_ms": 228.76,
+      "prompt_n": 34,
+      "gen_ms": 2822.32,
+      "gen_n": 128
+     },
+     "prompt_ms": 228.762,
+     "gen_ms": 2822.323,
+     "prompt_tps": 148.6,
+     "gen_tps": 45.4,
+     "text": " ..., one thousand. Then, count the total number of letters used, excluding spac"
+    }
+   ]
+  },
+  "pp512": 436.2,
+  "pp512_ntok": 481,
+  "pp4096": 368.0,
+  "pp4096_ntok": 4069,
+  "tg128": 45.4
+ },
+ "quality": {
+  "short": {
+   "name": "short",
+   "ttft_s": 0.707,
+   "wall_s": 1.18,
+   "usage_api": {
+    "prompt_tokens": 73,
+    "completion_tokens": 26,
+    "total_tokens": 99,
+    "timing_prompt_processing": 339.535,
+    "timing_token_generation": 560.789
+   },
+   "llama_log": {
+    "task": 433,
+    "prompt_ms": 339.54,
+    "prompt_n": 73,
+    "gen_ms": 560.79,
+    "gen_n": 26
+   },
+   "prompt_tokens_processed": 73,
+   "completion_tokens": 26,
+   "prompt_ms": 339.54,
+   "gen_ms": 560.79,
+   "gen_tps": 46.4,
+   "finish": "stop",
+   "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra",
+   "reasoning_chars": 0,
+   "score": {
+    "code": true,
+    "mult": true,
+    "capital": true
+   }
+  },
+  "long": {
+   "name": "long",
+   "ttft_s": 22.367,
+   "wall_s": 23.0,
+   "usage_api": {
+    "prompt_tokens": 6918,
+    "completion_tokens": 26,
+    "total_tokens": 6944,
+    "timing_prompt_processing": 21946.806,
+    "timing_token_generation": 758.868
+   },
+   "llama_log": {
+    "task": 460,
+    "prompt_ms": 21946.81,
+    "prompt_n": 6915,
+    "gen_ms": 758.87,
+    "gen_n": 26
+   },
+   "prompt_tokens_processed": 6915,
+   "completion_tokens": 26,
+   "prompt_ms": 21946.81,
+   "gen_ms": 758.87,
+   "gen_tps": 34.3,
+   "finish": "stop",
+   "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra",
+   "reasoning_chars": 0,
+   "score": {
+    "code": true,
+    "mult": true,
+    "capital": true
+   }
+  }
+ },
+ "mem_main": {
+  "peak_rss_gb": 18.42,
+  "peak_footprint_gb": 1.09,
+  "min_free_pct": 16
+ },
+ "d16k": {
+  "prime": {
+   "name": "prime_16k",
+   "wall_s": 80.56,
+   "prompt_tokens": 16602,
+   "completion_tokens": 1,
+   "usage_api": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+    "timing_prompt_processing": 80209.582,
+    "timing_token_generation": 0.001
+   },
+   "llama_log": {
+    "task": 2,
+    "prompt_ms": 80209.58,
+    "prompt_n": 16602,
+    "gen_ms": 0.0,
+    "gen_n": 1
+   },
+   "prompt_ms": 80209.582,
+   "gen_ms": 0.001,
+   "prompt_tps": 207.0,
+   "gen_tps": null,
+   "text": " \n"
+  },
+  "runs": [
+   {
+    "name": "d16k_r0",
+    "wall_s": 11.02,
+    "prompt_tokens": 567,
+    "completion_tokens": 128,
+    "usage_api": {
+     "prompt_tokens": 0,
+     "completion_tokens": 0,
+     "total_tokens": 0,
+     "timing_prompt_processing": 4542.392,
+     "timing_token_generation": 6154.38
+    },
+    "llama_log": {
+     "task": 36,
+     "prompt_ms": 4542.39,
+     "prompt_n": 567,
+     "gen_ms": 6154.38,
+     "gen_n": 128
+    },
+    "prompt_ms": 4542.392,
+    "gen_ms": 6154.38,
+    "prompt_tps": 124.8,
+    "gen_tps": 20.8,
+    "text": " four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, f",
+    "new_tokens_est": 567,
+    "pp_new_tps": 124.8
+   },
+   {
+    "name": "d16k_r1",
+    "wall_s": 10.98,
+    "prompt_tokens": 561,
+    "completion_tokens": 128,
+    "usage_api": {
+     "prompt_tokens": 0,
+     "completion_tokens": 0,
+     "total_tokens": 0,
+     "timing_prompt_processing": 4556.406,
+     "timing_token_generation": 6141.883
+    },
+    "llama_log": {
+     "task": 166,
+     "prompt_ms": 4556.41,
+     "prompt_n": 561,
+     "gen_ms": 6141.88,
+     "gen_n": 128
+    },
+    "prompt_ms": 4556.406,
+    "gen_ms": 6141.883,
+    "prompt_tps": 123.1,
+    "gen_tps": 20.8,
+    "text": " four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, f",
+    "new_tokens_est": 561,
+    "pp_new_tps": 123.1
+   },
+   {
+    "name": "d16k_r2",
+    "wall_s": 11.04,
+    "prompt_tokens": 558,
+    "completion_tokens": 128,
+    "usage_api": {
+     "prompt_tokens": 0,
+     "completion_tokens": 0,
+     "total_tokens": 0,
+     "timing_prompt_processing": 4517.363,
+     "timing_token_generation": 6159.932
+    },
+    "llama_log": {
+     "task": 296,
+     "prompt_ms": 4517.36,
+     "prompt_n": 558,
+     "gen_ms": 6159.93,
+     "gen_n": 128
+    },
+    "prompt_ms": 4517.363,
+    "gen_ms": 6159.932,
+    "prompt_tps": 123.5,
+    "gen_tps": 20.8,
+    "text": " four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, f",
+    "new_tokens_est": 558,
+    "pp_new_tps": 123.5
+   }
+  ],
+  "pp512_d16k": 123.5,
+  "tg128_d16k": 20.8,
+  "new_ntok": 561
+ },
+ "mem": {
+  "peak_rss_gb": 18.82,
+  "peak_footprint_gb": 1.27,
+  "min_free_pct": 16
+ },
+ "resume": {
+  "t1_cold": {
+   "name": "t1_cold",
+   "ttft_s": 79.872,
+   "wall_s": 80.25,
+   "usage_api": {
+    "prompt_tokens": 16259,
+    "completion_tokens": 13,
+    "total_tokens": 16272,
+    "timing_prompt_processing": 79267.4,
+    "timing_token_generation": 570.43
+   },
+   "llama_log": {
+    "task": 428,
+    "prompt_ms": 79267.4,
+    "prompt_n": 16259,
+    "gen_ms": 570.43,
+    "gen_n": 13
+   },
+   "prompt_tokens_processed": 16259,
+   "completion_tokens": 13,
+   "prompt_ms": 79267.4,
+   "gen_ms": 570.43,
+   "gen_tps": 22.8,
+   "finish": "stop",
+   "content": "ORCHID-7419",
+   "reasoning_chars": 0,
+   "score": {
+    "code": true,
+    "mult": false,
+    "capital": false
+   }
+  },
+  "t2_warm_in_memory": {
+   "name": "t2_warm_in_memory",
+   "ttft_s": 1.155,
+   "wall_s": 1.3,
+   "usage_api": {
+    "prompt_tokens": 16298,
+    "completion_tokens": 8,
+    "total_tokens": 16306,
+    "timing_prompt_processing": 525.844,
+    "timing_token_generation": 334.009
+   },
+   "llama_log": {
+    "task": 473,
+    "prompt_ms": 525.84,
+    "prompt_n": 39,
+    "gen_ms": 334.01,
+    "gen_n": 8
+   },
+   "prompt_tokens_processed": 39,
+   "completion_tokens": 8,
+   "prompt_ms": 525.84,
+   "gen_ms": 334.01,
+   "gen_tps": 24.0,
+   "finish": "stop",
+   "content": "391",
+   "reasoning_chars": 0,
+   "score": {
+    "code": false,
+    "mult": true,
+    "capital": false
+   }
+  },
+  "restart_s": 2.6,
+  "reload_s": 4.0,
+  "t3_resume_after_restart": {
+   "name": "t3_resume_after_restart",
+   "ttft_s": 79.76,
+   "wall_s": 79.85,
+   "usage_api": {
+    "prompt_tokens": 16328,
+    "completion_tokens": 7,
+    "total_tokens": 16335,
+    "timing_prompt_processing": 79149.019,
+    "timing_token_generation": 287.695
+   },
+   "llama_log": {
+    "task": 2,
+    "prompt_ms": 79149.02,
+    "prompt_n": 16328,
+    "gen_ms": 287.69,
+    "gen_n": 7
+   },
+   "prompt_tokens_processed": 16328,
+   "completion_tokens": 7,
+   "prompt_ms": 79149.02,
+   "gen_ms": 287.69,
+   "gen_tps": 24.3,
+   "finish": "stop",
+   "content": "Canberra",
+   "reasoning_chars": 0,
+   "score": {
+    "code": false,
+    "mult": false,
+    "capital": true
+   }
+  }
+ }
+}

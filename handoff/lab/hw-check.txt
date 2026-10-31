@@ -1,0 +1,128 @@
+================= prf-hays-exo01
+## hostname: prf-hays-exo01
+Apple M4
+24 GB RAM
+      Model Name: Mac mini
+      Model Identifier: Mac16,10
+      Chip: Apple M4
+      Total Number of Cores: 10 (4 Performance and 6 Efficiency)
+      Memory: 24 GB
+ProductName:		macOS
+ProductVersion:		26.6.2
+BuildVersion:		25G83
+## disk
+Filesystem        Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk3s1s1   460Gi    12Gi   115Gi    10%    459k  1.2G    0%   /
+/dev/disk3s5     460Gi   319Gi   115Gi    74%    1.0M  1.2G    0%   /System/Volumes/Data
+   Disk Size:                 494.4 GB (494384795648 Bytes) (exactly 965595304 512-Byte-Units)
+   Container Total Space:     494.4 GB (494384795648 Bytes) (exactly 965595304 512-Byte-Units)
+   Container Free Space:      123.7 GB (123673370624 Bytes) (exactly 241549552 512-Byte-Units)
+## ollama
+zsh:8: command not found: ollama
+zsh:8: command not found: ollama
+ollama not found
+exo not found
+mlx_lm.generate not found
+llama-server not found
+## thunderbolt
+    Thunderbolt/USB4 Bus 3:
+      Vendor Name: Apple Inc.
+      Device Name: Mac mini
+      Port:
+          Status: No device connected
+          Link Status: 0x100
+          Speed: Up to 40 Gb/s
+          Receptacle: 4
+    Thunderbolt/USB4 Bus 1:
+      Vendor Name: Apple Inc.
+      Device Name: Mac mini
+      Port:
+          Status: No device connected
+          Link Status: 0x100
+          Speed: Up to 40 Gb/s
+          Receptacle: 2
+    Thunderbolt/USB4 Bus 0:
+      Vendor Name: Apple Inc.
+      Device Name: Mac mini
+      Port:
+          Status: Device connected
+          Link Status: 0x2
+          Speed: 40 Gb/s
+          Receptacle: 1
+          Vendor Name: Apple Inc.
+          Device Name: Mac16,10
+          Vendor ID: 0x0A27
+## bridge/net
+Hardware Port: Thunderbolt 1
+Device: en2
+--
+Hardware Port: Thunderbolt 2
+Device: en3
+--
+Hardware Port: Thunderbolt 4
+Device: en4
+
+================= prf-hays-exo02
+## hostname: prf-hays-exo02
+Apple M4
+24 GB RAM
+      Model Name: Mac mini
+      Model Identifier: Mac16,10
+      Chip: Apple M4
+      Total Number of Cores: 10 (4 Performance and 6 Efficiency)
+      Memory: 24 GB
+ProductName:		macOS
+ProductVersion:		26.6.2
+BuildVersion:		25G83
+## disk
+Filesystem        Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk3s1s1   460Gi    12Gi   292Gi     4%    459k  3.1G    0%   /
+/dev/disk3s5     460Gi   142Gi   292Gi    33%    1.1M  3.1G    0%   /System/Volumes/Data
+   Disk Size:                 494.4 GB (494384795648 Bytes) (exactly 965595304 512-Byte-Units)
+   Container Total Space:     494.4 GB (494384795648 Bytes) (exactly 965595304 512-Byte-Units)
+   Container Free Space:      313.0 GB (313049628672 Bytes) (exactly 611425056 512-Byte-Units)
+## ollama
+zsh:8: command not found: ollama
+zsh:8: command not found: ollama
+ollama not found
+exo not found
+mlx_lm.generate not found
+llama-server not found
+## thunderbolt
+    Thunderbolt/USB4 Bus 3:
+      Vendor Name: Apple Inc.
+      Device Name: Mac mini
+      Port:
+          Status: No device connected
+          Link Status: 0x100
+          Speed: Up to 40 Gb/s
+          Receptacle: 4
+    Thunderbolt/USB4 Bus 1:
+      Vendor Name: Apple Inc.
+      Device Name: Mac mini
+      Port:
+          Status: No device connected
+          Link Status: 0x100
+          Speed: Up to 40 Gb/s
+          Receptacle: 2
+    Thunderbolt/USB4 Bus 0:
+      Vendor Name: Apple Inc.
+      Device Name: Mac mini
+      Port:
+          Status: Device connected
+          Link Status: 0x2
+          Speed: 40 Gb/s
+          Receptacle: 1
+          Vendor Name: Apple Inc.
+          Device Name: Mac16,10
+          Vendor ID: 0x0A27
+## bridge/net
+Hardware Port: Thunderbolt 1
+Device: en2
+--
+Hardware Port: Thunderbolt 2
+Device: en3
+--
+Hardware Port: Thunderbolt 4
+Device: en4
+

@@ -1,0 +1,12 @@
+suite start 17:19:44
+gptoss rc=0 17:24:03
+gemma rc=0 17:29:35
+qwen rc=1 17:29:46
+suite done 17:29:46
+suite2 start 17:30:35
+qwen-2x12k rc=1 17:30:37
+qwen-1x18k rc=0 17:35:38
+gptoss-raw rc=0 17:37:30
+gemma-raw rc=0 17:39:43
+suite2 done 17:39:43
+qwen-2x8k rc=0 17:41:26

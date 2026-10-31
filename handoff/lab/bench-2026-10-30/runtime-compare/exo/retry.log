@@ -1,0 +1,7 @@
+16:05:12 instances before []
+16:05:12 place {'message': 'Command received.', 'command_id': 'ac7ed737-eb07-43bd-8965-a4efc48c9112', 'model_card': {'modelId': 'mlx-community/Qwen3-30B-A3B-4bit', 'storageSize': {'inBytes': 17612931072}, 'nLayers':
+16:05:24 instance 8a5401f4-1cdd-4269-858a-2e25e569547d ['RunnerReady']
+16:05:52 bench rc 1
+16:05:52 runners after bench {'effe56a0-5d29-4d34-931c-330194bc564b': {'RunnerFailed': {'errorMessage': 'Terminated (signal=6 (Abort trap: 6))'}}, 'a4a08007-7135-4748-bac3-d28f7b33d7cc': {'RunnerFailed': {'errorMessage': 'Terminated (signal=6 (Abort trap: 6))'}}, '37a60f50-c1ef-4c20-9ddc-641bf903c56e': {'RunnerShuttingDown': {}}, 'e5d04034-9256-42a5-89fa-e4d4155dcc97': {'RunnerFailed': {'errorMessage': 'Terminated (signal=6 (Abort trap: 6))'}}}
+16:05:52 delete {'message': 'Command received.', 'command_id': 'f252a876-e6df-4446-8493-b13d21ff15b4', 'instance_id': '8a5401f4-1cdd-4269-858a-2e25e569547d'}
+16:05:55 RETRY DONE

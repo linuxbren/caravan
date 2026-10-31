@@ -1,0 +1,46 @@
+[serve f16] pid 20555
+{"name": "warm_load", "wall_s": 7.14, "load_s": 7.11, "prompt_n": 1, "prompt_tps": 31.1, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "calib200", "wall_s": 8.95, "load_s": 0.0, "prompt_n": 3861, "prompt_tps": 433.1, "gen_n": 1, "gen_tps": 1000000.0}
+tokens/line 19.30
+{"name": "pp512_r0", "wall_s": 1.2, "load_s": 0.0, "prompt_n": 513, "prompt_tps": 431.2, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r1", "wall_s": 1.21, "load_s": 0.0, "prompt_n": 512, "prompt_tps": 424.5, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r2", "wall_s": 1.22, "load_s": 0.0, "prompt_n": 511, "prompt_tps": 419.9, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r0", "wall_s": 9.68, "load_s": 0.0, "prompt_n": 4093, "prompt_tps": 423.6, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r1", "wall_s": 9.76, "load_s": 0.0, "prompt_n": 4095, "prompt_tps": 420.6, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r2", "wall_s": 9.8, "load_s": 0.0, "prompt_n": 4094, "prompt_tps": 418.9, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "tg128_r0", "wall_s": 3.98, "load_s": 0.0, "prompt_n": 32, "prompt_tps": 73.9, "gen_n": 128, "gen_tps": 36.2}
+{"name": "tg128_r1", "wall_s": 3.97, "load_s": 0.0, "prompt_n": 35, "prompt_tps": 77.2, "gen_n": 128, "gen_tps": 36.4}
+{"name": "tg128_r2", "wall_s": 3.95, "load_s": 0.0, "prompt_n": 32, "prompt_tps": 76.7, "gen_n": 128, "gen_tps": 36.4}
+{"name": "f16_short", "wall_s": 5.19, "prompt_n": 124, "prompt_tps": 218.2, "gen_n": 165, "gen_tps": 35.7, "done_reason": "stop", "content": "ORCHID-7419  \n391  \nCanberra", "thinking": "The user says: \"Important note: the vault access code is ORCHID-7419. Answer in one short line each, no explanation. 1) What is the vault access code? 2) What is 17 multiplied by 23? 3) What is the capital of Australia?\"\n\nWe need to answer each in one short line each, no explanation. So we need to o", "thinking_chars": 513, "score": {"code": true, "mult": true, "capital": true}}
+{"name": "f16_long", "wall_s": 16.58, "prompt_n": 5713, "prompt_tps": 407.0, "gen_n": 84, "gen_tps": 33.5, "done_reason": "stop", "content": "ORCHID-7419  \n391  \nCanberra", "thinking": "The user wants short line answers, no explanation. They ask 3 questions: vault access code, 17*23, capital of Australia. The vault access code is given: ORCHID-7419. 17*23 = 391. Capital of Australia is Canberra. Provide each on separate line.", "thinking_chars": 243, "score": {"code": true, "mult": true, "capital": true}}
+f16 mem {'peak_rss_gb': 12.96, 'peak_footprint_gb': 0.0, 'min_free_pct': 40}
+ps {"models":[{"name":"rc-gpt-oss-20b-mxfp4:latest","model":"rc-gpt-oss-20b-mxfp4:latest","size":11105552301,"digest":"129b0ae65eb2d5d6858519ee47b2eb3a8adfdc2c76412a2f1e4bda3b33cc8aaa","details":{"parent_model":"","format":"gguf","family":"gpt-oss","families":["gpt-oss"],"parameter_size":"20.9B","quantization_level":"MXFP4_MOE"},"expires_at":"2319-02-09T14:17:37.323474807-06:00","size_vram":11105552301,"context_length":8192,"runner":"llamacpp"}]}
+[serve] stopped rc=0
+[serve q8_0] pid 20841
+{"name": "warm_load", "wall_s": 1.12, "load_s": 1.08, "prompt_n": 1, "prompt_tps": 28.3, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "calib200", "wall_s": 9.17, "load_s": 0.0, "prompt_n": 3859, "prompt_tps": 422.3, "gen_n": 1, "gen_tps": 1000000.0}
+tokens/line 19.30
+{"name": "pp512_r0", "wall_s": 1.26, "load_s": 0.0, "prompt_n": 512, "prompt_tps": 409.7, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r1", "wall_s": 1.26, "load_s": 0.0, "prompt_n": 512, "prompt_tps": 408.5, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp512_r2", "wall_s": 1.27, "load_s": 0.0, "prompt_n": 514, "prompt_tps": 405.5, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r0", "wall_s": 9.83, "load_s": 0.0, "prompt_n": 4096, "prompt_tps": 417.3, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r1", "wall_s": 9.85, "load_s": 0.0, "prompt_n": 4093, "prompt_tps": 416.3, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "pp4096_r2", "wall_s": 9.86, "load_s": 0.0, "prompt_n": 4095, "prompt_tps": 416.2, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "tg128_r0", "wall_s": 4.08, "load_s": 0.0, "prompt_n": 31, "prompt_tps": 64.2, "gen_n": 128, "gen_tps": 35.6}
+{"name": "tg128_r1", "wall_s": 4.04, "load_s": 0.0, "prompt_n": 32, "prompt_tps": 73.3, "gen_n": 128, "gen_tps": 35.6}
+{"name": "tg128_r2", "wall_s": 4.05, "load_s": 0.0, "prompt_n": 31, "prompt_tps": 72.7, "gen_n": 128, "gen_tps": 35.4}
+{"name": "q8_short", "wall_s": 6.82, "prompt_n": 124, "prompt_tps": 210.3, "gen_n": 219, "gen_tps": 35.2, "done_reason": "stop", "content": "ORCHID-7419  \n391  \nCanberra", "thinking": "The user says: \"Important note: the vault access code is ORCHID-7419. Answer in one short line each, no explanation. 1) What is the vault access code? 2) What is 17 multiplied by 23? 3) What is the capital of Australia?\"\n\nWe need to answer each in one short line each, no explanation. So we should gi", "thinking_chars": 753, "score": {"code": true, "mult": true, "capital": true}}
+{"name": "q8_long", "wall_s": 16.85, "prompt_n": 5713, "prompt_tps": 403.9, "gen_n": 84, "gen_tps": 31.2, "done_reason": "stop", "content": "ORCHID-7419  \n391  \nCanberra", "thinking": "The user wants short line answers, no explanation. They ask 3 questions: vault access code, 17*23, capital of Australia. The vault access code is given: ORCHID-7419. 17*23 = 391. Capital of Australia is Canberra. Provide each on separate line.", "thinking_chars": 243, "score": {"code": true, "mult": true, "capital": true}}
+q8 mem {'peak_rss_gb': 12.83, 'peak_footprint_gb': 0.0, 'min_free_pct': 40}
+ps {"models":[{"name":"rc-gpt-oss-20b-mxfp4:latest","model":"rc-gpt-oss-20b-mxfp4:latest","size":11090872237,"digest":"129b0ae65eb2d5d6858519ee47b2eb3a8adfdc2c76412a2f1e4bda3b33cc8aaa","details":{"parent_model":"","format":"gguf","family":"gpt-oss","families":["gpt-oss"],"parameter_size":"20.9B","quantization_level":"MXFP4_MOE"},"expires_at":"2319-02-09T14:19:00.923546807-06:00","size_vram":11090872237,"context_length":8192,"runner":"llamacpp"}]}
+[serve] stopped rc=0
+[serve q8_0] pid 21145
+{"name": "warm_load_18k", "wall_s": 1.13, "load_s": 1.08, "prompt_n": 1, "prompt_tps": 26.3, "gen_n": 1, "gen_tps": 333333.3}
+{"name": "calib200", "wall_s": 8.99, "load_s": 0.0, "prompt_n": 3861, "prompt_tps": 430.5, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "prime_16k", "wall_s": 48.1, "load_s": 0.0, "prompt_n": 16328, "prompt_tps": 339.9, "gen_n": 1, "gen_tps": 1000000.0}
+{"name": "d16k_r0", "wall_s": 6.78, "load_s": 0.0, "prompt_n": 16879, "prompt_tps": 7673.8, "gen_n": 128, "gen_tps": 28.3}
+{"name": "d16k_r1", "wall_s": 6.8, "load_s": 0.0, "prompt_n": 16880, "prompt_tps": 7714.0, "gen_n": 128, "gen_tps": 28.3}
+{"name": "d16k_r2", "wall_s": 6.8, "load_s": 0.0, "prompt_n": 16880, "prompt_tps": 7695.3, "gen_n": 128, "gen_tps": 28.3}
+d16k mem {'peak_rss_gb': 12.81, 'peak_footprint_gb': 0.0, 'min_free_pct': 39}
+[serve] stopped rc=0
+DONE gpt-oss-20b-mxfp4

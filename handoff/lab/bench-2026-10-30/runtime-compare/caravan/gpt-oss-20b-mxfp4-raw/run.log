@@ -1,0 +1,14 @@
+17:35:38 server cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.cache/huggingface/hub/models--ggml-org--gpt-oss-20b-GGUF/blobs/27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901 --tensor-split 1 --port 8080 -c 36864 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/gpt-oss-20b-mxfp4-raw/slots/ --parallel 2 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 2048
+17:35:46 start #1: server ready 7.6s, proxy ready, total 8.1s; pids 37757/37758
+17:35:46 mem {'peak_rss_gb': 0.0, 'peak_footprint_gb': 0.0, 'min_free_pct': 100}
+17:36:33 {"name": "raw_cold_16k", "wall_s": 47.09, "prompt_n": 16352, "cache_n": 0, "prompt_tps": 347.7, "gen_n": 1, "gen_tps": null}
+17:36:35 {"name": "raw_warm_in_memory", "wall_s": 2.28, "prompt_n": 547, "cache_n": 16351, "prompt_tps": 246.4, "gen_n": 1, "gen_tps": null}
+17:36:37 [proxy] stopped rc=-15
+17:36:38 [server] stopped rc=0
+17:36:38 server cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.cache/huggingface/hub/models--ggml-org--gpt-oss-20b-GGUF/blobs/27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901 --tensor-split 1 --port 8080 -c 36864 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/gpt-oss-20b-mxfp4-raw/slots/ --parallel 2 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 2048
+17:36:40 start #2: server ready 1.5s, proxy ready, total 2.1s; pids 37774/37775
+17:37:30 {"name": "raw_after_restart", "wall_s": 50.4, "prompt_n": 16926, "cache_n": 0, "prompt_tps": 336.5, "gen_n": 1, "gen_tps": null}
+17:37:30 raw proxy log ['[slot-pin-proxy] restored slot occupancy for 1 slot(s) from /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/gpt-oss-20b-mxfp4-raw/session_slots.json', '[slot-pin-proxy] restored slot 0 from disk for fingerprint fdefab2cffaa7bfd (16898 tokens)', '[slot-pin-proxy] POST /completion -> 200 id_slot=0 fp=fdefab2cffaa7bfd cache=restored']
+17:37:30 [proxy] stopped rc=-15
+17:37:30 [server] stopped rc=0
+17:37:30 DONE gpt-oss-20b-mxfp4-raw

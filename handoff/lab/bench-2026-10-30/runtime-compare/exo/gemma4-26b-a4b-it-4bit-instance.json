@@ -1,0 +1,76 @@
+{
+ "MlxRingInstance": {
+  "instanceId": "6e13394a-a176-46fb-9c9f-769b607b2697",
+  "shardAssignments": {
+   "modelId": "mlx-community/gemma-4-26b-a4b-it-4bit",
+   "runnerToShard": {
+    "a4a08007-7135-4748-bac3-d28f7b33d7cc": {
+     "PipelineShardMetadata": {
+      "modelCard": {
+       "modelId": "mlx-community/gemma-4-26b-a4b-it-4bit",
+       "storageSize": {
+        "inBytes": 15608614044
+       },
+       "nLayers": 30,
+       "hiddenSize": 2816,
+       "supportsTensor": false,
+       "numKeyValueHeads": 8,
+       "tasks": [
+        "TextGeneration"
+       ],
+       "components": null,
+       "family": "gemma",
+       "quantization": "4bit",
+       "baseModel": "Gemma 4 26B A4B",
+       "capabilities": [
+        "text",
+        "vision"
+       ],
+       "contextLength": 262144,
+       "usesCfg": false,
+       "trustRemoteCode": true,
+       "isCustom": false,
+       "vision": {
+        "imageTokenId": 258880,
+        "modelType": "gemma4",
+        "weightsRepo": "mlx-community/gemma-4-26b-a4b-it-4bit",
+        "imageToken": null,
+        "processorRepo": null
+       },
+       "samplingDefaults": {
+        "temperature": 1.0,
+        "topP": 0.95,
+        "topK": 64,
+        "minP": null,
+        "repetitionPenalty": null,
+        "presencePenalty": null,
+        "frequencyPenalty": null,
+        "thinking": null,
+        "nonThinking": null
+       }
+      },
+      "deviceRank": 0,
+      "worldSize": 1,
+      "immediateException": false,
+      "shouldTimeout": null,
+      "startLayer": 0,
+      "endLayer": 30,
+      "nLayers": 30
+     }
+    }
+   },
+   "nodeToRunner": {
+    "12D3KooWJsP15BpLQ7RRfwW7w5BhwcqpjMeKG6hfdLziHkTRar4Y": "a4a08007-7135-4748-bac3-d28f7b33d7cc"
+   }
+  },
+  "hostsByNode": {
+   "12D3KooWJsP15BpLQ7RRfwW7w5BhwcqpjMeKG6hfdLziHkTRar4Y": [
+    {
+     "ip": "0.0.0.0",
+     "port": 52124
+    }
+   ]
+  },
+  "ephemeralPort": 52124
+ }
+}

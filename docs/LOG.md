@@ -2606,3 +2606,12 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
   new v3 halves: 21.1 / 24.7 / 26.7 tok/s (v3 30.4 / 27.7 / 26.6, one Mini
   51.0 / 41.3 / 36.5). Still no-go.
 - No services stopped; all test workers exited after their runs.
+
+## 2026-10-31: handoff folder for a new assistant
+
+- Brenden is moving his assistant to a different account. Added
+  [`handoff/`](../handoff/README.md): the full brief (lab, network, rules,
+  post and video style, current state, first steps), the old assistant's
+  memory, the two daily reminder routines, and a copy of the lab folder
+  (experiment log, video scripts, all eight lab videos). No secrets; they're
+  named only (`MINI_SSH_PASSWORD`). Code unchanged.

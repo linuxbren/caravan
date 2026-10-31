@@ -1,0 +1,7 @@
+ollama suite start 15:18:04
+qwen rc=0 15:23:30
+gemma rc=0 15:28:57
+gptoss rc=0 15:33:09
+ollama suite done 15:33:09
+qwen rerun (memory) start 15:35:42
+qwen rerun done 15:41:37

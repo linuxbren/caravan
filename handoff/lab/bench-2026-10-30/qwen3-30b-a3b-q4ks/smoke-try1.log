@@ -1,0 +1,8 @@
+[q8] cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf --tensor-split 1 --port 8080 -c 16384 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/qwen3-30b-a3b-q4ks/slots/ --parallel 2 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 512
+[q8] ready in 1.0s pid 68645
+[proxy] ready in 1.0s
+{"name": "proxy_smoke", "wall_s": 0.55, "prompt_n": 18, "prompt_tps": 60.98717913967419, "gen_n": 11, "gen_tps": 41.66458343749479, "content": "Hello, how are you?", "reasoning": ""}
+{"name": "proxy_smoke_repeat", "wall_s": 0.29, "prompt_n": 1, "prompt_tps": 41.595607503847596, "gen_n": 12, "gen_tps": 42.33537312858408, "content": "Hello, how are you today?", "reasoning": ""}
+{"name": "q8_short", "wall_s": 1.14, "prompt_n": 73, "prompt_tps": 135.16240781646056, "gen_n": 26, "gen_tps": 42.04097144913547, "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "reasoning": ""}
+[proxy] stopped rc=-15
+[q8] stopped rc=0

@@ -1,0 +1,58 @@
+Runtime-compare restore evidence — 2026-10-30 (times CDT)
+
+Pre-state (pre/exo-state-pre.json, captured ~14:12):
+  nodes: prf-hays-exo02, prf-hays-exo01
+  instance 94a1664c MlxRingInstance mlx-community/Qwen3.6-35B-A3B-5bit, Pipeline
+    runner 3f9d383d prf-hays-exo01 layers 0-20 / 40, worldSize 2, rank 0, RunnerReady
+    runner 12443128 prf-hays-exo02 layers 20-40 / 40, worldSize 2, rank 1, RunnerReady
+
+Restore steps:
+  16:04:53 exo single-node suite finished, test instances deleted (EXO1 instances [])
+  16:05:12-16:05:55 Qwen3-30B exo retry (quality,d16k) placed/deleted; instances [] afterwards
+  16:06:57 `open -g -a /Applications/EXO.app` on EXO2 (exo had been stopped there since 15:17:44)
+  ~16:07:20 topology: 2 nodes (prf-hays-exo01, prf-hays-exo02); no instance; EXO2 boot exo_restore.py not running
+  16:07:51 POST /place_instance {"model_id":"mlx-community/Qwen3.6-35B-A3B-5bit","sharding":"Pipeline","instance_meta":"MlxRing","min_nodes":2} (from EXO2) -> "Command received."
+  16:08:06 both runners RunnerReady
+  16:08:29 tiny chat via EXO2 127.0.0.1:52415 -> 200, completion returned (30 tok)
+  16:08:31 Hermes: curl http://<EXO2-tailnet-IP>:8642/health -> {"status": "ok", "platform": "hermes-agent", "version": "0.20.5"} HTTP 200
+  talaria_check.sh (EXO2, read-only): PASS hub /v1/lists 200; PASS talaria-calendar today; PASS hermes /health 200;
+     PASS exo chat completion; PASS vet server on exo1 /health 200; PASS exo still serving only Qwen
+     memory_pressure exo2 40%; exo ramAvailable exo01 6.6 GB (28%), exo02 6.8 GB (28%)
+  Hermes gateway launchd ai.hermes.gateway still pid 1027 (never restarted).
+
+Post-state (exo-state-post.json):
+  nodes: prf-hays-exo01, prf-hays-exo02
+  instance 257085b5 MlxRingInstance mlx-community/Qwen3.6-35B-A3B-5bit, Pipeline
+    runner 318a7007 prf-hays-exo02 layers 0-18 / 40, worldSize 2, rank 0, RunnerReady
+    runner 3788cf8c prf-hays-exo01 layers 18-40 / 40, worldSize 2, rank 1, RunnerReady
+
+Match: model, MlxRing, Pipeline, min_nodes 2, worldSize 2, both friendlyNames, RunnerReady x2 -> MATCH.
+Difference: exo's memory-weighted placement chose an 18/22 split with EXO2 as rank 0 (pre: 20/20, EXO1 rank 0).
+  Same place_instance call as suite-1 restore and EXO2's exo_restore.py; the API has no layer-pinning field, so this
+  was not forced. Instance/runner/node IDs differ by design (EXO1 node ID changed when exo restarted).
+Ollama: stopped (no ollama/llama-server processes, no launchd job); installed at ~/ollama-bench, models in ~/.ollama (41 GB) on EXO1.
+Exo downtime (Hermes model unavailable): 15:17:29 -> 16:08:29, about 51 min.
+
+== Restore after Caravan run (2026-10-30 17:45-17:47 CDT) ==
+exo started on both Minis 17:45; place Qwen3.6-35B-A3B-5bit Pipeline/MlxRing min_nodes 2
+instance 038f658d MlxRingInstance: 99c944bc exo02 layers 0-19 rank 0 RunnerReady; 5c33e95e exo01 layers 19-40 rank 1 RunnerReady (pre2 was 0-18/18-40)
+Hermes http://<EXO2-tailnet-IP>:8642/health -> {"status": "ok", "platform": "hermes-agent", "version": "0.20.5"} HTTP 200
+talaria_check.sh: PASS hub /v1/lists; PASS talaria-calendar; PASS hermes /health; PASS exo chat completion; PASS vet server /health; PASS exo still serving only Qwen
+No llama-server / slot_pin_proxy / ollama processes on EXO1. ~/.caravan/proxy/session_slots.json unchanged (932 B, 05:41).
+
+=== LocalAI run (2026-10-30) restore ===
+exo paused on both Minis 19:04 CDT; LocalAI suite 19:06–19:24 CDT (Mini clock); exo relaunched 19:24:52 CDT (open -g -a EXO.app on both).
+place_instance Qwen3.6-35B-A3B-5bit Pipeline/MlxRing min_nodes 2 -> RunnerReady on both; exo02 layers 0-19 rank 0, exo01 layers 19-40 rank 1 (same split as pre3). State: exo-state-post3.json
+Hermes /health: {"status": "ok", "platform": "hermes-agent", "version": "0.20.5"} HTTP 200
+talaria_check.sh (EXO2):
+PASS hub /v1/lists 200
+PASS talaria-calendar today (7 lines)
+PASS hermes /health 200
+PASS exo chat completion
+PASS vet server on exo1 /health 200
+PASS exo still serving only Qwen
+memory_pressure exo2: 38%
+exo ramAvailable prf-hays-exo01: 6.1 GB (25%)
+exo ramAvailable prf-hays-exo02: 6.2 GB (26%)
+[rc=0]
+LocalAI: no local-ai/backend processes left; no LaunchAgent; installed at ~/localai-bench (binary + metal-llama-cpp backend + 6 YAMLs + 3 GGUF symlinks).

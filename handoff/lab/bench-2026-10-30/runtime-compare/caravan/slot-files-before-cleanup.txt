@@ -1,0 +1,55 @@
+gemma4-26b-q4_0-raw/slots/:
+total 605272
+-rw-r--r--@ 1 brenden  staff  298563076 Oct 30 17:39 626f830e0b87785f.bin
+
+gemma4-26b-q4_0/slots/:
+total 4052968
+-rw-r--r--@ 1 brenden  staff  299707156 Oct 30 17:27 11c933df2074e157.bin
+-rw-r--r--@ 1 brenden  staff  155869060 Oct 30 17:24 45b284f6675a94d5.bin
+-rw-r--r--@ 1 brenden  staff  289595668 Oct 30 17:29 53d6075dfcf7616d.bin
+-rw-r--r--@ 1 brenden  staff  194473588 Oct 30 17:26 7845259d7efb6397.bin
+-rw-r--r--@ 1 brenden  staff  155858164 Oct 30 17:24 8ab07239525d8ee6.bin
+-rw-r--r--@ 1 brenden  staff  155847268 Oct 30 17:25 b926dfaac65b0882.bin
+-rw-r--r--@ 1 brenden  staff  291012148 Oct 30 17:28 bench-timing-ref.bin
+-rw-r--r--@ 1 brenden  staff  299707156 Oct 30 17:28 bench-timing-ref1.bin
+-rw-r--r--@ 1 brenden  staff   41539464 Oct 30 17:25 c76991e2e6f394f2.bin
+-rw-r--r--@ 1 brenden  staff  164139124 Oct 30 17:24 e7a87200db413665.bin
+
+gpt-oss-20b-mxfp4-raw/slots/:
+total 439312
+-rw-r--r--@ 1 brenden  staff  222930020 Oct 30 17:37 fdefab2cffaa7bfd.bin
+
+gpt-oss-20b-mxfp4/slots/:
+total 2314856
+-rw-r--r--@ 1 brenden  staff  224250292 Oct 30 17:22 11c933df2074e157.bin
+-rw-r--r--@ 1 brenden  staff   55163972 Oct 30 17:20 3cb39f0b447516d8.bin
+-rw-r--r--@ 1 brenden  staff   55177044 Oct 30 17:20 76f5446b3b60d962.bin
+-rw-r--r--@ 1 brenden  staff   77477876 Oct 30 17:21 7845259d7efb6397.bin
+-rw-r--r--@ 1 brenden  staff   52118196 Oct 30 17:20 af66a0a11679a9f6.bin
+-rw-r--r--@ 1 brenden  staff  212616212 Oct 30 17:23 bench-timing-ref.bin
+-rw-r--r--@ 1 brenden  staff  224250292 Oct 30 17:23 bench-timing-ref1.bin
+-rw-r--r--@ 1 brenden  staff    6300836 Oct 30 17:20 c76991e2e6f394f2.bin
+-rw-r--r--@ 1 brenden  staff  212760004 Oct 30 17:24 cb58fd69b7afa5f1.bin
+-rw-r--r--@ 1 brenden  staff   55190116 Oct 30 17:20 fa549b1430790507.bin
+
+qwen3-30b-a3b-q4ks-1x18k/slots/:
+total 6897648
+-rw-r--r--@ 1 brenden  staff  853289356 Oct 30 17:34 09e28728efa6e9f3.bin
+-rw-r--r--@ 1 brenden  staff  903230796 Oct 30 17:32 11c933df2074e157.bin
+-rw-r--r--@ 1 brenden  staff  851774396 Oct 30 17:33 bench-timing-ref.bin
+-rw-r--r--@ 1 brenden  staff  897745596 Oct 30 17:35 eed7638a10aa0b7e.bin
+
+qwen3-30b-a3b-q4ks-2x12k/slots/:
+total 0
+
+qwen3-30b-a3b-q4ks-2x8k/slots/:
+total 2444808
+-rw-r--r--@ 1 brenden  staff  362703520 Oct 30 17:41 0f480ad6ee62b828.bin
+-rw-r--r--@ 1 brenden  staff    5120720 Oct 30 17:41 55942f89c3052841.bin
+-rw-r--r--@ 1 brenden  staff  245268000 Oct 30 17:40 ad7a202efdb58af0.bin
+-rw-r--r--@ 1 brenden  staff  212879200 Oct 30 17:40 b9ea5889d74bb9ab.bin
+-rw-r--r--@ 1 brenden  staff  212879200 Oct 30 17:40 d3a8ae6645e0ee36.bin
+-rw-r--r--@ 1 brenden  staff  212879200 Oct 30 17:40 d704dec0d23bd38e.bin
+
+qwen3-30b-a3b-q4ks/slots/:
+total 0

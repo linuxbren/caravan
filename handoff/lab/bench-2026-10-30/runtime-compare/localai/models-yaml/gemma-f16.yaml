@@ -1,0 +1,19 @@
+name: gemma-f16
+backend: llama-cpp
+context_size: 8192
+f16: true
+gpu_layers: 999
+mmap: true
+flash_attention: "on"
+cache_type_k: f16
+cache_type_v: f16
+batch: 2048
+parameters:
+  model: gemma-4-26B_q4_0-it.gguf
+  temperature: 0
+template:
+  use_tokenizer_template: true
+options:
+  - parallel:1
+  - ubatch:512
+  - cache_ram:0

@@ -1,0 +1,36 @@
+0.00.025.597 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.025.761 W srv  llama_server: -----------------
+0.00.025.761 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.025.762 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.025.762 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.025.762 W srv  llama_server: -----------------
+0.00.027.364 I srv    load_model: loading model '/Users/brenden/.cache/huggingface/hub/models--ggml-org--gpt-oss-20b-GGUF/blobs/27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901'
+0.00.442.630 W load: setting token '<|message|>' (200008) attribute to USER_DEFINED (16), old attributes: 8
+0.00.442.636 W load: setting token '<|constrain|>' (200003) attribute to USER_DEFINED (16), old attributes: 8
+0.00.442.775 W load: setting token '<|channel|>' (200005) attribute to USER_DEFINED (16), old attributes: 8
+0.00.442.989 W load: setting token '<|start|>' (200006) attribute to USER_DEFINED (16), old attributes: 8
+0.00.444.030 W load: special_eog_ids contains both '<|return|>' and '<|call|>', or '<|calls|>' and '<|flush|>' tokens, removing '<|end|>' token from EOG list
+0.00.872.374 I cmn          init: llama threadpool init, n_threads = 4
+0.00.968.437 I srv    load_model: initializing, n_slots = 2, n_ctx_slot = 18432, kv_unified = 'false'
+0.00.968.470 W srv          init: --cache-idle-slots requires --cache-ram, disabling
+0.00.970.501 I srv  llama_server: model loaded
+0.00.970.504 I srv  llama_server: listening on http://127.0.0.1:8080
+0.00.970.504 W srv  llama_server: NOTICE: server default port will be changed to :9931 in a future release
+0.00.970.504 W srv  llama_server:         ref: https://github.com/ggml-org/llama.cpp/pull/26508
+0.01.624.651 I slot get_availabl: id  0 | task -1 | selected slot by id (0)
+0.01.624.696 I slot launch_slot_: id  0 | task 2 | processing task, is_child = 0
+0.06.552.563 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =   4157, progress = 0.26, t =   4.93 s / 843.57 tokens per second
+0.11.427.488 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =   6205, progress = 0.39, t =   9.80 s / 632.98 tokens per second
+0.16.808.495 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =   8253, progress = 0.51, t =  15.18 s / 543.54 tokens per second
+0.22.615.935 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  10301, progress = 0.64, t =  20.99 s / 490.73 tokens per second
+0.28.843.243 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  12349, progress = 0.77, t =  27.22 s / 453.70 tokens per second
+0.35.492.941 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  14067, progress = 0.87, t =  33.87 s / 415.35 tokens per second
+0.41.414.688 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  16070, progress = 1.00, t =  39.79 s / 403.87 tokens per second
+0.48.689.720 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  16096, progress = 1.00, t =  47.07 s / 342.00 tokens per second
+0.49.167.645 I slot print_timing: id  0 | task 2 | prompt processing, n_tokens =  16111, progress = 1.00, t =  47.54 s / 338.87 tokens per second
+0.50.681.892 I slot print_timing: id  0 | task 2 | prompt eval time =   47921.95 ms / 16115 tokens (    2.97 ms per token,   336.28 tokens per second)
+0.50.681.894 I slot print_timing: id  0 | task 2 |        eval time =    1135.24 ms /    34 tokens (   34.40 ms per token,    29.07 tokens per second)
+0.50.681.894 I slot print_timing: id  0 | task 2 |       total time =   49057.19 ms / 16149 tokens
+0.50.681.894 I slot print_timing: id  0 | task 2 |    graphs reused =         32
+0.50.682.108 I slot      release: id  0 | task 2 | stop processing: n_tokens = 16148, truncated = 0
+0.53.753.316 I srv    operator(): operator(): cleaning up before exit...

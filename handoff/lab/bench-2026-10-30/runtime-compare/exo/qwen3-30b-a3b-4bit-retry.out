@@ -1,0 +1,24 @@
+{"name": "short", "wall_s": 1.24, "usage": {"prompt_tokens": 73, "completion_tokens": 26, "total_tokens": 99, "prompt_tokens_details": {"cached_tokens": 0, "audio_tokens": 0}, "completion_tokens_details": {"reasoning_tokens": 1, "audio_tokens": 0, "accepted_prediction_tokens": 0, "rejected_prediction_tokens": 0}}, "finish": "stop", "content": "\n\n1) ORCHID-7419  \n2) 391  \n3) Canberra", "reasoning": "\n\n", "reasoning_chars": 2, "score": {"code": true, "mult": true, "capital": true}}
+{"name": "long", "wall_s": 20.3, "usage": {"prompt_tokens": 6918, "completion_tokens": 26, "total_tokens": 6944, "prompt_tokens_details": {"cached_tokens": 3, "audio_tokens": 0}, "completion_tokens_details": {"reasoning_tokens": 1, "audio_tokens": 0, "accepted_prediction_tokens": 0, "rejected_prediction_tokens": 0}}, "finish": "stop", "content": "\n\n1) ORCHID-7419  \n2) 391  \n3) Canberra", "reasoning": "\n\n", "reasoning_chars": 2, "score": {"code": true, "mult": true, "capital": true}}
+{"name": "short_repeat", "wall_s": 1.25, "usage": {"prompt_tokens": 73, "completion_tokens": 26, "total_tokens": 99, "prompt_tokens_details": {"cached_tokens": 3, "audio_tokens": 0}, "completion_tokens_details": {"reasoning_tokens": 1, "audio_tokens": 0, "accepted_prediction_tokens": 0, "rejected_prediction_tokens": 0}}, "finish": "stop", "content": "\n\n1) ORCHID-7419  \n2) 391  \n3) Canberra", "reasoning": "\n\n", "reasoning_chars": 2, "score": {"code": true, "mult": true, "capital": true}}
+Traceback (most recent call last):
+  File "/Users/brenden/.caravan/bench-2026-10-30/runtime-compare/exo_bench.py", line 86, in <module>
+    res["quality2"] = {k: chat(v, k + "_repeat") for k, v in P.items()}; save()
+                          ~~~~^^^^^^^^^^^^^^^^^^
+  File "/Users/brenden/.caravan/bench-2026-10-30/runtime-compare/exo_bench.py", line 55, in chat
+    t0 = time.time(); r = json.load(urllib.request.urlopen(req, timeout=3600)); dt = time.time() - t0
+                          ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py", line 298, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)

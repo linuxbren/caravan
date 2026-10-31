@@ -1,0 +1,34 @@
+[q8] cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf --tensor-split 1 --port 8080 -c 16384 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/qwen3-30b-a3b-q4ks/slots/ --parallel 2 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 512
+[q8] ready in 1.0s pid 68645
+[proxy] ready in 1.0s
+{"name": "proxy_smoke", "wall_s": 0.55, "prompt_n": 18, "prompt_tps": 60.98717913967419, "gen_n": 11, "gen_tps": 41.66458343749479, "content": "Hello, how are you?", "reasoning": ""}
+{"name": "proxy_smoke_repeat", "wall_s": 0.29, "prompt_n": 1, "prompt_tps": 41.595607503847596, "gen_n": 12, "gen_tps": 42.33537312858408, "content": "Hello, how are you today?", "reasoning": ""}
+{"name": "q8_short", "wall_s": 1.14, "prompt_n": 73, "prompt_tps": 135.16240781646056, "gen_n": 26, "gen_tps": 42.04097144913547, "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "reasoning": ""}
+[proxy] stopped rc=-15
+[q8] stopped rc=0
+Traceback (most recent call last):
+  File "/Users/brenden/.caravan/bench-2026-10-30/smoke.py", line 88, in <module>
+    results["q8_long"] = chat("http://127.0.0.1:8080", P["long"], "q8_long")
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/brenden/.caravan/bench-2026-10-30/smoke.py", line 67, in chat
+    r, dt = post(base + "/v1/chat/completions", body)
+            ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/brenden/.caravan/bench-2026-10-30/smoke.py", line 18, in post
+    t = time.time(); r = json.load(urllib.request.urlopen(req, timeout=timeout)); return r, time.time() - t
+                                   ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 493, in open
+    response = meth(req, response)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 602, in http_response
+    response = self.parent.error(
+        'http', request, response, code, msg, hdrs)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 531, in error
+    return self._call_chain(*args)
+           ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 611, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 400: Bad Request

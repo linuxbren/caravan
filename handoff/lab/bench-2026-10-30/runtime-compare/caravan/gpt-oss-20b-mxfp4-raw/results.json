@@ -1,0 +1,54 @@
+{
+ "config": {
+  "model": "/Users/brenden/.cache/huggingface/hub/models--ggml-org--gpt-oss-20b-GGUF/blobs/27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901",
+  "n_slots": 2,
+  "ctx_per_slot": 18432,
+  "ubatch": 2048,
+  "batch": 2048,
+  "kv": "q8_0",
+  "fa": "on",
+  "ngl": 999,
+  "max_tokens": 800,
+  "no_think": ""
+ },
+ "mem": {
+  "peak_rss_gb": 0.0,
+  "peak_footprint_gb": 0.0,
+  "min_free_pct": 100
+ },
+ "resume_raw": {
+  "cold": {
+   "name": "raw_cold_16k",
+   "wall_s": 47.09,
+   "prompt_n": 16352,
+   "cache_n": 0,
+   "prompt_tps": 347.7,
+   "gen_n": 1,
+   "gen_tps": null
+  },
+  "warm_in_memory": {
+   "name": "raw_warm_in_memory",
+   "wall_s": 2.28,
+   "prompt_n": 547,
+   "cache_n": 16351,
+   "prompt_tps": 246.4,
+   "gen_n": 1,
+   "gen_tps": null
+  },
+  "restart_s": 2.1,
+  "after_restart": {
+   "name": "raw_after_restart",
+   "wall_s": 50.4,
+   "prompt_n": 16926,
+   "cache_n": 0,
+   "prompt_tps": 336.5,
+   "gen_n": 1,
+   "gen_tps": null
+  },
+  "proxy_log": [
+   "[slot-pin-proxy] restored slot occupancy for 1 slot(s) from /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/gpt-oss-20b-mxfp4-raw/session_slots.json",
+   "[slot-pin-proxy] restored slot 0 from disk for fingerprint fdefab2cffaa7bfd (16898 tokens)",
+   "[slot-pin-proxy] POST /completion -> 200 id_slot=0 fp=fdefab2cffaa7bfd cache=restored"
+  ]
+ }
+}

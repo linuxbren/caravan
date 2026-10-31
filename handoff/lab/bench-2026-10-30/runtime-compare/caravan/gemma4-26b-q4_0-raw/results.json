@@ -1,0 +1,54 @@
+{
+ "config": {
+  "model": "/Users/brenden/.caravan/models/gemma-4-26B_q4_0-it.gguf",
+  "n_slots": 2,
+  "ctx_per_slot": 18432,
+  "ubatch": 2048,
+  "batch": 2048,
+  "kv": "q8_0",
+  "fa": "on",
+  "ngl": 999,
+  "max_tokens": 1000,
+  "no_think": ""
+ },
+ "mem": {
+  "peak_rss_gb": 0.0,
+  "peak_footprint_gb": 0.0,
+  "min_free_pct": 100
+ },
+ "resume_raw": {
+  "cold": {
+   "name": "raw_cold_16k",
+   "wall_s": 56.17,
+   "prompt_n": 16608,
+   "cache_n": 0,
+   "prompt_tps": 295.8,
+   "gen_n": 1,
+   "gen_tps": null
+  },
+  "warm_in_memory": {
+   "name": "raw_warm_in_memory",
+   "wall_s": 2.76,
+   "prompt_n": 549,
+   "cache_n": 16608,
+   "prompt_tps": 203.3,
+   "gen_n": 1,
+   "gen_tps": null
+  },
+  "restart_s": 2.1,
+  "after_restart": {
+   "name": "raw_after_restart",
+   "wall_s": 59.24,
+   "prompt_n": 17175,
+   "cache_n": 0,
+   "prompt_tps": 290.3,
+   "gen_n": 1,
+   "gen_tps": null
+  },
+  "proxy_log": [
+   "[slot-pin-proxy] restored slot occupancy for 1 slot(s) from /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/gemma4-26b-q4_0-raw/session_slots.json",
+   "[slot-pin-proxy] restored slot 0 from disk for fingerprint 626f830e0b87785f (17157 tokens)",
+   "[slot-pin-proxy] POST /completion -> 200 id_slot=0 fp=626f830e0b87785f cache=restored"
+  ]
+ }
+}

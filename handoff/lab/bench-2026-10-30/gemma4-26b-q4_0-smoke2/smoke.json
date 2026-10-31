@@ -1,0 +1,74 @@
+{
+ "proxy_smoke": {
+  "name": "proxy_smoke",
+  "wall_s": 11.25,
+  "prompt_n": 22,
+  "prompt_tps": 77.15805828239147,
+  "gen_n": 388,
+  "gen_tps": 35.30967773486684,
+  "content": "Hello, how are you today?",
+  "reasoning": "*   Constraint: Say \"hello\".\n    *   Constraint: Use exactly five words.\n\n    *   \"Hello, how are you today?\" (5 words)\n    *   \"Hello, it is nice meeting.\" (5 words - a bit awkward)\n    *   \"Hello, I am your assistant.\" (5 words)\n    *   \"Hello, I hope you're well.\" (5 words)\n    *   \"Hello, have a great day.\" (5 words)\n    *   \"Hello, how can I help?\" (5 words)\n\n    *   \"Hello, how can I help?\" ",
+  "reasoning_chars": 1106,
+  "finish": "stop"
+ },
+ "proxy_smoke_2": {
+  "name": "proxy_smoke_repeat",
+  "wall_s": 11.07,
+  "prompt_n": 5,
+  "prompt_tps": 57.75472722442332,
+  "gen_n": 388,
+  "gen_tps": 35.288990847020585,
+  "content": "Hello, how are you today?",
+  "reasoning": "*   Constraint: Say \"hello\".\n    *   Constraint: Use exactly five words.\n\n    *   \"Hello, how are you today?\" (5 words)\n    *   \"Hello, it is nice meeting.\" (5 words - a bit awkward)\n    *   \"Hello, I am your assistant.\" (5 words)\n    *   \"Hello, I hope you're well.\" (5 words)\n    *   \"Hello, have a great day.\" (5 words)\n    *   \"Hello, how can I help?\" (5 words)\n\n    *   \"Hello, how can I help?\" ",
+  "reasoning_chars": 1106,
+  "finish": "stop"
+ },
+ "q8_short": {
+  "name": "q8_short",
+  "wall_s": 8.1,
+  "prompt_n": 71,
+  "prompt_tps": 144.03463322899276,
+  "gen_n": 270,
+  "gen_tps": 35.36689006971353,
+  "content": "1) ORCHID-7419\n2) 391\n3) Canberra",
+  "reasoning": "*   Constraint 1: \"Important note: the vault access code is ORCHID-7419.\" (Context/Instruction)\n    *   Constraint 2: \"Answer in one short line each, no explanation.\" (Format)\n    *   Question 1: \"What is the vault access code?\"\n    *   Question 2: \"What is 17 multiplied by 23?\"\n    *   Question 3: \"What is the capital of Australia?\"\n\n    *   Q1: ORCHID-7419\n    *   Q2: 17 * 23 = (20 - 3) * 23 = 4",
+  "reasoning_chars": 643,
+  "finish": "stop"
+ },
+ "q8_long": {
+  "name": "q8_long",
+  "wall_s": 38.4,
+  "prompt_n": 7129,
+  "prompt_tps": 315.13127876639345,
+  "gen_n": 494,
+  "gen_tps": 31.250253551752955,
+  "content": "1) ORCHID-7419\n2) 391\n3) Canberra",
+  "reasoning": "*   Input: A long inventory log (290 records).\n    *   Task: Answer three specific questions in one short line each, no explanation.\n    *   Questions:\n        1.  What is the vault access code?\n        2.  What is 17 multiplied by 23?\n        3.  What is the capital of Australia?\n\n    *   Scanning the text for \"vault access code\".\n    *   Found: \"Important note: the vault access code is ORCHID-74",
+  "reasoning_chars": 1409,
+  "finish": "stop"
+ },
+ "f16_short": {
+  "name": "f16_short",
+  "wall_s": 8.66,
+  "prompt_n": 78,
+  "prompt_tps": 132.2811891061353,
+  "gen_n": 295,
+  "gen_tps": 36.44323000066193,
+  "content": "1) ORCHID-7419\n2) 391\n3) Canberra",
+  "reasoning": "*   Constraint 1: \"Important note: the vault access code is ORCHID-7419.\" (Context/Instruction)\n    *   Constraint 2: \"Answer in one short line each, no explanation.\" (Format)\n    *   Question 1: \"What is the vault access code?\"\n    *   Question 2: \"What is 17 multiplied by 23?\"\n    *   Question 3: \"What is the capital of Australia?\"\n\n    *   Q1: ORCHID-7419\n    *   Q2: 17 * 23 = (20 - 3) * 23 = 4",
+  "reasoning_chars": 690,
+  "finish": "stop"
+ },
+ "f16_long": {
+  "name": "f16_long",
+  "wall_s": 38.74,
+  "prompt_n": 7122,
+  "prompt_tps": 310.55799055636845,
+  "gen_n": 495,
+  "gen_tps": 31.262514498465734,
+  "content": "1) ORCHID-7419\n2) 391\n3) Canberra",
+  "reasoning": "*   Input: A long inventory log (290 records).\n    *   Task: Answer three specific questions in one short line each, no explanation.\n    *   Questions:\n        1.  What is the vault access code?\n        2.  What is 17 multiplied by 23?\n        3.  What is the capital of Australia?\n\n    *   Scanning the text for \"vault access code\".\n    *   Found: \"Important note: the vault access code is ORCHID-74",
+  "reasoning_chars": 1424,
+  "finish": "stop"
+ }
+}

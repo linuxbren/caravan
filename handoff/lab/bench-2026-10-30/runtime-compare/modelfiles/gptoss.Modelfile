@@ -1,0 +1,3 @@
+FROM /Users/brenden/.cache/huggingface/hub/models--ggml-org--gpt-oss-20b-GGUF/blobs/27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901
+PARAMETER num_gpu 999
+PARAMETER num_ctx 8192

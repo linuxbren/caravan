@@ -1,0 +1,126 @@
+== before A_fa_f16 06:54:42
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 90%
+Pages free:                                   978452.
+Pages active:                                 149394.
+Pages inactive:                               158892.
+Pages wired down:                             134604.
+Pages stored in compressor:                   185343.
+Pages occupied by compressor:                  14650.
+== after A_fa_f16 06:57:04
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 29%
+Pages free:                                    60317.
+Pages active:                                 169653.
+Pages inactive:                               255490.
+Pages wired down:                            1024093.
+Pages stored in compressor:                   211265.
+Pages occupied by compressor:                  24695.
+== before B_fa1_q8 06:57:04
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 49%
+Pages free:                                    60655.
+Pages active:                                 169627.
+Pages inactive:                               554504.
+Pages wired down:                             725083.
+Pages stored in compressor:                   211265.
+Pages occupied by compressor:                  24695.
+== after B_fa1_q8 06:58:12
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 74%
+Pages free:                                    61729.
+Pages active:                                 189910.
+Pages inactive:                               934269.
+Pages wired down:                             323204.
+Pages stored in compressor:                   211038.
+Pages occupied by compressor:                  24670.
+== before C_ub 06:58:12
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 90%
+Pages free:                                    72464.
+Pages active:                                 190051.
+Pages inactive:                              1123424.
+Pages wired down:                             123515.
+Pages stored in compressor:                   211035.
+Pages occupied by compressor:                  24670.
+== after C_ub 07:00:31
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 30%
+Pages free:                                    29082.
+Pages active:                                 142741.
+Pages inactive:                               347376.
+Pages wired down:                             977188.
+Pages stored in compressor:                   246916.
+Pages occupied by compressor:                  42008.
+== before C2_ub2048_v 07:02:32
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 88%
+Pages free:                                    87361.
+Pages active:                                 149947.
+Pages inactive:                              1124766.
+Pages wired down:                             133589.
+Pages stored in compressor:                   245330.
+Pages occupied by compressor:                  41490.
+== after C2_ub2048_v 07:02:38
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 32%
+Pages free:                                    93878.
+Pages active:                                 136608.
+Pages inactive:                               316500.
+Pages wired down:                             941435.
+Pages stored in compressor:                   270479.
+Pages occupied by compressor:                  49546.
+== before D_d8k_f16 07:02:38
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 55%
+Pages free:                                    93968.
+Pages active:                                 136578.
+Pages inactive:                               666769.
+Pages wired down:                             591173.
+Pages stored in compressor:                   270479.
+Pages occupied by compressor:                  49546.
+== after D_d8k_f16 07:03:24
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 32%
+Pages free:                                    99818.
+Pages active:                                  59720.
+Pages inactive:                               378052.
+Pages wired down:                             924726.
+Pages stored in compressor:                   309181.
+Pages occupied by compressor:                  67515.
+== before D_d8k_q8 07:03:24
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 59%
+Pages free:                                    99700.
+Pages active:                                  59899.
+Pages inactive:                               840907.
+Pages wired down:                             461878.
+Pages stored in compressor:                   309026.
+Pages occupied by compressor:                  67464.
+== after D_d8k_q8 07:04:13
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 28%
+Pages free:                                   107772.
+Pages active:                                  94112.
+Pages inactive:                               259125.
+Pages wired down:                            1004957.
+Pages stored in compressor:                   296939.
+Pages occupied by compressor:                  62876.
+== before D_d16k_q8 07:04:13
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 51%
+Pages free:                                   107850.
+Pages active:                                  93117.
+Pages inactive:                               623670.
+Pages wired down:                             641410.
+Pages stored in compressor:                   296938.
+Pages occupied by compressor:                  62875.
+== after D_d16k_q8 07:06:02
+vm.swapusage: total = 2048.00M  used = 478.12M  free = 1569.88M  (encrypted)
+System-wide memory free percentage: 32%
+Pages free:                                   114446.
+Pages active:                                  82407.
+Pages inactive:                               353471.
+Pages wired down:                             928377.
+Pages stored in compressor:                   288774.
+Pages occupied by compressor:                  59689.

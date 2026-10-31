@@ -1,0 +1,62 @@
+{
+ "proxy_smoke": {
+  "name": "proxy_smoke",
+  "wall_s": 0.31,
+  "prompt_n": 1,
+  "prompt_tps": 28.843380444188057,
+  "gen_n": 12,
+  "gen_tps": 42.3950914192335,
+  "content": "Hello, how are you today?",
+  "reasoning": ""
+ },
+ "proxy_smoke_2": {
+  "name": "proxy_smoke_repeat",
+  "wall_s": 0.29,
+  "prompt_n": 1,
+  "prompt_tps": 40.998729039399784,
+  "gen_n": 12,
+  "gen_tps": 42.41160072947953,
+  "content": "Hello, how are you today?",
+  "reasoning": ""
+ },
+ "q8_short": {
+  "name": "q8_short",
+  "wall_s": 1.09,
+  "prompt_n": 73,
+  "prompt_tps": 152.30099684131903,
+  "gen_n": 26,
+  "gen_tps": 41.88818535354466,
+  "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra",
+  "reasoning": ""
+ },
+ "q8_long": {
+  "name": "q8_long",
+  "wall_s": 24.43,
+  "prompt_n": 6915,
+  "prompt_tps": 293.1482044131968,
+  "gen_n": 26,
+  "gen_tps": 29.872718321774585,
+  "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra",
+  "reasoning": ""
+ },
+ "f16_short": {
+  "name": "f16_short",
+  "wall_s": 1.16,
+  "prompt_n": 73,
+  "prompt_tps": 128.5285940908539,
+  "gen_n": 26,
+  "gen_tps": 42.81239778540029,
+  "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra",
+  "reasoning": ""
+ },
+ "f16_long": {
+  "name": "f16_long",
+  "wall_s": 24.46,
+  "prompt_n": 6915,
+  "prompt_tps": 292.19686065214114,
+  "gen_n": 26,
+  "gen_tps": 32.34140100361835,
+  "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra",
+  "reasoning": ""
+ }
+}

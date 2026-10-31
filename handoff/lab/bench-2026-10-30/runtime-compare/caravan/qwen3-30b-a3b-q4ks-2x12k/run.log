@@ -1,0 +1,4 @@
+17:30:35 server cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf --tensor-split 1 --port 8080 -c 24576 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/qwen3-30b-a3b-q4ks-2x12k/slots/ --parallel 2 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 1024
+17:30:37 start #1: server ready 1.0s, proxy ready, total 1.5s; pids 37124/37125
+17:30:37 [proxy] stopped rc=-15
+17:30:37 [server] stopped rc=0

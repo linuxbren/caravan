@@ -1,0 +1,29 @@
+17:30:37 server cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf --tensor-split 1 --port 8080 -c 18432 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/qwen3-30b-a3b-q4ks-1x18k/slots/ --parallel 1 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 1024
+17:30:39 start #1: server ready 1.0s, proxy ready, total 1.5s; pids 37133/37134
+17:32:00 {"name": "prime_16k", "wall_s": 80.87, "prompt_n": 16602, "cache_n": 0, "prompt_tps": 205.4, "gen_n": 1, "gen_tps": null}
+17:32:11 {"name": "d16k_r0", "wall_s": 11.18, "prompt_n": 567, "cache_n": 16601, "prompt_tps": 121.6, "gen_n": 128, "gen_tps": 20.0}
+17:32:22 {"name": "d16k_r1", "wall_s": 11.17, "prompt_n": 561, "cache_n": 16605, "prompt_tps": 121.7, "gen_n": 128, "gen_tps": 20.0}
+17:32:33 {"name": "d16k_r2", "wall_s": 11.13, "prompt_n": 559, "cache_n": 16604, "prompt_tps": 122.3, "gen_n": 128, "gen_tps": 20.1}
+17:32:33 mem {'peak_rss_gb': 18.68, 'peak_footprint_gb': 1.21, 'min_free_pct': 15}
+17:33:53 {"name": "t1_cold", "ttft_s": 79.984, "wall_s": 80.37, "prompt_n": 16259, "cache_n": 0, "prompt_ms": 79601.966, "prompt_tps": 204.3, "gen_n": 13, "gen_tps": 20.7, "finish": "stop", "content": "ORCHID-7419", "reasoning_chars": 0, "score": {"code": true, "mult": false, "capital": false}}
+17:33:55 {"name": "t2_warm_in_memory", "ttft_s": 1.008, "wall_s": 1.15, "prompt_n": 39, "cache_n": 16259, "prompt_ms": 642.427, "prompt_tps": 60.7, "gen_n": 8, "gen_tps": 20.6, "finish": "stop", "content": "391", "reasoning_chars": 0, "score": {"code": false, "mult": true, "capital": false}}
+17:33:57 slot files {'09e28728efa6e9f3.bin': 851774396, '11c933df2074e157.bin': 903230796}
+17:33:57 direct save {'id_slot': 0, 'filename': 'bench-timing-ref.bin', 'n_saved': 16305, 'n_written': 851774396, 'timings': {'save_ms': 181.575}} {}
+17:33:57 [proxy] stopped rc=-15
+17:33:57 [server] stopped rc=0
+17:33:57 server cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf --tensor-split 1 --port 8080 -c 18432 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/qwen3-30b-a3b-q4ks-1x18k/slots/ --parallel 1 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 1024
+17:33:59 start #2: server ready 1.0s, proxy ready, total 1.5s; pids 37692/37694
+17:34:00 {"name": "t3_resume_after_restart", "ttft_s": 1.179, "wall_s": 1.27, "prompt_n": 30, "cache_n": 16298, "prompt_ms": 719.82, "prompt_tps": 41.7, "gen_n": 7, "gen_tps": 21.4, "finish": "stop", "content": "Canberra", "reasoning_chars": 0, "score": {"code": false, "mult": false, "capital": true}}
+17:34:00 proxy restore log ['[slot-pin-proxy] restored slot occupancy for 1 slot(s) from /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/qwen3-30b-a3b-q4ks-1x18k/session_slots.json', '[slot-pin-proxy] listening on 127.0.0.1:8090, forwarding to 127.0.0.1:8080, pinning completions per-session across 1 slot(s) (LRU), FIFO-serialized; disk save every 1 turn(s)', '[slot-pin-proxy] restored slot 0 from disk for fingerprint 09e28728efa6e9f3 (16305 tokens)', '[slot-pin-proxy] POST /v1/chat/completions -> 200 id_slot=0 fp=09e28728efa6e9f3 cache=restored']
+17:34:03 direct restore {'id_slot': 0, 'filename': 'bench-timing-ref.bin', 'n_restored': 16305, 'n_read': 851774396, 'timings': {'restore_ms': 264.981}}
+17:35:24 {"name": "raw_cold_16k", "wall_s": 81.17, "prompt_n": 16609, "cache_n": 0, "prompt_tps": 204.6, "gen_n": 1, "gen_tps": null}
+17:35:29 {"name": "raw_warm_in_memory", "wall_s": 4.73, "prompt_n": 558, "cache_n": 16608, "prompt_tps": 122.7, "gen_n": 1, "gen_tps": null}
+17:35:31 [proxy] stopped rc=-15
+17:35:31 [server] stopped rc=0
+17:35:31 server cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf --tensor-split 1 --port 8080 -c 18432 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/qwen3-30b-a3b-q4ks-1x18k/slots/ --parallel 1 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 1024
+17:35:33 start #3: server ready 1.0s, proxy ready, total 1.5s; pids 37751/37752
+17:35:37 {"name": "raw_after_restart", "wall_s": 4.67, "prompt_n": 574, "cache_n": 16611, "prompt_tps": 130.7, "gen_n": 1, "gen_tps": null}
+17:35:37 raw proxy log ['[slot-pin-proxy] restored slot occupancy for 1 slot(s) from /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/qwen3-30b-a3b-q4ks-1x18k/session_slots.json', '[slot-pin-proxy] restored slot 0 from disk for fingerprint eed7638a10aa0b7e (17166 tokens)', '[slot-pin-proxy] POST /completion -> 200 id_slot=0 fp=eed7638a10aa0b7e cache=restored']
+17:35:37 [proxy] stopped rc=-15
+17:35:38 [server] stopped rc=0
+17:35:38 DONE qwen3-30b-a3b-q4ks-1x18k

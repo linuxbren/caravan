@@ -1,0 +1,11 @@
+[slot-pin-proxy] listening on 127.0.0.1:8090, forwarding to 127.0.0.1:8080, pinning completions per-session across 2 slot(s) (LRU), FIFO-serialized; disk save every 1 turn(s)
+[slot-cleanup] automatic slot cleanup disabled (mode=off)
+[slot-pin-proxy] GET /health -> 200
+[slot-pin-proxy] "GET /health HTTP/1.1" 200 -
+[slot-pin-proxy] POST /completion -> 200 id_slot=0 fp=fdefab2cffaa7bfd cache=no-file
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 0 to disk for fingerprint fdefab2cffaa7bfd
+[slot-pin-proxy] POST /completion -- waited 0.0s behind 1 queued request(s)
+[slot-pin-proxy] POST /completion -> 200 id_slot=0 fp=fdefab2cffaa7bfd cache=warm
+[slot-pin-proxy] "POST /completion HTTP/1.1" 200 -
+[slot-pin-proxy] saved slot 0 to disk for fingerprint fdefab2cffaa7bfd

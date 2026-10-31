@@ -1,0 +1,3 @@
+FROM /Users/brenden/.caravan/models/gemma-4-26B_q4_0-it.gguf
+PARAMETER num_gpu 999
+PARAMETER num_ctx 8192

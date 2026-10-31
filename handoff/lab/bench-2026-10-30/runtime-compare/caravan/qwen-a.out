@@ -1,0 +1,30 @@
+17:30:35 server cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf --tensor-split 1 --port 8080 -c 24576 --slot-save-path /Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/qwen3-30b-a3b-q4ks-2x12k/slots/ --parallel 2 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 1024
+17:30:37 start #1: server ready 1.0s, proxy ready, total 1.5s; pids 37124/37125
+17:30:37 [proxy] stopped rc=-15
+17:30:37 [server] stopped rc=0
+Traceback (most recent call last):
+  File "/Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/caravan_bench.py", line 100, in <module>
+    comp("Hello there, this is a warm-up request.", 1, "warm")
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/caravan_bench.py", line 58, in comp
+    r, dt = post(PX + "/completion", body); t = r.get("timings", {})
+            ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/brenden/.caravan/bench-2026-10-30/runtime-compare/caravan/caravan_bench.py", line 22, in post
+    t = time.time(); r = json.load(urllib.request.urlopen(req, timeout=timeout)); return r, time.time() - t
+                                   ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 493, in open
+    response = meth(req, response)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 602, in http_response
+    response = self.parent.error(
+        'http', request, response, code, msg, hdrs)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 531, in error
+    return self._call_chain(*args)
+           ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/urllib/request.py", line 611, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error

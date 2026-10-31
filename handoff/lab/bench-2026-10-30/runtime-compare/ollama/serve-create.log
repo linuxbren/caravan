@@ -1,0 +1,40 @@
+Couldn't find '/Users/brenden/.ollama/id_ed25519'. Generating new private key.
+Your new public key is: 
+
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWRQj51HXW5Sfeqjrf1I/7gAEKketU/uh5qs1RBnd1Y
+
+time=2026-10-30T14:34:02.263-05:00 level=INFO source=routes.go:2474 msg="server config" env="map[HTTPS_PROXY: HTTP_PROXY: LLAMA_ARG_FIT: LLAMA_ARG_FIT_TARGET: NO_PROXY: OLLAMA_CONTEXT_LENGTH:0 OLLAMA_CREATE_REMOTE:false OLLAMA_DEBUG:INFO OLLAMA_DEBUG_LOG_REQUESTS:false OLLAMA_EDITOR: OLLAMA_FLASH_ATTENTION:false OLLAMA_GO_TEMPLATE:true OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://127.0.0.1:11434 OLLAMA_IGPU_ENABLE: OLLAMA_KEEP_ALIVE:5m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:0 OLLAMA_MAX_QUEUE:512 OLLAMA_MAX_TRANSFER_STREAMS:4 OLLAMA_MODELS:/Users/brenden/.ollama/models OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NO_CLOUD:false OLLAMA_NUM_PARALLEL:1 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_REMOTES:[ollama.com] OLLAMA_SCHED_SPREAD:false http_proxy: https_proxy: no_proxy:]"
+time=2026-10-30T14:34:02.263-05:00 level=INFO source=routes.go:2476 msg="Ollama cloud disabled: false"
+time=2026-10-30T14:34:02.264-05:00 level=INFO source=images.go:1033 msg="total blobs: 0"
+time=2026-10-30T14:34:02.264-05:00 level=INFO source=images.go:1042 msg="total unused blobs removed: 0"
+time=2026-10-30T14:34:02.264-05:00 level=INFO source=routes.go:2536 msg="Listening on 127.0.0.1:11434 (version 0.40.13)"
+time=2026-10-30T14:34:02.265-05:00 level=INFO source=runner.go:60 msg="discovering available GPUs..."
+time=2026-10-30T14:34:02.810-05:00 level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h11m44.588021269s consecutive_failures=0
+time=2026-10-30T14:34:06.556-05:00 level=INFO source=types.go:32 msg="inference compute" id=0 filter_id=0 library=Metal compute=0.0 name=MTL0 description="Apple M4" libdirs="" driver=0.0 pci_id="" type=iGPU total="17.8 GiB" available="17.8 GiB"
+time=2026-10-30T14:34:06.556-05:00 level=INFO source=routes.go:2586 msg="vram-based default context" total_vram="17.8 GiB" default_num_ctx=4096
+[GIN] 2026/10/30 - 14:34:13 | 200 |  68.25µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/10/30 - 14:34:13 | 200 | 14.834µs |       127.0.0.1 | HEAD     "/api/blobs/sha256:0c2ef7d6282446ba790088ba281f87c297c7ce018ff0678c915cee365e41a6da"
+[GIN] 2026/10/30 - 14:34:13 | 404 | 37.625µs |       127.0.0.1 | HEAD     "/api/blobs/sha256:fa0c96bed61759800bcab82a8a44a8effcd92cdd8bced06b8195232237390b4a"
+[GIN] 2026/10/30 - 14:34:28 | 200 | 200.42ms |       127.0.0.1 | POST     "/api/create"
+[GIN] 2026/10/30 - 14:34:33 | 200 |  11.75µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/10/30 - 14:34:33 | 200 | 14.291µs |       127.0.0.1 | HEAD     "/api/blobs/sha256:9b79d7069303349132a9e98c3cb37b2e8143b2d388e4ab5085c82edcead0c728"
+[GIN] 2026/10/30 - 14:34:33 | 404 | 23.709µs |       127.0.0.1 | HEAD     "/api/blobs/sha256:3eca3b8f6d7baf218a7dd6bba5fb59a56ee25fe2d567b6f5f589b4f697eca51d"
+[GIN] 2026/10/30 - 14:34:46 | 200 | 656.82ms |       127.0.0.1 | POST     "/api/create"
+[GIN] 2026/10/30 - 14:34:51 | 200 | 13.125µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/10/30 - 14:34:51 | 200 | 11.375µs |       127.0.0.1 | HEAD     "/api/blobs/sha256:242ff4a388e7ae92dee982b0da2a0a8f3175173099329dca8549e7be9a0f35ba"
+[GIN] 2026/10/30 - 14:34:51 | 404 | 24.208µs |       127.0.0.1 | HEAD     "/api/blobs/sha256:27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901"
+[GIN] 2026/10/30 - 14:35:02 | 200 | 596.92ms |       127.0.0.1 | POST     "/api/create"
+[GIN] 2026/10/30 - 14:35:02 | 200 |  10.75µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/10/30 - 14:35:02 | 200 |  98.04ms |       127.0.0.1 | GET      "/api/tags"
+[GIN] 2026/10/30 - 14:35:07 | 200 | 36.292µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/10/30 - 14:35:07 | 200 |  43.13ms |       127.0.0.1 | POST     "/api/show"
+[GIN] 2026/10/30 - 14:35:07 | 200 | 22.583µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/10/30 - 14:35:07 | 200 |   1.28ms |       127.0.0.1 | POST     "/api/show"
+[GIN] 2026/10/30 - 14:35:07 | 200 | 24.916µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/10/30 - 14:35:07 | 200 |  62.29ms |       127.0.0.1 | POST     "/api/show"
+[GIN] 2026/10/30 - 14:35:07 | 200 | 10.208µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/10/30 - 14:35:07 | 200 | 496.708µs |       127.0.0.1 | POST     "/api/show"
+[GIN] 2026/10/30 - 14:35:07 | 200 |  8.292µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/10/30 - 14:35:07 | 200 |  36.98ms |       127.0.0.1 | POST     "/api/show"
+[GIN] 2026/10/30 - 14:35:07 | 200 | 11.584µs |       127.0.0.1 | HEAD     "/"
+[GIN] 2026/10/30 - 14:35:07 | 200 | 454.083µs |       127.0.0.1 | POST     "/api/show"
