@@ -212,7 +212,7 @@ tail -f ~/Library/Logs/caravan/*.log
 - After a launchd plist's arguments change: `bootout` then `bootstrap`
   (`kickstart` doesn't re-read the file). For a Python-only change,
   `launchctl kickstart -k gui/$(id -u)/com.caravan.<name>` is enough.
-- Tests: `python3 -m unittest discover -s tests -v` (stdlib only; 120
+- Tests: `python3 -m unittest discover -s tests -v` (stdlib only; 126
   tests on the v3 branch).
 
 ## Documentation

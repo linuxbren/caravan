@@ -444,10 +444,56 @@ def _valid(store, key):
 
 
 # --- mlx: one stage of a split model ------------------------------------------
+# Written next to the shards by mlx_split_fetch.py: {"repo": ..., "sizes": {file: bytes}}
+# with the sizes Hugging Face lists. Optional; the safetensors header check
+# below works without it (e.g. for files copied by hand).
+SIZES_FILE = "caravan-split-sizes.json"
+
+
+class ShardSizeError(RuntimeError):
+    """A shard this stage needs is there but has the wrong size (cut-off
+    download or copy)."""
+
+
+def safetensors_expected_size(path):
+    """The size a complete safetensors file must have: the 8-byte header
+    length + the JSON header + the end of the last tensor's data. Reads only
+    the header. None when the header itself is cut off or unreadable."""
+    import json
+    import struct
+    try:
+        with open(path, "rb") as fh:
+            raw = fh.read(8)
+            if len(raw) < 8:
+                return None
+            (n,) = struct.unpack("<Q", raw)
+            if n > (100 << 20):          # no real header is this big
+                return None
+            head = fh.read(n)
+        if len(head) < n:
+            return None
+        h = json.loads(head)
+        ends = [v["data_offsets"][1] for k, v in h.items() if k != "__metadata__"]
+        return 8 + n + max(ends, default=0)
+    except (OSError, ValueError, KeyError, TypeError, IndexError):
+        return None
+
+
+def _fetch_hint(d, who, front_layers, repo=None):
+    cmd = f"python3 agent/mlx_split_fetch.py {repo or '<repo>'} {d} --role {who}"
+    if front_layers is not None:
+        cmd += f" --packer-layers {front_layers}"
+    return cmd
+
+
 def check_local_shards(model_dir, role, front_layers=None):
     """A split-downloaded model dir (agent/mlx_split_fetch.py) holds only some
     shards; strict=False loading would then silently leave missing weights at
-    their random init. Refuse to start unless this stage's shards are here."""
+    their random init. Refuse to start unless this stage's shards are here
+    and complete: each one's size must match the size Hugging Face listed
+    (SIZES_FILE, when present) and the size its own safetensors header
+    implies. Missing or wrong files are fetched again from the source with
+    mlx_split_fetch.py; a stage never gets weights from the other Mac."""
     import json
     from pathlib import Path
     d = Path(model_dir)
@@ -456,10 +502,34 @@ def check_local_shards(model_dir, role, front_layers=None):
         return []
     from mlx_split_fetch import plan_files
     need = plan_files(json.loads(cfg.read_text()), json.loads(idx.read_text()), front_layers)[role]
+    who = {"head": "lead", "front": "packer"}.get(role, role)
+    recorded, repo = {}, None
+    if (d / SIZES_FILE).exists():
+        try:
+            r = json.loads((d / SIZES_FILE).read_text())
+            recorded, repo = dict(r.get("sizes") or {}), r.get("repo")
+        except (OSError, ValueError, TypeError, AttributeError):
+            recorded, repo = {}, None
     missing = sorted(f for f in need if not (d / f).exists())
     if missing:
-        who = {"head": "lead", "front": "packer"}.get(role, role)
-        raise FileNotFoundError(f"{who} stage needs {missing} in {d} (run mlx_split_fetch.py --role {who})")
+        raise FileNotFoundError(f"{who} stage needs {missing} in {d}. Fetch them from the source: "
+                                + _fetch_hint(d, who, front_layers, repo))
+    bad = []
+    for f in sorted(need):
+        actual = (d / f).stat().st_size
+        want = recorded.get(f)
+        if want and actual != want:
+            bad.append(f"{f} is {actual:,} bytes, Hugging Face lists {want:,}")
+            continue
+        exp = safetensors_expected_size(d / f)
+        if exp is None:
+            bad.append(f"{f} ({actual:,} bytes) has a cut-off or unreadable header")
+        elif actual != exp:
+            bad.append(f"{f} is {actual:,} bytes, its header says {exp:,}")
+    if bad:
+        raise ShardSizeError(f"{who} stage: wrong size in {d}: " + "; ".join(bad)
+                             + ". Move the bad file(s) aside, then fetch them again from the source: "
+                             + _fetch_hint(d, who, front_layers, repo))
     return sorted(need)
 
 

@@ -178,8 +178,10 @@ Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oc
   straddles the cut goes to both Macs. Embeddings go to the packer (and to
   the lead too when they're tied), `lm_head` and the final norm go to the
   lead, and vision towers are skipped (the split is text-only). The stage
-  refuses to start if one of its shards is missing, because loading
-  without them would silently leave random weights. Tested on Qwen3 30B
+  refuses to start if one of its shards is missing or the wrong size
+  (v3.1: checked against the shard's own header and the sizes Hugging
+  Face lists), because loading without them would silently leave random
+  weights. Tested on Qwen3 30B
   8-bit: the lead downloaded 16.65 GB and the packer 21.09 GB, instead of
   32.44 GB each, and the split loaded from those partial copies. It's a
   command you run yourself (see

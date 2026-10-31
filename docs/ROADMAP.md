@@ -4,7 +4,8 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-10-31 (v3, branch `caravan-v3-mlx-split`, in progress).
+*Last updated 2026-10-31 (v3 tagged; v3.1 in progress on branch
+`caravan-v3-mlx-split`).
 Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
@@ -45,10 +46,13 @@ Open tasks for this rule:
   at a Caravan folder with `LLAMA_CACHE` and add a cap that never
   removes the current model's tensors.
 - [ ] **GGUF: the C++ binary** has no `--cache`, so it always resends.
-- [ ] **MLX: check the files on startup.** The packer only checks that
-  its shards exist, not their size or checksum. Compare them with the
-  sizes (and optionally hashes) Hugging Face lists. Stale `.incomplete`
-  downloads sit next to two of the 8-bit models on EXO2.
+- [x] **MLX: check the files on startup** (sizes done, v3.1). Each stage
+  checks that its shards exist and have the right size: the size their
+  own safetensors header implies, and the size Hugging Face lists when
+  `mlx_split_fetch.py` recorded it (`caravan-split-sizes.json`). A wrong
+  size stops the stage with the file name and the fetch command.
+  Still open: checksums (a file of the right size with bad bytes isn't
+  caught).
 - [ ] **MLX: fetch missing shards from the source.** Offer to run
   `mlx_split_fetch.py --role packer` (Hugging Face) instead of stopping
   with an error. Never fetch from the lead.

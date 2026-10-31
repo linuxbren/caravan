@@ -273,8 +273,12 @@ python3 agent/mlx_split_fetch.py <hf repo> <local dir> --role lead|packer [--pac
 | `--with-vision` | Also fetch vision or audio parts (skipped by default; the split is text-only). |
 | `--dry-run` | Print the plan (files and sizes) without downloading the weights (it still fetches the small `config.json` and index file). |
 
-Files that hold layers on both sides of the cut go to both Macs. The
-worker refuses to start a stage whose files are missing. It needs
+Files that hold layers on both sides of the cut go to both Macs. After a
+real download it saves the shard sizes Hugging Face lists in
+`caravan-split-sizes.json` in the model folder. The worker refuses to start
+a stage whose files are missing or the wrong size (checked against that
+file when it's there, and always against each shard's own safetensors
+header), and tells you which file and which command to run. It needs
 `huggingface_hub` in the Python you run it with. Nothing is ever deleted;
 leftover `.incomplete` files from an interrupted download stay on disk.
 

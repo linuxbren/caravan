@@ -2505,3 +2505,14 @@ already has, but smaller ones are sent every time, and the first load
 of a model is sent in full. EXO2's cache (14.4 GB from Sep 8–10) holds
 none of the current GGUFs' tensors, so the next GGUF start is a full cold
 send. The gaps are listed as open tasks there.
+
+## 2026-10-31: shard size check at startup (v3.1)
+
+Firm-rule task 5, sizes part. `mlx_split.check_local_shards()` now also
+checks each shard a stage needs: its size must equal what its own
+safetensors header implies (8 bytes + header + end of the last tensor;
+exact for all 36 shard files on EXO1 and EXO2), and, when
+`mlx_split_fetch.py` downloaded it, the size Hugging Face lists, which the
+fetch tool now saves to `caravan-split-sizes.json`. A mismatch raises
+`ShardSizeError` naming the file and the fetch command (from Hugging
+Face, never from the other Mac). Checksums are still open. 126 tests pass.

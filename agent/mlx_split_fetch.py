@@ -11,7 +11,10 @@ Internally the lead is "head" and Packer 1 is "front", as in mlx_split.py.)
 How: read config.json + model.safetensors.index.json (small files, fetched
 first), map every weight name to a role, and pass the needed shard files to
 huggingface_hub.snapshot_download(allow_patterns=...) together with the
-config/tokenizer files.
+config/tokenizer files. After a real download it writes
+caravan-split-sizes.json (the shard sizes Hugging Face lists) next to the
+files; the worker checks each shard's size against it, and against the
+shard's own safetensors header, before it starts.
 
 Weight -> role rules (plan_split() decides the layer ranges, same as the worker):
   * "...layers.<i>." of the language model -> the stage holding layer i
@@ -84,6 +87,25 @@ def file_sizes(repo):
     return {s.rfilename: (s.size or 0) for s in info.siblings}
 
 
+def write_sizes(d, repo, sizes):
+    """Record the shard sizes Hugging Face lists, so the worker can check
+    them at startup (mlx_split.check_local_shards). Merges with an existing
+    record for the same repo."""
+    from mlx_split import SIZES_FILE
+    p = Path(d) / SIZES_FILE
+    old = {}
+    if p.exists():
+        try:
+            r = json.loads(p.read_text())
+            if r.get("repo") == repo:
+                old = dict(r.get("sizes") or {})
+        except (OSError, ValueError, AttributeError):
+            old = {}
+    old.update({f: int(s) for f, s in sizes.items() if s})
+    p.write_text(json.dumps({"repo": repo, "sizes": old}, indent=1, sort_keys=True))
+    return p
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("repo"); ap.add_argument("local_dir")
@@ -113,6 +135,7 @@ def main(argv=None):
     print(json.dumps(report), flush=True)
     if not a.dry_run:
         snapshot_download(a.repo, local_dir=str(d), allow_patterns=SMALL + mine)
+        write_sizes(d, a.repo, {f: sizes[f] for f in shards})
         print("FETCHED", shown, report["my_gb"], "GB of", report["full_gb"], flush=True)
     return report
 

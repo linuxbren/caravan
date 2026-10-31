@@ -8,12 +8,28 @@ What changed in each Caravan version, newest first. Numbers come from
 "Reading" is how fast a prompt is taken in, "writing" is how fast the
 reply comes out.
 
-## v3 (unreleased): one MLX model split across two Macs
+## v3.1 (unreleased)
 
-Branch `caravan-v3-mlx-split` (off `main` at `c026359`). Not merged, not
-pushed. Commits: `b03d1e9` (the split), `a167835` (cache fix for hybrid
+On branch `caravan-v3-mlx-split`, after the `v3` tag. Not pushed.
+
+**New**
+
+- **Shard size check at startup (MLX split).** Before a split stage
+  loads, it checks that every shard file it needs is complete: the size
+  must match what the file's own safetensors header implies, and, when
+  `mlx_split_fetch.py` downloaded it, the size Hugging Face lists (saved
+  in `caravan-split-sizes.json` next to the files). A cut-off download or
+  copy now stops the stage with an error that names the file and the
+  `mlx_split_fetch.py` command to fetch it again from Hugging Face. It
+  never falls back to getting files from the other Mac. 6 new unit tests
+  (126 in total).
+
+## v3 (tag `v3`, `df68468`): one MLX model split across two Macs
+
+Branch `caravan-v3-mlx-split` (off `main` at `c026359`), pushed with tag
+`v3`; not merged into `main`. Commits: `b03d1e9` (the split), `a167835` (cache fix for hybrid
 models, bench client), `d68e094` (docs and results), `83f86a9` (lead /
-packer names), `14dfcb4` and `8a64430` (roadmap).
+packer names), `14dfcb4` and `8a64430` (roadmap), `df68468` (docs).
 
 **New**
 
