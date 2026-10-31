@@ -11,9 +11,11 @@ drives the live setup.
 """
 import signal
 import subprocess
+import sys
 import time
 
 import config
+import kv_auto
 
 
 def build_head_command(model_blob_path: str, peer_rpc_addrs: list,
@@ -38,6 +40,7 @@ def build_head_command(model_blob_path: str, peer_rpc_addrs: list,
     """
     if settings is None:
         settings = config.resolve_llama_settings()
+    settings = resolve_kv_types(settings, model_blob_path, len(peer_rpc_addrs) + 1)
     tensor_split = ",".join("1" for _ in range(len(peer_rpc_addrs) + 1))
     cmd = [
         str(config.LLAMA_SERVER_BIN),
@@ -66,7 +69,25 @@ def build_head_command(model_blob_path: str, peer_rpc_addrs: list,
         "-b", str(settings.batch_size),
         "-ub", str(settings.ubatch_size),
     ]
+    if settings.swa_full:
+        cmd += ["--swa-full"]
     return cmd
+
+
+def resolve_kv_types(settings: "config.LlamaSettings", model_path: str, n_devices: int = 1,
+                     log=None) -> "config.LlamaSettings":
+    """Turns cache_type_k/v "auto" into f16 or q8_0 (kv_auto.decide) and
+    logs the decision with its estimate. Explicit types pass through."""
+    if "auto" not in (settings.cache_type_k, settings.cache_type_v):
+        return settings
+    d = kv_auto.decide(model_path, settings.n_slots, settings.ctx_per_slot, settings.ubatch_size,
+                       settings.cache_type_k, settings.cache_type_v, n_devices=n_devices,
+                       swa_full=settings.swa_full, cfg=config.kv_auto_config())
+    ctk, ctv = d.cache_type_k, d.cache_type_v
+    if settings.flash_attn == "off" and ctv not in ("f32", "f16", "bf16"):
+        ctv = "f16"  # a quantized V cache needs flash attention
+    (log or (lambda m: print(m, file=sys.stderr)))(kv_auto.format_decision(d._replace(cache_type_v=ctv)))
+    return settings._replace(cache_type_k=ctk, cache_type_v=ctv)
 
 
 def build_tail_command() -> list[str]:

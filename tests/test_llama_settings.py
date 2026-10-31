@@ -22,7 +22,8 @@ sys.path.insert(0, str(REPO / "agent"))
 ENV_KEYS = ("CARAVAN_N_SLOTS", "CARAVAN_CTX_PER_SLOT", "CARAVAN_FLASH_ATTN",
             "CARAVAN_CACHE_TYPE_K", "CARAVAN_CACHE_TYPE_V", "CARAVAN_CACHE_RAM_MIB",
             "CARAVAN_N_GPU_LAYERS", "CARAVAN_BATCH_SIZE", "CARAVAN_UBATCH_SIZE",
-            "CARAVAN_RPC_ADDR", "CARAVAN_MODEL")
+            "CARAVAN_RPC_ADDR", "CARAVAN_MODEL", "CARAVAN_SWA_FULL",
+            "CARAVAN_COMPUTE_RESERVE_MIB", "CARAVAN_KV_SAFETY_MARGIN_MIB")
 
 
 def _flag(cmd, name):
@@ -35,6 +36,8 @@ class LlamaSettingsTest(unittest.TestCase):
         self.cfg = Path(self.tmp.name) / "config.json"
         env = {k: "" for k in ENV_KEYS}
         env["CARAVAN_CONFIG"] = str(self.cfg)
+        # pin the GPU limit so "auto" never shells out to swift in tests
+        env["CARAVAN_GPU_WORKING_SET_MIB"] = "19069.67"
         self.env = mock.patch.dict(os.environ, env)
         self.env.start()
         import config
@@ -50,7 +53,8 @@ class LlamaSettingsTest(unittest.TestCase):
         s = self.config.resolve_llama_settings()
         self.assertEqual(s.n_slots, 4)
         self.assertEqual(s.total_ctx, 262144)
-        self.assertEqual((s.flash_attn, s.cache_type_k, s.cache_type_v), ("on", "q8_0", "q8_0"))
+        # 2026-10-30: "auto" (f16 if it fits, else q8_0) -- see test_kv_auto.py
+        self.assertEqual((s.flash_attn, s.cache_type_k, s.cache_type_v), ("on", "auto", "auto"))
         self.assertEqual((s.cache_ram_mib, s.n_gpu_layers, s.batch_size, s.ubatch_size),
                          (0, "999", 2048, 512))
         self.assertEqual(s.rpc, "169.254.104.38:50052")
@@ -68,7 +72,7 @@ class LlamaSettingsTest(unittest.TestCase):
 
     def test_validation(self):
         bad = [{"flash_attn": "maybe"}, {"cache_type_k": "q3"},
-               {"flash_attn": "off"},                       # q8_0 V cache needs FA
+               {"flash_attn": "off", "cache_type_v": "q8_0"},  # q8_0 V cache needs FA
                {"ubatch_size": 4096}, {"n_slots": 0}, {"n_gpu_layers": "lots"}]
         for o in bad:
             with self.subTest(o=o), self.assertRaises(ValueError):

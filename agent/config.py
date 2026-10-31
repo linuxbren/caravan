@@ -108,8 +108,13 @@ LLAMA_DEFAULTS = {
     # 24 GB machines. NOTE: changes the on-disk slot-save format, so slot
     # files saved under f16 won't restore after switching (they'll just be
     # reprocessed cold and re-saved).
-    "cache_type_k": "q8_0",
-    "cache_type_v": "q8_0",
+    # 2026-10-30: default "auto" -- f16 when weights + f16 KV for
+    # n_slots x ctx_per_slot + compute reserve + margin fit under the GPU
+    # working-set limit, else q8_0 (see kv_auto.py; the decision and the
+    # estimate are logged). f16 was 4-6% faster on Qwen3-30B / Gemma 4.
+    # An explicit type (flag / CARAVAN_CACHE_TYPE_K/V / config) wins.
+    "cache_type_k": "auto",
+    "cache_type_v": "auto",
     # --cache-ram MiB. llama.cpp defaults to 8192: a host-RAM prompt cache
     # that, with --cache-idle-slots (also on by default), copies every idle
     # slot's KV into RAM at the start of *every* new task. Caravan already
@@ -130,6 +135,10 @@ LLAMA_DEFAULTS = {
     # Link-local (169.254/16) addresses are self-assigned and CAN change
     # (re-cabling, interface reset) -- prefer render_llama_plist.py --rpc auto.
     "rpc": "169.254.104.38:50052",
+    # --swa-full: full-size cache for sliding-window layers (Gemma, GPT-
+    # OSS). Costs memory; the Oct 30 stopgap for restored SWA slots being
+    # discarded on llama.cpp builds without context-checkpoint save.
+    "swa_full": False,
 }
 
 LLAMA_ENV_VARS = {
@@ -143,9 +152,10 @@ LLAMA_ENV_VARS = {
     "batch_size": "CARAVAN_BATCH_SIZE",
     "ubatch_size": "CARAVAN_UBATCH_SIZE",
     "rpc": "CARAVAN_RPC_ADDR",
+    "swa_full": "CARAVAN_SWA_FULL",
 }
 
-KV_CACHE_TYPES = ("f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1")
+KV_CACHE_TYPES = ("auto", "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1")
 FLASH_ATTN_VALUES = ("on", "off", "auto")
 
 
@@ -160,6 +170,7 @@ class LlamaSettings(NamedTuple):
     batch_size: int
     ubatch_size: int
     rpc: str
+    swa_full: bool = False
 
     @property
     def total_ctx(self) -> int:
@@ -203,7 +214,7 @@ def resolve_llama_settings(overrides: Optional[dict] = None,
     for name, v in (("cache_type_k", ctk), ("cache_type_v", ctv)):
         if v not in KV_CACHE_TYPES:
             raise ValueError(f"{name} must be one of {KV_CACHE_TYPES}, got {v!r}")
-    if fa == "off" and ctv not in ("f32", "f16", "bf16"):
+    if fa == "off" and ctv not in ("auto", "f32", "f16", "bf16"):
         raise ValueError("a quantized V cache (cache_type_v) requires flash_attn on/auto")
     ngl = str(raw["n_gpu_layers"]).strip().lower()
     if ngl not in ("all", "auto"):
@@ -226,7 +237,15 @@ def resolve_llama_settings(overrides: Optional[dict] = None,
         batch_size=batch,
         ubatch_size=ubatch,
         rpc=str(raw["rpc"]).strip(),
+        swa_full=str(raw["swa_full"]).strip().lower() in ("1", "true", "yes", "on"),
     )
+
+
+def kv_auto_config(config_path: Optional[Path] = None) -> dict:
+    """The optional "kv_auto" config section (gpu_working_set_mib,
+    compute_reserve_mib, safety_margin_mib) -- see kv_auto.py."""
+    sec = load_config_file(config_path).get("kv_auto")
+    return sec if isinstance(sec, dict) else {}
 
 
 def add_llama_cli_args(parser) -> None:
@@ -240,9 +259,9 @@ def add_llama_cli_args(parser) -> None:
     g.add_argument("--flash-attn", choices=FLASH_ATTN_VALUES, default=None,
                    help="-fa (env CARAVAN_FLASH_ATTN, default on)")
     g.add_argument("--cache-type-k", default=None,
-                   help="-ctk (env CARAVAN_CACHE_TYPE_K, default q8_0)")
+                   help="-ctk (env CARAVAN_CACHE_TYPE_K, default auto = f16 if it fits, else q8_0)")
     g.add_argument("--cache-type-v", default=None,
-                   help="-ctv (env CARAVAN_CACHE_TYPE_V, default q8_0)")
+                   help="-ctv (env CARAVAN_CACHE_TYPE_V, default auto = f16 if it fits, else q8_0)")
     g.add_argument("--cache-ram", dest="cache_ram_mib", type=int, default=None,
                    help="--cache-ram MiB, 0 = off, -1 = unlimited (env CARAVAN_CACHE_RAM_MIB, default 0)")
     g.add_argument("--n-gpu-layers", default=None,
@@ -251,6 +270,8 @@ def add_llama_cli_args(parser) -> None:
                    help="-b (env CARAVAN_BATCH_SIZE, default 2048)")
     g.add_argument("--ubatch-size", type=int, default=None,
                    help="-ub (env CARAVAN_UBATCH_SIZE, default 512)")
+    g.add_argument("--swa-full", action="store_const", const=True, default=None,
+                   help="pass --swa-full (env CARAVAN_SWA_FULL=1, default off)")
 
 
 def llama_overrides_from_args(args) -> dict:

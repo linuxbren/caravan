@@ -208,13 +208,14 @@ Used by `agent/caravan_agent.py`, `agent/supervisor.py` and
 | `--n-slots` | `CARAVAN_N_SLOTS` | `n_slots` | `4` | `--parallel N` (and `-c`) |
 | `--ctx-per-slot` | `CARAVAN_CTX_PER_SLOT` | `ctx_per_slot` | `65536` | `-c n_slots × ctx_per_slot` |
 | `--flash-attn` | `CARAVAN_FLASH_ATTN` | `flash_attn` | `on` | `-fa on\|off\|auto` |
-| `--cache-type-k` | `CARAVAN_CACHE_TYPE_K` | `cache_type_k` | `q8_0` | `-ctk` |
-| `--cache-type-v` | `CARAVAN_CACHE_TYPE_V` | `cache_type_v` | `q8_0` | `-ctv` (quantized V requires flash attention) |
+| `--cache-type-k` | `CARAVAN_CACHE_TYPE_K` | `cache_type_k` | `auto` | `-ctk` (`auto` = f16 if it fits, else q8_0) |
+| `--cache-type-v` | `CARAVAN_CACHE_TYPE_V` | `cache_type_v` | `auto` | `-ctv` (quantized V requires flash attention) |
 | `--cache-ram` | `CARAVAN_CACHE_RAM_MIB` | `cache_ram_mib` | `0` | `--cache-ram` MiB (0 = off) |
 | `--n-gpu-layers` | `CARAVAN_N_GPU_LAYERS` | `n_gpu_layers` | `999` | `-ngl` |
 | `--batch-size` | `CARAVAN_BATCH_SIZE` | `batch_size` | `2048` | `-b` |
 | `--ubatch-size` | `CARAVAN_UBATCH_SIZE` | `ubatch_size` | `512` | `-ub` |
 | `--rpc` (render tool only; `auto` = discover) | `CARAVAN_RPC_ADDR` | `rpc` | `169.254.104.38:50052` | `--rpc` |
+| `--swa-full` | `CARAVAN_SWA_FULL` | `swa_full` | off | `--swa-full` (full-size sliding-window cache) |
 
 Always passed as well: `--no-kv-unified` (each slot gets its own KV
 region), `--slot-save-path ~/.caravan/llama-server/slots/`, `--port 8080`,
@@ -224,9 +225,25 @@ Why these defaults:
 
 - **`-fa on`**: deterministic instead of `auto`, and required for an 8-bit
   V cache.
-- **`q8_0` K/V**: half the KV memory of f16. Switching cache types makes
-  existing disk slot files unrestorable; each session reprocesses once and
-  is saved again.
+- **`auto` K/V** (since 2026-10-30): f16 when
+  `weights + f16 KV (n_slots × ctx_per_slot) + compute reserve + margin`
+  fits under the GPU working-set limit (× devices with RPC), else `q8_0`
+  (half the KV memory). f16 was 4–6% faster on the Oct 30 benchmarks.
+  The KV estimate reads the GGUF header (layers, KV heads, head sizes,
+  sliding-window layers); the limit is Metal's
+  `recommendedMaxWorkingSetSize` (asked once via `swift`, cached in
+  `~/.caravan/agent/gpu_limit.json`), else `iogpu.wired_limit_mb`, else
+  18186.25 MiB (llama.cpp prints this as "19069.67 MB", decimal). The
+  decision and every term of the estimate are logged:
+  `[caravan] KV cache -ctk f16 -ctv f16: f16 fits (…)`. Tune under
+  `"kv_auto"`: `gpu_working_set_mib` (`CARAVAN_GPU_WORKING_SET_MIB`),
+  `compute_reserve_mib` (default: ubatch × n_vocab × 4 B + 64 MiB, which
+  matches llama.cpp's measured Metal compute buffers;
+  `CARAVAN_COMPUTE_RESERVE_MIB`), `safety_margin_mib` (256,
+  `CARAVAN_KV_SAFETY_MARGIN_MIB`). An unreadable model means `q8_0`. The
+  production shape (4 × 64K) still resolves to `q8_0`. Switching cache types
+  makes existing disk slot files unrestorable; each session reprocesses
+  once and is saved again.
 - **`--cache-ram 0`**: llama.cpp's default 8 GiB host-RAM prompt cache
   copies every idle slot on each new task. Caravan already pins sessions
   to slots and saves them to disk, so the RAM cache only duplicates memory
