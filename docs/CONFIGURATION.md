@@ -9,7 +9,9 @@ The config file path can be changed with `CARAVAN_CONFIG` (the agent and
 the standalone cleanup also take `--config`). A missing file is fine. An
 unreadable file is reported with a warning and ignored.
 
-All names below were checked against the v2.1 code.
+All names below were checked against the v3 code (branch
+`caravan-v3-mlx-split`). Everything except the MLX split section is the
+same on `main` (v2.1).
 
 ## The config file
 
@@ -35,7 +37,8 @@ Every section is optional:
     "models": { "qwen3-30b-mlx": "~/.exo/models/mlx-community--Qwen3-30B-A3B-4bit" },
     "model_dirs": ["~/.exo/models", "~/.caravan/models/mlx"],
     "cache_dir": "~/.caravan/mlx/prompt-cache",
-    "server": "caravan", "python": "~/.caravan/venvs/mlx/bin/python", "extra_args": []
+    "server": "caravan", "python": "~/.caravan/venvs/mlx/bin/python", "extra_args": [],
+    "split": { "packer": "169.254.x.y:5560", "packer_layers": 24 }
   },
   "slot_cleanup": {
     "mode": "archive", "max_age_days": 30, "interval_hours": 6,
@@ -112,6 +115,15 @@ python3 agent/ollama_store.py qwen3:30b-a3b    # GGUF blob path (for llama-serve
 | node id, GPU limit cache | `~/.caravan/agent/` |
 | child logs | `~/.caravan/agent/logs/{llama-server,rpc-server,mlx-server}.log` |
 | packer's tensor cache | `~/Library/Caches/llama.cpp/rpc` (from `rpc-server --cache`) |
+
+**The packer's tensor cache (GGUF split download, stage 1).** The packer
+runs `ggml-rpc-server -c` / `--cache` (the agent passes it by default,
+and so does `launchd/com.caravan.rpc-server.plist`). The packer then keeps the
+weights it receives on its own disk, keyed by hash, so only the first load
+sends them over the cable; a restart loads in about 53 s instead of 7–11
+min over LAN. The lead still needs the whole GGUF on its own disk. A fork
+patch that lets the packer load its own part from its own disk (stage 2)
+is planned, not built; see [ROADMAP.md](ROADMAP.md).
 
 ## Proxy: `proxy/slot_pin_proxy.py`
 
@@ -210,10 +222,85 @@ by hand: `~/.caravan/venvs/mlx/bin/python agent/mlx_worker.py --model <dir>`.
 | `--cache-limit-gb` | off | Cap MLX's pool of freed GPU buffers. |
 | `--wired-limit` | `startup` | `startup`: raise Metal's wired limit once and hold it. `per-request`: raise and drop it around each request (v2 behaviour). `off`: never touch it. |
 
+Split flags (v3; see the next section):
+
+| flag | default | what |
+|---|---|---|
+| `--split-role` | `none` | `lead` (serves the API, runs the last layers, picks each token) or `packer` (runs the embeddings and the first layers; no HTTP). `head` / `front` are deprecated aliases. |
+| `--split-peer HOST:PORT` | – | Lead only: Packer 1's address, normally its Thunderbolt address, port 5560. |
+| `--split-listen HOST:PORT` | – | Packer only: where to listen (its Thunderbolt address). |
+| `--split-packer-layers K` | half (the odd layer goes to the lead) | How many layers Packer 1 runs. Use the same value on both Macs; the lead refuses to start if the two disagree. `--split-front-layers` is a deprecated alias. |
+
 `python3 agent/render_mlx_plist.py <model> [--port] [--host] [--python]
 [-o PATH]` writes `launchd/com.caravan.mlx-server.plist` (label
 `com.caravan.mlx-server`, log `~/.caravan/logs/mlx-server.log`) from the
 same settings. Loading it into launchd is a manual step.
+
+## MLX split across two Macs (v3)
+
+One MLX model can run across two Macs: Packer 1 runs the first layers and
+the lead runs the rest. How it works: [MLX-SPLIT.md](MLX-SPLIT.md).
+
+| env | config `mlx.split.` | default | what |
+|---|---|---|---|
+| `CARAVAN_MLX_SPLIT_PACKER` | `packer` | none (no split) | Packer 1's `HOST:PORT`. Setting it turns the split on. |
+| `CARAVAN_MLX_SPLIT_PACKER_LAYERS` | `packer_layers` | half | Layers on Packer 1 (1 or more). |
+
+Order: flag > env > config, as everywhere else. The split needs the
+Caravan worker (`mlx.server = "caravan"`); with `mlx_lm` it's an error.
+
+**What reads these today.** Only the helpers in `agent/mlx_backend.py`:
+`build_lead_command()` adds the lead's split flags to the normal worker
+command, and `build_packer_command()` gives the matching command for the
+packer Mac. `caravan_agent.py --apply` and `render_mlx_plist.py` still
+start a one-Mac worker, so for now start both halves by hand with the
+flags above (packer first). Wiring the split into the agent is on the
+[roadmap](ROADMAP.md).
+
+### Split download: `agent/mlx_split_fetch.py`
+
+A prototype command that downloads only one Mac's part of an MLX model
+from Hugging Face, instead of the whole model on every Mac:
+
+```sh
+python3 agent/mlx_split_fetch.py <hf repo> <local dir> --role lead|packer [--packer-layers K] [--dry-run]
+```
+
+| flag | what |
+|---|---|
+| `--role` | `lead` or `packer` (`head` / `front` are deprecated aliases). |
+| `--packer-layers K` | Same cut as the workers (default half). `--front-layers` is a deprecated alias. |
+| `--with-vision` | Also fetch vision or audio parts (skipped by default; the split is text-only). |
+| `--dry-run` | Print the plan (files and sizes) without downloading the weights (it still fetches the small `config.json` and index file). |
+
+Files that hold layers on both sides of the cut go to both Macs. The
+worker refuses to start a stage whose files are missing. It needs
+`huggingface_hub` in the Python you run it with. Nothing is ever deleted;
+leftover `.incomplete` files from an interrupted download stay on disk.
+
+### Deprecated names
+
+The split roles were renamed on Oct 31, 2026: **lead** (the Mac you talk
+to), **packers** (the others, numbered in layer order; Packer 1 runs the
+first layers), and the **string** (the whole group). The old names still
+work, but new setups should use the new ones. When both are given, the
+new one wins.
+
+| New | Deprecated |
+|---|---|
+| `--split-role lead` / `packer` | `--split-role head` / `front` |
+| `--split-packer-layers` | `--split-front-layers` |
+| `mlx.split.packer` / `packer_layers` | `mlx.split.front` / `front_layers` |
+| `CARAVAN_MLX_SPLIT_PACKER` / `_PACKER_LAYERS` | `CARAVAN_MLX_SPLIT_FRONT` / `_FRONT_LAYERS` |
+| `mlx_backend.build_lead_command()` / `build_packer_command()` | `build_head_command()` / `build_front_command()` |
+| `mlx_split_fetch.py --role lead\|packer --packer-layers` | `--role head\|front --front-layers` |
+
+Names that are internal only and weren't renamed: the role values inside
+the code (`head`, `front`, `tail`), `supervisor.build_head_command()` and
+`build_tail_command()` (the llama.cpp lead and packer commands), and the
+stage id saved inside split caches (for example `head 24-47 of 48`), so
+existing caches still load. `GET /caravan/split` reports `lead` and
+`packers` and still includes the old `head` / `front` keys.
 
 ## Scripts
 

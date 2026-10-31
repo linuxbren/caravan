@@ -20,9 +20,9 @@ The proxy plist is needed on the lead in both cases.
 | plist | machine | what |
 |---|---|---|
 | `com.caravan.agent.plist` | every node | `agent/caravan_agent.py --apply` (Homebrew Python 3.10+) |
-| `com.caravan.llama-server.plist` | node-a (manual mode) | the sharded `llama-server` |
-| `com.caravan.rpc-server.plist` | node-b (manual mode) | `ggml-rpc-server --cache` |
-| `com.caravan.slot-pin-proxy.plist` | node-a | `proxy/slot_pin_proxy.py` |
+| `com.caravan.llama-server.plist` | node-a, the lead (manual mode) | the sharded `llama-server` |
+| `com.caravan.rpc-server.plist` | node-b, the packer (manual mode) | `ggml-rpc-server --cache` (keeps the packer's part on its own disk) |
+| `com.caravan.slot-pin-proxy.plist` | node-a, the lead | `proxy/slot_pin_proxy.py` |
 
 All are user-level LaunchAgents (not LaunchDaemons) -- they run in the
 logged-in user's session, matching how openclaw's own gateway is set up.
@@ -33,7 +33,9 @@ directory** before bootstrapping. Nothing is templated yet (packaging is on
 [docs/ROADMAP.md](../docs/ROADMAP.md)). Two plists can be generated:
 `com.caravan.llama-server.plist` with `agent/render_llama_plist.py`
 (below), and `com.caravan.mlx-server.plist` (the MLX worker) with
-`agent/render_mlx_plist.py`.
+`agent/render_mlx_plist.py`. There's no plist for the v3 two-Mac MLX
+split yet; its two workers are started by hand (see
+[docs/MLX-SPLIT.md](../docs/MLX-SPLIT.md)).
 
 Logs go to `~/Library/Logs/caravan/*.log` on each machine.
 
@@ -53,7 +55,7 @@ launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.agent.plist
 launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.slot-pin-proxy.plist
 ```
 
-## Install by hand (node-a: llama-server + slot-pin-proxy)
+## Install by hand (node-a, the lead: llama-server + slot-pin-proxy)
 
 ```sh
 mkdir -p ~/Library/Logs/caravan
@@ -61,7 +63,7 @@ launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.llama-server.
 launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.slot-pin-proxy.plist
 ```
 
-## Install by hand (node-b: rpc-server)
+## Install by hand (node-b, the packer: rpc-server)
 
 ```sh
 ssh <user>@<node-b-ip> 'mkdir -p ~/Library/Logs/caravan'
@@ -130,9 +132,9 @@ directly and resolves the blob itself.
 ## Regenerating the llama-server plist (flags, RPC address, model)
 
 As of 2026-10-30 the plist passes `-ngl 999 -fa on -ctk q8_0 -ctv q8_0
---cache-ram 0 -b 2048 -ub 512` explicitly (see the main README's
-[llama-server settings](../README.md#llama-server-agent-render-tool) for
-why), and its `--rpc` points at node-b's Thunderbolt Bridge link-local
+--cache-ram 0 -b 2048 -ub 512` explicitly (see
+[llama-server settings](../docs/CONFIGURATION.md#llama-server-settings-lead)
+for what each one does), and its `--rpc` points at node-b's Thunderbolt Bridge link-local
 address (`169.254.x.x:50052`) instead of a Tailscale address.
 
 **Link-local caveat:** `169.254.x.x` addresses are self-assigned by each
@@ -154,8 +156,8 @@ upgraded to the Thunderbolt path when it answers) -- it needs
 caravan-agent's health endpoint running on node-b. Otherwise pass
 `--rpc host:port`, or set `CARAVAN_RPC_ADDR` / `"llama_server": {"rpc":
 ...}`. Every tuning flag (`--n-slots`, `--ubatch-size`, ...) is accepted
-too, and the plist is rendered by the same `supervisor.build_head_command()` the
-agent uses, so they can't drift. The tool never touches launchd or
+too, and the plist is rendered by the same `supervisor.build_head_command()`
+(the lead's command; internal name) the agent uses, so they can't drift. The tool never touches launchd or
 `~/Library/LaunchAgents`; after writing the file, re-bootstrap as in
 "Restart after editing a plist" above. Note that changing `-ctk/-ctv`
 makes existing disk slot files unrestorable (they're reprocessed cold
@@ -169,7 +171,9 @@ If you change the slot count, change it for both: `--n-slots` here and
 ## Slot cleanup settings for the proxy
 
 `slot_pin_proxy.py` cleans up stale disk KV slot files on startup and
-every 6 hours (see the main README, "Configuration").
+every 6 hours (see [docs/CONFIGURATION.md](../docs/CONFIGURATION.md#saved-chat-cleanup-and-the-per-mac-cap)).
+The default mode is `delete`; run `python3 -m proxy.slot_cleanup --dry-run -v`
+first on a Mac with saved chats you care about.
 
 `com.caravan.slot-pin-proxy.plist` also sets `CARAVAN_PINNED_SLOT`. That's
 a leftover from the single-pinned-slot design; current code ignores it. To change that

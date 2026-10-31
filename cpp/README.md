@@ -10,14 +10,17 @@ supervision.
 
 Real, tested (not just compiles):
 
-- **Head**: calls `int llama_server(int argc, char** argv)` directly --
+Roles use Caravan's names: the **lead** serves the model, the **packer**
+lends its GPU (older notes said head and tail).
+
+- **Lead**: calls `int llama_server(int argc, char** argv)` directly --
   exactly what `tools/server/main.cpp` itself calls. Verified: the HTTP
   server comes up inside `caravan`'s own process, answers `/health`, and
   serves real completions when there's enough memory for the model
   (single-node testing hit a genuine GPU OOM running the full 30B model
   on one machine -- expected, this model is normally sharded for exactly
   that reason, not a bug in this code).
-- **Tail**: calls `void ggml_backend_rpc_start_server(...)` directly --
+- **Packer**: calls `void ggml_backend_rpc_start_server(...)` directly --
   exactly what `tools/rpc/rpc-server.cpp` calls after resolving devices.
   Verified: a real TCP listener comes up, accepts connections, all
   inside `caravan`'s own process.
@@ -44,15 +47,15 @@ Real, tested (not just compiles):
   offline entry, the real peer): correctly upgraded the real peer's
   address to its Tailscale IP and correctly ignored the unrelated
   machine since it was never seen via mDNS.
-- **Full real end-to-end test**: `caravan` as head *and* tail
+- **Full real end-to-end test**: `caravan` as lead *and* packer
   simultaneously, on real production ports, zero Python involved on
   either side. Self-discovered each other via mDNS, loaded in under 30s,
   served a real completion at 6.03 tok/s -- matching two independent
   earlier Thunderbolt measurements almost exactly. See `docs/LOG.md`,
-  "Full real end-to-end test."
+  "Full real end-to-end test" (that log entry uses the old names)."
 
 **Not done yet** -- everything else `agent/` already does in Python:
-the `/health` + `fast_paths` server, `--cache` for the tail role,
+the `/health` + `fast_paths` server, `--cache` for the packer role,
 persistent node identity, crash supervision, configurable settings. The
 target model is hardcoded (`target_model = "muse-glimmer"` in
 `main.cpp`), so `--model` / `CARAVAN_MODEL` / `~/.caravan/config.json`

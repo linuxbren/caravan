@@ -1,5 +1,11 @@
 # Log
 
+*Naming note: entries written before 2026-10-31's rename say "head" for
+the Mac you talk to and "tail" (llama.cpp) or "front" (MLX) for the
+other one, and they're left as written. Today's names: the **lead** is
+the Mac you talk to, the **packers** are the others (Packer 1 runs the
+first layers), and the whole group is the **string**.*
+
 ## 2026-09-05
 
 - Confirmed Ollama has no native multi-machine sharding, but llama.cpp
@@ -2464,3 +2470,26 @@ Design note: [MLX-SPLIT.md](MLX-SPLIT.md). Numbers:
   existing caches still load.
 - Added a "possible future direction" to the roadmap: Terminal Delight as
   a terminal-first console for Caravan (not scheduled).
+
+## 2026-10-31: docs brought up to date with v3
+
+A docs-only pass on `caravan-v3-mlx-split` (no code changes):
+
+- New `docs/CHANGELOG.md`: v0 → v3 with commits, headline numbers and the
+  deprecated names. New `bench/v3/README.md` for `split_client.py`.
+- `docs/CONFIGURATION.md`: the split flags (`--split-role`,
+  `--split-peer`, `--split-listen`, `--split-packer-layers`), `mlx.split`
+  and its env vars, `mlx_split_fetch.py`, the packer's tensor cache
+  (GGUF split download stage 1), and a "Deprecated names" table.
+- Corrected: `mlx.split` is read only by the `mlx_backend` command
+  helpers; `caravan_agent.py --apply` and `render_mlx_plist.py` still
+  start a one-Mac worker, so both halves of a split are started by hand.
+  MLX-SPLIT.md had implied the config was enough.
+- README, ARCHITECTURE, MLX, MLX-SPLIT, BENCHMARKS, ROADMAP and the
+  agent, cpp, launchd and bench READMEs: v3 status and results, why
+  Caravan uses its own link (MLX's standard link fails on ~2 MB+ messages
+  over our Thunderbolt 4 cable; the direct-memory link needs Thunderbolt
+  5), lead / packer / string wording instead of head / front / tail, and
+  fixed links to sections that had moved into CONFIGURATION.md. Test
+  count: 120.
+- Older entries in this log keep the words they were written with.

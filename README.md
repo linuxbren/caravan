@@ -10,13 +10,25 @@ as a way to run a GGUF model that is too big for one 24 GB Mac mini across
 two of them, using llama.cpp's RPC backend over a Thunderbolt cable. It has
 since grown into the everyday backend that keeps each conversation's cache
 warm, saves it to disk so it survives restarts, and serves MLX models
-through the same front door.
+through the same entry point. Since v3 it can also split one MLX model
+across two Macs.
 
-> **Status: early, experimental, v2.1.** Caravan runs one personal
-> assistant on a pair of Mac minis (M4, 24 GB each). It isn't packaged,
-> and it hasn't been tested on other setups. The launchd plists still
-> contain machine-specific paths. See [docs/ROADMAP.md](docs/ROADMAP.md)
-> for what's done and what's next.
+> **Status: early, experimental.** `main` is v2.1. v3 (one MLX model
+> split across two Macs) is on the `caravan-v3-mlx-split` branch, waiting
+> for review. Caravan runs one personal assistant on a pair of Mac minis
+> (M4, 24 GB each). It isn't packaged, and it hasn't been tested on other
+> setups. The launchd plists still contain machine-specific paths. See
+> [docs/CHANGELOG.md](docs/CHANGELOG.md) for what changed in each version
+> and [docs/ROADMAP.md](docs/ROADMAP.md) for what's next.
+
+## Names: lead, packers, string
+
+When a model is split across Macs, the **lead** is the Mac you talk to:
+it serves the API, runs the last layers and picks each token. The other
+Macs are **packers**, numbered in layer order (Packer 1 runs the first
+layers). The whole group is the **string**. Older docs and flags said
+"head", "front" or "tail"; those flag and config names still work but
+are deprecated (see [docs/CONFIGURATION.md](docs/CONFIGURATION.md#deprecated-names)).
 
 ## Why
 
@@ -38,7 +50,7 @@ next to GGUF models. Each Mac works out its own role.
 
 ## Features
 
-- **One front door** (`proxy/slot_pin_proxy.py`, port 8090): an
+- **One entry point** (`proxy/slot_pin_proxy.py`, port 8090): an
   OpenAI-compatible proxy. Each request goes to llama.cpp or MLX based on
   its `model` field.
 - **Per-session caches.** Each conversation is recognized by a fingerprint
@@ -55,7 +67,13 @@ next to GGUF models. Each Mac works out its own role.
   answer, and locks the model in GPU memory at startup.
 - **Two-Mac split for GGUF**: llama.cpp RPC. The lead Mac serves the model
   and the packer Mac lends its GPU. Over Thunderbolt the packer loads its part
-  in 29–39 s, and `rpc-server --cache` makes later loads faster.
+  in 29–39 s, and `rpc-server --cache` keeps the packer's part on its own
+  disk so a restart loads in about 53 s instead of 7–11 min.
+- **Two-Mac split for MLX (v3, branch `caravan-v3-mlx-split`)**: Caravan's
+  own layer-by-layer split over one TCP connection on the Thunderbolt
+  cable. Each Mac holds about half the model, so bigger models and longer
+  chats fit; writing is slower. Chat memory is kept and saved on both
+  halves. See [docs/MLX-SPLIT.md](docs/MLX-SPLIT.md).
 - **Automatic KV cache type**: f16 when it fits under the GPU memory
   limit, otherwise 8-bit (q8_0). The decision and its estimate are logged.
 - **Saved-chat cleanup and a per-Mac cap**: saves older than 30 days are
@@ -73,7 +91,7 @@ next to GGUF models. Each Mac works out its own role.
 | backend | models | runs on | cache reuse | saved across restarts |
 |---|---|---|---|---|
 | llama.cpp `llama-server` (+ `rpc-server` on the packer) | GGUF, from the local Ollama store | one Mac, or split across two over RPC | per-session slot | yes, llama-server slot files |
-| Caravan MLX worker | MLX safetensors (`mlx-community/...`) from `~/.exo/models` or `~/.caravan/models/mlx` | one Mac (a two-Mac MLX split is on the roadmap) | per-session cache, sliding-window layers included | yes, `.safetensors` per session |
+| Caravan MLX worker | MLX safetensors (`mlx-community/...`) from `~/.exo/models` or `~/.caravan/models/mlx` | one Mac, or split across two (v3, started by hand) | per-session cache, sliding-window layers included | yes, `.safetensors` per session (one per Mac when split) |
 | plain `mlx_lm.server` (optional, `mlx.server = "mlx_lm"`) | MLX | one Mac | Qwen-style models only | no |
 
 ## Headline numbers
@@ -92,6 +110,10 @@ noted.
 | MLX, first message after a restart, 4k chat (v1 → v2) | 12.7–16.0 s | 0.52–0.64 s |
 | MLX, 16k chat, turn 2 (v1 → v2) | Gemma 4 55.1 s, GPT-OSS 37.3 s | 0.72 s, 0.59 s |
 | MLX Qwen3 reading speed, 4k, side by side (v1 / v2 / v2.1) | 395.9 / 393.4 tok/s | 395.6 tok/s |
+| MLX peak memory per Mac, one Mac → split across two (v2.1 → v3) | Qwen3 19.04, Gemma 4 17.14, GPT-OSS 13.41 GB | 10.49, 9.28, 7.05 GB |
+| MLX Qwen3 30B, 16k chat (v2.1 → v3) | out of memory | fits (first read 81.9 s, turn 2 0.72 s) |
+| MLX writing speed, one Mac → split (v2.1 → v3) | Qwen3 51.0, Gemma 4 41.3, GPT-OSS 36.5 tok/s | 29.5, 26.9, 26.1 tok/s (28–42% slower) |
+| 8-bit models that don't fit one Mac, split (v3) | – | Qwen3 30B 20.6, Gemma 4 26B 18.1, GPT-OSS 20B 19.8 tok/s, all with a 16k chat |
 
 ## Quick start
 
@@ -106,8 +128,9 @@ Requirements:
   `GGML_METAL=ON` at `~/dev/llama.cpp` (Homebrew's build has no RPC), and
   [Ollama](https://ollama.com) on the lead as the model store.
 - For MLX: a venv with `mlx-lm` (tested with 0.32.2) at
-  `~/.caravan/venvs/mlx`, and the model downloaded locally. Caravan never
-  downloads models.
+  `~/.caravan/venvs/mlx`, and the model downloaded locally. The agent,
+  proxy and worker never download models (the v3 split-download tool,
+  `agent/mlx_split_fetch.py`, is a separate command you run yourself).
 
 ```sh
 git clone https://github.com/linuxbren/caravan ~/dev/caravan
@@ -138,6 +161,21 @@ or `~/.caravan/models/mlx/mlx-community--<name>`:
 /opt/homebrew/bin/python3 caravan_agent.py --model mlx-community/<name> --apply
 ```
 
+**MLX, split across two Macs (v3).** Each Mac needs its own copy of the
+model (or just its own part, from `agent/mlx_split_fetch.py`). Start
+Packer 1 first, then the lead; the agent doesn't start a split yet:
+
+```sh
+# on the packer Mac
+~/.caravan/venvs/mlx/bin/python agent/mlx_worker.py --split-role packer \
+  --split-listen <packer-thunderbolt-ip>:5560 --model <local model dir>
+# on the lead Mac
+~/.caravan/venvs/mlx/bin/python agent/mlx_worker.py --split-role lead \
+  --split-peer <packer-thunderbolt-ip>:5560 --model <local model dir> --port 8092
+```
+
+Details: [docs/MLX-SPLIT.md](docs/MLX-SPLIT.md).
+
 **Then the proxy, on the lead**, and point your client at it:
 
 ```sh
@@ -162,6 +200,7 @@ Nothing needs configuring: every setting has a default. See
 curl http://127.0.0.1:8090/health          # through the proxy (to llama-server)
 curl http://127.0.0.1:8080/slots           # llama-server slots
 curl http://127.0.0.1:8092/caravan/cache   # MLX worker: sessions in memory
+curl http://127.0.0.1:8092/caravan/split   # MLX split (v3, on the lead): both halves, link stats
 curl http://127.0.0.1:8091/health          # caravan-agent: node id, stats, fast paths
 tail -f ~/Library/Logs/caravan/*.log
 ```
@@ -173,7 +212,8 @@ tail -f ~/Library/Logs/caravan/*.log
 - After a launchd plist's arguments change: `bootout` then `bootstrap`
   (`kickstart` doesn't re-read the file). For a Python-only change,
   `launchctl kickstart -k gui/$(id -u)/com.caravan.<name>` is enough.
-- Tests: `python3 -m unittest discover -s tests -v` (stdlib only; 97 tests).
+- Tests: `python3 -m unittest discover -s tests -v` (stdlib only; 120
+  tests on the v3 branch).
 
 ## Documentation
 
@@ -182,19 +222,21 @@ tail -f ~/Library/Logs/caravan/*.log
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | components, request flow, sessions, save/restore, cache choices, diagrams |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | every flag, env var and config key, with defaults |
 | [docs/MLX.md](docs/MLX.md) | how the MLX worker works, GPT-OSS reasoning, limits |
+| [docs/MLX-SPLIT.md](docs/MLX-SPLIT.md) | v3: one MLX model split across two Macs, lead / packer names, split download |
 | [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | how we measure, and the results by version |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | done by version, next in order, known limits |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | what changed in each version (v0 → v3) |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | done by version, next in order, ideas, parked items, known limits |
 | [docs/LOG.md](docs/LOG.md) | the dated build log: every measurement and dead end |
-| [agent/README.md](agent/README.md), [launchd/README.md](launchd/README.md), [cpp/README.md](cpp/README.md), [bench/improvements/README.md](bench/improvements/README.md) | per-directory notes |
+| [agent/README.md](agent/README.md), [launchd/README.md](launchd/README.md), [cpp/README.md](cpp/README.md), [bench/improvements/README.md](bench/improvements/README.md), [bench/v3/README.md](bench/v3/README.md) | per-directory notes |
 
 ## Repository layout
 
 | path | what |
 |---|---|
-| `agent/` | caravan-agent (discovery, role, supervision, settings, auto KV), the MLX worker and its launcher, plist renderers |
+| `agent/` | caravan-agent (discovery, role, supervision, settings, auto KV), the MLX worker and its launcher, the MLX split (`mlx_split.py`) and split download (`mlx_split_fetch.py`), plist renderers |
 | `proxy/` | the proxy, backend routing, saved-chat cleanup |
 | `launchd/` | launchd plists and how to install them |
-| `bench/` | benchmark scripts: `improvements/` (v0 → v1), `v2/`, `v2.1/` (same-session A/B) |
+| `bench/` | benchmark scripts: `improvements/` (v0 → v1), `v2/`, `v2.1/` (same-session A/B), `v3/` (one Mac vs split) |
 | `cpp/` | experimental single binary (lead or packer in-process) |
 | `scripts/` | safe packer restart |
 | `tests/` | stdlib `unittest` suite |

@@ -1,8 +1,9 @@
 # Architecture
 
-How Caravan v2.1 is put together. For settings see
+How Caravan is put together: v2.1 on `main`, plus the v3 MLX split on
+the `caravan-v3-mlx-split` branch. For settings see
 [CONFIGURATION.md](CONFIGURATION.md). For the MLX worker in depth see
-[MLX.md](MLX.md).
+[MLX.md](MLX.md), and for the MLX split [MLX-SPLIT.md](MLX-SPLIT.md).
 
 ## Naming: lead, packers, string
 
@@ -11,10 +12,12 @@ to: it serves the API, runs the last layers and picks each token. The
 **packers** are the other Macs, numbered in layer order (Packer 1 runs the
 first layers, then Packer 2, and so on; the lead finishes). The whole group
 is the **string**. For llama.cpp RPC the packer is the Mac running
-`ggml-rpc-server`. Older notes and the internals say "head" for the lead
-and "tail" (llama.cpp) or "front" (MLX v3) for a packer; see
-[MLX-SPLIT.md](MLX-SPLIT.md#naming-lead-packers-string) for the
-deprecated aliases.
+`ggml-rpc-server`; for the MLX split (v3) it's the Mac running the
+worker with `--split-role packer`. Older log entries and some internal
+code names (`supervisor.build_head_command()`, `build_tail_command()`,
+role values `head` / `front` / `tail`) still use the old words "head",
+"front" and "tail". The old flag and config names are deprecated
+aliases; see [CONFIGURATION.md](CONFIGURATION.md#deprecated-names).
 
 ## The pieces
 
@@ -46,11 +49,12 @@ flowchart LR
 
 | component | code | what it does |
 |---|---|---|
-| Proxy | `proxy/slot_pin_proxy.py`, `proxy/backends.py` | The one front door. Recognizes each conversation (session), routes by model to llama.cpp or MLX, runs requests one at a time, saves and restores each session's cache, cancels requests whose client is gone. |
+| Proxy | `proxy/slot_pin_proxy.py`, `proxy/backends.py` | The one entry point. Recognizes each conversation (session), routes by model to llama.cpp or MLX, runs requests one at a time, saves and restores each session's cache, cancels requests whose client is gone. |
 | Saved-chat cleanup | `proxy/slot_cleanup.py` | Inside the proxy (and as a CLI): removes or archives saves older than N days, then holds all saves to a per-Mac cap. |
 | Agent | `agent/caravan_agent.py` and friends | Runs the same way on every Mac. It finds peers, picks a role (lead, packer or MLX), builds the server command, and supervises it. It also serves `/health` on port 8091. |
 | llama.cpp | `~/dev/llama.cpp` (fork `linuxbren/llama.cpp`, branch `caravan-patches`) | `llama-server` on the lead and `ggml-rpc-server` on the packer. |
 | MLX worker | `agent/mlx_worker.py`, launched via `agent/mlx_backend.py` | Caravan's own OpenAI-compatible MLX server with per-session caches. See [MLX.md](MLX.md). |
+| MLX split (v3) | `agent/mlx_split.py`, `agent/mlx_worker.py --split-role`, `agent/mlx_split_fetch.py` | One MLX model across two Macs: Packer 1 runs the first layers, the lead runs the rest and serves the API, over one TCP connection on the Thunderbolt cable. Split download prototype. See [MLX-SPLIT.md](MLX-SPLIT.md). |
 | launchd | `launchd/` | Plists for the agent, the proxy, and a manual per-role setup. The llama-server and MLX plists can be rendered from the agent's own command builders (`render_llama_plist.py`, `render_mlx_plist.py`). |
 | C++ binary | `cpp/` | Experimental: lead or packer in one process, linking llama.cpp. Proven end to end once; not production-ready. |
 
@@ -141,6 +145,30 @@ every `slot_save_every` turns. The worker checkpoints the cache at the end
 of the prompt and rewinds to it after generating, which makes the next
 turn reusable even for sliding-window layers. Details in [MLX.md](MLX.md).
 
+## One MLX model across two Macs (v3)
+
+```
+ client ─► proxy ─► LEAD worker :8092 ──tokens──► PACKER 1 worker (link :5560)
+                    last layers, sampling  ◄─hidden states─  embeddings, first layers
+```
+
+- The proxy talks to the lead exactly as to a one-Mac worker; nothing
+  changed on the proxy side.
+- The lead sends one request at a time over a plain TCP connection
+  (protocol `caravan-split-1`) and waits for the reply. Caravan uses its
+  own link because MLX's standard link (`mx.distributed` ring) fails on
+  messages of about 2 MB or more over our Thunderbolt 4 cable, its
+  direct-memory link (jaccl) needs Thunderbolt 5, and mlx-lm's built-in
+  splitting covers only Qwen models.
+- Each Mac keeps and saves its own half of every chat's cache, in
+  lockstep. A saved chat is restored only when both halves are on disk and
+  match; otherwise both are dropped and the chat is read again.
+- The two Macs take turns on every token, which is why the split writes
+  28–42% slower than one Mac. Ideas for that, including splitting each
+  layer across both Macs, are in [ROADMAP.md](ROADMAP.md#beating-the-turn-taking-in-the-split).
+- Both halves are started by hand today; the agent doesn't run a split
+  yet.
+
 ## Saved chats: cleanup and the per-Mac cap
 
 Saves would otherwise pile up forever. One Mac collected about 154 GB of
@@ -216,7 +244,9 @@ then the default `muse-glimmer`.
   50052 --cache`. The packer stores nothing itself, but `--cache` keeps the
   tensors it receives on disk, keyed by hash. A restart then loads in
   about 53 s instead of 7–11 minutes over LAN. This is the "shard cache"
-  (GitHub issue #3), and it turned out to need no patch.
+  (GitHub issue #3), and it turned out to need no patch. It's also stage 1
+  of a GGUF split download; stage 2, a fork patch so the packer loads its
+  own part from its own disk, is on the [roadmap](ROADMAP.md).
 - **No election.** Whoever has the model is lead. In practice one Mac
   owns the model store, so two leads isn't a real case.
 
@@ -272,7 +302,7 @@ next step, rather than a separate monitor.
 
 Caravan runs llama.cpp from
 [`linuxbren/llama.cpp`](https://github.com/linuxbren/llama.cpp), branch
-`caravan-patches`. That's upstream `5047748f` plus one patch:
+`caravan-patches` (`86e16204`). That's upstream `5047748f` plus one patch:
 `getaddrinfo` instead of `gethostbyname` in the RPC client's connect, so
 RPC peers given as names resolve under launchd. The v1+ numbers were
 measured on this branch. The base brings in upstream #26004 (context
@@ -283,8 +313,8 @@ Other branches on the fork:
 
 - `caravan-patches-rebase-2026-10-30`: the same commit, under the name
   it had when it was made.
-- `caravan-patches-v0`: the older base with the same patch, used for the
-  v0 benchmarks.
+- `caravan-patches-v0` (`2f26123e`): the older base with the same patch,
+  used for the v0 benchmarks.
 
 Flag names in this repo were checked against `caravan-patches`.
 
@@ -306,6 +336,12 @@ Flag names in this repo were checked against `caravan-patches`.
 6. **v2 / v2.1** (Oct 31). The Caravan MLX worker with per-session caches
    saved to disk, clean GPT-OSS replies, the per-Mac cap, then the wired
    limit held from startup.
+7. **v3** (Oct 31, branch `caravan-v3-mlx-split`, not merged yet). One MLX
+   model split across two Macs over Caravan's own TCP link, chat memory
+   on both halves, a split-download prototype, and the lead / packer /
+   string names.
+
+Per-version changes are summarized in [CHANGELOG.md](CHANGELOG.md).
 
 Details for every step are in [LOG.md](LOG.md). What's next is in
 [ROADMAP.md](ROADMAP.md).

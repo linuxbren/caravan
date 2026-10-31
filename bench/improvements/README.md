@@ -1,6 +1,6 @@
 # Improvements bench (Caravan v0 vs v1)
 
-These scripts produced the 2026-10-30 numbers in `docs/LOG.md`. They run on one Mac (the head) and use **test ports only**: llama-server on 8180, the proxy on 8190 and mlx_lm.server on 8192. Production ports 8080/8090 and exo's 52415 are never touched. Each script starts its own server and proxy, measures everything **through the proxy**, and stops what it started. Results go to `~/.caravan/bench-2026-10-30/improvements/<tag>/`.
+These scripts produced the 2026-10-30 numbers in `docs/LOG.md`. They run on one Mac (the lead) and use **test ports only**: llama-server on 8180, the proxy on 8190 and mlx_lm.server on 8192. Production ports 8080/8090 and exo's 52415 are never touched. Each script starts its own server and proxy, measures everything **through the proxy**, and stops what it started. Results go to `~/.caravan/bench-2026-10-30/improvements/<tag>/`.
 
 - `imp_bench.py <tag> <model.gguf> <max_tokens> <ubatch> <n_slots> <ctx_per_slot> [phases]`: the GGUF path. Phases:
   - `main`: pp512, pp4096 and tg128, median of 3.

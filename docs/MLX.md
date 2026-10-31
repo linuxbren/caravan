@@ -13,8 +13,11 @@ request whose `model` is an MLX id goes to the **Caravan MLX worker**
    `mlx-community--<name>/` (exo's layout) or `mlx-community/<name>/`, with
    a `config.json` inside. Other locations can be added with
    `mlx.model_dirs`, or a model can be named directly with `mlx.models`
-   (alias → directory). **Caravan never downloads a model.** The proxy
-   rewrites the request's model id to the local directory.
+   (alias → directory). **The agent, proxy and worker never download a
+   model.** The proxy rewrites the request's model id to the local
+   directory. (For a two-Mac split, `agent/mlx_split_fetch.py` can
+   download just one Mac's part; it's a separate command you run
+   yourself. See [MLX-SPLIT.md](MLX-SPLIT.md).)
 3. Start the worker: `caravan_agent.py --model mlx-community/<name>
    --apply`. This runs `mlx_worker.py --model <dir> --port 8092
    --cache-dir ~/.caravan/mlx/prompt-cache`. Or render a launchd plist
@@ -24,6 +27,11 @@ request whose `model` is an MLX id goes to the **Caravan MLX worker**
 
 One worker serves one model. The worker takes 6–9 s to start (plain
 `mlx_lm.server`: about 1.6 s).
+
+**Too big for one Mac?** Since v3 the same worker can split one model
+across two Macs: Packer 1 runs the first layers and the lead runs the rest
+and serves the API (`--split-role packer|lead`). See
+[MLX-SPLIT.md](MLX-SPLIT.md).
 
 ## Why Caravan has its own MLX server
 
@@ -156,6 +164,7 @@ limit 0 -> 19069665280 bytes (held for process lifetime)`. Options are
 | POST | `/caravan/cache/restore` | `{"key": fp}` → `warm`, `restored`, `miss` or `rejected`. |
 | POST | `/caravan/cache/save` | `{"key": fp}`: write the session's checkpoint to disk. |
 | POST | `/caravan/cache/drop` | `{"keys": [...]}`: forget sessions in memory. |
+| GET | `/caravan/split` | v3, lead only: both halves' layers and memory, and the link stats. Reports `lead` and `packers` (plus the deprecated `head` / `front` keys). |
 | POST | `/v1/chat/completions`, `/v1/completions` | OpenAI-compatible, streaming or not. |
 
 ## Results
@@ -172,12 +181,11 @@ Single Mac mini M4 24 GB, through the proxy. Full tables are in
 
 ## Limits
 
-- **One model per worker, one Mac.** MLX models aren't split across Macs
-  yet (that's on the [roadmap](ROADMAP.md)), and one worker holds one
-  model.
-- **Qwen3 30B at 16k doesn't fit** on a 24 GB Mac with a plain f16 cache,
-  not even with `--kv-bits 8`. Use 4k–8k chats, or the GGUF build of the
-  model.
+- **One model per worker.** On one Mac, or split across two with v3
+  ([MLX-SPLIT.md](MLX-SPLIT.md); slower, and started by hand for now).
+- **Qwen3 30B at 16k doesn't fit** on one 24 GB Mac with a plain f16 cache,
+  not even with `--kv-bits 8`. Use 4k–8k chats, the GGUF build of the
+  model, or the v3 split across two Macs (about 10.5 GB per Mac).
 - **Gemma 4 reads short prompts about 8% slower** than with plain
   `mlx_lm.server` (397 vs 430 tok/s on a 512-token prompt, side by side).
   The likely cause is the checkpoint snapshot of its sliding-window

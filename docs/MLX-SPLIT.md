@@ -57,6 +57,13 @@ the new names (`lead: layers 24-47 of 48`, `packer 1: layers 0-23 of 48`).
 
 ## Why this approach
 
+In short: MLX itself works fine and runs the model on each Mac. What we
+skipped are MLX's ready-made ways of *linking* two Macs. Its standard
+link breaks on messages of about 2 MB or more over our Thunderbolt 4
+cable, its fast direct-memory link needs Thunderbolt 5 (our M4 minis have
+Thunderbolt 4), and mlx-lm's built-in splitting only covers Qwen models.
+So Caravan links the Macs itself, with a plain TCP connection.
+
 We checked the ready-made options first:
 
 | Option | Result on two M4 Mac minis, Thunderbolt 4 |
@@ -120,13 +127,39 @@ On the lead Mac:
   --split-peer <packer-tb-ip>:5560 --model <local model dir> --port 8092
 ```
 
-or set `"mlx": {"split": {"packer": "<packer-tb-ip>:5560"}}` in
+Start the packer first. `--split-packer-layers K` must match on both
+Macs (the lead checks and refuses to start otherwise).
+
+`"mlx": {"split": {"packer": "<packer-tb-ip>:5560"}}` in
 `~/.caravan/config.json` (env `CARAVAN_MLX_SPLIT_PACKER`, and
-`CARAVAN_MLX_SPLIT_PACKER_LAYERS` for the cut), and
-`mlx_backend.build_packer_command()` prints the matching packer command.
+`CARAVAN_MLX_SPLIT_PACKER_LAYERS` for the cut) is read by the helpers
+`mlx_backend.build_lead_command()` and `build_packer_command()`, which
+return the two commands above. `caravan_agent.py --apply` and
+`render_mlx_plist.py` don't use it yet: they still start a one-Mac
+worker, so start both halves by hand for now. All flags and settings:
+[CONFIGURATION.md](CONFIGURATION.md#mlx-split-across-two-macs-v3).
 `GET /caravan/split` on the lead shows both stages' memory and the link
 stats; every reply's `usage.caravan.split` has the per-request network
 cost (calls, MB each way, time waiting on the packer, network time).
+
+## Results in short
+
+Measured Oct 31 on two Mac minis M4 24 GB, side by side with v2.1 on one
+Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oct-31-mlx).
+
+- Memory per Mac roughly halves (Qwen3 30B 19.04 → 10.49 GB, Gemma 4 26B
+  17.14 → 9.28 GB, GPT-OSS 20B 13.41 → 7.05 GB), so Qwen3 30B now holds a
+  16k chat on MLX.
+- Writing is 28–42% slower and reading 16–25% slower. Each half costs
+  16–24 ms per token, about what the whole model costs on one Mac, while
+  the cable adds under 1 ms and under 10 KB per token. The Macs take turns,
+  so the time is per-pass overhead, not the cable.
+- Chat reuse and restart resume work across the split, at +0.1–0.4 s.
+- The 8-bit versions, which don't fit on one Mac, all run split with a 16k
+  chat and pass 3/3: Qwen3 30B 8-bit (20.6 tok/s, 18.12 GB per Mac), Gemma
+  4 26B 8-bit (18.1 tok/s, 15.58 GB), GPT-OSS 20B 8-bit (19.8 tok/s,
+  12.13 GB). GPT-OSS 120B doesn't fit across two 24 GB Macs, even at 2-bit
+  (parked; see [ROADMAP.md](ROADMAP.md#deferred--parked)).
 
 ## How the weights get to each Mac
 
@@ -146,12 +179,29 @@ cost (calls, MB each way, time waiting on the packer, network time).
   the lead too when they're tied), `lm_head` and the final norm go to the
   lead, and vision towers are skipped (the split is text-only). The stage
   refuses to start if one of its shards is missing, because loading
-  without them would silently leave random weights.
+  without them would silently leave random weights. Tested on Qwen3 30B
+  8-bit: the lead downloaded 16.65 GB and the packer 21.09 GB, instead of
+  32.44 GB each, and the split loaded from those partial copies. It's a
+  command you run yourself (see
+  [CONFIGURATION.md](CONFIGURATION.md#split-download-agentmlx_split_fetchpy));
+  the agent doesn't run it yet.
+- **GGUF, for comparison.** With llama.cpp RPC the lead needs the whole
+  GGUF on its own disk and sends the packer's part over the cable at load.
+  Stage 1 of a GGUF split download is already in place: the packer runs
+  `rpc-server --cache`, keeps its part on its own disk, and a restart
+  loads in about 53 s instead of 7–11 min. Stage 2 (a fork patch so the
+  packer loads its own part from its own disk, fetched by byte range or
+  from `gguf-split` files) is planned; see [ROADMAP.md](ROADMAP.md).
 
 ## Limits
 
 - The link is **unauthenticated**. Keep it on the Thunderbolt cable.
 - Generation is a serial pipeline: per token, the lead waits for the
   packer, then runs its half. There's no overlap of the two halves yet.
+  Ideas for fixing that, including splitting each layer across both Macs
+  instead of stacking them, are in [ROADMAP.md](ROADMAP.md#beating-the-turn-taking-in-the-split).
+- Not started by the agent or launchd yet; both halves are started by hand.
 - `--kv-bits` with the split is untested.
 - Two Macs only (one packer, one lead). More stages are a roadmap item.
+- The bench talked to the lead worker directly; the proxy path was only
+  smoke-tested.

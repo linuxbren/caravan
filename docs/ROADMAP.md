@@ -4,7 +4,15 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-10-31 (v3, branch `caravan-v3-mlx-split`, in progress).*
+*Last updated 2026-10-31 (v3, branch `caravan-v3-mlx-split`, in progress).
+Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
+
+**Names.** In a split, the **lead** is the Mac you talk to (it serves the
+API, runs the last layers and picks each token), the **packers** are the
+other Macs, numbered in layer order (Packer 1 runs the first layers), and
+the whole group is the **string**. The old words "head", "front" and
+"tail" survive only in older log entries, internal code names and
+deprecated flag aliases.
 
 ## Done
 
@@ -83,7 +91,7 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
    MLX. Design: [MLX-SPLIT.md](MLX-SPLIT.md).
    - [x] Feasibility: `mx.distributed` ring fails on ≥2 MB messages over
      Thunderbolt; jaccl needs Thunderbolt 5; mlx-lm pipeline sharding
-     covers only Qwen3. Chosen: Caravan's own layer pipeline over one TCP
+     covers only Qwen models. Chosen: Caravan's own layer pipeline over one TCP
      connection.
    - [x] Lead/packer worker pair (`--split-role lead|packer`), Qwen3, Gemma 4
      and GPT-OSS.
@@ -104,6 +112,16 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
      120B build fits two Macs with chat room (parked), so its bigger brother
      is the 20B at 8-bit.
    - [x] Proxy routes MLX requests to the lead unchanged (smoke test).
+   - [x] Lead / packer / string naming (`83f86a9`); old flag, env and
+     config names kept as deprecated aliases.
+   - [x] Docs: CHANGELOG, configuration (split flags, env, config,
+     deprecated names), bench/v3 README.
+   - [ ] Copy the renamed code to the packer Mac (EXO2) before the next
+     split run: its copy predates `83f86a9`, so it only knows the old
+     flag names.
+   - [ ] Start the split from the agent and launchd (today both halves
+     are started by hand; `mlx.split` is only read by the
+     `mlx_backend` command helpers).
    - [ ] Merge to `main` (waiting for review; not pushed).
 3. **Split download (MLX).** Each Mac downloads only its own layers
    straight from Hugging Face; nothing relayed through the lead. Read
@@ -166,7 +184,7 @@ Ideas worth writing down. None is planned or started.
 
 [Terminal Delight](https://github.com/parker-brown-family/terminal-delight)
 is a Rust terminal for Linux (Omarchy) by Parker Brown. Two of its features
-could make it a terminal-first front end for Caravan instead of a web UI:
+could make it a terminal-first console for Caravan instead of a web UI:
 the **Local launcher** (`~/.config/terminal-delight/local-agent.toml`,
 which starts a local agent program in a pane) and **Workbench surfaces**
 (the program writes JSON items under `surfaces/<session>/<pane>/`, which
@@ -327,6 +345,8 @@ list above point to it.
 - **The MLX worker takes 6–9 s to start** (vs 1.6 s for `mlx_lm.server`).
 - **The v3 split is slower than one Mac.** Writing is 28–42% slower and
   reading 16–25% slower; use it for what doesn't fit on one Mac.
+- **The v3 split is started by hand.** The agent and the launchd plists
+  still start a one-Mac MLX worker.
 - **MLX tool calls** are returned as text, not as a `tool_calls` field.
 - **Same first message = same session**, on both backends.
 - **The Thunderbolt address can change.** macOS self-assigns 169.254.x.x

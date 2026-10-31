@@ -9,7 +9,8 @@ raw step-by-step notes are in [LOG.md](LOG.md).
 
 - Two Mac minis, Apple M4 with 24 GB unified memory each.
 - Linked by a Thunderbolt 4/USB4 cable (40 Gb/s) and the same LAN.
-- The version comparisons (v0 onward) ran on **one** of them.
+- The version comparisons v0 to v2.1 ran on **one** of them. v3 (the
+  MLX split) uses both, compared side by side with v2.1 on one.
 
 **Models.** The same three were used for every version comparison, each
 in a GGUF build (llama.cpp) and an MLX build:
@@ -56,6 +57,7 @@ in a GGUF build (llama.cpp) and an MLX build:
 | `bench/improvements/` | v0 → v1 |
 | `bench/v2/` | v1 → v2 (`suite_v2.sh`, `suite_v2_llama.sh`) |
 | `bench/v2.1/` | v1 / v2 / v2.1 same-session A/B (`ab_bench.py`, `suite_v21.sh`) |
+| `bench/v3/` | v2.1 (one Mac) vs v3 (split across two) and the bigger brothers (`split_client.py`; see [its README](../bench/v3/README.md)) |
 
 ## Two Macs over RPC (Sep 2026, llama.cpp)
 
@@ -333,3 +335,9 @@ across both Macs. None of the bigger ones fits on one 24 GB Mac.
   exo two-Mac numbers.
 - The v3 split through the proxy under load (only smoke-tested).
 - Overlapping the two halves (not built yet).
+- The cable-timing test for splitting each layer across both Macs
+  (round-trip time of small messages over Caravan's TCP link at batch 1,
+  4 and 16). Planned first step; see ROADMAP, "Beating the turn-taking in
+  the split".
+- A GGUF split where the packer loads its own part from its own disk
+  (stage 2; not built).
