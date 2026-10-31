@@ -2399,3 +2399,49 @@ are gone, and roadmap item 1 (publish the rebased branch) is done. The
 earlier entries in this log that name the old `RookiOS72/llama.cpp` fork
 are left as they were written. On the bench Mac, `~/dev/llama.cpp` has a
 `linuxbren` remote for fetching; its `origin` is unchanged.
+
+## 2026-10-31: v3, one MLX model split across two Macs
+
+Branch `caravan-v3-mlx-split` (off `c026359`, not pushed, not merged).
+Design note: [MLX-SPLIT.md](MLX-SPLIT.md). Numbers:
+[BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oct-31-mlx).
+
+- **Why our own pipeline.** `mx.distributed`'s ring backend failed over
+  Thunderbolt on messages of 2 MB and up; jaccl (RDMA) needs Thunderbolt 5;
+  mlx-lm's pipeline sharding only covers Qwen3. So v3 splits by layers
+  itself: the front Mac runs the embeddings and layers 0..K-1 and sends
+  the hidden state over one TCP connection; the head Mac runs the rest,
+  samples, and serves the HTTP API. Protocol `caravan-split-1`.
+- **Chat memory on both halves.** Each stage keeps its own per-session
+  cache, in lockstep, and saves it to its own disk. A restore needs both
+  halves or neither. The head notices a restarted front (new epoch) and
+  re-reads instead of trusting stale state.
+- **Results (one session).** Memory per Mac roughly halves; Qwen3 30B now
+  holds a 16k chat on MLX. Writing is 28–42% slower and reading 16–25%
+  slower. Each half costs 16–24 ms per token, almost what the whole model
+  cost on one Mac, while the cable adds under 1 ms and 5–10 KB per token.
+  So the remaining cost is per-pass overhead (parked: overlap the halves,
+  compile the stage graphs).
+- **Bigger brothers.** The 8-bit versions all run split with a 16k chat:
+  Qwen3 30B 8-bit at 18.1 GB per Mac (20.6 tok/s), Gemma 4 26B 8-bit at
+  15.6 GB (18.1 tok/s), GPT-OSS 20B 8-bit at 12.1 GB (19.8 tok/s); 3/3
+  each, none fits on one Mac. GPT-OSS 120B doesn't fit two Macs with chat
+  room even at 2-bit (36.6 GB, ~18.3 GB per Mac), so it's parked. Qwen3.6 35B-A3B 5-bit runs but re-reads the whole
+  chat every turn (hybrid attention; parked).
+- **Split download (prototype).** `agent/mlx_split_fetch.py` reads
+  `model.safetensors.index.json` and fetches only this stage's shard
+  files plus config and tokenizer. Qwen3 30B 8-bit: head 16.65 GB, front
+  21.09 GB, instead of 32.44 GB each. The worker refuses to start a stage
+  whose shards are missing.
+- **How the tail gets its weights today.** MLX v3: each Mac loads from its
+  own local copy, and each stage only reads its own layers' weights (lazy
+  load). The copies get there either by a full download per Mac, by a
+  one-time copy over the cable from the other Mac, or (new) by the split
+  download. Nothing is streamed from head to front at load time.
+  llama.cpp (GGUF): the head needs the whole GGUF on disk and sends the
+  tail's tensors over RPC at load; with `rpc-server --cache` (our build
+  has it, and the tail plist uses it) the tail keeps them on disk by hash,
+  so only the first load crosses the wire.
+- **Fixes along the way.** Qwen3.6 (`qwen3_5_moe`) built its cache by
+  walking all layers after the other stage's layers were dropped; the
+  stage now builds a prototype cache first and copies it.

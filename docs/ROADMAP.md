@@ -90,8 +90,21 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
    - [x] Per-stage session caches with save/restore on each Mac (both
      halves or neither).
    - [x] `mlx.split` config and front-command builder; unit tests.
-   - [ ] Side-by-side numbers vs v2.1 on one Mac, and the 8-bit "bigger
-     brothers" split across both.
+   - [x] Side-by-side numbers vs v2.1 on one Mac (2026-10-31, one
+     session; [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oct-31-mlx)).
+     Memory per Mac roughly halves (Qwen3 19.0 → 10.5 GB, Gemma 4 17.1 →
+     9.3 GB, GPT-OSS 13.4 → 7.1 GB) and Qwen3 now holds a 16k chat. The
+     price: writing 28–42% slower, reading 16–25% slower, turn 2 and
+     restart resume +0.1–0.4 s. Quality 3/3 on both.
+   - [x] Bigger brothers split across both Macs: Qwen3 30B 8-bit (16k chat
+     fits at 18.1 GB per Mac), Gemma 4 26B 8-bit (15.6 GB per Mac) and
+     GPT-OSS 20B 8-bit (12.1 GB per Mac), all 3/3, 16k chats fit; none fits
+     on one Mac. Writing 24–33% slower than the 4-bit versions. Qwen3.6
+     35B-A3B 5-bit ran as an extra. GPT-OSS only comes in 20B and 120B; no
+     120B build fits two Macs with chat room (parked), so its bigger brother
+     is the 20B at 8-bit.
+   - [x] Proxy routes MLX requests to the head unchanged (smoke test).
+   - [ ] Merge to `main` (waiting for review; not pushed).
 3. **Split download (MLX).** Each Mac downloads only its own layers
    straight from Hugging Face; nothing relayed through the head. Read
    `model.safetensors.index.json`, map each node's layer range to its
@@ -101,7 +114,10 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
    (the head needs the embedding shard too), vision towers (skipped for
    text-only), and re-planning when more tails join (a new cut means new
    shards, and files no longer needed should be reported, not deleted).
-   *Prototype in v3: `agent/mlx_split_fetch.py`.*
+   *Prototype in v3: `agent/mlx_split_fetch.py`. Qwen3 30B 8-bit: the head
+   downloaded 16.65 GB and the front 21.09 GB instead of 32.44 GB each,
+   and the split loaded from those partial copies. Not yet wired into
+   the agent (it's a CLI), and it doesn't re-plan when the cut changes.*
 4. **Split download (GGUF), stage 1: rpc-server's local tensor cache.**
    With `ggml-rpc-server -c/--cache` the tail keeps the tensors it
    receives on disk, keyed by hash, so it only receives its weights over
@@ -166,11 +182,15 @@ list above point to it.
 | C++ binary hardcodes the model (Known limits) | Experiment only; the Python agent is the supported path. | If the single-binary route is picked up again. |
 | `mx.distributed` ring over Thunderbolt (fails on ≥2 MB messages) | Our own TCP pipeline works today. | With a newer mlx release; would allow mlx-lm/exo-style sharding. |
 | jaccl / RDMA over Thunderbolt | Needs Thunderbolt 5 (M4 Pro/Max); our Minis are Thunderbolt 4. | If a Thunderbolt 5 Mac joins. |
-| GPT-OSS 120B split across two Minis | 63.4 GB of weights vs 48 GB total memory: doesn't fit. | With a third Mac (or more memory). |
+| GPT-OSS 120B split across two Minis | Needs a third Mini or more memory. The two Minis have about 2 × 19 GB of GPU memory. The stock build is 63.4 GB. Checked 2026-10-31 for heavier-compressed builds: every GGUF quant is 62.6–66 GB, even Q2_K and IQ1_S, because the experts stay in MXFP4. The smallest MLX build is `jesusoctavioas/gpt-oss-120b-mlx-2Bit` at 36.6 GB, which would be about 18.3 GB of weights per Mini, under 1 GB short of what a stage needs with chat memory (our stages peak 1.5–2.2 GB above their weights). `manjunathshiva/gpt-oss-120b-tq3a-tq2e-g32` (37.7 GB) uses a TurboQuant mode that stock mlx can't load. Pruned "REAP" 58B variants are different models. So GPT-OSS's bigger brother in v3 is the 20B at 8-bit. | When a third Mini (or a bigger-memory Mac) joins, or a ≤ 32 GB 120B build appears. |
 | Split link is unauthenticated | Thunderbolt-only cable between two trusted Macs. | Before the split runs over LAN/Tailscale. |
-| No overlap of the two halves when writing (serial pipeline) | Simplicity first; it's the main reason writing is slower split. | After v3: overlap the next token's front pass with the head, or compile the stage graphs. |
+| No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token, about as much as the whole model on one Mac, so the time is fixed per-pass overhead (graph build, sync), not compute or the cable (<1 ms). | After v3 merges: overlap the next token's front pass with the head (async eval), and try compiling each stage's graph. |
 | `--kv-bits` with the split | Untested. | With the 8-bit chat memory item. |
 | More than two stages (one head, several fronts) | Two Macs today. | When a third Mac joins; needs re-planning of the cut and of split downloads. |
+| Split download used for one model only | Qwen3 30B 8-bit ran from split downloads. For Gemma 4 8-bit and GPT-OSS 20B 8-bit, the head downloaded its files plus the front-only ones and copied them to the front over Thunderbolt (one internet download instead of two). | When split download is wired into the agent (Next #3). |
+| Qwen3.6 35B (hybrid attention) doesn't reuse the chat | Its linear-attention layers can't be rewound, and the template drops the reasoning from earlier replies, so every turn diverges and re-reads the whole chat (11 s at 4k, 53 s at 16k), also after a restart. Same on one Mac. | With per-model profiles: keep the reasoning in the history for hybrid models, or snapshot at the end of the user turn. |
+| Split download: resume and clean-up of interrupted downloads | Prototype; stale `.incomplete` files from killed downloads stay on disk (nothing deleted). | When split download is wired into the agent. |
+| v3 bench hits the worker directly | The proxy path was only smoke-tested (turn 1 cold, turn 2 reused, backend=mlx). | With the next proxy benchmark pass. |
 
 ## Known limits
 
@@ -182,6 +202,8 @@ list above point to it.
   + ~3.2 GB cache), even with `--kv-bits 8`. Use the GGUF for long Qwen
   chats, or the v3 MLX split across both Macs.
 - **The MLX worker takes 6–9 s to start** (vs 1.6 s for `mlx_lm.server`).
+- **The v3 split is slower than one Mac.** Writing is 28–42% slower and
+  reading 16–25% slower; use it for what doesn't fit on one Mac.
 - **MLX tool calls** are returned as text, not as a `tool_calls` field.
 - **Same first message = same session**, on both backends.
 - **The Thunderbolt address can change.** macOS self-assigns 169.254.x.x

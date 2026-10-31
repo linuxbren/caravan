@@ -105,7 +105,10 @@ cost (calls, MB each way, time waiting on the front, network time).
   Nothing is streamed from the head at load time. Each stage reads only
   the weights for its layers (lazy load), but the copy on disk is
   normally the full model (for this sprint the front Mac's copies of the
-  4-bit models were copied once over Thunderbolt from the head Mac).
+  4-bit models were copied once over Thunderbolt from the head Mac; for
+  Gemma 4 26B 8-bit and GPT-OSS 20B 8-bit the head downloaded its own
+  files plus the front-only ones and copied only the front's files over,
+  so the front holds a partial copy).
 - **Prototype split download** (`agent/mlx_split_fetch.py`): each Mac reads
   `model.safetensors.index.json`, maps its layer range to shard files and
   downloads only those from Hugging Face (`snapshot_download` with

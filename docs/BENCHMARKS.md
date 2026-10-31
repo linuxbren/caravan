@@ -224,10 +224,112 @@ GPT-OSS, 61–67 ms for Qwen3, and 70–96 ms for Gemma 4.
 - **Gemma 4 short prompts are about 8% slower** with the worker than with
   plain `mlx_lm.server`. That gap is real and still open.
 
+## v2.1 vs v3: one Mac vs two Macs (Oct 31, MLX)
+
+v2.1 runs the whole model on one Mac mini. v3 splits it across both:
+the front Mac runs the embeddings and the first half of the layers, the
+head Mac runs the second half, the final norm, `lm_head` and sampling,
+and they talk over one TCP connection on the Thunderbolt cable. Both
+variants were run in one session (10:08–10:35 CDT; bigger brothers
+10:38–11:05 CDT), with exo paused on both Macs. Each Mac loads from its
+own local copy of the weights. The bench talks to the worker directly
+(`bench/v3/split_client.py`); the proxy path was smoke-tested separately.
+
+Speeds are tok/s, the median of 2 runs. Memory is the peak per Mac (for
+v3, the busier of the two). "Quality" is 3 short checks (code, a
+multiplication, a capital). 4k and 16k chats plant a code word in turn 1
+and ask for it back.
+
+Qwen3 v2.1 uses the tuned settings (`--prompt-cache-size 1
+--prompt-cache-bytes 536870912 --prefill-step-size 512`); with the
+defaults it runs out of GPU memory at 4k. v3 uses the defaults.
+
+| | Qwen3 30B 4-bit v2.1 | v3 | Gemma 4 26B 4-bit v2.1 | v3 | GPT-OSS 20B v2.1 | v3 |
+|---|---|---|---|---|---|---|
+| writing (tok/s) | 51.0 | 29.5 | 41.3 | 26.9 | 36.5 | 26.1 |
+| reading 512 (tok/s) | 465 | 388 | 431 | 328 | 457 | 350 |
+| reading 4k (tok/s) | 400 | 332 | 399 | 301 | 445 | 338 |
+| peak memory per Mac (GB) | 19.04 | 10.49 | 17.14 | 9.28 | 13.41 | 7.05 |
+| 4k chat, turn 2 | 0.39 s | 0.51 s | 0.40 s | 0.59 s | 0.37 s | 0.46 s |
+| 4k chat, after a restart | 0.33 s | 0.74 s | 0.46 s | 0.71 s | 0.34 s | 0.50 s |
+| 16k chat, first read | out of memory | 81.9 s | 46.5 s | 61.3 s | 41.4 s | 54.2 s |
+| 16k chat, turn 2 | – | 0.72 s | 0.42 s | 0.52 s | 0.39 s | 0.49 s |
+| quality | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 |
+
+All 16k runs that fit found the code word. Restarts restored from disk
+(`hit-disk`) on both versions, both halves on v3.
+
+**Where the time goes (v3, per token written):**
+
+| | front | cable | head | whole model on one Mac (v2.1) | sent per token |
+|---|---|---|---|---|---|
+| Qwen3 30B 4-bit | 16.6 ms | 0.72 ms | 16.3 ms | 19.6 ms | 5.4 KB |
+| Gemma 4 26B 4-bit | 17.5 ms | 0.78 ms | 18.8 ms | 24.2 ms | 7.4 KB |
+| GPT-OSS 20B | 17.0 ms | 0.89 ms | 20.5 ms | 27.4 ms | 9.6 KB |
+
+A 4k read sends 16.6 MB (Qwen3) to 22.9 MB (Gemma 4) over the cable in
+0.02–0.03 s.
+
+**What it shows.**
+
+- Memory per Mac roughly halves, so Qwen3 30B goes from right at the GPU
+  limit to about 10.5 GB and now holds a 16k chat.
+- Writing is 28–42% slower and reading 16–25% slower. The halves run one
+  after the other, and each half costs almost as much as the whole model
+  did on one Mac. So the time is per-pass overhead, not compute and not
+  the cable (under 1 ms per token).
+- Chat reuse and restart resume work across the split, at +0.1–0.4 s.
+- exo's two-Mac MLX mode wasn't measured in this lab (no comparable
+  numbers).
+
+## Bigger brothers, split across two Macs (Oct 31, MLX, v3)
+
+The same models at a higher-quality quantization, both versions on v3
+across both Macs. None of the bigger ones fits on one 24 GB Mac.
+
+| | Qwen3 30B 4-bit | Qwen3 30B 8-bit | Gemma 4 26B 4-bit | Gemma 4 26B 8-bit | GPT-OSS 20B MXFP4 (stock) | GPT-OSS 20B 8-bit | Qwen3.6 35B-A3B 5-bit (extra) |
+|---|---|---|---|---|---|---|---|
+| weights per Mac (GB) | 8.41 | 15.89 | 6.9 | 13.02 | 5.42 | 10.5 | 11.57 |
+| writing (tok/s) | 29.5 | 20.6 | 26.9 | 18.1 | 26.1 | 19.8 | 25.7 |
+| reading 512 / 4k (tok/s) | 388 / 332 | 377 / 320 | 328 / 301 | 316 / 282 | 350 / 338 | 334 / 312 | 387 / 362 |
+| peak memory per Mac (GB) | 10.49 | 18.12 | 9.28 | 15.58 | 7.05 | 12.13 | 14.33 |
+| 16k chat, first read / turn 2 | 81.9 / 0.72 s | 83.2 / 0.89 s | 61.3 / 0.52 s | 64.4 / 0.71 s | 54.2 / 0.49 s | 57.5 / 0.84 s | 53.2 / 53.5 s |
+| 4k chat, after a restart | 0.74 s | 1.14 s | 0.71 s | 1.06 s | 0.50 s | 0.99 s | 12.1 s |
+| quality | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 |
+
+- Qwen3 30B 8-bit fits a 16k chat at 18.1 GB per Mac, close to the
+  ~19 GB GPU limit, so that's about the ceiling for this pair of Macs. It
+  writes 30% slower than 4-bit (front 23.5 ms + cable 0.81 ms + head
+  24.0 ms per token).
+- Qwen3.6 35B-A3B (hybrid attention, `qwen3_5_moe`) runs, but it doesn't
+  reuse the chat: its linear-attention layers can't be rewound and the
+  template drops the reasoning from earlier replies, so every turn
+  re-reads the whole chat. That's a model-family limit, not the split
+  (see ROADMAP, parked).
+- Gemma 4 26B 8-bit (27.95 GB) and GPT-OSS 20B 8-bit (22.23 GB) both fit a
+  16k chat with room to spare (15.6 and 12.1 GB per Mac). Writing is 33% and
+  24% slower than their 4-bit / MXFP4 versions; quality 3/3 on all of them.
+- GPT-OSS only comes in 20B and 120B. The 120B doesn't fit two 24 GB Macs
+  with chat room: every GGUF quant is 62.6–66 GB (experts stay MXFP4), and
+  the smallest MLX build (`jesusoctavioas/gpt-oss-120b-mlx-2Bit`, 36.58 GB)
+  would be ~18.3 GB of weights per Mac against a ~19.07 GB limit, while our
+  stages peak 1.5–2.2 GB above their weights. So its bigger brother here is
+  `lmstudio-community/gpt-oss-20b-MLX-8bit`. GPT-OSS ships with MXFP4
+  experts, so the 8-bit build is mostly a re-encode; don't expect much
+  quality gain from it.
+- Qwen3 30B 8-bit ran from split downloads: each Mac had only its own
+  shard files (head 16.65 GB, front 21.09 GB, of 32.44 GB). Gemma 4 8-bit and GPT-OSS
+  20B 8-bit were downloaded on EXO1 and EXO2's front files were copied over
+  Thunderbolt (planned split: Gemma 22.75 / 15.59 of 27.95 GB, GPT-OSS
+  16.98 / 15.8 of 22.23 GB).
+
 ## Not measured yet
 
 - The two-Mac split with the v1+ settings (flash attention, automatic
   KV, the rebased llama.cpp).
 - Cold-disk restore.
 - Larger `ubatch` sizes.
-- A two-Mac MLX split.
+- exo on the same two Macs (exo stays paused), so there are no comparable
+  exo two-Mac numbers.
+- The v3 split through the proxy under load (only smoke-tested).
+- Overlapping the two halves (not built yet).
