@@ -110,6 +110,16 @@ Settings: --n-slots, --slot-save-every, --slot-idle-save-seconds,
 --prompt-fingerprint-chars (or CARAVAN_N_SLOTS, CARAVAN_SLOT_SAVE_EVERY,
 CARAVAN_SLOT_IDLE_SAVE_SECONDS, CARAVAN_PROMPT_FINGERPRINT_CHARS, or
 ~/.caravan/config.json) -- see main().
+
+2026-10-30 MLX step (a): completions are now routed by their `model`
+field (backends.py). GGUF models go to llama-server exactly as before;
+MLX models (an "mlx-community/" id prefix, or an explicit "mlx.models"
+entry in the config) go to an mlx_lm.server on this Mini (default
+127.0.0.1:8092). MLX requests still go through the FIFO and get a
+session fingerprint, but there's no id_slot and no disk save/restore yet
+-- logged as "cache=mlx-noop". Settings: --mlx-host / --mlx-port /
+--mlx-prefixes / --no-mlx, CARAVAN_MLX_* env vars, or the "mlx" object
+in ~/.caravan/config.json. Step (b) design notes live in backends.py.
 """
 import argparse
 import contextlib
@@ -129,8 +139,10 @@ from typing import NamedTuple
 
 try:
     import slot_cleanup  # run as a script: proxy/ is sys.path[0]
+    import backends
 except ImportError:  # imported as proxy.slot_pin_proxy from the repo root
     from proxy import slot_cleanup
+    from proxy import backends
 
 UPSTREAM_HOST = os.environ.get("CARAVAN_UPSTREAM_HOST", "127.0.0.1")
 UPSTREAM_PORT = int(os.environ.get("CARAVAN_UPSTREAM_PORT", "8080"))
@@ -212,6 +224,37 @@ except ValueError as _e:  # never crash-loop a KeepAlive'd proxy over a bad sett
     sys.stderr.write(f"[slot-pin-proxy] invalid setting ({_e}); using defaults\n")
     SETTINGS = ProxySettings(**{k: v[3] for k, v in PROXY_SETTING_SOURCES.items()})
 N_SLOTS = SETTINGS.n_slots
+
+try:
+    MLX_SETTINGS = backends.resolve_mlx_settings(_load_config_file())
+except ValueError as _e:
+    sys.stderr.write(f"[slot-pin-proxy] invalid mlx setting ({_e}); MLX routing off\n")
+    MLX_SETTINGS = backends.resolve_mlx_settings({}, {"enabled": False, "port": backends.DEFAULT_MLX_PORT})
+# host/port read lazily so UPSTREAM_HOST/PORT stay the one source of truth.
+ROUTER = backends.Router(
+    backends.LlamaBackend(lambda: UPSTREAM_HOST, lambda: UPSTREAM_PORT), MLX_SETTINGS)
+
+
+class MlxSessionTracker:
+    """MLX has no slots: this only remembers which session fingerprints
+    were seen this run (and turn counts) so the log shows pinning is
+    still per-session, and so step (b) has the hook it needs."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.turns: dict = {}
+
+    def seen(self, fingerprint) -> bool:
+        with self._lock:
+            return fingerprint in self.turns
+
+    def turn(self, fingerprint) -> int:
+        with self._lock:
+            self.turns[fingerprint] = self.turns.get(fingerprint, 0) + 1
+            return self.turns[fingerprint]
+
+
+mlx_sessions = MlxSessionTracker()
 
 
 class FifoGate:
@@ -847,17 +890,30 @@ class ProxyHandler(BaseHTTPRequestHandler):
         slot_note = ""
         slot_for_save = None
         fingerprint_for_save = None
+        backend = ROUTER.llama
+        mlx_fingerprint = None
         if is_completion:
             try:
                 data = json.loads(raw_body)
             except ValueError:
                 data = None
             if isinstance(data, dict):
+                backend = ROUTER.for_model(data.get("model"))
+            if isinstance(data, dict) and backend.supports_slots:
                 slot, fingerprint, slot_note = prepare_completion(data)
                 data["id_slot"] = slot
                 raw_body = json.dumps(data).encode("utf-8")
                 slot_for_save = slot
                 fingerprint_for_save = fingerprint
+            elif isinstance(data, dict):
+                # MLX: same session identity, no slot, persistence is a no-op.
+                mlx_fingerprint = session_fingerprint(data)
+                restore = backend.restore(mlx_fingerprint) if mlx_fingerprint else "ephemeral"
+                warm = "warm" if mlx_fingerprint and mlx_sessions.seen(mlx_fingerprint) else "cold"
+                slot_note = (f" backend=mlx model={data.get('model')} fp={mlx_fingerprint} "
+                             f"cache={restore} ({warm}; slot save/restore not implemented for MLX)")
+                raw_body = json.dumps(backend.prepare_body(data)).encode("utf-8")
+        upstream_host, upstream_port = backend.address()
 
         headers = {
             k: v
@@ -865,9 +921,9 @@ class ProxyHandler(BaseHTTPRequestHandler):
             if k.lower() not in ("host", "content-length")
         }
         headers["Content-Length"] = str(len(raw_body))
-        headers["Host"] = f"{UPSTREAM_HOST}:{UPSTREAM_PORT}"
+        headers["Host"] = f"{upstream_host}:{upstream_port}"
 
-        conn = http.client.HTTPConnection(UPSTREAM_HOST, UPSTREAM_PORT)
+        conn = http.client.HTTPConnection(upstream_host, upstream_port)
         try:
             # conn.getresponse() blocks with no timeout -- during a cold
             # prompt-processing run that can be many minutes with zero
@@ -913,9 +969,12 @@ class ProxyHandler(BaseHTTPRequestHandler):
                     raise exc
                 # llama-server isn't up yet/crashed -- common right after
                 # a launchd (re)start race, not worth a traceback.
-                note_upstream_down()
-                self.log_message("%s %s -> upstream unreachable (%s)", method, self.path, exc)
-                body = b"llama-server upstream unreachable\n"
+                if backend.supports_slots:
+                    note_upstream_down()
+                self.log_message("%s %s -> %s upstream unreachable (%s)",
+                                 method, self.path, backend.name, exc)
+                body = (b"mlx_lm.server upstream unreachable\n" if backend.name == "mlx"
+                        else b"llama-server upstream unreachable\n")
                 self.send_response(502)
                 self.send_header("Content-Type", "text/plain")
                 self.send_header("Content-Length", str(len(body)))
@@ -992,6 +1051,11 @@ class ProxyHandler(BaseHTTPRequestHandler):
             # still holding the FIFO gate.
             if status == 200 and slot_for_save is not None:
                 finish_completion(slot_for_save, fingerprint_for_save)
+            elif status == 200 and mlx_fingerprint is not None:
+                n = mlx_sessions.turn(mlx_fingerprint)
+                sys.stderr.write(
+                    f"[slot-pin-proxy] mlx fp={mlx_fingerprint} turn {n}: slot save "
+                    f"{ROUTER.mlx.save(mlx_fingerprint)} (MLX prompt-cache persistence is step b)\n")
         except (BrokenPipeError, ConnectionResetError, http.client.HTTPException):
             # http.client.HTTPException (e.g. IncompleteRead) added
             # 2026-09-06: caught live during the --slot-save-path restart
@@ -1049,6 +1113,13 @@ def start_slot_cleanup(overrides: "dict | None" = None):
     )
 
 
+def configure_mlx(overrides: "dict | None" = None) -> None:
+    """Re-resolves MLX routing with CLI overrides (main(); tests)."""
+    global MLX_SETTINGS
+    MLX_SETTINGS = backends.resolve_mlx_settings(_load_config_file(), overrides)
+    ROUTER.mlx = backends.MlxBackend(MLX_SETTINGS)
+
+
 def configure(settings: ProxySettings) -> None:
     """Applies resolved settings (main() after parsing flags; tests)."""
     global SETTINGS, N_SLOTS, session_slots
@@ -1077,10 +1148,21 @@ def main(argv=None):
                         help="prompt-style calls: prefix length identifying a session; shorter "
                              "prompts are unpinned one-shots (env CARAVAN_PROMPT_FINGERPRINT_CHARS, "
                              "config proxy.prompt_fingerprint_chars, default 2048)")
+    g = parser.add_argument_group("MLX backend (flag > env > config \"mlx\" > default)")
+    g.add_argument("--mlx-host", default=None, help="mlx_lm.server host (env CARAVAN_MLX_HOST, default 127.0.0.1)")
+    g.add_argument("--mlx-port", type=int, default=None,
+                   help=f"mlx_lm.server port (env CARAVAN_MLX_PORT, default {backends.DEFAULT_MLX_PORT})")
+    g.add_argument("--mlx-prefixes", default=None,
+                   help="comma list of model-id prefixes routed to MLX (env CARAVAN_MLX_PREFIXES, "
+                        "default mlx-community/)")
+    g.add_argument("--no-mlx", action="store_true", help="never route to MLX (env CARAVAN_MLX_ENABLED=0)")
     slot_cleanup.add_cli_args(parser, proxy=True)
     args = parser.parse_args(argv)
     try:
         configure(resolve_proxy_settings({k: getattr(args, k) for k in ProxySettings._fields}))
+        configure_mlx({"host": args.mlx_host, "port": args.mlx_port,
+                       "model_prefixes": args.mlx_prefixes,
+                       "enabled": False if args.no_mlx else None})
     except ValueError as e:
         parser.error(str(e))
 
@@ -1093,6 +1175,12 @@ def main(argv=None):
         + (f", idle saver {SETTINGS.idle_save_seconds:g}s" if SETTINGS.idle_save_seconds > 0 else ""),
         flush=True,
     )
+    if MLX_SETTINGS.enabled:
+        print(f"[slot-pin-proxy] MLX routing on: models matching {list(MLX_SETTINGS.model_prefixes)} "
+              f"or {sorted(MLX_SETTINGS.models)} -> mlx_lm.server {MLX_SETTINGS.host}:{MLX_SETTINGS.port} "
+              "(no slot save/restore for MLX yet)", flush=True)
+    else:
+        print("[slot-pin-proxy] MLX routing off", flush=True)
     start_slot_cleanup(slot_cleanup.overrides_from_args(args))
     start_idle_saver(SETTINGS.idle_save_seconds)
     try:

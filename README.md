@@ -257,6 +257,29 @@ Other keys are under `"proxy"`.
 | -- | `CARAVAN_PROXY_STATE_FILE` | -- | `~/.caravan/proxy/session_slots.json` | slot occupancy |
 | -- | `CARAVAN_SLOT_SAVE_DIR` | -- | `~/.caravan/llama-server/slots` | must match `--slot-save-path` |
 
+MLX backend (since 2026-10-30, step a). Completions whose `model` is an
+MLX id go to an `mlx_lm.server` on the same Mini; everything else still
+goes to llama-server. Same FIFO, same session fingerprint, but no slot:
+the log says `backend=mlx … cache=mlx-noop` (MLX prompt-cache persistence
+is step b, see `proxy/backends.py`). Keys are under `"mlx"`.
+
+| flag | env | config key | default | meaning |
+|---|---|---|---|---|
+| `--mlx-host` / `--mlx-port` | `CARAVAN_MLX_HOST` / `CARAVAN_MLX_PORT` | `mlx.host` / `mlx.port` | `127.0.0.1` / `8092` | mlx_lm.server |
+| `--mlx-prefixes` | `CARAVAN_MLX_PREFIXES` | `mlx.model_prefixes` | `mlx-community/` | model ids routed to MLX |
+| -- | -- | `mlx.models` | `{}` | explicit `{"alias-or-id": "/local/dir"}` (also routed to MLX) |
+| -- | `CARAVAN_MLX_MODEL_DIRS` | `mlx.model_dirs` | `~/.exo/models, ~/.caravan/models/mlx` | where `org/name` is looked up as `org--name/` |
+| `--no-mlx` | `CARAVAN_MLX_ENABLED=0` | `mlx.enabled` | on | route everything to llama-server |
+
+The request's `model` is rewritten to the local directory, so mlx_lm never
+downloads anything. To start the server: `caravan_agent.py --model
+mlx-community/<name> --apply` (role MLX), or render a launchd job with
+`python3 agent/render_mlx_plist.py mlx-community/<name>` (writes
+`launchd/com.caravan.mlx-server.plist`; loading it is manual). Python:
+`mlx.python` / `CARAVAN_MLX_PYTHON`, default
+`~/.caravan/venvs/mlx/bin/python` (`python3 -m venv ~/.caravan/venvs/mlx &&
+~/.caravan/venvs/mlx/bin/pip install mlx-lm`).
+
 How the proxy behaves:
 
 - **Sessions.** Chat requests are identified by a hash of their first

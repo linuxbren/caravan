@@ -34,6 +34,7 @@ from pathlib import Path
 import config
 import health_server
 import identity
+import mlx_backend
 import ollama_store
 import supervisor
 from discovery import mdns, tailscale
@@ -278,6 +279,31 @@ def main() -> int:
     # below covers both the --apply (supervise, blocks) and dry-run paths.
     advertiser = mdns.advertise_start(me["hostname"], config.AGENT_PORT)
     print(f"[caravan-agent] advertising via mDNS as {me['hostname']!r}")
+
+    cfg = config.load_config_file(config_path)
+    mlx_s = mlx_backend.resolve(cfg)[0]
+    if mlx_backend.is_mlx_model(args.model, mlx_s):
+        # MLX step (a): an MLX target runs mlx_lm.server on this Mini (no
+        # RPC peers, no slot files); the proxy routes MLX ids to it.
+        try:
+            cmd = mlx_backend.build_mlx_command(args.model, cfg)
+        except FileNotFoundError as e:
+            print(f"[caravan-agent] ERROR: {e}", file=sys.stderr)
+            advertiser.terminate()
+            return 1
+        print(f"[caravan-agent] role: MLX for {args.model} (mlx_lm.server on "
+              f"{mlx_s.host}:{mlx_s.port}; slot save/restore is a no-op for MLX)")
+        print(f"[caravan-agent] would run: {' '.join(cmd)}")
+        try:
+            if args.apply:
+                log_path = config.STATE_DIR / "logs" / "mlx-server.log"
+                print(f"[caravan-agent] --apply set, supervising now (log: {log_path})")
+                supervisor.supervise(cmd, log_path)
+            else:
+                print("[caravan-agent] dry run -- pass --apply to actually spawn this.")
+            return 0
+        finally:
+            advertiser.terminate()
 
     have_model = ollama_store.has_model(args.model)
     print(f"[caravan-agent] target model: {args.model} -- "
