@@ -8,9 +8,10 @@ What changed in each Caravan version, newest first. Numbers come from
 "Reading" is how fast a prompt is taken in, "writing" is how fast the
 reply comes out.
 
-## v3.1 (unreleased)
+## v3.1 (tag `v3.1`, `2260d2e`, Oct 31 2026)
 
-On branch `caravan-v3-mlx-split`, after the `v3` tag. Not pushed.
+On branch `caravan-v3-mlx-split`, after the `v3` tag. Pushed with tag
+`v3.1`; not merged into `main`.
 
 **New**
 
