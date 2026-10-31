@@ -332,10 +332,11 @@ simplest first:
        B tokens (one per user), so the total is about B ÷ (half + cable
        cost at that batch) tokens per second. Compare with v2.1 on one Mini (20 /
        24 / 27 ms per token for Qwen3 30B / Gemma 4 26B / GPT-OSS 20B)
-       and v3's layer split (34 / 37 / 38 ms). Example: Qwen3 at 50 µs
-       round trip is 96 × 50 µs ≈ 4.8 ms of cable per token; 17 + 4.8 ≈
-       22 ms beats the v3 split (34 ms) but not one Mini (20 ms) for a
-       single chat.
+       and v3's layer split (34 / 37 / 38 ms). The first guess was 50 µs
+       per round trip (Qwen3: 96 × 50 µs ≈ 4.8 ms of cable, 17 + 4.8 ≈ 22
+       ms). **Measured on Oct 31: about 100 µs** (below), so Qwen3 is
+       96 × 101 µs ≈ 9.7 ms of cable, 16.6 + 9.7 ≈ 26 ms per token: still
+       better than the v3 split (34 ms), worse than one Mini (20 ms).
      - **Go / no-go rule.** Go, and build a prototype, if for at least one
        model the prediction beats v3's layer split for a single chat
        **and** beats both v2.1 and v3 with idea 1 (several chats at once)
@@ -345,6 +346,32 @@ simplest first:
        and the batched case doesn't win either, it's no-go over
        Thunderbolt 4: park it until faster links (Thunderbolt 5 or
        direct-memory links) are available.
+   - **Result, Oct 31 2026 (`bench/cable/`, details in
+     [BENCHMARKS.md](BENCHMARKS.md#cable-timing-oct-31-thunderbolt-4)).**
+     A round trip through Caravan's link takes about 100 µs for one
+     chat's hidden state (median; 95th percentile about 125 µs), 122–137
+     µs at batch 4 and 190–213 µs at batch 16. At these sizes plain TCP is only 10–35 µs
+     faster, so Caravan's framing isn't the problem; the cable and the
+     network stack are. Predicted time per token (slower v3 half +
+     cable), single chat: Qwen3 26.3 ms, Gemma 4 25.0 ms, GPT-OSS 25.5
+     ms, so all three beat the v3 split (34 / 37 / 38 ms), and only
+     GPT-OSS also beats one Mini (27.4 ms). Batched (assuming, as above,
+     that a step costs the same at batch 4 or 16, which is a best case
+     for every option), only GPT-OSS at batch 4 beats both one Mini (150
+     vs 146 tok/s) and v3 with idea 1 (about 98); Qwen3 and Gemma 4 lose
+     to one Mini at every batch. The cable alone at batch 1 (Qwen3 9.7
+     ms) is just under half of one Mini's 19.6 ms, so the "park" clause
+     isn't hit on the cable alone.
+     **Verdict: not a go yet.** By the letter of the rule GPT-OSS passes,
+     but by 3%, and only if waiting for the GPU before each exchange is
+     free. It isn't: the `--gpu-sync` run added about 1 ms per round trip
+     (a pessimistic test, the two waits ran one after the other), and a
+     lone MLX sync on one Mini takes about 175 µs. GPT-OSS keeps its
+     batch-4 lead only if the GPU wait adds less than about 15 µs per
+     exchange (single chat: less than about 40 µs). **Park it** for
+     Thunderbolt 4, and do ideas 1 and 3 first. The one cheap test that
+     could reopen it: measure the GPU wait the way a real layer would
+     have it (both Minis at once, arrays already on the GPU).
 5. **Uneven layer split.** Move the cut so both halves take the same time
    (the lead also does the output layer and sampling, so it is usually
    the slower half). Small win on its own; it matters most combined with

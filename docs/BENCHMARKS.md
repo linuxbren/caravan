@@ -58,6 +58,7 @@ in a GGUF build (llama.cpp) and an MLX build:
 | `bench/v2/` | v1 → v2 (`suite_v2.sh`, `suite_v2_llama.sh`) |
 | `bench/v2.1/` | v1 / v2 / v2.1 same-session A/B (`ab_bench.py`, `suite_v21.sh`) |
 | `bench/v3/` | v2.1 (one Mac) vs v3 (split across two) and the bigger brothers (`split_client.py`; see [its README](../bench/v3/README.md)) |
+| `bench/cable/` | cable timing over Thunderbolt for splitting each layer (`cable_timing.py`; see [its README](../bench/cable/README.md)) |
 
 ## Two Macs over RPC (Sep 2026, llama.cpp)
 
@@ -325,6 +326,67 @@ across both Macs. None of the bigger ones fits on one 24 GB Mac.
   Thunderbolt (planned split: Gemma 22.75 / 15.59 of 27.95 GB, GPT-OSS
   16.98 / 15.8 of 22.23 GB).
 
+## Cable timing (Oct 31, Thunderbolt 4)
+
+The first test for splitting each layer across both Macs (ROADMAP idea
+4). `bench/cable/cable_timing.py` (see [its README](../bench/cable/README.md)),
+EXO1 (lead) to EXO2 (packer) over the Thunderbolt cable (`en2` on EXO1,
+EXO2 at its link-local address), test port 5570/5571, MLX venv Python.
+No models loaded, no Caravan or exo services running, nothing stopped.
+Run 17:13–17:15 CDT. 100 warm-up round trips, then 2,000 per size (200
+for 1 MB). Raw JSON: `bench/cable/results/`.
+
+**Round trip, send N bytes and get N back (µs)**
+
+| bytes | what | Caravan link median / p95 / p99 | plain TCP median / p95 / p99 | Caravan + GPU sync median / p95 |
+|---:|---|---|---|---|
+| 1,024 | | 99.8 / 127.2 / 148.0 | 80.2 / 105.1 / 113.1 | 1,058.9 / 1,340.4 |
+| 4,096 | Qwen3 batch 1 | 101.1 / 123.1 / 133.4 | 90.9 / 110.9 / 117.0 | 1,102.9 / 1,327.0 |
+| 5,632 | Gemma 4 batch 1 | 103.5 / 126.5 / 137.9 | 92.3 / 111.5 / 118.3 | 1,107.1 / 1,405.6 |
+| 5,760 | GPT-OSS batch 1 | 104.4 / 125.7 / 139.6 | 87.9 / 108.9 / 116.0 | 1,106.3 / 1,441.8 |
+| 16,384 | Qwen3 batch 4 | 122.1 / 148.5 / 160.0 | 104.6 / 123.2 / 130.7 | 1,143.3 / 1,454.3 |
+| 22,528 | Gemma 4 batch 4 | 137.4 / 162.9 / 174.0 | 110.5 / 127.7 / 136.0 | 1,167.0 / 1,525.8 |
+| 23,040 | GPT-OSS batch 4 | 128.1 / 150.7 / 165.7 | 111.3 / 129.0 / 138.8 | 1,168.5 / 1,500.0 |
+| 65,536 | Qwen3 batch 16 | 190.5 / 214.0 / 222.4 | 158.1 / 183.0 / 196.1 | 1,294.4 / 1,949.3 |
+| 90,112 | Gemma 4 batch 16 | 212.7 / 236.8 / 245.0 | 181.8 / 204.4 / 217.5 | 1,308.4 / 1,935.5 |
+| 92,160 | GPT-OSS batch 16 | 213.1 / 236.0 / 246.1 | 179.9 / 204.9 / 218.4 | 1,309.6 / 1,949.6 |
+| 262,144 | | 253.9 / 275.7 / 314.8 | 237.0 / 260.3 / 277.5 | 2,234.1 / 2,471.0 |
+| 1,048,576 | | 693.2 / 729.4 / 946.9 | 754.4 / 788.6 / 866.3 | 4,483.4 / 4,977.9 |
+
+Bulk, one way in 1 MiB frames through the Caravan link: 1,978 MB/s
+(1,074 MB/s in the GPU-sync run). A second run without GPU sync (5,000
+round trips per size, up to 92 KB) agreed within about 3%. A lone MLX
+sync (make a 4 KB array, one op, wait) on EXO1 takes about 175 µs
+median.
+
+**What it means for splitting each layer** (ROADMAP formula: time per
+step = the slower v3 half + layers × 2 × round trip; one step makes one
+token per chat)
+
+| model (layers) | batch | cable per step | predicted ms per step | predicted tok/s | one Mini (v2.1) | v3 split | v3 + several chats (best case) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Qwen3 30B (48) | 1 | 9.7 ms | 26.3 | 38 | 51 | 29 | — |
+| | 4 | 11.7 ms | 28.3 | 141 | 204 | 118 | 120 |
+| | 16 | 18.3 ms | 34.9 | 459 | 816 | 471 | 482 |
+| Gemma 4 26B (30) | 1 | 6.2 ms | 25.0 | 40 | 41 | 27 | — |
+| | 4 | 8.2 ms | 27.0 | 148 | 165 | 108 | 106 |
+| | 16 | 12.8 ms | 31.6 | 507 | 661 | 432 | 426 |
+| GPT-OSS 20B (24) | 1 | 5.0 ms | 25.5 | 39 | 36 | 26 | — |
+| | 4 | 6.1 ms | 26.6 | 150 | 146 | 105 | 98 |
+| | 16 | 10.2 ms | 30.7 | 521 | 584 | 421 | 390 |
+
+- The slower half is from v3's "where the time goes": Qwen3 16.6 ms
+  (packer), Gemma 4 18.8 ms (lead), GPT-OSS 20.5 ms (lead). One Mini is
+  19.6 / 24.2 / 27.4 ms per token and the v3 split 34 / 37 / 38 ms.
+- The batch 4 and 16 columns are estimates, not measurements: every
+  option is assumed to take the same time per step at batch 4 or 16 as at
+  batch 1 (a best case; the larger batch costs some extra compute).
+  "v3 + several chats" is half the chats on each Mini at a time, each
+  step one slower half: batch ÷ 2 ÷ slower half.
+- With the GPU-sync round trips instead, every model loses everything
+  (for example GPT-OSS batch 1: 48 × 1.1 ms ≈ 53 ms of cable).
+- Verdict and next step: ROADMAP, idea 4, "Result, Oct 31 2026".
+
 ## Not measured yet
 
 - The two-Mac split with the v1+ settings (flash attention, automatic
@@ -335,9 +397,11 @@ across both Macs. None of the bigger ones fits on one 24 GB Mac.
   exo two-Mac numbers.
 - The v3 split through the proxy under load (only smoke-tested).
 - Overlapping the two halves (not built yet).
-- The cable-timing test for splitting each layer across both Macs
-  (round-trip time of small messages over Caravan's TCP link at batch 1,
-  4 and 16). Planned first step; see ROADMAP, "Beating the turn-taking in
-  the split".
+- The real GPU wait in a split-each-layer exchange (both Macs syncing at
+  the same time, arrays already on the GPU). The cable-timing test only
+  has a pessimistic version of it.
+- Batching on one Mac (v2.1) or in the split (v3 with several chats at
+  once). The cable-timing predictions assume a step costs the same at
+  batch 4 or 16 as at batch 1.
 - A GGUF split where the packer loads its own part from its own disk
   (stage 2; not built).

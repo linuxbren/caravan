@@ -23,6 +23,12 @@ On branch `caravan-v3-mlx-split`, after the `v3` tag. Not pushed.
   `mlx_split_fetch.py` command to fetch it again from Hugging Face. It
   never falls back to getting files from the other Mac. 6 new unit tests
   (126 in total).
+- **Cable-timing benchmark (`bench/cable/`).** Times one round trip over
+  the Thunderbolt cable through Caravan's own split link and through
+  plain TCP, at each model's per-layer exchange size. About 100 µs for
+  one chat (the first guess was 50 µs). Result for splitting each layer
+  across both Macs: not a go yet over Thunderbolt 4; see
+  [BENCHMARKS.md](BENCHMARKS.md#cable-timing-oct-31-thunderbolt-4).
 
 ## v3 (tag `v3`, `df68468`): one MLX model split across two Macs
 

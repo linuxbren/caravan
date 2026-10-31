@@ -2537,3 +2537,26 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
   today. Every finished shard in those folders matched the size Hugging
   Face lists first; two of the partials were for lead-only shards the
   packer doesn't need. Only `.incomplete` files were removed.
+
+## 2026-10-31: cable timing for splitting each layer (ROADMAP idea 4)
+
+- New `bench/cable/cable_timing.py`: an echo server on EXO2 (Caravan's
+  `serve_front` with a stand-in state, plus a plain-TCP echo on the next
+  port) and a client on EXO1 (`FrontClient`, plus a plain socket). Test
+  ports 5570/5571, MLX venv, no models, no services running; the
+  servers were stopped afterwards. Route checked: EXO1 reaches EXO2 over
+  `en2` (Thunderbolt 1).
+- One chat's hidden state (4–6 KB) takes about 100 µs per round trip
+  through Caravan's link, median (p95 about 125, p99 about 135–140);
+  plain TCP about 90 µs. Batch 4 is 122–137 µs, batch 16 190–213 µs. The
+  roadmap had guessed 50 µs.
+- With a GPU sync on each side before each send (`--gpu-sync`) a round
+  trip is about 1.1 ms. That test runs the two syncs one after the
+  other, so it's pessimistic; a lone MLX sync is about 175 µs.
+- Plugged into the roadmap's formula: Qwen3 26.3 ms per token (was
+  guessed 22), Gemma 4 25.0, GPT-OSS 25.5. All beat the v3 split, only
+  GPT-OSS beats one Mini. Batched, only GPT-OSS at batch 4 passes the
+  go rule, by 3%, and only if the GPU wait were free. Verdict: not a go
+  yet; parked for Thunderbolt 4. Tables in BENCHMARKS.md, verdict in
+  ROADMAP idea 4.
+

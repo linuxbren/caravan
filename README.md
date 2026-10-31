@@ -227,7 +227,7 @@ tail -f ~/Library/Logs/caravan/*.log
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | what changed in each version (v0 → v3) |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | done by version, next in order, ideas, parked items, known limits |
 | [docs/LOG.md](docs/LOG.md) | the dated build log: every measurement and dead end |
-| [agent/README.md](agent/README.md), [launchd/README.md](launchd/README.md), [cpp/README.md](cpp/README.md), [bench/improvements/README.md](bench/improvements/README.md), [bench/v3/README.md](bench/v3/README.md) | per-directory notes |
+| [agent/README.md](agent/README.md), [launchd/README.md](launchd/README.md), [cpp/README.md](cpp/README.md), [bench/improvements/README.md](bench/improvements/README.md), [bench/v3/README.md](bench/v3/README.md), [bench/cable/README.md](bench/cable/README.md) | per-directory notes |
 
 ## Repository layout
 
@@ -236,7 +236,7 @@ tail -f ~/Library/Logs/caravan/*.log
 | `agent/` | caravan-agent (discovery, role, supervision, settings, auto KV), the MLX worker and its launcher, the MLX split (`mlx_split.py`) and split download (`mlx_split_fetch.py`), plist renderers |
 | `proxy/` | the proxy, backend routing, saved-chat cleanup |
 | `launchd/` | launchd plists and how to install them |
-| `bench/` | benchmark scripts: `improvements/` (v0 → v1), `v2/`, `v2.1/` (same-session A/B), `v3/` (one Mac vs split) |
+| `bench/` | benchmark scripts: `improvements/` (v0 → v1), `v2/`, `v2.1/` (same-session A/B), `v3/` (one Mac vs split), `cable/` (Thunderbolt round-trip timing) |
 | `cpp/` | experimental single binary (lead or packer in-process) |
 | `scripts/` | safe packer restart |
 | `tests/` | stdlib `unittest` suite |
