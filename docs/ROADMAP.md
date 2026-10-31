@@ -225,11 +225,52 @@ simplest first:
    overhead. Output is identical to normal decoding. Needs a draft model
    that shares the tokenizer (for example a small Qwen3 for Qwen3 30B) and
    memory for it on the lead.
-4. **Split each layer across both Minis (tensor parallel).** Both Minis
-   work on every layer at the same time instead of taking turns. But it
-   needs two exchanges per layer (dozens per token instead of one), so it
-   lives or dies on the cable's latency; over Thunderbolt 4 TCP it may
-   cost more than it saves.
+4. **Split each layer across both Minis (tensor parallel).** *Brenden's
+   preferred direction to investigate.* Both Minis work on every layer at
+   the same time instead of taking turns, each holding half of every
+   layer's weights.
+   - **Scaling.** Each layer needs two exchanges between the Minis (after
+     attention and after the feed-forward part), and each exchange pays a
+     fixed cable delay. For one chat the exchanges are tiny (one hidden
+     state, a few KB), so that delay dominates and may cancel the gain over
+     Thunderbolt 4. With several users, everyone's data is batched into the
+     same exchanges: the fixed delay is paid once per layer for all of
+     them, so it gets better the more users there are. It scales poorly to
+     3 or more Minis, because every exchange involves every Mini. The
+     usual answer is a hybrid: split each layer within close pairs of
+     Minis, then chain the pairs lead to packer as today.
+   - **First test, before building anything: a cable-timing
+     microbenchmark.** Over our Thunderbolt link between the two Minis,
+     using Caravan's own TCP link (the same socket setup as the split):
+     - Measure the round-trip time for small messages at each model's
+       per-layer exchange size, `hidden_size × batch × 2 bytes` (bf16),
+       for batch sizes 1, 4 and 16, for all three models (read
+       `hidden_size` and the layer count from each model's
+       `config.json`; for example Qwen3 30B-A3B is 2,048 × 48 layers, so
+       4 KB per exchange at batch 1). Report the median and the 99th
+       percentile; optionally also time a round trip that includes a GPU
+       sync on each side, since the real exchange waits for the GPU too.
+     - Estimate the cable cost per token: `layers × 2 × round-trip time`.
+     - Predict the time per token as roughly one Mini's half of the
+       compute plus that cable cost. For the half, use v3's per-half
+       numbers from "where the time goes" (16–20 ms per token, which
+       already include the per-pass overhead). At batch B one step makes
+       B tokens (one per user), so the total is about B ÷ (half + cable
+       cost at that batch) tokens per second. Compare with v2.1 on one Mini (20 /
+       24 / 27 ms per token for Qwen3 30B / Gemma 4 26B / GPT-OSS 20B)
+       and v3's layer split (34 / 37 / 38 ms). Example: Qwen3 at 50 µs
+       round trip is 96 × 50 µs ≈ 4.8 ms of cable per token; 17 + 4.8 ≈
+       22 ms beats the v3 split (34 ms) but not one Mini (20 ms) for a
+       single chat.
+     - **Go / no-go rule.** Go, and build a prototype, if for at least one
+       model the prediction beats v3's layer split for a single chat
+       **and** beats both v2.1 and v3 with idea 1 (several chats at once)
+       in total tokens per second at batch 4 or 16. If it only wins at
+       batch 16, go only for the multi-user and agent case. If the cable
+       cost alone is more than half of v2.1's time per token at batch 1
+       and the batched case doesn't win either, it's no-go over
+       Thunderbolt 4: park it until faster links (Thunderbolt 5 or
+       direct-memory links) are available.
 5. **Uneven layer split.** Move the cut so both halves take the same time
    (the lead also does the output layer and sampling, so it is usually
    the slower half). Small win on its own; it matters most combined with
