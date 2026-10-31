@@ -1,164 +1,136 @@
 # Roadmap
 
-What has been built so far, what comes next and in what order, and what is
-still known to be broken or limited. All numbers come from
-[LOG.md](LOG.md), measured on a 24 GB Mac mini M4 (mlx-lm 0.32.2 for MLX).
-"4k" and "16k" are chat lengths in tokens. Reading and writing speeds are
-tokens per second. "Wait" is the time to the first word of the reply.
+What's built, what's next and in what order, and what's still limited.
+Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
+unless noted). "4k" and "16k" are chat lengths in tokens.
 
 *Last updated 2026-10-31 (v2.1).*
 
-## Done, by version
+## Done
 
-Each version builds on the previous one. Branches are local and not merged
-yet: `improvements-1-3` (v1), `caravan-v2-mlx-cache` (v2), and
-`caravan-v2.1` (v2.1).
+### Before v0: the split, the proxy, the agent (Sep 2026)
 
-### v0: baseline (`45ed2c2`, 2026-10-30)
+1. **Prove the split.** One 16 GB-weight GGUF model ran across two Macs
+   with llama.cpp RPC (Metal on both).
+2. **Make it usable day to day.**
+   - The proxy: a session keeps its slot, requests run one at a time,
+     requests are cancelled when the client disconnects, and slots are
+     saved to disk.
+   - launchd supervision.
+   - The Thunderbolt cable: the tail's cold load went from 7–11 min to
+     29–39 s, and writing from ~4 to 6.1 tok/s.
+   - The shard cache, which turned out to be native (`rpc-server --cache`).
+3. **The self-organizing agent.**
+   - mDNS and Tailscale discovery, head and tail roles.
+   - Automatic Thunderbolt > Tailscale > LAN path choice.
+   - Supervision.
+   - The root cause of the launchd networking failures: the Local
+     Network permission.
+4. **Unified C++ binary (experiment).** Head and tail in one process with
+   mDNS discovery, proven end to end once.
 
-One GGUF model split across two Macs with llama.cpp RPC. A proxy keeps
-each conversation in its own llama-server slot and saves it to disk. The
-agent picks head or tail and the fastest link. Configurable target model,
-stale slot-file cleanup, tuned proxy and llama-server flags, and docs for
-the public repo. This is the reference point for the v1 numbers.
+### v0: baseline (`45ed2c2`, Oct 30)
 
-### v1: rebased llama.cpp, MLX step a, auto KV cache (`32b9756`, `737fea2`, `c846e65`)
+- Configurable target model.
+- Saved-slot cleanup after 30 days.
+- Proxy performance work: LRU slots, fewer saves, prefix fingerprints for
+  raw prompts, smoother streaming.
+- Explicit llama-server flags.
+- Docs for the public repo.
 
-In plain words: a newer llama.cpp that resumes long chats after a restart
-almost instantly. MLX models can now be served through the same proxy. The
-KV cache uses full precision (f16) when it fits, else 8-bit.
+### v1: rebased llama.cpp, MLX through the proxy, automatic KV (`32b9756`, `737fea2`, `c846e65`)
 
-- **Rebased llama.cpp** (upstream `5047748f`, one Caravan patch kept). A
-  16k chat after a restart: GPT-OSS waits 46.3 → **0.65 s**, Gemma 4
-  56.1 → **0.93 s** (Qwen3 has no sliding window, so it barely changes:
-  1.18 → 1.10 s).
-- **Reading speed, v0 → v1** (pp4096): GPT-OSS 403.0 → 453.6, Gemma 4
-  354.9 → 379.7, Qwen3 338.0 → 356.4. **Writing** (tg128): 35.9 → 37.1,
-  34.4 → 36.7, 41.4 → 42.5. Most of the gain comes from the rebase. f16
-  mostly helps writing, and costs about 1.7 GB on Gemma.
-- **Auto KV cache**: f16 for Gemma 4 and GPT-OSS, q8_0 for Qwen3 (f16
-  would need 19,097 MiB against an 18,186 MiB GPU limit).
-- **MLX step a**: models with an MLX id are sent to `mlx_lm.server` on
-  the same Mac. It works, but Gemma 4 and GPT-OSS reuse nothing between
-  messages: turn 2 of a 4k chat takes 10.8 s and 9.2 s, and after a restart
-  16.0 s and 12.7 s.
+- **Rebased llama.cpp** (upstream `5047748f`) keeps checkpoints in slot
+  files. A 16k chat after a restart: GPT-OSS 46.3 → **0.65 s**, Gemma 4
+  56.1 → **0.93 s**.
+- **Faster reading** (pp4096): GPT-OSS 403 → 454, Gemma 4 355 → 380,
+  Qwen3 338 → 356 tok/s.
+- **Automatic KV type**: f16 when it fits (Gemma 4, GPT-OSS), q8_0
+  otherwise (Qwen3).
+- **MLX step a**: MLX ids routed to `mlx_lm.server`. It worked, but Gemma 4
+  and GPT-OSS reused nothing between messages.
 
-### v2: MLX chats kept and saved per session (`f57af3b`, `6d4bdb0`, `fac73b8`, `f73eafb`, `7835efd`)
+### v2: the Caravan MLX worker (`f57af3b`, `6d4bdb0`, `fac73b8`, `f73eafb`, `7835efd`)
 
-In plain words: Caravan's own MLX worker keeps each conversation's cache
-between messages and saves it to disk, so MLX now works like the llama.cpp
-side. GPT-OSS replies no longer contain its internal markup. Saved chats
-are held to a per-Mac cap.
+- **Per-session MLX caches** with checkpoint and rewind, saved to disk.
+  Turn 2 of a 4k chat: Gemma 4 10.76 → **0.49 s**, GPT-OSS 9.16 →
+  **0.50 s**. After a restart: 12.7–16.0 → **0.52–0.64 s**.
+- **Clean GPT-OSS replies**: the answer goes in `content`, the reasoning
+  in `reasoning_content`.
+- **Per-Mac cap** on saved chats: 200 files / 50 GB, llama.cpp and MLX
+  together, least recently used first, never active sessions.
+- **No regression** on the llama.cpp path.
 
-- **Turn 2 of a 4k chat, v1 → v2:** Gemma 4 10.76 → **0.49 s**, GPT-OSS
-  9.16 → **0.50 s** (Qwen3 0.44 → 0.56 s; it already reused its cache).
-  At 16k: Gemma 4 55.1 → 0.72 s, GPT-OSS 37.3 → 0.59 s.
-- **First message after a restart (4k):** Qwen3 16.0 → 0.59 s, Gemma 4
-  16.0 → 0.64 s, GPT-OSS 12.7 → 0.52 s. At 16k: Gemma 4 60.3 → 0.84 s,
-  GPT-OSS 40.7 → 0.59 s. Loading a save takes 0.01–0.13 s (warm disk).
-- **GPT-OSS reasoning cleanup:** `content` is only the answer, and the
-  thinking moves to `reasoning_content` (and `reasoning`), the way
-  llama-server returns it. Reasoning that a client sends back is ignored,
-  so the history still matches the cache.
-- **Writing speed** improved slightly (tg128: 47.0 → 49.1, 39.8 → 42.2,
-  35.3 → 37.4). Peak memory is the same or a little lower.
-- **llama.cpp path:** no regression (e.g. 16k after a restart 0.652 →
-  0.65 s for GPT-OSS, reading within noise or better).
-- **Saved-chat cap** (`7835efd`): after the 30-day age rule, llama.cpp
-  and MLX saves together are held to 200 files / 50 GB. The least recently
-  used go first, and an active session is never evicted.
-- Cost: the worker takes 6–9 s to start (it loads and warms up up front)
-  vs 1.6 s for mlx_lm.server.
+### v2.1: steadier MLX (`b9ebeb7`)
 
-### v2.1: wired limit held from startup, optional deferred save (`b9ebeb7`)
-
-In plain words: the MLX worker now locks the model in GPU memory once at
-startup, as mlx_lm.server does, instead of around every request. Saving
-after a one-message request can be turned off.
-
-- `--wired-limit startup|per-request|off` (default `startup`), and
-  `CARAVAN_MLX_SAVE_MIN_TURNS` (default 1 = unchanged; 2 skips the save
-  for one-message requests).
-- **Qwen3 reading 4k, all versions side by side in one session**
-  (6 runs each, median): v1 395.9, v2 393.4, **v2.1 395.6**. v2.1 is a
-  little steadier: its slowest run was 390 vs 380 for v2. The 4k gap seen
-  on separate days (v2 374–390 vs v1 396) was mostly drift between days.
-- **Skipping the first save:** no measurable effect (396.4). A 4k save
-  takes about 0.10 s on a warm disk.
-- Gemma 4 and GPT-OSS: same as v2 (4k 376 / 415). Restart resume still
-  works (Qwen3 4k: 0.52 s after a restart, 31 of 4,377 tokens re-read).
+- Wired limit set once at startup and held (`--wired-limit`, default
+  `startup`).
+- Optional deferred first save (`mlx_save_min_turns`).
+- **Benchmarking method changed**: versions are compared side by side in
+  one session. With that method, v1, v2 and v2.1 read 4k at 396, 393 and
+  396 tok/s.
 
 ## Next, in order
 
-1. **Two-Mac MLX split.** Run one MLX model across both Minis, the way
-   llama.cpp RPC already does for GGUF, so models and long chats that
-   don't fit one 24 GB Mac (Qwen3 at 16k today) can run on MLX.
-2. **Per-model profiles.** Each model needs its own settings: sessions
-   kept in memory, cache memory budget, prompt chunk size, cache
-   compression, and when to save. Today Qwen3 needs hand-tuned values.
-   Plan:
-   - compute a starting profile from the model's config and size (weights
-     plus cache memory per token, against the GPU limit);
-   - confirm it with a short probe on first load (read a 4k prompt,
-     measure memory, keep about 15% free);
-   - refine it from real use (peak memory and speeds the worker already
-     logs);
-   - ship starter profiles for the known models (Qwen3, Gemma 4,
-     GPT-OSS).
-3. **Gemma short-prompt checkpoint cost.** On Gemma 4, short prompts read
-   about 8% slower than v1 (512 tokens: 396–397 vs 430 tok/s, same
-   session). GPT-OSS and Qwen3 don't show it. The likely cause is the
-   worker's snapshot of Gemma's sliding-window layers before each reply.
-4. **Proxy overhead.** Measured at 30–100 ms per request between the
-   client and the worker's own timing (GPT-OSS ~27 ms, Qwen3 ~65 ms,
-   Gemma 4 70–95 ms). It covers the HTTP hop, the restore check and prompt
-   preparation. Against v1 (also behind the proxy) Qwen3 short requests
-   differ by only about 6 ms, so it's mostly cheap already. What's left:
-   the one-off ~0.15 s on Qwen3's first short request after a big chat
-   (likely dropping the previous chat from memory).
-5. **Memory headroom.** Qwen3 leaves about 16–17% free and swap reaches
-   about 1.45 GB.
-   - Size the cache from the real GPU limit (`recommendedMaxWorkingSetSize`).
-   - Grow or shrink the cache budget with free memory.
-   - Use the two-Mac split for what doesn't fit.
-   - Warn before a request runs out of memory instead of failing.
-6. **Cold-disk restore.** All restore timings so far were on a warm disk,
-   with the file already in macOS's file cache. Measure a real cold read
-   (after `sudo purge` or a reboot), then consider preloading recent
-   sessions' saves at startup.
+1. **Publish the rebased llama.cpp branch.** The v1+ numbers depend on
+   `caravan-patches` rebased onto upstream `5047748f`. The fork's
+   published `caravan-patches` branch is still the older base, so a fresh
+   clone today doesn't get the sliding-window restore fix.
+2. **Two-Mac MLX split.** Run one MLX model across both Macs, as llama.cpp
+   RPC does for GGUF, so models and long chats that don't fit on one 24 GB
+   Mac (Qwen3 at 16k) can run on MLX.
+3. **Per-model profiles.** Today Qwen3 needs hand-tuned worker settings
+   (sessions in memory, cache budget, chunk size, cache quantization, when
+   to save). The plan:
+   - Compute a starting profile from the model's size and config against
+     the GPU limit.
+   - Check it with a short probe on first load.
+   - Refine it from the peak memory and speeds the worker already reports.
+   - Ship starter profiles for Qwen3, Gemma 4 and GPT-OSS.
+4. **Gemma 4 short-prompt cost.** Short prompts read about 8% slower with
+   the worker than with plain `mlx_lm.server` (397 vs 430 tok/s at 512
+   tokens). The likely cause is the per-reply snapshot of the
+   sliding-window layers; make it cheaper or skip it when it isn't needed.
+5. **Proxy overhead.** 27–96 ms per MLX request, depending on the model.
+   It's mostly cheap already, against v1 behind the same proxy. What's
+   left is the one-off ~0.15 s on the first short request after a big
+   chat.
+6. **Memory headroom.** Qwen3 leaves 16–17% free, and swap reaches about
+   1.45 GB.
+   - Size the MLX cache from the real GPU limit.
+   - Adapt it to free memory.
+   - Warn before a request would run out of memory instead of failing.
+7. **Cold-disk restore.** Measure restore with the file out of the disk
+   cache. Then consider preloading recently used sessions at startup.
+8. **Re-measure the two-Mac split** with the v1+ settings (flash
+   attention over RPC, automatic KV, larger `ubatch`).
+9. **Packaging.** Templated launchd plists (no machine-specific paths), an
+   install script, and the agent running the proxy itself.
 
-## Known limits and open issues
+## Known limits
 
-- **Qwen3 at 16k on MLX runs out of memory** (16.4 GB weights + ~3.2 GB
-  cache). This happens with mlx_lm.server too, and `--kv-bits 8` doesn't
-  help. Use the GGUF on llama-server for long Qwen chats.
-- **The MLX worker takes 6–9 s to start** (vs 1.6 s for mlx_lm.server),
-  because it loads and warms up before the first message.
-- **The cap defaults to delete mode.** Cleanup (`mode`, default `delete`)
-  applies the 200-file / 50 GB cap as soon as the proxy starts. On a Mini
-  with a backlog of saved chats, run
-  `python3 -m proxy.slot_cleanup --dry-run --max-gb 50 --max-count 200`
-  first, or set `CARAVAN_SLOT_CLEANUP=archive`.
-- **Broken GPT-OSS GGUF symlink** on the reference Mini:
-  `~/.caravan/models/gpt-oss-20b.gguf` points at a removed Ollama blob.
-  The llama.cpp bench uses the HF blob instead (`GPT_OSS_GGUF` overrides).
-  The symlink was left as is.
-- The other limits in the README (Thunderbolt address changes, launchd
-  paths, C++ binary) still apply.
-
-## Benchmark method
-
-- **Same three models every time:** Qwen3-30B-A3B, Gemma 4 26B-A4B and
-  GPT-OSS-20B (MLX 4-bit / 4-bit / MXFP4-Q8, plus their GGUFs for
-  llama.cpp). Same prompts: pp512, pp4096, tg128, a 4k and 16k multi-turn
-  chat, a restart before turn 3, and a 3-question quality check.
-- **Compare versions side by side in one session.** This is the lesson
-  from v2.1: runs on different days drifted by up to ~20 tok/s at 4k,
-  enough to look like a regression that wasn't there. `bench/v2.1/ab_bench.py`
-  restarts every version fresh each round, rotates the order, and takes
-  at least 6 runs per size for the model in question.
-- Test ports only (llama 8180, proxy 8190, MLX 8192). exo stays paused,
-  and nothing else heavy runs on the Mac.
-- Record peak memory footprint, lowest free memory and swap, sampled every
-  2 s. Read the footprint, not RSS (macOS counts the MLX worker's RSS lower).
-- Measure restore on a warm disk and, separately, on a cold one.
+- **Cleanup defaults to `delete`.** At proxy startup, saves older than 30
+  days, and the least recently used saves over 200 files / 50 GB, are
+  deleted. Run `python3 -m proxy.slot_cleanup --dry-run` first, or set
+  `CARAVAN_SLOT_CLEANUP=archive`.
+- **Qwen3 30B at 16k doesn't fit on MLX** on a 24 GB Mac (16.4 GB weights
+  + ~3.2 GB cache), even with `--kv-bits 8`. Use the GGUF for long Qwen
+  chats.
+- **The MLX worker takes 6–9 s to start** (vs 1.6 s for `mlx_lm.server`).
+- **MLX tool calls** are returned as text, not as a `tool_calls` field.
+- **Same first message = same session**, on both backends.
+- **The Thunderbolt address can change.** macOS self-assigns 169.254.x.x
+  addresses. The hand-managed plist's `--rpc` fallback is a literal one;
+  the agent and `render_llama_plist.py --rpc auto` discover it instead.
+- **The launchd plists contain absolute paths** for one user's home
+  directory. Edit them for your machine. The proxy plist's
+  `CARAVAN_PINNED_SLOT` is a leftover the proxy no longer reads.
+- **Head selection is "whoever has the model"**: no election, and two Macs
+  that both have it aren't handled. The agent doesn't run the proxy yet.
+- **The C++ binary** hardcodes the model and lacks `--cache`, the health
+  server, identity and crash supervision.
+- **Only tested on two Apple Silicon Macs.** RDMA over Thunderbolt needs
+  Thunderbolt 5, so the split runs over plain TCP.
+- **RPC is unauthenticated.** Keep it on a private link.
+- **Not released.** There are no packages, and there's no support beyond
+  this repo.

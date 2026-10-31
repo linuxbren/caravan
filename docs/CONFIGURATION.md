@@ -1,0 +1,223 @@
+# Configuration
+
+Every setting has a default, so Caravan runs with no configuration at all.
+Where a setting can be given more than one way, the order is:
+
+**command-line flag > environment variable > `~/.caravan/config.json` > default**
+
+The config file path can be changed with `CARAVAN_CONFIG` (the agent and
+the standalone cleanup also take `--config`). A missing file is fine. An
+unreadable file is reported with a warning and ignored.
+
+All names below were checked against the v2.1 code.
+
+## The config file
+
+Every section is optional:
+
+```json
+{
+  "model": "gpt-oss-20b",
+  "llama_server": {
+    "n_slots": 4, "ctx_per_slot": 65536, "flash_attn": "on",
+    "cache_type_k": "auto", "cache_type_v": "auto", "cache_ram_mib": 0,
+    "n_gpu_layers": 999, "batch_size": 2048, "ubatch_size": 512,
+    "swa_full": false, "rpc": "auto"
+  },
+  "kv_auto": { "safety_margin_mib": 256 },
+  "proxy": {
+    "slot_save_every": 1, "slot_idle_save_seconds": 0,
+    "prompt_fingerprint_chars": 2048, "mlx_save_min_turns": 1
+  },
+  "mlx": {
+    "enabled": true, "host": "127.0.0.1", "port": 8092,
+    "model_prefixes": ["mlx-community/"],
+    "models": { "qwen3-30b-mlx": "~/.exo/models/mlx-community--Qwen3-30B-A3B-4bit" },
+    "model_dirs": ["~/.exo/models", "~/.caravan/models/mlx"],
+    "cache_dir": "~/.caravan/mlx/prompt-cache",
+    "server": "caravan", "python": "~/.caravan/venvs/mlx/bin/python", "extra_args": []
+  },
+  "slot_cleanup": {
+    "mode": "archive", "max_age_days": 30, "interval_hours": 6,
+    "max_count": 200, "max_gb": 50, "protect_minutes": 30
+  }
+}
+```
+
+After a change, restart whatever reads the setting: the agent (or
+`launchctl kickstart -k`) for `model`, `llama_server`, `kv_auto` and the
+MLX launch keys; the proxy for `proxy`, `mlx` routing and `slot_cleanup`.
+A launchd plist only changes when it's re-rendered and bootstrapped again.
+
+## Agent: `agent/caravan_agent.py`
+
+| flag | env | config | default | what |
+|---|---|---|---|---|
+| `--model` | `CARAVAN_MODEL` | `model` | `muse-glimmer` | Model to serve. An Ollama-store name (`name`, `name:tag`, `namespace/name:tag`) for GGUF, or an MLX id (`mlx-community/...`) for the MLX role. |
+| `--config` | `CARAVAN_CONFIG` | – | `~/.caravan/config.json` | Config file path. |
+| `--apply` | – | – | off | Start and supervise. Without it, the agent only prints its role and the command (a dry run). |
+| `--serve-for SECONDS` | – | – | – | Dry run only: keep the health endpoint and mDNS advertisement up for N seconds after printing the plan, so another Mac's dry run can discover this one. |
+
+### llama-server settings (head)
+
+The agent, `agent/render_llama_plist.py` and the proxy (for `n_slots`)
+all read these.
+
+| flag | env | config `llama_server.` | default | what |
+|---|---|---|---|---|
+| `--n-slots` | `CARAVAN_N_SLOTS` | `n_slots` | `4` | Parallel slots (`--parallel`). Each conversation in memory needs one. |
+| `--ctx-per-slot` | `CARAVAN_CTX_PER_SLOT` | `ctx_per_slot` | `65536` | Context per slot. The total is `-c n_slots × ctx_per_slot`, with `--no-kv-unified` so each slot owns its share. |
+| `--flash-attn` | `CARAVAN_FLASH_ATTN` | `flash_attn` | `on` | `on`, `off` or `auto`. A quantized V cache needs `on` or `auto`. |
+| `--cache-type-k` | `CARAVAN_CACHE_TYPE_K` | `cache_type_k` | `auto` | `auto`, `f32`, `f16`, `bf16`, `q8_0`, `q4_0`, `q4_1`, `iq4_nl`, `q5_0`, `q5_1`. `auto` = f16 if it fits, else q8_0 (see kv_auto below). |
+| `--cache-type-v` | `CARAVAN_CACHE_TYPE_V` | `cache_type_v` | `auto` | Same choices. |
+| `--cache-ram` | `CARAVAN_CACHE_RAM_MIB` | `cache_ram_mib` | `0` | llama-server's host prompt cache in MiB. 0 = off, -1 = unlimited. Off by default because it competes with the GPU for the same unified memory. |
+| `--n-gpu-layers` | `CARAVAN_N_GPU_LAYERS` | `n_gpu_layers` | `999` | Layers on the GPU (all). |
+| `--batch-size` | `CARAVAN_BATCH_SIZE` | `batch_size` | `2048` | Logical batch. |
+| `--ubatch-size` | `CARAVAN_UBATCH_SIZE` | `ubatch_size` | `512` | Physical batch. Larger reads long prompts faster but costs compute memory. |
+| `--swa-full` | `CARAVAN_SWA_FULL` | `swa_full` | off | Full-size cache for sliding-window layers. Uses much more memory; not needed on the rebased llama.cpp. |
+| `--rpc` (render tool only) | `CARAVAN_RPC_ADDR` | `rpc` | `169.254.104.38:50052` | Comma-separated `host:port` list, or `auto` to discover. The running agent always discovers. This default is a link-local address that can change, so prefer `auto`. |
+
+Always passed, not configurable: `--slot-save-path
+~/.caravan/llama-server/slots/`, `--no-kv-unified`, `--port 8080`, and
+`--rpc`/`--device`/`--tensor-split` (even split) on a head with peers.
+
+`render_llama_plist.py` also takes `--model`, `--model-path` (use a GGUF
+path directly), `--config` and `--output/-o` (default: stdout). It never
+loads anything into launchd.
+
+### Automatic KV cache type: `kv_auto`
+
+Used only when a cache type is `auto`.
+
+| env | config `kv_auto.` | default | what |
+|---|---|---|---|
+| `CARAVAN_GPU_WORKING_SET_MIB` | `gpu_working_set_mib` | Metal's `recommendedMaxWorkingSetSize`, cached in `~/.caravan/agent/gpu_limit.json`; if that's unavailable, `iogpu.wired_limit_mb`, then 18186.25 | GPU memory budget per device, MiB. |
+| `CARAVAN_COMPUTE_RESERVE_MIB` | `compute_reserve_mib` | ubatch × vocabulary × 4 B + 64 MiB | Room for llama.cpp's compute buffers. |
+| `CARAVAN_KV_SAFETY_MARGIN_MIB` | `safety_margin_mib` | `256` | Extra headroom. |
+
+To check what a model name resolves to in the Ollama store:
+
+```sh
+python3 agent/ollama_store.py --list           # models in the local store
+python3 agent/ollama_store.py qwen3:30b-a3b    # GGUF blob path (for llama-server -m)
+```
+
+### Fixed paths and ports (agent)
+
+| what | value |
+|---|---|
+| llama.cpp binaries | `~/dev/llama.cpp/build/bin/llama-server`, `ggml-rpc-server` |
+| ports | llama-server 8080, rpc-server 50052, agent health 8091 |
+| Ollama store | `~/.ollama/models` (`OLLAMA_MODELS` overrides) |
+| node id, GPU limit cache | `~/.caravan/agent/` |
+| child logs | `~/.caravan/agent/logs/{llama-server,rpc-server,mlx-server}.log` |
+| tail's tensor cache | `~/Library/Caches/llama.cpp/rpc` (from `rpc-server --cache`) |
+
+## Proxy: `proxy/slot_pin_proxy.py`
+
+### Connections and files (environment only)
+
+| env | default | what |
+|---|---|---|
+| `CARAVAN_PROXY_PORT` | `8090` | Port to listen on. It always binds 127.0.0.1. |
+| `CARAVAN_UPSTREAM_HOST` | `127.0.0.1` | llama-server host. |
+| `CARAVAN_UPSTREAM_PORT` | `8080` | llama-server port. |
+| `CARAVAN_PROXY_STATE_FILE` | `~/.caravan/proxy/session_slots.json` | Session → slot table. |
+| `CARAVAN_SLOT_SAVE_DIR` | `~/.caravan/llama-server/slots` | Where llama-server writes slot files (must match its `--slot-save-path`). |
+
+### Sessions and saving
+
+| flag | env | config | default | what |
+|---|---|---|---|---|
+| `--n-slots` | `CARAVAN_N_SLOTS` | `llama_server.n_slots` | `4` | Must match llama-server. |
+| `--slot-save-every` | `CARAVAN_SLOT_SAVE_EVERY` | `proxy.slot_save_every` | `1` | Save a session every N turns (both backends). |
+| `--slot-idle-save-seconds` | `CARAVAN_SLOT_IDLE_SAVE_SECONDS` | `proxy.slot_idle_save_seconds` | `0` (off) | llama.cpp only: also save a session after N idle seconds. |
+| `--prompt-fingerprint-chars` | `CARAVAN_PROMPT_FINGERPRINT_CHARS` | `proxy.prompt_fingerprint_chars` | `2048` (min 64) | Raw-prompt requests: how many leading characters identify the session. Shorter prompts aren't pinned. |
+| `--mlx-save-min-turns` | `CARAVAN_MLX_SAVE_MIN_TURNS` | `proxy.mlx_save_min_turns` | `1` | MLX only: first turn that gets saved. `2` skips saving one-off chats. |
+
+### MLX routing (proxy) and launch (agent)
+
+| flag | env | config `mlx.` | default | what |
+|---|---|---|---|---|
+| `--no-mlx` | `CARAVAN_MLX_ENABLED` (`0`/`1`) | `enabled` | on | Route MLX models at all. |
+| `--mlx-host` | `CARAVAN_MLX_HOST` | `host` | `127.0.0.1` | MLX worker host. |
+| `--mlx-port` | `CARAVAN_MLX_PORT` | `port` | `8092` | MLX worker port (the agent starts the worker on it). |
+| `--mlx-prefixes` | `CARAVAN_MLX_PREFIXES` | `model_prefixes` | `mlx-community/` | Model ids with these prefixes are MLX. Comma-separated (a list in JSON). |
+| – | – | `models` | `{}` | Explicit `alias → local directory` map. Aliases are MLX too. |
+| – | `CARAVAN_MLX_MODEL_DIRS` | `model_dirs` | `~/.exo/models`, `~/.caravan/models/mlx` | Where to find `org--name/` or `org/name/` model directories (they must contain `config.json`). |
+| – | `CARAVAN_MLX_CACHE_DIR` | `cache_dir` | `~/.caravan/mlx/prompt-cache` | Saved MLX sessions (`<fingerprint>.safetensors`). Read by the worker, the proxy and cleanup. |
+| – | `CARAVAN_MLX_SERVER` | `server` | `caravan` | `caravan` (the MLX worker) or `mlx_lm` (plain `mlx_lm.server`: no saved sessions, and sliding-window models don't reuse their cache). |
+| – | `CARAVAN_MLX_PYTHON` | `python` | `~/.caravan/venvs/mlx/bin/python` | Python with `mlx-lm` installed. |
+| – | `CARAVAN_MLX_EXTRA_ARGS` | `extra_args` | none | Extra arguments for the worker: a list in JSON, space-separated in the env var, e.g. `--kv-bits 8 --prompt-cache-size 2`. |
+
+If the model isn't found locally, the request fails rather than
+downloading anything.
+
+### Saved-chat cleanup and the per-Mac cap
+
+> **Warning: the default mode is `delete`.** At startup, and every 6 hours
+> after that, the proxy permanently deletes saved chats (llama.cpp `.bin`
+> and MLX `.safetensors`) that are older than 30 days. If the remaining
+> saves are over 200 files or 50 GB, it also deletes the least recently
+> used ones. Deleted conversations still work; they just start cold next
+> time. Before the first start on a Mac with saves you care about, run
+> `python3 -m proxy.slot_cleanup --dry-run -v` from the repo root to see
+> what would go. To keep the files, use `archive` (it moves them and
+> never deletes) or `off`.
+
+| proxy flag | standalone flag | env | config `slot_cleanup.` | default | what |
+|---|---|---|---|---|---|
+| `--slot-cleanup` | `--mode` | `CARAVAN_SLOT_CLEANUP` | `mode` | **`delete`** | `delete`, `archive` or `off`. Applies to both the age rule and the cap. |
+| `--slot-max-age-days` | `--max-age-days` | `CARAVAN_SLOT_MAX_AGE_DAYS` | `max_age_days` | `30` | Age rule, by the file's last-write time. |
+| `--slot-archive-dir` | `--archive-dir` | `CARAVAN_SLOT_ARCHIVE_DIR` | `archive_dir` | `~/.caravan/llama-server/slots-archive` | Where `archive` moves files (MLX files go into its `mlx/` subfolder). Never pruned. |
+| `--slot-cleanup-interval-hours` | `--interval-hours` | `CARAVAN_SLOT_CLEANUP_INTERVAL_HOURS` | `interval_hours` | `6` | How often the proxy re-runs cleanup. 0 or less = only at startup. |
+| `--slot-max-count` | `--max-count` | `CARAVAN_SLOT_MAX_COUNT` | `max_count` | `200` | Cap on saved files, both kinds together. 0 = no count cap. |
+| `--slot-max-gb` | `--max-gb` | `CARAVAN_SLOT_MAX_GB` | `max_gb` | `50` | Cap on total size in GB (10^9 bytes). 0 = no size cap. |
+| `--slot-protect-minutes` | `--protect-minutes` | `CARAVAN_SLOT_PROTECT_MINUTES` | `protect_minutes` | `30` | The cap never removes a session with a turn this recent, one that's in a slot now, or one with unsaved turns. |
+
+Standalone run: `python3 -m proxy.slot_cleanup` from the repo root. It also takes:
+
+| flag | env | default | what |
+|---|---|---|---|
+| `--slot-dir` | `CARAVAN_SLOT_SAVE_DIR` | `~/.caravan/llama-server/slots` | llama.cpp saves. |
+| `--mlx-dir` | `CARAVAN_MLX_CACHE_DIR` | not scanned | MLX saves (the proxy always passes its MLX cache dir). |
+| `--state-file` | `CARAVAN_PROXY_STATE_FILE` | `~/.caravan/proxy/session_slots.json` | So cap protection knows the sessions in slots. |
+| `--config` | `CARAVAN_CONFIG` | `~/.caravan/config.json` | |
+| `--dry-run` | – | off | Report only. |
+| `-v` | – | off | List each file. |
+
+If the proxy is running, the standalone tool can't see which sessions
+are live in memory. Use `--dry-run`, or let the proxy do it.
+
+## MLX worker: `agent/mlx_worker.py`
+
+The agent starts the worker with `--model <local dir> --host --port
+--cache-dir` from the `mlx` settings, plus `mlx.extra_args`. To run it
+by hand: `~/.caravan/venvs/mlx/bin/python agent/mlx_worker.py --model <dir>`.
+
+| flag | default | what |
+|---|---|---|
+| `--model` | required | Local model directory (or id). |
+| `--host` / `--port` | `127.0.0.1` / `8092` | Listen address. |
+| `--prompt-cache-size` | `4` | Sessions kept in memory. |
+| `--prompt-cache-bytes` | `2G` | Memory budget for all sessions' caches; accepts `512M`, `2G`. The session in use is never evicted. |
+| `--prefill-step-size` | `2048` | Prompt tokens read per step. |
+| `--max-tokens` | `512` | Default reply limit when a request sets none. |
+| `--cache-dir` | `$CARAVAN_MLX_CACHE_DIR` or `~/.caravan/mlx/prompt-cache` | Saved sessions. |
+| `--no-persist` | off | Never read or write cache files. |
+| `--kv-bits` | off | `4` or `8`: quantize the full-attention cache layers. Smaller memory and files, somewhat slower reads (Qwen3 4k: 380 → 325 tok/s with 8). |
+| `--kv-group-size` | `64` | Group size for `--kv-bits`. |
+| `--cache-limit-gb` | off | Cap MLX's pool of freed GPU buffers. |
+| `--wired-limit` | `startup` | `startup`: raise Metal's wired limit once and hold it. `per-request`: raise and drop it around each request (v2 behaviour). `off`: never touch it. |
+
+`python3 agent/render_mlx_plist.py <model> [--port] [--host] [--python]
+[-o PATH]` writes `launchd/com.caravan.mlx-server.plist` (label
+`com.caravan.mlx-server`, log `~/.caravan/logs/mlx-server.log`) from the
+same settings. Loading it into launchd is a manual step.
+
+## Scripts
+
+`scripts/restart-rpc-server.sh` restarts the tail safely. It checks that
+the head's slots are idle, stops the head, restarts the tail, then starts
+the head. Set `CARAVAN_NODE_B_HOST` and `CARAVAN_NODE_B_USER` to reach the
+tail.

@@ -1,7 +1,7 @@
 # launchd services
 
 Keeps Caravan's background processes running across crashes and reboots.
-See [docs/PLAN.md](../docs/PLAN.md) (stage 2) and
+See [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) and
 [GitHub issue #1](https://github.com/linuxbren/caravan/issues/1).
 
 There are two ways to run the model processes. Use one or the other on a
@@ -29,9 +29,11 @@ logged-in user's session, matching how openclaw's own gateway is set up.
 Paths inside the plists are absolute and specific to the original machine
 pair (the same user name and home directory on both). launchd doesn't
 expand `~`, so **edit the `/Users/...` paths to match your home
-directory** before bootstrapping. Nothing is templated yet (see PLAN.md
-stage 3). Only `com.caravan.llama-server.plist` can be generated, with
-`agent/render_llama_plist.py` (below).
+directory** before bootstrapping. Nothing is templated yet (packaging is on
+[docs/ROADMAP.md](../docs/ROADMAP.md)). Two plists can be generated:
+`com.caravan.llama-server.plist` with `agent/render_llama_plist.py`
+(below), and `com.caravan.mlx-server.plist` (the MLX worker) with
+`agent/render_mlx_plist.py`.
 
 Logs go to `~/Library/Logs/caravan/*.log` on each machine.
 

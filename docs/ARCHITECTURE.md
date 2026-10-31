@@ -1,282 +1,321 @@
 # Architecture
 
-This is the current reference for how Caravan is put together and where
-it's heading. The design was worked out in a 2026-09-06 session (see
-`docs/LOG.md` for the narrative and the measurements); update this doc in
-place as the design changes. For setup and configuration see the
-[README](../README.md).
+How Caravan v2.1 is put together. For settings see
+[CONFIGURATION.md](CONFIGURATION.md). For the MLX worker in depth see
+[MLX.md](MLX.md).
 
-## Components today
+## The pieces
 
+```mermaid
+flowchart LR
+    client["OpenAI-compatible client<br/>(e.g. an assistant gateway)"]
+    subgraph head["Mac A: head"]
+        proxy["slot_pin_proxy.py<br/>:8090<br/>sessions, FIFO, save/restore, cleanup"]
+        llama["llama-server<br/>:8080<br/>GGUF, N slots"]
+        mlx["Caravan MLX worker<br/>mlx_worker.py :8092<br/>MLX, one cache per session"]
+        disk[("~/.caravan<br/>slot .bin files<br/>MLX .safetensors")]
+        agentA["caravan-agent :8091"]
+    end
+    subgraph tail["Mac B: tail"]
+        rpc["ggml-rpc-server :50052<br/>--cache"]
+        agentB["caravan-agent :8091"]
+    end
+    client --> proxy
+    proxy -- "GGUF model ids" --> llama
+    proxy -- "MLX model ids" --> mlx
+    llama -- "RPC over Thunderbolt<br/>(else Tailscale / LAN)" --> rpc
+    llama <--> disk
+    mlx <--> disk
+    agentA -. "discovers, /health" .- agentB
+    agentA -. supervises .-> llama
+    agentA -. "supervises (MLX role)" .-> mlx
+    agentB -. supervises .-> rpc
 ```
-client --> :8090 slot_pin_proxy.py --> :8080 llama-server (head) ==RPC==> :50052 rpc-server (tail)
-                 (node-a)                    (node-a, full GGUF)          (node-b, --cache)
-caravan-agent on each node: /health on :8091, discovery, role, supervision
-```
 
-| component | where | status |
+| component | code | what it does |
 |---|---|---|
-| `agent/` (Python) | every node | Has run in production under launchd (`com.caravan.agent`): role detection, discovery, fastest-path selection, supervision of `llama-server` or `rpc-server --cache`. |
-| `proxy/slot_pin_proxy.py` | head | Has run in production (`com.caravan.slot-pin-proxy`). Separate from the agent. |
-| `launchd/com.caravan.llama-server.plist`, `com.caravan.rpc-server.plist` | head / tail | The manual per-role alternative to the agent. The llama-server plist is rendered from the agent's own command builder (`agent/render_llama_plist.py`). |
-| `cpp/` | every node | Experimental single binary: head and tail in-process, mDNS + Tailscale discovery. Proven end to end once; missing `--cache`, health server, identity, supervision, configurable model. |
+| Proxy | `proxy/slot_pin_proxy.py`, `proxy/backends.py` | The one front door. Recognizes each conversation (session), routes by model to llama.cpp or MLX, runs requests one at a time, saves and restores each session's cache, cancels requests whose client is gone. |
+| Saved-chat cleanup | `proxy/slot_cleanup.py` | Inside the proxy (and as a CLI): removes or archives saves older than N days, then holds all saves to a per-Mac cap. |
+| Agent | `agent/caravan_agent.py` and friends | Runs the same way on every Mac. It finds peers, picks a role (head, tail or MLX), builds the server command, and supervises it. It also serves `/health` on port 8091. |
+| llama.cpp | `~/dev/llama.cpp` (fork `RookiOS72/llama.cpp`, branch `caravan-patches`) | `llama-server` on the head and `ggml-rpc-server` on the tail. |
+| MLX worker | `agent/mlx_worker.py`, launched via `agent/mlx_backend.py` | Caravan's own OpenAI-compatible MLX server with per-session caches. See [MLX.md](MLX.md). |
+| launchd | `launchd/` | Plists for the agent, the proxy, and a manual per-role setup. The llama-server and MLX plists can be rendered from the agent's own command builders (`render_llama_plist.py`, `render_mlx_plist.py`). |
+| C++ binary | `cpp/` | Experimental: head or tail in one process, linking llama.cpp. Proven end to end once; not production-ready. |
 
-### The proxy
+## A request, start to finish
 
-llama-server assigns requests to slots on its own and was found moving
-conversations between slots, discarding their cached prompt each time.
-The proxy sits in front of it and:
+```mermaid
+sequenceDiagram
+    participant C as client
+    participant P as proxy :8090
+    participant B as backend (llama-server or MLX worker)
+    participant D as disk (~/.caravan)
+    C->>P: POST /v1/chat/completions {model, messages}
+    P->>P: wait for its turn (FIFO gate)
+    P->>P: fingerprint the session, pick the backend by model
+    alt llama.cpp (GGUF)
+        P->>P: session's own slot (or the least recently used one)
+        P->>B: restore slot from <fp>.bin if it isn't warm already
+    else MLX
+        P->>B: POST /caravan/cache/restore {key: fp}
+        Note over B: memory hit = "warm", else load <fp>.safetensors
+    end
+    P->>B: the request (id_slot, or X-Caravan-Session header)
+    B-->>P: reply (streamed or not)
+    P-->>C: reply, passed on as it arrives
+    P->>B: save the session's cache, if due
+    B->>D: <fp>.bin / <fp>.safetensors
+    P->>P: release the gate, next request
+```
 
-- **Fingerprints sessions.** Chat requests use a hash of the first
-  non-system message, skipping a client-inserted, timestamped "session
-  bootstrap" marker. Raw-prompt requests use a hash of a fixed-length
-  prompt prefix. Requests with no usable identity are one-shots.
-- **Pins slots.** Each session keeps its slot; new sessions take the least
-  recently used slot. Occupancy and last-use times persist in
+1. **One at a time.** Every completion request (`/v1/chat/completions`,
+   `/v1/completions`, `/completion`) takes a ticket at a strict FIFO gate.
+   On a single Mac, and even more over RPC, two jobs at once split the
+   speed and evict each other's cache. Other requests (`/v1/models`,
+   `/health`, `/slots`) skip the gate and go to llama-server.
+2. **Session fingerprint.** For chat requests, it's a hash of the first
+   real non-system message. That message never changes for the life of a
+   conversation, and no client cooperation is needed. A synthetic
+   "(session bootstrap)" marker that some clients insert is skipped. For
+   raw-prompt requests, it's a hash of the first 2048 characters (a
+   growing prompt keeps its prefix). Shorter or batched prompts are
+   one-shots: they run, but they're never pinned or saved. Caveat: two
+   different chats that start with the same first message share a
+   session.
+3. **Routing.** A `model` that starts with `mlx-community/`, or is listed
+   under `mlx.models`, goes to the MLX worker. The proxy rewrites it to
+   the local model directory and drops llama-only fields. Everything else
+   goes to llama-server.
+4. **Client gone = cancel.** While waiting and while streaming, the proxy
+   checks whether the client is still connected. If not, it closes its own
+   upstream connection. llama-server and the MLX worker both stop the job,
+   and the gate is freed.
+5. **Save after the reply**, still holding the gate, so the next request
+   waits for the save, never overlapping it. If the upstream is down, the
+   client gets a clear 502 that names the backend.
+
+## Sessions on llama.cpp: slots
+
+- llama-server runs with `--parallel N --no-kv-unified` (N = `n_slots`,
+  default 4) and `-c N × ctx_per_slot` (default 64K per slot), so each
+  slot owns its own context. With a unified pool, restoring one big
+  session could leave no room for the others.
+- A session keeps its slot. A new session takes an empty slot, or else the
+  least recently used one. Before a slot is handed over, the old occupant
+  is saved if it has unsaved turns. Assignments persist in
   `~/.caravan/proxy/session_slots.json`.
-- **Serializes completions** through a FIFO gate, and cancels the upstream
-  request when the client disconnects.
-- **Persists the KV cache.** Each session's slot is saved to disk with
-  llama-server's slot save/restore API (`--slot-save-path`). It's restored
-  on that session's first request after a restart, unless the slot is
-  still warm. Saves are skipped when nothing changed, can be thinned to
-  every N turns, or can be done by an idle saver. Every save, restore and
-  cleanup happens while holding the FIFO gate, so they never overlap a
-  request or each other.
-- **Cleans up** slot files older than a configurable age.
-- **Streams** responses as they arrive, with correct HTTP framing.
+- **Save** (`POST /slots/<id>?action=save`, `<fp>.bin` in
+  `~/.caravan/llama-server/slots/`, about 1 GB for a long session). It runs
+  after each reply, every N turns, or from an idle saver
+  (`slot_idle_save_seconds`). It's skipped when the slot's token count
+  hasn't changed.
+- **Restore** (`?action=restore`) on a session's first request after a
+  restart. It's skipped when llama-server still holds that session warm
+  (checked once per session per proxy run with `GET /slots`). A failed
+  restore just means that session starts cold.
+- Sliding-window models (Gemma, GPT-OSS) restore properly only on the
+  rebased llama.cpp (upstream #26004 stores context checkpoints in the
+  slot file). On the older build their restored slots were thrown away
+  and re-read from scratch.
 
-llama-server runs with `--parallel N --no-kv-unified`, so each slot owns
-a fixed `ctx_per_slot` context. With a unified KV pool, restoring one big
-session could exhaust space for the others (see LOG.md).
+## Sessions on MLX: the Caravan MLX worker
 
-## Goal
+No slots. The proxy sends the fingerprint as `X-Caravan-Session`, and the
+worker keeps one live cache per session. Before each request the proxy
+asks it to `restore` that session: `warm` if it's in memory, `restored`
+if it was loaded from disk, `miss` if neither. After the reply the proxy
+asks it to `save`, from turn `mlx_save_min_turns` (default 1) onward and
+every `slot_save_every` turns. The worker checkpoints the cache at the end
+of the prompt and rewinds to it after generating, which makes the next
+turn reusable even for sliding-window layers. Details in [MLX.md](MLX.md).
 
-One app (the "Caravan agent"), installed identically on every machine in
-the cluster. Each instance figures out on its own whether it's acting as
-**head** (serves inference, holds the full model) or a **tail**
-(contributes compute to whichever machine is head) — no manually-edited
-plist per role, no hand-picked IPs, no human deciding up front which
-machine is "the server."
+## Saved chats: cleanup and the per-Mac cap
 
-## Why this isn't just "build what exo does"
+Saves would otherwise pile up forever. One Mac collected about 154 GB of
+`.bin` files in a month. `slot_cleanup` runs inside the proxy at startup
+and every 6 hours, holding the FIFO gate so it never races a save or
+restore:
 
-**Correction (2026-09-06, later that night):** earlier LOG.md entries and
-an earlier version of this section claimed exo requires every node to
-hold a full local copy of the model. That was wrong -- never verified,
-carried forward from an earlier session's assumption. Checked directly:
-exo uses pipeline parallelism and each node downloads only the layer
-range it's assigned (its "Placement Engine" decides the split, each
-node's "DownloadCoordinator" fetches just its own shard) -- see
-[exo's README](https://github.com/exo-explore/exo/blob/main/README.md).
-That's the same shard-only-storage property this project's own planned
-Phase 2 (below) is aiming for, not something Caravan does instead of
-exo. Corrected the reasoning below; see LOG.md for the fuller writeup of
-what was wrong and why.
+1. **Age rule.** Saves not written for `max_age_days` (30) go.
+2. **Cap.** If the remaining saves, llama.cpp `.bin` and MLX
+   `.safetensors` counted together, exceed `max_count` (200) or `max_gb`
+   (50), the least recently used go first until both limits hold.
+   **Never evicted:** a session that is in a llama.cpp slot right now, has
+   unsaved turns, or had a turn in the last `protect_minutes` (30). Each
+   file is re-checked under the gate. If only active sessions are left,
+   the cap is exceeded and that's logged.
+3. **Mode.** `delete` (default), `archive` (move to `archive_dir`, never
+   pruned), or `off`. Evicted sessions are also dropped from
+   `session_slots.json` and from the MLX worker's memory.
 
-llama.cpp's RPC backend still has a real structural asymmetry, just not
-the one originally claimed here:
+## Automatic KV cache type (llama.cpp)
 
-- **Head** (`llama-server`) needs the *full model file* on local disk (to
-  read metadata/tokenizer and do orchestration) and does the actual
-  serving.
-- **Tail** (`rpc-server`) needs *nothing stored* — a dumb, stateless
-  compute backend that executes whatever tensors arrive over the wire and
-  forgets them when the process exits.
+`cache_type_k/v` default to `auto` (`agent/kv_auto.py`). The agent picks
+f16 when
 
-The genuine difference from exo isn't storage footprint -- it's that
-exo's pipeline-parallel design has no node that needs *full* model
-knowledge; every node, including whichever one starts the pipeline, only
-ever needs its own shard. llama.cpp's RPC backend isn't built that way:
-the head specifically needs the complete model file present, even though
-it only computes some of the layers itself. That's a real, inherent
-constraint of this backend, not a duplication cost Caravan is avoiding by
-being cleverer than exo. Practical effect is the same either way: head
-role follows wherever the full model already lives.
+    model weights + f16 KV for n_slots × ctx_per_slot + compute reserve + 256 MiB margin
+        ≤ GPU working-set limit × number of devices
 
-## Role determination — self-declared, not elected
+and q8_0 (half the KV memory) when not.
 
-No leader-election protocol. Each agent instance checks its own local
-Ollama blob store on startup/periodically:
+- **KV size** comes from the GGUF header. Sliding-window layers count only
+  window + ubatch tokens.
+- **Compute reserve** = ubatch × vocabulary × 4 B + 64 MiB, which matches
+  the measured Metal buffers.
+- **GPU limit** is Metal's `recommendedMaxWorkingSetSize`, asked once and
+  cached in `~/.caravan/agent/gpu_limit.json`. That's 18,186.25 MiB on an
+  M4 24 GB.
 
-- Has the model requested → **head** for that model. Launches
-  `llama-server --rpc <discovered peers>`.
-- Doesn't have it → **tail** candidate. Ensures `rpc-server` is running,
-  waits to be used.
+Anything it can't estimate falls back to q8_0. The decision and every
+term are logged. Measured: f16 for Gemma 4 and GPT-OSS, q8_0 for Qwen3
+30B. Switching type makes existing slot files unrestorable; each session
+re-reads once and is saved again.
 
-In practice there's one Ollama instance across the whole cluster (the
-machine running openclaw's gateway, or whichever machine a human/agent
-points requests at) — that machine pulls models and is therefore always
-head. This is fine and expected, not a limitation to design around: the
-value of "one app everywhere" is a uniform install and automatic
-tail-side behavior, not that head literally moves around day to day.
-Multi-model support falls out for free regardless (different nodes could
-independently be head for different models, if that ever becomes real
-usage) without any extra design work.
+## Wired limit (MLX)
 
-No safeguard is needed for "two nodes both have the same model and both
-try to become head" — given the single-Ollama-instance reality this
-isn't a real scenario. Revisit only if actual usage changes.
+On Apple Silicon, "wired" memory can't be paged out. The MLX worker
+raises Metal's wired limit to the recommended working set once at
+startup and keeps it for the life of the process, as `mlx_lm.server`
+does (`--wired-limit startup`, the default). v2 raised and dropped the
+limit around every request instead (`--wired-limit per-request`
+reproduces that). In side-by-side runs the medians were the same, and
+v2.1 was a little steadier (slowest Qwen 4k read 390 vs 380 tok/s).
 
-## Discovery — mDNS + Tailscale, then the fastest live path
+## The agent: head, tail, or MLX
 
-- Every agent advertises and browses a `_caravan._tcp` Bonjour/mDNS
-  service on the LAN: zero-config, no other infrastructure needed.
-- When Tailscale is running, the agent also reads `tailscale status
-  --json` for peers.
-- A discovered machine counts as a peer only if its Caravan agent answers
-  `/health` on port 8091. This keeps unrelated machines on the same LAN or
-  tailnet out of `--rpc`.
-- Each agent has a small persistent identity (a UUID under
-  `~/.caravan/agent/`). Peers seen through both mechanisms are merged by
-  normalized hostname.
-- **Path selection:** each agent's `/health` reports its `fast_paths`
-  (IPv4 addresses on up Thunderbolt Bridge interfaces). The head tries
-  those first, then the Tailscale address, then the mDNS/LAN address, and
-  uses the first one whose agent answers. If the cable is unplugged it
-  falls back automatically. This is a fixed priority by interface type,
-  not a bandwidth measurement.
-- History: Tailscale used to be preferred over LAN because LAN connections
-  failed from some process contexts. The real cause turned out to be
-  macOS's Local Network privacy permission. A `llama-server` launched
-  directly by launchd has no grantable identity; spawned by an allowed
-  parent (the Python agent) it inherits the grant. See LOG.md, "The actual
-  root cause".
+The same code runs on every Mac (`caravan_agent.py`; a dry run by default,
+`--apply` to start and supervise). There's no plist per role and no
+hand-picked IP address. The agent replaces the hand-written per-role
+launchd plists (GitHub issue #1); those plists stay as a manual fallback.
 
-## Head/tail interaction
+**Target model**: `--model`, then `CARAVAN_MODEL`, then config `model`,
+then the default `muse-glimmer`.
 
-Head, once it knows which peers are live tail candidates, decides a
-tensor split and launches `llama-server --rpc host1:port,host2:port,...`
-pointed at them — conceptually "I've got this model, I'm head, here's
-your shard." Tails just need `rpc-server` already running and reachable;
-llama.cpp's own RPC protocol handles the actual tensor transfer.
+### Role determination — self-declared, not elected
 
-"Cache it for next time" (a tail persisting its assigned tensor range
-across restarts) is **not** part of this phase — see Phase 2 below.
+- **MLX role**: if the target is an MLX id, the agent starts the MLX
+  worker (or `mlx_lm.server`) on this Mac. No peers are involved.
+- **Head**: the target GGUF is in this Mac's Ollama store
+  (`~/.ollama/models`, or `$OLLAMA_MODELS`). The head needs the full model
+  file locally, even though it computes only part of the layers. It
+  starts `llama-server --rpc <peers> --device MTL0,RPC0… --tensor-split
+  1,1…` with the settings above.
+- **Tail**: no local model. It starts `ggml-rpc-server -H 0.0.0.0 -p
+  50052 --cache`. The tail stores nothing itself, but `--cache` keeps the
+  tensors it receives on disk, keyed by hash. A restart then loads in
+  about 53 s instead of 7–11 minutes over LAN. This is the "shard cache"
+  (GitHub issue #3), and it turned out to need no patch.
+- **No election.** Whoever has the model is head. In practice one Mac
+  owns the model store, so two heads isn't a real case.
 
-## Scope: what "one app" actually covers
+The supervisor restarts a crashed child after 10 s and passes SIGTERM and
+SIGINT on to it. Child logs go to `~/.caravan/agent/logs/`.
 
-Not just process spawning. Everything that's currently a separate,
-manually-managed piece is in scope to eventually be absorbed into this
-one agent, not left standing alongside it forever:
+### Discovery — mDNS + Tailscale, then the fastest live path
 
-- **Process supervision** (Phase 1, below) -- replaces the hand-written
-  launchd plists.
-- **The slot-pinning reverse proxy** (`../proxy/slot_pin_proxy.py`) --
-  currently a third, separately-supervised process. Not yet folded in;
-  real open question is whether it becomes a component the agent runs
-  itself, or stays a standalone piece the agent merely launches/monitors.
-  Not decided -- see Open Questions.
-- **Cross-node restart coordination** -- `../scripts/restart-rpc-server.sh`
-  encodes the safe restart order (stop head, restart tail, start head)
-  as a manual/scripted operator action today. Once agents run on both
-  nodes with a real health/status surface between them, this becomes
-  something the agents negotiate directly (a tail can tell its head "I'm
-  about to restart" and get a clean pause instead of a crash) rather
-  than a human running a script. See GitHub issue #7.
-- **Monitoring/heartbeat** -- `health_server.py`'s `/health` endpoint
-  today only answers "is this node a live Caravan agent" (for discovery
-  gating). Growing it into real liveness + resource reporting (CPU,
-  memory, and GPU memory via `ggml-rpc`'s existing `RPC_CMD_GET_DEVICE_MEMORY`)
-  is the natural, single place this lives -- not a separate monitoring
-  script -- since this endpoint already exists and already runs on every
-  node.
+This is a hybrid design:
 
-## Two build phases
+- Each agent advertises and browses `_caravan._tcp` over mDNS, and also
+  reads `tailscale status --json`.
+- A machine counts as a peer only if its agent answers `/health` on port
+  8091 (checked with `curl`; see below). This keeps unrelated machines on
+  the LAN or tailnet out of `--rpc`.
+- Peers found both ways are merged by normalized hostname. Each agent has
+  a stable id in `~/.caravan/agent/`.
 
-**Phase 1 — orchestration/robustness layer (built, proven under launchd).** Discovery,
-self role-detection, process supervision (spawn/monitor `llama-server` or
-`rpc-server` locally based on role, replacing the hand-written per-role
-launchd plists), and picking the fastest live path per peer. This absorbs
-GitHub issue #1 (manual launchd supervision). The per-role plists remain
-as a manual fallback.
+**Path selection.** Each peer's `/health` reports its Thunderbolt Bridge
+addresses (`fast_paths`). The head tries those first, then the Tailscale
+address, then the LAN address, and uses the first that answers. This is
+a fixed priority by link type, not a speed test, and it falls back on its
+own if the cable is unplugged.
 
-**Phase 2 — shard cache.** ~~A real patch to `ggml-rpc.cpp`~~ **Done
-already, turned out to need no patch at all** (2026-09-06, later still:
-see LOG.md, "Issue #3: solved natively"). `ggml-rpc.cpp` already ships a
-hash-keyed, self-invalidating on-disk tensor cache; `rpc-server --cache`
-turns it on. Verified live: 53s warm-cache restart vs. 7-11 minutes cold.
-The agent passes `--cache` when it spawns `rpc-server`
-(`supervisor.build_tail_command()`). The Thunderbolt link later cut the
-*cold*-cache transfer to 29-39 s (LOG.md). Corresponds to GitHub issue #3,
-now closed.
+**The EHOSTUNREACH note.** Early on, connections from launchd-started
+processes failed with `EHOSTUNREACH` ("No route to host") while the same
+command worked from a terminal. The lessons the code keeps:
+
+- Probe peers with `curl` rather than Python sockets.
+- Try every candidate address directly instead of trusting one resolved
+  name.
+- Have the agent launch `llama-server`.
+
+The root cause was macOS's Local Network permission. A `llama-server`
+started directly by launchd has no identity the permission can be granted
+to, so it can't reach the tail at all. Started by the Python agent, with
+Python allowed under Privacy & Security > Local Network, it can. See
+[LOG.md](LOG.md), "The actual root cause", and
+[launchd/README.md](../launchd/README.md).
+
+### What the agent reports
+
+`GET :8091/health` returns:
+
+- the node id
+- `fast_paths`
+- the disk usage of the slot directory and the tail's RPC tensor cache
+
+Growing it into fuller liveness and resource reporting is the natural
+next step, rather than a separate monitor.
+
+## The llama.cpp fork
+
+Caravan runs llama.cpp from `RookiOS72/llama.cpp`, branch
+`caravan-patches`: upstream plus one patch, `getaddrinfo` instead of
+`gethostbyname` in the RPC client's connect, so RPC peers given as names
+resolve under launchd. The v1+ numbers were measured on that patch
+rebased onto upstream `5047748f` (local branch
+`caravan-patches-rebase-2026-10-30`). The rebase brings in upstream #26004
+(context checkpoints in slot files), which is what makes Gemma and
+GPT-OSS restore after a restart. Publishing the rebased branch is on the
+[roadmap](ROADMAP.md). Flag names in this repo were checked against that
+fork.
+
+## How it got here
+
+1. **Prove the split** (2026-09-05). llama.cpp built with `GGML_RPC=ON
+   GGML_METAL=ON` on both Macs, `rpc-server` on one, `llama-server --rpc`
+   on the other. A 16 GB model split across both worked.
+2. **Make it usable day to day** (Sep 6–8). The proxy (slot pinning, FIFO,
+   cancel on disconnect, disk saves), launchd, the Thunderbolt cable
+   (14–22× faster cold loads), and the shard cache, which turned out to be
+   native (`rpc-server --cache`).
+3. **The self-organizing agent** (Sep 7–8). Discovery, roles, the fastest
+   link, supervision, and the Local Network root cause.
+4. **v0** (Oct 30, `45ed2c2`). Configurable model, stale-save cleanup, a
+   performance pass, public docs.
+5. **v1** (Oct 30). Rebased llama.cpp, MLX models through the proxy (step
+   a), automatic KV cache type.
+6. **v2 / v2.1** (Oct 31). The Caravan MLX worker with per-session caches
+   saved to disk, clean GPT-OSS replies, the per-Mac cap, then the wired
+   limit held from startup.
+
+Details for every step are in [LOG.md](LOG.md). What's next is in
+[ROADMAP.md](ROADMAP.md).
+
+## Open design questions
+
+- Should the agent run the proxy itself? Today the proxy is a separate
+  launchd service.
+- Head selection is "whoever has the model"; there's no handling for two
+  Macs that both have it.
+- Cross-Mac restart coordination (a tail warning its head before it
+  restarts) is a script today (`scripts/restart-rpc-server.sh`), not a
+  protocol between agents.
+- The hand-managed llama-server plist's fallback `--rpc` is a
+  link-local (169.254.x.x) address, which macOS can reassign. The agent
+  and `render_llama_plist.py --rpc auto` avoid this by discovering it.
 
 ## Language
 
-**Phase 1: Python.** Matches the existing `slot_pin_proxy.py`, no build
-step, cheapest to iterate while the design is still moving. The agent
-needs Python 3.10+; the proxy is stdlib-only and 3.9-compatible.
-
-**In progress: C++ single binary (`cpp/`).** Rather than a full rewrite,
-llama.cpp itself is linked as a library: `llama_server()` for the head and
-`ggml_backend_rpc_start_server()` for the tail, called in-process, with
-mDNS and Tailscale discovery ported from Python. The llama.cpp fork's
-`caravan-patches` branch carries Caravan's patches. See `cpp/README.md`.
-
-**Later: a compiled language, undecided.** Once Phase 1 has proven itself
-in real daily use, port it — this is PLAN.md's stage 3 packaging/"real
-app for other people" milestone, a distinct later decision, not something
-Phase 1 needs to serve. The reasoning captured here and in LOG.md/GitHub
-issues is the actual bridge to that port — not portable Python code.
-Options, for whenever that decision comes up:
-
-- **Go** — full cross-platform (macOS/Linux/Windows/BSD/more) with
-  trivial cross-compilation (`GOOS`/`GOARCH`, no target SDK needed). Best
-  choice if a non-Mac node ever joins the cluster.
-- **Rust** — same platform breadth, the most battle-tested of the three
-  for this class of networked infra tooling, more cross-compile setup
-  overhead than Go.
-- **Swift** — best native fit for today's all-Mac fleet: built-in
-  Bonjour/Network framework (no third-party mDNS library needed), clean
-  launchd/codesigning story. Real official Linux support, but less
-  mature/common for this than Go or Rust; Windows support is the least
-  mature of the three.
-
-**Ruled out: Ruby / Rails.** Ruby is interpreted — a peer to Python, not
-a compiled-language option. Rails specifically is a web application
-framework (MVC, database-backed models, views, asset pipeline); Caravan's
-agent is a networked daemon with no database and no web UI, so Rails'
-actual machinery doesn't apply. Plain Ruby would be a fair comparison to
-Python but has no advantage here — weaker stdlib/ecosystem for this kind
-of systems/networking work, and, like Python, still needs a language
-runtime installed on every node, so it doesn't get any closer to the
-eventual compiled/dependency-free goal either.
-
-## Open questions (not yet decided)
-
-- Head selection is "whoever has the model". There's no handling for two
-  nodes that both have it; acceptable while one machine owns the Ollama
-  store.
-- The fallback `--rpc` in the hand-managed plist is a literal link-local
-  (169.254.x.x) address, which macOS can reassign. The agent and
-  `render_llama_plist.py --rpc auto` avoid this by discovering it.
-
-- Exact wire format for the head→tail "here's your shard" coordination
-  message (today this is implicit in how `llama-server --rpc` connects
-  out; whether the agent needs its own explicit message on top of that,
-  or whether "tail has `rpc-server` reachable" is sufficient, is unresolved).
-- Whether the slot-pinning proxy becomes a component the agent runs
-  itself, or stays a standalone piece the agent merely launches/monitors
-  (see "Scope: what 'one app' actually covers," above).
-- Exact protocol for cross-node restart coordination (a tail telling its
-  head "restarting, please pause" before it goes down) — GitHub issue #7
-  scoped this down considerably once issue #3 made recovery cheap (~50s),
-  so this is lower urgency than it was, but still undecided.
-
-## Relationship to existing GitHub issues
-
-Issues live at <https://github.com/linuxbren/caravan/issues>; statuses
-below are as of the last update to this section.
-
-- **#1** (supervise processes with launchd) — closed
-  (2026-09-06, crash-recovery verified live). Phase 1 still absorbs the
-  *manual per-role plist* problem this leaves behind; #1 itself was
-  narrower (does it survive a crash/reboot) and that part is done.
-- **#2** (system prompt size) — unrelated, still open on its own track.
-- **#3** (shard-scoped cache) — closed (2026-09-06, solved natively via
-  `rpc-server --cache`, no patch needed — see Phase 2 above). The agent
-  passes the flag.
-- **#7** (node-to-node lifecycle signaling) — open; two of its three
-  proposed signals turned out to already be covered by existing
-  mechanisms (see LOG.md), the remaining monitoring/coordination piece
-  is this doc's "Scope" section above, not separate work.
+- **Python today.** No build step, cheap to change. The agent needs
+  3.10+. The proxy is stdlib-only and runs on 3.9+.
+- **The unified-binary experiment (`cpp/`).** This links llama.cpp as a
+  library (`llama_server()` for the head,
+  `ggml_backend_rpc_start_server()` for the tail) with mDNS and Tailscale
+  discovery ported from Python. See [cpp/README.md](../cpp/README.md).
+- **If Caravan is ever packaged for other people**, a compiled agent is
+  the likely route.
+  - Go: easiest cross-compiling.
+  - Rust: most proven for this kind of networked tool.
+  - Swift: best native fit for an all-Mac fleet (built-in Bonjour,
+    launchd, code signing).
+  - Undecided; not needed yet.

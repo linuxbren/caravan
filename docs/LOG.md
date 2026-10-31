@@ -111,8 +111,8 @@
 
 **Step 1 verdict: proven.** The core trick works, is stable enough to
 finish a real request, and performs comparably to exo's own approach.
-Worth deciding next whether/how to move to step 2 (see
-[PLAN.md](PLAN.md)).
+Worth deciding next whether/how to move to step 2 (the stage plan,
+now summarized in [ROADMAP.md](ROADMAP.md), "Done").
 
 ## Wiring it into a real assistant (openclaw)
 
@@ -2174,7 +2174,7 @@ weren't there:
 
 ## 2026-10-30 (evening, v1): improvements 1–3 measured (rebased llama.cpp, MLX step a, auto KV)
 
-All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and the same three models as the runtime compare. Scripts are in `bench/improvements/`.
+All runs were on one Mac mini (M4, 24 GB), using test ports (llama 8180, proxy 8190, mlx 8192) and the same three models as the runtime compare. Scripts are in `bench/improvements/`.
 
 - **llama.cpp rebased** onto upstream `5047748f`, with one Caravan patch re-applied: getaddrinfo in the RPC connect. There was one conflict, in ggml-rpc transport.cpp, where the getaddrinfo version was kept. The rebase brings in upstream #26004, which stores context checkpoints in the slot file. Resume after a restart (16k chat, wait for the first token):
 
@@ -2209,10 +2209,10 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
 
   Notes:
   - The chat for this test is 4k tokens. "After restart" includes paging the weights in, because mlx loads lazily.
-  - Qwen needed the prompt-cache caps listed in the README. Without them it ran out of Metal memory twice.
+  - Qwen needed capped prompt-cache settings (`--prompt-cache-size` / `--prompt-cache-bytes`, settable through `mlx.extra_args`). Without them it ran out of Metal memory twice.
   - GPT-OSS returns raw harmony markup, so the bench sends back only the final channel.
   - Peak footprint: Qwen 19.0 GB, Gemma 18.6 GB, GPT-OSS 13.9 GB.
-- Step b (MLX prompt-cache save/restore) has not started. Design notes are in `proxy/backends.py`.
+- Step b (MLX prompt-cache save/restore) had not started yet at this point; it became the v2 MLX worker (next entry).
 
 ## 2026-10-31 (v2): MLX per-session caches saved to disk, GPT-OSS reasoning cleanup, saved-chat cap
 
@@ -2228,8 +2228,9 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
   (`save_prompt_cache`, `<cache-dir>/<fingerprint>.safetensors`, the PR #1405
   idea) and loaded after a restart. All mlx work runs on one thread with its
   own stream (MLX streams are per-thread). The proxy sends
-  `X-Caravan-Session`, restores before a session's first turn and saves
-  every `save_every_n_turns`; `slot_cleanup` ages out the `.safetensors`
+  `X-Caravan-Session`, asks the worker to restore before every MLX
+  request (`warm` when the session is already in memory) and saves every
+  `slot_save_every` turns; `slot_cleanup` ages out the `.safetensors`
   files (`mlx_dir`, archive to `archive_dir/mlx`).
 - **GPT-OSS harmony parsing in the worker**: a marker state machine
   splits analysis/commentary (→ `reasoning_content` + `reasoning`) from the
@@ -2239,7 +2240,8 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
 - `--kv-bits 4|8` (QuantizedKVCache for full-attention layers) added and
   tried for Qwen3 at 16k: still Metal OOM (footprint 19.3 GB), and 4k
   reading got 15% slower (380 → 325 tok/s). Off by default.
-- Bench: `bench/v2/` (EXO1 `~/.caravan/bench-2026-10-31/v2/`), test ports
+- Bench: `bench/v2/` (results in `~/.caravan/bench-2026-10-31/v2/` on the
+  bench Mac), test ports
   8190/8192, exo paused. v1 = `improvements-1-3` + mlx_lm.server.
 
   | MLX, v1 → v2 | Qwen3 4-bit | Gemma 4 4-bit | GPT-OSS MXFP4-Q8 |
@@ -2295,16 +2297,17 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
   (CLI archive run: 15 MLX caches, 1.15 GB, archived LRU-first under a
   0.8 GB cap. Proxy on test port 8190: 2 slot files evicted under a
   1-file cap, and the in-slot session kept although it was the oldest).
-  Dry run on EXO1's real `~/.caravan/llama-server/slots`: it is empty
-  today (0 files), so the defaults would evict nothing there. The
-  269-file / ~154-165 GB backlog in the 2026-10-30 entry isn't on EXO1
-  any more and was not checked (node-a/EXO2 wasn't touched). By the
+  Dry run on the bench Mac's real `~/.caravan/llama-server/slots`: it is
+  empty today (0 files), so the defaults would evict nothing there. The
+  269-file / ~154-165 GB backlog in the 2026-10-30 entry isn't on that Mac,
+  and the other Mac was not checked or touched. By the
   numbers logged then, the 30-day age rule alone already covers all of
   it (Sep 6-18). The cap alone (age rule off) would keep the newest
   ~50 GB (~80-90 files) and evict ~180-190 files / ~105-115 GB.
 - **Limits still open (MLX):** Qwen3 30B at 16k doesn't fit in either
   version (16.4 GB weights + ~3.2 GB KV; kv8 doesn't save it); the worker
-  starts 6–9 s vs 1.6 s; Gemma short-prompt reading is ~7% slower;
+  starts 6–9 s vs 1.6 s; Gemma short-prompt reading is ~7% slower (~8% in the v2.1
+  side-by-side run);
   every one-turn request also writes a small save file (cleanup ages them
   out); restore was measured on a warm disk, not a cold one.
 - Next: two-Mac MLX split, then per-model profiles, proxy overhead,
@@ -2353,3 +2356,24 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
   9.7 s, t3 0.52 s (re-read 31 of 4377 tokens), t4 0.53 s.
 - Commit b9ebeb7 on `caravan-v2.1`. Version summary and roadmap:
   [ROADMAP.md](ROADMAP.md).
+
+## 2026-10-31: docs rewritten from the v2.1 code
+
+The README and every doc were written again from scratch against the code
+on `caravan-v2.1`, since the earlier ones still described the GGUF-only
+setup and said nothing about MLX:
+
+- `README.md`: what Caravan is and why, features, the two backends, quick
+  start, measured headline numbers, status.
+- New `docs/CONFIGURATION.md` (every flag, env var and config key, with
+  defaults and a warning about cleanup's delete mode), `docs/MLX.md` and
+  `docs/BENCHMARKS.md` (method and the per-version tables).
+- `docs/ARCHITECTURE.md` and `docs/ROADMAP.md` rewritten. `docs/PLAN.md`
+  removed: its stage history is now in ARCHITECTURE ("How it got here")
+  and ROADMAP ("Done").
+- This log: the bench Mac is no longer named, and three statements were
+  corrected to match the code (MLX restore runs before every request, the
+  save setting is `slot_save_every`, and the README no longer lists the
+  Qwen cache caps, so the entry names the flags).
+- Known gap recorded in the roadmap: the rebased llama.cpp branch that the
+  v1+ numbers depend on isn't published on the fork yet.
