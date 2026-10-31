@@ -215,6 +215,8 @@ class SessionStoreTest(unittest.TestCase):
         self.assertEqual((n, how), (0, "cold"))
         layout = W.SessionStore(FakeOps(layout=("KVCache", "KVCache")), self.dir, IDENT)
         self.assertEqual(layout.restore(KEY), "rejected")
+        quant = W.SessionStore(FakeOps(), self.dir, dict(IDENT, kv_bits=8))
+        self.assertEqual(quant.restore(KEY), "rejected")  # saved with a 16-bit cache
         (self.dir / f"{KEY}.safetensors").write_text("garbage")
         self.assertEqual(W.SessionStore(FakeOps(), self.dir, IDENT).restore(KEY), "rejected")
 
@@ -361,6 +363,11 @@ class CliTest(unittest.TestCase):
         self.assertEqual(W.parse_bytes("512M"), 512 << 20)
         self.assertEqual(W.parse_bytes("2G"), 2 << 30)
         self.assertEqual(W.parse_bytes("1000"), 1000)
+        self.assertIsNone(a.kv_bits)
+        q = W.build_parser().parse_args(["--model", "/m", "--kv-bits", "8"])
+        self.assertEqual((q.kv_bits, q.kv_group_size), (8, 64))
+        with self.assertRaises(SystemExit):
+            W.build_parser().parse_args(["--model", "/m", "--kv-bits", "3"])
 
     def test_valid_key(self):
         self.assertTrue(W.valid_key("0123456789abcdef"))

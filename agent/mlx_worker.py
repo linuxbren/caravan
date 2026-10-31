@@ -45,7 +45,8 @@ Same flag names as mlx_lm.server where they mean the same thing, so the
 "mlx.extra_args" config keeps working:
     python agent/mlx_worker.py --model DIR --port 8092 \
         [--prompt-cache-size 4] [--prompt-cache-bytes N] [--prefill-step-size 2048] \
-        [--cache-dir ~/.caravan/mlx/prompt-cache] [--no-persist] [--cache-limit-gb G]
+        [--cache-dir ~/.caravan/mlx/prompt-cache] [--no-persist] [--cache-limit-gb G] \
+        [--kv-bits 8]   # quantized cache for full-attention layers (Qwen3 at 16k)
 
 The pure cache bookkeeping (SessionStore) doesn't import mlx, so it's
 unit-tested with fake cache layers (tests/test_mlx_worker.py).
@@ -431,13 +432,21 @@ def tokenizer_hash(model_dir: Path) -> str:
 class MlxOps:
     """The mlx side of SessionStore."""
 
-    def __init__(self, model):
+    def __init__(self, model, kv_bits=None, kv_group_size=64):
         import mlx.core as mx
         from mlx_lm.models import cache as C
         self.mx, self.C, self.model = mx, C, model
+        self.kv_bits, self.kv_group_size = kv_bits, kv_group_size
 
     def new_cache(self):
-        return self.C.make_prompt_cache(self.model)
+        cache = self.C.make_prompt_cache(self.model)
+        if self.kv_bits:
+            # Full-attention layers only (sliding-window ones are already
+            # bounded); quantized from the first token, so prefill, the
+            # checkpoint and the file all use the same layout.
+            cache = [self.C.QuantizedKVCache(group_size=self.kv_group_size, bits=self.kv_bits)
+                     if type(c).__name__ == "KVCache" else c for c in cache]
+        return cache
 
     def always_trimmable(self, layer):
         return type(layer).__name__ in ALWAYS_TRIMMABLE
@@ -499,6 +508,12 @@ class MlxOps:
             if type(c).__name__ == "KVCache" and c.keys is not None:
                 o = c.offset
                 out.append(self.C.KVCache.from_state((c.keys[..., :o, :], c.values[..., :o, :], o)))
+            elif type(c).__name__ == "QuantizedKVCache" and c.keys is not None:
+                o = c.offset
+                q = self.C.QuantizedKVCache(group_size=c.group_size, bits=c.bits)
+                q.state = (tuple(x[..., :o, :] for x in c.keys), tuple(x[..., :o, :] for x in c.values),
+                           o, c.group_size, c.bits)
+                out.append(q)
             else:
                 out.append(c)
         self.C.save_prompt_cache(path, out, metadata)
@@ -565,8 +580,9 @@ class Engine:
         self.prefill_step = int(args.prefill_step_size)
         self.default_max_tokens = int(args.max_tokens)
         ident = {"model": str(self.model_dir), "tokenizer": tokenizer_hash(self.model_dir),
-                 "mlx_lm": _version("mlx_lm"), "model_type": self.model_type}
-        self.store = SessionStore(MlxOps(self.model), args.cache_dir, ident,
+                 "mlx_lm": _version("mlx_lm"), "model_type": self.model_type,
+                 "kv_bits": args.kv_bits or 0}
+        self.store = SessionStore(MlxOps(self.model, args.kv_bits, args.kv_group_size), args.cache_dir, ident,
                                   max_sessions=args.prompt_cache_size,
                                   max_bytes=args.prompt_cache_bytes,
                                   persist=not args.no_persist)
@@ -584,7 +600,7 @@ class Engine:
         log(f"warm-up {self.warmup_s:.2f}s")
         log(f"loaded {self.model_dir.name} ({self.model_type}) in {time.time() - t0:.1f}s; "
             f"sessions<= {self.store.max_sessions}, bytes<= {args.prompt_cache_bytes}, "
-            f"prefill step {self.prefill_step}, persist="
+            f"prefill step {self.prefill_step}, kv bits {args.kv_bits or 16}, persist="
             + (f"on {self.store.cache_dir}" if self.store.persist else "off"))
 
     def _main(self, ready):
@@ -981,6 +997,10 @@ def build_parser():
     ap.add_argument("--max-tokens", type=int, default=512, help="default when a request sets none")
     ap.add_argument("--cache-dir", default=os.environ.get("CARAVAN_MLX_CACHE_DIR") or DEFAULT_CACHE_DIR)
     ap.add_argument("--no-persist", action="store_true", help="never write or read cache files")
+    ap.add_argument("--kv-bits", type=int, choices=(4, 8), default=None,
+                    help="quantize full-attention cache layers (mlx_lm QuantizedKVCache); "
+                         "halves (8) or quarters (4) their memory and file size")
+    ap.add_argument("--kv-group-size", type=int, default=64)
     ap.add_argument("--cache-limit-gb", type=float, default=None, help="mx.set_cache_limit (freed-buffer pool)")
     return ap
 
