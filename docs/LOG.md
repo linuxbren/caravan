@@ -2493,3 +2493,15 @@ A docs-only pass on `caravan-v3-mlx-split` (no code changes):
   fixed links to sections that had moved into CONFIGURATION.md. Test
   count: 120.
 - Older entries in this log keep the words they were written with.
+
+## 2026-10-31: firm rule, each packer keeps its share on its own disk
+
+Added under "Firm rules" in ROADMAP.md: the lead never resends a packer's
+portion at startup, for GGUF and MLX. Checked today. MLX v3 already meets
+it: the packer loads from its own folder, the link has no way to send
+weights, and a missing shard stops it with an error. GGUF only partly
+meets it: `rpc-server --cache` skips tensors over 10 MiB that the packer
+already has, but smaller ones are sent every time, and the first load
+of a model is sent in full. EXO2's cache (14.4 GB from Sep 8–10) holds
+none of the current GGUFs' tensors, so the next GGUF start is a full cold
+send. The gaps are listed as open tasks there.

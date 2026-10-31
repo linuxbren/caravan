@@ -14,6 +14,51 @@ the whole group is the **string**. The old words "head", "front" and
 "tail" survive only in older log entries, internal code names and
 deprecated flag aliases.
 
+## Firm rules
+
+### Each packer keeps its share of the model on its own disk (GGUF and MLX)
+
+The lead never resends a packer's portion at startup. A restart, or going
+back to a model the packer already has, should send no weights over the
+cable. A packer that's missing files gets them from the original source
+(Hugging Face), never from the lead.
+
+Where things stand (checked 2026-10-31 against this branch's code and the
+disks on EXO1 and EXO2):
+
+| Format | Rule met? | Why |
+|---|---|---|
+| MLX (v3 split) | **Yes** | Packer 1 loads its layers from its own folder (`--model` is a local path) and reads only those weights. The link between the Macs carries hidden states and session commands (`hello`, `prepare`, `fwd`, `save`, `restore` and so on); it has no way to send weights or files. If a shard it needs is missing, the packer refuses to start and names the files to fetch with `mlx_split_fetch.py`. It never downloads on its own and never copies from the lead. On EXO2 the packer loaded in 0.4–7.0 s for every v3 run. |
+| GGUF (llama.cpp RPC) | **Partly** | In llama.cpp's design the lead reads the whole GGUF and sends each packer its tensors at load. With `rpc-server --cache` (on by default in the agent and in the plist) the packer saves each tensor over 10 MiB to `~/Library/Caches/llama.cpp/rpc/`, named by a hash of its contents, and later loads send only the hash for those. Still sent every time: tensors of 10 MiB or less (0.56 GB of the whole Qwen3 30B Q4_K_S file and 0.84 GB of Gemma 4 26B q4_0; the packer gets its layers' share). Sent in full: the first load of any model or of a changed file. EXO2's cache today (504 files, 14.4 GB, written Sep 8–10) holds none of the tensors of the GGUFs now on EXO1, so the next two-Mac GGUF start would be a full cold send. Stage 2 (Next, item 5) is what makes this a yes. |
+
+Open tasks for this rule:
+
+- [ ] **GGUF stage 2** (Next, item 5): the packer loads its tensors from
+  its own copy of the file, small tensors included, so the lead sends no
+  weights at all.
+- [ ] **GGUF, until then: show cache misses.** Log, at each load, how much
+  the lead actually sent to each packer, so a cold send is visible.
+- [ ] **GGUF: own the packer's cache.** Caravan doesn't manage it today:
+  there's no size cap and no cleanup of tensors from old models (slot
+  cleanup only touches the slot and MLX session folders), and it sits
+  under `~/Library/Caches`, which macOS cleanup tools may clear. Point it
+  at a Caravan folder with `LLAMA_CACHE` and add a cap that never
+  removes the current model's tensors.
+- [ ] **GGUF: the C++ binary** has no `--cache`, so it always resends.
+- [ ] **MLX: check the files on startup.** The packer only checks that
+  its shards exist, not their size or checksum. Compare them with the
+  sizes (and optionally hashes) Hugging Face lists. Stale `.incomplete`
+  downloads sit next to two of the 8-bit models on EXO2.
+- [ ] **MLX: fetch missing shards from the source.** Offer to run
+  `mlx_split_fetch.py --role packer` (Hugging Face) instead of stopping
+  with an error. Never fetch from the lead.
+- [ ] **MLX: the lead checks it's the same model.** `hello` compares only
+  the layer range and layer count. The packer already knows its model
+  name and tokenizer hash, so compare those too.
+- [ ] **MLX: keep packer files in Caravan's own folder**
+  (`~/.caravan/mlx-models`). The Qwen3.6 35B packer on EXO2 ran from
+  exo's model folder, which exo manages and could remove.
+
 ## Done
 
 ### Before v0: the split, the proxy, the agent (Sep 2026)
@@ -141,7 +186,8 @@ deprecated flag aliases.
    receives on disk, keyed by hash, so it only receives its weights over
    the wire the first time. *Checked 2026-10-31: our build has `-c,
    --cache` and the packer plist already uses it.* What's left: the lead
-   still needs the full GGUF on its own disk and reads all of it.
+   still needs the full GGUF on its own disk and reads all of it, and
+   tensors of 10 MiB or less are sent every time (see Firm rules).
 5. **Split download (GGUF), stage 2: packer loads its own tensors.** A fork
    patch so the packer loads its assigned tensors from its own disk instead
    of the lead pushing them. Each packer fetches only its tensors' byte
@@ -345,6 +391,8 @@ list above point to it.
 - **The MLX worker takes 6–9 s to start** (vs 1.6 s for `mlx_lm.server`).
 - **The v3 split is slower than one Mac.** Writing is 28–42% slower and
   reading 16–25% slower; use it for what doesn't fit on one Mac.
+- **GGUF packers still get weights from the lead** on a first load or a
+  cache miss, and get the small tensors every time (see Firm rules).
 - **The v3 split is started by hand.** The agent and the launchd plists
   still start a one-Mac MLX worker.
 - **MLX tool calls** are returned as text, not as a `tool_calls` field.
