@@ -253,6 +253,11 @@ class MlxSessionTracker:
             self.turns[fingerprint] = self.turns.get(fingerprint, 0) + 1
             return self.turns[fingerprint]
 
+    def forget(self, fingerprints) -> None:
+        with self._lock:
+            for fp in fingerprints:
+                self.turns.pop(fp, None)
+
 
 mlx_sessions = MlxSessionTracker()
 
@@ -906,12 +911,19 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 slot_for_save = slot
                 fingerprint_for_save = fingerprint
             elif isinstance(data, dict):
-                # MLX: same session identity, no slot, persistence is a no-op.
+                # MLX (step b, 2026-10-31): same session identity, no slot.
+                # The fingerprint goes to Caravan's MLX worker as
+                # X-Caravan-Session -> one prompt cache per session, saved to
+                # <fp>.safetensors and loaded back after a restart. A plain
+                # mlx_lm.server ignores the header and 404s the cache calls
+                # ("mlx-noop").
                 mlx_fingerprint = session_fingerprint(data)
                 restore = backend.restore(mlx_fingerprint) if mlx_fingerprint else "ephemeral"
                 warm = "warm" if mlx_fingerprint and mlx_sessions.seen(mlx_fingerprint) else "cold"
+                how = ("per-session MLX prompt cache" if restore != "mlx-noop"
+                       else "no MLX cache endpoints upstream")
                 slot_note = (f" backend=mlx model={data.get('model')} fp={mlx_fingerprint} "
-                             f"cache={restore} ({warm}; slot save/restore not implemented for MLX)")
+                             f"cache={restore} ({warm}; {how})")
                 raw_body = json.dumps(backend.prepare_body(data)).encode("utf-8")
         upstream_host, upstream_port = backend.address()
 
@@ -922,6 +934,8 @@ class ProxyHandler(BaseHTTPRequestHandler):
         }
         headers["Content-Length"] = str(len(raw_body))
         headers["Host"] = f"{upstream_host}:{upstream_port}"
+        if mlx_fingerprint is not None:
+            headers.update(backend.session_headers(mlx_fingerprint))
 
         conn = http.client.HTTPConnection(upstream_host, upstream_port)
         try:
@@ -1053,9 +1067,10 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 finish_completion(slot_for_save, fingerprint_for_save)
             elif status == 200 and mlx_fingerprint is not None:
                 n = mlx_sessions.turn(mlx_fingerprint)
+                every = max(1, int(SETTINGS.save_every_n_turns or 1))
+                saved = ROUTER.mlx.save(mlx_fingerprint) if n % every == 0 else f"skipped (every {every})"
                 sys.stderr.write(
-                    f"[slot-pin-proxy] mlx fp={mlx_fingerprint} turn {n}: slot save "
-                    f"{ROUTER.mlx.save(mlx_fingerprint)} (MLX prompt-cache persistence is step b)\n")
+                    f"[slot-pin-proxy] mlx fp={mlx_fingerprint} turn {n}: slot save {saved}\n")
         except (BrokenPipeError, ConnectionResetError, http.client.HTTPException):
             # http.client.HTTPException (e.g. IncompleteRead) added
             # 2026-09-06: caught live during the --slot-save-path restart
@@ -1089,6 +1104,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
 def _forget_cleaned_sessions(fingerprints) -> list:
     fingerprints = list(fingerprints)
     save_tracker.forget(fingerprints)
+    mlx_sessions.forget(fingerprints)
     with _restore_lock:
         for fp in fingerprints:
             _warm_this_run.discard(fp)
@@ -1103,6 +1119,8 @@ def start_slot_cleanup(overrides: "dict | None" = None):
     overrides = {k: v for k, v in (overrides or {}).items() if v is not None}
     overrides.setdefault("slot_dir", str(SLOT_SAVE_DIR))
     overrides.setdefault("state_file", str(STATE_FILE))
+    if MLX_SETTINGS.enabled:
+        overrides.setdefault("mlx_dir", MLX_SETTINGS.cache_dir)
     try:
         settings = slot_cleanup.resolve_settings(overrides)
     except ValueError as e:
@@ -1110,6 +1128,7 @@ def start_slot_cleanup(overrides: "dict | None" = None):
         return None
     return slot_cleanup.start_background(
         settings, gate=_exclusive_slot_io, forget=_forget_cleaned_sessions,
+        drop=lambda fps: ROUTER.mlx.drop(fps),
     )
 
 
@@ -1178,7 +1197,7 @@ def main(argv=None):
     if MLX_SETTINGS.enabled:
         print(f"[slot-pin-proxy] MLX routing on: models matching {list(MLX_SETTINGS.model_prefixes)} "
               f"or {sorted(MLX_SETTINGS.models)} -> mlx_lm.server {MLX_SETTINGS.host}:{MLX_SETTINGS.port} "
-              "(no slot save/restore for MLX yet)", flush=True)
+              f"(per-session prompt cache in {MLX_SETTINGS.cache_dir} when the upstream is Caravan's MLX worker)", flush=True)
     else:
         print("[slot-pin-proxy] MLX routing off", flush=True)
     start_slot_cleanup(slot_cleanup.overrides_from_args(args))

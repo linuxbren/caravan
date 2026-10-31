@@ -54,6 +54,11 @@ DEFAULTS = {
     "archive_dir": str(Path.home() / ".caravan" / "llama-server" / "slots-archive"),
     "slot_dir": str(Path.home() / ".caravan" / "llama-server" / "slots"),
     "state_file": str(Path.home() / ".caravan" / "proxy" / "session_slots.json"),
+    # v2 (2026-10-31): Caravan's MLX worker saves <fp>.safetensors in
+    # ~/.caravan/mlx/prompt-cache; same age rule as the llama.cpp .bin
+    # files. Off unless set: the proxy passes its MLX cache dir, the CLI
+    # takes --mlx-dir / CARAVAN_MLX_CACHE_DIR. "" / "off" = don't scan.
+    "mlx_dir": "",
 }
 
 ENV_VARS = {
@@ -63,6 +68,7 @@ ENV_VARS = {
     "archive_dir": "CARAVAN_SLOT_ARCHIVE_DIR",
     "slot_dir": "CARAVAN_SLOT_SAVE_DIR",
     "state_file": "CARAVAN_PROXY_STATE_FILE",
+    "mlx_dir": "CARAVAN_MLX_CACHE_DIR",
 }
 
 _FLOAT_KEYS = ("max_age_days", "interval_hours")
@@ -99,6 +105,7 @@ class Settings(NamedTuple):
     archive_dir: Path
     slot_dir: Path
     state_file: Path
+    mlx_dir: Optional[Path] = None     # MLX worker prompt caches (*.safetensors)
 
 
 def resolve_settings(overrides: Optional[dict] = None,
@@ -137,6 +144,8 @@ def resolve_settings(overrides: Optional[dict] = None,
         archive_dir=Path(str(out["archive_dir"])).expanduser(),
         slot_dir=Path(str(out["slot_dir"])).expanduser(),
         state_file=Path(str(out["state_file"])).expanduser(),
+        mlx_dir=(None if str(out["mlx_dir"]).strip().lower() in ("", "off", "none")
+                 else Path(str(out["mlx_dir"])).expanduser()),
     )
 
 
@@ -147,8 +156,9 @@ class StaleFile(NamedTuple):
 
 
 def find_stale(slot_dir: Path, max_age_days: float,
-               now: Optional[float] = None) -> List[StaleFile]:
-    """Regular *.bin files directly in slot_dir whose mtime is older than
+               now: Optional[float] = None, suffix: str = ".bin") -> List[StaleFile]:
+    """Regular *<suffix> files (.bin: llama.cpp slots; .safetensors: MLX
+    prompt caches) directly in slot_dir whose mtime is older than
     max_age_days. Symlinks and subdirectories are never touched."""
     now = time.time() if now is None else now
     cutoff = now - max_age_days * 86400.0
@@ -156,7 +166,7 @@ def find_stale(slot_dir: Path, max_age_days: float,
     if not slot_dir.is_dir():
         return stale
     for p in slot_dir.iterdir():
-        if p.suffix != ".bin" or p.is_symlink():
+        if p.suffix != suffix or p.is_symlink():
             continue
         try:
             st = p.stat()
@@ -221,7 +231,8 @@ def prune_state_file(state_file: Path, fingerprints: Iterable[str],
 def cleanup(settings: Settings, dry_run: bool = False,
             gate: Optional[Callable[[], "object"]] = None,
             forget: Optional[Callable[[List[str]], List[str]]] = None,
-            now: Optional[float] = None) -> CleanupResult:
+            now: Optional[float] = None,
+            drop: Optional[Callable[[List[str]], object]] = None) -> CleanupResult:
     """Removes/archives stale slot files per `settings`.
 
     gate: optional context-manager factory; held while files are actually
@@ -233,6 +244,9 @@ def cleanup(settings: Settings, dry_run: bool = False,
     session->slot map (proxy). Without it, session_slots.json is pruned
     directly on disk.
 
+    drop: optional callable told which MLX session caches were removed
+    (the proxy asks the MLX worker to forget its in-memory copy too).
+
     dry_run: report only -- no file, directory or state change at all.
     """
     if settings.mode == "off":
@@ -241,6 +255,9 @@ def cleanup(settings: Settings, dry_run: bool = False,
         raise ValueError("archive_dir must differ from slot_dir")
 
     candidates = find_stale(settings.slot_dir, settings.max_age_days, now)
+    mlx_dir = getattr(settings, "mlx_dir", None)
+    if mlx_dir is not None and mlx_dir.resolve() != settings.slot_dir.resolve():
+        candidates += find_stale(mlx_dir, settings.max_age_days, now, suffix=".safetensors")
     if dry_run or not candidates:
         return CleanupResult(candidates, [], 0, [], [])
 
@@ -267,13 +284,22 @@ def cleanup(settings: Settings, dry_run: bool = False,
             try:
                 if settings.mode == "delete":
                     f.path.unlink()
+                elif f.path.suffix == ".safetensors":
+                    (settings.archive_dir / "mlx").mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(f.path), str(_archive_target(settings.archive_dir / "mlx", f.path.name)))
                 else:
                     shutil.move(str(f.path), str(_archive_target(settings.archive_dir, f.path.name)))
                 removed.append(StaleFile(f.path, st.st_size, st.st_mtime))
             except OSError as e:
                 errors.append(f"{f.path.name}: {e}")
 
-        fps = [f.path.stem for f in removed]
+        fps = sorted({f.path.stem for f in removed})
+        mlx_fps = [f.path.stem for f in removed if f.path.suffix == ".safetensors"]
+        if drop is not None and mlx_fps:
+            try:
+                drop(mlx_fps)
+            except Exception as e:  # the worker may be down; files are gone anyway
+                errors.append(f"mlx drop: {e!r}")
         if forget is not None:
             dropped = forget(fps)
         else:
@@ -310,6 +336,7 @@ def log_result(settings: Settings, result: CleanupResult, dry_run: bool) -> None
 def start_background(settings: Settings,
                      gate: Optional[Callable[[], "object"]] = None,
                      forget: Optional[Callable[[List[str]], List[str]]] = None,
+                     drop: Optional[Callable[[List[str]], object]] = None,
                      ) -> Optional[threading.Thread]:
     """Daemon thread: one pass at startup, then every interval_hours
     (<= 0 means startup only). Never raises into the proxy."""
@@ -320,7 +347,7 @@ def start_background(settings: Settings,
     def _loop():
         while True:
             try:
-                log_result(settings, cleanup(settings, gate=gate, forget=forget), dry_run=False)
+                log_result(settings, cleanup(settings, gate=gate, forget=forget, drop=drop), dry_run=False)
             except Exception as e:  # never let cleanup kill the proxy
                 _log(f"cleanup pass failed: {e!r}")
             if settings.interval_hours <= 0:
@@ -329,6 +356,7 @@ def start_background(settings: Settings,
 
     _log(f"automatic slot cleanup: mode={settings.mode} max_age_days={settings.max_age_days:g} "
          f"interval_hours={settings.interval_hours:g} slot_dir={settings.slot_dir}"
+         + (f" mlx_dir={settings.mlx_dir}" if getattr(settings, "mlx_dir", None) else "")
          + (f" archive_dir={settings.archive_dir}" if settings.mode == "archive" else ""))
     t = threading.Thread(target=_loop, name="slot-cleanup", daemon=True)
     t.start()
@@ -360,6 +388,9 @@ def add_cli_args(parser: argparse.ArgumentParser, proxy: bool = False) -> None:
         parser.add_argument("--slot-dir", dest="slot_dir", default=None,
                             help="slot save dir (env CARAVAN_SLOT_SAVE_DIR, "
                                  "default ~/.caravan/llama-server/slots)")
+        parser.add_argument("--mlx-dir", dest="mlx_dir", default=None,
+                            help="also clean MLX worker prompt caches (*.safetensors) here "
+                                 "(env CARAVAN_MLX_CACHE_DIR, e.g. ~/.caravan/mlx/prompt-cache)")
 
 
 def overrides_from_args(args: argparse.Namespace) -> dict:
@@ -370,6 +401,7 @@ def overrides_from_args(args: argparse.Namespace) -> dict:
         "interval_hours": getattr(args, "interval_hours", None),
         "slot_dir": getattr(args, "slot_dir", None),
         "state_file": getattr(args, "state_file", None),
+        "mlx_dir": getattr(args, "mlx_dir", None),
     }
 
 

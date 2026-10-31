@@ -9,8 +9,16 @@ flag > env > ~/.caravan/config.json "mlx" > default.
       "python": "~/.caravan/venvs/mlx/bin/python",   # CARAVAN_MLX_PYTHON
       "port": 8092, "host": "127.0.0.1",             # CARAVAN_MLX_PORT / _HOST
       "models": {"qwen3-mlx": "~/.exo/models/mlx-community--Qwen3-30B-A3B-4bit"},
-      "extra_args": ["--prompt-cache-size", "4"]     # CARAVAN_MLX_EXTRA_ARGS (space separated)
+      "extra_args": ["--prompt-cache-size", "4"],    # CARAVAN_MLX_EXTRA_ARGS (space separated)
+      "server": "caravan"                            # CARAVAN_MLX_SERVER: caravan | mlx_lm
     }
+
+v2 (2026-10-31): the default server is Caravan's own MLX worker
+(agent/mlx_worker.py): same OpenAI API as mlx_lm.server, plus a prompt
+cache per proxy session that is reused turn to turn (also for Gemma 4 and
+gpt-oss, whose sliding-window caches mlx_lm.server 0.32.2 can't reuse)
+and saved to / loaded from mlx.cache_dir across restarts. "mlx_lm" keeps
+the plain mlx_lm.server (step a behaviour).
 
 Used two ways:
   * caravan_agent.py --model mlx-community/<name> [--apply]  -> role MLX,
@@ -30,6 +38,8 @@ if str(_PROXY_DIR) not in sys.path:
 import backends  # noqa: E402  (proxy/backends.py: one definition of MLX settings)
 
 DEFAULT_MLX_PYTHON = "~/.caravan/venvs/mlx/bin/python"
+SERVERS = ("caravan", "mlx_lm")
+WORKER = Path(__file__).resolve().parent / "mlx_worker.py"
 is_mlx_model = backends.is_mlx_model
 
 
@@ -46,6 +56,16 @@ def resolve(cfg: dict, overrides: Optional[dict] = None):
     return s, str(Path(python).expanduser()), [str(x) for x in extra]
 
 
+def resolve_server(cfg: dict, overrides: Optional[dict] = None) -> str:
+    overrides = {k: v for k, v in (overrides or {}).items() if v is not None}
+    sec = cfg.get("mlx") if isinstance(cfg.get("mlx"), dict) else {}
+    server = str(overrides.get("server") or os.environ.get("CARAVAN_MLX_SERVER", "").strip()
+                 or sec.get("server") or "caravan").strip().lower().replace("-", "_")
+    if server not in SERVERS:
+        raise ValueError(f"mlx server must be one of {SERVERS}, got {server!r}")
+    return server
+
+
 def build_mlx_command(model: str, cfg: dict, overrides: Optional[dict] = None) -> list:
     """mlx_lm.server command for `model` (an MLX id, alias, or local dir).
     Raises FileNotFoundError when there's no local copy -- Caravan never
@@ -56,5 +76,8 @@ def build_mlx_command(model: str, cfg: dict, overrides: Optional[dict] = None) -
         raise FileNotFoundError(
             f"no local MLX model for {model!r} (looked in {', '.join(s.model_dirs)} "
             "and config mlx.models)")
-    return [python, "-m", "mlx_lm", "server", "--model", path,
-            "--host", s.host, "--port", str(s.port)] + extra
+    if resolve_server(cfg, overrides) == "mlx_lm":
+        return [python, "-m", "mlx_lm", "server", "--model", path,
+                "--host", s.host, "--port", str(s.port)] + extra
+    return [python, str(WORKER), "--model", path, "--host", s.host, "--port", str(s.port),
+            "--cache-dir", str(Path(s.cache_dir).expanduser())] + extra

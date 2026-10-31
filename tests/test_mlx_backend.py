@@ -31,7 +31,8 @@ class FakeMlx:
     or SSE. Knows nothing about slots (404s them, like the real one)."""
 
     def __init__(self):
-        self.bodies, self.paths = [], []
+        self.bodies, self.paths, self.headers, self.cache_calls = [], [], [], []
+        self.worker = False   # True: act like Caravan's MLX worker (agent/mlx_worker.py)
         fake = self
 
         class H(BaseHTTPRequestHandler):
@@ -44,6 +45,19 @@ class FakeMlx:
                 n = int(self.headers.get("Content-Length") or 0)
                 body = json.loads(self.rfile.read(n) or b"{}")
                 fake.paths.append(self.path)
+                fake.headers.append(dict(self.headers))
+                if fake.worker and self.path.startswith("/caravan/cache/"):
+                    op = self.path.rsplit("/", 1)[-1]
+                    fake.cache_calls.append((op, body))
+                    res = ({"dropped": body.get("keys")} if op == "drop"
+                           else {"result": {"restore": "restored", "save": "saved"}[op]})
+                    out = json.dumps(res).encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(out)))
+                    self.end_headers()
+                    self.wfile.write(out)
+                    return
                 if not self.path.startswith("/v1/"):
                     self.send_response(404)
                     self.send_header("Content-Length", "0")
@@ -126,10 +140,19 @@ class SettingsTest(unittest.TestCase):
         import render_mlx_plist
         d = _mlx_model_dir(self.root, "mlx-community/gemma-4-26b-a4b-it-4bit")
         cfg = {"mlx": {"model_dirs": [str(self.root)], "python": "/venv/bin/python",
-                       "extra_args": ["--prompt-cache-size", "4"]}}
+                       "extra_args": ["--prompt-cache-size", "4"], "cache_dir": "/c"}}
+        # v2 default: Caravan's MLX worker (per-session prompt cache, saved under cache_dir)
         cmd = mlx_backend.build_mlx_command("mlx-community/gemma-4-26b-a4b-it-4bit", cfg, {"port": 8192})
+        self.assertEqual(cmd, ["/venv/bin/python", str(mlx_backend.WORKER), "--model", str(d),
+                               "--host", "127.0.0.1", "--port", "8192", "--cache-dir", "/c",
+                               "--prompt-cache-size", "4"])
+        # step-a behaviour stays one setting away
+        cmd = mlx_backend.build_mlx_command("mlx-community/gemma-4-26b-a4b-it-4bit", cfg,
+                                            {"port": 8192, "server": "mlx_lm"})
         self.assertEqual(cmd, ["/venv/bin/python", "-m", "mlx_lm", "server", "--model", str(d),
                                "--host", "127.0.0.1", "--port", "8192", "--prompt-cache-size", "4"])
+        with self.assertRaises(ValueError):
+            mlx_backend.build_mlx_command("mlx-community/gemma-4-26b-a4b-it-4bit", cfg, {"server": "x"})
         with self.assertRaises(FileNotFoundError):  # never lets mlx_lm download
             mlx_backend.build_mlx_command("mlx-community/not-here", cfg)
         out = self.root / "p.plist"
@@ -138,7 +161,7 @@ class SettingsTest(unittest.TestCase):
                 render_mlx_plist.main(["mlx-community/gemma-4-26b-a4b-it-4bit", "-o", str(out)])
         pl = plistlib.loads(out.read_bytes())
         self.assertEqual(pl["Label"], "com.caravan.mlx-server")
-        self.assertEqual(pl["ProgramArguments"][:4], ["/venv/bin/python", "-m", "mlx_lm", "server"])
+        self.assertEqual(pl["ProgramArguments"][:2], ["/venv/bin/python", str(mlx_backend.WORKER)])
 
 
 class ProxyRoutingTest(ProxyTestBase):
@@ -185,6 +208,33 @@ class ProxyRoutingTest(ProxyTestBase):
         # same session again -> still pinned by fingerprint, now "warm"
         self.post({"model": "mlx-community/Qwen3-30B-A3B-4bit", "messages": self.msgs("x" * 200)})
         self.assertIn("(warm;", self.stderr.getvalue())
+
+    def test_mlx_worker_session_cache_restore_save(self):
+        """v2: with Caravan's MLX worker upstream, the proxy sends the session
+        fingerprint as X-Caravan-Session, restores before and saves after."""
+        self.mlx.worker = True
+        r, data = self.post({"model": "mlx-community/Qwen3-30B-A3B-4bit", "messages": self.msgs("z" * 200)})
+        self.assertEqual(r.status, 200)
+        fp = self.spp.session_fingerprint({"messages": self.msgs("z" * 200)})
+        self.assertTrue(fp)
+        comp = [h for p, h in zip(self.mlx.paths, self.mlx.headers) if p.startswith("/v1/")]
+        hdr = {k.lower(): v for k, v in comp[-1].items()}
+        self.assertEqual(hdr.get("x-caravan-session"), fp)
+        self.assertEqual(self.mlx.cache_calls, [("restore", {"key": fp}), ("save", {"key": fp})])
+        log = self.stderr.getvalue()
+        self.assertIn("cache=mlx-restored (cold; per-session MLX prompt cache)", log)
+        self.assertIn(f"mlx fp={fp} turn 1: slot save mlx-saved", log)
+        self.assertEqual(self.spp.ROUTER.mlx.drop([fp]), f"mlx-dropped {[fp]}")
+        # the llama.cpp side never saw any of it
+        self.assertEqual(self.fake.calls, [])
+
+    def test_mlx_save_every_n_turns(self):
+        self.mlx.worker = True
+        self.spp.configure(self.spp.SETTINGS._replace(save_every_n_turns=2))
+        for _ in range(3):
+            self.post({"model": "mlx-community/Qwen3-30B-A3B-4bit", "messages": self.msgs("w" * 200)})
+        self.assertEqual([op for op, _ in self.mlx.cache_calls].count("save"), 1)
+        self.assertIn("slot save skipped (every 2)", self.stderr.getvalue())
 
     def test_gguf_model_still_goes_to_llama(self):
         r, _ = self.post({"model": "qwen3:30b", "messages": self.msgs("y" * 200)})

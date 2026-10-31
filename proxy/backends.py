@@ -52,10 +52,12 @@ Step (b), not built yet -- MLX prompt-cache persistence. Notes for it:
     offset/keep state in the cache meta_state; test those models first,
     since that's exactly where llama.cpp's restore broke.
 """
+import json
 import os
 from pathlib import Path
 from typing import NamedTuple, Optional
 
+DEFAULT_MLX_CACHE_DIR = "~/.caravan/mlx/prompt-cache"
 DEFAULT_MLX_PORT = 8092
 DEFAULT_MLX_PREFIXES = ("mlx-community/",)
 DEFAULT_MLX_MODEL_DIRS = ("~/.exo/models", "~/.caravan/models/mlx")
@@ -68,6 +70,7 @@ class MlxSettings(NamedTuple):
     model_prefixes: tuple
     models: dict          # alias/id -> local path
     model_dirs: tuple
+    cache_dir: str = DEFAULT_MLX_CACHE_DIR   # worker's <fp>.safetensors (slot cleanup scans it)
 
 
 def _as_bool(v) -> bool:
@@ -111,6 +114,7 @@ def resolve_mlx_settings(cfg: dict, overrides: Optional[dict] = None) -> MlxSett
         model_prefixes=_as_list(pick("model_prefixes", "CARAVAN_MLX_PREFIXES", DEFAULT_MLX_PREFIXES)),
         models={str(k): str(v) for k, v in models.items()},
         model_dirs=_as_list(pick("model_dirs", "CARAVAN_MLX_MODEL_DIRS", DEFAULT_MLX_MODEL_DIRS)),
+        cache_dir=str(pick("cache_dir", "CARAVAN_MLX_CACHE_DIR", DEFAULT_MLX_CACHE_DIR)),
     )
 
 
@@ -187,11 +191,55 @@ class MlxBackend(Backend):
 
     # Step (b) seam: these become real once an MLX prompt-cache save/
     # restore endpoint exists (see module docstring).
+    # Step (b), 2026-10-31: Caravan's MLX worker (agent/mlx_worker.py)
+    # keeps one prompt cache per session, keyed by the proxy's session
+    # fingerprint (sent as X-Caravan-Session), and saves/loads it as
+    # <fp>.safetensors -- the llama.cpp <fp>.bin semantics. A plain
+    # mlx_lm.server 404s these endpoints, which reads as "mlx-noop".
+    SESSION_HEADER = "X-Caravan-Session"
+    CACHE_TIMEOUT = 120.0
+
+    def session_headers(self, fingerprint: Optional[str]) -> dict:
+        return {self.SESSION_HEADER: fingerprint} if fingerprint else {}
+
+    def _cache_call(self, op: str, payload: dict):
+        import http.client
+        host, port = self.address()
+        try:
+            conn = http.client.HTTPConnection(host, port, timeout=self.CACHE_TIMEOUT)
+            try:
+                body = json.dumps(payload).encode("utf-8")
+                conn.request("POST", f"/caravan/cache/{op}", body=body,
+                             headers={"Content-Type": "application/json",
+                                      "Content-Length": str(len(body))})
+                r = conn.getresponse()
+                data = r.read()
+                if r.status != 200:
+                    return None
+                return json.loads(data or b"{}")
+            finally:
+                conn.close()
+        except (OSError, ValueError, Exception):
+            return None
+
     def restore(self, fingerprint: Optional[str]) -> str:
-        return "mlx-noop"
+        if not fingerprint:
+            return "mlx-noop"
+        j = self._cache_call("restore", {"key": fingerprint})
+        return f"mlx-{j['result']}" if isinstance(j, dict) and j.get("result") else "mlx-noop"
 
     def save(self, fingerprint: Optional[str]) -> str:
-        return "mlx-noop"
+        if not fingerprint:
+            return "mlx-noop"
+        j = self._cache_call("save", {"key": fingerprint})
+        return f"mlx-{j['result']}" if isinstance(j, dict) and j.get("result") else "mlx-noop"
+
+    def drop(self, fingerprints) -> str:
+        fps = [f for f in fingerprints if f]
+        if not fps:
+            return "mlx-noop"
+        j = self._cache_call("drop", {"keys": fps})
+        return f"mlx-dropped {j.get('dropped')}" if isinstance(j, dict) else "mlx-noop"
 
 
 class Router:

@@ -188,9 +188,17 @@ class ProxyWiringTest(unittest.TestCase):
             old.write_bytes(b"x")
             t = time.time() - 40 * DAY
             os.utime(old, (t, t))
+            # v2: the MLX worker's prompt caches age out the same way.
+            mlxd = d / "mlx-cache"
+            mlxd.mkdir()
+            old_mlx, new_mlx = mlxd / "cccc.safetensors", mlxd / "dddd.safetensors"
+            old_mlx.write_bytes(b"x")
+            new_mlx.write_bytes(b"x")
+            os.utime(old_mlx, (t, t))
             env = dict(CLEAN_ENV, CARAVAN_PROXY_STATE_FILE=str(state),
                        CARAVAN_SLOT_SAVE_DIR=str(slots), CARAVAN_CONFIG=str(d / "none.json"),
-                       CARAVAN_SLOT_CLEANUP_INTERVAL_HOURS="0")
+                       CARAVAN_SLOT_CLEANUP_INTERVAL_HOURS="0", CARAVAN_MLX_CACHE_DIR=str(mlxd),
+                       CARAVAN_MLX_PORT="1")
             with mock.patch.dict(os.environ, env):
                 sys.modules.pop("slot_pin_proxy", None)
                 with contextlib.redirect_stderr(io.StringIO()):
@@ -204,6 +212,8 @@ class ProxyWiringTest(unittest.TestCase):
                     spp.completion_fifo.release(ticket)
                     thread.join(timeout=5)
                 self.assertFalse(old.exists())
+                self.assertFalse(old_mlx.exists())
+                self.assertTrue(new_mlx.exists())
                 self.assertEqual(json.loads(state.read_text())["assignments"], {"bbbb": 1})
                 self.assertNotIn("aaaa", spp._warm_this_run)
                 sys.modules.pop("slot_pin_proxy", None)
