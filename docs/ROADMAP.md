@@ -201,6 +201,45 @@ Gaps on the Caravan side this would expose:
 Fixing these also helps other remote clients, such as a 3D-printed AI
 object on the home network.
 
+### Beating the turn-taking in the split
+
+Today the halves take turns: for each token, Packer 1 runs its layers,
+then the lead runs its layers and picks the token, and only then can
+Packer 1 start the next one. Each Mini sits idle about half the time.
+That's part of why a split chat writes 28–42% slower than one Mini
+(the rest is the per-pass overhead in the parked table below). Ideas,
+simplest first:
+
+1. **Run several chats at once.** While the lead finishes chat A's token,
+   Packer 1 already works on chat B's, and they swap. Both Minis stay
+   busy, so total throughput across chats nearly doubles; a single chat
+   is no faster. Needs the worker to keep two chats in flight and the
+   proxy to stop running MLX requests strictly one at a time.
+2. **Chunked reading.** Cut a long prompt into chunks and read them like
+   an assembly line: Packer 1 reads chunk 2 while the lead reads chunk 1.
+   Faster long-prompt reads (time to first token); writing is unchanged.
+3. **Guess ahead (speculative decoding).** A small draft model on the
+   lead guesses the next few tokens; the string then checks all of them
+   in one pass (Packer 1 then the lead), keeping the ones that match.
+   One round trip can yield several tokens, so it also hides the per-pass
+   overhead. Output is identical to normal decoding. Needs a draft model
+   that shares the tokenizer (for example a small Qwen3 for Qwen3 30B) and
+   memory for it on the lead.
+4. **Split each layer across both Minis (tensor parallel).** Both Minis
+   work on every layer at the same time instead of taking turns. But it
+   needs two exchanges per layer (dozens per token instead of one), so it
+   lives or dies on the cable's latency; over Thunderbolt 4 TCP it may
+   cost more than it saves.
+5. **Uneven layer split.** Move the cut so both halves take the same time
+   (the lead also does the output layer and sampling, so it is usually
+   the slower half). Small win on its own; it matters most combined with
+   1 or 2, where the slower half sets the pace. Already possible with
+   `--split-packer-layers K`; needs measuring per model.
+
+**Recommendation:** for a single chat, try 3 (guess ahead) first. For
+agents or several users sending requests at once, do 1 (several chats at
+once).
+
 ## Deferred / parked
 
 Things we chose not to do now, so they don't get lost. Each has why it's
@@ -227,7 +266,7 @@ list above point to it.
 | jaccl / RDMA over Thunderbolt | Needs Thunderbolt 5 (M4 Pro/Max); our Minis are Thunderbolt 4. | If a Thunderbolt 5 Mac joins. |
 | GPT-OSS 120B split across two Minis | Needs a third Mini or more memory. The two Minis have about 2 × 19 GB of GPU memory. The stock build is 63.4 GB. Checked 2026-10-31 for heavier-compressed builds: every GGUF quant is 62.6–66 GB, even Q2_K and IQ1_S, because the experts stay in MXFP4. The smallest MLX build is `jesusoctavioas/gpt-oss-120b-mlx-2Bit` at 36.6 GB, which would be about 18.3 GB of weights per Mini, under 1 GB short of what a stage needs with chat memory (our stages peak 1.5–2.2 GB above their weights). `manjunathshiva/gpt-oss-120b-tq3a-tq2e-g32` (37.7 GB) uses a TurboQuant mode that stock mlx can't load. Pruned "REAP" 58B variants are different models. So GPT-OSS's bigger brother in v3 is the 20B at 8-bit. | When a third Mini (or a bigger-memory Mac) joins, or a ≤ 32 GB 120B build appears. |
 | Split link is unauthenticated | Thunderbolt-only cable between two trusted Macs. | Before the split runs over LAN/Tailscale. |
-| No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token, about as much as the whole model on one Mac, so the time is fixed per-pass overhead (graph build, sync), not compute or the cable (<1 ms). | After v3 merges: overlap the next token's packer pass with the lead (async eval), and try compiling each stage's graph. |
+| No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token, about as much as the whole model on one Mac, so the time is fixed per-pass overhead (graph build, sync), not compute or the cable (<1 ms). The lead and Packer 1 take turns, so each sits idle half the time. | After v3 merges. Ideas and a recommendation: "Beating the turn-taking in the split" under Possible future directions. Also try compiling each stage's graph. |
 | `--kv-bits` with the split | Untested. | With the 8-bit chat memory item. |
 | More than two stages (one lead, several packers) | Two Macs today. | When a third Mac joins; needs re-planning of the cut and of split downloads. |
 | Split download used for one model only | Qwen3 30B 8-bit ran from split downloads. For Gemma 4 8-bit and GPT-OSS 20B 8-bit, the lead downloaded its files plus the packer-only ones and copied them to the packer over Thunderbolt (one internet download instead of two). | When split download is wired into the agent (Next #3). |
