@@ -68,8 +68,8 @@ re-measured on two Macs yet.
 |---|---|---|
 | Writing | 4.23 tok/s first run; ~3.8–4.5 typical | 6.1 tok/s (6.09 via the Python agent, 6.03 via the C++ binary) |
 | Reading | 15.5 tok/s first run; ~65–100 tok/s on long real prompts | 48.5 tok/s on a 149-token prompt |
-| Model load, tail cache cold | 7–11 min | 29–39 s |
-| Model load, tail cache warm (`rpc-server --cache`) | 53 s; 34 s for a full scripted tail restart | – |
+| Model load, packer cache cold | 7–11 min | 29–39 s |
+| Model load, packer cache warm (`rpc-server --cache`) | 53 s; 34 s for a full scripted packer restart | – |
 
 RDMA over Thunderbolt isn't available on these Macs (it needs
 Thunderbolt 5: M4 Pro/Max or M3 Ultra), so the Thunderbolt numbers are
@@ -227,8 +227,8 @@ GPT-OSS, 61–67 ms for Qwen3, and 70–96 ms for Gemma 4.
 ## v2.1 vs v3: one Mac vs two Macs (Oct 31, MLX)
 
 v2.1 runs the whole model on one Mac mini. v3 splits it across both:
-the front Mac runs the embeddings and the first half of the layers, the
-head Mac runs the second half, the final norm, `lm_head` and sampling,
+the packer Mac runs the embeddings and the first half of the layers, the
+lead Mac runs the second half, the final norm, `lm_head` and sampling,
 and they talk over one TCP connection on the Thunderbolt cable. Both
 variants were run in one session (10:08–10:35 CDT; bigger brothers
 10:38–11:05 CDT), with exo paused on both Macs. Each Mac loads from its
@@ -261,7 +261,7 @@ All 16k runs that fit found the code word. Restarts restored from disk
 
 **Where the time goes (v3, per token written):**
 
-| | front | cable | head | whole model on one Mac (v2.1) | sent per token |
+| | packer | cable | lead | whole model on one Mac (v2.1) | sent per token |
 |---|---|---|---|---|---|
 | Qwen3 30B 4-bit | 16.6 ms | 0.72 ms | 16.3 ms | 19.6 ms | 5.4 KB |
 | Gemma 4 26B 4-bit | 17.5 ms | 0.78 ms | 18.8 ms | 24.2 ms | 7.4 KB |
@@ -299,7 +299,7 @@ across both Macs. None of the bigger ones fits on one 24 GB Mac.
 
 - Qwen3 30B 8-bit fits a 16k chat at 18.1 GB per Mac, close to the
   ~19 GB GPU limit, so that's about the ceiling for this pair of Macs. It
-  writes 30% slower than 4-bit (front 23.5 ms + cable 0.81 ms + head
+  writes 30% slower than 4-bit (packer 23.5 ms + cable 0.81 ms + lead
   24.0 ms per token).
 - Qwen3.6 35B-A3B (hybrid attention, `qwen3_5_moe`) runs, but it doesn't
   reuse the chat: its linear-attention layers can't be rewound and the
@@ -318,8 +318,8 @@ across both Macs. None of the bigger ones fits on one 24 GB Mac.
   experts, so the 8-bit build is mostly a re-encode; don't expect much
   quality gain from it.
 - Qwen3 30B 8-bit ran from split downloads: each Mac had only its own
-  shard files (head 16.65 GB, front 21.09 GB, of 32.44 GB). Gemma 4 8-bit and GPT-OSS
-  20B 8-bit were downloaded on EXO1 and EXO2's front files were copied over
+  shard files (lead 16.65 GB, packer 21.09 GB, of 32.44 GB). Gemma 4 8-bit and GPT-OSS
+  20B 8-bit were downloaded on EXO1 and EXO2's packer files were copied over
   Thunderbolt (planned split: Gemma 22.75 / 15.59 of 27.95 GB, GPT-OSS
   16.98 / 15.8 of 22.23 GB).
 

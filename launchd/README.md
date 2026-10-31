@@ -12,10 +12,10 @@ node, never both:
   --cache` itself. Spawning `llama-server` from the agent's Python also
   avoids macOS's Local Network permission problem; see "Local Network
   permission" below.
-- **Manual per role:** `com.caravan.llama-server.plist` on the head and
-  `com.caravan.rpc-server.plist` on the tail.
+- **Manual per role:** `com.caravan.llama-server.plist` on the lead and
+  `com.caravan.rpc-server.plist` on the packer.
 
-The proxy plist is needed on the head in both cases.
+The proxy plist is needed on the lead in both cases.
 
 | plist | machine | what |
 |---|---|---|
@@ -49,7 +49,7 @@ matters on both nodes. Clone/place the repo at the same path
 ```sh
 mkdir -p ~/Library/Logs/caravan
 launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.agent.plist
-# head only:
+# lead only:
 launchctl bootstrap gui/$(id -u) ~/dev/caravan/launchd/com.caravan.slot-pin-proxy.plist
 ```
 
@@ -95,13 +95,13 @@ launchctl kickstart -k gui/$(id -u)/com.caravan.<name>
 
 See the main [README's Operations section](../README.md#operations) for
 restart caveats (for example, never restart `rpc-server` while
-`llama-server` is loading the model; restart the head after the tail).
+`llama-server` is loading the model; restart the lead after the packer).
 
 ## Local Network permission (macOS)
 
 macOS blocks LAN connections from processes that don't have the "Local
 Network" privacy permission. A `llama-server` started directly by launchd
-can't be granted it, so it fails to reach a tail on a LAN or Thunderbolt
+can't be granted it, so it fails to reach a packer on a LAN or Thunderbolt
 address (Tailscale addresses aren't affected). The agent's Python can be
 granted the permission, and the `llama-server` it spawns inherits it. This
 is one reason the agent is the recommended setup. Background: docs/LOG.md,
@@ -154,7 +154,7 @@ upgraded to the Thunderbolt path when it answers) -- it needs
 caravan-agent's health endpoint running on node-b. Otherwise pass
 `--rpc host:port`, or set `CARAVAN_RPC_ADDR` / `"llama_server": {"rpc":
 ...}`. Every tuning flag (`--n-slots`, `--ubatch-size`, ...) is accepted
-too, and the plist is rendered by the same `build_head_command()` the
+too, and the plist is rendered by the same `supervisor.build_head_command()` the
 agent uses, so they can't drift. The tool never touches launchd or
 `~/Library/LaunchAgents`; after writing the file, re-bootstrap as in
 "Restart after editing a plist" above. Note that changing `-ctk/-ctv`

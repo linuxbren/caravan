@@ -23,10 +23,15 @@ and saved to / loaded from mlx.cache_dir across restarts. "mlx_lm" keeps
 the plain mlx_lm.server (step a behaviour).
 
 v3 (2026-10-31): a model can be split across two Minis (agent/mlx_split.py,
-docs/MLX-SPLIT.md). "mlx": {"split": {"front": "169.254.x.y:5560",
-"front_layers": 24}} (or CARAVAN_MLX_SPLIT_FRONT / _FRONT_LAYERS) makes the
-worker on this Mini the *head* (last layers + sampling + HTTP API) and
-build_front_command() gives the matching command for the other Mini.
+docs/MLX-SPLIT.md). "mlx": {"split": {"packer": "169.254.x.y:5560",
+"packer_layers": 24}} (or CARAVAN_MLX_SPLIT_PACKER / _PACKER_LAYERS) makes the
+worker on this Mini the *lead* (last layers + sampling + HTTP API) and
+build_packer_command() gives the matching command for Packer 1, the other
+Mini. Naming: the lead is the Mini you talk to; packers are numbered in
+layer order (Packer 1 runs the first layers); together they're the string.
+Deprecated aliases still accepted: config "front"/"front_layers", env
+CARAVAN_MLX_SPLIT_FRONT / _FRONT_LAYERS, build_head_command /
+build_front_command, roles "head"/"front".
 
 Used two ways:
   * caravan_agent.py --model mlx-community/<name> [--apply]  -> role MLX,
@@ -93,55 +98,73 @@ def build_mlx_command(model: str, cfg: dict, overrides: Optional[dict] = None) -
 
 def resolve_split(cfg: dict, overrides: Optional[dict] = None) -> Optional[dict]:
     """{"front": "HOST:PORT", "front_layers": int|None} or None (no split).
-    flag (overrides["split_front"]) > env CARAVAN_MLX_SPLIT_FRONT > config mlx.split."""
+    "front" is Packer 1's address (internal key kept from before the rename).
+    flag (overrides["split_packer"], deprecated "split_front") > env
+    CARAVAN_MLX_SPLIT_PACKER (deprecated CARAVAN_MLX_SPLIT_FRONT) > config
+    mlx.split.packer (deprecated mlx.split.front)."""
     overrides = {k: v for k, v in (overrides or {}).items() if v is not None}
     sec = cfg.get("mlx") if isinstance(cfg.get("mlx"), dict) else {}
     sp = sec.get("split") if isinstance(sec.get("split"), dict) else {}
-    front = (overrides.get("split_front") or os.environ.get("CARAVAN_MLX_SPLIT_FRONT", "").strip()
-             or sp.get("front") or "")
+    front = (overrides.get("split_packer") or overrides.get("split_front")
+             or os.environ.get("CARAVAN_MLX_SPLIT_PACKER", "").strip()
+             or os.environ.get("CARAVAN_MLX_SPLIT_FRONT", "").strip()
+             or sp.get("packer") or sp.get("front") or "")
     front = str(front).strip()
     if not front or front.lower() in ("off", "none", "0"):
         return None
     host, _, port = front.rpartition(":")
     if not host or not port.isdigit():
-        raise ValueError(f"mlx split front must be HOST:PORT, got {front!r}")
-    k = (overrides.get("split_front_layers") or os.environ.get("CARAVAN_MLX_SPLIT_FRONT_LAYERS", "").strip()
-         or sp.get("front_layers"))
+        raise ValueError(f"mlx split packer must be HOST:PORT, got {front!r}")
+    k = (overrides.get("split_packer_layers") or overrides.get("split_front_layers")
+         or os.environ.get("CARAVAN_MLX_SPLIT_PACKER_LAYERS", "").strip()
+         or os.environ.get("CARAVAN_MLX_SPLIT_FRONT_LAYERS", "").strip()
+         or sp.get("packer_layers") or sp.get("front_layers"))
     k = int(k) if k not in (None, "") else None
     if k is not None and k < 1:
-        raise ValueError("mlx split front_layers must be >= 1")
+        raise ValueError("mlx split packer_layers must be >= 1")
     return {"front": front, "front_layers": k}
 
 
+_ROLE = {"head": "lead", "lead": "lead", "front": "packer", "packer": "packer"}
+
+
 def build_split_args(split: Optional[dict], role: str) -> list:
+    """Worker flags for `role` ("lead" or "packer"; "head"/"front" accepted)."""
     if not split:
         return []
-    out = ["--split-role", role, "--split-peer" if role == "head" else "--split-listen", split["front"]]
+    role = _ROLE[role]
+    out = ["--split-role", role, "--split-peer" if role == "lead" else "--split-listen", split["front"]]
     if split.get("front_layers"):
-        out += ["--split-front-layers", str(split["front_layers"])]
+        out += ["--split-packer-layers", str(split["front_layers"])]
     return out
 
 
-def build_head_command(model: str, cfg: dict, overrides: Optional[dict] = None) -> list:
-    """build_mlx_command plus the head flags when a split is configured
+def build_lead_command(model: str, cfg: dict, overrides: Optional[dict] = None) -> list:
+    """build_mlx_command plus the lead flags when a split is configured
     (unchanged single-Mini command otherwise)."""
     cmd = build_mlx_command(model, cfg, overrides)
     split = resolve_split(cfg, overrides)
     if split and resolve_server(cfg, overrides) == "mlx_lm":
         raise ValueError("an MLX split needs the Caravan worker (mlx.server = caravan)")
-    return cmd + build_split_args(split, "head")
+    return cmd + build_split_args(split, "lead")
 
 
-def build_front_command(model_path: str, cfg: dict, overrides: Optional[dict] = None,
+build_head_command = build_lead_command      # deprecated name
+
+
+def build_packer_command(model_path: str, cfg: dict, overrides: Optional[dict] = None,
                         python: Optional[str] = None, worker: Optional[str] = None,
                         cache_dir: Optional[str] = None) -> list:
-    """Command to run on the *other* Mini: the front stage listening on the
-    Thunderbolt address from mlx.split.front. model_path / python / worker
+    """Command to run on the *other* Mini: Packer 1, listening on the
+    Thunderbolt address from mlx.split.packer. model_path / python / worker
     are paths on that Mini (it has its own copy of the model)."""
     split = resolve_split(cfg, overrides)
     if not split:
-        raise ValueError("no mlx split configured (mlx.split.front)")
+        raise ValueError("no mlx split configured (mlx.split.packer)")
     s, py, _ = resolve(cfg, overrides)
     return ([python or py, worker or str(WORKER), "--model", model_path,
              "--cache-dir", cache_dir or str(Path(s.cache_dir).expanduser())]
-            + build_split_args(split, "front"))
+            + build_split_args(split, "packer"))
+
+
+build_front_command = build_packer_command   # deprecated name

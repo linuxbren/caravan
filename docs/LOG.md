@@ -2409,12 +2409,12 @@ Design note: [MLX-SPLIT.md](MLX-SPLIT.md). Numbers:
 - **Why our own pipeline.** `mx.distributed`'s ring backend failed over
   Thunderbolt on messages of 2 MB and up; jaccl (RDMA) needs Thunderbolt 5;
   mlx-lm's pipeline sharding only covers Qwen3. So v3 splits by layers
-  itself: the front Mac runs the embeddings and layers 0..K-1 and sends
-  the hidden state over one TCP connection; the head Mac runs the rest,
+  itself: the packer Mac runs the embeddings and layers 0..K-1 and sends
+  the hidden state over one TCP connection; the lead Mac runs the rest,
   samples, and serves the HTTP API. Protocol `caravan-split-1`.
 - **Chat memory on both halves.** Each stage keeps its own per-session
   cache, in lockstep, and saves it to its own disk. A restore needs both
-  halves or neither. The head notices a restarted front (new epoch) and
+  halves or neither. The lead notices a restarted packer (new epoch) and
   re-reads instead of trusting stale state.
 - **Results (one session).** Memory per Mac roughly halves; Qwen3 30B now
   holds a 16k chat on MLX. Writing is 28–42% slower and reading 16–25%
@@ -2430,18 +2430,37 @@ Design note: [MLX-SPLIT.md](MLX-SPLIT.md). Numbers:
   chat every turn (hybrid attention; parked).
 - **Split download (prototype).** `agent/mlx_split_fetch.py` reads
   `model.safetensors.index.json` and fetches only this stage's shard
-  files plus config and tokenizer. Qwen3 30B 8-bit: head 16.65 GB, front
+  files plus config and tokenizer. Qwen3 30B 8-bit: lead 16.65 GB, packer
   21.09 GB, instead of 32.44 GB each. The worker refuses to start a stage
   whose shards are missing.
-- **How the tail gets its weights today.** MLX v3: each Mac loads from its
+- **How the packer gets its weights today.** MLX v3: each Mac loads from its
   own local copy, and each stage only reads its own layers' weights (lazy
   load). The copies get there either by a full download per Mac, by a
   one-time copy over the cable from the other Mac, or (new) by the split
-  download. Nothing is streamed from head to front at load time.
-  llama.cpp (GGUF): the head needs the whole GGUF on disk and sends the
-  tail's tensors over RPC at load; with `rpc-server --cache` (our build
-  has it, and the tail plist uses it) the tail keeps them on disk by hash,
+  download. Nothing is streamed from lead to packer at load time.
+  llama.cpp (GGUF): the lead needs the whole GGUF on disk and sends the
+  packer's tensors over RPC at load; with `rpc-server --cache` (our build
+  has it, and the packer plist uses it) the packer keeps them on disk by hash,
   so only the first load crosses the wire.
 - **Fixes along the way.** Qwen3.6 (`qwen3_5_moe`) built its cache by
   walking all layers after the other stage's layers were dropped; the
   stage now builds a prototype cache first and copies it.
+
+## 2026-10-31: naming: lead, packers, string
+
+- Renamed the roles in a split: the **lead** is the Mac you talk to (API,
+  last layers, picks each token); the **packers** are the other Macs,
+  numbered in layer order (Packer 1 runs the first layers); the whole
+  group is the **string**. Replaces "head" and "front" (MLX v3) and
+  "tail" (llama.cpp RPC) in docs, logs and the command line. Older log
+  entries above keep the old words.
+- New names: `--split-role lead|packer`, `--split-packer-layers`,
+  `mlx.split.packer` / `packer_layers`, `CARAVAN_MLX_SPLIT_PACKER` /
+  `_PACKER_LAYERS`, `build_lead_command()` / `build_packer_command()`,
+  `mlx_split_fetch.py --role lead|packer --packer-layers`. The old names
+  stay as deprecated aliases; the new name wins when both are set.
+- `GET /caravan/split` adds `lead` and `packers` and keeps `head` and
+  `front`. The saved-cache stage id (`head 24-47 of 48`) is unchanged, so
+  existing caches still load.
+- Added a "possible future direction" to the roadmap: Terminal Delight as
+  a terminal-first console for Caravan (not scheduled).

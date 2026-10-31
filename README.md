@@ -53,8 +53,8 @@ next to GGUF models. Each Mac works out its own role.
   keeps per-session caches that also work for sliding-window models
   (Gemma 4, GPT-OSS), returns GPT-OSS's reasoning separately from the
   answer, and locks the model in GPU memory at startup.
-- **Two-Mac split for GGUF**: llama.cpp RPC. The head Mac serves the model
-  and the tail Mac lends its GPU. Over Thunderbolt the tail loads its part
+- **Two-Mac split for GGUF**: llama.cpp RPC. The lead Mac serves the model
+  and the packer Mac lends its GPU. Over Thunderbolt the packer loads its part
   in 29–39 s, and `rpc-server --cache` makes later loads faster.
 - **Automatic KV cache type**: f16 when it fits under the GPU memory
   limit, otherwise 8-bit (q8_0). The decision and its estimate are logged.
@@ -65,14 +65,14 @@ next to GGUF models. Each Mac works out its own role.
   client hangs up is cancelled.
 - **Self-organizing agent** (`agent/caravan_agent.py`): finds peers over
   mDNS and Tailscale, picks the fastest link (Thunderbolt, then Tailscale,
-  then LAN), decides head or tail (or MLX), and supervises the server.
+  then LAN), decides lead or packer (or MLX), and supervises the server.
 - **launchd services** so everything survives crashes and reboots.
 
 ## Supported backends
 
 | backend | models | runs on | cache reuse | saved across restarts |
 |---|---|---|---|---|
-| llama.cpp `llama-server` (+ `rpc-server` on the tail) | GGUF, from the local Ollama store | one Mac, or split across two over RPC | per-session slot | yes, llama-server slot files |
+| llama.cpp `llama-server` (+ `rpc-server` on the packer) | GGUF, from the local Ollama store | one Mac, or split across two over RPC | per-session slot | yes, llama-server slot files |
 | Caravan MLX worker | MLX safetensors (`mlx-community/...`) from `~/.exo/models` or `~/.caravan/models/mlx` | one Mac (a two-Mac MLX split is on the roadmap) | per-session cache, sliding-window layers included | yes, `.safetensors` per session |
 | plain `mlx_lm.server` (optional, `mlx.server = "mlx_lm"`) | MLX | one Mac | Qwen-style models only | no |
 
@@ -85,7 +85,7 @@ noted.
 | what | before | after |
 |---|---|---|
 | Two Macs over Thunderbolt vs Wi-Fi/LAN, generation (Sep, 16 GB model) | ~3.8–4.5 tok/s | 6.1 tok/s |
-| Tail model load, cold cache, Thunderbolt vs LAN | 7–11 min | 29–39 s |
+| Packer model load, cold cache, Thunderbolt vs LAN | 7–11 min | 29–39 s |
 | llama.cpp, 16k chat, first message after a restart (v0 → v1) | GPT-OSS 46.3 s, Gemma 4 56.1 s | 0.65 s, 0.93 s |
 | llama.cpp reading speed, 4k prompt (v0 → v1) | GPT-OSS 403, Gemma 4 355, Qwen3 338 tok/s | 454, 380, 356 tok/s |
 | MLX, turn 2 of a 4k chat (v1 → v2) | Gemma 4 10.76 s, GPT-OSS 9.16 s | 0.49 s, 0.50 s |
@@ -104,7 +104,7 @@ Requirements:
   proxy is stdlib-only and runs on 3.9+.
 - For GGUF: llama.cpp built from source with `GGML_RPC=ON` and
   `GGML_METAL=ON` at `~/dev/llama.cpp` (Homebrew's build has no RPC), and
-  [Ollama](https://ollama.com) on the head as the model store.
+  [Ollama](https://ollama.com) on the lead as the model store.
 - For MLX: a venv with `mlx-lm` (tested with 0.32.2) at
   `~/.caravan/venvs/mlx`, and the model downloaded locally. Caravan never
   downloads models.
@@ -121,8 +121,8 @@ patch. That base also restores Gemma and GPT-OSS chats after a restart,
 and it's what the v1+ numbers were measured on. The older base used for
 the v0 benchmarks is kept on the `caravan-patches-v0` branch.
 
-**GGUF, split across two Macs.** Pull the model on the head, then run the
-agent on both Macs, starting with the tail:
+**GGUF, split across two Macs.** Pull the model on the lead, then run the
+agent on both Macs, starting with the packer:
 
 ```sh
 ollama pull <model>
@@ -138,7 +138,7 @@ or `~/.caravan/models/mlx/mlx-community--<name>`:
 /opt/homebrew/bin/python3 caravan_agent.py --model mlx-community/<name> --apply
 ```
 
-**Then the proxy, on the head**, and point your client at it:
+**Then the proxy, on the lead**, and point your client at it:
 
 ```sh
 python3 ~/dev/caravan/proxy/slot_pin_proxy.py        # 127.0.0.1:8090
@@ -166,7 +166,7 @@ curl http://127.0.0.1:8091/health          # caravan-agent: node id, stats, fast
 tail -f ~/Library/Logs/caravan/*.log
 ```
 
-- **Never restart the tail's `rpc-server` while the head's `llama-server`
+- **Never restart the packer's `rpc-server` while the lead's `llama-server`
   is running**: llama-server holds a live RPC session and crashes. Use
   `scripts/restart-rpc-server.sh` (it checks the slots are idle, then
   stops, restarts and starts in order).
@@ -195,8 +195,8 @@ tail -f ~/Library/Logs/caravan/*.log
 | `proxy/` | the proxy, backend routing, saved-chat cleanup |
 | `launchd/` | launchd plists and how to install them |
 | `bench/` | benchmark scripts: `improvements/` (v0 → v1), `v2/`, `v2.1/` (same-session A/B) |
-| `cpp/` | experimental single binary (head or tail in-process) |
-| `scripts/` | safe tail restart |
+| `cpp/` | experimental single binary (lead or packer in-process) |
+| `scripts/` | safe packer restart |
 | `tests/` | stdlib `unittest` suite |
 | `docs/` | the documentation above |
 

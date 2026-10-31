@@ -17,16 +17,16 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
      requests are cancelled when the client disconnects, and slots are
      saved to disk.
    - launchd supervision.
-   - The Thunderbolt cable: the tail's cold load went from 7–11 min to
+   - The Thunderbolt cable: the packer's cold load went from 7–11 min to
      29–39 s, and writing from ~4 to 6.1 tok/s.
    - The shard cache, which turned out to be native (`rpc-server --cache`).
 3. **The self-organizing agent.**
-   - mDNS and Tailscale discovery, head and tail roles.
+   - mDNS and Tailscale discovery, lead and packer roles.
    - Automatic Thunderbolt > Tailscale > LAN path choice.
    - Supervision.
    - The root cause of the launchd networking failures: the Local
      Network permission.
-4. **Unified C++ binary (experiment).** Head and tail in one process with
+4. **Unified C++ binary (experiment).** Lead and packer in one process with
    mDNS discovery, proven end to end once.
 
 ### v0: baseline (`45ed2c2`, Oct 30)
@@ -85,11 +85,11 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
      Thunderbolt; jaccl needs Thunderbolt 5; mlx-lm pipeline sharding
      covers only Qwen3. Chosen: Caravan's own layer pipeline over one TCP
      connection.
-   - [x] Head/front worker pair (`--split-role head|front`), Qwen3, Gemma 4
+   - [x] Lead/packer worker pair (`--split-role lead|packer`), Qwen3, Gemma 4
      and GPT-OSS.
    - [x] Per-stage session caches with save/restore on each Mac (both
      halves or neither).
-   - [x] `mlx.split` config and front-command builder; unit tests.
+   - [x] `mlx.split` config and packer-command builder; unit tests.
    - [x] Side-by-side numbers vs v2.1 on one Mac (2026-10-31, one
      session; [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oct-31-mlx)).
      Memory per Mac roughly halves (Qwen3 19.0 → 10.5 GB, Gemma 4 17.1 →
@@ -103,33 +103,33 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
      35B-A3B 5-bit ran as an extra. GPT-OSS only comes in 20B and 120B; no
      120B build fits two Macs with chat room (parked), so its bigger brother
      is the 20B at 8-bit.
-   - [x] Proxy routes MLX requests to the head unchanged (smoke test).
+   - [x] Proxy routes MLX requests to the lead unchanged (smoke test).
    - [ ] Merge to `main` (waiting for review; not pushed).
 3. **Split download (MLX).** Each Mac downloads only its own layers
-   straight from Hugging Face; nothing relayed through the head. Read
+   straight from Hugging Face; nothing relayed through the lead. Read
    `model.safetensors.index.json`, map each node's layer range to its
    shard files, fetch them with `snapshot_download(allow_patterns=...)`
    plus config and tokenizer files. Edge cases: shards that straddle the
    cut (both Macs fetch them), embeddings and `lm_head`, tied embeddings
-   (the head needs the embedding shard too), vision towers (skipped for
-   text-only), and re-planning when more tails join (a new cut means new
+   (the lead needs the embedding shard too), vision towers (skipped for
+   text-only), and re-planning when more packers join (a new cut means new
    shards, and files no longer needed should be reported, not deleted).
-   *Prototype in v3: `agent/mlx_split_fetch.py`. Qwen3 30B 8-bit: the head
-   downloaded 16.65 GB and the front 21.09 GB instead of 32.44 GB each,
+   *Prototype in v3: `agent/mlx_split_fetch.py`. Qwen3 30B 8-bit: the lead
+   downloaded 16.65 GB and the packer 21.09 GB instead of 32.44 GB each,
    and the split loaded from those partial copies. Not yet wired into
    the agent (it's a CLI), and it doesn't re-plan when the cut changes.*
 4. **Split download (GGUF), stage 1: rpc-server's local tensor cache.**
-   With `ggml-rpc-server -c/--cache` the tail keeps the tensors it
+   With `ggml-rpc-server -c/--cache` the packer keeps the tensors it
    receives on disk, keyed by hash, so it only receives its weights over
    the wire the first time. *Checked 2026-10-31: our build has `-c,
-   --cache` and the tail plist already uses it.* What's left: the head
+   --cache` and the packer plist already uses it.* What's left: the lead
    still needs the full GGUF on its own disk and reads all of it.
-5. **Split download (GGUF), stage 2: tail loads its own tensors.** A fork
-   patch so the tail loads its assigned tensors from its own disk instead
-   of the head pushing them. Each tail fetches only its tensors' byte
+5. **Split download (GGUF), stage 2: packer loads its own tensors.** A fork
+   patch so the packer loads its assigned tensors from its own disk instead
+   of the lead pushing them. Each packer fetches only its tensors' byte
    ranges (HTTP Range requests using the tensor offsets in the GGUF
-   header), or uses `gguf-split` shards. Then the head no longer needs the
-   tail's part on disk either.
+   header), or uses `gguf-split` shards. Then the lead no longer needs the
+   packer's part on disk either.
 6. **Per-model profiles.** Today Qwen3 needs hand-tuned worker settings
    (sessions in memory, cache budget, chunk size, cache quantization, when
    to save). The plan:
@@ -158,6 +158,49 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
 12. **Packaging.** Templated launchd plists (no machine-specific paths), an
     install script, and the agent running the proxy itself.
 
+## Possible future directions (not scheduled)
+
+Ideas worth writing down. None is planned or started.
+
+### Terminal Delight as Caravan's console
+
+[Terminal Delight](https://github.com/parker-brown-family/terminal-delight)
+is a Rust terminal for Linux (Omarchy) by Parker Brown. Two of its features
+could make it a terminal-first front end for Caravan instead of a web UI:
+the **Local launcher** (`~/.config/terminal-delight/local-agent.toml`,
+which starts a local agent program in a pane) and **Workbench surfaces**
+(the program writes JSON items under `surfaces/<session>/<pane>/`, which
+the terminal renders next to the pane; see `app/src/surfacefeed.rs`).
+
+Ways to do it, least work first:
+
+1. **An existing CLI in a pane.** `aichat`, `llm` or a short Python loop,
+   pointed at the proxy on port 8090. Works today, no Workbench items.
+2. **A small Caravan chat program, started from the Local launcher
+   (recommended).** It keeps the whole chat and resends it every turn (so
+   the proxy recognizes the session and reuses its cache), streams the
+   reply, and writes Workbench files. For GPT-OSS it would show the
+   reasoning and the answer as separate items.
+3. **Codex through the Local launcher.** Little code, but Codex talks
+   `/v1/responses`, which the proxy passes through without queueing or
+   session pinning, so it would miss Caravan's chat reuse.
+4. **A native Rust chat pane in Terminal Delight.** The nicest result, but
+   it needs Parker to add an HTTP client to the terminal.
+
+Gaps on the Caravan side this would expose:
+
+- The proxy listens on `127.0.0.1` only (`slot_pin_proxy.py`, the
+  `ThreadingHTTPServer` call near the end). Another machine needs a bind
+  option (for example `--listen-host`) or an SSH tunnel.
+- No authentication. Add an optional API key before listening beyond
+  localhost.
+- `/v1/models` should list the MLX models too, not only the llama.cpp ones.
+- Nice to have: a way for a client to find the lead (the Mac you talk
+  to) without a hard-coded address.
+
+Fixing these also helps other remote clients, such as a 3D-printed AI
+object on the home network.
+
 ## Deferred / parked
 
 Things we chose not to do now, so they don't get lost. Each has why it's
@@ -168,7 +211,7 @@ list above point to it.
 |---|---|---|
 | Gemma 4 ~8% short-prompt checkpoint cost (Next #7) | Small, only on short prompts; v3 split work took priority. | After v3 lands; before Gemma 4 becomes the default MLX model. |
 | Qwen3 ~0.15 s drop-previous-chat cost (Next #8) | One-off per big chat, hard to see in use. | With the proxy overhead pass. |
-| MLX worker 6–9 s startup (Known limits) | Only paid on (re)start; the split adds the front's ~2–4 s in parallel. | When the agent restarts workers on model switch (packaging). |
+| MLX worker 6–9 s startup (Known limits) | Only paid on (re)start; the split adds the packer's ~2–4 s in parallel. | When the agent restarts workers on model switch (packaging). |
 | 8-bit MLX chat memory (`--kv-bits 8`, off) | Slower and still didn't fit Qwen3 at 16k on one Mac; untested with the split. | If a split model runs short of memory at long chats. |
 | Per-model profiles (Next #6) | Needs the v3 memory numbers first (they change what fits). | Right after v3. |
 | Proxy overhead trims (Next #8) | 27–96 ms per request, already small next to model time. | With the next proxy release. |
@@ -184,10 +227,10 @@ list above point to it.
 | jaccl / RDMA over Thunderbolt | Needs Thunderbolt 5 (M4 Pro/Max); our Minis are Thunderbolt 4. | If a Thunderbolt 5 Mac joins. |
 | GPT-OSS 120B split across two Minis | Needs a third Mini or more memory. The two Minis have about 2 × 19 GB of GPU memory. The stock build is 63.4 GB. Checked 2026-10-31 for heavier-compressed builds: every GGUF quant is 62.6–66 GB, even Q2_K and IQ1_S, because the experts stay in MXFP4. The smallest MLX build is `jesusoctavioas/gpt-oss-120b-mlx-2Bit` at 36.6 GB, which would be about 18.3 GB of weights per Mini, under 1 GB short of what a stage needs with chat memory (our stages peak 1.5–2.2 GB above their weights). `manjunathshiva/gpt-oss-120b-tq3a-tq2e-g32` (37.7 GB) uses a TurboQuant mode that stock mlx can't load. Pruned "REAP" 58B variants are different models. So GPT-OSS's bigger brother in v3 is the 20B at 8-bit. | When a third Mini (or a bigger-memory Mac) joins, or a ≤ 32 GB 120B build appears. |
 | Split link is unauthenticated | Thunderbolt-only cable between two trusted Macs. | Before the split runs over LAN/Tailscale. |
-| No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token, about as much as the whole model on one Mac, so the time is fixed per-pass overhead (graph build, sync), not compute or the cable (<1 ms). | After v3 merges: overlap the next token's front pass with the head (async eval), and try compiling each stage's graph. |
+| No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token, about as much as the whole model on one Mac, so the time is fixed per-pass overhead (graph build, sync), not compute or the cable (<1 ms). | After v3 merges: overlap the next token's packer pass with the lead (async eval), and try compiling each stage's graph. |
 | `--kv-bits` with the split | Untested. | With the 8-bit chat memory item. |
-| More than two stages (one head, several fronts) | Two Macs today. | When a third Mac joins; needs re-planning of the cut and of split downloads. |
-| Split download used for one model only | Qwen3 30B 8-bit ran from split downloads. For Gemma 4 8-bit and GPT-OSS 20B 8-bit, the head downloaded its files plus the front-only ones and copied them to the front over Thunderbolt (one internet download instead of two). | When split download is wired into the agent (Next #3). |
+| More than two stages (one lead, several packers) | Two Macs today. | When a third Mac joins; needs re-planning of the cut and of split downloads. |
+| Split download used for one model only | Qwen3 30B 8-bit ran from split downloads. For Gemma 4 8-bit and GPT-OSS 20B 8-bit, the lead downloaded its files plus the packer-only ones and copied them to the packer over Thunderbolt (one internet download instead of two). | When split download is wired into the agent (Next #3). |
 | Qwen3.6 35B (hybrid attention) doesn't reuse the chat | Its linear-attention layers can't be rewound, and the template drops the reasoning from earlier replies, so every turn diverges and re-reads the whole chat (11 s at 4k, 53 s at 16k), also after a restart. Same on one Mac. | With per-model profiles: keep the reasoning in the history for hybrid models, or snapshot at the end of the user turn. |
 | Split download: resume and clean-up of interrupted downloads | Prototype; stale `.incomplete` files from killed downloads stay on disk (nothing deleted). | When split download is wired into the agent. |
 | v3 bench hits the worker directly | The proxy path was only smoke-tested (turn 1 cold, turn 2 reused, backend=mlx). | With the next proxy benchmark pass. |
@@ -212,7 +255,7 @@ list above point to it.
 - **The launchd plists contain absolute paths** for one user's home
   directory. Edit them for your machine. The proxy plist's
   `CARAVAN_PINNED_SLOT` is a leftover the proxy no longer reads.
-- **Head selection is "whoever has the model"**: no election, and two Macs
+- **Lead selection is "whoever has the model"**: no election, and two Macs
   that both have it aren't handled. The agent doesn't run the proxy yet.
 - **The C++ binary** hardcodes the model and lacks `--cache`, the health
   server, identity and crash supervision.

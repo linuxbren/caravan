@@ -1,9 +1,12 @@
 """Split download for a two-Mini MLX split (Caravan v3 prototype, 2026-10-31).
 
 Each Mini fetches only the safetensors shards that hold *its* layers,
-straight from Hugging Face -- nothing is relayed through the head.
+straight from Hugging Face -- nothing is relayed through the lead.
 
-    python mlx_split_fetch.py <repo> <local_dir> --role head|front [--front-layers K] [--dry-run]
+    python mlx_split_fetch.py <repo> <local_dir> --role lead|packer [--packer-layers K] [--dry-run]
+
+(--role head|front and --front-layers still work as deprecated aliases.
+Internally the lead is "head" and Packer 1 is "front", as in mlx_split.py.)
 
 How: read config.json + model.safetensors.index.json (small files, fetched
 first), map every weight name to a role, and pass the needed shard files to
@@ -12,8 +15,8 @@ config/tokenizer files.
 
 Weight -> role rules (plan_split() decides the layer ranges, same as the worker):
   * "...layers.<i>." of the language model -> the stage holding layer i
-  * embed_tokens -> front; also head when embeddings are tied (no lm_head)
-  * lm_head and the final norm -> head
+  * embed_tokens -> front (Packer 1); also head (the lead) when embeddings are tied (no lm_head)
+  * lm_head and the final norm -> head (the lead)
   * vision / audio towers -> nobody (the split is text-only) unless --with-vision
   * anything else -> both (safe default)
 Shards are whole files, so a shard that straddles the boundary goes to both
@@ -84,11 +87,16 @@ def file_sizes(repo):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("repo"); ap.add_argument("local_dir")
-    ap.add_argument("--role", choices=("head", "front"), required=True)
-    ap.add_argument("--front-layers", type=int)
+    ap.add_argument("--role", choices=("lead", "packer", "head", "front"), required=True,
+                    help="lead: the Mini you talk to (last layers); packer: Packer 1 (first layers). "
+                         "head/front: deprecated aliases")
+    ap.add_argument("--packer-layers", "--front-layers", dest="front_layers", type=int, metavar="K",
+                    help="layers on Packer 1 (--front-layers: deprecated alias)")
     ap.add_argument("--with-vision", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args(argv)
+    a.role = {"lead": "head", "packer": "front"}.get(a.role, a.role)
+    shown = {"head": "lead", "front": "packer"}[a.role]
     from huggingface_hub import snapshot_download
     d = Path(a.local_dir).expanduser()
     snapshot_download(a.repo, local_dir=str(d), allow_patterns=["config.json", "model.safetensors.index.json"])
@@ -99,13 +107,13 @@ def main(argv=None):
     mine = sorted(p[a.role])
     gb = lambda fs: round(sum(sizes.get(f, 0) for f in fs) / 1e9, 2)  # noqa: E731
     shards = sorted(f for f in sizes if f.endswith(".safetensors"))
-    report = {"repo": a.repo, "role": a.role, "split": p["split"], "tied": p["tied"], "files": mine,
+    report = {"repo": a.repo, "role": shown, "split": p["split"], "tied": p["tied"], "files": mine,
               "shared": sorted(p["shared"]), "my_gb": gb(mine), "full_gb": gb(shards),
               "other_gb": gb(p["head" if a.role == "front" else "front"])}
     print(json.dumps(report), flush=True)
     if not a.dry_run:
         snapshot_download(a.repo, local_dir=str(d), allow_patterns=SMALL + mine)
-        print("FETCHED", a.role, report["my_gb"], "GB of", report["full_gb"], flush=True)
+        print("FETCHED", shown, report["my_gb"], "GB of", report["full_gb"], flush=True)
     return report
 
 

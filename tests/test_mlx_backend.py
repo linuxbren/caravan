@@ -146,11 +146,11 @@ class SettingsTest(unittest.TestCase):
         cfg = {"mlx": {"model_dirs": [str(self.root)], "split": {"front": "169.254.1.2:5560", "front_layers": 20}}}
         head = mb.build_head_command("mlx-community/Qwen3-30B-A3B-4bit", cfg)
         self.assertEqual(head[:len(one)], one)
-        self.assertEqual(head[len(one):], ["--split-role", "head", "--split-peer", "169.254.1.2:5560",
-                                           "--split-front-layers", "20"])
+        self.assertEqual(head[len(one):], ["--split-role", "lead", "--split-peer", "169.254.1.2:5560",
+                                           "--split-packer-layers", "20"])
         front = mb.build_front_command("/m/q", cfg, python="/py", worker="/w.py", cache_dir="/c")
-        self.assertEqual(front, ["/py", "/w.py", "--model", "/m/q", "--cache-dir", "/c", "--split-role", "front",
-                                 "--split-listen", "169.254.1.2:5560", "--split-front-layers", "20"])
+        self.assertEqual(front, ["/py", "/w.py", "--model", "/m/q", "--cache-dir", "/c", "--split-role", "packer",
+                                 "--split-listen", "169.254.1.2:5560", "--split-packer-layers", "20"])
         with mock.patch.dict(os.environ, {"CARAVAN_MLX_SPLIT_FRONT": "off"}):
             self.assertIsNone(mb.resolve_split(cfg))
         with mock.patch.dict(os.environ, {"CARAVAN_MLX_SPLIT_FRONT": "10.0.0.9:7000"}):
@@ -163,6 +163,23 @@ class SettingsTest(unittest.TestCase):
             mb.build_head_command("mlx-community/Qwen3-30B-A3B-4bit", cfg, {"server": "mlx_lm"})
         with self.assertRaises(ValueError):
             mb.build_front_command("/m", base)
+
+    def test_split_lead_packer_names_and_deprecated_aliases(self):
+        import mlx_backend as mb
+        _mlx_model_dir(self.root, "mlx-community/Qwen3-30B-A3B-4bit")
+        new = {"mlx": {"model_dirs": [str(self.root)], "split": {"packer": "169.254.1.2:5560", "packer_layers": 20}}}
+        old = {"mlx": {"model_dirs": [str(self.root)], "split": {"front": "169.254.1.2:5560", "front_layers": 20}}}
+        self.assertEqual(mb.resolve_split(new), mb.resolve_split(old))
+        self.assertEqual(mb.build_lead_command("mlx-community/Qwen3-30B-A3B-4bit", new),
+                         mb.build_head_command("mlx-community/Qwen3-30B-A3B-4bit", old))
+        self.assertEqual(mb.build_packer_command("/m", new, python="/py", worker="/w.py", cache_dir="/c"),
+                         mb.build_front_command("/m", old, python="/py", worker="/w.py", cache_dir="/c"))
+        with mock.patch.dict(os.environ, {"CARAVAN_MLX_SPLIT_PACKER": "10.0.0.9:7000",
+                                          "CARAVAN_MLX_SPLIT_PACKER_LAYERS": "9"}):
+            self.assertEqual(mb.resolve_split(old), {"front": "10.0.0.9:7000", "front_layers": 9})
+        self.assertEqual(mb.resolve_split(old, {"split_packer": "10.0.0.8:1", "split_packer_layers": 3}),
+                         {"front": "10.0.0.8:1", "front_layers": 3})
+        self.assertEqual(mb.build_split_args(mb.resolve_split(new), "head"), mb.build_split_args(mb.resolve_split(new), "lead"))
 
     def test_launch_command_and_plist(self):
         import mlx_backend

@@ -58,7 +58,7 @@ A launchd plist only changes when it's re-rendered and bootstrapped again.
 | `--apply` | – | – | off | Start and supervise. Without it, the agent only prints its role and the command (a dry run). |
 | `--serve-for SECONDS` | – | – | – | Dry run only: keep the health endpoint and mDNS advertisement up for N seconds after printing the plan, so another Mac's dry run can discover this one. |
 
-### llama-server settings (head)
+### llama-server settings (lead)
 
 The agent, `agent/render_llama_plist.py` and the proxy (for `n_slots`)
 all read these.
@@ -79,7 +79,7 @@ all read these.
 
 Always passed, not configurable: `--slot-save-path
 ~/.caravan/llama-server/slots/`, `--no-kv-unified`, `--port 8080`, and
-`--rpc`/`--device`/`--tensor-split` (even split) on a head with peers.
+`--rpc`/`--device`/`--tensor-split` (even split) on a lead with peers.
 
 `render_llama_plist.py` also takes `--model`, `--model-path` (use a GGUF
 path directly), `--config` and `--output/-o` (default: stdout). It never
@@ -111,7 +111,7 @@ python3 agent/ollama_store.py qwen3:30b-a3b    # GGUF blob path (for llama-serve
 | Ollama store | `~/.ollama/models` (`OLLAMA_MODELS` overrides) |
 | node id, GPU limit cache | `~/.caravan/agent/` |
 | child logs | `~/.caravan/agent/logs/{llama-server,rpc-server,mlx-server}.log` |
-| tail's tensor cache | `~/Library/Caches/llama.cpp/rpc` (from `rpc-server --cache`) |
+| packer's tensor cache | `~/Library/Caches/llama.cpp/rpc` (from `rpc-server --cache`) |
 
 ## Proxy: `proxy/slot_pin_proxy.py`
 
@@ -217,7 +217,7 @@ same settings. Loading it into launchd is a manual step.
 
 ## Scripts
 
-`scripts/restart-rpc-server.sh` restarts the tail safely. It checks that
-the head's slots are idle, stops the head, restarts the tail, then starts
-the head. Set `CARAVAN_NODE_B_HOST` and `CARAVAN_NODE_B_USER` to reach the
-tail.
+`scripts/restart-rpc-server.sh` restarts the packer safely. It checks that
+the lead's slots are idle, stops the lead, restarts the packer, then starts
+the lead. Set `CARAVAN_NODE_B_HOST` and `CARAVAN_NODE_B_USER` to reach the
+packer.

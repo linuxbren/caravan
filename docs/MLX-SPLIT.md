@@ -10,7 +10,7 @@ One MLX model runs across two Macs, cut by layers, the way llama.cpp RPC
 splits a GGUF:
 
 ```
- client ──HTTP──► proxy ──► HEAD (Mac A)                      FRONT (Mac B)
+ client ──HTTP──► proxy ──► LEAD (Mac A)                      PACKER (Mac B)
                             HTTP API, sessions, sampling       embeddings
                             layers K..N-1, norm, lm_head  ◄──  layers 0..K-1
                                     ▲   tokens ───────────►        │
@@ -18,14 +18,42 @@ splits a GGUF:
                                          one TCP connection over Thunderbolt
 ```
 
-- The **front** holds the embeddings and the first K layers. It gets token
+- The **packer** holds the embeddings and the first K layers. It gets token
   ids, runs its layers and sends back the hidden states (bf16 bytes).
-- The **head** holds the remaining layers, the final norm and the output
+- The **lead** holds the remaining layers, the final norm and the output
   layer. It runs the OpenAI-style HTTP API, sampling and the session
   bookkeeping, so the proxy talks to it exactly as it talks to a one-Mac
   worker. No proxy change was needed.
 - Default cut: half the layers on each Mac (the odd layer goes to the
-  head). `--split-front-layers K` / `mlx.split.front_layers` moves it.
+  lead). `--split-packer-layers K` / `mlx.split.packer_layers` moves it.
+
+## Naming: lead, packers, string
+
+- The **lead** is the Mac you talk to. It serves the API (the proxy points
+  at it), runs the last layers and picks each token.
+- The **packers** are the other Macs, numbered in layer order: Packer 1
+  runs the first layers, then Packer 2, and so on, and the lead finishes.
+  v3 has exactly one, Packer 1.
+- The **string** is the whole group (lead plus packers).
+
+Earlier drafts called these "head" and "front" (and the llama.cpp RPC
+helper a "tail"). The old names still work as deprecated aliases:
+
+| New | Deprecated alias |
+|---|---|
+| `--split-role lead` / `packer` | `--split-role head` / `front` |
+| `--split-packer-layers K` | `--split-front-layers K` |
+| `mlx.split.packer` / `mlx.split.packer_layers` | `mlx.split.front` / `mlx.split.front_layers` |
+| `CARAVAN_MLX_SPLIT_PACKER` / `CARAVAN_MLX_SPLIT_PACKER_LAYERS` | `CARAVAN_MLX_SPLIT_FRONT` / `CARAVAN_MLX_SPLIT_FRONT_LAYERS` |
+| `mlx_backend.build_lead_command()` / `build_packer_command()` | `build_head_command()` / `build_front_command()` |
+| `mlx_split_fetch.py --role lead\|packer --packer-layers K` | `--role head\|front --front-layers K` |
+
+When both are given, the new name wins. `GET /caravan/split` reports
+`lead` and `packers` (a list) and still includes the old `head` / `front`
+keys. Internally the code keeps the role values `head` / `front`, and the
+stage id saved with each session cache (for example `head 24-47 of 48`)
+is unchanged, so caches saved before the rename still load. Logs show
+the new names (`lead: layers 24-47 of 48`, `packer 1: layers 0-23 of 48`).
 
 ## Why this approach
 
@@ -47,14 +75,14 @@ keep its own per-session caches.
 ## Protocol (`caravan-split-1`)
 
 Frames: `>IQ` header (JSON length, payload length), then JSON, then raw
-bytes. The head sends one op at a time and waits for the reply.
+bytes. The lead sends one op at a time and waits for the reply.
 
 | Op | Meaning |
 |---|---|
-| `hello` | protocol, model, layer range, number of layers, **epoch** (random per front start) |
-| `prepare` | make the front's cache for a session ready; returns how many tokens it already holds |
+| `hello` | protocol, model, layer range, number of layers, **epoch** (random per packer start) |
+| `prepare` | make the packer's cache for a session ready; returns how many tokens it already holds |
 | `fwd` | tokens in, hidden states out (ctx `session` or `scratch`) |
-| `checkpoint` / `rewind` / `reset` | keep the front's cache in lockstep with the head's |
+| `checkpoint` / `rewind` / `reset` | keep the packer's cache in lockstep with the lead's |
 | `restore` / `save` / `drop` / `evict` / `flush` | per-stage disk persistence |
 | `describe` | memory and session stats for `/caravan/split` |
 
@@ -62,67 +90,68 @@ bytes. The head sends one op at a time and waits for the reply.
 
 Each Mac keeps a `SessionStore` for **its own layers** and saves its own
 safetensors file for a session (the metadata identity includes the stage,
-so a head file can never be loaded as a front file).
+so a lead file can never be loaded as a packer file).
 
-- **Lockstep.** Every reuse, checkpoint and rewind on the head is mirrored
-  on the front before the forward pass.
+- **Lockstep.** Every reuse, checkpoint and rewind on the lead is mirrored
+  on the packer before the forward pass.
 - **Restore rule.** A saved chat counts as restored only when *both* halves
   are on disk with the same token digest. If one half is missing or they
   disagree, both are dropped and the chat is read cold. Never mix halves.
-- **Evictions** are decided by the head (it has the memory budget) and
-  mirrored to the front (`evict` = save if dirty, then drop).
-- **Front restart.** The head notices a new epoch on reconnect and drops its
+- **Evictions** are decided by the lead (it has the memory budget) and
+  mirrored to the packer (`evict` = save if dirty, then drop).
+- **Packer restart.** The lead notices a new epoch on reconnect and drops its
   in-memory sessions; the next turn restores both halves from disk.
 - **Mismatch.** If the two halves ever hold different lengths for a
   session, both are reset and the turn reads cold (`split-resync`).
 
 ## Running it
 
-On the front Mac (Thunderbolt address of that Mac):
+On the packer Mac (Thunderbolt address of that Mac):
 
 ```
-~/.caravan/venvs/mlx/bin/python agent/mlx_worker.py --split-role front \
-  --split-listen <front-tb-ip>:5560 --model <local model dir> --cache-dir <dir>
+~/.caravan/venvs/mlx/bin/python agent/mlx_worker.py --split-role packer \
+  --split-listen <packer-tb-ip>:5560 --model <local model dir> --cache-dir <dir>
 ```
 
-On the head Mac:
+On the lead Mac:
 
 ```
-~/.caravan/venvs/mlx/bin/python agent/mlx_worker.py --split-role head \
-  --split-peer <front-tb-ip>:5560 --model <local model dir> --port 8092
+~/.caravan/venvs/mlx/bin/python agent/mlx_worker.py --split-role lead \
+  --split-peer <packer-tb-ip>:5560 --model <local model dir> --port 8092
 ```
 
-or set `"mlx": {"split": {"front": "<front-tb-ip>:5560"}}` in
-`~/.caravan/config.json` (env `CARAVAN_MLX_SPLIT_FRONT`), and
-`mlx_backend.build_front_command()` prints the matching front command.
-`GET /caravan/split` on the head shows both stages' memory and the link
+or set `"mlx": {"split": {"packer": "<packer-tb-ip>:5560"}}` in
+`~/.caravan/config.json` (env `CARAVAN_MLX_SPLIT_PACKER`, and
+`CARAVAN_MLX_SPLIT_PACKER_LAYERS` for the cut), and
+`mlx_backend.build_packer_command()` prints the matching packer command.
+`GET /caravan/split` on the lead shows both stages' memory and the link
 stats; every reply's `usage.caravan.split` has the per-request network
-cost (calls, MB each way, time waiting on the front, network time).
+cost (calls, MB each way, time waiting on the packer, network time).
 
 ## How the weights get to each Mac
 
 - **Today:** each Mac loads from **its own local copy** of the model.
-  Nothing is streamed from the head at load time. Each stage reads only
+  Nothing is streamed from the lead at load time. Each stage reads only
   the weights for its layers (lazy load), but the copy on disk is
-  normally the full model (for this sprint the front Mac's copies of the
-  4-bit models were copied once over Thunderbolt from the head Mac; for
-  Gemma 4 26B 8-bit and GPT-OSS 20B 8-bit the head downloaded its own
-  files plus the front-only ones and copied only the front's files over,
-  so the front holds a partial copy).
+  normally the full model (for this sprint the packer Mac's copies of the
+  4-bit models were copied once over Thunderbolt from the lead Mac; for
+  Gemma 4 26B 8-bit and GPT-OSS 20B 8-bit the lead downloaded its own
+  files plus the packer-only ones and copied only the packer's files over,
+  so the packer holds a partial copy).
 - **Prototype split download** (`agent/mlx_split_fetch.py`): each Mac reads
   `model.safetensors.index.json`, maps its layer range to shard files and
   downloads only those from Hugging Face (`snapshot_download` with
   `allow_patterns`, plus config and tokenizer files). A shard that
-  straddles the cut goes to both Macs. Embeddings go to the front (and to
-  the head too when they're tied), `lm_head` and the final norm go to the
-  head, and vision towers are skipped (the split is text-only). The stage
+  straddles the cut goes to both Macs. Embeddings go to the packer (and to
+  the lead too when they're tied), `lm_head` and the final norm go to the
+  lead, and vision towers are skipped (the split is text-only). The stage
   refuses to start if one of its shards is missing, because loading
   without them would silently leave random weights.
 
 ## Limits
 
 - The link is **unauthenticated**. Keep it on the Thunderbolt cable.
-- Generation is a serial pipeline: per token, the head waits for the
-  front, then runs its half. There's no overlap of the two halves yet.
+- Generation is a serial pipeline: per token, the lead waits for the
+  packer, then runs its half. There's no overlap of the two halves yet.
 - `--kv-bits` with the split is untested.
-- Two Macs only (one front, one head). More stages are a roadmap item.
+- Two Macs only (one packer, one lead). More stages are a roadmap item.

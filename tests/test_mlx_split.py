@@ -39,6 +39,10 @@ class PlanTest(unittest.TestCase):
 
     def test_label(self):
         self.assertEqual(S.stage_label("front", (0, 24), 48), "front 0-23 of 48")
+        # saved-cache ids keep the old wording; people see lead / packer
+        self.assertEqual(S.stage_title("front", (0, 24), 48), "packer 1: layers 0-23 of 48")
+        self.assertEqual(S.stage_title("head", (24, 48), 48), "lead: layers 24-47 of 48")
+        self.assertEqual(S.title_from_label("front 0-23 of 48"), "packer 1: layers 0-23 of 48")
 
 
 class FrameTest(unittest.TestCase):

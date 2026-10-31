@@ -2,10 +2,19 @@
 """Caravan v3 (2026-10-31): one MLX model split across two Minis.
 
 Pipeline split by layers, the way exo and llama.cpp's RPC backend do it,
-but with Caravan's per-session caches kept on both sides:
+but with Caravan's per-session caches kept on both sides.
 
-    proxy --HTTP--> head worker (Mini A)            front stage (Mini B)
-                    mlx_worker.py --split-role head  mlx_worker.py --split-role front
+Naming (2026-10-31): the Mini you talk to -- it picks each token, serves
+the API and runs the last layers -- is the LEAD. The other Minis are
+PACKERS, numbered in layer order: Packer 1 runs the first layers, then
+Packer 2, and so on, with the lead finishing. The whole group is the
+STRING. Inside this module the lead's role is still called "head" and
+Packer 1's "front" (role values, class names, the saved-cache stage
+labels), so caches saved before the rename still restore; user-facing
+text, flags and env vars use lead / packer (old names are aliases).
+
+    proxy --HTTP--> lead worker (Mini A)            Packer 1 (Mini B)
+                    mlx_worker.py --split-role lead  mlx_worker.py --split-role packer
                     layers K..N-1, norm, lm_head      embeddings, layers 0..K-1
                     sampling, sessions, HTTP API      its own sessions for its layers
                           |  tokens ------------------------>  |
@@ -57,12 +66,32 @@ def plan_split(n_layers: int, front_layers=None):
         raise ValueError("need at least 2 layers to split")
     k = n // 2 if front_layers in (None, "", 0) else int(front_layers)
     if not 1 <= k <= n - 1:
-        raise ValueError(f"front layers must be 1..{n - 1}, got {k}")
+        raise ValueError(f"packer layers must be 1..{n - 1}, got {k}")
     return (0, k), (k, n)
 
 
 def stage_label(role, rng, n):
+    """Stage id stored in the session caches' metadata ("head 12-23 of 24").
+    Kept in the old wording so saved caches stay valid; use stage_title()
+    for anything a person reads."""
     return f"{role} {rng[0]}-{rng[1] - 1} of {n}"
+
+
+ROLE_TITLE = {"head": "lead", "lead": "lead", "front": "packer 1", "packer": "packer 1"}
+
+
+def stage_title(role, rng, n):
+    """Human-readable stage name: "lead: layers 12-23 of 24", "packer 1: layers 0-11 of 24"."""
+    return f"{ROLE_TITLE.get(role, role)}: layers {rng[0]}-{rng[1] - 1} of {n}"
+
+
+def title_from_label(label):
+    """stage_label() text -> stage_title() text ("front 0-11 of 24" -> "packer 1: layers 0-11 of 24")."""
+    try:
+        role, rest = str(label).split(" ", 1)
+        return f"{ROLE_TITLE.get(role, role)}: layers {rest}"
+    except ValueError:
+        return str(label)
 
 
 def tokens_digest(tokens) -> str:
@@ -145,7 +174,7 @@ class FrontClient:
         hello = self._roundtrip({"op": "hello", "proto": PROTO})[0]
         if hello.get("proto") != PROTO:
             self.close()
-            raise FrontError(f"front speaks {hello.get('proto')!r}, need {PROTO}")
+            raise FrontError(f"packer 1 speaks {hello.get('proto')!r}, need {PROTO}")
         old, self.epoch, self.hello = self.epoch, hello.get("epoch"), hello
         if old is not None and old != self.epoch and self.on_new_epoch:
             self.on_new_epoch(old, self.epoch)
@@ -166,7 +195,7 @@ class FrontClient:
             rh, rp = read_frame(self.sock)
         except (OSError, ConnectionError) as e:
             self.close()
-            raise FrontError(f"front {self.addr}: {e}") from e
+            raise FrontError(f"packer 1 at {self.addr}: {e}") from e
         st = self.stats
         st["calls"] += 1
         st["bytes_out"] += len(data)
@@ -174,7 +203,7 @@ class FrontClient:
         st["wait_s"] += time.perf_counter() - t0
         st["front_s"] += float(rh.get("_s", 0.0))
         if "error" in rh:
-            raise FrontError(f"front: {rh['error']}")
+            raise FrontError(f"packer 1: {rh['error']}")
         return rh, rp
 
     def call(self, op, payload=b"", **kw):
@@ -273,7 +302,7 @@ def serve_front(listen, state: FrontState, log=print, stats_fn=None, stop=None):
     srv.bind((host, port))
     srv.listen(1)
     srv.settimeout(1.0)
-    log(f"front stage listening on {listen} (epoch {state.epoch})")
+    log(f"packer stage listening on {listen} (epoch {state.epoch})")
     while not (stop and stop.is_set()):
         try:
             conn, peer = srv.accept()
@@ -284,7 +313,7 @@ def serve_front(listen, state: FrontState, log=print, stats_fn=None, stop=None):
             conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         except OSError:
             pass
-        log(f"head connected from {peer[0]}")
+        log(f"lead connected from {peer[0]}")
         try:
             while True:
                 h, p = read_frame(conn)
@@ -299,7 +328,7 @@ def serve_front(listen, state: FrontState, log=print, stats_fn=None, stop=None):
                 rh["_s"] = round(time.perf_counter() - t0, 6)
                 conn.sendall(encode_frame(rh, rp))
         except (ConnectionError, OSError) as e:
-            log(f"head disconnected ({e})")
+            log(f"lead disconnected ({e})")
         finally:
             try:
                 conn.close()
@@ -322,7 +351,7 @@ class SplitSessions:
         try:
             self.client.call("evict", keys=list(keys))
         except FrontError as e:
-            self.log(f"front evict failed: {e}")
+            self.log(f"packer 1 evict failed: {e}")
 
     def _front_restarted(self, old, new):
         # The front lost its in-memory sessions; ours no longer have a
@@ -333,7 +362,7 @@ class SplitSessions:
                 self.store.save(k)
         self.store.sessions.clear()
         self.store.ops.release()
-        self.log(f"front restarted (epoch {old} -> {new}); dropped {n} in-memory session(s) here")
+        self.log(f"packer 1 restarted (epoch {old} -> {new}); dropped {n} in-memory session(s) here")
 
     def restore(self, key) -> str:
         """Both halves or neither."""
@@ -347,7 +376,7 @@ class SplitSessions:
             return r
         if verdict == "miss":
             return r if r in ("miss", "rejected") else "miss"
-        self.log(f"session {key}: halves disagree (head {r}/{hd}, front {fr.get('result')}/"
+        self.log(f"session {key}: halves disagree (lead {r}/{hd}, packer 1 {fr.get('result')}/"
                  f"{fr.get('digest')}) -- dropping both, re-reading cold")
         self.store.drop([key])
         self.client.call("drop", keys=[key])
@@ -363,12 +392,12 @@ class SplitSessions:
             how = how[: -len("memory")] + "disk"
         fr = self.client.call("prepare", key=key, prompt=list(prompt))[0]
         if fr.get("n") != n:
-            self.log(f"session {s.key}: head reuses {n}, front {fr.get('n')} -- both re-read cold")
+            self.log(f"session {s.key}: lead reuses {n}, packer 1 {fr.get('n')} -- both re-read cold")
             self.store.reset(s)
             self.client.call("reset")
             fr = self.client.call("prepare", key=key, prompt=list(prompt))[0]
             if fr.get("n") != 0:
-                raise FrontError("front could not reset the session")
+                raise FrontError("packer 1 could not reset the session")
             return s, 0, "split-resync"
         return s, n, how
 
@@ -388,7 +417,7 @@ class SplitSessions:
         try:
             self.client.call("reset")
         except FrontError as e:
-            self.log(f"front reset failed: {e}")
+            self.log(f"packer 1 reset failed: {e}")
 
     def save(self, key):
         r = self.store.save(key)
@@ -405,7 +434,7 @@ class SplitSessions:
         try:
             self.client.call("flush")
         except FrontError as e:
-            self.log(f"front flush failed: {e}")
+            self.log(f"packer 1 flush failed: {e}")
         return n
 
 
@@ -429,7 +458,8 @@ def check_local_shards(model_dir, role, front_layers=None):
     need = plan_files(json.loads(cfg.read_text()), json.loads(idx.read_text()), front_layers)[role]
     missing = sorted(f for f in need if not (d / f).exists())
     if missing:
-        raise FileNotFoundError(f"{role} stage needs {missing} in {d} (run mlx_split_fetch.py --role {role})")
+        who = {"head": "lead", "front": "packer"}.get(role, role)
+        raise FileNotFoundError(f"{who} stage needs {missing} in {d} (run mlx_split_fetch.py --role {who})")
     return sorted(need)
 
 

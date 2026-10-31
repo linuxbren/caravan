@@ -2,10 +2,11 @@
 """caravan-agent: the self-organizing piece of Caravan.
 
 One binary/script, meant to run identically on every node. On each run it
-decides for itself whether this machine should act as head (serves the
-target model, needs it pulled locally) or a tail (contributes compute to
-whichever machine is head) -- see docs/ARCHITECTURE.md for the full
-design and why this doesn't need a real election protocol.
+decides for itself whether this machine should act as the lead (serves
+the target model, needs it pulled locally; formerly "head") or a packer
+(contributes compute to whichever machine is lead; formerly "tail") -- see
+docs/ARCHITECTURE.md for the full design and why this doesn't need a real
+election protocol.
 
 Status: scaffold. Role detection and both discovery paths are real and
 testable today. Actually spawning/supervising llama-server or rpc-server
@@ -233,7 +234,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--model", default=None,
-        help="Ollama model name to serve as head (e.g. 'qwen3:30b'). "
+        help="Ollama model name to serve as lead (e.g. 'qwen3:30b'). "
              "Default: $CARAVAN_MODEL, else \"model\" in the config file, "
              f"else {config.DEFAULT_TARGET_MODEL!r}.",
     )
@@ -325,12 +326,12 @@ def main() -> int:
             blob_path = ollama_store.resolve_blob_path(args.model)
             if blob_path is None:
                 print(f"[caravan-agent] ERROR: manifest for {args.model} found but "
-                      "GGUF blob is missing -- cannot act as head.", file=sys.stderr)
+                      "GGUF blob is missing -- cannot act as lead.", file=sys.stderr)
                 return 1
 
             rpc_addrs = _rpc_addrs_from_peers(peers)
             cmd = supervisor.build_head_command(str(blob_path), rpc_addrs, llama_settings)
-            print(f"[caravan-agent] role: HEAD for {args.model}")
+            print(f"[caravan-agent] role: LEAD for {args.model} (formerly 'head')")
             print(f"[caravan-agent] would run: {' '.join(cmd)}")
 
             if args.apply:
@@ -340,7 +341,7 @@ def main() -> int:
         else:
             role = "tail"
             cmd = supervisor.build_tail_command()
-            print("[caravan-agent] role: TAIL (no local model -- ready to serve compute)")
+            print("[caravan-agent] role: PACKER (formerly 'tail'; no local model -- ready to serve compute)")
             print(f"[caravan-agent] would run: {' '.join(cmd)}")
 
             if args.apply:

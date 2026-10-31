@@ -369,6 +369,16 @@ class CliTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             W.build_parser().parse_args(["--model", "/m", "--kv-bits", "3"])
 
+    def test_split_flags_lead_packer_and_deprecated_aliases(self):
+        P = W.build_parser()
+        a = P.parse_args(["--model", "/m", "--split-role", "packer", "--split-listen", "h:1", "--split-packer-layers", "5"])
+        b = P.parse_args(["--model", "/m", "--split-role", "front", "--split-listen", "h:1", "--split-front-layers", "5"])
+        self.assertEqual((a.split_role, a.split_front_layers), ("packer", 5))
+        self.assertEqual(b.split_front_layers, 5)
+        self.assertEqual(P.parse_args(["--model", "/m", "--split-role", "lead", "--split-peer", "h:1"]).split_role, "lead")
+        with self.assertRaises(SystemExit):     # lead without a packer address
+            W.main(["--model", "/m", "--split-role", "lead"])
+
     def test_valid_key(self):
         self.assertTrue(W.valid_key("0123456789abcdef"))
         for bad in ("", "../x", "a b", None, 5, W.ANON, "x" * 65):

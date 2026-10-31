@@ -4,19 +4,31 @@ How Caravan v2.1 is put together. For settings see
 [CONFIGURATION.md](CONFIGURATION.md). For the MLX worker in depth see
 [MLX.md](MLX.md).
 
+## Naming: lead, packers, string
+
+Whenever a model is split across Macs, the **lead** is the Mac you talk
+to: it serves the API, runs the last layers and picks each token. The
+**packers** are the other Macs, numbered in layer order (Packer 1 runs the
+first layers, then Packer 2, and so on; the lead finishes). The whole group
+is the **string**. For llama.cpp RPC the packer is the Mac running
+`ggml-rpc-server`. Older notes and the internals say "head" for the lead
+and "tail" (llama.cpp) or "front" (MLX v3) for a packer; see
+[MLX-SPLIT.md](MLX-SPLIT.md#naming-lead-packers-string) for the
+deprecated aliases.
+
 ## The pieces
 
 ```mermaid
 flowchart LR
     client["OpenAI-compatible client<br/>(e.g. an assistant gateway)"]
-    subgraph head["Mac A: head"]
+    subgraph lead["Mac A: lead"]
         proxy["slot_pin_proxy.py<br/>:8090<br/>sessions, FIFO, save/restore, cleanup"]
         llama["llama-server<br/>:8080<br/>GGUF, N slots"]
         mlx["Caravan MLX worker<br/>mlx_worker.py :8092<br/>MLX, one cache per session"]
         disk[("~/.caravan<br/>slot .bin files<br/>MLX .safetensors")]
         agentA["caravan-agent :8091"]
     end
-    subgraph tail["Mac B: tail"]
+    subgraph packer["Mac B: packer"]
         rpc["ggml-rpc-server :50052<br/>--cache"]
         agentB["caravan-agent :8091"]
     end
@@ -36,11 +48,11 @@ flowchart LR
 |---|---|---|
 | Proxy | `proxy/slot_pin_proxy.py`, `proxy/backends.py` | The one front door. Recognizes each conversation (session), routes by model to llama.cpp or MLX, runs requests one at a time, saves and restores each session's cache, cancels requests whose client is gone. |
 | Saved-chat cleanup | `proxy/slot_cleanup.py` | Inside the proxy (and as a CLI): removes or archives saves older than N days, then holds all saves to a per-Mac cap. |
-| Agent | `agent/caravan_agent.py` and friends | Runs the same way on every Mac. It finds peers, picks a role (head, tail or MLX), builds the server command, and supervises it. It also serves `/health` on port 8091. |
-| llama.cpp | `~/dev/llama.cpp` (fork `linuxbren/llama.cpp`, branch `caravan-patches`) | `llama-server` on the head and `ggml-rpc-server` on the tail. |
+| Agent | `agent/caravan_agent.py` and friends | Runs the same way on every Mac. It finds peers, picks a role (lead, packer or MLX), builds the server command, and supervises it. It also serves `/health` on port 8091. |
+| llama.cpp | `~/dev/llama.cpp` (fork `linuxbren/llama.cpp`, branch `caravan-patches`) | `llama-server` on the lead and `ggml-rpc-server` on the packer. |
 | MLX worker | `agent/mlx_worker.py`, launched via `agent/mlx_backend.py` | Caravan's own OpenAI-compatible MLX server with per-session caches. See [MLX.md](MLX.md). |
 | launchd | `launchd/` | Plists for the agent, the proxy, and a manual per-role setup. The llama-server and MLX plists can be rendered from the agent's own command builders (`render_llama_plist.py`, `render_mlx_plist.py`). |
-| C++ binary | `cpp/` | Experimental: head or tail in one process, linking llama.cpp. Proven end to end once; not production-ready. |
+| C++ binary | `cpp/` | Experimental: lead or packer in one process, linking llama.cpp. Proven end to end once; not production-ready. |
 
 ## A request, start to finish
 
@@ -181,7 +193,7 @@ limit around every request instead (`--wired-limit per-request`
 reproduces that). In side-by-side runs the medians were the same, and
 v2.1 was a little steadier (slowest Qwen 4k read 390 vs 380 tok/s).
 
-## The agent: head, tail, or MLX
+## The agent: lead, packer, or MLX
 
 The same code runs on every Mac (`caravan_agent.py`; a dry run by default,
 `--apply` to start and supervise). There's no plist per role and no
@@ -195,18 +207,18 @@ then the default `muse-glimmer`.
 
 - **MLX role**: if the target is an MLX id, the agent starts the MLX
   worker (or `mlx_lm.server`) on this Mac. No peers are involved.
-- **Head**: the target GGUF is in this Mac's Ollama store
-  (`~/.ollama/models`, or `$OLLAMA_MODELS`). The head needs the full model
+- **Lead**: the target GGUF is in this Mac's Ollama store
+  (`~/.ollama/models`, or `$OLLAMA_MODELS`). The lead needs the full model
   file locally, even though it computes only part of the layers. It
   starts `llama-server --rpc <peers> --device MTL0,RPC0… --tensor-split
   1,1…` with the settings above.
-- **Tail**: no local model. It starts `ggml-rpc-server -H 0.0.0.0 -p
-  50052 --cache`. The tail stores nothing itself, but `--cache` keeps the
+- **Packer**: no local model. It starts `ggml-rpc-server -H 0.0.0.0 -p
+  50052 --cache`. The packer stores nothing itself, but `--cache` keeps the
   tensors it receives on disk, keyed by hash. A restart then loads in
   about 53 s instead of 7–11 minutes over LAN. This is the "shard cache"
   (GitHub issue #3), and it turned out to need no patch.
-- **No election.** Whoever has the model is head. In practice one Mac
-  owns the model store, so two heads isn't a real case.
+- **No election.** Whoever has the model is lead. In practice one Mac
+  owns the model store, so two leads isn't a real case.
 
 The supervisor restarts a crashed child after 10 s and passes SIGTERM and
 SIGINT on to it. Child logs go to `~/.caravan/agent/logs/`.
@@ -224,7 +236,7 @@ This is a hybrid design:
   a stable id in `~/.caravan/agent/`.
 
 **Path selection.** Each peer's `/health` reports its Thunderbolt Bridge
-addresses (`fast_paths`). The head tries those first, then the Tailscale
+addresses (`fast_paths`). The lead tries those first, then the Tailscale
 address, then the LAN address, and uses the first that answers. This is
 a fixed priority by link type, not a speed test, and it falls back on its
 own if the cable is unplugged.
@@ -240,7 +252,7 @@ command worked from a terminal. The lessons the code keeps:
 
 The root cause was macOS's Local Network permission. A `llama-server`
 started directly by launchd has no identity the permission can be granted
-to, so it can't reach the tail at all. Started by the Python agent, with
+to, so it can't reach the packer at all. Started by the Python agent, with
 Python allowed under Privacy & Security > Local Network, it can. See
 [LOG.md](LOG.md), "The actual root cause", and
 [launchd/README.md](../launchd/README.md).
@@ -251,7 +263,7 @@ Python allowed under Privacy & Security > Local Network, it can. See
 
 - the node id
 - `fast_paths`
-- the disk usage of the slot directory and the tail's RPC tensor cache
+- the disk usage of the slot directory and the packer's RPC tensor cache
 
 Growing it into fuller liveness and resource reporting is the natural
 next step, rather than a separate monitor.
@@ -302,9 +314,9 @@ Details for every step are in [LOG.md](LOG.md). What's next is in
 
 - Should the agent run the proxy itself? Today the proxy is a separate
   launchd service.
-- Head selection is "whoever has the model"; there's no handling for two
+- Lead selection is "whoever has the model"; there's no handling for two
   Macs that both have it.
-- Cross-Mac restart coordination (a tail warning its head before it
+- Cross-Mac restart coordination (a packer warning its lead before it
   restarts) is a script today (`scripts/restart-rpc-server.sh`), not a
   protocol between agents.
 - The hand-managed llama-server plist's fallback `--rpc` is a
@@ -316,8 +328,8 @@ Details for every step are in [LOG.md](LOG.md). What's next is in
 - **Python today.** No build step, cheap to change. The agent needs
   3.10+. The proxy is stdlib-only and runs on 3.9+.
 - **The unified-binary experiment (`cpp/`).** This links llama.cpp as a
-  library (`llama_server()` for the head,
-  `ggml_backend_rpc_start_server()` for the tail) with mDNS and Tailscale
+  library (`llama_server()` for the lead,
+  `ggml_backend_rpc_start_server()` for the packer) with mDNS and Tailscale
   discovery ported from Python. See [cpp/README.md](../cpp/README.md).
 - **If Caravan is ever packaged for other people**, a compiled agent is
   the likely route.

@@ -1,5 +1,5 @@
 """Caravan v3 bench client (2026-10-31). Talks straight to an MLX worker
-(v2.1 single Mini, or the v3 split head) with X-Caravan-Session, so both
+(v2.1 single Mini, or the v3 split lead) with X-Caravan-Session, so both
 variants take the same path.
 
   split_client.py bench  URL MODEL OUT.json [no_think]   warm, tg128 x2, pp512 x2, pp4096 x2, quality 3/3

@@ -603,7 +603,8 @@ class Engine:
         self.make_sampler, self.make_logits_processors = make_sampler, make_logits_processors
         self.stream = mx.new_stream(mx.default_device())
         t0 = time.time()
-        self.split = None           # v3: SplitSessions when this is the head of a two-Mini split
+        self.split = None           # v3: SplitSessions when this is the lead of a two-Mini split
+                                    # (internally the lead is still role "head", Packer 1 "front")
         self.client = None
         role = getattr(args, "split_role", "none") or "none"
         if role == "head":
@@ -616,10 +617,10 @@ class Engine:
             self.tokenizer = load_tokenizer(self.model_dir, eos_token_ids=cfg0.get("eos_token_id"))
             hello = self.client.call("hello", proto=S.PROTO)[0]
             if hello.get("range") != [0, self.stage.range[0]] or hello.get("n_layers") != self.stage.n_layers:
-                raise RuntimeError(f"front stage {hello.get('stage')} doesn't match head "
-                                   f"{S.stage_label('head', self.stage.range, self.stage.n_layers)}")
-            log(f"split head: {S.stage_label('head', self.stage.range, self.stage.n_layers)} here, "
-                f"front {hello.get('stage')} at {args.split_peer}")
+                raise RuntimeError(f"Packer 1 ({S.title_from_label(hello.get('stage'))}) doesn't match the lead "
+                                   f"({S.stage_title('head', self.stage.range, self.stage.n_layers)})")
+            log(f"split lead: {S.stage_title('head', self.stage.range, self.stage.n_layers)} here, "
+                f"{S.title_from_label(hello.get('stage'))} at {args.split_peer}")
         else:
             self.model, self.tokenizer = load(str(self.model_dir))
         cfg = json.loads((self.model_dir / "config.json").read_text())
@@ -724,11 +725,15 @@ class Engine:
             return None
         front = self.client.call("stats")[0]
         front.pop("_s", None)
-        return {"head": {"stage": self.store.ident.get("stage"),
-                         "weights_gb": round(self.stage.nbytes() / 1e9, 2),
-                         "active_gb": round(self.mx.get_active_memory() / 1e9, 2),
-                         "peak_gb": round(self.mx.get_peak_memory() / 1e9, 2)},
-                "front": front, "peer": self.args.split_peer}
+        import mlx_split as S
+        lead = {"stage": self.store.ident.get("stage"),
+                "name": S.stage_title("head", self.stage.range, self.stage.n_layers),
+                "weights_gb": round(self.stage.nbytes() / 1e9, 2),
+                "active_gb": round(self.mx.get_active_memory() / 1e9, 2),
+                "peak_gb": round(self.mx.get_peak_memory() / 1e9, 2)}
+        front.setdefault("name", S.title_from_label(front.get("stage")))
+        # "lead" / "packers" are the names to use; "head" / "front" are deprecated aliases.
+        return {"lead": lead, "packers": [front], "head": lead, "front": front, "peer": self.args.split_peer}
 
     def call(self, fn):
         """Run fn() on the mlx thread (after any queued generation)."""
@@ -1123,13 +1128,15 @@ def build_parser():
                          "per-request: v2 behaviour (raise/drop around each request); off: never touch it")
     ap.add_argument("--cache-limit-gb", type=float, default=None, help="mx.set_cache_limit (freed-buffer pool)")
     # v3: one model split across two Minis (agent/mlx_split.py)
-    ap.add_argument("--split-role", choices=("none", "head", "front"), default="none",
-                    help="head: HTTP + last layers + lm_head, asks --split-peer for the first layers; "
-                         "front: embeddings + first layers, listens on --split-listen (no HTTP)")
-    ap.add_argument("--split-peer", default=None, help="head: front stage HOST:PORT (Thunderbolt address)")
-    ap.add_argument("--split-listen", default=None, help="front: HOST:PORT to listen on (Thunderbolt address)")
-    ap.add_argument("--split-front-layers", type=int, default=None,
-                    help="layers on the front stage (default: half, the odd one to the head)")
+    ap.add_argument("--split-role", choices=("none", "lead", "packer", "head", "front"), default="none",
+                    help="lead: HTTP + last layers + lm_head, asks --split-peer (Packer 1) for the first layers; "
+                         "packer: embeddings + first layers, listens on --split-listen (no HTTP). "
+                         "head/front: deprecated aliases for lead/packer")
+    ap.add_argument("--split-peer", default=None, help="lead: Packer 1's HOST:PORT (Thunderbolt address)")
+    ap.add_argument("--split-listen", default=None, help="packer: HOST:PORT to listen on (Thunderbolt address)")
+    ap.add_argument("--split-packer-layers", "--split-front-layers", dest="split_front_layers", type=int, default=None, metavar="K",
+                    help="layers on Packer 1 (default: half, the odd one to the lead). "
+                         "--split-front-layers is a deprecated alias")
     return ap
 
 
@@ -1173,11 +1180,11 @@ def front_main(args):
 
     def _term(*_):
         n = store.flush()
-        log(f"front shutting down; saved {n} session(s) with unsaved turns")
+        log(f"packer 1 shutting down; saved {n} session(s) with unsaved turns")
         stop.set()
     signal.signal(signal.SIGTERM, _term)
     signal.signal(signal.SIGINT, _term)
-    log(f"front stage {label} of {model_dir.name} loaded in {time.time() - t0:.1f}s, "
+    log(f"packer stage {S.title_from_label(label)} of {model_dir.name} loaded in {time.time() - t0:.1f}s, "
         f"{stage.nbytes() / 1e9:.1f} GB of layers; wired {wired}; persist="
         + (f"on {store.cache_dir}" if store.persist else "off"))
     S.serve_front(args.split_listen, state, log=log, stats_fn=stats, stop=stop)
@@ -1186,12 +1193,14 @@ def front_main(args):
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    # Internal role names stay "head"/"front"; "lead"/"packer" are the user-facing ones.
+    args.split_role = {"lead": "head", "packer": "front"}.get(args.split_role, args.split_role)
     if args.split_role == "front":
         if not args.split_listen:
-            raise SystemExit("--split-role front needs --split-listen HOST:PORT")
+            raise SystemExit("--split-role packer needs --split-listen HOST:PORT")
         return front_main(args)
     if args.split_role == "head" and not args.split_peer:
-        raise SystemExit("--split-role head needs --split-peer HOST:PORT")
+        raise SystemExit("--split-role lead needs --split-peer HOST:PORT")
     engine = Engine(args)
     srv = ThreadingHTTPServer((args.host, args.port), make_handler(engine))
     srv.daemon_threads = True
