@@ -23,7 +23,8 @@ import backends  # noqa: E402
 from test_proxy_perf import ProxyTestBase  # noqa: E402
 
 MLX_ENV = ("CARAVAN_MLX_ENABLED", "CARAVAN_MLX_HOST", "CARAVAN_MLX_PORT", "CARAVAN_MLX_PREFIXES",
-           "CARAVAN_MLX_MODEL_DIRS", "CARAVAN_MLX_PYTHON", "CARAVAN_MLX_EXTRA_ARGS")
+           "CARAVAN_MLX_MODEL_DIRS", "CARAVAN_MLX_PYTHON", "CARAVAN_MLX_EXTRA_ARGS",
+           "CARAVAN_MLX_SPLIT_FRONT", "CARAVAN_MLX_SPLIT_FRONT_LAYERS", "CARAVAN_MLX_SERVER")
 
 
 class FakeMlx:
@@ -134,6 +135,34 @@ class SettingsTest(unittest.TestCase):
         self.assertIsNone(backends.resolve_mlx_model_path("mlx-community/absent", s))
         off = s._replace(enabled=False)
         self.assertFalse(backends.is_mlx_model("mlx-community/Qwen3-30B-A3B-4bit", off))
+
+    def test_split_head_and_front_commands(self):
+        import mlx_backend as mb
+        d = _mlx_model_dir(self.root, "mlx-community/Qwen3-30B-A3B-4bit")
+        base = {"mlx": {"model_dirs": [str(self.root)]}}
+        self.assertIsNone(mb.resolve_split(base))
+        one = mb.build_mlx_command("mlx-community/Qwen3-30B-A3B-4bit", base)
+        self.assertEqual(mb.build_head_command("mlx-community/Qwen3-30B-A3B-4bit", base), one)
+        cfg = {"mlx": {"model_dirs": [str(self.root)], "split": {"front": "169.254.1.2:5560", "front_layers": 20}}}
+        head = mb.build_head_command("mlx-community/Qwen3-30B-A3B-4bit", cfg)
+        self.assertEqual(head[:len(one)], one)
+        self.assertEqual(head[len(one):], ["--split-role", "head", "--split-peer", "169.254.1.2:5560",
+                                           "--split-front-layers", "20"])
+        front = mb.build_front_command("/m/q", cfg, python="/py", worker="/w.py", cache_dir="/c")
+        self.assertEqual(front, ["/py", "/w.py", "--model", "/m/q", "--cache-dir", "/c", "--split-role", "front",
+                                 "--split-listen", "169.254.1.2:5560", "--split-front-layers", "20"])
+        with mock.patch.dict(os.environ, {"CARAVAN_MLX_SPLIT_FRONT": "off"}):
+            self.assertIsNone(mb.resolve_split(cfg))
+        with mock.patch.dict(os.environ, {"CARAVAN_MLX_SPLIT_FRONT": "10.0.0.9:7000"}):
+            self.assertEqual(mb.resolve_split(cfg), {"front": "10.0.0.9:7000", "front_layers": 20})
+        self.assertEqual(mb.resolve_split(cfg, {"split_front_layers": 7})["front_layers"], 7)
+        for bad in ("nohost", "h:x"):
+            with self.assertRaises(ValueError):
+                mb.resolve_split({"mlx": {"split": {"front": bad}}})
+        with self.assertRaises(ValueError):
+            mb.build_head_command("mlx-community/Qwen3-30B-A3B-4bit", cfg, {"server": "mlx_lm"})
+        with self.assertRaises(ValueError):
+            mb.build_front_command("/m", base)
 
     def test_launch_command_and_plist(self):
         import mlx_backend

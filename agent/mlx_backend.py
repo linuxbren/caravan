@@ -22,6 +22,12 @@ gpt-oss, whose sliding-window caches mlx_lm.server 0.32.2 can't reuse)
 and saved to / loaded from mlx.cache_dir across restarts. "mlx_lm" keeps
 the plain mlx_lm.server (step a behaviour).
 
+v3 (2026-10-31): a model can be split across two Minis (agent/mlx_split.py,
+docs/MLX-SPLIT.md). "mlx": {"split": {"front": "169.254.x.y:5560",
+"front_layers": 24}} (or CARAVAN_MLX_SPLIT_FRONT / _FRONT_LAYERS) makes the
+worker on this Mini the *head* (last layers + sampling + HTTP API) and
+build_front_command() gives the matching command for the other Mini.
+
 Used two ways:
   * caravan_agent.py --model mlx-community/<name> [--apply]  -> role MLX,
     supervises mlx_lm.server instead of llama-server;
@@ -83,3 +89,59 @@ def build_mlx_command(model: str, cfg: dict, overrides: Optional[dict] = None) -
                 "--host", s.host, "--port", str(s.port)] + extra
     return [python, str(WORKER), "--model", path, "--host", s.host, "--port", str(s.port),
             "--cache-dir", str(Path(s.cache_dir).expanduser())] + extra
+
+
+def resolve_split(cfg: dict, overrides: Optional[dict] = None) -> Optional[dict]:
+    """{"front": "HOST:PORT", "front_layers": int|None} or None (no split).
+    flag (overrides["split_front"]) > env CARAVAN_MLX_SPLIT_FRONT > config mlx.split."""
+    overrides = {k: v for k, v in (overrides or {}).items() if v is not None}
+    sec = cfg.get("mlx") if isinstance(cfg.get("mlx"), dict) else {}
+    sp = sec.get("split") if isinstance(sec.get("split"), dict) else {}
+    front = (overrides.get("split_front") or os.environ.get("CARAVAN_MLX_SPLIT_FRONT", "").strip()
+             or sp.get("front") or "")
+    front = str(front).strip()
+    if not front or front.lower() in ("off", "none", "0"):
+        return None
+    host, _, port = front.rpartition(":")
+    if not host or not port.isdigit():
+        raise ValueError(f"mlx split front must be HOST:PORT, got {front!r}")
+    k = (overrides.get("split_front_layers") or os.environ.get("CARAVAN_MLX_SPLIT_FRONT_LAYERS", "").strip()
+         or sp.get("front_layers"))
+    k = int(k) if k not in (None, "") else None
+    if k is not None and k < 1:
+        raise ValueError("mlx split front_layers must be >= 1")
+    return {"front": front, "front_layers": k}
+
+
+def build_split_args(split: Optional[dict], role: str) -> list:
+    if not split:
+        return []
+    out = ["--split-role", role, "--split-peer" if role == "head" else "--split-listen", split["front"]]
+    if split.get("front_layers"):
+        out += ["--split-front-layers", str(split["front_layers"])]
+    return out
+
+
+def build_head_command(model: str, cfg: dict, overrides: Optional[dict] = None) -> list:
+    """build_mlx_command plus the head flags when a split is configured
+    (unchanged single-Mini command otherwise)."""
+    cmd = build_mlx_command(model, cfg, overrides)
+    split = resolve_split(cfg, overrides)
+    if split and resolve_server(cfg, overrides) == "mlx_lm":
+        raise ValueError("an MLX split needs the Caravan worker (mlx.server = caravan)")
+    return cmd + build_split_args(split, "head")
+
+
+def build_front_command(model_path: str, cfg: dict, overrides: Optional[dict] = None,
+                        python: Optional[str] = None, worker: Optional[str] = None,
+                        cache_dir: Optional[str] = None) -> list:
+    """Command to run on the *other* Mini: the front stage listening on the
+    Thunderbolt address from mlx.split.front. model_path / python / worker
+    are paths on that Mini (it has its own copy of the model)."""
+    split = resolve_split(cfg, overrides)
+    if not split:
+        raise ValueError("no mlx split configured (mlx.split.front)")
+    s, py, _ = resolve(cfg, overrides)
+    return ([python or py, worker or str(WORKER), "--model", model_path,
+             "--cache-dir", cache_dir or str(Path(s.cache_dir).expanduser())]
+            + build_split_args(split, "front"))

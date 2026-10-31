@@ -4,7 +4,7 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-10-31 (v2.1).*
+*Last updated 2026-10-31 (v3, branch `caravan-v3-mlx-split`, in progress).*
 
 ## Done
 
@@ -77,10 +77,44 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
    the rebased branch (upstream `5047748f` + the RPC patch) that the v1+
    numbers depend on, and `caravan-patches-v0` keeps the old base used
    for v0.
-2. **Two-Mac MLX split.** Run one MLX model across both Macs, as llama.cpp
-   RPC does for GGUF, so models and long chats that don't fit on one 24 GB
-   Mac (Qwen3 at 16k) can run on MLX.
-3. **Per-model profiles.** Today Qwen3 needs hand-tuned worker settings
+2. **Two-Mac MLX split.** *In progress (v3, 2026-10-31).* Run one MLX
+   model across both Macs, as llama.cpp RPC does for GGUF, so models and
+   long chats that don't fit on one 24 GB Mac (Qwen3 at 16k) can run on
+   MLX. Design: [MLX-SPLIT.md](MLX-SPLIT.md).
+   - [x] Feasibility: `mx.distributed` ring fails on ≥2 MB messages over
+     Thunderbolt; jaccl needs Thunderbolt 5; mlx-lm pipeline sharding
+     covers only Qwen3. Chosen: Caravan's own layer pipeline over one TCP
+     connection.
+   - [x] Head/front worker pair (`--split-role head|front`), Qwen3, Gemma 4
+     and GPT-OSS.
+   - [x] Per-stage session caches with save/restore on each Mac (both
+     halves or neither).
+   - [x] `mlx.split` config and front-command builder; unit tests.
+   - [ ] Side-by-side numbers vs v2.1 on one Mac, and the 8-bit "bigger
+     brothers" split across both.
+3. **Split download (MLX).** Each Mac downloads only its own layers
+   straight from Hugging Face; nothing relayed through the head. Read
+   `model.safetensors.index.json`, map each node's layer range to its
+   shard files, fetch them with `snapshot_download(allow_patterns=...)`
+   plus config and tokenizer files. Edge cases: shards that straddle the
+   cut (both Macs fetch them), embeddings and `lm_head`, tied embeddings
+   (the head needs the embedding shard too), vision towers (skipped for
+   text-only), and re-planning when more tails join (a new cut means new
+   shards, and files no longer needed should be reported, not deleted).
+   *Prototype in v3: `agent/mlx_split_fetch.py`.*
+4. **Split download (GGUF), stage 1: rpc-server's local tensor cache.**
+   With `ggml-rpc-server -c/--cache` the tail keeps the tensors it
+   receives on disk, keyed by hash, so it only receives its weights over
+   the wire the first time. *Checked 2026-10-31: our build has `-c,
+   --cache` and the tail plist already uses it.* What's left: the head
+   still needs the full GGUF on its own disk and reads all of it.
+5. **Split download (GGUF), stage 2: tail loads its own tensors.** A fork
+   patch so the tail loads its assigned tensors from its own disk instead
+   of the head pushing them. Each tail fetches only its tensors' byte
+   ranges (HTTP Range requests using the tensor offsets in the GGUF
+   header), or uses `gguf-split` shards. Then the head no longer needs the
+   tail's part on disk either.
+6. **Per-model profiles.** Today Qwen3 needs hand-tuned worker settings
    (sessions in memory, cache budget, chunk size, cache quantization, when
    to save). The plan:
    - Compute a starting profile from the model's size and config against
@@ -88,25 +122,55 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
    - Check it with a short probe on first load.
    - Refine it from the peak memory and speeds the worker already reports.
    - Ship starter profiles for Qwen3, Gemma 4 and GPT-OSS.
-4. **Gemma 4 short-prompt cost.** Short prompts read about 8% slower with
+7. **Gemma 4 short-prompt cost.** Short prompts read about 8% slower with
    the worker than with plain `mlx_lm.server` (397 vs 430 tok/s at 512
    tokens). The likely cause is the per-reply snapshot of the
    sliding-window layers; make it cheaper or skip it when it isn't needed.
-5. **Proxy overhead.** 27–96 ms per MLX request, depending on the model.
+8. **Proxy overhead.** 27–96 ms per MLX request, depending on the model.
    It's mostly cheap already, against v1 behind the same proxy. What's
    left is the one-off ~0.15 s on the first short request after a big
    chat.
-6. **Memory headroom.** Qwen3 leaves 16–17% free, and swap reaches about
+9. **Memory headroom.** Qwen3 leaves 16–17% free, and swap reaches about
    1.45 GB.
    - Size the MLX cache from the real GPU limit.
    - Adapt it to free memory.
    - Warn before a request would run out of memory instead of failing.
-7. **Cold-disk restore.** Measure restore with the file out of the disk
-   cache. Then consider preloading recently used sessions at startup.
-8. **Re-measure the two-Mac split** with the v1+ settings (flash
-   attention over RPC, automatic KV, larger `ubatch`).
-9. **Packaging.** Templated launchd plists (no machine-specific paths), an
-   install script, and the agent running the proxy itself.
+10. **Cold-disk restore.** Measure restore with the file out of the disk
+    cache. Then consider preloading recently used sessions at startup.
+11. **Re-measure the two-Mac split** with the v1+ settings (flash
+    attention over RPC, automatic KV, larger `ubatch`).
+12. **Packaging.** Templated launchd plists (no machine-specific paths), an
+    install script, and the agent running the proxy itself.
+
+## Deferred / parked
+
+Things we chose not to do now, so they don't get lost. Each has why it's
+parked and when to pick it up again. Items that are already on the "Next"
+list above point to it.
+
+| Item | Why parked | Revisit when |
+|---|---|---|
+| Gemma 4 ~8% short-prompt checkpoint cost (Next #7) | Small, only on short prompts; v3 split work took priority. | After v3 lands; before Gemma 4 becomes the default MLX model. |
+| Qwen3 ~0.15 s drop-previous-chat cost (Next #8) | One-off per big chat, hard to see in use. | With the proxy overhead pass. |
+| MLX worker 6–9 s startup (Known limits) | Only paid on (re)start; the split adds the front's ~2–4 s in parallel. | When the agent restarts workers on model switch (packaging). |
+| 8-bit MLX chat memory (`--kv-bits 8`, off) | Slower and still didn't fit Qwen3 at 16k on one Mac; untested with the split. | If a split model runs short of memory at long chats. |
+| Per-model profiles (Next #6) | Needs the v3 memory numbers first (they change what fits). | Right after v3. |
+| Proxy overhead trims (Next #8) | 27–96 ms per request, already small next to model time. | With the next proxy release. |
+| Memory headroom (Next #9) | The split halves per-Mac weights, which changes the problem. | Re-check with v3 numbers; then size caches from the real GPU limit. |
+| Cold-disk restore measurement and preload (Next #10) | Needs a reliable way to drop files from the disk cache without touching user data. | After v3; before advertising restart resume times. |
+| Suite 2: two-Mini runs of Qwen3 30B 8-bit and the Qwen3.6 35B GGUF | Qwen3 30B 8-bit moved into v3 (MLX split); the Qwen3.6 35B GGUF two-Mini run is still parked. | After v3, with Next #11 (re-measure the llama.cpp split). |
+| Broken `gpt-oss-20b.gguf` symlink in `~/.caravan/models` | Not ours to change during the sprint; GPT-OSS GGUF runs use the Ollama blob. | Next maintenance pass; fix by hand, not by a script. |
+| Saved-chat cap deletes by default (Known limits) + a dry run on the second Mini's backlog (~165 GB) | Deleting a user's saved chats needs their sign-off; v3 runs with `CARAVAN_SLOT_CLEANUP=off`. | Before the next proxy restart on that Mini: run `--dry-run`, review, then decide `archive` vs `delete`. |
+| Restore exo and Hermes on both Minis | Paused for the Caravan sprint so they don't compete for memory. | When the Caravan sprint is done. |
+| Scrub personal paths (launchd plists, docs) | Cosmetic for the public repo; plists are hand-managed. | With packaging (Next #12). |
+| C++ binary hardcodes the model (Known limits) | Experiment only; the Python agent is the supported path. | If the single-binary route is picked up again. |
+| `mx.distributed` ring over Thunderbolt (fails on ≥2 MB messages) | Our own TCP pipeline works today. | With a newer mlx release; would allow mlx-lm/exo-style sharding. |
+| jaccl / RDMA over Thunderbolt | Needs Thunderbolt 5 (M4 Pro/Max); our Minis are Thunderbolt 4. | If a Thunderbolt 5 Mac joins. |
+| GPT-OSS 120B split across two Minis | 63.4 GB of weights vs 48 GB total memory: doesn't fit. | With a third Mac (or more memory). |
+| Split link is unauthenticated | Thunderbolt-only cable between two trusted Macs. | Before the split runs over LAN/Tailscale. |
+| No overlap of the two halves when writing (serial pipeline) | Simplicity first; it's the main reason writing is slower split. | After v3: overlap the next token's front pass with the head, or compile the stage graphs. |
+| `--kv-bits` with the split | Untested. | With the 8-bit chat memory item. |
+| More than two stages (one head, several fronts) | Two Macs today. | When a third Mac joins; needs re-planning of the cut and of split downloads. |
 
 ## Known limits
 
@@ -114,9 +178,9 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
   days, and the least recently used saves over 200 files / 50 GB, are
   deleted. Run `python3 -m proxy.slot_cleanup --dry-run` first, or set
   `CARAVAN_SLOT_CLEANUP=archive`.
-- **Qwen3 30B at 16k doesn't fit on MLX** on a 24 GB Mac (16.4 GB weights
+- **Qwen3 30B at 16k doesn't fit on MLX** on one 24 GB Mac (16.4 GB weights
   + ~3.2 GB cache), even with `--kv-bits 8`. Use the GGUF for long Qwen
-  chats.
+  chats, or the v3 MLX split across both Macs.
 - **The MLX worker takes 6–9 s to start** (vs 1.6 s for `mlx_lm.server`).
 - **MLX tool calls** are returned as text, not as a `tool_calls` field.
 - **Same first message = same session**, on both backends.

@@ -119,6 +119,7 @@ class SessionStore:
         self.clock = clock
         self.sessions = {}
         self.stats = {"hit_tokens": 0, "read_tokens": 0}
+        self.on_evict = None        # v3 split: callback(keys) so the other stage drops them too
 
     # --- paths / metadata -------------------------------------------------
     def path(self, key) -> Path:
@@ -180,6 +181,8 @@ class SessionStore:
         if evicted:
             self.ops.release()
             log(f"evicted {len(evicted)} session(s) from memory: {', '.join(evicted)}")
+            if self.on_evict:
+                self.on_evict(evicted)
         return evicted
 
     # --- disk -------------------------------------------------------------
@@ -260,14 +263,17 @@ class SessionStore:
         return n
 
     # --- per request ------------------------------------------------------
-    def prepare(self, key, prompt) -> "tuple[Session, int, str]":
+    def prepare(self, key, prompt, allow_load=True) -> "tuple[Session, int, str]":
         """Session for `key` with its cache positioned at the longest
         reusable prefix of `prompt` (always leaving >= 1 token to read).
-        Returns (session, n_reused, how)."""
+        Returns (session, n_reused, how). allow_load=False (v3 split): never
+        read the disk here -- the head restores both halves together first."""
         key = key if valid_key(key) else ANON
         how = "memory"
         s = self.sessions.get(key)
-        if s is None:
+        if s is None and not allow_load:
+            how = "new"
+        elif s is None:
             s, how = self._load(key)
             how = "disk" if s is not None else ("rejected" if how == "rejected" else "new")
         if s is None:
@@ -597,7 +603,25 @@ class Engine:
         self.make_sampler, self.make_logits_processors = make_sampler, make_logits_processors
         self.stream = mx.new_stream(mx.default_device())
         t0 = time.time()
-        self.model, self.tokenizer = load(str(self.model_dir))
+        self.split = None           # v3: SplitSessions when this is the head of a two-Mini split
+        self.client = None
+        role = getattr(args, "split_role", "none") or "none"
+        if role == "head":
+            import mlx_split as S
+            from mlx_lm.utils import load_tokenizer
+            cfg0 = json.loads((self.model_dir / "config.json").read_text())
+            self.stage = S.Stage(self.model_dir, "head", args.split_front_layers)
+            self.client = S.FrontClient(args.split_peer)
+            self.model = S.SplitModel(self.stage, self.client)
+            self.tokenizer = load_tokenizer(self.model_dir, eos_token_ids=cfg0.get("eos_token_id"))
+            hello = self.client.call("hello", proto=S.PROTO)[0]
+            if hello.get("range") != [0, self.stage.range[0]] or hello.get("n_layers") != self.stage.n_layers:
+                raise RuntimeError(f"front stage {hello.get('stage')} doesn't match head "
+                                   f"{S.stage_label('head', self.stage.range, self.stage.n_layers)}")
+            log(f"split head: {S.stage_label('head', self.stage.range, self.stage.n_layers)} here, "
+                f"front {hello.get('stage')} at {args.split_peer}")
+        else:
+            self.model, self.tokenizer = load(str(self.model_dir))
         cfg = json.loads((self.model_dir / "config.json").read_text())
         self.model_type = cfg.get("model_type", "")
         self.wired_mode = getattr(args, "wired_limit", "startup")
@@ -614,20 +638,29 @@ class Engine:
         ident = {"model": str(self.model_dir), "tokenizer": tokenizer_hash(self.model_dir),
                  "mlx_lm": _version("mlx_lm"), "model_type": self.model_type,
                  "kv_bits": args.kv_bits or 0}
+        if self.client is not None:
+            import mlx_split as S
+            ident["stage"] = S.stage_label("head", self.stage.range, self.stage.n_layers)
         self.store = SessionStore(MlxOps(self.model, args.kv_bits, args.kv_group_size), args.cache_dir, ident,
                                   max_sessions=args.prompt_cache_size,
                                   max_bytes=args.prompt_cache_bytes,
                                   persist=not args.no_persist)
+        if self.client is not None:
+            self.split = S.SplitSessions(self.store, self.client, log=log)
         # Warm-up: the first forward pass in a fresh process pays one-off
         # kernel/weight-paging costs (~1-2.5 s here); pay them at startup
         # instead of on the first resumed turn.
         tw = time.time()
+        if self.split:
+            self.model.begin_scratch()
         with mx.stream(self.stream):
             c = self.store.ops.new_cache()
             self.model(mx.array([[int(self.tokenizer.encode("Hi")[-1])] * 16]), cache=c)
             mx.eval([x.state for x in c])
             del c
             mx.clear_cache()
+        if self.split:
+            self.model.end_scratch()
         self.warmup_s = time.time() - tw
         log(f"warm-up {self.warmup_s:.2f}s")
         log(f"loaded {self.model_dir.name} ({self.model_type}) in {time.time() - t0:.1f}s; "
@@ -660,6 +693,42 @@ class Engine:
                 except BaseException as e:
                     out.put(("error", e))
                 out.put(None)
+
+    # -- session ops: local store, or both halves of a split ---------------
+    def s_prepare(self, key, prompt):
+        return self.split.prepare(key, prompt) if self.split else self.store.prepare(key, prompt)
+
+    def s_checkpoint(self, s, tokens):
+        (self.split or self.store).checkpoint(s, tokens)
+
+    def s_rewind(self, s, completed=True):
+        (self.split or self.store).rewind(s, completed=completed)
+
+    def s_reset(self, s):
+        (self.split or self.store).reset(s)
+
+    def s_save(self, key):
+        return (self.split or self.store).save(key)
+
+    def s_restore(self, key):
+        return (self.split or self.store).restore(key)
+
+    def s_drop(self, keys):
+        return (self.split or self.store).drop(keys)
+
+    def s_flush(self):
+        return (self.split or self.store).flush()
+
+    def split_info(self):
+        if not self.split:
+            return None
+        front = self.client.call("stats")[0]
+        front.pop("_s", None)
+        return {"head": {"stage": self.store.ident.get("stage"),
+                         "weights_gb": round(self.stage.nbytes() / 1e9, 2),
+                         "active_gb": round(self.mx.get_active_memory() / 1e9, 2),
+                         "peak_gb": round(self.mx.get_peak_memory() / 1e9, 2)},
+                "front": front, "peer": self.args.split_peer}
 
     def call(self, fn):
         """Run fn() on the mlx thread (after any queued generation)."""
@@ -716,7 +785,9 @@ class Engine:
     def _run(self, key, prompt, body, cancel):
         mx, G = self.mx, self.G
         t0 = time.time()
-        s, n_reused, how = self.store.prepare(key, prompt)
+        if self.client is not None:
+            self.client.reset_stats()
+        s, n_reused, how = self.s_prepare(key, prompt)
         completed = False
         n_gen = 0
         try:
@@ -731,7 +802,7 @@ class Engine:
                         self.model(chunk[None], cache=s.cache)
                         mx.eval([c.state for c in s.cache])
                         mx.clear_cache()
-            self.store.checkpoint(s, prompt[:-1])
+            self.s_checkpoint(s, prompt[:-1])
             t_prefill = time.time() - t0
             if body.get("seed") is not None:
                 mx.random.seed(int(body["seed"]))
@@ -773,17 +844,27 @@ class Engine:
                     "completion_tokens": n_gen, "finish": finish, "prefill_s": round(t_prefill, 3),
                     "ttft_s": round(ttft or 0, 3), "total_s": round(time.time() - t0, 3),
                     "peak_gb": round(mx.get_peak_memory() / 1e9, 2)}
+            if self.client is not None:
+                st = dict(self.client.stats)
+                info["split"] = {"calls": st["calls"], "mb_out": round(st["bytes_out"] / 1e6, 2),
+                                 "mb_in": round(st["bytes_in"] / 1e6, 2),
+                                 "wait_s": round(st["wait_s"], 3), "front_s": round(st["front_s"], 3),
+                                 "net_s": round(st["wait_s"] - st["front_s"], 3)}
         except BaseException as e:
             # Cancelled or failed: back to the last checkpoint if there is one.
-            if s.snaps is not None:
-                self.store.rewind(s, completed=False)
-            else:
+            try:
+                if s.snaps is not None:
+                    self.s_rewind(s, completed=False)
+                else:
+                    self.s_reset(s)
+            except Exception as e2:     # v3: the front may be the thing that failed
+                log(f"session {s.key}: rewind after failure also failed ({e2!r}); dropping it here")
                 self.store.reset(s)
             log(f"session {s.key}: generation stopped ({e!r}); rewound")
             if isinstance(e, KeyboardInterrupt):
                 return
             raise
-        self.store.rewind(s, completed=completed)
+        self.s_rewind(s, completed=completed)
         log(f"session {s.key}: {how}, reused {n_reused}/{len(prompt)} tokens, read "
             f"{len(prompt) - n_reused} in {t_prefill:.2f}s, {n_gen} generated, "
             f"total {info['total_s']:.2f}s, peak {info['peak_gb']} GB")
@@ -857,10 +938,13 @@ def make_handler(engine: "Engine"):
 
         def do_GET(self):
             if self.path.startswith("/health"):
-                return self._json(200, {"status": "ok", "worker": "caravan"})
+                return self._json(200, {"status": "ok", "worker": "caravan",
+                                        "split": bool(engine.split)})
             if self.path.startswith("/v1/models"):
                 return self._json(200, {"object": "list", "data": [
                     {"id": str(engine.model_dir), "object": "model", "owned_by": "caravan"}]})
+            if self.path.startswith("/caravan/split"):
+                return self._json(200, engine.call(engine.split_info) or {"split": False})
             if self.path.startswith("/caravan/cache"):
                 return self._json(200, engine.call(lambda: {
                     "sessions": engine.store.describe(), "persist": engine.store.persist,
@@ -875,14 +959,14 @@ def make_handler(engine: "Engine"):
                 op = self.path.split("?")[0].rsplit("/", 1)[-1]
                 if op == "drop":
                     keys = [k for k in body.get("keys") or [] if valid_key(k)]
-                    return self._json(200, {"dropped": engine.call(lambda: engine.store.drop(keys))})
+                    return self._json(200, {"dropped": engine.call(lambda: engine.s_drop(keys))})
                 key = body.get("key")
                 if not valid_key(key):
                     return self._json(400, {"error": "bad key"})
                 if op == "save":
-                    return self._json(200, {"result": engine.call(lambda: engine.store.save(key))})
+                    return self._json(200, {"result": engine.call(lambda: engine.s_save(key))})
                 if op == "restore":
-                    return self._json(200, {"result": engine.call(lambda: engine.store.restore(key))})
+                    return self._json(200, {"result": engine.call(lambda: engine.s_restore(key))})
                 return self._json(404, {"error": "unknown op"})
             if self.path.startswith("/v1/chat/completions"):
                 return self._complete(body, chat=True)
@@ -986,7 +1070,8 @@ def make_handler(engine: "Engine"):
             usage = {"prompt_tokens": info["prompt_tokens"], "completion_tokens": info["completion_tokens"],
                      "total_tokens": info["prompt_tokens"] + info["completion_tokens"],
                      "prompt_tokens_details": {"cached_tokens": info["cached_tokens"]},
-                     "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb")}}
+                     "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb", "split")
+                                 if k in info}}
             try:
                 if stream:
                     send(pack("", "", finish=info["finish"]))
@@ -1037,18 +1122,83 @@ def build_parser():
                     help="startup: set Metal wired limit once at load and hold it (like mlx_lm.server); "
                          "per-request: v2 behaviour (raise/drop around each request); off: never touch it")
     ap.add_argument("--cache-limit-gb", type=float, default=None, help="mx.set_cache_limit (freed-buffer pool)")
+    # v3: one model split across two Minis (agent/mlx_split.py)
+    ap.add_argument("--split-role", choices=("none", "head", "front"), default="none",
+                    help="head: HTTP + last layers + lm_head, asks --split-peer for the first layers; "
+                         "front: embeddings + first layers, listens on --split-listen (no HTTP)")
+    ap.add_argument("--split-peer", default=None, help="head: front stage HOST:PORT (Thunderbolt address)")
+    ap.add_argument("--split-listen", default=None, help="front: HOST:PORT to listen on (Thunderbolt address)")
+    ap.add_argument("--split-front-layers", type=int, default=None,
+                    help="layers on the front stage (default: half, the odd one to the head)")
     return ap
+
+
+def front_main(args):
+    """v3 front stage: embeddings + the first layers, its own session caches."""
+    import mlx.core as mx
+    import mlx_split as S
+    from mlx_lm.utils import maybe_set_recommended_wired_limit
+    t0 = time.time()
+    model_dir = Path(args.model).expanduser().resolve()
+    stage = S.Stage(model_dir, "front", args.split_front_layers)
+    wired = apply_startup_wiring(getattr(args, "wired_limit", "startup"), mx, maybe_set_recommended_wired_limit)
+    if args.cache_limit_gb is not None:
+        mx.set_cache_limit(int(args.cache_limit_gb * (1 << 30)))
+    label = S.stage_label("front", stage.range, stage.n_layers)
+    ident = {"model": str(model_dir), "tokenizer": tokenizer_hash(model_dir), "mlx_lm": _version("mlx_lm"),
+             "model_type": stage.model_type, "kv_bits": args.kv_bits or 0, "stage": label}
+
+    class _M:                       # MlxOps only needs make_cache()
+        make_cache = staticmethod(stage.make_cache)
+    ops = MlxOps(_M(), args.kv_bits, args.kv_group_size)
+    # The head decides evictions (count + bytes over both halves); the front mirrors them.
+    store = SessionStore(ops, args.cache_dir, ident, max_sessions=1 << 20, max_bytes=None,
+                         persist=not args.no_persist)
+    stream = mx.new_stream(mx.default_device())
+
+    def forward(tokens, cache):
+        with mx.stream(stream):
+            return stage.front_forward(tokens, cache)
+
+    info = {"stage": label, "range": list(stage.range), "n_layers": stage.n_layers,
+            "model_type": stage.model_type, "mlx_lm": _version("mlx_lm")}
+    state = S.FrontState(store, forward, info, new_scratch=ops.new_cache)
+
+    def stats():
+        return {"stage": label, "weights_gb": round(stage.nbytes() / 1e9, 2),
+                "active_gb": round(mx.get_active_memory() / 1e9, 2),
+                "peak_gb": round(mx.get_peak_memory() / 1e9, 2),
+                "sessions": len(store.sessions), "session_gb": round(store.total_bytes() / 1e9, 3)}
+    stop = threading.Event()
+
+    def _term(*_):
+        n = store.flush()
+        log(f"front shutting down; saved {n} session(s) with unsaved turns")
+        stop.set()
+    signal.signal(signal.SIGTERM, _term)
+    signal.signal(signal.SIGINT, _term)
+    log(f"front stage {label} of {model_dir.name} loaded in {time.time() - t0:.1f}s, "
+        f"{stage.nbytes() / 1e9:.1f} GB of layers; wired {wired}; persist="
+        + (f"on {store.cache_dir}" if store.persist else "off"))
+    S.serve_front(args.split_listen, state, log=log, stats_fn=stats, stop=stop)
+    return 0
 
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    if args.split_role == "front":
+        if not args.split_listen:
+            raise SystemExit("--split-role front needs --split-listen HOST:PORT")
+        return front_main(args)
+    if args.split_role == "head" and not args.split_peer:
+        raise SystemExit("--split-role head needs --split-peer HOST:PORT")
     engine = Engine(args)
     srv = ThreadingHTTPServer((args.host, args.port), make_handler(engine))
     srv.daemon_threads = True
 
     def _term(*_):
         def _stop():
-            n = engine.call(engine.store.flush)
+            n = engine.call(engine.s_flush)
             log(f"shutting down; saved {n} session(s) with unsaved turns")
             srv.shutdown()
         threading.Thread(target=_stop, daemon=True).start()
