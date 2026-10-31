@@ -2274,6 +2274,34 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
   The `~/.caravan/models/gpt-oss-20b.gguf` symlink points at a removed
   Ollama blob; `suite_v2_llama.sh` now defaults to the HF blob v1 used
   (`GPT_OSS_GGUF` overrides). Symlink left as is.
+- **Per-Mini cap on saved chats** (`proxy/slot_cleanup.py`, from an X
+  reply). After the age rule, the llama.cpp `.bin` slot files and the MLX
+  `.safetensors` caches left over are counted together and held to
+  `max_count` (default 200) and `max_gb` (default 50). Least recently
+  used (oldest mtime) go first, in the same delete / archive / off mode,
+  and each eviction gets its own log line. Never evicted: a session in a
+  llama.cpp slot, with unsaved turns, or with a turn (llama.cpp or MLX)
+  in the last `protect_minutes` (30). In the proxy that comes from
+  `_active_sessions()`; the CLI uses the occupants in
+  `session_slots.json`. Each file is re-checked under the FIFO gate (it
+  must be unchanged and still inactive). If everything left is active,
+  the cap is exceeded and that is logged. Settings: `--slot-max-count` /
+  `--slot-max-gb` / `--slot-protect-minutes` (CLI `--max-count` /
+  `--max-gb` / `--protect-minutes`), `CARAVAN_SLOT_MAX_COUNT` /
+  `CARAVAN_SLOT_MAX_GB` / `CARAVAN_SLOT_PROTECT_MINUTES`, and
+  `slot_cleanup.max_count|max_gb|protect_minutes` in config.json. There
+  are 9 new unit tests.
+  Exercised only on scratch copies of bench files in `/tmp/capdemo`
+  (CLI archive run: 15 MLX caches, 1.15 GB, archived LRU-first under a
+  0.8 GB cap. Proxy on test port 8190: 2 slot files evicted under a
+  1-file cap, and the in-slot session kept although it was the oldest).
+  Dry run on EXO1's real `~/.caravan/llama-server/slots`: it is empty
+  today (0 files), so the defaults would evict nothing there. The
+  269-file / ~154-165 GB backlog in the 2026-10-30 entry isn't on EXO1
+  any more and was not checked (node-a/EXO2 wasn't touched). By the
+  numbers logged then, the 30-day age rule alone already covers all of
+  it (Sep 6-18). The cap alone (age rule off) would keep the newest
+  ~50 GB (~80-90 files) and evict ~180-190 files / ~105-115 GB.
 - **Limits still open (MLX):** Qwen3 30B at 16k doesn't fit in either
   version (16.4 GB weights + ~3.2 GB KV; kv8 doesn't save it); the worker
   starts 6–9 s vs 1.6 s; Gemma short-prompt reading is ~7% slower;

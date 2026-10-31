@@ -173,6 +173,125 @@ class SlotCleanupTest(unittest.TestCase):
         self.assertTrue((self.slots / "aaaa.bin").exists())
 
 
+class SlotCapTest(unittest.TestCase):
+    """Per-Mini cap (v2): count / GB limits, LRU first, never active."""
+    setUp = SlotCleanupTest.setUp
+    tearDown = SlotCleanupTest.tearDown
+    _slot = SlotCleanupTest._slot
+    _settings = SlotCleanupTest._settings
+
+    def _mlx(self, name, age_days, size=10):
+        d = self.slots.parent / "mlx-cache"
+        d.mkdir(exist_ok=True)
+        p = d / name
+        p.write_bytes(b"x" * size)
+        t = self.now - age_days * DAY
+        os.utime(p, (t, t))
+        return p
+
+    def test_cap_defaults_env_file(self):
+        s = slot_cleanup.resolve_settings()
+        self.assertEqual((s.max_count, s.max_gb, s.protect_minutes), (200, 50.0, 30.0))
+        self.config.write_text(json.dumps({"slot_cleanup": {"max_count": 5, "max_gb": 2.5}}))
+        s = slot_cleanup.resolve_settings()
+        self.assertEqual((s.max_count, s.max_gb), (5, 2.5))
+        with mock.patch.dict(os.environ, {"CARAVAN_SLOT_MAX_COUNT": "7", "CARAVAN_SLOT_MAX_GB": "0"}):
+            s = slot_cleanup.resolve_settings({"max_count": 9})
+        self.assertEqual((s.max_count, s.max_gb), (9, 0.0))
+        for bad in ({"max_count": -1}, {"max_count": "x"}, {"max_gb": -2}, {"protect_minutes": -1}):
+            with self.assertRaises(ValueError):
+                slot_cleanup.resolve_settings(bad)
+
+    def test_count_cap_evicts_lru_first(self):
+        for i, age in enumerate([1, 5, 3, 2]):
+            self._slot(f"s{i}.bin", age)
+        r = slot_cleanup.cleanup(self._settings(max_count=2), now=self.now)
+        self.assertEqual(sorted(f.path.name for f in r.evicted), ["s1.bin", "s2.bin"])
+        self.assertEqual(sorted(p.name for p in self.slots.iterdir()), ["s0.bin", "s3.bin"])
+
+    def test_size_cap_counts_llama_and_mlx_together(self):
+        self._slot("a.bin", 4, size=600)
+        self._mlx("b.safetensors", 3, size=600)
+        self._slot("c.bin", 2, size=600)
+        self._mlx("d.safetensors", 1, size=600)
+        s = self._settings(max_count=0, max_gb=1500 / 1e9, mode="archive",
+                           mlx_dir=str(self.slots.parent / "mlx-cache"))
+        r = slot_cleanup.cleanup(s, now=self.now)
+        self.assertEqual([f.path.name for f in r.evicted], ["a.bin", "b.safetensors"])
+        self.assertTrue((self.archive / "a.bin").exists())
+        self.assertTrue((self.archive / "mlx" / "b.safetensors").exists())
+        self.assertEqual(r.kept_total, 1200)
+
+    def test_active_and_recent_sessions_never_evicted(self):
+        self._slot("busy.bin", 9)          # oldest, but in a llama.cpp slot
+        self._slot("old.bin", 8)
+        self._slot("fresh.bin", 0.001)     # ~1.5 min ago: within protect_minutes
+        self.state.write_text(json.dumps({"version": 2, "slots": [
+            {"fingerprint": "busy", "last_used": 0}], "assignments": {"busy": 0}}))
+        r = slot_cleanup.cleanup(self._settings(max_count=1), now=self.now)
+        self.assertEqual([f.path.name for f in r.evicted], ["old.bin"])
+        self.assertTrue(r.over_cap_active)
+        self.assertTrue((self.slots / "busy.bin").exists())
+        self.assertTrue((self.slots / "fresh.bin").exists())
+        # proxy-style callback overrides the state file
+        r = slot_cleanup.cleanup(self._settings(max_count=1, protect_minutes=0),
+                                 now=self.now, active=lambda: ["fresh"])
+        self.assertEqual([f.path.name for f in r.evicted], ["busy.bin"])
+
+    def test_session_turned_active_under_gate_is_spared(self):
+        self._slot("a.bin", 5)
+        self._slot("b.bin", 4)
+        calls = []
+
+        def active():
+            calls.append(1)
+            return [] if len(calls) == 1 else ["a"]   # a becomes active after the scan
+        r = slot_cleanup.cleanup(self._settings(max_count=1), now=self.now, active=active)
+        self.assertEqual([f.path.name for f in r.evicted], [])
+        self.assertTrue((self.slots / "a.bin").exists())
+
+    def test_cap_dry_run_and_off_change_nothing(self):
+        for i in range(4):
+            self._slot(f"s{i}.bin", i + 1)
+        before = sorted(p.name for p in self.slots.iterdir())
+        r = slot_cleanup.cleanup(self._settings(max_count=1), dry_run=True, now=self.now)
+        self.assertEqual(len(r.evicted), 3)
+        self.assertEqual((r.kept_count, r.kept_total), (1, 10))
+        r = slot_cleanup.cleanup(self._settings(max_count=1, mode="off"), now=self.now)
+        self.assertEqual(r.removed, [])
+        self.assertEqual(sorted(p.name for p in self.slots.iterdir()), before)
+
+    def test_age_rule_runs_first_and_cap_zero_is_off(self):
+        self._slot("ancient.bin", 40)
+        for i in range(3):
+            self._slot(f"s{i}.bin", i + 1)
+        r = slot_cleanup.cleanup(self._settings(max_count=0, max_gb=0), now=self.now)
+        self.assertEqual([f.path.name for f in r.removed], ["ancient.bin"])
+        self.assertEqual(r.evicted, [])
+
+    def test_eviction_is_logged(self):
+        self._slot("a.bin", 5)
+        self._slot("b.bin", 4)
+        s = self._settings(max_count=1)
+        r = slot_cleanup.cleanup(s, now=self.now)
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            slot_cleanup.log_result(s, r, dry_run=False)
+        self.assertIn("evicted (over cap 1 files", err.getvalue())
+        self.assertIn("a.bin", err.getvalue())
+
+    def test_cli_cap_dry_run(self):
+        for i in range(3):
+            self._slot(f"s{i}.bin", i + 1)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = slot_cleanup.main(["--dry-run", "--slot-dir", str(self.slots),
+                                    "--state-file", str(self.state), "--max-count", "1"])
+        self.assertEqual(rc, 0)
+        self.assertIn("+ 2 over the cap", out.getvalue())
+        self.assertEqual(len(list(self.slots.iterdir())), 3)
+
+
 class ProxyWiringTest(unittest.TestCase):
     """slot_pin_proxy's gate/forget hooks: cleanup waits for the FIFO gate
     and drops assignments from the live in-memory map."""
@@ -216,6 +335,12 @@ class ProxyWiringTest(unittest.TestCase):
                 self.assertTrue(new_mlx.exists())
                 self.assertEqual(json.loads(state.read_text())["assignments"], {"bbbb": 1})
                 self.assertNotIn("aaaa", spp._warm_this_run)
+                # v2 cap: live sessions come from the proxy's own state.
+                spp.session_slots.mark_used(1, "bbbb")
+                spp.mlx_sessions.turn("eeee")
+                act = spp._active_sessions(60.0)
+                self.assertIn("bbbb", act)
+                self.assertIn("eeee", act)
                 sys.modules.pop("slot_pin_proxy", None)
 
 

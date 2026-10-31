@@ -366,9 +366,24 @@ restore. Config keys are under `"slot_cleanup"`.
 | `--slot-archive-dir` | `--archive-dir` | `CARAVAN_SLOT_ARCHIVE_DIR` | `archive_dir` | `~/.caravan/llama-server/slots-archive` |
 | `--slot-cleanup-interval-hours` | `--interval-hours` | `CARAVAN_SLOT_CLEANUP_INTERVAL_HOURS` (`<= 0` = startup only) | `interval_hours` | `6` |
 | -- | `--slot-dir` | `CARAVAN_SLOT_SAVE_DIR` | `slot_dir` | `~/.caravan/llama-server/slots` |
+| -- | `--mlx-dir` | `CARAVAN_MLX_CACHE_DIR` | `mlx_dir` | the proxy's MLX cache dir (when MLX is on) |
+| `--slot-max-count` | `--max-count` | `CARAVAN_SLOT_MAX_COUNT` (`0` = no count cap) | `max_count` | `200` |
+| `--slot-max-gb` | `--max-gb` | `CARAVAN_SLOT_MAX_GB` (`0` = no size cap) | `max_gb` | `50` |
+| `--slot-protect-minutes` | `--protect-minutes` | `CARAVAN_SLOT_PROTECT_MINUTES` | `protect_minutes` | `30` |
 
 Age is the file's modification time (last save). `archive` moves files
 instead of deleting them; the archive is never pruned automatically.
+
+**Per-Mini cap (v2).** After the age rule, the saved chats that are left,
+llama.cpp `.bin` and MLX `.safetensors` counted together, are held to
+`max_count` files and `max_gb` GB. The least recently used are evicted
+first, in the same `delete` / `archive` / `off` mode, and each eviction is
+logged. A session that is active is never evicted: it's in a llama.cpp
+slot now, has unsaved turns, or had a turn or save in the last
+`protect_minutes`. If only active sessions are left the cap can be
+exceeded, and that is logged. **Before you run v2 on a Mini with a big
+backlog, dry-run it first** (`python3 -m proxy.slot_cleanup --dry-run`).
+The cap applies as soon as the proxy starts.
 
 ## Operations
 
@@ -389,6 +404,7 @@ tail -f ~/Library/Logs/caravan/*.log
 python3 -m proxy.slot_cleanup --dry-run                   # what would go, and total size
 python3 -m proxy.slot_cleanup --mode archive --max-age-days 30
 python3 -m proxy.slot_cleanup                              # delete files older than 30 days
+python3 -m proxy.slot_cleanup --dry-run --max-gb 50 --max-count 200   # what the cap would evict
 ```
 
 Cleanup also runs as soon as the proxy starts. To review first, set

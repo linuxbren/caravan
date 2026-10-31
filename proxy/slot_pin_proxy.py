@@ -91,6 +91,11 @@ while it removes so it can't race a save/restore, and forgets those
 sessions' slot assignments. Configure with --slot-cleanup /
 --slot-max-age-days / --slot-archive-dir / --slot-cleanup-interval-hours
 or the matching CARAVAN_SLOT_* env vars; see slot_cleanup.py.
+v2 (2026-10-31): the same pass also holds the Mini to a cap on saved
+chats, llama.cpp + MLX together (--slot-max-count 200 / --slot-max-gb 50,
+least recently used first). Sessions in a slot, with unsaved turns, or
+with a turn in the last --slot-protect-minutes (30) are never evicted
+(_active_sessions).
 
 2026-10-30 performance pass (see docs/LOG.md for the full list):
   * new sessions get the least-recently-used slot, not round-robin
@@ -246,9 +251,11 @@ class MlxSessionTracker:
     were seen this run (and turn counts) so the log shows pinning is
     still per-session, and so step (b) has the hook it needs."""
 
-    def __init__(self):
+    def __init__(self, clock=time.monotonic):
         self._lock = threading.Lock()
+        self._clock = clock
         self.turns: dict = {}
+        self.last_turn: dict = {}
 
     def seen(self, fingerprint) -> bool:
         with self._lock:
@@ -257,12 +264,20 @@ class MlxSessionTracker:
     def turn(self, fingerprint) -> int:
         with self._lock:
             self.turns[fingerprint] = self.turns.get(fingerprint, 0) + 1
+            self.last_turn[fingerprint] = self._clock()
             return self.turns[fingerprint]
+
+    def recent(self, seconds: float) -> list:
+        """Sessions with an MLX turn in the last `seconds` (slot cap: active)."""
+        now = self._clock()
+        with self._lock:
+            return [fp for fp, t in self.last_turn.items() if now - t < seconds]
 
     def forget(self, fingerprints) -> None:
         with self._lock:
             for fp in fingerprints:
                 self.turns.pop(fp, None)
+                self.last_turn.pop(fp, None)
 
 
 mlx_sessions = MlxSessionTracker()
@@ -427,6 +442,11 @@ class SessionSlotAssigner:
             self._occupant[slot] = fingerprint
             self._last_used[slot] = self._clock()
             self._save()
+
+    def occupants(self) -> list:
+        """Fingerprints currently held in a llama.cpp slot."""
+        with self._lock:
+            return [fp for fp in self._occupant if fp]
 
     def forget(self, fingerprints) -> list:
         """Drops sessions whose disk cache was cleaned up (slot_cleanup):
@@ -643,6 +663,13 @@ class SaveTracker:
                 (fp, self._slot[fp]) for fp, n in self._turns_unsaved.items()
                 if n > 0 and now - self._last_activity.get(fp, now) >= idle_seconds
             ]
+
+    def active(self, seconds: float) -> list:
+        """Sessions with unsaved turns, or a turn in the last `seconds`."""
+        now = self._clock()
+        with self._lock:
+            return [fp for fp, t in self._last_activity.items()
+                    if self._turns_unsaved.get(fp, 0) > 0 or now - t < seconds]
 
     def forget(self, fingerprints) -> None:
         with self._lock:
@@ -1118,6 +1145,15 @@ def _forget_cleaned_sessions(fingerprints) -> list:
     return session_slots.forget(fingerprints)
 
 
+def _active_sessions(protect_seconds: float = 1800.0) -> list:
+    """Sessions the per-Mini slot cap must never evict: in a llama.cpp
+    slot right now, unsaved turns, or a turn (llama.cpp or MLX) in the
+    last protect_seconds."""
+    return sorted(set(session_slots.occupants())
+                  | set(save_tracker.active(protect_seconds))
+                  | set(mlx_sessions.recent(protect_seconds)))
+
+
 def start_slot_cleanup(overrides: "dict | None" = None):
     """Starts the automatic stale-slot cleanup thread. A bad setting
     disables cleanup with a log line rather than crash-looping a
@@ -1135,6 +1171,7 @@ def start_slot_cleanup(overrides: "dict | None" = None):
     return slot_cleanup.start_background(
         settings, gate=_exclusive_slot_io, forget=_forget_cleaned_sessions,
         drop=lambda fps: ROUTER.mlx.drop(fps),
+        active=lambda: _active_sessions(settings.protect_minutes * 60.0),
     )
 
 
