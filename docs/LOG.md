@@ -2516,3 +2516,24 @@ exact for all 36 shard files on EXO1 and EXO2), and, when
 fetch tool now saves to `caravan-split-sizes.json`. A mismatch raises
 `ShardSizeError` naming the file and the fetch command (from Hugging
 Face, never from the other Mac). Checksums are still open. 126 tests pass.
+
+## 2026-10-31: housekeeping
+
+- EXO2 runs the current branch: the pre-rename copy `~/cv3` was renamed to
+  `~/cv3.pre-rename-2026-10-31` (kept, with its old session caches and
+  logs), and `~/cv3` is now a git clone of `caravan-v3-mlx-split` from
+  GitHub plus the two unpushed commits brought over as a git bundle from
+  EXO1 (`d23a276`). `--split-packer-layers` is there, `--help` and the
+  imports work, and all 126 tests pass in EXO2's MLX venv. The new
+  shard size check passes for all six packer folders on EXO2.
+- EXO1: `~/.caravan/models/gpt-oss-20b.gguf` pointed at a removed Ollama
+  blob. It now points at the Hugging Face copy of
+  `ggml-org/gpt-oss-20b-GGUF` `gpt-oss-20b-MXFP4.gguf` (12,109,566,624
+  bytes, blob `27cd6c43…5901`), the file the GPT-OSS GGUF runs already
+  used directly.
+- EXO2: removed 13 stale `.incomplete` files (9.22 GB) under
+  `.cache/huggingface/download/` in the Qwen3 30B 8-bit (10 files) and
+  Gemma 4 26B 8-bit (3) folders, left by the stalled downloads earlier
+  today. Every finished shard in those folders matched the size Hugging
+  Face lists first; two of the partials were for lead-only shards the
+  packer doesn't need. Only `.incomplete` files were removed.

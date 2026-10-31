@@ -165,9 +165,15 @@ Open tasks for this rule:
      config names kept as deprecated aliases.
    - [x] Docs: CHANGELOG, configuration (split flags, env, config,
      deprecated names), bench/v3 README.
-   - [ ] Copy the renamed code to the packer Mac (EXO2) before the next
-     split run: its copy predates `83f86a9`, so it only knows the old
-     flag names.
+   - [x] Copy the renamed code to the packer Mac (EXO2): `~/cv3` is now a
+     git clone of this branch at `d23a276` (Oct 31); the old copy is kept
+     as `~/cv3.pre-rename-2026-10-31`.
+   - [x] Housekeeping (Oct 31): repointed the broken
+     `~/.caravan/models/gpt-oss-20b.gguf` symlink on EXO1 at the Hugging
+     Face copy of `gpt-oss-20b-MXFP4.gguf`; removed 13 stale
+     `.incomplete` partial downloads (9.22 GB) from the two 8-bit MLX
+     models on EXO2 after checking every finished shard against Hugging
+     Face's sizes.
    - [ ] Start the split from the agent and launchd (today both halves
      are started by hand; `mlx.split` is only read by the
      `mlx_backend` command helpers).
@@ -366,7 +372,6 @@ list above point to it.
 | Memory headroom (Next #9) | The split halves per-Mac weights, which changes the problem. | Re-check with v3 numbers; then size caches from the real GPU limit. |
 | Cold-disk restore measurement and preload (Next #10) | Needs a reliable way to drop files from the disk cache without touching user data. | After v3; before advertising restart resume times. |
 | Suite 2: two-Mini runs of Qwen3 30B 8-bit and the Qwen3.6 35B GGUF | Qwen3 30B 8-bit moved into v3 (MLX split); the Qwen3.6 35B GGUF two-Mini run is still parked. | After v3, with Next #11 (re-measure the llama.cpp split). |
-| Broken `gpt-oss-20b.gguf` symlink in `~/.caravan/models` | Not ours to change during the sprint; GPT-OSS GGUF runs use the Ollama blob. | Next maintenance pass; fix by hand, not by a script. |
 | Saved-chat cap deletes by default (Known limits) + a dry run on the second Mini's backlog (~165 GB) | Deleting a user's saved chats needs their sign-off; v3 runs with `CARAVAN_SLOT_CLEANUP=off`. | Before the next proxy restart on that Mini: run `--dry-run`, review, then decide `archive` vs `delete`. |
 | Restore exo and Hermes on both Minis | Paused for the Caravan sprint so they don't compete for memory. | When the Caravan sprint is done. |
 | Scrub personal paths (launchd plists, docs) | Cosmetic for the public repo; plists are hand-managed. | With packaging (Next #12). |
