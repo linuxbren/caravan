@@ -297,6 +297,11 @@ mlx-community/<name> --apply` (role MLX), or render a launchd job with
 `~/.caravan/venvs/mlx/bin/python` (`python3 -m venv ~/.caravan/venvs/mlx &&
 ~/.caravan/venvs/mlx/bin/pip install mlx-lm`).
 
+Known limits with mlx-lm 0.32.2 on a 24 GB Mini (measured 2026-10-30, see docs/LOG.md):
+- Qwen3-30B-A3B 4-bit needs `mlx.extra_args` such as `["--prompt-cache-size", "1", "--prompt-cache-bytes", "536870912", "--prefill-step-size", "512"]`. The default prompt cache keeps 10 sequences on the GPU and runs out of Metal memory.
+- GPT-OSS replies come back with raw harmony markup (`<|channel|>analysis…`) in `content`. Clients must send back only the final channel, or mlx_lm fails the next turn.
+- Gemma 4 and GPT-OSS (sliding-window models) got no in-memory reuse between chat turns. Qwen did (0.44 s turn 2).
+
 How the proxy behaves:
 
 - **Sessions.** Chat requests are identified by a hash of their first

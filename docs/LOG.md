@@ -2171,3 +2171,45 @@ weren't there:
   absolute `/Users/...` paths in the launchd plists and the
   `scripts/restart-rpc-server.sh` defaults (override with
   `CARAVAN_NODE_B_HOST` / `CARAVAN_NODE_B_USER`).
+
+## 2026-10-30 (evening): improvements 1–3 measured (rebased llama.cpp, MLX step a, auto KV)
+
+All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and the same three models as the runtime compare. Scripts are in `bench/improvements/`.
+
+- **llama.cpp rebased** onto upstream `5047748f`, with one Caravan patch re-applied: getaddrinfo in the RPC connect. There was one conflict, in ggml-rpc transport.cpp, where the getaddrinfo version was kept. The rebase brings in upstream #26004, which stores context checkpoints in the slot file. Resume after a restart (16k chat, wait for the first token):
+
+  | model | old build | rebased | old + `--swa-full` |
+  |---|---|---|---|
+  | GPT-OSS | 46.3 s | **0.65 s** | 0.59 s |
+  | Gemma 4 | 56.1 s | **0.93 s** | 0.48 s |
+  | Qwen3 (no SWA) | 1.18 s | 1.10 s | — |
+
+  Raw prefix with a divergent tail after a restart: GPT-OSS 49.2 → 2.23 s, Gemma 59.3 → 2.59 s. `--swa-full` on the old build failed this case for GPT-OSS (51.2 s). Gemma slot files grow from 291 MB to 849 MB with checkpoints.
+- **Auto KV.** The Metal recommendedMaxWorkingSetSize on an M4 24 GB is 18186.25 MiB. Decisions:
+  - Gemma 4, 2×18k: f16 (estimate 18058 MiB, the tightest case, ran fine).
+  - GPT-OSS: f16 (14406 MiB).
+  - Qwen3: q8_0 (f16 would need 19097 MiB).
+
+  Same-session speeds in tok/s (v0 = 45ed2c2 + old build, q8_0 → rebased + q8_0 → v1 = rebased + auto):
+
+  | model | tg128 | pp512 | pp4096 | pp @16k | tg @16k | peak RSS |
+  |---|---|---|---|---|---|---|
+  | GPT-OSS | 35.9 → 37.1 → 37.1 | 374.7 → 434.0 → 436.8 | 403.0 → 452.3 → 453.6 | 237.3 → 258.6 → 256.6 | 27.7 → 28.9 → 31.1 | 12.8 → 13.0 → 13.4 GB |
+  | Gemma 4 | 34.4 → 34.8 → 36.7 | 333.9 → 383.5 → 399.9 | 354.9 → 377.8 → 379.7 | 211.0 → 226.4 → 231.5 | 25.9 → 25.8 → 27.5 | 16.4 → 16.7 → 18.4 GB |
+  | Qwen3 (q8_0 either way) | 41.4 → 42.5 | 361.1 → 401.9 | 338.0 → 356.4 | 124.8 → 128.2 | 20.7 → 20.9 | 18.7 → 18.7 GB |
+
+  Most of the reading-speed gain comes from the rebase. f16 mostly adds writing speed for Gemma and writing speed on long chats for GPT-OSS, and costs about 1.7 GB on Gemma. Quality was 3/3 on everything.
+- **MLX step a** (mlx-lm 0.32.2, through the proxy; the proxy logs `backend=mlx … cache=mlx-noop`):
+
+  | model | pp512 | pp4096 | tg128 | turn 2 (warm) | after restart |
+  |---|---|---|---|---|---|
+  | Gemma 4 4-bit | 427.2 | 383.8 | 39.8 | 10.8 s (no reuse) | 16.0 s |
+  | GPT-OSS MXFP4-Q8 | 434.4 | 441.4 | 35.3 | 9.2 s (no reuse) | 12.7 s |
+  | Qwen3 4-bit | 439.4 | 395.7 | 47.0 | **0.44 s** | 16.0 s |
+
+  Notes:
+  - The chat for this test is 4k tokens. "After restart" includes paging the weights in, because mlx loads lazily.
+  - Qwen needed the prompt-cache caps listed in the README. Without them it ran out of Metal memory twice.
+  - GPT-OSS returns raw harmony markup, so the bench sends back only the final channel.
+  - Peak footprint: Qwen 19.0 GB, Gemma 18.6 GB, GPT-OSS 13.9 GB.
+- Step b (MLX prompt-cache save/restore) has not started. Design notes are in `proxy/backends.py`.
