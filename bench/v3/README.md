@@ -28,3 +28,9 @@ python3 split_client.py resume URL MODEL OUT.json TAG          # turn 3, after y
 Start the workers yourself (packer first, then the lead; see
 [docs/MLX-SPLIT.md](../../docs/MLX-SPLIT.md#running-it)) and stop them
 afterwards. The script starts and stops nothing.
+
+Before you run it, check that **Low Power Mode is off on both Macs**
+(`pmset -g | grep lowpowermode` should print `0`). The first v3 numbers
+were taken with it on for the packer; turning it off made reading
+16–30% faster. See the rerun in
+[docs/BENCHMARKS.md](../../docs/BENCHMARKS.md#v3-rerun-with-low-power-mode-off-oct-31-mlx-v31).

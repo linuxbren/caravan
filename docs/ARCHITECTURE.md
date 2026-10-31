@@ -164,7 +164,7 @@ turn reusable even for sliding-window layers. Details in [MLX.md](MLX.md).
   lockstep. A saved chat is restored only when both halves are on disk and
   match; otherwise both are dropped and the chat is read again.
 - The two Macs take turns on every token, which is why the split writes
-  28–42% slower than one Mac. Ideas for that, including splitting each
+  27–40% slower than one Mac. Ideas for that, including splitting each
   layer across both Macs, are in [ROADMAP.md](ROADMAP.md#beating-the-turn-taking-in-the-split).
 - Both halves are started by hand today; the agent doesn't run a split
   yet.

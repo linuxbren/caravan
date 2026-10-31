@@ -49,6 +49,12 @@ in a GGUF build (llama.cpp) and an MLX build:
   are from different days, so compare within a table.
 - Restore times were measured with files in the disk cache (warm disk).
   A cold-disk restore will take longer.
+- **Low Power Mode must be off on both Macs** (`pmset -g` should show
+  `lowpowermode 0`; turn it off in System Settings → Energy, or
+  `sudo pmset -a lowpowermode 0`). On Oct 31 EXO2 (the packer) was found
+  in Low Power Mode; every two-Mac number up to the "v3 rerun" section
+  below was measured that way. Turning it off made the split read 16–30%
+  faster but write less than 3% faster.
 
 **Scripts.**
 
@@ -58,7 +64,7 @@ in a GGUF build (llama.cpp) and an MLX build:
 | `bench/v2/` | v1 → v2 (`suite_v2.sh`, `suite_v2_llama.sh`) |
 | `bench/v2.1/` | v1 / v2 / v2.1 same-session A/B (`ab_bench.py`, `suite_v21.sh`) |
 | `bench/v3/` | v2.1 (one Mac) vs v3 (split across two) and the bigger brothers (`split_client.py`; see [its README](../bench/v3/README.md)) |
-| `bench/cable/` | cable timing over Thunderbolt for splitting each layer (`cable_timing.py`; see [its README](../bench/cable/README.md)) |
+| `bench/cable/` | cable timing and the GPU-wait test for splitting each layer (`cable_timing.py`, `gpu_wait.py`; see [its README](../bench/cable/README.md)) |
 
 ## Two Macs over RPC (Sep 2026, llama.cpp)
 
@@ -326,6 +332,79 @@ across both Macs. None of the bigger ones fits on one 24 GB Mac.
   Thunderbolt (planned split: Gemma 22.75 / 15.59 of 27.95 GB, GPT-OSS
   16.98 / 15.8 of 22.23 GB).
 
+## v3 rerun with Low Power Mode off (Oct 31, MLX, v3.1)
+
+The same split bench as the two sections above, rerun after Brenden
+turned Low Power Mode off on EXO2 (`pmset -g`: `lowpowermode 0` on both
+Macs). Same models, same `bench/v3/split_client.py bench` client, same
+worker defaults (4 sessions, 2 GB, prefill step 2048, 16-bit cache, save
+on). Code: v3.1 at the branch tip, `f68d15e`, on both Macs (no speed
+changes since v3). EXO1 lead on test port 8194, EXO2 packer on
+169.254.104.38:5560. Medians of 2 runs. 4-bit 18:10–18:15 CDT, 8-bit
+18:15–18:21 CDT; no services stopped. Raw output on EXO1 in
+`~/.caravan/bench-2026-10-31/v3.1-rerun/`. Only the `bench` part was
+rerun, not the 4k / 16k chat and restart tests. The one-Mac (v2.1)
+numbers are from the earlier side-by-side session; they ran on one Mac
+and weren't rerun.
+
+**4-bit (the v3 headline models)**
+
+| | Qwen3 30B: one Mac (v2.1) | old v3 | new v3 | Gemma 4 26B: one Mac | old v3 | new v3 | GPT-OSS 20B: one Mac | old v3 | new v3 |
+|---|---|---|---|---|---|---|---|---|---|
+| writing (tok/s) | 51.0 | 29.5 | **30.4** | 41.3 | 26.9 | **27.7** | 36.5 | 26.1 | **26.6** |
+| reading 512 (tok/s) | 465 | 388 | **451** | 431 | 328 | **411** | 457 | 350 | **440** |
+| reading 4k (tok/s) | 400 | 332 | **408** | 399 | 301 | **375** | 445 | 338 | **424** |
+| peak memory per Mac, this bench (GB) | – | 10.44 | **10.02** | – | 9.28 | **9.09** | – | 7.03 | **6.94** |
+| quality | 3/3 | 3/3 | **3/3** | 3/3 | 3/3 | **3/3** | 3/3 | 3/3 | **3/3** |
+
+Peak memory here is the bench only (from `/caravan/split` right after
+it), so it's compared with the old run's same snapshot, not with the
+16k-chat peaks in the tables above (10.49 / 9.28 / 7.05 GB).
+
+**8-bit (the bigger brothers)**
+
+| | Qwen3 30B 8-bit: old | new | Gemma 4 26B 8-bit: old | new | GPT-OSS 20B 8-bit: old | new |
+|---|---|---|---|---|---|---|
+| writing (tok/s) | 20.6 | **20.7** | 18.1 | **18.4** | 19.8 | **20.1** |
+| reading 512 / 4k (tok/s) | 377 / 320 | **442 / 395** | 316 / 282 | **401 / 362** | 334 / 312 | **430 / 405** |
+| peak memory per Mac, this bench (GB) | 18.07 | **17.65** | 15.58 | **15.38** | 12.10 | **12.01** |
+| quality | 3/3 | **3/3** | 3/3 | **3/3** | 3/3 | **3/3** |
+
+**Where the time goes, per token written (ms, median of both runs)**
+
+| | packer: old → new | cable: old → new | lead: old → new |
+|---|---|---|---|
+| Qwen3 30B 4-bit | 16.7 → 16.1 | 0.73 → 0.80 | 16.1 → 15.7 |
+| Gemma 4 26B 4-bit | 17.4 → 16.4 | 0.79 → 0.82 | 18.5 → 18.5 |
+| GPT-OSS 20B | 16.7 → 16.0 | 0.84 → 0.88 | 20.2 → 20.3 |
+| Qwen3 30B 8-bit | 23.5 → 22.9 | 0.82 → 0.85 | 23.6 → 23.9 |
+| Gemma 4 26B 8-bit | 24.6 → 23.8 | 0.96 → 0.89 | 28.9 → 29.1 |
+| GPT-OSS 20B 8-bit | 23.0 → 22.2 | 0.94 → 0.88 | 25.9 → 26.3 |
+
+Packer = time the packer reports ÷ link calls; cable = (time the lead
+waited − packer time) ÷ calls; lead = (writing time − time waiting on
+the packer) ÷ tokens written. Both runs are worked out the same way here,
+so the old column can differ by up to 0.3 ms from the single-run numbers
+in "where the time goes" above.
+
+**What it shows.**
+
+- **Reading got 16–30% faster; writing less than 3%.** Reading a prompt
+  keeps the GPU doing sums flat out, and Low Power Mode had been slowing
+  the packer's GPU. Writing one token at a time is mostly waiting for
+  memory and the per-pass overhead, which Low Power Mode barely touched:
+  the packer's half only got 0.5–1 ms faster per token.
+- Reading on the split is now within about 6% of one Mac (Qwen3's 4k is
+  even 2% ahead; different days, so call it a tie). Writing is still
+  27–40% slower than one Mac, for the same reason as before: the Macs
+  take turns, and each half costs almost what the whole model does on
+  one Mac.
+- The packer is now the faster half on every model: by 0.4 ms on Qwen3
+  4-bit, 2–4 ms on Gemma 4 and GPT-OSS. Moving the cut (ROADMAP idea 5)
+  now has something to win.
+- Memory is 0.1–0.4 GB lower than the old snapshot; the memory code
+  didn't change, and the cause wasn't looked into.
+
 ## Cable timing (Oct 31, Thunderbolt 4)
 
 The first test for splitting each layer across both Macs (ROADMAP idea
@@ -443,8 +522,50 @@ compute) ÷ exchanges per token (96 / 60 / 48)
   the weights again, and the GPU still has to stop twice.
 - EXO2 (the packer) was in Low Power Mode (`pmset` lowpowermode 1), which
   likely explains why its compute was 50–80% slower than EXO1's at batch
-  4. At batch 1 the two Macs were within 3–6%.
+  4. At batch 1 the two Macs were within 3–6%. Rerun below with it off.
 - Verdict: ROADMAP, idea 4, "GPU-wait test, Oct 31 2026".
+
+### Rerun with Low Power Mode off (Oct 31)
+
+Run 18:21–18:25 CDT. Same script, defaults and port, `f68d15e` on both Macs, both Macs at
+`lowpowermode 0`. Raw JSON:
+`bench/cable/results/2026-10-31-gpu-wait-lpm-off.json`.
+
+| model | batch | compute (lead / packer, ms) | GPU wait only (µs) | cable only, median / p95 (µs) | full exchange, median / p95 (µs) | overlap trick (µs) |
+|---|---:|---|---:|---|---|---:|
+| Qwen3 30B | 1 | 11.34 / 9.09 | 234 | 49 / 56 | 325 / 331 | — |
+| | 4 | 27.15 / 27.37 | 299 | 55 / 59 | 403 / 411 | 572 |
+| Gemma 4 26B | 1 | 9.55 / 9.55 | 272 | 74 / 81 | 366 / 377 | — |
+| | 4 | 25.03 / 25.23 | 311 | 64 / 77 | 414 / 424 | 639 |
+| GPT-OSS 20B | 1 | 9.53 / 9.56 | 269 | 78 / 97 | 359 / 373 | — |
+| | 4 | 30.51 / 30.76 | 295 | 83 / 96 | 403 / 418 | 750 |
+
+Worked out as before: GPU wait only = the slower Mac's (wait after each
+part − its compute) ÷ exchanges; full exchange and overlap = (lead's
+time − slower Mac's compute) ÷ exchanges.
+
+**Estimate, single chat, with the new v3 halves** (slower half: Qwen3
+packer 16.1 ms, Gemma 4 lead 18.5 ms, GPT-OSS lead 20.3 ms)
+
+| model | split each layer | new v3 split | one Mini | per exchange needed to beat v3 / one Mini |
+|---|---|---:|---:|---|
+| Qwen3 30B | 16.1 + 96 × 0.325 ≈ 47.3 ms, 21.1 tok/s | 30.4 tok/s | 51.0 tok/s | < 175 µs / < 36 µs |
+| Gemma 4 26B | 18.5 + 60 × 0.366 ≈ 40.5 ms, 24.7 tok/s | 27.7 tok/s | 41.3 tok/s | < 294 µs / < 95 µs |
+| GPT-OSS 20B | 20.3 + 48 × 0.359 ≈ 37.5 ms, 26.7 tok/s | 26.6 tok/s | 36.5 tok/s | < 362 µs / < 148 µs |
+
+- With the p95 exchange cost: 20.9 / 24.3 / 26.2 tok/s. With a free cable:
+  23.5 / 27.7 / 29.6 tok/s, still below one Mini on all three.
+- Batch 1 barely moved (325–366 µs per exchange, was 331–359). Batch 4
+  got worse, 403–414 µs (was 298–351): the slow packer had been hiding
+  part of the wait inside its own compute time. Now both Macs compute at
+  the same speed and the full cost shows.
+- EXO1's compute was also 17–20% lower than last time for Gemma 4 and
+  GPT-OSS at batch 1. EXO1 was never in Low Power Mode; most likely the
+  lead's "compute" timing includes the once-per-token handshake with the
+  slower packer. Not looked into further.
+- **Verdict: still no-go.** It now ties v3 on GPT-OSS (26.7 vs 26.6
+  tok/s) instead of the earlier 5% lead, loses to v3 on Qwen3 (−30%) and
+  Gemma 4 (−11%), and loses to one Mini on all three (−27% to −59%).
 
 ## Not measured yet
 

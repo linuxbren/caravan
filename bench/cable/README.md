@@ -74,4 +74,10 @@ the slower Mac) ÷ exchanges per token.
 
 Defaults: all three models, batch 1 and 4, 200 timed tokens after 20
 warm-up ones per mode (about 4 minutes in all). Results from Oct 31 are in
-`results/2026-10-31-gpu-wait.json`.
+`results/2026-10-31-gpu-wait.json` (EXO2 in Low Power Mode) and
+`results/2026-10-31-gpu-wait-lpm-off.json` (the rerun with it off on
+both Macs).
+
+Check that **Low Power Mode is off on both Macs** first (`pmset -g |
+grep lowpowermode` should print `0`); with it on, one Mac's compute is
+slower and hides part of the wait at batch 4.

@@ -112,7 +112,7 @@ noted.
 | MLX Qwen3 reading speed, 4k, side by side (v1 / v2 / v2.1) | 395.9 / 393.4 tok/s | 395.6 tok/s |
 | MLX peak memory per Mac, one Mac → split across two (v2.1 → v3) | Qwen3 19.04, Gemma 4 17.14, GPT-OSS 13.41 GB | 10.49, 9.28, 7.05 GB |
 | MLX Qwen3 30B, 16k chat (v2.1 → v3) | out of memory | fits (first read 81.9 s, turn 2 0.72 s) |
-| MLX writing speed, one Mac → split (v2.1 → v3) | Qwen3 51.0, Gemma 4 41.3, GPT-OSS 36.5 tok/s | 29.5, 26.9, 26.1 tok/s (28–42% slower) |
+| MLX writing speed, one Mac → split (v2.1 → v3) | Qwen3 51.0, Gemma 4 41.3, GPT-OSS 36.5 tok/s | 29.5, 26.9, 26.1 tok/s (28–42% slower); rerun with Low Power Mode off: 30.4, 27.7, 26.6 (27–40% slower) |
 | 8-bit models that don't fit one Mac, split (v3) | – | Qwen3 30B 20.6, Gemma 4 26B 18.1, GPT-OSS 20B 19.8 tok/s, all with a 16k chat |
 
 ## Quick start

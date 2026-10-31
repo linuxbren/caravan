@@ -152,7 +152,11 @@ Open tasks for this rule:
      Memory per Mac roughly halves (Qwen3 19.0 → 10.5 GB, Gemma 4 17.1 →
      9.3 GB, GPT-OSS 13.4 → 7.1 GB) and Qwen3 now holds a 16k chat. The
      price: writing 28–42% slower, reading 16–25% slower, turn 2 and
-     restart resume +0.1–0.4 s. Quality 3/3 on both.
+     restart resume +0.1–0.4 s. Quality 3/3 on both. **Rerun Oct 31 with
+     Low Power Mode off on EXO2** (it had been on for these numbers):
+     writing 30.4 / 27.7 / 26.6 tok/s (27–40% slower than one Mac),
+     reading within about 6% of one Mac; see
+     [BENCHMARKS.md](BENCHMARKS.md#v3-rerun-with-low-power-mode-off-oct-31-mlx-v31).
    - [x] Bigger brothers split across both Macs: Qwen3 30B 8-bit (16k chat
      fits at 18.1 GB per Mac), Gemma 4 26B 8-bit (15.6 GB per Mac) and
      GPT-OSS 20B 8-bit (12.1 GB per Mac), all 3/3, 16k chats fit; none fits
@@ -280,7 +284,7 @@ object on the home network.
 Today the halves take turns: for each token, Packer 1 runs its layers,
 then the lead runs its layers and picks the token, and only then can
 Packer 1 start the next one. Each Mini sits idle about half the time.
-That's part of why a split chat writes 28–42% slower than one Mini
+That's part of why a split chat writes 27–40% slower than one Mini
 (the rest is the per-pass overhead in the parked table below). Ideas,
 simplest first:
 
@@ -393,11 +397,27 @@ simplest first:
      Mini on all three, because the GPU wait is the bigger cost. Parked
      until there's a way to swap results without stopping the GPU each
      time (for example GPU-to-GPU links). Do ideas 1 and 3 instead.
+   - **Rerun with Low Power Mode off, Oct 31 2026.** EXO2 had been in Low
+     Power Mode for the test above. With it off on both Minis: one
+     exchange costs 325–366 µs at batch 1 (about the same) and 403–414 µs
+     at batch 4 (higher: the slow packer had been hiding part of the
+     wait). With the new v3 halves: Qwen3 16.1 + 96 × 0.325 ≈ 47.3 ms
+     (21.1 tok/s, v3 30.4, one Mini 51.0), Gemma 4 18.5 + 60 × 0.366 ≈
+     40.5 ms (24.7, v3 27.7, one Mini 41.3), GPT-OSS 20.3 + 48 × 0.359 ≈
+     37.5 ms (26.7, v3 26.6, one Mini 36.5). Budgets per exchange: under
+     175 / 294 / 362 µs to beat v3, under 36 / 95 / 148 µs to beat one
+     Mini. **Still no-go:** it only ties v3 on GPT-OSS and loses to one
+     Mini on all three. See
+     [BENCHMARKS.md](BENCHMARKS.md#rerun-with-low-power-mode-off-oct-31).
 5. **Uneven layer split.** Move the cut so both halves take the same time
    (the lead also does the output layer and sampling, so it is usually
    the slower half). Small win on its own; it matters most combined with
    1 or 2, where the slower half sets the pace. Already possible with
-   `--split-packer-layers K`; needs measuring per model.
+   `--split-packer-layers K`; needs measuring per model. Measured Oct 31
+   with Low Power Mode off: the packer half is 2–4 ms faster than the
+   lead on Gemma 4 and GPT-OSS (16.4 vs 18.5, 16.0 vs 20.3 ms per token),
+   0.4 ms on Qwen3, so giving the packer a layer or two more should help
+   those two.
 
 **Recommendation:** for a single chat, try 3 (guess ahead) first. For
 agents or several users sending requests at once, do 1 (several chats at
@@ -446,8 +466,12 @@ list above point to it.
   + ~3.2 GB cache), even with `--kv-bits 8`. Use the GGUF for long Qwen
   chats, or the v3 MLX split across both Macs.
 - **The MLX worker takes 6–9 s to start** (vs 1.6 s for `mlx_lm.server`).
-- **The v3 split is slower than one Mac.** Writing is 28–42% slower and
-  reading 16–25% slower; use it for what doesn't fit on one Mac.
+- **The v3 split is slower than one Mac.** Writing is 27–40% slower;
+  reading is within about 6% (Oct 31 rerun, Low Power Mode off). Use it
+  for what doesn't fit on one Mac.
+- **Benchmarks need Low Power Mode off on both Macs** (`pmset -g`
+  `lowpowermode 0`). Turning it off on the packer made the split read
+  16–30% faster.
 - **GGUF packers still get weights from the lead** on a first load or a
   cache miss, and get the small tensors every time (see Firm rules).
 - **The v3 split is started by hand.** The agent and the launchd plists

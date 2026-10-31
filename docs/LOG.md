@@ -2579,3 +2579,30 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
 - Found on the way: EXO2 is in Low Power Mode (`pmset -g` lowpowermode
   1). Its compute was 50–80% slower than EXO1's at batch 4. Not changed.
 
+## 2026-10-31: v3 split and GPU-wait rerun with Low Power Mode off
+
+- Brenden turned Low Power Mode off on EXO2. `pmset -g` showed
+  `lowpowermode 0` on EXO1 and EXO2 before the runs. Both Macs on v3.1,
+  branch tip `f68d15e`.
+- v3 split bench, same as the first run (`split_client.py bench`, EXO1
+  lead on port 8194, EXO2 packer on 169.254.104.38:5560, worker
+  defaults), output in `~/.caravan/bench-2026-10-31/v3.1-rerun/` on EXO1.
+  4-bit 18:10–18:15 CDT, 8-bit 18:15–18:21 CDT. The first attempt failed
+  in 40 s because the model paths were given as `~/…` and got expanded
+  on the wrong machine; rerun with full `/Users/brenden/…` paths after
+  deleting the failed output.
+- 4-bit writing: Qwen3 30.4 (was 29.5), Gemma 4 27.7 (26.9), GPT-OSS
+  26.6 (26.1) tok/s. Reading 512 / 4k: 451 / 408 (388 / 332), 411 / 375
+  (328 / 301), 440 / 424 (350 / 338). Bench peak per Mac 10.02 / 9.09 /
+  6.94 GB (10.44 / 9.28 / 7.03). Quality 3/3.
+- 8-bit writing: 20.7 / 18.4 / 20.1 (20.6 / 18.1 / 19.8). Reading 512 / 4k:
+  442 / 395, 401 / 362, 430 / 405. Bench peak 17.65 / 15.38 / 12.01 GB.
+  Quality 3/3.
+- Per token, the packer half got 0.5–1 ms faster, the lead and the cable
+  didn't change. So Low Power Mode mostly slowed reading (GPU-heavy) and
+  hardly writing (memory and overhead).
+- `gpu_wait.py` rerun, 18:21–18:25 CDT, port 5572. Per exchange at batch
+  1: 325 / 366 / 359 µs; batch 4: 403 / 414 / 403 µs. Estimates with the
+  new v3 halves: 21.1 / 24.7 / 26.7 tok/s (v3 30.4 / 27.7 / 26.6, one Mini
+  51.0 / 41.3 / 36.5). Still no-go.
+- No services stopped; all test workers exited after their runs.

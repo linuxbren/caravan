@@ -21,6 +21,26 @@ On branch `caravan-v3-mlx-split`.
   Mac on all three models and only roughly tie v3 on GPT-OSS: no-go,
   parked. See [BENCHMARKS.md](BENCHMARKS.md#gpu-wait-for-splitting-each-layer-oct-31-thunderbolt-4).
 
+**Benchmarks**
+
+- **v3 split rerun with Low Power Mode off on both Macs.** EXO2 (the
+  packer) had been in Low Power Mode for all earlier two-Mac numbers.
+  With it off, on v3.1 (`f68d15e`): writing 30.4 / 27.7 / 26.6 tok/s
+  (was 29.5 / 26.9 / 26.1), reading 16–30% faster and now within about
+  6% of one Mac, 8-bit writing 20.7 / 18.4 / 20.1 (was 20.6 / 18.1 /
+  19.8), quality 3/3 on all six. See
+  [BENCHMARKS.md](BENCHMARKS.md#v3-rerun-with-low-power-mode-off-oct-31-mlx-v31).
+- **GPU-wait test rerun** with Low Power Mode off: about the same per
+  exchange at batch 1 (325–366 µs), higher at batch 4 (403–414 µs).
+  Splitting each layer is still a no-go (21.1 / 24.7 / 26.7 tok/s
+  estimated). Raw JSON: `bench/cable/results/2026-10-31-gpu-wait-lpm-off.json`.
+
+**Docs**
+
+- Setup note: Low Power Mode must be off on both Macs for benchmarks
+  (BENCHMARKS Method, MLX-SPLIT "Running it", `bench/v3` and
+  `bench/cable` READMEs, ROADMAP known issues).
+
 ## v3.1 (tag `v3.1`, `2260d2e`, Oct 31 2026)
 
 On branch `caravan-v3-mlx-split`, after the `v3` tag. Pushed with tag

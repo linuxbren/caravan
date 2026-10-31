@@ -130,6 +130,11 @@ On the lead Mac:
 Start the packer first. `--split-packer-layers K` must match on both
 Macs (the lead checks and refuses to start otherwise).
 
+Turn **Low Power Mode off on both Macs** (`pmset -g` should show
+`lowpowermode 0`). The split runs at the pace of the slower Mac; with
+Low Power Mode on for the packer, turning it off made reading 16–30%
+faster.
+
 `"mlx": {"split": {"packer": "<packer-tb-ip>:5560"}}` in
 `~/.caravan/config.json` (env `CARAVAN_MLX_SPLIT_PACKER`, and
 `CARAVAN_MLX_SPLIT_PACKER_LAYERS` for the cut) is read by the helpers
@@ -150,7 +155,10 @@ Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oc
 - Memory per Mac roughly halves (Qwen3 30B 19.04 → 10.49 GB, Gemma 4 26B
   17.14 → 9.28 GB, GPT-OSS 20B 13.41 → 7.05 GB), so Qwen3 30B now holds a
   16k chat on MLX.
-- Writing is 28–42% slower and reading 16–25% slower. Each half costs
+- Writing is 28–42% slower and reading 16–25% slower (first run; EXO2
+  was in Low Power Mode). Rerun with it off: writing 30.4 / 27.7 / 26.6
+  tok/s (27–40% slower than one Mac), reading within about 6% of one Mac
+  ([BENCHMARKS.md](BENCHMARKS.md#v3-rerun-with-low-power-mode-off-oct-31-mlx-v31)). Each half costs
   16–24 ms per token, about what the whole model costs on one Mac, while
   the cable adds under 1 ms and under 10 KB per token. The Macs take turns,
   so the time is per-pass overhead, not the cable.
