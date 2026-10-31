@@ -173,6 +173,7 @@ class ProxySettings(NamedTuple):
     save_every_n_turns: int       # inline disk save every N completed turns per session
     idle_save_seconds: float      # >0: save after a session's slot is idle this long, instead of inline
     prompt_fingerprint_chars: int  # prompt-style calls: prefix length that identifies a session
+    mlx_save_min_turns: int = 1   # MLX: no disk save until a session has this many turns (2 = skip one-shots)
 
 
 PROXY_SETTING_SOURCES = {
@@ -182,6 +183,11 @@ PROXY_SETTING_SOURCES = {
     "idle_save_seconds": ("CARAVAN_SLOT_IDLE_SAVE_SECONDS", "proxy", "slot_idle_save_seconds", 0.0, float, 0),
     "prompt_fingerprint_chars": ("CARAVAN_PROMPT_FINGERPRINT_CHARS", "proxy",
                                  "prompt_fingerprint_chars", 2048, int, 64),
+    # v2.1: a one-message request (turn 1) is often a one-shot that never
+    # comes back; 2 defers the first MLX save to the session's 2nd turn
+    # (which then saves everything). Trade-off: a restart right after a
+    # session's first turn re-reads that prompt.
+    "mlx_save_min_turns": ("CARAVAN_MLX_SAVE_MIN_TURNS", "proxy", "mlx_save_min_turns", 1, int, 1),
 }
 
 
@@ -1101,7 +1107,13 @@ class ProxyHandler(BaseHTTPRequestHandler):
             elif status == 200 and mlx_fingerprint is not None:
                 n = mlx_sessions.turn(mlx_fingerprint)
                 every = max(1, int(SETTINGS.save_every_n_turns or 1))
-                saved = ROUTER.mlx.save(mlx_fingerprint) if n % every == 0 else f"skipped (every {every})"
+                min_turns = max(1, int(SETTINGS.mlx_save_min_turns or 1))
+                if n < min_turns:
+                    saved = f"skipped (turn {n} < min {min_turns})"
+                elif n % every == 0:
+                    saved = ROUTER.mlx.save(mlx_fingerprint)
+                else:
+                    saved = f"skipped (every {every})"
                 sys.stderr.write(
                     f"[slot-pin-proxy] mlx fp={mlx_fingerprint} turn {n}: slot save {saved}\n")
         except (BrokenPipeError, ConnectionResetError, http.client.HTTPException):
@@ -1210,6 +1222,10 @@ def main(argv=None):
                         help="prompt-style calls: prefix length identifying a session; shorter "
                              "prompts are unpinned one-shots (env CARAVAN_PROMPT_FINGERPRINT_CHARS, "
                              "config proxy.prompt_fingerprint_chars, default 2048)")
+    parser.add_argument("--mlx-save-min-turns", dest="mlx_save_min_turns", type=int, default=None,
+                        help="MLX sessions: no disk save before this many turns; 2 skips saving "
+                             "one-message requests (env CARAVAN_MLX_SAVE_MIN_TURNS, config "
+                             "proxy.mlx_save_min_turns, default 1 = save from the first turn)")
     g = parser.add_argument_group("MLX backend (flag > env > config \"mlx\" > default)")
     g.add_argument("--mlx-host", default=None, help="mlx_lm.server host (env CARAVAN_MLX_HOST, default 127.0.0.1)")
     g.add_argument("--mlx-port", type=int, default=None,

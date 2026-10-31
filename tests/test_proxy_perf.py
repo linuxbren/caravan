@@ -109,7 +109,8 @@ class FakeLlama:
 
 def _clean_env(tmp: Path) -> dict:
     env = {k: "" for k in ("CARAVAN_N_SLOTS", "CARAVAN_SLOT_SAVE_EVERY",
-                           "CARAVAN_SLOT_IDLE_SAVE_SECONDS", "CARAVAN_PROMPT_FINGERPRINT_CHARS")}
+                           "CARAVAN_SLOT_IDLE_SAVE_SECONDS", "CARAVAN_PROMPT_FINGERPRINT_CHARS",
+                           "CARAVAN_MLX_SAVE_MIN_TURNS")}
     env.update(CARAVAN_CONFIG=str(tmp / "config.json"),
                CARAVAN_PROXY_STATE_FILE=str(tmp / "session_slots.json"),
                CARAVAN_SLOT_SAVE_DIR=str(tmp / "slots"))

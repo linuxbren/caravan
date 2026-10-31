@@ -375,5 +375,87 @@ class CliTest(unittest.TestCase):
             self.assertFalse(W.valid_key(bad))
 
 
+class WiredLimitTest(unittest.TestCase):
+    """v2.1: the Metal wired limit is set once at startup and held, not
+    raised/dropped around every request (v2's per-request behaviour)."""
+
+    class FakeMx:
+        REC = 18_190_000_000
+
+        def __init__(self):
+            self.limit = 0
+            self.calls = []
+
+        def device_info(self):
+            return {"max_recommended_working_set_size": self.REC}
+
+        def set_wired_limit(self, n):
+            old, self.limit = self.limit, n
+            self.calls.append(n)
+            return old
+
+    class FakeG:
+        def __init__(self, mx):
+            self.mx, self.entered = mx, 0
+
+        def wired_limit(self, model, streams):
+            import contextlib
+            g = self
+
+            @contextlib.contextmanager
+            def cm():
+                g.entered += 1
+                old = g.mx.set_wired_limit(g.mx.REC)
+                try:
+                    yield
+                finally:
+                    g.mx.set_wired_limit(old)
+            return cm()
+
+    def _setup(self, mode):
+        mx = self.FakeMx()
+        G = self.FakeG(mx)
+        res = W.apply_startup_wiring(mode, mx, lambda: mx.set_wired_limit(mx.REC))
+        return mx, G, res
+
+    def test_default_mode_is_startup(self):
+        self.assertEqual(W.build_parser().parse_args(["--model", "/m"]).wired_limit, "startup")
+        with self.assertRaises(SystemExit):
+            W.build_parser().parse_args(["--model", "/m", "--wired-limit", "bogus"])
+
+    def test_startup_sets_once_and_requests_never_toggle(self):
+        mx, G, res = self._setup("startup")
+        self.assertEqual(res, (0, mx.REC))
+        self.assertEqual(mx.calls, [mx.REC])
+        for _ in range(5):
+            with W.request_wiring("startup", G, object(), None):
+                self.assertEqual(mx.limit, mx.REC)
+            self.assertEqual(mx.limit, mx.REC)  # still held after the request
+        self.assertEqual(G.entered, 0)
+        self.assertEqual(mx.calls, [mx.REC])  # never touched again
+
+    def test_per_request_reproduces_v2_toggle(self):
+        mx, G, res = self._setup("per-request")
+        self.assertIsNone(res)
+        self.assertEqual(mx.calls, [])
+        for _ in range(3):
+            with W.request_wiring("per-request", G, object(), None):
+                self.assertEqual(mx.limit, mx.REC)
+            self.assertEqual(mx.limit, 0)  # dropped back after each request
+        self.assertEqual(G.entered, 3)
+        self.assertEqual(mx.calls, [mx.REC, 0] * 3)
+
+    def test_off_never_touches_limit(self):
+        mx, G, res = self._setup("off")
+        self.assertIsNone(res)
+        with W.request_wiring("off", G, object(), None):
+            pass
+        self.assertEqual((mx.calls, G.entered), ([], 0))
+
+    def test_no_recommended_size(self):
+        mx = self.FakeMx()
+        self.assertIsNone(W.apply_startup_wiring("startup", mx, lambda: None))
+
+
 if __name__ == "__main__":
     unittest.main()

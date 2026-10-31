@@ -268,6 +268,7 @@ Other keys are under `"proxy"`.
 | `--n-slots` | `CARAVAN_N_SLOTS` | `llama_server.n_slots` | `4` | slots to spread sessions over |
 | `--slot-save-every` | `CARAVAN_SLOT_SAVE_EVERY` | `proxy.slot_save_every` | `1` | save a session's KV to disk every N completed turns |
 | `--slot-idle-save-seconds` | `CARAVAN_SLOT_IDLE_SAVE_SECONDS` | `proxy.slot_idle_save_seconds` | `0` (off) | if > 0: no saves after each reply; save once a session has been idle this long (60 is reasonable) |
+| `--mlx-save-min-turns` | `CARAVAN_MLX_SAVE_MIN_TURNS` | `proxy.mlx_save_min_turns` | `1` | MLX sessions: no disk save before this many turns (`2` skips one-message requests; a restart right after turn 1 then re-reads that prompt) |
 | `--prompt-fingerprint-chars` | `CARAVAN_PROMPT_FINGERPRINT_CHARS` | `proxy.prompt_fingerprint_chars` | `2048` | prompt-style calls: prefix length that identifies a session |
 | -- | `CARAVAN_UPSTREAM_HOST` / `CARAVAN_UPSTREAM_PORT` | -- | `127.0.0.1` / `8080` | llama-server |
 | -- | `CARAVAN_PROXY_PORT` | -- | `8090` | listen port (127.0.0.1 only) |
@@ -316,7 +317,10 @@ client sends back are not rendered, so the history still matches the
 cache. Worker flags (pass with `mlx.extra_args`): `--prompt-cache-size`
 (sessions in memory, 4), `--prompt-cache-bytes` (2 GiB),
 `--prefill-step-size` (2048), `--kv-bits 4|8` (quantized cache for
-full-attention layers), `--no-persist`, `--cache-limit-gb`.
+full-attention layers), `--no-persist`, `--cache-limit-gb`,
+`--wired-limit startup|per-request|off` (default `startup`: the Metal wired
+limit is raised to the recommended working set once at load and held, as
+mlx_lm.server does; `per-request` is the v2 behaviour).
 
 Measured 2026-10-31 on a 24 GB Mini (mlx-lm 0.32.2, see docs/LOG.md):
 - Turn 2 of a 4k chat: GPT-OSS 9.2 → 0.50 s, Gemma 4 10.8 → 0.49 s, Qwen3 0.44 → 0.56 s. 16k chat: GPT-OSS 37.3 → 0.59 s, Gemma 4 55.1 → 0.72 s.

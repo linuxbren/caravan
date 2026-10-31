@@ -2309,3 +2309,46 @@ All runs were on node-a, using test ports (llama 8180, proxy 8190, mlx 8192) and
   out); restore was measured on a warm disk, not a cold one.
 - Next: two-Mac MLX split, then per-model profiles, proxy overhead,
   memory headroom, cold-disk restore.
+
+## 2026-10-31 (v2.1, branch caravan-v2.1)
+
+- **Wired limit at startup.** The MLX worker now raises the Metal wired
+  limit to the recommended working set once, right after load, and holds
+  it (`wired limit 0 -> 19069665280 bytes` in the log on the 24 GB Mini),
+  like mlx_lm.server. v2 wrapped each request's prompt reading in
+  `mlx_lm.generate.wired_limit()`, so the limit went up and back down
+  around every request. New flag `--wired-limit startup|per-request|off`
+  (default startup; per-request reproduces v2). 5 new unit tests with a
+  fake mx check the limit is set once and never touched per request.
+- **Optional deferred first save.** `CARAVAN_MLX_SAVE_MIN_TURNS` /
+  `--mlx-save-min-turns` / `proxy.mlx_save_min_turns` (default 1, no
+  change). With 2, one-message requests are not saved; a session's 2nd
+  turn saves everything. 2 new tests.
+- **A/B in one session** (bench/v2.1/ab_bench.py, 07:15-07:33 CDT): every
+  variant restarted fresh per round, rotated order, test ports only.
+  Qwen3 30B (3 rounds x 2 = 6 runs per size), tok/s, median:
+
+  | | v1 mlx_lm.server | v2 | v2.1 | v2.1 + save-min-turns 2 |
+  |---|---|---|---|---|
+  | 4k read (min-max) | 395.9 (385-397) | 393.4 (380-398) | 395.6 (390-399) | 396.4 (386-399) |
+  | 512 read, 1st after a 4.7k chat | 436 | 380 | 387 | 386 |
+  | 512 read, next | 441 | 438 | 439 | 434 |
+  | peak footprint / min free | 18.8 GB / 16% | 18.7 GB / 17% | 18.7 GB / 17% | 18.8 GB / 17% |
+
+  Swap: 1.04 GB used before the run, 1.45 GB max during it, 1.08 GB after.
+  Measured side by side, the 4k gap from yesterday's runs (396 vs 374-390)
+  is gone even for unchanged v2, so it was mostly drift between days. The
+  wired limit made v2.1 a little steadier (lowest run 390 vs 380), but the
+  medians are within noise. Skipping the first save changed nothing,
+  because a 4k save takes 0.10 s (399 MB) when the disk cache is warm.
+  The slower first 512 read after a big chat (~0.15 s) happens with or
+  without saves; it is likely evicting the previous session from memory
+  (prompt-cache-size 1).
+- Gemma 4 / GPT-OSS (1 round x 3): v2.1 = v2 (Gemma 4k 375.5 vs 376.4,
+  512 397 vs 396; GPT-OSS 4k 415.4 vs 415.4). Both trail v1 on Gemma in
+  this session (4k 383, 512 430), so the Gemma short-prompt gap (~8%) is
+  real and not fixed by the wired limit. GPT-OSS: v1 418/429 vs v2.1
+  415/424.
+- Restart resume (Qwen, 4k, v2.1): t1 cold 11.6 s, t2 0.72 s, restart
+  9.7 s, t3 0.52 s (re-read 31 of 4377 tokens), t4 0.53 s.
+

@@ -236,6 +236,23 @@ class ProxyRoutingTest(ProxyTestBase):
         self.assertEqual([op for op, _ in self.mlx.cache_calls].count("save"), 1)
         self.assertIn("slot save skipped (every 2)", self.stderr.getvalue())
 
+    def test_mlx_save_min_turns_skips_one_shots(self):
+        """v2.1: mlx_save_min_turns=2 -> a session's first turn is not saved;
+        its 2nd turn saves (the whole cache), later turns follow save_every."""
+        self.mlx.worker = True
+        self.spp.configure(self.spp.SETTINGS._replace(mlx_save_min_turns=2))
+        self.post({"model": "mlx-community/Qwen3-30B-A3B-4bit", "messages": self.msgs("o" * 200)})
+        self.assertEqual([op for op, _ in self.mlx.cache_calls].count("save"), 0)
+        self.assertIn("slot save skipped (turn 1 < min 2)", self.stderr.getvalue())
+        for _ in range(2):
+            self.post({"model": "mlx-community/Qwen3-30B-A3B-4bit", "messages": self.msgs("o" * 200)})
+        self.assertEqual([op for op, _ in self.mlx.cache_calls].count("save"), 2)
+
+    def test_mlx_save_min_turns_setting_sources(self):
+        with mock.patch.dict(os.environ, {"CARAVAN_MLX_SAVE_MIN_TURNS": "2"}):
+            self.assertEqual(self.spp.resolve_proxy_settings({}).mlx_save_min_turns, 2)
+        self.assertEqual(self.spp.ProxySettings._field_defaults["mlx_save_min_turns"], 1)
+
     def test_gguf_model_still_goes_to_llama(self):
         r, _ = self.post({"model": "qwen3:30b", "messages": self.msgs("y" * 200)})
         self.assertEqual(r.status, 200)

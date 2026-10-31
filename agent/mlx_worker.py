@@ -541,6 +541,31 @@ def _text_of(content):
     return "" if content is None else str(content)
 
 
+def apply_startup_wiring(mode, mx, set_recommended):
+    """--wired-limit startup (default, like mlx_lm.server): raise the Metal
+    wired limit to the recommended working set once, after load, and keep
+    it there for the life of the process so the weights stay resident.
+    Returns (old_limit, new_limit) or None when not applied."""
+    if mode != "startup":
+        return None
+    old = set_recommended()
+    if old is None:
+        return None
+    return old, mx.device_info().get("max_recommended_working_set_size")
+
+
+def request_wiring(mode, G, model, stream):
+    """Context for one request's prompt reading. v2 behaviour
+    ("per-request") wrapped it in mlx_lm's wired_limit(), which raises the
+    limit on entry and drops it back on exit -- so with no startup limit
+    the limit went up and down (twice, with stream_generate's own wrapper)
+    on every request. In "startup"/"off" mode this is a no-op."""
+    import contextlib
+    if mode == "per-request":
+        return G.wired_limit(model, [stream])
+    return contextlib.nullcontext()
+
+
 class Engine:
     """Model + tokenizer + the session store. MLX streams are per-thread,
     so everything that touches mlx (load, prefill, generation, cache
@@ -575,6 +600,13 @@ class Engine:
         self.model, self.tokenizer = load(str(self.model_dir))
         cfg = json.loads((self.model_dir / "config.json").read_text())
         self.model_type = cfg.get("model_type", "")
+        self.wired_mode = getattr(args, "wired_limit", "startup")
+        from mlx_lm.utils import maybe_set_recommended_wired_limit
+        self.wired = apply_startup_wiring(self.wired_mode, mx, maybe_set_recommended_wired_limit)
+        if self.wired:
+            log(f"wired limit {self.wired[0]} -> {self.wired[1]} bytes (held for process lifetime)")
+        else:
+            log(f"wired limit mode {self.wired_mode}: not set at startup")
         if args.cache_limit_gb is not None:
             mx.set_cache_limit(int(args.cache_limit_gb * (1 << 30)))
         self.prefill_step = int(args.prefill_step_size)
@@ -689,7 +721,7 @@ class Engine:
         n_gen = 0
         try:
             rest = prompt[n_reused:]
-            with G.wired_limit(self.model, [self.stream]):
+            with request_wiring(self.wired_mode, G, self.model, self.stream):
                 with mx.stream(self.stream):
                     todo = rest[:-1]
                     for i in range(0, len(todo), self.prefill_step):
@@ -1001,6 +1033,9 @@ def build_parser():
                     help="quantize full-attention cache layers (mlx_lm QuantizedKVCache); "
                          "halves (8) or quarters (4) their memory and file size")
     ap.add_argument("--kv-group-size", type=int, default=64)
+    ap.add_argument("--wired-limit", choices=("startup", "per-request", "off"), default="startup",
+                    help="startup: set Metal wired limit once at load and hold it (like mlx_lm.server); "
+                         "per-request: v2 behaviour (raise/drop around each request); off: never touch it")
     ap.add_argument("--cache-limit-gb", type=float, default=None, help="mx.set_cache_limit (freed-buffer pool)")
     return ap
 
