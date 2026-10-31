@@ -106,7 +106,8 @@ Notes:
 
 ## v0 → v1 (Oct 30, llama.cpp)
 
-v0 is `45ed2c2` on the old llama.cpp build with q8_0 KV. v1 is the
+v0 is `45ed2c2` on the old llama.cpp build (now the `caravan-patches-v0`
+branch of `linuxbren/llama.cpp`) with q8_0 KV. v1 is the
 rebased llama.cpp plus the automatic KV type (f16 for Gemma 4 and
 GPT-OSS, q8_0 for Qwen3).
 

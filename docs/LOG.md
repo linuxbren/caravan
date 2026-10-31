@@ -2377,3 +2377,25 @@ setup and said nothing about MLX:
   Qwen cache caps, so the entry names the flags).
 - Known gap recorded in the roadmap: the rebased llama.cpp branch that the
   v1+ numbers depend on isn't published on the fork yet.
+
+## 2026-10-31: llama.cpp fork moved to linuxbren/llama.cpp
+
+The llama.cpp fork now lives at
+[github.com/linuxbren/llama.cpp](https://github.com/linuxbren/llama.cpp),
+next to Caravan. Its branches:
+
+- `caravan-patches` = `86e16204`: upstream `5047748f` plus the getaddrinfo
+  RPC patch. This is the rebased build that the v1, v2 and v2.1 numbers
+  were measured on. Until now it existed only on the Mac.
+- `caravan-patches-rebase-2026-10-30`: the same commit, under its
+  original name.
+- `caravan-patches-v0` = `2f26123e`: the old base plus the same patch,
+  used for the v0 benchmarks.
+
+The README, ARCHITECTURE, ROADMAP, BENCHMARKS, `cpp/README.md` and
+`bench/improvements/README.md` now point at `linuxbren/llama.cpp`,
+branch `caravan-patches`. The "published branch is the older base" notes
+are gone, and roadmap item 1 (publish the rebased branch) is done. The
+earlier entries in this log that name the old `RookiOS72/llama.cpp` fork
+are left as they were written. On the bench Mac, `~/dev/llama.cpp` has a
+`linuxbren` remote for fetching; its `origin` is unchanged.

@@ -72,10 +72,11 @@ unless noted). "4k" and "16k" are chat lengths in tokens.
 
 ## Next, in order
 
-1. **Publish the rebased llama.cpp branch.** The v1+ numbers depend on
-   `caravan-patches` rebased onto upstream `5047748f`. The fork's
-   published `caravan-patches` branch is still the older base, so a fresh
-   clone today doesn't get the sliding-window restore fix.
+1. ~~**Publish the rebased llama.cpp branch.**~~ **Done (2026-10-31).**
+   The fork moved to `linuxbren/llama.cpp`. There, `caravan-patches` is
+   the rebased branch (upstream `5047748f` + the RPC patch) that the v1+
+   numbers depend on, and `caravan-patches-v0` keeps the old base used
+   for v0.
 2. **Two-Mac MLX split.** Run one MLX model across both Macs, as llama.cpp
    RPC does for GGUF, so models and long chats that don't fit on one 24 GB
    Mac (Qwen3 at 16k) can run on MLX.

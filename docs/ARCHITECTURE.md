@@ -37,7 +37,7 @@ flowchart LR
 | Proxy | `proxy/slot_pin_proxy.py`, `proxy/backends.py` | The one front door. Recognizes each conversation (session), routes by model to llama.cpp or MLX, runs requests one at a time, saves and restores each session's cache, cancels requests whose client is gone. |
 | Saved-chat cleanup | `proxy/slot_cleanup.py` | Inside the proxy (and as a CLI): removes or archives saves older than N days, then holds all saves to a per-Mac cap. |
 | Agent | `agent/caravan_agent.py` and friends | Runs the same way on every Mac. It finds peers, picks a role (head, tail or MLX), builds the server command, and supervises it. It also serves `/health` on port 8091. |
-| llama.cpp | `~/dev/llama.cpp` (fork `RookiOS72/llama.cpp`, branch `caravan-patches`) | `llama-server` on the head and `ggml-rpc-server` on the tail. |
+| llama.cpp | `~/dev/llama.cpp` (fork `linuxbren/llama.cpp`, branch `caravan-patches`) | `llama-server` on the head and `ggml-rpc-server` on the tail. |
 | MLX worker | `agent/mlx_worker.py`, launched via `agent/mlx_backend.py` | Caravan's own OpenAI-compatible MLX server with per-session caches. See [MLX.md](MLX.md). |
 | launchd | `launchd/` | Plists for the agent, the proxy, and a manual per-role setup. The llama-server and MLX plists can be rendered from the agent's own command builders (`render_llama_plist.py`, `render_mlx_plist.py`). |
 | C++ binary | `cpp/` | Experimental: head or tail in one process, linking llama.cpp. Proven end to end once; not production-ready. |
@@ -258,16 +258,23 @@ next step, rather than a separate monitor.
 
 ## The llama.cpp fork
 
-Caravan runs llama.cpp from `RookiOS72/llama.cpp`, branch
-`caravan-patches`: upstream plus one patch, `getaddrinfo` instead of
-`gethostbyname` in the RPC client's connect, so RPC peers given as names
-resolve under launchd. The v1+ numbers were measured on that patch
-rebased onto upstream `5047748f` (local branch
-`caravan-patches-rebase-2026-10-30`). The rebase brings in upstream #26004
-(context checkpoints in slot files), which is what makes Gemma and
-GPT-OSS restore after a restart. Publishing the rebased branch is on the
-[roadmap](ROADMAP.md). Flag names in this repo were checked against that
-fork.
+Caravan runs llama.cpp from
+[`linuxbren/llama.cpp`](https://github.com/linuxbren/llama.cpp), branch
+`caravan-patches`. That's upstream `5047748f` plus one patch:
+`getaddrinfo` instead of `gethostbyname` in the RPC client's connect, so
+RPC peers given as names resolve under launchd. The v1+ numbers were
+measured on this branch. The base brings in upstream #26004 (context
+checkpoints in slot files), which is what makes Gemma and GPT-OSS
+restore after a restart.
+
+Other branches on the fork:
+
+- `caravan-patches-rebase-2026-10-30`: the same commit, under the name
+  it had when it was made.
+- `caravan-patches-v0`: the older base with the same patch, used for the
+  v0 benchmarks.
+
+Flag names in this repo were checked against `caravan-patches`.
 
 ## How it got here
 

@@ -20,6 +20,6 @@ These scripts produced the 2026-10-30 numbers in `docs/LOG.md`. They run on one 
 - `common.py`: prompts, filler text, scoring and the memory sampler (shared with the earlier runtime-compare bench).
 
 **Comparison recipe.**
-- v0: `CARAVAN_DIR=<checkout of 45ed2c2>`, `LLAMA_BIN=<old caravan-patches build>`, `KV=q8_0`.
-- v1: `CARAVAN_DIR=<improvements branch>`, `LLAMA_BIN=<rebased build>`, `KV=auto`.
+- v0: `CARAVAN_DIR=<checkout of 45ed2c2>`, `LLAMA_BIN=<build of caravan-patches-v0>`, `KV=q8_0`.
+- v1: `CARAVAN_DIR=<improvements branch>`, `LLAMA_BIN=<build of caravan-patches>`, `KV=auto`.
 - Attribution run, to separate the rebase from the cache type: v1 with `KV=q8_0`.

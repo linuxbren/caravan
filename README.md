@@ -111,15 +111,15 @@ Requirements:
 
 ```sh
 git clone https://github.com/linuxbren/caravan ~/dev/caravan
-git clone -b caravan-patches https://github.com/RookiOS72/llama.cpp ~/dev/llama.cpp
+git clone -b caravan-patches https://github.com/linuxbren/llama.cpp ~/dev/llama.cpp
 cd ~/dev/llama.cpp && cmake -B build -DGGML_RPC=ON -DGGML_METAL=ON -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
 python3 -m venv ~/.caravan/venvs/mlx && ~/.caravan/venvs/mlx/bin/pip install mlx-lm
 ```
 
-The fork's published `caravan-patches` branch is the older llama.cpp base
-plus Caravan's RPC patch. The v1+ numbers were measured on that patch
-rebased onto upstream `5047748f`, which also restores Gemma and GPT-OSS
-chats after a restart. Publishing that branch is the first roadmap item.
+`caravan-patches` is upstream llama.cpp (`5047748f`) plus Caravan's RPC
+patch. That base also restores Gemma and GPT-OSS chats after a restart,
+and it's what the v1+ numbers were measured on. The older base used for
+the v0 benchmarks is kept on the `caravan-patches-v0` branch.
 
 **GGUF, split across two Macs.** Pull the model on the head, then run the
 agent on both Macs, starting with the tail:

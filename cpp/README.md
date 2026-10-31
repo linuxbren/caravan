@@ -68,7 +68,7 @@ dependency.
 Requires an already-built `llama.cpp` checkout (defaults to
 `~/dev/llama.cpp`, override with `-DLLAMA_CPP_DIR=...`). This is a
 temporary arrangement -- proper vendoring (a submodule pinned to the
-`RookiOS72/llama.cpp` fork's `caravan-patches` branch, built as part of
+`linuxbren/llama.cpp` fork's `caravan-patches` branch, built as part of
 this project) is the real "step 1" work, deferred until this core
 mechanism was proven worth building on.
 
