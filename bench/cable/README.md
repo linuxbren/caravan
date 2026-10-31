@@ -43,3 +43,35 @@ the route with `route -n get <IP>` (it should say the Thunderbolt port,
 
 Results from Oct 31, 2026 are in `results/` and in
 [docs/BENCHMARKS.md](../../docs/BENCHMARKS.md#cable-timing-oct-31-thunderbolt-4).
+
+## GPU-wait test (`gpu_wait.py`)
+
+The follow-up: both Minis run the exchange at the same time, the way
+split-each-layer would. For every layer each Mac runs its half of the
+attention part, waits for the GPU (`mx.eval`), swaps its partial result
+with the other Mac over Caravan's link framing, adds both, then does the
+same for the feed-forward (MoE) part. Two exchanges per layer.
+
+The GPU work is synthetic but sized like each model: 4-bit weights, a
+separate set per layer, half the attention projections and half the
+active experts per Mac (at batch 4, the expected number of different
+experts four tokens touch). No model is loaded; it builds 0.8–2.4 GB of
+random weights per Mac. It doesn't model attention over the chat
+history or the expert routing.
+
+It times one token (a pass over all layers) five ways: `compute` (all
+work queued, one wait per token), `sync` (a wait after every part, no
+cable), `net` (swap only, no GPU), `exchange` (the real pattern), and
+`overlap` (batch 4: two half-batches, send the first while the GPU
+finishes the second). The cost per exchange is (exchange − compute of
+the slower Mac) ÷ exchanges per token.
+
+```sh
+# packer (EXO2) first, then the lead (EXO1); the packer exits when the lead is done
+~/.caravan/venvs/mlx/bin/python bench/cable/gpu_wait.py packer --listen <EXO2 Thunderbolt IP>:5572
+~/.caravan/venvs/mlx/bin/python bench/cable/gpu_wait.py lead --peer <EXO2 Thunderbolt IP>:5572 --json out.json
+```
+
+Defaults: all three models, batch 1 and 4, 200 timed tokens after 20
+warm-up ones per mode (about 4 minutes in all). Results from Oct 31 are in
+`results/2026-10-31-gpu-wait.json`.

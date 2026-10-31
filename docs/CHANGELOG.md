@@ -8,6 +8,19 @@ What changed in each Caravan version, newest first. Numbers come from
 "Reading" is how fast a prompt is taken in, "writing" is how fast the
 reply comes out.
 
+## Unreleased (after v3.1)
+
+On branch `caravan-v3-mlx-split`.
+
+**New**
+
+- **GPU-wait test (`bench/cable/gpu_wait.py`).** Both Macs run every
+  layer's two exchanges at the same time with GPU work sized like half of
+  each model's layer. One exchange costs about 330–360 µs, mostly waiting
+  for the GPU. Splitting each layer across both Macs would lose to one
+  Mac on all three models and only roughly tie v3 on GPT-OSS: no-go,
+  parked. See [BENCHMARKS.md](BENCHMARKS.md#gpu-wait-for-splitting-each-layer-oct-31-thunderbolt-4).
+
 ## v3.1 (tag `v3.1`, `2260d2e`, Oct 31 2026)
 
 On branch `caravan-v3-mlx-split`, after the `v3` tag. Pushed with tag

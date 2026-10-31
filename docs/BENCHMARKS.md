@@ -387,6 +387,65 @@ token per chat)
   (for example GPT-OSS batch 1: 48 × 1.1 ms ≈ 53 ms of cable).
 - Verdict and next step: ROADMAP, idea 4, "Result, Oct 31 2026".
 
+## GPU wait for splitting each layer (Oct 31, Thunderbolt 4)
+
+The follow-up to the cable timing. `bench/cable/gpu_wait.py` (see
+[the README](../bench/cable/README.md#gpu-wait-test-gpu_waitpy)): both
+Macs run every layer's two exchanges at the same time, with synthetic
+4-bit GPU work sized like half of each model's layer (no model loaded,
+0.8–2.4 GB of random weights per Mac). EXO1 lead, EXO2 packer, Caravan's
+link framing over Thunderbolt, test port 5572, MLX 0.32.4. 200 timed
+tokens per mode after 20 warm-up (9,600–19,200 exchanges per model at
+batch 1). Run 17:31–17:36 CDT; no services stopped. Raw JSON:
+`bench/cable/results/2026-10-31-gpu-wait.json`.
+
+**Time per token on the lead (ms, median / p95)** (compute is also given
+for the packer, the slower Mac)
+
+| model | batch | compute (lead / packer) | wait after each part, no cable | swap only, no GPU | full exchange | overlap trick |
+|---|---:|---|---|---|---|---|
+| Qwen3 30B | 1 | 11.09 / 11.44 | 34.03 / 34.23 | 5.78 / 6.17 | 45.87 / 46.48 | — |
+| | 4 | 30.25 / 47.48 | 55.62 / 56.04 | 6.62 / 6.96 | 81.19 / 86.50 | 89.85 / 90.58 |
+| Gemma 4 26B | 1 | 11.92 / 12.30 | 25.57 / 25.81 | 4.42 / 4.98 | 32.91 / 33.36 | — |
+| | 4 | 25.16 / 43.92 | 43.54 / 43.98 | 4.80 / 5.48 | 61.81 / 65.66 | 74.75 / 84.13 |
+| GPT-OSS 20B | 1 | 11.51 / 12.21 | 22.26 / 22.52 | 4.18 / 4.91 | 28.11 / 28.63 | — |
+| | 4 | 30.51 / 55.19 | 44.77 / 45.05 | 4.42 / 4.99 | 71.90 / 77.75 | 86.23 / 87.15 |
+
+**Cost per exchange on top of the compute (µs)** = (time − slower Mac's
+compute) ÷ exchanges per token (96 / 60 / 48)
+
+| model | batch | GPU wait only (slower Mac) | cable only, median / p95 | full exchange, median / p95 | overlap trick |
+|---|---:|---:|---|---|---:|
+| Qwen3 30B | 1 | 277 | 60 / 64 | 359 / 365 | — |
+| | 4 | 201 | 69 / 73 | 351 / 406 | 441 |
+| Gemma 4 26B | 1 | 261 | 74 / 83 | 343 / 351 | — |
+| | 4 | 219 | 80 / 91 | 298 / 362 | 514 |
+| GPT-OSS 20B | 1 | 246 | 87 / 102 | 331 / 342 | — |
+| | 4 | 230 | 92 / 104 | 348 / 470 | 647 |
+
+**Estimate, single chat** (time per token = slower v3 half + exchanges
+× full-exchange cost; v3 and one Mini are measured)
+
+| model | split each layer | v3 split | one Mini | per exchange needed to beat v3 / one Mini |
+|---|---|---:|---:|---|
+| Qwen3 30B | 51.0 ms, 19.6 tok/s | 29.5 tok/s | 51.0 tok/s | < 180 µs / < 31 µs |
+| Gemma 4 26B | 39.4 ms, 25.4 tok/s | 26.9 tok/s | 41.3 tok/s | < 306 µs / < 90 µs |
+| GPT-OSS 20B | 36.4 ms, 27.5 tok/s | 26.1 tok/s | 36.5 tok/s | < 371 µs / < 144 µs |
+
+- With the p95 exchange cost: 19.4 / 25.1 / 27.1 tok/s.
+- The swap-only column (60–90 µs) is lower than the cable-timing round
+  trip (100 µs), because both Macs send at the same time instead of
+  taking turns.
+- The cable is the smaller part. With a free cable (the cable-only column
+  taken off), the estimate would be 22.1 / 28.6 / 31.0 tok/s, still below
+  one Mini on all three.
+- The overlap trick (two half-batches) was slower: each half-batch reads
+  the weights again, and the GPU still has to stop twice.
+- EXO2 (the packer) was in Low Power Mode (`pmset` lowpowermode 1), which
+  likely explains why its compute was 50–80% slower than EXO1's at batch
+  4. At batch 1 the two Macs were within 3–6%.
+- Verdict: ROADMAP, idea 4, "GPU-wait test, Oct 31 2026".
+
 ## Not measured yet
 
 - The two-Mac split with the v1+ settings (flash attention, automatic
@@ -397,9 +456,6 @@ token per chat)
   exo two-Mac numbers.
 - The v3 split through the proxy under load (only smoke-tested).
 - Overlapping the two halves (not built yet).
-- The real GPU wait in a split-each-layer exchange (both Macs syncing at
-  the same time, arrays already on the GPU). The cable-timing test only
-  has a pessimistic version of it.
 - Batching on one Mac (v2.1) or in the split (v3 with several chats at
   once). The cable-timing predictions assume a step costs the same at
   batch 4 or 16 as at batch 1.

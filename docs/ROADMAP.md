@@ -372,6 +372,27 @@ simplest first:
      Thunderbolt 4, and do ideas 1 and 3 first. The one cheap test that
      could reopen it: measure the GPU wait the way a real layer would
      have it (both Minis at once, arrays already on the GPU).
+   - **GPU-wait test, Oct 31 2026 (`bench/cable/gpu_wait.py`).** Both
+     Minis ran the exchange at the same time with GPU work sized like half
+     of each layer. One exchange costs about 330–360 µs on top of the
+     compute: about 250–280 µs is waiting for the GPU to finish each part
+     (that alone is more than the cable), about 60–90 µs the cable. Batch
+     4 is about the same per exchange (300–350 µs), and sending the first
+     half-batch while the GPU finishes the second made it worse (440–650
+     µs). Per exchange, splitting each layer would need less than 180 /
+     306 / 371 µs (Qwen3 / Gemma 4 / GPT-OSS) to beat the v3 split, and
+     less than 31 / 90 / 144 µs to beat one Mini. Estimated single-chat
+     speed: Qwen3 16.6 + 96 × 0.359 ≈ 51.0 ms (19.6 tok/s, v3 29.5, one
+     Mini 51.0), Gemma 4 18.8 + 60 × 0.343 ≈ 39.4 ms (25.4 tok/s, v3 26.9,
+     one Mini 41.3), GPT-OSS 20.5 + 48 × 0.331 ≈ 36.4 ms (27.5 tok/s, v3
+     26.1, one Mini 36.5).
+     **Verdict: no-go.** Against v3 it loses on Qwen3 and Gemma 4 and is
+     only about 5% ahead on GPT-OSS, which is within this test's error.
+     Against one Mini it loses on all three by 25–60%. A faster cable
+     alone wouldn't save it: with a free cable it would still lose to one
+     Mini on all three, because the GPU wait is the bigger cost. Parked
+     until there's a way to swap results without stopping the GPU each
+     time (for example GPU-to-GPU links). Do ideas 1 and 3 instead.
 5. **Uneven layer split.** Move the cut so both halves take the same time
    (the lead also does the output layer and sampling, so it is usually
    the slower half). Small win on its own; it matters most combined with

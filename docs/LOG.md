@@ -2560,3 +2560,22 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
   yet; parked for Thunderbolt 4. Tables in BENCHMARKS.md, verdict in
   ROADMAP idea 4.
 
+## 2026-10-31: GPU-wait test for splitting each layer (no-go)
+
+- `bench/cable/gpu_wait.py`: both Minis run every layer's two exchanges at
+  the same time (compute half, wait for the GPU, swap 4–6 KB over
+  Caravan's link framing, add), with synthetic 4-bit work sized like
+  each model. Port 5572, MLX venv, 17:31–17:36 CDT, about 4 minutes. No
+  model loaded, no services stopped; both scripts exited and `/tmp`
+  copies were removed.
+- One exchange costs 331–359 µs at batch 1 on top of the compute. Waiting
+  for the GPU alone is 246–277 µs; the cable alone 60–87 µs. Batch 4:
+  298–351 µs. The overlap trick (two half-batches) was worse, 441–647 µs.
+- Estimates: Qwen3 19.6 tok/s (v3 29.5, one Mini 51.0), Gemma 4 25.4
+  (26.9, 41.3), GPT-OSS 27.5 (26.1, 36.5). Budgets per exchange to beat
+  v3: 180 / 306 / 371 µs; to beat one Mini: 31 / 90 / 144 µs.
+- Verdict: no-go; parked. A faster cable alone doesn't fix it, because the
+  GPU wait is the larger cost.
+- Found on the way: EXO2 is in Low Power Mode (`pmset -g` lowpowermode
+  1). Its compute was 50–80% slower than EXO1's at batch 4. Not changed.
+
