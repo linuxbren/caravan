@@ -472,12 +472,16 @@ class Stage:
             if not self.tied:
                 need.append(self.lm.lm_head.parameters())
         mx.eval(need)
+        # Some models (qwen3_5) build their cache by looking at every layer,
+        # so make an empty template now, while all layers are still there.
+        from mlx_lm.models.cache import make_prompt_cache
+        self._proto = make_prompt_cache(self.model)
         # Drop the other stage's (never evaluated) layers.
         for i in range(n):
             if not a <= i < b:
                 self.inner.layers[i] = None
-        from mlx_lm.models.cache import make_prompt_cache
-        self._make_full = lambda: make_prompt_cache(self.model)
+        import copy
+        self._make_full = lambda: copy.deepcopy(self._proto)
 
     def _kind(self, i, layer):
         if getattr(layer, "is_linear", False):

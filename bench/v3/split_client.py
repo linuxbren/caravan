@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "improvements"))
 from common import filler, prompts, score  # noqa: E402
 
 CMD, URL, MODEL, OUT = sys.argv[1:5]
-NT = " /no_think" if "qwen3" in MODEL.lower() else ""
+NT = " /no_think" if "qwen3-30b" in MODEL.lower() else ""   # Qwen3.6 has no /no_think switch
 STATE = Path(OUT + ".state.json")
 
 
