@@ -122,6 +122,43 @@ def read_frame(sock):
     payload = _recv_exact(sock, pl) if pl else b""
     return header, payload
 
+# --- GPU keep-warm while the peer works --------------------------------------
+# Turn-taking leaves each Mini idle ~15-20 ms/token. After that idle the next
+# mx graph build + eval is ~5 ms slower (Metal/driver cool-down). A tiny eval
+# on a side thread during the wait restores tight-loop speed (measured
+# 2026-10-31 on Gemma 4 / GPT-OSS / Qwen3). One short-lived thread per wait:
+# started just before blocking recv, joined before this process runs layers.
+class GpuKeepalive:
+    def __init__(self, mx):
+        self._mx = mx
+        self._stop = threading.Event()
+        self._thr = None
+
+    def start(self):
+        """Warm Metal while the peer works (call before a blocking recv)."""
+        if self._thr is not None:
+            return
+        self._stop.clear()
+        mx = self._mx
+        arr = mx.zeros((32, 32), dtype=mx.float16)
+        mx.eval(arr)
+
+        def _run():
+            a = arr
+            while not self._stop.is_set():
+                a = a + 1
+                mx.eval(a)
+
+        self._thr = threading.Thread(target=_run, name="caravan-gpu-keepalive", daemon=True)
+        self._thr.start()
+
+    def stop(self):
+        """Stop warming before this process runs its own layers."""
+        self._stop.set()
+        th, self._thr = self._thr, None
+        if th is not None:
+            th.join(timeout=1.0)
+
 
 # --- restore agreement --------------------------------------------------------
 HAVE = ("warm", "restored")
@@ -156,7 +193,12 @@ class FrontClient:
         self.epoch = None
         self.hello = None
         self.on_new_epoch = None     # callback(old, new) when the front restarted
+        self._keepalive = None      # optional GpuKeepalive; set via enable_gpu_keepalive
         self.reset_stats()
+
+    def enable_gpu_keepalive(self, mx):
+        """Warm Metal while blocked waiting for the packer's reply."""
+        self._keepalive = GpuKeepalive(mx)
 
     def reset_stats(self):
         self.stats = {"calls": 0, "bytes_out": 0, "bytes_in": 0, "wait_s": 0.0, "front_s": 0.0}
@@ -190,10 +232,19 @@ class FrontClient:
     def _roundtrip(self, header, payload=b""):
         t0 = time.perf_counter()
         data = encode_frame(header, payload)
+        warm = self._keepalive
         try:
             self.sock.sendall(data)
-            rh, rp = read_frame(self.sock)
+            if warm is not None:
+                warm.start()
+            try:
+                rh, rp = read_frame(self.sock)
+            finally:
+                if warm is not None:
+                    warm.stop()
         except (OSError, ConnectionError) as e:
+            if warm is not None:
+                warm.stop()
             self.close()
             raise FrontError(f"packer 1 at {self.addr}: {e}") from e
         st = self.stats
@@ -314,9 +365,16 @@ def serve_front(listen, state: FrontState, log=print, stats_fn=None, stop=None):
         except OSError:
             pass
         log(f"lead connected from {peer[0]}")
+        warm = getattr(state, "keepalive", None)
         try:
             while True:
-                h, p = read_frame(conn)
+                if warm is not None:
+                    warm.start()
+                try:
+                    h, p = read_frame(conn)
+                finally:
+                    if warm is not None:
+                        warm.stop()
                 t0 = time.perf_counter()
                 if h.get("op") == "stats" and stats_fn:
                     rh, rp = stats_fn(), b""

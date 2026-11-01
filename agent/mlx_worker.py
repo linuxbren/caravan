@@ -613,6 +613,9 @@ class Engine:
             cfg0 = json.loads((self.model_dir / "config.json").read_text())
             self.stage = S.Stage(self.model_dir, "head", args.split_front_layers)
             self.client = S.FrontClient(args.split_peer)
+            if getattr(args, "split_keepalive", True):
+                self.client.enable_gpu_keepalive(mx)
+                log("lead GPU keepalive on (warms Metal while waiting for packer 1)")
             self.model = S.SplitModel(self.stage, self.client)
             self.tokenizer = load_tokenizer(self.model_dir, eos_token_ids=cfg0.get("eos_token_id"))
             hello = self.client.call("hello", proto=S.PROTO)[0]
@@ -1137,6 +1140,12 @@ def build_parser():
     ap.add_argument("--split-packer-layers", "--split-front-layers", dest="split_front_layers", type=int, default=None, metavar="K",
                     help="layers on Packer 1 (default: half, the odd one to the lead). "
                          "--split-front-layers is a deprecated alias")
+    # Default on; CARAVAN_MLX_SPLIT_KEEPALIVE=0/false/off disables. --no-split-keepalive too.
+    _ka_env = os.environ.get("CARAVAN_MLX_SPLIT_KEEPALIVE")
+    _ka_default = True if _ka_env is None else _ka_env.strip().lower() not in ("0", "false", "off", "no")
+    ap.add_argument("--split-keepalive", default=_ka_default, action=argparse.BooleanOptionalAction,
+                    help="keep Metal warm while waiting on the peer (default: on; cuts ~5 ms/half/token "
+                         "idle cool-down). --no-split-keepalive or CARAVAN_MLX_SPLIT_KEEPALIVE=0 disables")
     return ap
 
 
@@ -1170,6 +1179,9 @@ def front_main(args):
     info = {"stage": label, "range": list(stage.range), "n_layers": stage.n_layers,
             "model_type": stage.model_type, "mlx_lm": _version("mlx_lm")}
     state = S.FrontState(store, forward, info, new_scratch=ops.new_cache)
+    if getattr(args, "split_keepalive", True):
+        state.keepalive = S.GpuKeepalive(mx)
+        log("packer GPU keepalive on (warms Metal while waiting for the lead)")
 
     def stats():
         return {"stage": label, "weights_gb": round(stage.nbytes() / 1e9, 2),
