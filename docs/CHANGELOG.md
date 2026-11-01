@@ -10,15 +10,20 @@ reply comes out.
 
 ## Unreleased (after v3.2)
 
+- **Idea 1 N=3 stall fix.** `_pipe_round` preferred the just-led chat for
+  the next packer fetch, so a third chat waited ~4 s (tg128). Fair pick by
+  `(n_gen, t0)` + admit one prefill per loop. N=3 max TTFT ≤0.62 s; wall
+  aggregate ≈ N=2. N=2 unchanged. See
+  [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31nov-1-mlx).
+
 - **Idea 1: several chats at once (off by default).** `--split-pipeline-chats N`
   (env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`) overlaps Packer 1's work for chat B
   with the lead's layers for chat A when N≥2. Default N=1 is unchanged.
-  With idea-5 cuts + keepalive (Oct 31 night): two chats ≈1.6× aggregate
-  writing vs one; three chats raise the sum of per-chat rates but wall
-  aggregate drops (scheduler leaves one chat waiting ~4 s). Flag-off
-  single-chat still matches keepalive baseline (38.5 / 34.3 / 45.8 tok/s).
-  Bench: `bench/v3/pipeline_bench.py`. Details:
-  [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31-mlx).
+  With idea-5 cuts + keepalive: two chats ≈1.6× aggregate writing vs one;
+  N=3 stall fixed Nov 1 (see bullet above). Flag-off single-chat matches
+  keepalive baseline (~38 / 34 / 46 tok/s). Bench:
+  `bench/v3/pipeline_bench.py`. Details:
+  [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31nov-1-mlx).
 
 ## v3.2 (tag `v3.2`, `cb61970`, Oct 31 2026)
 

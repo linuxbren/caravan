@@ -296,9 +296,9 @@ simplest first:
    Bench talks straight to the lead (`bench/v3/pipeline_bench.py`); proxy
    FIFO still serializes MLX when the proxy is in the path (not required
    for this measurement). With idea-5 cuts + keepalive: two chats ≈1.6×
-   aggregate writing (wall); three chats need a better admit/schedule
-   (one chat still waits ~4 s TTFT). Details:
-   [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31-mlx).
+   aggregate writing (wall); N=3 stall fixed Nov 1 (fair `(n_gen, t0)` + one prefill per
+   loop; max TTFT ≤0.62 s; wall ≈ N=2). Details:
+   [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31nov-1-mlx).
 2. **Chunked reading.** Cut a long prompt into chunks and read them like
    an assembly line: Packer 1 reads chunk 2 while the lead reads chunk 1.
    Faster long-prompt reads (time to first token); writing is unchanged.

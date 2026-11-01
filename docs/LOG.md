@@ -2644,6 +2644,21 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
   Tables in BENCHMARKS.md; verdict in ROADMAP idea 5.
 
 
+
+## 2026-11-01: Idea 1 N=3 stall fix
+
+- **Root cause:** `_pipe_round` always gave the next packer slot to
+  `need[0]` in list order. After lead(A), A rejoined need ahead of a
+  never-started chat C, so C waited until A or B finished (~4 s TTFT on
+  tg128). Wall aggregate for N=3 fell below N=2.
+- **Fix:** fair pick by `(n_gen, t0)` among ready/need slots; admit at
+  most one prefill per outer loop so decode can start sooner. Flag-off
+  and N=2 paths unchanged.
+- **Recheck (America/Chicago ~01:25–01:36):** flag-off writing 38.1 /
+  34.2 / 45.7. Pipeline N=2 wall 61.0 / 54.0 / 72.7. N=3 wall 59.8 /
+  53.0 / 70.8; max TTFT 0.62 / 0.61 / 0.59 s (was ~4 s). Quality 3/3.
+  Ports cleaned after. Commits local (no push).
+
 ## 2026-10-31 night: Idea 1 several chats at once (pipeline)
 
 - **Goal:** Keep lead and Packer 1 both busy by overlapping chat B's

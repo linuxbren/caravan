@@ -936,9 +936,11 @@ class Engine:
                     p is not None and p[0] == "gen" for p in pending):
                 return
 
-            # Admit prefills up to capacity (serial prefill; overlap is decode-only).
-            while (len(decoding) < self.pipeline_chats and pending
-                   and pending[0] is not None and pending[0][0] == "gen"):
+            # Admit at most one prefill per outer loop so decode can start
+            # before later chats finish reading. Prefill itself stays serial
+            # (one socket); starvation of decode was the N=3 TTFT bug.
+            if (len(decoding) < self.pipeline_chats and pending
+                    and pending[0] is not None and pending[0][0] == "gen"):
                 _, payload, out = pending.pop(0)
                 key, prompt, body, cancel = payload
                 try:
@@ -946,11 +948,11 @@ class Engine:
                 except BaseException as e:
                     out.put(("error", e))
                     out.put(None)
-                    continue
-                if slot is None:
-                    out.put(None)  # cancelled during prefill
-                    continue
-                decoding.append(slot)
+                else:
+                    if slot is None:
+                        out.put(None)  # cancelled during prefill
+                    else:
+                        decoding.append(slot)
                 pull_available()
 
             if not decoding:
@@ -1041,7 +1043,13 @@ class Engine:
         return slot
 
     def _pipe_round(self, decoding):
-        """Advance decoding slots; with 2+ chats, send packer(B) before lead(A)."""
+        """Advance decoding slots; with 2+ chats, send packer(B) before lead(A).
+
+        Fairness: prefer slots with fewer tokens so far (then oldest). Without
+        that, need[0] in list order is the chat that just finished lead, so a
+        third never-started chat starves until one of the first two finishes
+        (~4 s TTFT on tg128).
+        """
         mx = self.mx
         model = self.model
         if getattr(self.client, "_inflight", False):
@@ -1073,10 +1081,13 @@ class Engine:
             with mx.stream(self.stream):
                 slot.h = model.finish_packer()
 
-        ready = [s for s in active if s.h is not None]
-        need = [s for s in active if s.h is None]
+        def fair_key(s):
+            return (s.n_gen, s.t0)
 
-        # Nobody has hidden states yet: prime the first (serial); next rounds overlap.
+        ready = sorted([s for s in active if s.h is not None], key=fair_key)
+        need = sorted([s for s in active if s.h is None], key=fair_key)
+
+        # Nobody has hidden states yet: prime the neediest (serial); next rounds overlap.
         if not ready:
             packer_fetch(need[0])
             return
@@ -1092,11 +1103,10 @@ class Engine:
         A = ready[0]
         B = need[0] if need else None
         if B is None:
-            # Everyone has h — lead A, then start A's next packer overlapped with lead of next ready.
-            others = [s for s in ready[1:]]
+            # Everyone has h — lead fairest ready; overlap its next packer with lead of next.
+            others = ready[1:]
             if others:
-                B = others[0]  # will lead B after starting A's next packer? 
-                # A has h; after lead A, A needs packer. B has h and can be led after.
+                B = others[0]
                 self._pipe_lead_sample(A)
                 if A.finished and not B.finished:
                     self._pipe_lead_sample(B)
@@ -1104,7 +1114,6 @@ class Engine:
                         packer_fetch(B)
                     return
                 if not A.finished:
-                    # Overlap: packer(A next) while we still could lead B
                     packer_begin(A)
                     if not B.finished and B.h is not None:
                         self._pipe_lead_sample(B)
@@ -1117,11 +1126,11 @@ class Engine:
                 packer_fetch(A)
             return
 
-        # Classic overlap: A ready, B needs packer.
+        # Classic overlap: A ready, B needs packer (B is the most starved needy).
         packer_begin(B)
         self._pipe_lead_sample(A)
         packer_finish(B)
-        # A now needs next h if still running — leave A.h None for next round (will overlap then).
+        # A now needs next h if still running — leave A.h None for next round.
 
     def _pipe_lead_sample(self, slot):
         """Run lead layers on slot.h, sample one token, emit piece; clear h."""

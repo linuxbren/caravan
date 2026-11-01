@@ -653,53 +653,61 @@ rejected (writing ~17.6 tok/s); not in the table.
   [MLX-SPLIT.md](MLX-SPLIT.md) and ROADMAP (Beating the turn-taking).
 
 
-## Idea 1: several chats at once (Oct 31, MLX)
+## Idea 1: several chats at once (Oct 31–Nov 1, MLX)
 
-Branch tip `be19fe1` (after tag `v3.2` / `cb61970`). Test ports 8194 /
-5560. Low Power Mode off. Keepalive on. Idea-5 cuts for the pipeline
-runs (Gemma K=16, GPT-OSS K=13, Qwen3 K=24). Client:
+Branch tip after stall fix (local; after tag `v3.2` / `cb61970`). Test
+ports 8194 / 5560. Low Power Mode off. Keepalive on. Idea-5 cuts for the
+pipeline runs (Gemma K=16, GPT-OSS K=13, Qwen3 K=24). Client:
 `bench/v3/pipeline_bench.py` (two waves of concurrent tg128; medians of
 2). Flag-off check used `split_client.py bench` with even cuts.
 
 ### Flag off (single chat, even cut) — matches keepalive baseline
 
-| model | writing (tok/s) | reading 512 / 4k | quality | peak GB (lead) |
-|---|---|---|---|---|
-| Gemma 4 26B | **38.5** | 428.1 / 398.2 | 3/3 | 9.27 |
-| GPT-OSS 20B | **34.3** | 452.2 / 443.9 | 3/3 | 7.00 |
-| Qwen3 30B | **45.8** | 462.8 / 429.2 | 3/3 | 10.29 |
+| model | writing (tok/s) | quality | peak GB (lead) |
+|---|---|---|---|
+| Gemma 4 26B | **38.1** (raw 38.5 / 37.8) | 3/3 | 9.27 |
+| GPT-OSS 20B | **34.2** | 3/3 | 7.00 |
+| Qwen3 30B | **45.7** | 3/3 | 10.29 |
 
 Prior keepalive-on medians were 38.3 / 34.1 / 45.6 — within day noise.
+Stall-fix recheck Nov 1 ~01:25 America/Chicago.
 
-### Pipeline on (`--split-pipeline-chats 3`), idea-5 cuts
+### Pipeline on (`--split-pipeline-chats 3`), idea-5 cuts — after stall fix
 
 Medians of 2 waves. **Wall aggregate** = decode tokens across chats /
-(wave wall − min prefill). **Sum** = sum of per-chat write tok/s
-(optimistic if fully overlapped).
+(wave wall − min prefill). **Sum** = sum of per-chat write tok/s.
 
-| model | N | per-chat writing (tok/s) | wall aggregate | sum of per-chat | peak GB | quality |
-|---|---|---|---|---|---|---|
-| Gemma 4 | 1 | 37.6 | 37.4 | 37.6 | 6.95 | 3/3 |
-| | 2 | 33.3 / 33.2 | **61.0** | 66.5 | 8.21 | 3/3 |
-| | 3 | 33.3 / 33.3 / 37.4 | 48.4 | 104.0 | 8.43 | 3/3 |
-| GPT-OSS | 1 | 33.8 | 33.5 | 33.8 | 5.70 | 3/3 |
-| | 2 | 29.1 / 29.1 | **54.0** | 58.2 | 6.37 | 3/3 |
-| | 3 | ~29 / ~29 / ~34 | 43.5 | 92.2 | 6.46 | 3/3 |
-| Qwen3 | 1 | 44.9 | 44.4 | 44.9 | 8.70 | 3/3 |
-| | 2 | 40.2 / 40.1 | **73.0** | 80.3 | 9.60 | 3/3 |
-| | 3 | ~40 / ~40 / ~45 | 57.6 | 124.9 | 10.0 | 3/3 |
+| model | N | per-chat writing (tok/s) | wall aggregate | sum of per-chat | max TTFT (s) | peak GB | quality |
+|---|---|---|---|---|---|---|---|
+| Gemma 4 | 1 | 37.4 | 37.0 | 37.4 | 0.33 | 6.95 | 3/3 |
+| | 2 | 33.3 / 33.3 | **61.0** | 66.6 | 0.63 | 8.21 | 3/3 |
+| | 3 | ~21–22 each | **59.8** | 65.5 | **0.62** | 8.43 | 3/3 |
+| GPT-OSS | 1 | 33.8 | 33.5 | 33.8 | 0.32 | 5.70 | 3/3 |
+| | 2 | 29.1 / 29.1 | **54.0** | 58.2 | 0.60 | 6.37 | 3/3 |
+| | 3 | ~19 each | **53.0** | 57.4 | **0.61** | 6.46 | 3/3 |
+| Qwen3 | 1 | 44.8 | 44.4 | 44.8 | 0.31 | 8.70 | 3/3 |
+| | 2 | 40.1 / 40.0 | **72.7** | 80.1 | 0.58 | 9.60 | 3/3 |
+| | 3 | ~25–27 each | **70.8** | 78.6 | **0.59** | 10.0 | 3/3 |
 
-**What it shows.**
+**Before the stall fix (Oct 31 night):** N=3 left one chat with ~4 s TTFT
+(Gemma 4.16 / GPT-OSS 4.71 / Qwen 3.49) and wall aggregate fell below N=2
+(Gemma 48.4, GPT-OSS 43.5, Qwen 57.6). Cause: `_pipe_round` always gave
+the next packer slot to `need[0]` in list order — the chat that just
+finished lead — so a third never-started chat waited until one of the
+first two finished tg128.
 
-- **Two chats work.** Wall aggregate ≈1.6× one pipeline chat (Gemma
-  37.4→61.0, GPT-OSS 33.5→54.0, Qwen 44.4→73.0). Per-chat rate falls
-  (shared halves) but both Minis stay busier.
-- **Three chats:** sum of per-chat rates rises again, but wall aggregate
-  drops vs N=2 because the current admit/round-robin leaves one chat with
-  ~4 s TTFT. Scheduler follow-up before calling N=3 a win on wall time.
+**After (Nov 1):** fair pick by `(n_gen, t0)` plus admit-one-prefill-per-
+loop. N=3 max TTFT ≤0.62 s; wall aggregate ≈ N=2 (two-stage pipeline
+cannot beat that much on wall time). N=2 unchanged. Quality 3/3. Workers
+stopped; ports free after.
+
+### What it shows
+
+- **Two chats work.** Wall aggregate ≈1.6× one pipeline chat.
+- **Three chats no longer stall.** Fair scheduling; wall ≈ N=2; per-chat
+  rate falls (three chats share two halves).
 - Pipeline N=1 is a few percent under flag-off even-cut (custom decode
   loop vs `stream_generate`); use flag off for single-chat compares.
-- Quality 3/3 on every run. Workers stopped; ports 8194/5560 free after.
 
 ## Not measured yet
 
