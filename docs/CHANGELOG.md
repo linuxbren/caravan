@@ -14,6 +14,14 @@ On branch `caravan-v3-mlx-split`.
 
 **New**
 
+- **GPU keepalive while waiting on the peer (default on).** During
+  turn-taking each Mini sits idle ~15–20 ms; Metal then pays ~5 ms extra
+  on the next graph build + eval. A short-lived side thread runs a tiny
+  `mx.eval` during the blocking recv (`GpuKeepalive` in `mlx_split.py`).
+  `--split-keepalive` on by default; `--no-split-keepalive` or
+  `CARAVAN_MLX_SPLIT_KEEPALIVE=0` disables. A long-lived pause thread
+  was tried and rejected (writing regressed).
+
 - **GPU-wait test (`bench/cable/gpu_wait.py`).** Both Macs run every
   layer's two exchanges at the same time with GPU work sized like half of
   each model's layer. One exchange costs about 330–360 µs, mostly waiting
@@ -22,6 +30,18 @@ On branch `caravan-v3-mlx-split`.
   parked. See [BENCHMARKS.md](BENCHMARKS.md#gpu-wait-for-splitting-each-layer-oct-31-thunderbolt-4).
 
 **Benchmarks**
+
+- **Uneven layer split (idea 5).** Packer +1 / +2 layers vs even: no
+  single-chat writing gain (serial pipeline). Best balanced cuts for
+  idea 1: Gemma K=16, GPT-OSS K=13, Qwen3 even. See
+  [BENCHMARKS.md](BENCHMARKS.md#uneven-layer-split-oct-31-mlx-idea-5).
+
+- **GPU keepalive A/B** (`0f14e72`, LPM off, medians of 2): writing
+  Gemma 4 38.3 vs 27.7, GPT-OSS 34.1 vs 26.6, Qwen3 45.6 vs 30.4 tok/s
+  (on vs off); reading 512 / 4k slightly up; peak mem unchanged; quality
+  3/3. `sudo powermetrics` needs a password on the Minis; lead CPU%
+  median rose during waits under keepalive. See
+  [BENCHMARKS.md](BENCHMARKS.md#gpu-keepalive-while-waiting-on-the-peer-oct-31-mlx).
 
 - **v3 split rerun with Low Power Mode off on both Macs.** EXO2 (the
   packer) had been in Low Power Mode for all earlier two-Mac numbers.
@@ -37,6 +57,8 @@ On branch `caravan-v3-mlx-split`.
 
 **Docs**
 
+- GPU keepalive results and flag docs (LOG, ROADMAP idea 6,
+  BENCHMARKS, MLX-SPLIT, CONFIGURATION, handoff experiments).
 - Setup note: Low Power Mode must be off on both Macs for benchmarks
   (BENCHMARKS Method, MLX-SPLIT "Running it", `bench/v3` and
   `bench/cable` READMEs, ROADMAP known issues).

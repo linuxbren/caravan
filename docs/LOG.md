@@ -2642,3 +2642,24 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
   Qwen3 **K=24 (even)**. Reading flat across cuts; packer peak memory
   rose and lead peak fell as K grew. Flag works; no code changes.
   Tables in BENCHMARKS.md; verdict in ROADMAP idea 5.
+
+## 2026-10-31: GPU keepalive while waiting on the peer
+
+- Found the ~5–6 ms/half/token "split tax": after each Mini sits idle
+  ~15–20 ms waiting on the peer, the next Metal graph build + eval is
+  ~5 ms slower (cool-down). Cable and ser/deser are under 1 ms.
+- Fix: `GpuKeepalive` in `agent/mlx_split.py` — a short-lived thread
+  runs a tiny `mx.eval` during the blocking recv, then joins before
+  this process runs its layers. `--split-keepalive` on by default;
+  `--no-split-keepalive` or `CARAVAN_MLX_SPLIT_KEEPALIVE=0` disables.
+  A long-lived pause thread was tried on Gemma 4 and rejected (writing
+  fell to ~17.6 tok/s).
+- A/B on EXO1 lead :8194 / EXO2 packer 169.254.104.38:5560, LPM off,
+  medians of 2, 21:53–22:05 CDT, output
+  `~/.caravan/bench-2026-10-31/split-tax/ab/`. Code commit `0f14e72`.
+- Writing on vs off: Gemma 4 38.3 vs 27.7, GPT-OSS 34.1 vs 26.6, Qwen3
+  45.6 vs 30.4 tok/s. Reading 512 / 4k slightly up (no regression).
+  Peak mem unchanged. Quality 3/3 every run.
+- Power: `sudo powermetrics` needs a password on the Minis. Lead CPU%
+  median rose during waits (e.g. Gemma 4.5 → 13.9); packer median
+  barely moved with the spawn design. Tables in BENCHMARKS.md.

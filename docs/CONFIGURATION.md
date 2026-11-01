@@ -230,6 +230,7 @@ Split flags (v3; see the next section):
 | `--split-peer HOST:PORT` | – | Lead only: Packer 1's address, normally its Thunderbolt address, port 5560. |
 | `--split-listen HOST:PORT` | – | Packer only: where to listen (its Thunderbolt address). |
 | `--split-packer-layers K` | half (the odd layer goes to the lead) | How many layers Packer 1 runs. Use the same value on both Macs; the lead refuses to start if the two disagree. `--split-front-layers` is a deprecated alias. |
+| `--split-keepalive` / `--no-split-keepalive` | on | Keep Metal warm with a tiny eval on a short-lived thread while waiting for the peer (cuts ~5 ms/half cool-down). Env `CARAVAN_MLX_SPLIT_KEEPALIVE=0` / `false` / `off` / `no` also disables. |
 
 `python3 agent/render_mlx_plist.py <model> [--port] [--host] [--python]
 [-o PATH]` writes `launchd/com.caravan.mlx-server.plist` (label
@@ -245,6 +246,7 @@ the lead runs the rest. How it works: [MLX-SPLIT.md](MLX-SPLIT.md).
 |---|---|---|---|
 | `CARAVAN_MLX_SPLIT_PACKER` | `packer` | none (no split) | Packer 1's `HOST:PORT`. Setting it turns the split on. |
 | `CARAVAN_MLX_SPLIT_PACKER_LAYERS` | `packer_layers` | half | Layers on Packer 1 (1 or more). |
+| `CARAVAN_MLX_SPLIT_KEEPALIVE` | (flag only) | on | `0` / `false` / `off` / `no` disables GPU keepalive while waiting on the peer. |
 
 Order: flag > env > config, as everywhere else. The split needs the
 Caravan worker (`mlx.server = "caravan"`); with `mlx_lm` it's an error.

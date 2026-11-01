@@ -4,9 +4,9 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-10-31 evening (idea 5 uneven split measured on
-branch `caravan-v3-mlx-split`; v3 tagged, v3.1 on the branch).
-Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
+*Last updated 2026-10-31 evening (GPU keepalive measured and on by
+default on branch `caravan-v3-mlx-split`; v3 tagged, v3.1 on the
+branch). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -424,10 +424,25 @@ simplest first:
    GPT-OSS **K=13** (17.4 vs 18.5), Qwen3 **even K=24** (16.1 vs 15.6).
    Reading flat; quality 3/3. Keep those cuts when building idea 1.
 
+6. **GPU keepalive while waiting on the peer.** *Shipped Oct 31 evening*
+   (`0f14e72`). Each Mini's idle wait cools Metal; the next half costs
+   ~5 ms extra. A short-lived side thread runs a tiny `mx.eval` during
+   the blocking recv (`GpuKeepalive`), then stops before this process
+   runs layers. Default on (`--split-keepalive`; disable with
+   `--no-split-keepalive` or `CARAVAN_MLX_SPLIT_KEEPALIVE=0`). A/B vs
+   off (LPM off, medians of 2): writing Gemma 4 38.3 vs 27.7, GPT-OSS
+   34.1 vs 26.6, Qwen3 45.6 vs 30.4 tok/s; reading 512 / 4k slightly
+   up; quality 3/3; peak mem unchanged. A long-lived pause thread
+   regressed writing (~17.6 tok/s on Gemma) and was rejected. Details:
+   [BENCHMARKS.md](BENCHMARKS.md#gpu-keepalive-while-waiting-on-the-peer-oct-31-mlx).
+   Does not remove the serial half-then-half pipeline; ideas 1 and 3
+   still apply on top.
+
 **Recommendation:** for a single chat, try 3 (guess ahead) first. For
 agents or several users sending requests at once, do 1 (several chats at
 once), with the balanced cuts from idea 5 (Gemma K=16, GPT-OSS K=13,
-Qwen3 even). Idea 5 alone does not speed up a single chat.
+Qwen3 even). Idea 5 alone does not speed up a single chat. Idea 6 (keepalive)
+is already the default and raises single-chat writing ~28–50%.
 
 ## Deferred / parked
 
@@ -454,7 +469,7 @@ list above point to it.
 | jaccl / RDMA over Thunderbolt | Needs Thunderbolt 5 (M4 Pro/Max); our Minis are Thunderbolt 4. | If a Thunderbolt 5 Mac joins. |
 | GPT-OSS 120B split across two Minis | Needs a third Mini or more memory. The two Minis have about 2 × 19 GB of GPU memory. The stock build is 63.4 GB. Checked 2026-10-31 for heavier-compressed builds: every GGUF quant is 62.6–66 GB, even Q2_K and IQ1_S, because the experts stay in MXFP4. The smallest MLX build is `jesusoctavioas/gpt-oss-120b-mlx-2Bit` at 36.6 GB, which would be about 18.3 GB of weights per Mini, under 1 GB short of what a stage needs with chat memory (our stages peak 1.5–2.2 GB above their weights). `manjunathshiva/gpt-oss-120b-tq3a-tq2e-g32` (37.7 GB) uses a TurboQuant mode that stock mlx can't load. Pruned "REAP" 58B variants are different models. So GPT-OSS's bigger brother in v3 is the 20B at 8-bit. | When a third Mini (or a bigger-memory Mac) joins, or a ≤ 32 GB 120B build appears. |
 | Split link is unauthenticated | Thunderbolt-only cable between two trusted Macs. | Before the split runs over LAN/Tailscale. |
-| No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token, about as much as the whole model on one Mac, so the time is fixed per-pass overhead (graph build, sync), not compute or the cable (<1 ms). The lead and Packer 1 take turns, so each sits idle half the time. Idea 5 (uneven cut) confirmed the sum is what matters for a single chat: moving layers did not raise writing speed. | After v3 merges. Do ideas 1 and 3; use idea 5's balanced cuts with idea 1. Also try compiling each stage's graph. |
+| No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token without keepalive, about as much as the whole model on one Mac; the cable is <1 ms. Part of that was Metal cool-down after the idle wait (~5 ms/half); idea 6 (GPU keepalive, default on) removes it and raises writing ~28–50%. The rest is still serial turn-taking and graph-build overhead. Idea 5 confirmed moving layers does not raise single-chat writing. | After v3 merges. Do ideas 1 and 3 on top of keepalive; use idea 5's balanced cuts with idea 1. Also try compiling each stage's graph. |
 | `--kv-bits` with the split | Untested. | With the 8-bit chat memory item. |
 | More than two stages (one lead, several packers) | Two Macs today. | When a third Mac joins; needs re-planning of the cut and of split downloads. |
 | Split download used for one model only | Qwen3 30B 8-bit ran from split downloads. For Gemma 4 8-bit and GPT-OSS 20B 8-bit, the lead downloaded its files plus the packer-only ones and copied them to the packer over Thunderbolt (one internet download instead of two). | When split download is wired into the agent (Next #3). |

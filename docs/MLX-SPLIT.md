@@ -130,6 +130,13 @@ On the lead Mac:
 Start the packer first. `--split-packer-layers K` must match on both
 Macs (the lead checks and refuses to start otherwise).
 
+`--split-keepalive` (default on) keeps Metal warm on a short-lived
+side thread while this Mac waits for the peer, so the next half does
+not pay ~5 ms of cool-down after the idle. Disable with
+`--no-split-keepalive` or `CARAVAN_MLX_SPLIT_KEEPALIVE=0`. Measured
+Oct 31: writing +28–50% vs off, reading and quality unchanged
+([BENCHMARKS.md](BENCHMARKS.md#gpu-keepalive-while-waiting-on-the-peer-oct-31-mlx)).
+
 Turn **Low Power Mode off on both Macs** (`pmset -g` should show
 `lowpowermode 0`). The split runs at the pace of the slower Mac; with
 Low Power Mode on for the packer, turning it off made reading 16–30%
@@ -165,6 +172,10 @@ Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oc
   (`--split-packer-layers`, idea 5) tried Oct 31: no single-chat writing
   gain (serial pipeline); best balanced cuts Gemma K=16, GPT-OSS K=13,
   Qwen3 even ([BENCHMARKS.md](BENCHMARKS.md#uneven-layer-split-oct-31-mlx-idea-5)).
+  GPU keepalive (idea 6, default on, `0f14e72`) removes Metal cool-down
+  during the peer wait: writing 38.3 / 34.1 / 45.6 tok/s on Gemma 4 /
+  GPT-OSS / Qwen3 vs 27.7 / 26.6 / 30.4 off; reading slightly up;
+  quality 3/3 ([BENCHMARKS.md](BENCHMARKS.md#gpu-keepalive-while-waiting-on-the-peer-oct-31-mlx)).
 - Chat reuse and restart resume work across the split, at +0.1–0.4 s.
 - The 8-bit versions, which don't fit on one Mac, all run split with a 16k
   chat and pass 3/3: Qwen3 30B 8-bit (20.6 tok/s, 18.12 GB per Mac), Gemma
@@ -212,7 +223,9 @@ Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oc
 - Generation is a serial pipeline: per token, the lead waits for the
   packer, then runs its half. There's no overlap of the two halves yet.
   Moving the cut (`--split-packer-layers`) does not speed up a single
-  chat (measured Oct 31). Ideas for fixing the turn-taking, including
+  chat (measured Oct 31). GPU keepalive (default on) removes the Metal
+  cool-down during that wait and raises writing ~28–50%; it does not
+  overlap the halves. Ideas for fixing the turn-taking, including
   several chats at once and guess ahead, are in
   [ROADMAP.md](ROADMAP.md#beating-the-turn-taking-in-the-split).
 - Not started by the agent or launchd yet; both halves are started by hand.

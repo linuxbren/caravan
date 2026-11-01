@@ -4,6 +4,40 @@ Each entry: date, goal, hardware, software/runtime, model + quant, config, resul
 
 <!-- entries below, newest first -->
 
+## 2026-10-31 — GPU keepalive while waiting on the peer (Caravan MLX split)
+
+**Goal.** Remove the ~5–6 ms/half/token Metal cool-down that shows up after each Mini sits idle during turn-taking. Keep Metal warm with a tiny `mx.eval` on a side thread during the blocking peer wait, then stop it before this process runs its own layers. A/B keepalive on vs off on all three 4-bit models; also sample CPU while it runs (powermetrics needs a password on the Minis).
+
+**Hardware.** EXO1 (lead) and EXO2 (packer), Mac mini M4 24 GB, Thunderbolt 4 cable. `pmset -g` showed `lowpowermode 0` on both before every run.
+
+**Software.** Branch `caravan-v3-mlx-split`, code commit `0f14e72` (spawn-per-wait `GpuKeepalive` in `agent/mlx_split.py`, `--split-keepalive` / `CARAVAN_MLX_SPLIT_KEEPALIVE` in `agent/mlx_worker.py`). MLX 0.32.4, mlx-lm 0.32.2. `bench/v3/split_client.py bench`. Flag on by default; OFF runs used `--no-split-keepalive`.
+
+**Config.** EXO1 lead on test port 8194, EXO2 packer on 169.254.104.38:5560, worker defaults. Models 4-bit from EXO1 `~/.exo/models/...` and EXO2 `~/.caravan/mlx-models/...`. Medians of 2 (tg128 / pp512 / pp4096). 21:53–22:05 CDT. Output `~/.caravan/bench-2026-10-31/split-tax/ab/` on EXO1 (and packer CPU samples on EXO2). No services stopped; workers killed after each run. A long-lived pause-thread variant was tried on Gemma 4 first and rejected (writing ~17.6 tok/s, reading down); tables below use the spawn-per-wait design only.
+
+**Results: writing / reading 512 / reading 4k (tok/s), TTFT on tg128 (s), peak mem (GB), quality**
+
+| model | keepalive | write | read 512 / 4k | TTFT | peak | q |
+|---|---|---:|---|---:|---:|---|
+| Gemma 4 | off | 27.7 | 411.9 / 376.4 | 0.401 | 9.09 | 3/3 |
+| Gemma 4 | on | 38.3 | 427.0 / 397.7 | 0.344 | 9.09 | 3/3 |
+| GPT-OSS | off | 26.6 | 441.5 / 424.7 | 0.380 | 6.94 | 3/3 |
+| GPT-OSS | on | 34.1 | 452.3 / 443.6 | 0.335 | 6.94 | 3/3 |
+| Qwen3 | off | 30.4 | 450.6 / 409.8 | 0.367 | 10.01 | 3/3 |
+| Qwen3 | on | 45.6 | 461.5 / 429.0 | 0.324 | 10.01 | 3/3 |
+
+Writing up ~39% / ~28% / ~50% (Gemma / GPT-OSS / Qwen). Reading and quality did **not** regress (reading slightly up). Peak memory unchanged.
+
+**Power / heat while waiting.** `sudo -n powermetrics` is not available (needs a password). Proxy: `ps -p … -o %cpu=` every 1 s during each bench (lead on EXO1, packer on EXO2). Lead CPU median: Gemma off 4.5 → on 13.9; GPT-OSS 1.7 → 15.0; Qwen 1.4 → 12.8 (keepalive keeps the process busier during the peer wait). Packer CPU median barely moved with the spawn design (GPT-OSS 0.5 → 5.5; Qwen 0.7 → 0.9). The rejected long-lived thread held lead/packer CPU medians around 70–72% and slowed writing. No watt or temperature numbers without powermetrics.
+
+**Takeaway.** Spawn-per-wait GPU keepalive is a real single-chat writing win with no reading or quality cost. Default on; disable with `--no-split-keepalive` or `CARAVAN_MLX_SPLIT_KEEPALIVE=0`. Do not use a long-lived pause thread (MLX lock contention). The remaining gap vs one Mac is still the serial half-then-half pipeline (ideas 1 and 3).
+
+**Deficiencies.** Two runs per setting. CPU% is a proxy for power, not watts or GPU busy. No idle-but-loaded watt draw. No 4k/16k chat or restart under keepalive. Long-lived variant only fully bench'd on Gemma 4.
+
+**Would be faster/more robust if.** Idea 1 / 3 still applied on top. A passwordless `powermetrics` sample (or `ioreg` GPU busy) for real idle-loaded watts. Keepalive tied into `build_lead_command` / `build_packer_command` when the agent starts the split.
+
+**Post status.** not drafted
+
+
 ## 2026-10-31 — Uneven layer split with `--split-packer-layers` (Caravan ROADMAP idea 5)
 
 **Goal.** Move the cut so Packer 1 gets +1 or +2 layers vs the default even split, for 4-bit Gemma 4, GPT-OSS and Qwen3. Expectation from the LPM-off rerun: the packer half was 2–4 ms faster than the lead on Gemma 4 and GPT-OSS, 0.4 ms on Qwen3, so giving the packer a layer or two more should balance the halves. ROADMAP called this a small win alone and more important with idea 1 (several chats at once).

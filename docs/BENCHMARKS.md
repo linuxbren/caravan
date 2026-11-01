@@ -613,6 +613,46 @@ within noise.
 - Verdict and next step: ROADMAP, idea 5.
 
 
+## GPU keepalive while waiting on the peer (Oct 31, MLX)
+
+Same split bench as the LPM-off / idea-5 runs, with `--split-keepalive`
+(default on) vs `--no-split-keepalive`. Code commit `0f14e72` on branch
+`caravan-v3-mlx-split` (spawn-per-wait `GpuKeepalive`). EXO1 lead on
+test port 8194, EXO2 packer on 169.254.104.38:5560, worker defaults.
+`lowpowermode 0` on both. Medians of 2 runs. 21:53–22:05 CDT. Raw output
+on EXO1 in `~/.caravan/bench-2026-10-31/split-tax/ab/`. Only the `bench`
+part. A long-lived pause-thread variant was tried on Gemma 4 and
+rejected (writing ~17.6 tok/s); not in the table.
+
+**4-bit**
+
+| model | keepalive | writing (tok/s) | reading 512 / 4k (tok/s) | wait before first word, tg128 (s) | peak mem (GB) | quality |
+|---|---|---:|---|---:|---:|---|
+| Gemma 4 26B | off | 27.7 | 411.9 / 376.4 | 0.401 | 9.09 | 3/3 |
+| | on | 38.3 | 427.0 / 397.7 | 0.344 | 9.09 | 3/3 |
+| GPT-OSS 20B | off | 26.6 | 441.5 / 424.7 | 0.380 | 6.94 | 3/3 |
+| | on | 34.1 | 452.3 / 443.6 | 0.335 | 6.94 | 3/3 |
+| Qwen3 30B | off | 30.4 | 450.6 / 409.8 | 0.367 | 10.01 | 3/3 |
+| | on | 45.6 | 461.5 / 429.0 | 0.324 | 10.01 | 3/3 |
+
+**What it shows.**
+
+- **Writing up ~28–50%** with no reading or quality regression (reading
+  slightly higher). Peak memory unchanged. Quality 3/3 on every run.
+- Cause: after ~15–20 ms idle waiting on the peer, Metal's next graph
+  build + eval costs ~5 ms extra. A tiny `mx.eval` on a short-lived
+  side thread during the blocking recv removes that cool-down.
+- **Power / heat.** `sudo powermetrics` needs a password on the Minis
+  (not measured in watts). Lead `ps` CPU% median during the bench rose
+  with keepalive on (Gemma 4.5 → 13.9, GPT-OSS 1.7 → 15.0, Qwen 1.4 →
+  12.8); packer median barely moved under the spawn design. The
+  rejected long-lived thread held CPU medians around 70% and slowed
+  writing.
+- Flag: `--split-keepalive` (default on); `--no-split-keepalive` or
+  `CARAVAN_MLX_SPLIT_KEEPALIVE=0` disables. See
+  [MLX-SPLIT.md](MLX-SPLIT.md) and ROADMAP (Beating the turn-taking).
+
+
 ## Not measured yet
 
 - The two-Mac split with the v1+ settings (flash attention, automatic
