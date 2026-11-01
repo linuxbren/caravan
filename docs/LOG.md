@@ -1,3 +1,11 @@
+## 2026-11-01: idea 3 follow-up (Gemma 270m, prompt-lookup, GPT-OSS)
+
+- Full-prompt draft prefill fix; `--split-prompt-lookup`; rotating-KV trim room
+  guard for GPT-OSS; draft/verify timing in usage.caravan.speculate.
+- Gemma: E2B still loses (draft_s dominates); **gemma-3-270m-it-4bit k=2 → 44.4**
+  vs 38.4; PL helps repeat only. GPT-OSS: no small draft; PL ≤ baseline.
+  Qwen draft k=3 → **59.3** (suite also strong). Commit local, no push.
+
 ## 2026-11-01: idea 3 guess-ahead (speculative decoding) prototype
 
 - Off-by-default `--split-draft-model` / `--split-speculate-k` on the lead;

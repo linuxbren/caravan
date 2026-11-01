@@ -1,16 +1,20 @@
-"""Idea 3 guess-ahead bench (2026-11-01). Talks to the split lead.
+"""Idea 3 guess-ahead bench. Talks to the split lead (test ports).
 
-  speculate_bench.py URL MODEL OUT.json [tag]
+  speculate_bench.py URL MODEL OUT.json [tag] [mode]
 
-Warm once, then two tg128 runs (medians later). One quality check.
-Lead should be started with --split-draft-model and --split-speculate-k.
-Does not start or stop workers. Low Power Mode must be off.
+mode: standard (default) | suite
+  standard — warm + tg128 x2 + quality 3/3 (count prompt; same as before)
+  suite    — also edit/code/repetitive prompts (prompt-lookup friendly), medians of 2
+
+Lead flags: --split-draft-model / --split-speculate-k / --split-prompt-lookup
+LPM off. Does not start/stop workers.
 """
 import json, sys, time, uuid, urllib.request
 from pathlib import Path
 
 URL, MODEL, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
 TAG = sys.argv[4] if len(sys.argv) > 4 else "spec"
+MODE = sys.argv[5] if len(sys.argv) > 5 else "standard"
 NT = " /no_think" if "qwen3-30b" in MODEL.lower() else ""
 Path(OUT).expanduser().parent.mkdir(parents=True, exist_ok=True)
 OUT = str(Path(OUT).expanduser())
@@ -57,22 +61,63 @@ def quality():
     return q
 
 
+PROMPTS = {
+    "count": ("Count from one to three hundred in words, separated by commas." + NT, 128),
+    "repeat": (
+        "Repeat the following paragraph exactly, twice in a row, with no other text:\n"
+        "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.\n"
+        + NT, 128),
+    "code_edit": (
+        "Here is a Python function:\n\n"
+        "def add(a, b):\n    return a + b\n\n"
+        "Rewrite ONLY the function so it adds three numbers a, b, c. "
+        "Output only the new function, nothing else.\n" + NT, 128),
+    "code_cont": (
+        "Continue this code with a standard iterative Fibonacci implementation. "
+        "Output only code.\n\n"
+        "def fib(n):\n    if n < 2:\n        return n\n" + NT, 128),
+}
+
+
+def run_pair(key):
+    prompt, ntok = PROMPTS[key]
+    runs = []
+    for i in range(2):
+        s = uuid.uuid4().hex[:16]
+        runs.append(post([{"role": "user", "content": prompt}], ntok, s, f"{TAG}_{key}_{i}"))
+    return runs
+
+
 session = uuid.uuid4().hex[:16]
 warm = post([{"role": "user", "content": "Say hi in three words." + NT}], 16, session, "warm")
-runs = []
-for i in range(2):
-    s = uuid.uuid4().hex[:16]
-    prompt = ("Count from one to three hundred in words, separated by commas." + NT)
-    runs.append(post([{"role": "user", "content": prompt}], 128, s, f"{TAG}_tg128_{i}"))
+results = {"count": run_pair("count")}
+if MODE == "suite":
+    for key in ("repeat", "code_edit", "code_cont"):
+        results[key] = run_pair(key)
 q = quality()
 ok_q = sum(1 for r in q if r.get("ok"))
-out = {"tag": TAG, "model": MODEL, "url": URL, "warm": warm, "tg128": runs, "quality": q,
-       "quality_ok": f"{ok_q}/3"}
+
+
+def med_tps(runs):
+    vals = sorted(r.get("write_tps") for r in runs if r.get("write_tps") is not None)
+    if not vals:
+        return None
+    return vals[len(vals) // 2] if len(vals) % 2 else vals[len(vals) // 2 - 1]  # lower median for even
+
+
+out = {"tag": TAG, "model": MODEL, "url": URL, "mode": MODE, "warm": warm,
+       "prompts": results, "quality": q, "quality_ok": f"{ok_q}/3",
+       "medians": {k: med_tps(v) for k, v in results.items()}}
+# back-compat alias
+out["tg128"] = results["count"]
 Path(OUT).write_text(json.dumps(out, indent=2) + "\n")
-print(json.dumps({
-    "tag": TAG,
-    "tg128": [{"ok": r.get("ok"), "write_tps": r.get("write_tps"), "speculate": r.get("speculate"),
-               "peak_gb": r.get("peak_gb"), "ttft_s": r.get("ttft_s"), "error": r.get("error")}
-              for r in runs],
-    "quality_ok": out["quality_ok"],
-}, indent=2))
+summary = {
+    "tag": TAG, "mode": MODE, "quality_ok": out["quality_ok"], "medians": out["medians"],
+    "count": [{"ok": r.get("ok"), "write_tps": r.get("write_tps"), "speculate": r.get("speculate"),
+               "peak_gb": r.get("peak_gb"), "error": r.get("error")} for r in results["count"]],
+}
+if MODE == "suite":
+    for key in ("repeat", "code_edit", "code_cont"):
+        summary[key] = [{"write_tps": r.get("write_tps"), "speculate": r.get("speculate")}
+                        for r in results[key]]
+print(json.dumps(summary, indent=2))

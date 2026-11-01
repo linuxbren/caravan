@@ -1,6 +1,8 @@
 ## Unreleased
 
 ### Added
+- Idea 3 prompt-lookup (`--split-prompt-lookup`) + draft prefill fix;
+  Gemma-3-270m draft path; GPT-OSS rotating-KV speculate guard.
 - Idea 3 guess-ahead prototype: `--split-draft-model`, `--split-speculate-k`
   (off by default). Packer `trim` for speculative reject. See BENCHMARKS.
 

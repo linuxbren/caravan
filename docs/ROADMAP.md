@@ -310,12 +310,11 @@ simplest first:
    decoding. Flags: `--split-draft-model DIR` /
    `CARAVAN_MLX_SPLIT_DRAFT_MODEL`, `--split-speculate-k K` (default 4) /
    `CARAVAN_MLX_SPLIT_SPECULATE_K`. Packer KV trim via a new `trim` op.
-   Bench (4-bit, keepalive on, LPM off, medians of 2, quality 3/3): Qwen3
-   30B + Qwen3-0.6B-4bit draft (~335 MB) peaks at **k=3 → 57.4 tok/s** vs
-   45.9 baseline (~+25%); Gemma 4 26B + gemma-4-E2B-it-4bit (~3.3 GB) is
-   slower than baseline at every k (draft too heavy / acceptance ~0.48–0.59);
-   GPT-OSS has no small same-family draft on mlx-community. Details:
-   [BENCHMARKS.md](BENCHMARKS.md#idea-3-guess-ahead-speculative-decoding-nov-1-mlx).
+   Follow-up same day: full-prompt draft prefill; `--split-prompt-lookup N`;
+   Gemma **g3-270m k=2 → 44.4** vs 38.4 (~+16%); Qwen draft k=3 → **59.3**
+   (was 57.4); GPT-OSS stays at baseline (no small o200k draft; PL ineffective
+   under 128-token rotating KV). Details:
+   [BENCHMARKS.md](BENCHMARKS.md#idea-3-follow-up-lighter-drafts--prompt-lookup-nov-1-mlx).
 4. **Split each layer across both Minis (tensor parallel).** *Brenden's
    preferred direction to investigate.* Both Minis work on every layer at
    the same time instead of taking turns, each holding half of every

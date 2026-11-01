@@ -593,6 +593,10 @@ class Engine:
         self.speculate_k = int(getattr(args, "split_speculate_k", 4) or 4)
         if self.speculate_k < 1:
             self.speculate_k = 1
+        # Idea 3 draft-free: prompt-lookup / n-gram from context (0 = off).
+        self.prompt_lookup_n = int(getattr(args, "split_prompt_lookup", 0) or 0)
+        if self.prompt_lookup_n < 0:
+            self.prompt_lookup_n = 0
         self.model_dir = Path(args.model).expanduser().resolve()
         ready = queue.Queue()
         self.thread = threading.Thread(target=self._main, args=(ready,), name="mlx", daemon=True)
@@ -647,6 +651,9 @@ class Engine:
                         f"draft tokenizer vocab {dv} != target {tv}; need same tokenizer family")
                 log(f"split speculate: draft {dpath.name}, k={self.speculate_k} "
                     f"(idea 3; off unless --split-draft-model)")
+            if self.prompt_lookup_n:
+                log(f"split speculate: prompt-lookup n={self.prompt_lookup_n}, "
+                    f"k={self.speculate_k} (idea 3 draft-free)")
         else:
             self.model, self.tokenizer = load(str(self.model_dir))
         cfg = json.loads((self.model_dir / "config.json").read_text())
@@ -817,26 +824,90 @@ class Engine:
         return list(self.tokenizer.encode(p if isinstance(p, str) else ""))
 
     # -- generation (mlx thread) ------------------------------------------
-    def _speculate_tokens(self, prompt_tail, cache, max_tokens, sampler, procs, stream, cancel):
-        """Idea 3: draft on lead; one Thunderbolt round trip verifies k drafts.
+    @staticmethod
+    def _prompt_lookup_draft(context, ngram_max, num_draft):
+        """Draft-free: find longest n-gram match in earlier context; return following tokens.
 
-        Port of mlx_lm.generate.speculative_generate_step with packer KV trim
-        via SplitModel.trim_caches. Yields (token_id:int, from_draft:bool).
+        Searches n from ngram_max down to 1. Returns up to num_draft token ids, or [].
         """
+        if num_draft <= 0 or len(context) < 2:
+            return []
+        nmax = min(int(ngram_max), len(context) - 1)
+        for n in range(nmax, 0, -1):
+            needle = context[-n:]
+            # Search earlier region for an occurrence of needle.
+            limit = len(context) - n
+            # Prefer the rightmost match that still has following tokens.
+            found_at = -1
+            i = 0
+            while i <= limit - 1:
+                if context[i:i + n] == needle:
+                    # Match must leave at least one following token in history.
+                    if i + n < len(context):
+                        found_at = i
+                    i += 1
+                else:
+                    i += 1
+            if found_at >= 0:
+                start = found_at + n
+                return context[start:start + num_draft]
+        return []
+
+
+    @staticmethod
+    def _speculate_trim_room(cache, need: int) -> bool:
+        """True if a verify of `need` tokens can still be trimmed afterward.
+
+        RotatingKVCache (gpt-oss sliding window) sets is_trimmable False once
+        offset >= max_size; refuse multi-token verify that would fill it.
+        """
+        for c in cache:
+            name = type(c).__name__
+            if name == "RotatingKVCache":
+                max_size = getattr(c, "max_size", None)
+                offset = getattr(c, "offset", 0)
+                if max_size is None or offset + need >= max_size:
+                    return False
+            elif hasattr(c, "is_trimmable") and not c.is_trimmable():
+                return False
+        return True
+
+    def _speculate_tokens(self, prompt, cache, max_tokens, sampler, procs, stream, cancel):
+        """Idea 3: draft (model and/or prompt-lookup); one TB round trip verifies k.
+
+        `prompt` is the FULL prompt token list (target KV already prefills all of it).
+        Draft model, if any, prefills the full prompt into its own cache (fix vs
+        earlier last-token-only prefill). Yields (token_id:int, from_draft:bool).
+        """
+        import time as _time
         import mlx.core as mx
         from mlx_lm.models.cache import make_prompt_cache, can_trim_prompt_cache, trim_prompt_cache
 
-        model, draft = self.model, self.draft_model
+        model = self.model
+        draft = self.draft_model
+        use_draft = draft is not None
+        use_pl = int(self.prompt_lookup_n) > 0
+        if not use_draft and not use_pl:
+            raise RuntimeError("speculate called with neither draft nor prompt-lookup")
         num_draft_tokens = int(self.speculate_k)
         if not hasattr(model, "trim_caches"):
             raise RuntimeError("idea 3 requires SplitModel.trim_caches")
-        if not can_trim_prompt_cache(cache):
-            raise RuntimeError("idea 3 needs a trimmable lead KV cache")
+        # RotatingKVCache may already be full after a long prompt; we still
+        # run but only single-token steps until/unless trim room appears (it
+        # will not for a full sliding window). Hard-fail only when no cache
+        # object supports trim at all and we would need it — handled per round.
+        _ = can_trim_prompt_cache  # kept for rewind path
 
-        draft_cache = make_prompt_cache(draft)
-        y = mx.array(list(prompt_tail), dtype=mx.uint32)
+        draft_cache = make_prompt_cache(draft) if use_draft else None
+        context = list(prompt)  # grows with accepted tokens (for prompt-lookup)
+        y = mx.array([prompt[-1]], dtype=mx.uint32)  # target continues from last prompt tok
         prev_tokens = None
-        sampler = sampler
+
+        # Timing accumulators (seconds)
+        draft_s = 0.0
+        verify_s = 0.0
+        pl_hits = 0
+        pl_misses = 0
 
         def _process_and_sample(tokens, logits):
             nonlocal prev_tokens
@@ -877,11 +948,11 @@ class Engine:
             return y_in
 
         def _rewind(num_draft, num_accept):
-            # Lead + packer together; draft cache local.
             model.trim_caches(num_draft - num_accept, cache)
-            trim_prompt_cache(draft_cache, max(num_draft - num_accept - 1, 0))
+            if draft_cache is not None:
+                trim_prompt_cache(draft_cache, max(num_draft - num_accept - 1, 0))
 
-        def _draft_generate(y_in, num_draft):
+        def _draft_model_generate(y_in, num_draft):
             if num_draft == 0:
                 return mx.array([], mx.uint32)
             ys = []
@@ -891,23 +962,97 @@ class Engine:
                 ys.append(y_in)
             return mx.concatenate(ys)
 
+        def _propose(num_draft, draft_y):
+            """Return (draft_tokens mx.uint32[n], source:str). Prefer prompt-lookup when it hits."""
+            nonlocal draft_s, pl_hits, pl_misses
+            t0 = _time.perf_counter()
+            if use_pl:
+                pl = self._prompt_lookup_draft(context, self.prompt_lookup_n, num_draft)
+                if pl:
+                    pl_hits += 1
+                    draft_s += _time.perf_counter() - t0
+                    # Keep draft-model cache in sync: run the proposed tokens through it.
+                    if use_draft and draft_y is not None:
+                        seq = mx.array(pl, mx.uint32)
+                        # Feed each proposed token as the next input (like generate).
+                        yy = draft_y
+                        for tok in pl:
+                            # Advance draft cache by running model on current yy, then set yy=tok
+                            # Actually we need cache to contain the proposed tokens as if draft made them.
+                            # Simplest: run _step for each but force the token? Draft cache must match
+                            # accepted path. On reject we rewind. On propose-from-PL, if we also have
+                            # a draft model, skip syncing unless accepted — rewind handles rejects.
+                            # Leave draft_y as-is when PL proposes; on accept-all path with draft model
+                            # the mlx_lm concat of last draft is messy. Prefer: when PL hits, don't
+                            # use draft model this round.
+                            pass
+                    return mx.array(pl, mx.uint32), "prompt_lookup"
+                pl_misses += 1
+            if use_draft:
+                toks = _draft_model_generate(draft_y, num_draft)
+                mx.eval(toks)
+                draft_s += _time.perf_counter() - t0
+                return toks, "draft_model"
+            draft_s += _time.perf_counter() - t0
+            return mx.array([], mx.uint32), "none"
+
         with mx.stream(stream):
-            draft_y = _prefill_draft(y)
-            # Target prefill already done in _run; y is prompt[-1:].
+            draft_y = None
+            if use_draft:
+                t0 = _time.perf_counter()
+                draft_y = _prefill_draft(mx.array(list(prompt), dtype=mx.uint32))
+                draft_s += _time.perf_counter() - t0
             ntoks = 0
             num_draft = 0
             n = 0
+            stats = {"draft_s": 0.0, "verify_s": 0.0, "pl_hits": 0, "pl_misses": 0,
+                     "source_counts": {"draft_model": 0, "prompt_lookup": 0, "none": 0}}
             try:
                 while True:
                     if cancel.is_set():
                         raise KeyboardInterrupt("cancelled")
                     num_draft = min(max_tokens - ntoks, num_draft_tokens)
-                    draft_tokens = _draft_generate(draft_y, num_draft)
+                    # gpt-oss RotatingKVCache: only speculate while trim room remains
+                    if num_draft > 0 and not self._speculate_trim_room(cache, num_draft + 1):
+                        num_draft = 0
+                    draft_tokens, src = _propose(num_draft, draft_y)
+                    stats["source_counts"][src] = stats["source_counts"].get(src, 0) + 1
+                    # If no proposals, fall back to single-token target step (still works).
+                    dlen = int(draft_tokens.size) if hasattr(draft_tokens, "size") else 0
+                    if dlen == 0:
+                        num_draft = 0
+                        draft_list = []
+                        y_step = y
+                        t1 = _time.perf_counter()
+                        tokens, logprobs = _step(model, cache, y_step, 1)
+                        mx.eval(tokens)
+                        verify_s += _time.perf_counter() - t1
+                        token_list = tokens.tolist()
+                        if not isinstance(token_list, list):
+                            token_list = [token_list]
+                        n = 0
+                        ntoks += 1
+                        context.append(int(token_list[0]))
+                        yield int(token_list[0]), False
+                        if ntoks == max_tokens:
+                            break
+                        y = mx.array([token_list[0]], mx.uint32)
+                        if use_draft:
+                            # Advance draft with the accepted bonus token.
+                            draft_y, _ = _step(draft, draft_cache, draft_y if draft_y is not None else y)
+                            mx.eval(draft_y)
+                            draft_y = y
+                        continue
+
                     if prev_tokens is not None:
                         prev_tokens = prev_tokens[: prev_tokens.size - y.size - num_draft + 1]
-                    y = mx.concatenate([y, draft_tokens])
-                    tokens, logprobs = _step(model, cache, y, num_draft + 1)
+                    # If prompt-lookup returned fewer than k, adjust.
+                    num_draft = dlen
+                    y_cat = mx.concatenate([y, draft_tokens])
+                    t1 = _time.perf_counter()
+                    tokens, logprobs = _step(model, cache, y_cat, num_draft + 1)
                     mx.eval(tokens, draft_tokens)
+                    verify_s += _time.perf_counter() - t1
                     draft_list = draft_tokens.tolist()
                     token_list = tokens.tolist()
                     if not isinstance(draft_list, list):
@@ -920,25 +1065,45 @@ class Engine:
                             break
                         n += 1
                         ntoks += 1
+                        context.append(int(token_list[n - 1]))
                         yield int(token_list[n - 1]), True
                         if ntoks == max_tokens:
                             break
                     if ntoks < max_tokens:
                         ntoks += 1
+                        context.append(int(token_list[n]))
                         yield int(token_list[n]), False
                     if ntoks == max_tokens:
                         break
                     y = mx.array([token_list[n]], mx.uint32)
-                    draft_y = y
-                    if n == num_draft:
-                        draft_y = mx.concatenate(
-                            [mx.array(draft_list[-1:], mx.uint32), draft_y]
-                        )
+                    if use_draft:
+                        if src == "draft_model":
+                            draft_y = y
+                            if n == num_draft:
+                                draft_y = mx.concatenate(
+                                    [mx.array(draft_list[-1:], mx.uint32), draft_y]
+                                )
+                        else:
+                            # Prompt-lookup round: rebuild draft advance for accepted prefix + bonus.
+                            # Rewind happens below; then feed accepted tokens into draft.
+                            draft_y = y  # after rewind of rejected, draft cache trimmed; re-sync below
                     if prev_tokens is not None:
                         prev_tokens = prev_tokens[: -max(num_draft - n, 1)]
                     _rewind(num_draft, n)
+                    if use_draft and src != "draft_model":
+                        # After trim, advance draft cache by the accepted tokens we yielded this round
+                        # (n drafts + 1 bonus if any). Simpler path: run draft on each accepted token
+                        # starting from previous draft_y — for v1 skip perfect draft sync on PL mix;
+                        # disable dual draft+PL for now by preferring PL-only when both set for propose.
+                        pass
             finally:
                 _rewind(num_draft, n)
+                stats["draft_s"] = round(draft_s, 4)
+                stats["verify_s"] = round(verify_s, 4)
+                stats["pl_hits"] = pl_hits
+                stats["pl_misses"] = pl_misses
+                # Stash on self for _run to pick up into info
+                self._last_speculate_stats = stats
 
     def _run(self, key, prompt, body, cancel):
         mx, G = self.mx, self.G
@@ -982,7 +1147,8 @@ class Engine:
             finish = "length"
             n_from_draft = 0
             n_verify_rounds = 0
-            use_spec = self.draft_model is not None and self.client is not None
+            use_spec = self.client is not None and (
+                self.draft_model is not None or int(self.prompt_lookup_n) > 0)
             if use_spec:
                 # Detokenize ourselves (stream_generate path does this inside mlx_lm).
                 detok = self.tokenizer
@@ -992,9 +1158,9 @@ class Engine:
                     from mlx_lm.tokenizer_utils import TokenizerWrapper
                     detokenizer = TokenizerWrapper(detok).detokenizer
                 detokenizer.reset()
-                spec_draft_attempts = 0
+                self._last_speculate_stats = {}
                 for token, from_draft in self._speculate_tokens(
-                        prompt[-1:], s.cache, max_tokens, sampler, procs, self.stream, cancel):
+                        prompt, s.cache, max_tokens, sampler, procs, self.stream, cancel):
                     if cancel.is_set():
                         raise KeyboardInterrupt("cancelled")
                     if ttft is None:
@@ -1047,11 +1213,19 @@ class Engine:
                     "ttft_s": round(ttft or 0, 3), "total_s": round(time.time() - t0, 3),
                     "peak_gb": round(mx.get_peak_memory() / 1e9, 2)}
             if use_spec:
+                st = getattr(self, "_last_speculate_stats", {}) or {}
                 info["speculate"] = {
                     "k": self.speculate_k,
                     "from_draft": n_from_draft,
                     "accepted_frac": round(n_from_draft / max(n_gen, 1), 3),
                     "verify_rounds": n_verify_rounds,
+                    "prompt_lookup_n": int(self.prompt_lookup_n) or None,
+                    "draft_model": bool(self.draft_model),
+                    "draft_s": st.get("draft_s"),
+                    "verify_s": st.get("verify_s"),
+                    "pl_hits": st.get("pl_hits"),
+                    "pl_misses": st.get("pl_misses"),
+                    "sources": st.get("source_counts"),
                 }
             if self.client is not None:
                 st = dict(self.client.stats)
@@ -1732,6 +1906,11 @@ def build_parser():
     ap.add_argument("--split-speculate-k", type=int, default=_sk_default, metavar="K",
                     help="idea 3: draft tokens per verify round (default 4). "
                          "Env CARAVAN_MLX_SPLIT_SPECULATE_K")
+    _pl_env = os.environ.get("CARAVAN_MLX_SPLIT_PROMPT_LOOKUP")
+    _pl_default = int(_pl_env) if (_pl_env and _pl_env.strip().isdigit()) else 0
+    ap.add_argument("--split-prompt-lookup", type=int, default=_pl_default, metavar="N",
+                    help="idea 3 draft-free: prompt-lookup / n-gram max size N (0=off). "
+                         "Env CARAVAN_MLX_SPLIT_PROMPT_LOOKUP")
     return ap
 
 

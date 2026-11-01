@@ -247,7 +247,8 @@ Off by default. On the **lead only**:
 ```
 
 Or env: `CARAVAN_MLX_SPLIT_DRAFT_MODEL`, `CARAVAN_MLX_SPLIT_SPECULATE_K`
-(default k=4). Draft must share the target tokenizer (vocab size check at
+(default k=4), `CARAVAN_MLX_SPLIT_PROMPT_LOOKUP` / `--split-prompt-lookup N`
+(0=off; draft-free n-gram from context). Draft must share the target tokenizer (vocab size check at
 load). Packer needs no draft weights; rejects trim packer KV over the
 existing link (`trim` op). See
 [BENCHMARKS.md](BENCHMARKS.md#idea-3-guess-ahead-speculative-decoding-nov-1-mlx).

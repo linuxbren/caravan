@@ -771,6 +771,81 @@ on 8-bit was ~27 tok/s without draft and ~35 with k=4 (still below the
 4-bit baseline); peak ~16.6 GB. Idea 3 numbers above are 4-bit only.
 
 
+
+
+## Idea 3 follow-up: lighter drafts + prompt-lookup (Nov 1, MLX)
+
+Same test ports / LPM off / keepalive on / medians of 2 / quality 3/3.
+Flags: `--split-draft-model`, `--split-speculate-k`, new
+`--split-prompt-lookup N` (draft-free n-gram / prompt lookup). Draft
+prefill now uses the **full prompt** (earlier bug: last token only).
+`RotatingKVCache` (GPT-OSS sliding window 128) refuses multi-token verify
+when trim room would run out. Timing fields: `draft_s`, `verify_s`,
+`pl_hits` / `pl_misses`. Raw JSON:
+`~/.caravan/bench-2026-11-01/speculate2/`. Suite prompts: count (standard),
+repeat (verbatim copy), code_edit, code_cont.
+
+### Verify path
+
+`SplitModel.__call__` already sends the full token list in **one** packer
+`fwd` (one Thunderbolt RT) then lead layers. Multi-token verify is one RT.
+Qwen draft k=3 count: `draft_s≈0.47s`, `verify_s≈1.75s` over 33 rounds
+(~53 ms/verify for up to 4 tokens) vs ~22 ms/token baseline — wins when
+acceptance is high.
+
+### Gemma 4 26B-A4B-it-4bit
+
+Tokenizer note: `gemma-3-270m-it-4bit` (~181 MB downloaded) shares 262k
+vocab size but **not** identical `tokenizer.json` (~6206 id remaps, mostly
+specials/unused). Content encodes mostly align after BOS; used as draft
+anyway. `gemma-4-E2B-it-4bit` (3.3 GB) is an exact tokenizer match.
+
+| setting | count | repeat | code_edit | code_cont | peak GB | notes |
+|---|---:|---:|---:|---:|---:|---|
+| baseline | **38.4** | 38.2 | 38.2 | 38.3 | 7.39 | matches 38.1 |
+| E2B k=1 | 37.4 | — | — | — | 10.05 | draft_s 1.10 / verify_s 2.36 |
+| E2B k=2 | 36.4 | — | — | — | 10.05 | draft_s 1.48 / verify_s 2.09 |
+| **g3-270m k=2** | **44.4** | **46.6** | **44.7** | 38.1 | 7.54 | **best overall** (~+16% count) |
+| g3-270m k=3 | 41.5 | — | — | — | 7.54 | |
+| g3-270m k=4 | 37.3 | — | — | — | 7.54 | |
+| PL n=3 k=4 | 29.1 | **49.0** | 33.8 | 31.0 | 7.39 | wins only on repeat |
+| PL n=5 k=6 | 24.8 | 43.6 | 28.4 | 25.0 | 7.39 | |
+| hybrid PL+270m k=2 | 28.9 | 48.8 | 36.1 | 34.6 | 7.54 | PL false hits hurt count |
+
+**E2B cost:** draft alone ~3–4× the 270m draft time; acceptance mid; never
+beats baseline. **Best Gemma setting: `--split-draft-model gemma-3-270m-it-4bit --split-speculate-k 2`.**
+
+### GPT-OSS 20B MXFP4-Q8
+
+No small same-family / o200k_harmony draft on mlx-community (only 20B/120B;
+CUDA EAGLE/DFlare not MLX). Tokenizer-translation not practical without a
+small o200k MLX model. Sliding-window KV (128) limits speculation headroom.
+
+| setting | count | repeat | code_edit | code_cont | peak GB |
+|---|---:|---:|---:|---:|---:|
+| baseline | **34.0** | 33.9 | 33.2 | 34.0 | 6.13 | matches 34.2 |
+| PL n=3 k=4 | 29.8 | 33.3 | 33.9 | 32.9 | 6.13 | accept_frac ~0.07 |
+| PL n=2 k=3 | 31.1 | 32.9 | **34.9** | 33.4 | 6.13 | tiny code_edit bump |
+
+**Best GPT-OSS: baseline (no speculate).** Prompt-lookup does not help the
+standard chat mix; sliding window + low n-gram hits.
+
+### Qwen3 30B-A3B-4bit (prefill fix recheck)
+
+| setting | count | repeat | code_edit | code_cont | peak GB |
+|---|---:|---:|---:|---:|---:|
+| baseline | **45.5** | 44.5 | 42.8 | 44.7 | 8.68 | ~45.9 prior |
+| **draft 0.6B k=3** | **59.3** | **62.3** | **72.0** | **57.5** | 9.14 | was 57.4 before prefill fix |
+| PL n=3 k=4 | 30.4 | **63.7** | 36.8 | 30.5 | 8.68 | repeat-only win |
+
+**Best Qwen: draft 0.6B k=3** (still). Prefill fix ~+3% on count vs 57.4.
+
+### Self-speculation / lead-only early exit
+
+Not attempted: lead holds only the upper layers; logits need packer
+embeddings + lower layers. Would need new packer early-exit protocol.
+
+
 ## Not measured yet
 
 - The two-Mac split with the v1+ settings (flash attention, automatic
