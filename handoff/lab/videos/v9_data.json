@@ -1,0 +1,120 @@
+{
+ "_stills": [
+  2.0,
+  10.0,
+  17.0,
+  26.0,
+  35.0,
+  42.0,
+  50.0
+ ],
+ "_day": "Day 5",
+ "TG": {
+  "one": [
+   51.0,
+   41.3,
+   36.5
+  ],
+  "off": [
+   30.4,
+   27.7,
+   26.6
+  ],
+  "on": [
+   45.6,
+   38.3,
+   34.1
+  ]
+ },
+ "PP4K": {
+  "one": [
+   400.0,
+   399.0,
+   445.0
+  ],
+  "off": [
+   409.8,
+   376.4,
+   424.7
+  ],
+  "on": [
+   429.0,
+   397.7,
+   443.6
+  ]
+ },
+ "PP512": {
+  "one": [
+   465.0,
+   431.0,
+   457.0
+  ],
+  "off": [
+   450.6,
+   411.9,
+   441.5
+  ],
+  "on": [
+   461.5,
+   427.0,
+   452.3
+  ]
+ },
+ "TTFT": {
+  "off": [
+   0.367,
+   0.401,
+   0.38
+  ],
+  "on": [
+   0.324,
+   0.344,
+   0.335
+  ]
+ },
+ "MEM": {
+  "one": [
+   19.04,
+   17.14,
+   13.41
+  ],
+  "split": [
+   10.01,
+   9.09,
+   6.94
+  ]
+ },
+ "GAIN_PCT": [
+  50,
+  38,
+  28
+ ],
+ "COOLDOWN_MS": 5,
+ "IDLE_MS": [
+  15,
+  20
+ ],
+ "QUALITY": "3/3",
+ "TAKE": [
+  [
+   "ON",
+   "GPUs were napping between turns",
+   "each Mini sat idle ~15\u201320 ms waiting on the other; Metal then paid ~5 ms extra to wake up"
+  ],
+  [
+   "ON",
+   "A tiny keep-awake fixed it",
+   "while waiting, a short-lived thread runs a tiny GPU eval; writing jumped 28\u201350%"
+  ],
+  [
+   "ONE",
+   "Reading and quality held",
+   "reading a ~4,000-token prompt stayed flat or rose a little; 3 of 3 test answers right; memory unchanged"
+  ],
+  [
+   "MUTED",
+   "Next: several chats at once",
+   "overlap the halves across chats so both Minis stay busy; then guess ahead"
+  ]
+ ]
+}
