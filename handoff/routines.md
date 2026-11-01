@@ -32,7 +32,7 @@ Read Brenden's experiment log at /workspace/llm-lab/experiments.md, plus anythin
 - If nothing was tried or learned today, send a short reminder that today's progress post is still open. Offer to draft a quick "what I'm planning next" post from the roadmap, or note that there's nothing new to share.
 - Otherwise, remind him it's time to post and draft today's post as described below.
 
-The draft is today's daily Caravan build-log post in his voice. The voice is hands-on and mad-scientist homebrew, with concrete numbers. Write for hobbyists: use plain words and as few acronyms as possible. Keep it short; he prefers a tight single post (under 280 characters), with an optional short thread only if there's a lot to share.
+The draft is today's daily Caravan build-log post in his voice. The voice is hands-on and mad-scientist homebrew, with concrete numbers. Write for a friend who's into computers and AI but doesn't know local-AI lingo (no GGUF/MLX/TTFT/tg128 shorthand; no "we're teaching" framing). Gloss a term once if needed (e.g. tokens/sec = how fast it writes), then move on. Keep it short; he prefers a tight single post (under 280 characters), with an optional short thread only if there's a lot to share.
 
 ALWAYS start the post with the day of development plus a few words summing up what Caravan is. Oct 30, 2026 is Day 1, and each calendar day after that counts up (Oct 31 = Day 2). For example: "Day N of building Caravan in the open, my homebrew app for running AI models across my Mac minis."
 

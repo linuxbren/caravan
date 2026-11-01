@@ -1,0 +1,19 @@
+{
+  "_stills": [2.5, 12.0, 22.0, 32.0, 42.0, 52.0, 60.0],
+  "_day": "Day 6",
+  "WRITE": {
+    "one": [44, 37, 34],
+    "two": [73, 61, 54],
+    "three": [71, 60, 53]
+  },
+  "WAIT_THREE": {
+    "before": [3.5, 4.2, 4.7],
+    "after": [0.6, 0.6, 0.6]
+  },
+  "TAKE": [
+    ["ON", "Two Minis, one model", "each holds half the layers; every step of a reply shuttles across the cable"],
+    ["ON", "Two chats ≈ 1.6× writing speed", "Qwen3 44→73, Gemma 37→61, GPT-OSS 34→54 tokens/sec across chats"],
+    ["ONE", "Fair turns for a third chat", "used to sit ~4 s before the first word; now ~0.6 s. Wall speed still ≈ two chats"],
+    ["MUTED", "One chat isn't faster", "this is for several chats (or agents) at once. Quality checks passed"]
+  ]
+}

@@ -184,9 +184,13 @@ tailscale status                                   # should list prf-hays-exo01 
   - v8 is "Day 4" (the thread scheduled for Mon Nov 2).
 
   Check with Brenden which day number the next post gets.
-- **Voice:** hands-on, mad-scientist homebrew, concrete numbers, written for hobbyists.
-  Use plain words and as few acronyms as possible. Prefer one tight post (under 280
-  characters), or a short thread only when there's a lot.
+- **Audience:** a friend who's into computers and AI but doesn't know local-AI lingo
+  (GGUF, MLX, tok/s, TTFT, tg128, and other lab shorthand). Confident show-your-work
+  tone — teach by explaining the mechanism crisply, never announce that you're teaching
+  ("Teach-along", "Come learn with us", "those pieces are called tokens" is too
+  elementary). No condescending basics; no insider bench jargon on screen or in posts.
+- **Voice:** hands-on, mad-scientist homebrew, concrete numbers. Prefer one tight post
+  (under 280 characters), or a short thread only when there's a lot.
 - **Cover three things:**
   1. what we did;
   2. key stats vs the previous version and the **v0 baseline** (commit 45ed2c2, the
@@ -200,12 +204,15 @@ tailscale status                                   # should list prf-hays-exo01 
 
 | Say | Not |
 |---|---|
-| writing speed | tg / tg128 |
+| writing speed (or "tokens/sec (how fast it writes)" once, then writing speed) | tg / tg128 / tok/s alone |
 | reading speed | pp |
 | wait before the first word | TTFT |
+| top half / bottom half of the model (or the Mini you talk to / the other Mini) | N=, K=, agg, pipeline depth |
 
-- Avoid KV, q8_0, f16, SWA and ub on screen and in posts.
-- A token is about ¾ of a word.
+- Avoid lab shorthand on screen and in posts: tg128, TTFT, GGUF, MLX as unexplained
+  jargon, KV, q8_0, f16, SWA, ub, N=, K=, agg.
+- You may use "tokens per second" if glossed in context once; otherwise say writing
+  speed. Don't stop to define what a token is.
 
 ## 6. Lab video conventions
 
@@ -215,9 +222,10 @@ tailscale status                                   # should list prf-hays-exo01 
 - The title slide shows "Day N", matching the post's day.
 - Benchmark videos show **Caravan's latest version and the one before it**, next to the
   other runtimes (llama.cpp, Ollama, LocalAI, exo) as reference bars.
-- Use the plain labels from section 5.
+- Use the plain labels and audience guidance from section 5 (techie friend, not
+  grandmother; no "we're teaching" framing).
 - Superseded videos are kept and marked "superseded" in the index.
-- **How they're made:** `lab/videos/make_runtime_video_v8.py` is the newest. It's a
+- **How they're made:** `lab/videos/make_runtime_video_v12.py` is the newest Day 6 cut (v8/v9 still the older style refs). It's a
   Python script: PIL frames, numbers from `v8_data.json`, and the Inter fonts in
   `lab/videos/fonts/` (SIL OFL), encoded with ffmpeg. Copy the latest script for the next
   video and change the data and slides.
