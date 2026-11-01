@@ -1230,6 +1230,12 @@ class Engine:
         slot.out.put(("done", info))
 
 
+    def text_machine(self, prompt, stop_words):
+        if self.model_type == "gpt_oss":
+            return HarmonyAdapter()
+        return StateMachineAdapter(self.G, self.tokenizer, prompt, stop_words)
+
+
 class _PipeSlot:
     __slots__ = ("key", "session", "prompt", "body", "cancel", "out", "how", "n_reused",
                  "t0", "t_prefill", "sampler", "procs", "max_tokens", "stops",
@@ -1248,12 +1254,6 @@ class _PipeSlot:
         self.finish = None
         self._detok = None
 
-
-
-    def text_machine(self, prompt, stop_words):
-        if self.model_type == "gpt_oss":
-            return HarmonyAdapter()
-        return StateMachineAdapter(self.G, self.tokenizer, prompt, stop_words)
 
 
 class HarmonyAdapter:
