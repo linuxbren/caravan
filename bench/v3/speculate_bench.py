@@ -45,7 +45,9 @@ def post(msgs, max_tokens, session, name):
            "speculate": cv.get("speculate"),
            "content": (msg.get("content") or "")[:240]}
     if u.get("completion_tokens", 0) > 1 and cv.get("total_s") and cv.get("ttft_s"):
-        rec["write_tps"] = round((u["completion_tokens"] - 1) / (cv["total_s"] - cv["ttft_s"]), 1)
+        denom = cv["total_s"] - cv["ttft_s"]
+        if denom > 0:
+            rec["write_tps"] = round((u["completion_tokens"] - 1) / denom, 1)
     return rec
 
 

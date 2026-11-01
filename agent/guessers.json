@@ -84,8 +84,16 @@
         "k": 3,
         "vocab": "exact"
       },
-      "verification": "vocab_checked",
-      "notes": "HF tokenizer.json exact vs Llama-3.1-8B / Llama-3.2-3B (128256 incl. added); not yet Mini-gated"
+      "verification": "mini_verified",
+      "tested": {
+        "date": "2026-11-01",
+        "baseline_tps": 22.7,
+        "spec_tps": 51.5,
+        "prompt": "count",
+        "quality": "3/3",
+        "accepted_frac": 0.75,
+        "notes": "auto-pair Mini verify Nov 1; Meta-Llama-3.1-8B-Instruct-4bit (~4.2 GB) + Llama-3.2-1B draft (663 MB); medians of 2; LPM off; keepalive on; test ports; suite also: keepalive 21.2\u219222.8; pipeline wall_agg N1/N2/N3 22.5/39.3/39.0; first-load keep 19.29\u219235.87 be\u22480.45; shut-off at be=0.80; download prompt 663 MB yes"
+      }
     },
     {
       "id": "qwen25",

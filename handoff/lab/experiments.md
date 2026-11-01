@@ -1,3 +1,38 @@
+## 2026-11-01 — Llama 3.1 8B full Mini suite (every prior test class)
+
+**Goal.** Run Meta-Llama-3.1-8B-Instruct-4bit through every prior Mini test
+class (split keepalive A/B, pipeline N=1/2/3 wall + TTFT, guess-ahead
+nodraft vs auto-pair suite, first-load gate, shut-off, download prompt) and
+document beside Qwen3 / Gemma / GPT-OSS. Decide keep vs skip for `llama3`
+in `guessers.json`.
+
+**Hardware.** EXO1 lead / EXO2 packer, Mac mini M4 24 GB, Thunderbolt 4.
+LPM off. Test ports 8194 / 5560. Model ~4.2 GB both Minis; draft
+Llama-3.2-1B-Instruct-4bit ~680 MB on lead. Even cut K=16.
+
+**Software.** Branch `caravan-v3-mlx-split` tip after `b9bec26`. Clients
+`split_client.py`, `pipeline_bench.py`, `speculate_bench.py` (denom>0
+guard). Raw `~/.caravan/bench-2026-11-01/llama-suite/`.
+
+**Results (America/Chicago ~14:08–14:32).**
+
+| test | result |
+|---|---|
+| keepalive off / on write | **21.2** / **22.8** (read 243.0/227.7 → 243.9/229.5; q 3/3) |
+| pipeline wall_agg N1 / N2 / N3 | **22.5** / **39.3** / **39.0** (max TTFT ≤0.60 s) |
+| nodraft count/repeat/edit/cont | **22.7 / 22.0 / 20.7 / 22.2** |
+| auto-pair same | **51.5 / 51.6 / 64.7 / 46.8** (accept ~0.75; q 3/3) |
+| first-load gate | keep=1; baseline **19.29** / spec **35.87**; be≈0.45; q 3/3 |
+| shut-off (be=0.80, no skip-first-load) | disabled (`0.688 < 0.80`) |
+| download prompt | `A 663 MB helper…` yes → download; draft restored |
+
+**Takeaway.** Keep Llama pairing (`mini_verified`). Strongest count lift so
+far on the Minis (~+127%). Pipeline pattern matches larger MoEs (~1.7× at
+N=2; N=3 wall ≈ N=2). Keepalive gain small on this lighter 8B (already less
+Metal cool-down than 30B-class).
+
+**Post status.** not drafted.
+
 ## 2026-11-01 — download-prompt wild test + top-10 family map
 
 **Goal.** Live-test the guesser download ask on EXO1 (move caches aside, no
@@ -10,7 +45,7 @@ auto-pair remembered yes. No path: decline → baseline; reload remembered no.
 Restored `.bak` + original state (2318 B). Production not stopped.
 
 **Family map.** See `agent/guessers.json` + METHODOLOGY table. Mini-verified:
-Qwen3, Gemma4. Vocab-checked: Llama3, Qwen2.5, Gemma3, Gemma2, Distill-Qwen,
+Qwen3, Gemma4, Llama3 (see Llama suite entry). Vocab-checked: Qwen2.5, Gemma3, Gemma2, Distill-Qwen,
 SmolLM. Skips: GPT-OSS, Mistral, Phi-4, native DeepSeek. Tests: 22.
 
 # Brenden's Mac Mini LLM Lab — Experiment Log

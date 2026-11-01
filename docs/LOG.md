@@ -1,3 +1,23 @@
+## 2026-11-01: Llama 3.1 8B Mini suite (keepalive / pipeline / guess-ahead)
+
+- Target `mlx-community/Meta-Llama-3.1-8B-Instruct-4bit` (~4.2 GB) on both
+  Minis; draft `Llama-3.2-1B-Instruct-4bit` (~680 MB / size_mb 663) on lead.
+  Even cut K=16. Test ports 8194/5560. LPM off. Medians of 2. Raw:
+  `~/.caravan/bench-2026-11-01/llama-suite/`.
+- Keepalive: off write **21.2**, read 243.0 / 227.7; on **22.8**, 243.9 /
+  229.5; quality 3/3.
+- Pipeline: wall_agg N1 **22.5** / N2 **39.3** / N3 **39.0**; max TTFT ≤0.60 s.
+- Guess-ahead suite nodraft medians count/repeat/edit/cont **22.7 / 22.0 /
+  20.7 / 22.2**; auto-pair **51.5 / 51.6 / 64.7 / 46.8**, accept ~0.75,
+  quality 3/3.
+- First-load gate keep=1: baseline **19.29** / spec **35.87**, accept 0.75,
+  break_even ≈0.45, quality 3/3.
+- Shut-off: restart without `--split-draft-skip-first-load` after raising
+  cached be to 0.80 → hex chat disabled (`0.688 < 0.80`).
+- Download prompt: `A 663 MB helper…` yes → download; draft restored from
+  `.bak`. `speculate_bench.py` denom>0 guard for short quality replies.
+- Decision: **keep** `llama3` as `mini_verified` in `agent/guessers.json`.
+
 ## 2026-11-01: download-prompt live test + top-family guesser map
 
 - EXO1 test ports only (8194/5560; production untouched). Moved Qwen3-0.6B HF

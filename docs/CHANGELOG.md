@@ -11,11 +11,17 @@ reply comes out.
 ## Unreleased
 
 ### Fixed
+- `bench/v3/speculate_bench.py`: skip write_tps when `(total_s - ttft_s) ≤ 0`
+  (short quality replies no longer ZeroDivisionError).
 - First-load / quality `answer_ok` scores only the final answer after
   stripping think/channel blocks (Gemma `<channel|>` closer). Thought-only
   output no longer passes. Gate probes use 256 tokens.
 
 ### Added
+- Llama 3.1 8B Mini-verified guess-ahead suite (keepalive / pipeline N=1–3 /
+  nodraft vs auto-pair / first-load / shut-off / download prompt). Count
+  **22.7 → 51.5**; `llama3` → `mini_verified` in `guessers.json`. See
+  BENCHMARKS.
 - Top open-LLM family → guesser map in `agent/guessers.json` (Llama 3.x,
   Qwen3/2.5, Gemma 4/3/2, Distill-Qwen, SmolLM; skips for GPT-OSS, Mistral,
   Phi-4, native DeepSeek). `verification`: `mini_verified` | `vocab_checked`.

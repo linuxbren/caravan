@@ -634,11 +634,16 @@ rejected (writing ~17.6 tok/s); not in the table.
 | | on | 34.1 | 452.3 / 443.6 | 0.335 | 6.94 | 3/3 |
 | Qwen3 30B | off | 30.4 | 450.6 / 409.8 | 0.367 | 10.01 | 3/3 |
 | | on | 45.6 | 461.5 / 429.0 | 0.324 | 10.01 | 3/3 |
+| Llama 3.1 8B | off | 21.2 | 243.0 / 227.7 | 0.372 | 3.75 | 3/3 |
+| | on | 22.8 | 243.9 / 229.5 | 0.347 | 3.75 | 3/3 |
 
 **What it shows.**
 
 - **Writing up ~28–50%** with no reading or quality regression (reading
   slightly higher). Peak memory unchanged. Quality 3/3 on every run.
+- **Llama 3.1 8B (Nov 1 suite):** keepalive on is a smaller lift
+  (21.2 → 22.8 writing; reading flat). Same method, even cut K=16,
+  raw `~/.caravan/bench-2026-11-01/llama-suite/ka-*.jsonl`.
 - Cause: after ~15–20 ms idle waiting on the peer, Metal's next graph
   build + eval costs ~5 ms extra. A tiny `mx.eval` on a short-lived
   side thread during the blocking recv removes that cool-down.
@@ -688,6 +693,9 @@ Medians of 2 waves. **Wall aggregate** = decode tokens across chats /
 | Qwen3 | 1 | 44.8 | 44.4 | 44.8 | 0.31 | 8.70 | 3/3 |
 | | 2 | 40.1 / 40.0 | **72.7** | 80.1 | 0.58 | 9.60 | 3/3 |
 | | 3 | ~25–27 each | **70.8** | 78.6 | **0.59** | 10.0 | 3/3 |
+| Llama 3.1 8B | 1 | 22.5 | **22.5** | 22.5 | 0.32 | 2.52 | 3/3 |
+| | 2 | 20.9 / 20.8 | **39.3** | 41.7 | 0.60 | 3.24 | 3/3 |
+| | 3 | ~13–14 each | **39.0** | 41.0 | **0.60** | 3.26 | 3/3 |
 
 **Before the stall fix (Oct 31 night):** N=3 left one chat with ~4 s TTFT
 (Gemma 4.16 / GPT-OSS 4.71 / Qwen 3.49) and wall aggregate fell below N=2
@@ -731,6 +739,7 @@ of 2. Same writing metric as `split_client.py`
 | Qwen3 30B-A3B-4bit | `mlx-community/Qwen3-0.6B-4bit` | 335 MB | vocab match 151643 |
 | Gemma 4 26B-A4B-it-4bit | `mlx-community/gemma-4-E2B-it-4bit` | 3.3 GB | vocab match 262144; draft ~half a lead half |
 | GPT-OSS 20B | — | — | **no suitable small same-family draft** on mlx-community (only 20B/120B quants) |
+| Llama 3.1 8B-Instruct-4bit | `mlx-community/Llama-3.2-1B-Instruct-4bit` | 680 MB (size_mb 663) | vocab exact 128256; Mini-verified Nov 1 |
 
 **Qwen3 30B-A3B-4bit** (target from `~/.exo/models/...`; draft
 `~/.caravan/mlx-models/drafts/Qwen3-0.6B-4bit`)
@@ -844,6 +853,51 @@ standard chat mix; sliding window + low n-gram hits.
 
 Not attempted: lead holds only the upper layers; logits need packer
 embeddings + lower layers. Would need new packer early-exit protocol.
+
+
+
+### Llama 3.1 8B-Instruct-4bit (Mini suite, Nov 1)
+
+Target `mlx-community/Meta-Llama-3.1-8B-Instruct-4bit` (~4.2 GB on disk) on
+both Minis; draft `Llama-3.2-1B-Instruct-4bit` on the lead only (~680 MB).
+Even cut K=16. Test ports 8194 / 5560. LPM off. Keepalive on unless noted.
+Medians of 2. Client suite under `~/.caravan/bench-2026-11-01/llama-suite/`.
+`speculate_bench.py` guards `denom > 0` on short quality replies.
+
+**Keepalive A/B** (also in the keepalive table above): off **21.2** writing /
+243.0 / 227.7 reading; on **22.8** / 243.9 / 229.5. Quality 3/3.
+
+**Pipeline** (also in the idea 1 table): wall aggregate N=1 **22.5**, N=2
+**39.3**, N=3 **39.0**; max TTFT ≤0.60 s. Same ~1.7× N=1→N=2 pattern as the
+30B-class models; N=3 wall ≈ N=2.
+
+**Guess-ahead suite** (`speculate_bench.py` count / repeat / code_edit /
+code_cont; `--no-split-draft` vs auto-pair `llama3`):
+
+| setting | count | repeat | code_edit | code_cont | accept (count) | quality |
+|---|---:|---:|---:|---:|---:|---|
+| nodraft (baseline) | **22.7** | 22.0 | 20.7 | 22.2 | — | 3/3 |
+| **auto-pair Llama-3.2-1B k=3** | **51.5** | **51.6** | **64.7** | **46.8** | 0.75 | 3/3 |
+
+Count ≈ **+127%** vs nodraft (strongest single-chat guess-ahead lift measured
+so far on the Minis). Accept ~0.75 across count/repeat/edit; code_cont 0.71.
+
+**First-load gate** (cache write, skip-first-load off): keep=1, quality 3/3,
+baseline **19.29** / spec **35.87** tok/s, accepted_frac 0.75,
+break_even_frac ≈ **0.45**.
+
+**Shut-off:** with cached break_even raised to **0.80** and lead restarted
+*without* `--split-draft-skip-first-load` (cache hit loads be=0.80), hex
+stream chat disabled guessing (`accepted_frac 0.688 < 0.80` then
+`0.354 < 0.80`). Skip-first-load leaves default be=0.35 and will not demo
+shut-off against a high-accept draft.
+
+**Download prompt:** draft moved aside; PTY yes on
+`A 663 MB helper… Download Llama-3.2-1B-Instruct-4bit?` → download + draft
+wired; `download_answers.llama3=true`. Draft restored from `.bak`.
+
+**Decision:** keep `llama3` pairing as **mini_verified** in
+`agent/guessers.json`.
 
 
 ## Not measured yet
