@@ -256,3 +256,36 @@ class SplitSessionsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class KeyFwdTest(unittest.TestCase):
+    """Idea 1: packer fwd can name the session key; begin/finish overlaps two sessions."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.p = Pair(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_fwd_by_key_two_sessions(self):
+        p = self.p
+        ka, kb = "sessA", "sessB"
+        pa, pb = list(range(10, 20)), list(range(30, 40))
+        p.split.prepare(ka, pa)
+        p.split.prepare(kb, pb)
+        # Interleave fwds by key (not depending on cur alone)
+        p.client.call("fwd", tokens=pa[-1:], ctx="session", key=ka)
+        p.client.call("fwd", tokens=pb[-1:], ctx="session", key=kb)
+        p.client.call("fwd", tokens=[99], ctx="session", key=ka)
+        self.assertEqual(p.front_fwd[-3], pa[-1:])
+        self.assertEqual(p.front_fwd[-2], pb[-1:])
+        self.assertEqual(p.front_fwd[-1], [99])
+
+    def test_begin_finish_call_roundtrip(self):
+        p = self.p
+        p.split.prepare("s", list(range(5)))
+        p.client.begin_call("fwd", tokens=[1], ctx="session", key="s")
+        rh, rp = p.client.finish_call()
+        self.assertIn("dtype", rh)
+        self.assertTrue(len(rp) >= 1)

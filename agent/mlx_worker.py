@@ -584,6 +584,10 @@ class Engine:
         self.args = args
         self.jobs = queue.Queue()
         self._queue_mod = queue
+        # Idea 1: max concurrent split chats to pipeline (0/1 = off, serial as today).
+        self.pipeline_chats = int(getattr(args, "split_pipeline_chats", 1) or 1)
+        if self.pipeline_chats < 1:
+            self.pipeline_chats = 1
         self.model_dir = Path(args.model).expanduser().resolve()
         ready = queue.Queue()
         self.thread = threading.Thread(target=self._main, args=(ready,), name="mlx", daemon=True)
@@ -679,24 +683,28 @@ class Engine:
             ready.put(e)
             return
         ready.put(None)
-        while True:
-            job = self.jobs.get()
-            if job is None:
-                return
-            kind, payload, out = job
-            if kind == "call":
-                try:
-                    out.put(("ok", payload()))
-                except BaseException as e:
-                    out.put(("err", e))
-            else:
-                key, prompt, body, cancel = payload
-                try:
-                    for ev in self._run(key, prompt, body, cancel):
-                        out.put(ev)
-                except BaseException as e:
-                    out.put(("error", e))
-                out.put(None)
+        if self.pipeline_chats <= 1 or self.client is None:
+            while True:
+                job = self.jobs.get()
+                if job is None:
+                    return
+                kind, payload, out = job
+                if kind == "call":
+                    try:
+                        out.put(("ok", payload()))
+                    except BaseException as e:
+                        out.put(("err", e))
+                else:
+                    key, prompt, body, cancel = payload
+                    try:
+                        for ev in self._run(key, prompt, body, cancel):
+                            out.put(ev)
+                    except BaseException as e:
+                        out.put(("error", e))
+                    out.put(None)
+        else:
+            log(f"split pipeline chats={self.pipeline_chats} (idea 1; overlap packer/lead across sessions)")
+            self._main_pipeline()
 
     # -- session ops: local store, or both halves of a split ---------------
     def s_prepare(self, key, prompt):
@@ -795,6 +803,8 @@ class Engine:
         t0 = time.time()
         if self.client is not None:
             self.client.reset_stats()
+        if self.client is not None and hasattr(self.model, "session_key"):
+            self.model.session_key = key
         s, n_reused, how = self.s_prepare(key, prompt)
         completed = False
         n_gen = 0
@@ -869,6 +879,8 @@ class Engine:
                 log(f"session {s.key}: rewind after failure also failed ({e2!r}); dropping it here")
                 self.store.reset(s)
             log(f"session {s.key}: generation stopped ({e!r}); rewound")
+            if self.client is not None and hasattr(self.model, "session_key"):
+                self.model.session_key = None
             if isinstance(e, KeyboardInterrupt):
                 return
             raise
@@ -876,7 +888,367 @@ class Engine:
         log(f"session {s.key}: {how}, reused {n_reused}/{len(prompt)} tokens, read "
             f"{len(prompt) - n_reused} in {t_prefill:.2f}s, {n_gen} generated, "
             f"total {info['total_s']:.2f}s, peak {info['peak_gb']} GB")
+        if self.client is not None and hasattr(self.model, "session_key"):
+            self.model.session_key = None
         yield ("done", info)
+
+
+    def _main_pipeline(self):
+        """Idea 1: admit up to pipeline_chats sessions; overlap packer of one with lead of another."""
+        Empty = self._queue_mod.Empty
+        pending = []          # (key, prompt, body, cancel, out) awaiting prefill
+        decoding = []         # _PipeSlot in decode phase
+
+        def pull_available():
+            while True:
+                try:
+                    job = self.jobs.get_nowait()
+                except Empty:
+                    return
+                if job is None:
+                    pending.append(None)
+                    return
+                kind, payload, out = job
+                if kind == "call":
+                    # Run admin calls only when the pipeline is idle (avoid racing the socket).
+                    if decoding or pending:
+                        pending.append(("call", payload, out))
+                    else:
+                        try:
+                            out.put(("ok", payload()))
+                        except BaseException as e:
+                            out.put(("err", e))
+                else:
+                    pending.append(("gen", payload, out))
+
+        while True:
+            pull_available()
+            # Drain deferred calls only when idle.
+            while pending and pending[0] is not None and pending[0][0] == "call" and not decoding:
+                _, payload, out = pending.pop(0)
+                try:
+                    out.put(("ok", payload()))
+                except BaseException as e:
+                    out.put(("err", e))
+                pull_available()
+
+            if pending and pending[0] is None and not decoding and not any(
+                    p is not None and p[0] == "gen" for p in pending):
+                return
+
+            # Admit prefills up to capacity (serial prefill; overlap is decode-only).
+            while (len(decoding) < self.pipeline_chats and pending
+                   and pending[0] is not None and pending[0][0] == "gen"):
+                _, payload, out = pending.pop(0)
+                key, prompt, body, cancel = payload
+                try:
+                    slot = self._pipe_prefill(key, prompt, body, cancel, out)
+                except BaseException as e:
+                    out.put(("error", e))
+                    out.put(None)
+                    continue
+                if slot is None:
+                    out.put(None)  # cancelled during prefill
+                    continue
+                decoding.append(slot)
+                pull_available()
+
+            if not decoding:
+                # Block for the next job.
+                job = self.jobs.get()
+                if job is None:
+                    return
+                kind, payload, out = job
+                if kind == "call":
+                    try:
+                        out.put(("ok", payload()))
+                    except BaseException as e:
+                        out.put(("err", e))
+                else:
+                    pending.append(("gen", payload, out))
+                continue
+
+            # One overlapped decode round (or single-slot fallback).
+            self._pipe_round(decoding)
+            # Remove finished slots
+            still = []
+            for slot in decoding:
+                if slot.finished:
+                    try:
+                        self._pipe_finish(slot)
+                    except BaseException as e:
+                        slot.out.put(("error", e))
+                    slot.out.put(None)
+                else:
+                    still.append(slot)
+            decoding = still
+
+    def _pipe_prefill(self, key, prompt, body, cancel, out):
+        """Prepare + prefill + checkpoint; return a _PipeSlot ready to decode, or None if cancelled."""
+        mx = self.mx
+        if self.client is not None:
+            # Don't reset_stats per chat — aggregate across the pipeline wave.
+            pass
+        if hasattr(self.model, "session_key"):
+            self.model.session_key = key
+        s, n_reused, how = self.s_prepare(key, prompt)
+        t0 = time.time()
+        try:
+            rest = prompt[n_reused:]
+            with request_wiring(self.wired_mode, self.G, self.model, self.stream):
+                with mx.stream(self.stream):
+                    todo = rest[:-1]
+                    for i in range(0, len(todo), self.prefill_step):
+                        if cancel.is_set():
+                            raise KeyboardInterrupt("cancelled")
+                        chunk = mx.array(todo[i:i + self.prefill_step])
+                        self.model(chunk[None], cache=s.cache)
+                        mx.eval([c.state for c in s.cache])
+                        mx.clear_cache()
+            self.s_checkpoint(s, prompt[:-1])
+        except BaseException as e:
+            try:
+                if s.snaps is not None:
+                    self.s_rewind(s, completed=False)
+                else:
+                    self.s_reset(s)
+            except Exception:
+                self.store.reset(s)
+            if hasattr(self.model, "session_key"):
+                self.model.session_key = None
+            if isinstance(e, KeyboardInterrupt):
+                return None
+            raise
+        t_prefill = time.time() - t0
+        if body.get("seed") is not None:
+            mx.random.seed(int(body["seed"]))
+        sampler = self.make_sampler(temp=float(body.get("temperature", 0.0) or 0.0),
+                                    top_p=float(body.get("top_p", 1.0) or 1.0),
+                                    min_p=float(body.get("min_p", 0.0) or 0.0),
+                                    top_k=int(body.get("top_k", 0) or 0))
+        rp = body.get("repetition_penalty")
+        procs = self.make_logits_processors(repetition_penalty=rp) if rp else None
+        max_tokens = int(body.get("max_completion_tokens") or body.get("max_tokens")
+                         or self.default_max_tokens)
+        stop_words = body.get("stop") or []
+        if isinstance(stop_words, str):
+            stop_words = [stop_words]
+        stops = self.G.make_stop_sequences(self.tokenizer, stop_words).matcher()
+        slot = _PipeSlot(key=key, session=s, prompt=prompt, body=body, cancel=cancel, out=out,
+                         how=how, n_reused=n_reused, t0=t0, t_prefill=t_prefill,
+                         sampler=sampler, procs=procs, max_tokens=max_tokens, stops=stops,
+                         next_tokens=list(prompt[-1:]))
+        return slot
+
+    def _pipe_round(self, decoding):
+        """Advance decoding slots; with 2+ chats, send packer(B) before lead(A)."""
+        mx = self.mx
+        model = self.model
+        if getattr(self.client, "_inflight", False):
+            raise RuntimeError("pipeline: packer call still in flight at round start")
+
+        for slot in decoding:
+            if slot.cancel.is_set() and not slot.finished:
+                slot.finished = True
+                slot.cancelled = True
+                slot.h = None
+
+        active = [s for s in decoding if not s.finished]
+        if not active:
+            return
+
+        def packer_fetch(slot):
+            model.session_key = slot.key
+            with mx.stream(self.stream):
+                model.begin_packer(slot.next_tokens)
+                slot.h = model.finish_packer()
+
+        def packer_begin(slot):
+            model.session_key = slot.key
+            with mx.stream(self.stream):
+                model.begin_packer(slot.next_tokens)
+
+        def packer_finish(slot):
+            model.session_key = slot.key
+            with mx.stream(self.stream):
+                slot.h = model.finish_packer()
+
+        ready = [s for s in active if s.h is not None]
+        need = [s for s in active if s.h is None]
+
+        # Nobody has hidden states yet: prime the first (serial); next rounds overlap.
+        if not ready:
+            packer_fetch(need[0])
+            return
+
+        if len(active) == 1:
+            slot = ready[0]
+            self._pipe_lead_sample(slot)
+            if not slot.finished:
+                packer_fetch(slot)
+            return
+
+        # Two or more: overlap packer of a needy slot with lead of a ready one.
+        A = ready[0]
+        B = need[0] if need else None
+        if B is None:
+            # Everyone has h — lead A, then start A's next packer overlapped with lead of next ready.
+            others = [s for s in ready[1:]]
+            if others:
+                B = others[0]  # will lead B after starting A's next packer? 
+                # A has h; after lead A, A needs packer. B has h and can be led after.
+                self._pipe_lead_sample(A)
+                if A.finished and not B.finished:
+                    self._pipe_lead_sample(B)
+                    if not B.finished:
+                        packer_fetch(B)
+                    return
+                if not A.finished:
+                    # Overlap: packer(A next) while we still could lead B
+                    packer_begin(A)
+                    if not B.finished and B.h is not None:
+                        self._pipe_lead_sample(B)
+                    packer_finish(A)
+                    if not B.finished and B.h is None:
+                        packer_fetch(B)
+                return
+            self._pipe_lead_sample(A)
+            if not A.finished:
+                packer_fetch(A)
+            return
+
+        # Classic overlap: A ready, B needs packer.
+        packer_begin(B)
+        self._pipe_lead_sample(A)
+        packer_finish(B)
+        # A now needs next h if still running — leave A.h None for next round (will overlap then).
+
+    def _pipe_lead_sample(self, slot):
+        """Run lead layers on slot.h, sample one token, emit piece; clear h."""
+        mx, G = self.mx, self.G
+        model = self.model
+        if slot.h is None or slot.finished:
+            return
+        if slot.cancel.is_set():
+            slot.finished = True
+            slot.cancelled = True
+            slot.h = None
+            return
+        model.session_key = slot.key
+        with request_wiring(self.wired_mode, G, self.model, self.stream):
+            with mx.stream(self.stream):
+                logits = model.lead_logits(slot.h, slot.session.cache)
+                mx.eval(logits, [c.state for c in slot.session.cache])
+                logits = logits[:, -1, :]
+                if slot.procs:
+                    for p in slot.procs:
+                        logits = p(slot.all_tokens, logits)
+                y = slot.sampler(logits)
+                mx.eval(y)
+                token = int(y.flatten()[0].item()) if hasattr(y, "flatten") else int(y)
+        slot.h = None
+        if slot.ttft is None:
+            slot.ttft = time.time() - slot.t0
+        slot.n_gen += 1
+        slot.all_tokens.append(token)
+        # Detokenize like mlx_lm.generate
+        if slot._detok is None:
+            detok = getattr(self.tokenizer, "detokenizer", None)
+            if detok is not None:
+                try:
+                    detok.reset()
+                except Exception:
+                    pass
+                slot._detok = detok
+        text_piece = ""
+        if slot._detok is not None:
+            try:
+                slot._detok.add_token(token)
+                text_piece = getattr(slot._detok, "last_segment", None) or getattr(slot._detok, "text", "") or ""
+                # Prefer last_segment; fall back to full text delta
+                if not text_piece and hasattr(slot._detok, "text"):
+                    full = slot._detok.text
+                    prev = getattr(slot, "_detok_prev", "")
+                    text_piece = full[len(prev):]
+                    slot._detok_prev = full
+            except Exception:
+                text_piece = self.tokenizer.decode([token])
+        else:
+            text_piece = self.tokenizer.decode([token])
+        finish = None
+        if slot.stops.advance(token):
+            finish = "stop"
+        eos = self.tokenizer.eos_token_id
+        if isinstance(eos, (list, tuple)):
+            eos_set = set(eos)
+        else:
+            eos_set = {eos} if eos is not None else set()
+        if token in eos_set:
+            finish = "stop"
+        if slot.n_gen >= slot.max_tokens:
+            finish = finish or "length"
+        slot.out.put(("piece", text_piece, finish is not None))
+        if finish is not None:
+            slot.finished = True
+            slot.finish = finish
+            slot.next_tokens = [token]
+            return
+        slot.next_tokens = [token]
+
+    def _pipe_finish(self, slot):
+        completed = not slot.cancelled and slot.finished
+        try:
+            if slot.cancelled:
+                if slot.session.snaps is not None:
+                    self.s_rewind(slot.session, completed=False)
+                else:
+                    self.s_reset(slot.session)
+            else:
+                self.s_rewind(slot.session, completed=True)
+        except Exception as e2:
+            log(f"session {slot.key}: pipeline rewind failed ({e2!r})")
+            self.store.reset(slot.session)
+        if hasattr(self.model, "session_key"):
+            self.model.session_key = None
+        if slot.cancelled:
+            return
+        mx = self.mx
+        info = {"prompt_tokens": len(slot.prompt), "cached_tokens": slot.n_reused, "how": slot.how,
+                "completion_tokens": slot.n_gen, "finish": slot.finish or "length",
+                "prefill_s": round(slot.t_prefill, 3),
+                "ttft_s": round(slot.ttft or 0, 3), "total_s": round(time.time() - slot.t0, 3),
+                "peak_gb": round(mx.get_peak_memory() / 1e9, 2),
+                "pipeline": True}
+        if self.client is not None:
+            st = dict(self.client.stats)
+            info["split"] = {"calls": st["calls"], "mb_out": round(st["bytes_out"] / 1e6, 2),
+                             "mb_in": round(st["bytes_in"] / 1e6, 2),
+                             "wait_s": round(st["wait_s"], 3), "front_s": round(st["front_s"], 3),
+                             "net_s": round(st["wait_s"] - st["front_s"], 3)}
+        log(f"session {slot.key}: pipeline, reused {slot.n_reused}/{len(slot.prompt)}, "
+            f"{slot.n_gen} generated, total {info['total_s']:.2f}s, peak {info['peak_gb']} GB")
+        slot.out.put(("done", info))
+
+
+class _PipeSlot:
+    __slots__ = ("key", "session", "prompt", "body", "cancel", "out", "how", "n_reused",
+                 "t0", "t_prefill", "sampler", "procs", "max_tokens", "stops",
+                 "next_tokens", "all_tokens", "h", "n_gen", "ttft", "finished",
+                 "cancelled", "finish", "_detok")
+
+    def __init__(self, **kw):
+        for k, v in kw.items():
+            setattr(self, k, v)
+        self.all_tokens = list(self.prompt)
+        self.h = None
+        self.n_gen = 0
+        self.ttft = None
+        self.finished = False
+        self.cancelled = False
+        self.finish = None
+        self._detok = None
+
+
 
     def text_machine(self, prompt, stop_words):
         if self.model_type == "gpt_oss":
@@ -1146,6 +1518,11 @@ def build_parser():
     ap.add_argument("--split-keepalive", default=_ka_default, action=argparse.BooleanOptionalAction,
                     help="keep Metal warm while waiting on the peer (default: on; cuts ~5 ms/half/token "
                          "idle cool-down). --no-split-keepalive or CARAVAN_MLX_SPLIT_KEEPALIVE=0 disables")
+    _pipe_env = os.environ.get("CARAVAN_MLX_SPLIT_PIPELINE_CHATS")
+    _pipe_default = int(_pipe_env) if (_pipe_env and _pipe_env.strip().isdigit()) else 1
+    ap.add_argument("--split-pipeline-chats", type=int, default=_pipe_default, metavar="N",
+                    help="idea 1: overlap packer/lead across up to N concurrent split chats "
+                         "(default 1 = off; try 2 or 3). Env CARAVAN_MLX_SPLIT_PIPELINE_CHATS")
     return ap
 
 

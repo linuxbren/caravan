@@ -262,6 +262,57 @@ class FrontClient:
         kw["op"] = op
         return self._roundtrip(kw, payload)
 
+    def begin_call(self, op, payload=b"", **kw):
+        """Send one op without waiting (pipeline). Pair with finish_call()."""
+        self._ensure()
+        if getattr(self, "_inflight", False):
+            raise FrontError("packer 1: begin_call while a reply is still outstanding")
+        kw["op"] = op
+        t0 = time.perf_counter()
+        data = encode_frame(kw, payload)
+        try:
+            self.sock.sendall(data)
+        except (OSError, ConnectionError) as e:
+            self.close()
+            raise FrontError(f"packer 1 at {self.addr}: {e}") from e
+        self._inflight = True
+        self._inflight_t0 = t0
+        self._inflight_bytes_out = len(data)
+        st = self.stats
+        st["calls"] += 1
+        st["bytes_out"] += len(data)
+        warm = self._keepalive
+        if warm is not None:
+            warm.start()
+        return t0
+
+    def finish_call(self):
+        """Receive the reply for the outstanding begin_call()."""
+        if not getattr(self, "_inflight", False):
+            raise FrontError("packer 1: finish_call with nothing in flight")
+        warm = self._keepalive
+        t0 = getattr(self, "_inflight_t0", time.perf_counter())
+        try:
+            try:
+                rh, rp = read_frame(self.sock)
+            finally:
+                if warm is not None:
+                    warm.stop()
+        except (OSError, ConnectionError) as e:
+            if warm is not None:
+                warm.stop()
+            self._inflight = False
+            self.close()
+            raise FrontError(f"packer 1 at {self.addr}: {e}") from e
+        self._inflight = False
+        st = self.stats
+        st["bytes_in"] += 12 + len(rp) + len(json.dumps(rh))
+        st["wait_s"] += time.perf_counter() - t0
+        st["front_s"] += float(rh.get("_s", 0.0))
+        if "error" in rh:
+            raise FrontError(f"packer 1: {rh['error']}")
+        return rh, rp
+
 
 def _hostport(addr):
     host, _, port = str(addr).rpartition(":")
@@ -299,9 +350,16 @@ class FrontState:
                     self.scratch = self.new_scratch()
                 cache = self.scratch
             else:
-                if self.cur is None:
-                    return {"error": "fwd before prepare"}, b""
-                cache = self.cur.cache
+                key = h.get("key")
+                if key:
+                    s = st.sessions.get(key)
+                    if s is None:
+                        return {"error": f"fwd: unknown session {key!r}"}, b""
+                    self.cur, cache = s, s.cache
+                else:
+                    if self.cur is None:
+                        return {"error": "fwd before prepare"}, b""
+                    cache = self.cur.cache
             return self.forward(toks, cache)
         if op == "end_scratch":
             self.scratch = None
@@ -731,6 +789,7 @@ class SplitModel:
         self.ctx = "scratch"
         self._new_scratch = True
         self.model_type = stage.model_type
+        self.session_key = None     # optional; set during a session so packer fwd hits the right cache
 
     @property
     def layers(self):
@@ -739,14 +798,33 @@ class SplitModel:
     def make_cache(self):
         return self.stage.make_cache()
 
-    def __call__(self, inputs, cache=None, input_embeddings=None, **_):
-        mx = self.mx
-        toks = inputs.reshape(-1).tolist()      # forces the previous step: tokens must be concrete
+    def _fwd_kw(self, toks):
         kw = {"tokens": toks, "ctx": self.ctx}
         if self.ctx == "scratch":
             kw["new"], self._new_scratch = self._new_scratch, False
-        rh, rp = self.client.call("fwd", **kw)
+        elif self.session_key:
+            kw["key"] = self.session_key
+        return kw
+
+    def __call__(self, inputs, cache=None, input_embeddings=None, **_):
+        mx = self.mx
+        toks = inputs.reshape(-1).tolist()      # forces the previous step: tokens must be concrete
+        rh, rp = self.client.call("fwd", **self._fwd_kw(toks))
         h = array_from(mx, rh, rp)
+        h = self.stage.run_layers(h, cache)
+        return self.stage.logits(h)
+
+    def begin_packer(self, tokens):
+        """Start packer fwd without waiting (idea 1 pipeline). tokens: list[int]."""
+        self.client.begin_call("fwd", **self._fwd_kw(list(tokens)))
+
+    def finish_packer(self):
+        """Receive hidden states for the outstanding begin_packer()."""
+        rh, rp = self.client.finish_call()
+        return array_from(self.mx, rh, rp)
+
+    def lead_logits(self, h, cache):
+        """Run lead layers + lm_head on packer hidden states."""
         h = self.stage.run_layers(h, cache)
         return self.stage.logits(h)
 

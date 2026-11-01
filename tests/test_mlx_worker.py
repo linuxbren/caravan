@@ -376,6 +376,8 @@ class CliTest(unittest.TestCase):
         self.assertEqual((a.split_role, a.split_front_layers), ("packer", 5))
         self.assertEqual(b.split_front_layers, 5)
         self.assertEqual(P.parse_args(["--model", "/m", "--split-role", "lead", "--split-peer", "h:1"]).split_role, "lead")
+        self.assertEqual(P.parse_args(["--model", "/m", "--split-pipeline-chats", "3"]).split_pipeline_chats, 3)
+        self.assertEqual(P.parse_args(["--model", "/m"]).split_pipeline_chats, 1)
         with self.assertRaises(SystemExit):     # lead without a packer address
             W.main(["--model", "/m", "--split-role", "lead"])
 
