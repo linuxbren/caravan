@@ -315,8 +315,11 @@ simplest first:
    medians of 2 (8194/5560, LPM off): Qwen **45.9 → 59.7** (k=3);
    Gemma **38.4 → 44.5** (g3-270m k=2; strict-gate re-verify **44.3**);
    GPT-OSS **34.3** auto-skipped (no o200k draft). Shut-off confirmed
-   (`accepted_frac 0.438 < 0.80`). Details: [LOG.md](LOG.md),
-   [METHODOLOGY.md](METHODOLOGY.md).
+   (`accepted_frac 0.438 < 0.80`). Nov 1 evening: live download-prompt
+   test on EXO1 (size ask → yes downloads → quality keep → remembered
+   yes/no; caches restored). Top open-LLM families mapped in
+   `agent/guessers.json` (Mini-verified vs HF vocab-checked vs skip).
+   Details: [LOG.md](LOG.md), [METHODOLOGY.md](METHODOLOGY.md).
 4. **Split each layer across both Minis (tensor parallel).** *Brenden's
    preferred direction to investigate.* Both Minis work on every layer at
    the same time instead of taking turns, each holding half of every

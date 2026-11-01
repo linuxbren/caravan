@@ -18,13 +18,29 @@ class PairingTests(unittest.TestCase):
         ids = {p["id"] for p in t["pairings"]}
         self.assertIn("qwen3-30b-a3b", ids)
         self.assertIn("gemma-4-26b", ids)
+        self.assertIn("llama3", ids)
+        self.assertIn("qwen25", ids)
+        self.assertIn("gemma3", ids)
+        self.assertIn("gemma2", ids)
+        self.assertIn("deepseek-r1-distill-qwen", ids)
+        self.assertIn("smollm", ids)
         q = next(p for p in t["pairings"] if p["id"] == "qwen3-30b-a3b")
         self.assertEqual(q["draft"]["k"], 3)
         self.assertEqual(q["draft"]["size_mb"], 335)
+        self.assertEqual(q.get("verification"), "mini_verified")
         self.assertIn("tested", q)
         g = next(p for p in t["pairings"] if p["id"] == "gemma-4-26b")
         self.assertEqual(g["draft"]["vocab"], "compatible_specials_remap")
         self.assertEqual(g["draft"]["k"], 2)
+        self.assertEqual(g.get("verification"), "mini_verified")
+        llama = next(p for p in t["pairings"] if p["id"] == "llama3")
+        self.assertEqual(llama.get("verification"), "vocab_checked")
+        self.assertEqual(llama["draft"]["size_mb"], 663)
+        skips = {s.get("target_family") for s in t.get("no_pairing") or []}
+        self.assertIn("gpt_oss", skips)
+        self.assertIn("mistral", skips)
+        self.assertIn("phi4", skips)
+        self.assertIn("deepseek_native", skips)
 
     def test_find_qwen_and_gemma(self):
         self.assertEqual(
@@ -38,10 +54,35 @@ class PairingTests(unittest.TestCase):
             ga.find_pairing(Path("/x/Qwen3-30B-A3B-my-ft"))["id"],
             "qwen3-30b-a3b")
 
+    def test_find_top_family_pairings(self):
+        cases = [
+            ("/models/Llama-3.1-8B-Instruct-4bit", "llama3"),
+            ("/models/Qwen2.5-7B-Instruct-4bit", "qwen25"),
+            ("/models/gemma-3-12b-it-4bit", "gemma3"),
+            ("/models/gemma-2-9b-it-4bit", "gemma2"),
+            ("/models/DeepSeek-R1-Distill-Qwen-14B-4bit", "deepseek-r1-distill-qwen"),
+            ("/models/SmolLM-1.7B-Instruct-4bit", "smollm"),
+        ]
+        for path, expect in cases:
+            got = ga.find_pairing(Path(path))
+            self.assertIsNotNone(got, path)
+            self.assertEqual(got.get("id"), expect, path)
+            self.assertFalse(got.get("skip"), path)
+
     def test_gpt_oss_skips(self):
         p = ga.find_pairing(Path("/models/mlx-community--gpt-oss-20b-MXFP4-Q8"))
         self.assertTrue(p.get("skip"))
         self.assertIn("o200k", (p.get("reason") or "").lower() + "o200k")
+
+    def test_family_skips(self):
+        for path, needle in [
+            ("/models/Mistral-7B-Instruct-v0.3-4bit", "mistral"),
+            ("/models/Phi-4-mini-instruct-4bit", "phi"),
+            ("/models/DeepSeek-V3-0324-4bit", "deepseek"),
+        ]:
+            p = ga.find_pairing(Path(path))
+            self.assertTrue(p and p.get("skip"), path)
+            self.assertIn(needle, (p.get("reason") or "").lower())
 
 
 class VocabTests(unittest.TestCase):

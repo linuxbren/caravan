@@ -40,15 +40,17 @@ def find_pairing(model_dir: Path, table: Optional[dict] = None) -> Optional[dict
     stem = model_stem(model_dir)
     stem_n = _norm(stem)
     path_n = _norm(str(model_dir))
-    for skip in table.get("no_pairing") or []:
-        for m in skip.get("match") or []:
-            if _norm(m) in stem_n or _norm(m) in path_n:
-                return {"skip": True, "reason": skip.get("reason"), "match": m}
+    # Pairings win over skips so e.g. DeepSeek-R1-Distill-Qwen is not
+    # swallowed by a native DeepSeek-R1 skip entry.
     for pair in table.get("pairings") or []:
         for m in pair.get("match") or []:
             mn = _norm(m)
             if mn in stem_n or stem_n in mn or mn in path_n:
                 return dict(pair)
+    for skip in table.get("no_pairing") or []:
+        for m in skip.get("match") or []:
+            if _norm(m) in stem_n or _norm(m) in path_n:
+                return {"skip": True, "reason": skip.get("reason"), "match": m}
     return None
 
 

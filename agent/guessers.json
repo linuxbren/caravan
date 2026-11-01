@@ -9,7 +9,11 @@
         "Qwen3-30B-A3B",
         "qwen3-30b-a3b",
         "Qwen3-30B-A3B-4bit",
-        "Qwen3-30B-A3B-8bit"
+        "Qwen3-30B-A3B-8bit",
+        "Qwen3-32B",
+        "Qwen3-14B",
+        "Qwen3-8B",
+        "Qwen3-4B"
       ],
       "target_family": "qwen3",
       "draft": {
@@ -19,6 +23,7 @@
         "k": 3,
         "vocab": "exact"
       },
+      "verification": "mini_verified",
       "tested": {
         "date": "2026-11-01",
         "baseline_tps": 45.9,
@@ -34,7 +39,9 @@
         "gemma-4-26b",
         "gemma-4-26B",
         "gemma-4-26b-a4b",
-        "gemma-4-26b-a4b-it"
+        "gemma-4-26b-a4b-it",
+        "gemma-4-E2B",
+        "gemma-4-e2b"
       ],
       "target_family": "gemma4",
       "draft": {
@@ -44,6 +51,7 @@
         "k": 2,
         "vocab": "compatible_specials_remap"
       },
+      "verification": "mini_verified",
       "tested": {
         "date": "2026-11-01",
         "baseline_tps": 38.4,
@@ -55,6 +63,130 @@
         "strict_gate_nodraft_tps": 38.4,
         "note": " Final-answer-only quality gate Nov 1; re-verify median 44.3."
       }
+    },
+    {
+      "id": "llama3",
+      "match": [
+        "Llama-3.3-70B",
+        "Llama-3.1-70B",
+        "Llama-3.1-8B",
+        "Llama-3.2-11B",
+        "Llama-3.2-3B",
+        "Llama-3.2-90B",
+        "Meta-Llama-3.1",
+        "Meta-Llama-3.3"
+      ],
+      "target_family": "llama3",
+      "draft": {
+        "name": "Llama-3.2-1B-Instruct-4bit",
+        "hf_repo": "mlx-community/Llama-3.2-1B-Instruct-4bit",
+        "size_mb": 663,
+        "k": 3,
+        "vocab": "exact"
+      },
+      "verification": "vocab_checked",
+      "notes": "HF tokenizer.json exact vs Llama-3.1-8B / Llama-3.2-3B (128256 incl. added); not yet Mini-gated"
+    },
+    {
+      "id": "qwen25",
+      "match": [
+        "Qwen2.5-72B",
+        "Qwen2.5-32B",
+        "Qwen2.5-14B",
+        "Qwen2.5-7B",
+        "Qwen2.5-3B",
+        "Qwen2.5-1.5B",
+        "qwen2.5-72b",
+        "qwen2.5-7b"
+      ],
+      "target_family": "qwen25",
+      "draft": {
+        "name": "Qwen2.5-0.5B-Instruct-4bit",
+        "hf_repo": "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+        "size_mb": 278,
+        "k": 3,
+        "vocab": "exact"
+      },
+      "verification": "vocab_checked",
+      "notes": "HF tokenizer exact vs Qwen2.5-7B/14B (151665); not yet Mini-gated"
+    },
+    {
+      "id": "gemma3",
+      "match": [
+        "gemma-3-27b",
+        "gemma-3-12b",
+        "gemma-3-4b",
+        "gemma-3-1b",
+        "gemma-3-27B",
+        "gemma-3-12B"
+      ],
+      "target_family": "gemma3",
+      "draft": {
+        "name": "gemma-3-270m-it-4bit",
+        "hf_repo": "mlx-community/gemma-3-270m-it-4bit",
+        "size_mb": 181,
+        "k": 2,
+        "vocab": "exact"
+      },
+      "verification": "vocab_checked",
+      "notes": "HF tokenizer exact within Gemma 3 family; Mini gates only run for Gemma 4 remap pair so far"
+    },
+    {
+      "id": "gemma2",
+      "match": [
+        "gemma-2-27b",
+        "gemma-2-9b",
+        "gemma-2-27B",
+        "gemma-2-9B"
+      ],
+      "target_family": "gemma2",
+      "draft": {
+        "name": "gemma-2-2b-it-4bit",
+        "hf_repo": "mlx-community/gemma-2-2b-it-4bit",
+        "size_mb": 1403,
+        "k": 3,
+        "vocab": "exact"
+      },
+      "verification": "vocab_checked",
+      "notes": "HF tokenizer exact gemma-2-9b vs gemma-2-2b (256000); draft is large (~1.4 GB)"
+    },
+    {
+      "id": "deepseek-r1-distill-qwen",
+      "match": [
+        "DeepSeek-R1-Distill-Qwen-32B",
+        "DeepSeek-R1-Distill-Qwen-14B",
+        "DeepSeek-R1-Distill-Qwen-7B",
+        "DeepSeek-R1-Distill-Qwen-1.5B",
+        "R1-Distill-Qwen"
+      ],
+      "target_family": "deepseek_r1_distill_qwen",
+      "draft": {
+        "name": "Qwen2.5-0.5B-Instruct-4bit",
+        "hf_repo": "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+        "size_mb": 278,
+        "k": 3,
+        "vocab": "exact"
+      },
+      "verification": "vocab_checked",
+      "notes": "Distill-Qwen shares Qwen2.5 tokenizer (exact); not yet Mini-gated"
+    },
+    {
+      "id": "smollm",
+      "match": [
+        "SmolLM-1.7B",
+        "SmolLM2-1.7B",
+        "smollm-1.7b"
+      ],
+      "target_family": "smollm",
+      "draft": {
+        "name": "SmolLM-360M-Instruct-4bit",
+        "hf_repo": "mlx-community/SmolLM-360M-Instruct-4bit",
+        "size_mb": 204,
+        "k": 3,
+        "vocab": "exact"
+      },
+      "verification": "vocab_checked",
+      "notes": "HF tokenizer exact SmolLM-1.7B vs SmolLM-360M (49152); not yet Mini-gated. Prefer 360M as draft for 1.7B only."
     }
   ],
   "no_pairing": [
@@ -64,7 +196,46 @@
         "GPT-OSS",
         "gpt_oss"
       ],
-      "reason": "no small o200k_harmony MLX draft; prompt-lookup ineffective under 128-token rotating KV"
+      "reason": "no small o200k_harmony MLX draft; prompt-lookup ineffective under 128-token rotating KV",
+      "target_family": "gpt_oss",
+      "verification": "skip"
+    },
+    {
+      "match": [
+        "Mistral-7B",
+        "Mistral-Nemo",
+        "Mixtral-8x7B",
+        "Mixtral-8x22B",
+        "mistral-7b",
+        "mixtral"
+      ],
+      "reason": "no small same-vocab MLX draft for Mistral v0.3 SPM (~32k); Ministral-3 / Nemo use tekken 131k and are too large (~2.6 GB+) to ship as helpers",
+      "target_family": "mistral",
+      "verification": "skip"
+    },
+    {
+      "match": [
+        "Phi-4-mini",
+        "phi-4-mini",
+        "Phi-4",
+        "phi-4"
+      ],
+      "reason": "Phi-4 (100352) != Phi-4-mini (200019); no smaller same-vocab MLX draft under ~1 GB for either tokenizer",
+      "target_family": "phi4",
+      "verification": "skip"
+    },
+    {
+      "match": [
+        "DeepSeek-V3",
+        "DeepSeek-V2",
+        "deepseek-v3",
+        "DeepSeek-Coder-V2",
+        "DeepSeek-R1-0528",
+        "DeepSeek-R1-Zero"
+      ],
+      "reason": "native DeepSeek / R1 (non-Distill) tokenizers have no small public MLX draft with matching vocab; use deepseek-r1-distill-qwen pairing for Distill-Qwen builds",
+      "target_family": "deepseek_native",
+      "verification": "skip"
     }
   ]
 }

@@ -242,9 +242,12 @@ Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oc
 Shipped behind the speculate path: with `--no-split-draft` (or no pairing /
 declined download) behaviour matches baseline. On the **lead only**, the
 pairing table `agent/guessers.json` auto-selects a small draft when the
-loaded model matches (Qwen3-30B-A3B → Qwen3-0.6B-4bit k=3; Gemma-4-26B →
-gemma-3-270m-it-4bit k=2 with specials remap). GPT-OSS has no pairing and
-stays at baseline.
+loaded model matches. Mini-verified: Qwen3 → Qwen3-0.6B-4bit k=3;
+Gemma-4 → gemma-3-270m-it-4bit k=2 with specials remap. Vocab-checked
+(HF tokenizer only so far): Llama 3.x, Qwen2.5, Gemma 3/2,
+DeepSeek-R1-Distill-Qwen, SmolLM-1.7B. Explicit skips: GPT-OSS,
+Mistral/Mixtral v0.3, Phi-4 / Phi-4-mini, native DeepSeek-V3/R1.
+Family table: [METHODOLOGY.md](METHODOLOGY.md#guesser-family-map).
 
 ```sh
 # Auto-pair (asks once if the helper is missing; remembers in

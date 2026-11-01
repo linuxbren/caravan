@@ -1,3 +1,20 @@
+## 2026-11-01: download-prompt live test + top-family guesser map
+
+- EXO1 test ports only (8194/5560; production untouched). Moved Qwen3-0.6B HF
+  cache + drafts aside (`.bak`), backed up `guess-ahead-state.json`, then:
+  - Size prompt appeared: `A 335 MB helper can make … Download Qwen3-0.6B-4bit?`
+  - Yes → download, draft k=3 exact, first-load keep (baseline **36.98** /
+    spec **40.71** tok/s from the gate), quality keep.
+  - Reload remembered yes (auto-pair, no prompt, first-load cache hit keep=1).
+  - Cleared answers and answered no → baseline; reload remembered no (no prompt).
+  - Removed only the test download; restored `.bak` caches + state (2318 B,
+    first_load Qwen+Gemma, empty `download_answers`). Raw:
+    `~/.caravan/bench-2026-11-01/guess-ahead-download-test/`.
+- Expanded `agent/guessers.json` for top open LLM families (Mini-verified vs
+  HF vocab-checked vs explicit skip). `find_pairing` now prefers pairings
+  over skips (Distill-Qwen vs native DeepSeek-R1). Unit tests: **22**.
+  Docs: ROADMAP, METHODOLOGY family table, handoff next steps.
+
 ## 2026-11-01: first-load quality scores final answer only (Gemma channel closer)
 
 - `guess_ahead.final_answer_text` / `answer_ok` strip think/channel blocks and

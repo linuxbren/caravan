@@ -1,3 +1,18 @@
+## 2026-11-01 — download-prompt wild test + top-10 family map
+
+**Goal.** Live-test the guesser download ask on EXO1 (move caches aside, no
+delete of originals); map top open LLM families to small same-vocab drafts.
+
+**Prompt test (America/Chicago ~13:24–13:26).** Test ports 8194/5560 only.
+Moved Qwen3-0.6B HF/draft aside; cleared state answers. Yes path: size prompt
+335 MB → download → gate keep baseline **36.98** / spec **40.71**; reload
+auto-pair remembered yes. No path: decline → baseline; reload remembered no.
+Restored `.bak` + original state (2318 B). Production not stopped.
+
+**Family map.** See `agent/guessers.json` + METHODOLOGY table. Mini-verified:
+Qwen3, Gemma4. Vocab-checked: Llama3, Qwen2.5, Gemma3, Gemma2, Distill-Qwen,
+SmolLM. Skips: GPT-OSS, Mistral, Phi-4, native DeepSeek. Tests: 22.
+
 # Brenden's Mac Mini LLM Lab — Experiment Log
 
 Each entry: date, goal, hardware, software/runtime, model + quant, config, results (tok/s, memory, quality), what broke, fix/next step, post status.

@@ -91,6 +91,42 @@ Medians of **at least 2** timed runs (tg128). Say so in the table. Raw JSON
 lives on EXO1 under `~/.caravan/bench-YYYY-MM-DD/` (or the path passed as
 `OUT.json`). Copy summaries into `docs/BENCHMARKS.md` and `docs/LOG.md`.
 
+
+## Guesser family map
+
+`agent/guessers.json` maps popular open LLM families to a small same-vocabulary
+draft. Pairings win over `no_pairing` skips (so Distill-Qwen is not swallowed
+by a native DeepSeek-R1 skip).
+
+| Family | Guesser (MLX 4-bit) | Size | Status |
+|---|---|---:|---|
+| Qwen3 | Qwen3-0.6B-4bit | 335 MB | **Mini-verified** (Nov 1; 45.9→59.7) |
+| Gemma 4 | gemma-3-270m-it-4bit | 181 MB | **Mini-verified** (Nov 1; 38.4→44.5; remap) |
+| Llama 3.x | Llama-3.2-1B-Instruct-4bit | 663 MB | vocab-checked (exact 128256) |
+| Qwen2.5 | Qwen2.5-0.5B-Instruct-4bit | 278 MB | vocab-checked (exact) |
+| Gemma 3 | gemma-3-270m-it-4bit | 181 MB | vocab-checked (exact) |
+| Gemma 2 | gemma-2-2b-it-4bit | 1403 MB | vocab-checked (exact; large draft) |
+| DeepSeek-R1-Distill-Qwen | Qwen2.5-0.5B-Instruct-4bit | 278 MB | vocab-checked (exact) |
+| SmolLM (1.7B) | SmolLM-360M-Instruct-4bit | 204 MB | vocab-checked (exact) |
+| GPT-OSS | — | — | **skip** (no small o200k draft) |
+| Mistral / Mixtral (v0.3 SPM) | — | — | **skip** (no small same-vocab draft) |
+| Phi-4 / Phi-4-mini | — | — | **skip** (tokenizers diverge; no small draft) |
+| DeepSeek-V3 / native R1 | — | — | **skip** (Distill-Qwen is separate) |
+
+**Mini-verified** means the lead ran the first-load quality+speed gate on the
+Minis. **vocab-checked** means published HF `tokenizer.json` files match
+(exact or compatible specials remap) but the pair has not yet been gated on
+EXO1. Sizes are the helper download prompt values (`size_mb` in the table).
+
+## Download prompt (live check)
+
+Nov 1 on EXO1 test ports (8194/5560), Qwen3 main, PTY yes/no: size prompt
+("A 335 MB helper…"), yes → download + guess-ahead keep (gate baseline 36.98 /
+spec 40.71 tok/s, quality keep), remembered yes on next load (auto-pair, no
+prompt); no → baseline and remembered no. Original HF cache / drafts / state
+restored afterward (no production stop). Raw:
+`~/.caravan/bench-2026-11-01/guess-ahead-download-test/`.
+
 ## Stop when done
 
 Kill the test packer/lead processes. Leave production workers alone.

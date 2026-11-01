@@ -256,16 +256,18 @@ tailscale status                                   # should list prf-hays-exo01 
   - known limits.
 
   `lab/caravan-ROADMAP.md` is the old assistant's planning copy.
-- **Suggested next, as of Nov 1 (after Day 7 guess-ahead):**
+- **Suggested next, as of Nov 1 (after download-prompt live test + family map):**
   1. Brenden's go to **push** local idea-3 commits and cut a milestone tag (likely v3.5).
-  2. GPT-OSS still has no small same-vocab draft — park or hunt a compatible helper.
-  3. Then per-model profiles, proxy overhead, memory headroom, and cold-disk restore.
-  4. Housekeeping: make the bench scripts warn or refuse when `pmset -g` shows
+  2. Mini-gate the vocab-checked families (Llama 3.x, Qwen2.5, Gemma 3/2, Distill-Qwen, SmolLM) when a matching main is loaded.
+  3. GPT-OSS / Mistral / Phi-4 / native DeepSeek still have no small same-vocab draft — park or hunt helpers.
+  4. Then per-model profiles, proxy overhead, memory headroom, and cold-disk restore.
+  5. Housekeeping: make the bench scripts warn or refuse when `pmset -g` shows
      `lowpowermode 1` on either Mac.
   - Done since Oct 31 evening: idea 5, idea 1 (+ stall fix), Day 6 video v12, idea 3
     guess-ahead auto-pair (Qwen 45.9→59.7, Gemma 38.4→44.5, GPT-OSS skip 34.3;
-    shut-off 0.438<0.80), Gemma final-answer-only quality gate + Day 7 video v13.
-    Tags `v3.3` / `v3.4` pushed; idea-3 commits local only until push go.
+    shut-off 0.438<0.80), Gemma final-answer-only quality gate + Day 7 video v13,
+    live download-prompt test on EXO1, top open-LLM family → guesser map in
+    `agent/guessers.json`. Tags `v3.3` / `v3.4` pushed; idea-3 commits local only until push go.
 - **Parked:** idea 4, splitting each layer across both Minis. It's a no-go: about 330–410
   µs per exchange, 48–96 exchanges per token. Even with Low Power Mode off, the estimate
   is 21.1 / 24.7 / 26.7 tok/s, vs v3's 30.4 / 27.7 / 26.6 and one Mini's 51.0 / 41.3 /

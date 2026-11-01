@@ -16,6 +16,10 @@ reply comes out.
   output no longer passes. Gate probes use 256 tokens.
 
 ### Added
+- Top open-LLM family → guesser map in `agent/guessers.json` (Llama 3.x,
+  Qwen3/2.5, Gemma 4/3/2, Distill-Qwen, SmolLM; skips for GPT-OSS, Mistral,
+  Phi-4, native DeepSeek). `verification`: `mini_verified` | `vocab_checked`.
+  Live EXO1 download-prompt check (yes/no remembered; caches restored).
 - Idea 3 guess-ahead auto-pair: `agent/guessers.json`, vocab match/remap,
   ask-once download (lead only), first-load quality/speed gate (cached),
   mid-chat shut-off below break-even. Flags `--no-split-draft`,
