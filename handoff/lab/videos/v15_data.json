@@ -1,0 +1,33 @@
+{
+  "_stills": [1.5, 10.0, 22.0, 38.0, 54.0, 70.0, 86.0],
+  "_day": "Day 8",
+  "PAYOFF_BEFORE": 22.7,
+  "PAYOFF_AFTER": 51.5,
+  "HELPER_LABELS": ["Qwen3\n30B", "Gemma 4\n26B", "GPT-OSS\n20B", "Llama\n8B", "Qwen2.5\n14B", "Distill\n14B"],
+  "HELPER_OFF": [45.9, 38.4, 34.3, 22.7, 12.4, 12.3],
+  "HELPER_ON":  [59.7, 44.5, null, 51.5, 33.8, 16.9],
+  "HELPER_NOTE": ["0.6B", "270M", "skip", "1B", "0.5B", "0.5B"],
+  "KA_LABELS": ["Qwen3", "Gemma 4", "GPT-OSS", "Llama 8B", "Qwen2.5", "Distill"],
+  "KA_OFF": [30.4, 27.7, 26.6, 21.2, 11.7, 11.7],
+  "KA_ON":  [45.6, 38.3, 34.1, 22.8, 12.3, 12.4],
+  "PIPE_LABELS": ["Qwen3", "Gemma 4", "GPT-OSS", "Llama 8B", "Qwen2.5", "Distill"],
+  "PIPE_N1": [44.4, 37.0, 33.5, 22.5, 12.3, 12.2],
+  "PIPE_N2": [72.7, 61.0, 54.0, 39.3, 21.7, 21.5],
+  "PIPE_N3": [70.8, 59.8, 53.0, 39.0, 21.5, 21.6],
+  "FAMILIES": [
+    ["Qwen3 / Gemma 4 / Llama / Qwen2.5 / Distill-Qwen", "Mini-verified helpers"],
+    ["Gemma 3 / Gemma 2 / SmolLM", "vocab-checked (HF match)"],
+    ["GPT-OSS / Mistral / Phi-4 / native DeepSeek", "auto-skip — no small same-vocab draft"]
+  ],
+  "DL": [
+    ["Qwen3", "335 MB", "yes → remembered"],
+    ["Llama 8B", "663 MB", "yes → remembered"],
+    ["Qwen2.5 + Distill", "278 MB", "yes → remembered"]
+  ],
+  "TAKE": [
+    ["ON", "Helpers win when the family matches", "Llama 22.7→51.5 · Qwen2.5 12.4→33.8 · Qwen3 45.9→59.7"],
+    ["ONE", "Not only helpers since Day 7", "keepalive warmed Metal; two chats ~1.6× total writing speed"],
+    ["ON", "12-family map + real download ask", "auto-pair or skip; size prompt once, answer remembered"],
+    ["MUTED", "Next: fewer flags", "self-tuning defaults + optional ~/.caravan/config.toml"]
+  ]
+}

@@ -1,4 +1,45 @@
-## 2026-11-01 — Day 8 Llama 8B video (v14) + X draft
+## 2026-11-01 — Day 8 full scoreboard video (v15)
+
+**Goal.** Redo Day 8 lab video as v15 covering **all** local models Mini-tested,
+using only documented numbers from `docs/BENCHMARKS.md`. Keep v14 as a
+superseded draft. Show helper before/after for every model, plus non-helper
+gains since Day 7 (keepalive off/on; several-chats wall N=1/2/3). Mention the
+12-family helper map, live download-prompt tests, and planned "fewer flags".
+
+**Hardware / software.** Same Minis / same benches already logged. Video
+`handoff/lab/videos/make_runtime_video_v15.py`, data `v15_data.json`, out
+`2026-11-01_caravan-v3-day8-full-scoreboard_v15.mp4` (+ `/workspace/out/v15.mp4`).
+Duration **1:24**. Payoff in first 3s + burned-in captions. Stills in
+`stills_v15/`. Audience: techie friend new to local-AI lingo (gloss, never
+announce teaching).
+
+**Scoreboard numbers used (all from BENCHMARKS / matching METHODOLOGY):**
+
+Helper off → auto-pair on (count / best documented):
+| model | off | on | helper |
+|---|---:|---:|---|
+| Qwen3 30B-A3B | 45.9 | 59.7 | 0.6B |
+| Gemma 4 26B | 38.4 | 44.5 | 270M |
+| GPT-OSS 20B | 34.3 | skip | none |
+| Llama 3.1 8B | 22.7 | 51.5 | 1B |
+| Qwen2.5 14B | 12.4 | 33.8 | 0.5B |
+| Distill-Qwen 14B | 12.3 | 16.9 | 0.5B (shared) |
+
+Keepalive writing off → on: Qwen3 30.4→45.6; Gemma 27.7→38.3; GPT-OSS
+26.6→34.1; Llama 21.2→22.8; Qwen2.5 11.7→12.3; Distill 11.7→12.4.
+
+Pipeline wall aggregate N=1 / 2 / 3: Qwen3 44.4/72.7/70.8; Gemma 37.0/61.0/59.8;
+GPT-OSS 33.5/54.0/53.0; Llama 22.5/39.3/39.0; Qwen2.5 12.3/21.7/21.5; Distill
+12.2/21.5/21.6.
+
+Also on screen: 12-family map (8 pairings + 4 skips in `guessers.json` /
+METHODOLOGY table); download prompts 335 / 663 / 278 MB yes→remembered; next
+item ROADMAP "Fewer flags: self-tuning defaults + settings file".
+
+**Post status.** Video ready; Day 8 X draft still the earlier Llama-led draft
+unless Brenden wants a rewrite for the full scoreboard. Not posted.
+
+## 2026-11-01 — Day 8 Llama 8B video (v14, superseded by v15) + X draft
 
 **Goal.** Ship Day 8 lab video (payoff-first + burn-in captions) and X draft.
 Headline is the Llama 3.1 8B Mini suite / guess-ahead win; same day also
@@ -9,7 +50,7 @@ Post shape: line 1 = headline result/number; line 2 = full Day N opener.
 `handoff/lab/videos/make_runtime_video_v14.py`, data `v14_data.json`, out
 `2026-11-01_caravan-v3-llama8b-guess-ahead_v14.mp4` (+ `/workspace/out/v14.mp4`).
 Duration **0:54**. Payoff in first 3s + burned-in captions. Stills in
-`stills_v14/`.
+`stills_v14/`. **Superseded by v15** (full six-model scoreboard); v14 kept as draft.
 
 **Results.** Llama nodraft count **22.7** → auto-pair **51.5** (suite 51.5 /
 51.6 / 64.7 / 46.8; accept ~0.75; q 3/3; range ~47–65). Qwen2.5 14B **12.4 →
