@@ -231,7 +231,7 @@ Split flags (v3; see the next section):
 | `--split-listen HOST:PORT` | – | Packer only: where to listen (its Thunderbolt address). |
 | `--split-packer-layers K` | half (the odd layer goes to the lead) | How many layers Packer 1 runs. Use the same value on both Macs; the lead refuses to start if the two disagree. `--split-front-layers` is a deprecated alias. |
 | `--split-keepalive` / `--no-split-keepalive` | on | Keep Metal warm with a tiny eval on a short-lived thread while waiting for the peer (cuts ~5 ms/half cool-down). Env `CARAVAN_MLX_SPLIT_KEEPALIVE=0` / `false` / `off` / `no` also disables. |
-| `--split-pipeline-chats N` | 1 | Idea 1: overlap packer/lead across up to N concurrent split chats (1 = off). Env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`. |
+| `--split-pipeline-chats N` | 1 | Idea 1: overlap packer/lead across up to N concurrent split chats (1 = off). Fair `(n_gen, t0)` pick when N≥3. Env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`. |
 
 `python3 agent/render_mlx_plist.py <model> [--port] [--host] [--python]
 [-o PATH]` writes `launchd/com.caravan.mlx-server.plist` (label

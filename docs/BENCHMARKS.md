@@ -655,7 +655,7 @@ rejected (writing ~17.6 tok/s); not in the table.
 
 ## Idea 1: several chats at once (Oct 31–Nov 1, MLX)
 
-Branch tip after stall fix (local; after tag `v3.2` / `cb61970`). Test
+Branch tip after stall fix (tags `v3.3` / `v3.4`; after `v3.2` / `cb61970`). Test
 ports 8194 / 5560. Low Power Mode off. Keepalive on. Idea-5 cuts for the
 pipeline runs (Gemma K=16, GPT-OSS K=13, Qwen3 K=24). Client:
 `bench/v3/pipeline_bench.py` (two waves of concurrent tg128; medians of

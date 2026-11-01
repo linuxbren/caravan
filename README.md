@@ -174,7 +174,10 @@ Packer 1 first, then the lead; the agent doesn't start a split yet:
   --split-peer <packer-thunderbolt-ip>:5560 --model <local model dir> --port 8092
 ```
 
-Details: [docs/MLX-SPLIT.md](docs/MLX-SPLIT.md).
+Optional on both (off by default): `--split-pipeline-chats N` overlaps work
+across up to N concurrent chats so both GPUs stay busy (several chats /
+agents). Single-chat writing is unchanged when N=1. Details:
+[docs/MLX-SPLIT.md](docs/MLX-SPLIT.md).
 
 **Then the proxy, on the lead**, and point your client at it:
 

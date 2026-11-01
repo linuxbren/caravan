@@ -8,7 +8,16 @@ What changed in each Caravan version, newest first. Numbers come from
 "Reading" is how fast a prompt is taken in, "writing" is how fast the
 reply comes out.
 
-## Unreleased (after v3.2)
+## v3.4 (tag `v3.4`, Nov 1 2026)
+
+Branch `caravan-v3-mlx-split`. Day 6 lab video refreshed to the techie-friend
+cut (LAB-2026-11-01-03 / v12); v10–v11 kept and marked superseded. Post-style
+audience guidance in `handoff/README.md` §5/§6. Not merged to `main`.
+
+## v3.3 (tag `v3.3`, `f31d15a`, Nov 1 2026)
+
+Branch `caravan-v3-mlx-split`. Idea 1 several chats + N=3 stall fix + first
+Day 6 lab video (LAB-2026-11-01-01 / v10). Not merged to `main`.
 
 - **Idea 1 N=3 stall fix.** `_pipe_round` preferred the just-led chat for
   the next packer fetch, so a third chat waited ~4 s (tg128). Fair pick by

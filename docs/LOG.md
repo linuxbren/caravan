@@ -2645,6 +2645,19 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
 
 
 
+## 2026-11-01: Day 6 lab video + docs (v3.4)
+
+- Lab video LAB-2026-11-01-03 (`make_runtime_video_v12.py`): techie-friend
+  cut of several chats on the two-Mini split. v10 (jargon) and v11
+  (beginner / "teach-along") kept, superseded, not posted. Audience
+  guidance in `handoff/README.md` §5/§6, `handoff/routines.md`, videos
+  index intro.
+- Day 6 X draft saved in `handoff/lab/experiments.md` (status: drafted,
+  not posted). Measured numbers only (wall writing 44→73 / 37→61 / 34→54;
+  third-chat wait ~4 s→~0.6 s).
+- Tags: `v3.3` at first Day 6 cut (`f31d15a`); `v3.4` at this tip. Branch
+  pushed after Brenden approved noreply author + docs.
+
 ## 2026-11-01: Idea 1 N=3 stall fix
 
 - **Root cause:** `_pipe_round` always gave the next packer slot to
@@ -2657,7 +2670,7 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
 - **Recheck (America/Chicago ~01:25–01:36):** flag-off writing 38.1 /
   34.2 / 45.7. Pipeline N=2 wall 61.0 / 54.0 / 72.7. N=3 wall 59.8 /
   53.0 / 70.8; max TTFT 0.62 / 0.61 / 0.59 s (was ~4 s). Quality 3/3.
-  Ports cleaned after. Commits local (no push).
+  Ports cleaned after. Pushed with v3.3 / v3.4 after Brenden approved.
 
 ## 2026-10-31 night: Idea 1 several chats at once (pipeline)
 
@@ -2675,7 +2688,7 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
   raise the sum of per-chat rates but wall aggregate falls (one chat
   ~4 s TTFT). Quality 3/3. Ports cleaned after.
 - **Tag:** `v3.2` at `cb61970` (keepalive + Day 5 video) pushed earlier
-  the same evening; idea 1 commits are local until Brenden says push.
+  the same evening; idea 1 + stall fix + Day 6 videos pushed as v3.3 / v3.4.
 
 ## 2026-10-31: GPU keepalive while waiting on the peer
 

@@ -256,15 +256,14 @@ tailscale status                                   # should list prf-hays-exo01 
   - known limits.
 
   `lab/caravan-ROADMAP.md` is the old assistant's planning copy.
-- **Suggested next, as of Oct 31 evening:**
-  1. **Idea 5, uneven split:** move the cut with `--split-packer-layers`, one or two
-     layers more on the packer for Gemma 4 and GPT-OSS. The packer is now the faster half
-     by 2–4 ms per token.
-  2. **Idea 1, several chats at once.**
-  3. **Idea 3, guess ahead** (draft tokens).
-  4. Then per-model profiles, proxy overhead, memory headroom, and cold-disk restore.
-  5. A small housekeeping item he liked: make the bench scripts warn or refuse when
-     `pmset -g` shows `lowpowermode 1` on either Mac.
+- **Suggested next, as of Nov 1 (after idea 1 + Day 6 video):**
+  1. **Idea 3, guess ahead** (draft tokens / speculative decoding).
+  2. Then per-model profiles, proxy overhead, memory headroom, and cold-disk restore.
+  3. Housekeeping: make the bench scripts warn or refuse when `pmset -g` shows
+     `lowpowermode 1` on either Mac.
+  - Done since Oct 31 evening: idea 5 (uneven cut, no single-chat win; balanced K saved),
+    idea 1 (`--split-pipeline-chats`, ~1.6× wall at two chats), N=3 stall fix, Day 6
+    video v12 + X draft (drafted, not posted). Tags `v3.3` / `v3.4`.
 - **Parked:** idea 4, splitting each layer across both Minis. It's a no-go: about 330–410
   µs per exchange, 48–96 exchanges per token. Even with Low Power Mode off, the estimate
   is 21.1 / 24.7 / 26.7 tok/s, vs v3's 30.4 / 27.7 / 26.6 and one Mini's 51.0 / 41.3 /

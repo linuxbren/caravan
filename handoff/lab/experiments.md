@@ -4,6 +4,56 @@ Each entry: date, goal, hardware, software/runtime, model + quant, config, resul
 
 <!-- entries below, newest first -->
 
+## 2026-11-01 — Day 6 several chats video (v12) + X draft
+
+**Goal.** Lab video for idea 1 (several chats on the two-Mini split) in a techie-friend voice: explain the layer split and pipeline crisply, no "we're teaching" framing, no elementary token definition, no lab shorthand (tg128 / TTFT / N=). Same measured numbers as the stall-fix benches.
+
+**Hardware / software.** Same as idea 1 benches. Video script `handoff/lab/videos/make_runtime_video_v12.py`, data `v12_data.json`, ID LAB-2026-11-01-03. Duration 1:03. v10 (jargon) and v11 (beginner) kept, superseded, not posted.
+
+**Post status.** drafted (not posted). Final Day 6 X draft:
+
+---
+Day 6 of building Caravan in the open, my homebrew app for running AI models across my Mac minis.
+
+The model is split in half, one half on each Mini. With one chat, they take turns, so each GPU sits idle about half the time.
+
+Now Caravan runs two chats overlapped: while one Mini works on chat A, the other works on chat B. Total writing speed across chats is up ~1.6× (Qwen3 44→73, Gemma 37→61, GPT-OSS 34→54 tokens/sec).
+
+A third chat used to wait ~4s before its first word. A fairer turn order cut that to ~0.6s.
+
+A single chat on its own isn't faster, and quality checks all passed. Next up: guessing ahead.
+---
+
+
+## 2026-11-01 — Idea 1 N=3 stall fix (fair packer pick)
+
+**Goal.** Fix the third-chat starvation under `--split-pipeline-chats 3`: one chat waited ~4 s before the first word while the scheduler kept feeding the chats that already had work.
+
+**Hardware.** EXO1 lead / EXO2 packer, Mac mini M4 24 GB, Thunderbolt 4. LPM off. Keepalive on.
+
+**Software.** Branch `caravan-v3-mlx-split`, fix `ef244c6` (`_pipe_round` fair pick by `(n_gen, t0)` + admit one prefill per loop). Bench `bench/v3/pipeline_bench.py`. Idea-5 cuts for pipeline runs.
+
+**Results (America/Chicago ~01:25–01:36).** Flag-off writing 38.1 / 34.2 / 45.7. Pipeline N=2 wall 61.0 / 54.0 / 72.7. N=3 wall 59.8 / 53.0 / 70.8; max wait before first word 0.62 / 0.61 / 0.59 s (was ~4.2 / 4.7 / 3.5). Quality 3/3. N=2 unchanged.
+
+**Takeaway.** Two-stage pipeline: wall at three chats ≈ two. Fair turns fix the stall; single-chat path unchanged when the flag is off.
+
+**Post status.** Covered by the Day 6 draft above (drafted, not posted). Details: `docs/BENCHMARKS.md` idea 1 section.
+
+
+## 2026-10-31 night — Idea 1 several chats at once (`--split-pipeline-chats`)
+
+**Goal.** Overlap Packer 1's half for chat B with the lead's half for chat A so both GPUs stay busy across several chats / agents. Off by default (`N=1`).
+
+**Hardware.** Same two Minis, Thunderbolt 4, LPM off, keepalive on.
+
+**Software.** `3d3e98a` + `be19fe1` on `caravan-v3-mlx-split`. Flag `--split-pipeline-chats N` / `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`. Bench `bench/v3/pipeline_bench.py`.
+
+**Results.** Two chats wall aggregate ≈1.6× one (Qwen3 44.4→72.7, Gemma 37.0→61.0, GPT-OSS 33.5→54.0). Flag-off single-chat matches keepalive baseline. First N=3 run stalled one chat (~4 s TTFT) — fixed Nov 1 (entry above). Quality 3/3.
+
+**Takeaway.** Multi-chat throughput win; one chat on its own is not faster. Use idea-5 balanced cuts with the pipeline.
+
+**Post status.** Covered by the Day 6 draft above (drafted, not posted).
+
 ## 2026-10-31 — GPU keepalive while waiting on the peer (Caravan MLX split)
 
 **Goal.** Remove the ~5–6 ms/half/token Metal cool-down that shows up after each Mini sits idle during turn-taking. Keep Metal warm with a tiny `mx.eval` on a side thread during the blocking peer wait, then stop it before this process runs its own layers. A/B keepalive on vs off on all three 4-bit models; also sample CPU while it runs (powermetrics needs a password on the Minis).

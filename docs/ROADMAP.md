@@ -4,8 +4,8 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-10-31 night (idea 1 pipeline prototype behind
-`--split-pipeline-chats`; v3.2 tagged for keepalive). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
+*Last updated 2026-11-01 (idea 1 + N=3 stall fix shipped as v3.3; Day 6
+video v12 / techie-friend cut as v3.4; next is idea 3 guess-ahead). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the

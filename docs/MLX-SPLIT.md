@@ -135,7 +135,7 @@ side thread while this Mac waits for the peer, so the next half does
 not pay ~5 ms of cool-down after the idle. Disable with
 `--no-split-keepalive` or `CARAVAN_MLX_SPLIT_KEEPALIVE=0`. Measured
 
-`--split-pipeline-chats N` (default 1, env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`) overlaps Packer 1's half for chat B with the lead's half for chat A when N≥2. Off by default so single-chat behavior stays the old path. See [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31-mlx).
+`--split-pipeline-chats N` (default 1, env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`) overlaps Packer 1's half for chat B with the lead's half for chat A when N≥2. Off by default so single-chat behavior stays the old path. Two chats ≈1.6× wall aggregate writing; a fair `(n_gen, t0)` packer pick keeps a third chat's wait before the first word ~0.6 s (was ~4 s). See [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31nov-1-mlx).
 Oct 31: writing +28–50% vs off, reading and quality unchanged
 ([BENCHMARKS.md](BENCHMARKS.md#gpu-keepalive-while-waiting-on-the-peer-oct-31-mlx)).
 
