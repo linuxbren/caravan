@@ -232,6 +232,12 @@ Split flags (v3; see the next section):
 | `--split-packer-layers K` | half (the odd layer goes to the lead) | How many layers Packer 1 runs. Use the same value on both Macs; the lead refuses to start if the two disagree. `--split-front-layers` is a deprecated alias. |
 | `--split-keepalive` / `--no-split-keepalive` | on | Keep Metal warm with a tiny eval on a short-lived thread while waiting for the peer (cuts ~5 ms/half cool-down). Env `CARAVAN_MLX_SPLIT_KEEPALIVE=0` / `false` / `off` / `no` also disables. |
 | `--split-pipeline-chats N` | 1 | Idea 1: overlap packer/lead across up to N concurrent split chats (1 = off). Fair `(n_gen, t0)` pick when N≥3. Env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`. |
+| `--split-draft-model DIR` | off | Idea 3: override draft path on the lead. Env `CARAVAN_MLX_SPLIT_DRAFT_MODEL`. |
+| `--no-split-draft` | off | Idea 3: disable auto-pair and any draft. |
+| `--split-draft-auto-download` | off | Idea 3: download a matched guesser without prompting. Env `CARAVAN_MLX_SPLIT_DRAFT_AUTO_DOWNLOAD=1`. |
+| `--split-draft-skip-first-load` | off | Idea 3: skip the cached first-load quality/speed gate. |
+| `--split-speculate-k K` | pairing / 4 | Idea 3: draft tokens per verify. Env `CARAVAN_MLX_SPLIT_SPECULATE_K`. |
+| `--split-prompt-lookup N` | 0 | Idea 3 draft-free n-gram max size. Env `CARAVAN_MLX_SPLIT_PROMPT_LOOKUP`. |
 
 `python3 agent/render_mlx_plist.py <model> [--port] [--host] [--python]
 [-o PATH]` writes `launchd/com.caravan.mlx-server.plist` (label
@@ -249,6 +255,12 @@ the lead runs the rest. How it works: [MLX-SPLIT.md](MLX-SPLIT.md).
 | `CARAVAN_MLX_SPLIT_PACKER_LAYERS` | `packer_layers` | half | Layers on Packer 1 (1 or more). |
 | `CARAVAN_MLX_SPLIT_KEEPALIVE` | (flag only) | on | `0` / `false` / `off` / `no` disables GPU keepalive while waiting on the peer. |
 | `CARAVAN_MLX_SPLIT_PIPELINE_CHATS` | (flag only) | 1 | Idea 1 max concurrent pipelined chats (1 = off). |
+| `CARAVAN_MLX_SPLIT_DRAFT_MODEL` | (flag only) | off | Lead draft override path. |
+| `CARAVAN_MLX_SPLIT_DRAFT_AUTO_DOWNLOAD` | (flag only) | off | `1`/`true` downloads a matched guesser without asking. |
+| `CARAVAN_MLX_SPLIT_SPECULATE_K` | (flag only) | pairing / 4 | Draft tokens per verify round. |
+| `CARAVAN_MLX_SPLIT_PROMPT_LOOKUP` | (flag only) | 0 | Prompt-lookup n-gram size. |
+
+Idea 3 auto-pair reads `agent/guessers.json` on the lead: matching models load a small draft from `~/.caravan/mlx-models/drafts/` (ask once if missing; state in `~/.caravan/mlx/guess-ahead-state.json`). Vocab must match (exact or compatible specials remap). First load runs a quality + speed gate and caches it. Mid-chat shut-off disables guessing when the accepted-guess rate stays below break-even. See [MLX-SPLIT.md](MLX-SPLIT.md#idea-3-guess-ahead-speculative-decoding) and [METHODOLOGY.md](METHODOLOGY.md).
 
 Order: flag > env > config, as everywhere else. The split needs the
 Caravan worker (`mlx.server = "caravan"`); with `mlx_lm` it's an error.

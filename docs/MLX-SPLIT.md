@@ -239,16 +239,32 @@ Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oc
 
 ### Idea 3: guess-ahead (speculative decoding)
 
-Off by default. On the **lead only**:
+Shipped behind the speculate path: with `--no-split-draft` (or no pairing /
+declined download) behaviour matches baseline. On the **lead only**, the
+pairing table `agent/guessers.json` auto-selects a small draft when the
+loaded model matches (Qwen3-30B-A3B → Qwen3-0.6B-4bit k=3; Gemma-4-26B →
+gemma-3-270m-it-4bit k=2 with specials remap). GPT-OSS has no pairing and
+stays at baseline.
 
 ```sh
---split-draft-model ~/.caravan/mlx-models/drafts/Qwen3-0.6B-4bit \
-  --split-speculate-k 3
+# Auto-pair (asks once if the helper is missing; remembers in
+# ~/.caravan/mlx/guess-ahead-state.json):
+#   A 335 MB helper can make <model> faster. Download Qwen3-0.6B-4bit? [y/N]
+
+# Override / force / disable:
+--split-draft-model ~/.caravan/mlx-models/drafts/Qwen3-0.6B-4bit
+--split-speculate-k 3
+--split-draft-auto-download          # or CARAVAN_MLX_SPLIT_DRAFT_AUTO_DOWNLOAD=1
+--no-split-draft
+--split-draft-skip-first-load        # skip cached quality+speed gate
+--split-prompt-lookup N              # draft-free n-gram (0=off)
 ```
 
-Or env: `CARAVAN_MLX_SPLIT_DRAFT_MODEL`, `CARAVAN_MLX_SPLIT_SPECULATE_K`
-(default k=4), `CARAVAN_MLX_SPLIT_PROMPT_LOOKUP` / `--split-prompt-lookup N`
-(0=off; draft-free n-gram from context). Draft must share the target tokenizer (vocab size check at
-load). Packer needs no draft weights; rejects trim packer KV over the
-existing link (`trim` op). See
+At load: vocab must be exact or compatible (specials remap). First load on
+a machine runs quality prompts + a short speed A/B and keeps the pair only
+if quality passes and it is clearly faster (cached). During a chat, if the
+accepted-guess rate stays below the measured break-even window, guessing
+turns off for that chat and is logged. Packer needs no draft weights;
+rejects trim packer KV over the existing link (`trim` op). Bench workflow:
+[METHODOLOGY.md](METHODOLOGY.md). Numbers:
 [BENCHMARKS.md](BENCHMARKS.md#idea-3-guess-ahead-speculative-decoding-nov-1-mlx).

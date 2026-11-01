@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "drafts_dir": "~/.caravan/mlx-models/drafts",
+  "state_file": "~/.caravan/mlx/guess-ahead-state.json",
+  "pairings": [
+    {
+      "id": "qwen3-30b-a3b",
+      "match": [
+        "Qwen3-30B-A3B",
+        "qwen3-30b-a3b",
+        "Qwen3-30B-A3B-4bit",
+        "Qwen3-30B-A3B-8bit"
+      ],
+      "target_family": "qwen3",
+      "draft": {
+        "name": "Qwen3-0.6B-4bit",
+        "hf_repo": "mlx-community/Qwen3-0.6B-4bit",
+        "size_mb": 335,
+        "k": 3,
+        "vocab": "exact"
+      },
+      "tested": {
+        "date": "2026-11-01",
+        "baseline_tps": 45.9,
+        "spec_tps": 59.7,
+        "prompt": "count",
+        "quality": "3/3",
+        "notes": "auto-pair Mini verify Nov 1; medians of 2; LPM off; keepalive on; test ports"
+      }
+    },
+    {
+      "id": "gemma-4-26b",
+      "match": [
+        "gemma-4-26b",
+        "gemma-4-26B",
+        "gemma-4-26b-a4b",
+        "gemma-4-26b-a4b-it"
+      ],
+      "target_family": "gemma4",
+      "draft": {
+        "name": "gemma-3-270m-it-4bit",
+        "hf_repo": "mlx-community/gemma-3-270m-it-4bit",
+        "size_mb": 181,
+        "k": 2,
+        "vocab": "compatible_specials_remap"
+      },
+      "tested": {
+        "date": "2026-11-01",
+        "baseline_tps": 38.4,
+        "spec_tps": 44.5,
+        "prompt": "count",
+        "quality": "3/3",
+        "notes": "auto-pair Mini verify Nov 1; remap=6187 specials; medians of 2; LPM off"
+      }
+    }
+  ],
+  "no_pairing": [
+    {
+      "match": [
+        "gpt-oss",
+        "GPT-OSS",
+        "gpt_oss"
+      ],
+      "reason": "no small o200k_harmony MLX draft; prompt-lookup ineffective under 128-token rotating KV"
+    }
+  ]
+}

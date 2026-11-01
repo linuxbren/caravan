@@ -229,6 +229,7 @@ tail -f ~/Library/Logs/caravan/*.log
 | [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | how we measure, and the results by version |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | what changed in each version (v0 → v3) |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | done by version, next in order, ideas, parked items, known limits |
+| [docs/METHODOLOGY.md](docs/METHODOLOGY.md) | how we bench the MLX split (ports, LPM, medians, raw JSON) |
 | [docs/LOG.md](docs/LOG.md) | the dated build log: every measurement and dead end |
 | [handoff/README.md](handoff/README.md) | handoff brief for a new assistant: lab setup, rules, current state, first steps |
 | [agent/README.md](agent/README.md), [launchd/README.md](launchd/README.md), [cpp/README.md](cpp/README.md), [bench/improvements/README.md](bench/improvements/README.md), [bench/v3/README.md](bench/v3/README.md), [bench/cable/README.md](bench/cable/README.md) | per-directory notes |

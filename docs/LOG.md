@@ -1,3 +1,29 @@
+## 2026-11-01: idea 3 guess-ahead auto-pair (ask / gate / shut-off)
+
+- Shipped behind existing speculate path: `agent/guessers.json` pairings
+  (Qwen3-30B-A3B → 0.6B-4bit k=3; Gemma-4-26B → g3-270m k=2 + specials remap;
+  GPT-OSS no pairing). Vocab match at load; ask-once download with remembered
+  answers; first-load quality+speed gate cached in
+  `~/.caravan/mlx/guess-ahead-state.json`; mid-chat shut-off when accepted
+  frac < break-even. `--no-split-draft` / `--split-draft-model` /
+  `--split-draft-auto-download`. Tests: `agent/test_guess_ahead.py`.
+  Methodology: `docs/METHODOLOGY.md`. Commit local, no push.
+- Mini verify (8194/5560, LPM off, keepalive on, medians of 2, no new
+  downloads; drafts already on EXO1):
+
+  | model | mode | write tok/s | quality |
+  |---|---|---:|---|
+  | Qwen3-30B-A3B-4bit | auto-pair k=3 | **59.7** | 3/3 |
+  | Qwen3-30B-A3B-4bit | `--no-split-draft` | 45.9 | 3/3 |
+  | Gemma-4-26B-4bit | auto-pair k=2 (remap 6187) | **44.5** | 3/3 |
+  | Gemma-4-26B-4bit | `--no-split-draft` | 38.4 | 3/3 |
+  | GPT-OSS-20B MXFP4 | auto-skip (no pairing) | 34.3 | 3/3 |
+
+  Shut-off: with break-even raised to 0.80, low-hit hex prompt disabled
+  guessing after 48 tokens (`accepted_frac 0.438 < 0.800`). Download
+  decline/auto paths covered by unit tests + dry-run. Raw JSON:
+  `~/.caravan/bench-2026-11-01/guess-ahead/` on EXO1.
+
 ## 2026-11-01: idea 3 follow-up (Gemma 270m, prompt-lookup, GPT-OSS)
 
 - Full-prompt draft prefill fix; `--split-prompt-lookup`; rotating-KV trim room

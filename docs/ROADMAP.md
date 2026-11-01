@@ -5,7 +5,7 @@ Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
 *Last updated 2026-11-01 (idea 1 + N=3 stall fix shipped as v3.3; Day 6
-video v12 / techie-friend cut as v3.4; idea 3 guess-ahead prototype). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
+video v12 / techie-friend cut as v3.4; idea 3 guess-ahead auto-pair). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -302,19 +302,18 @@ simplest first:
 2. **Chunked reading.** Cut a long prompt into chunks and read them like
    an assembly line: Packer 1 reads chunk 2 while the lead reads chunk 1.
    Faster long-prompt reads (time to first token); writing is unchanged.
-3. **Guess ahead (speculative decoding).** *Prototype Nov 1 (off by
-   default).* A small draft model on the lead guesses the next few tokens;
-   the string then checks all of them in one pass (Packer 1 then the lead),
-   keeping the ones that match. One round trip can yield several tokens, so
-   it also hides the per-pass overhead. Output is identical to normal
-   decoding. Flags: `--split-draft-model DIR` /
-   `CARAVAN_MLX_SPLIT_DRAFT_MODEL`, `--split-speculate-k K` (default 4) /
-   `CARAVAN_MLX_SPLIT_SPECULATE_K`. Packer KV trim via a new `trim` op.
-   Follow-up same day: full-prompt draft prefill; `--split-prompt-lookup N`;
-   Gemma **g3-270m k=2 → 44.4** vs 38.4 (~+16%); Qwen draft k=3 → **59.3**
-   (was 57.4); GPT-OSS stays at baseline (no small o200k draft; PL ineffective
-   under 128-token rotating KV). Details:
-   [BENCHMARKS.md](BENCHMARKS.md#idea-3-follow-up-lighter-drafts--prompt-lookup-nov-1-mlx).
+3. **Guess ahead (speculative decoding).** *Shipped Nov 1 (auto-pair on
+   lead; `--no-split-draft` restores baseline).* A small draft on the lead
+   guesses the next few tokens; one Thunderbolt round trip verifies them.
+   Pairing table `agent/guessers.json` + vocab match/remap, ask-once
+   download, first-load quality/speed gate (cached), mid-chat shut-off
+   below break-even. Flags: `--split-draft-model`, `--no-split-draft`,
+   `--split-draft-auto-download`, `--split-speculate-k`,
+   `--split-prompt-lookup`, `--split-draft-skip-first-load`. Measured:
+   Qwen **0.6B k=3 → 59.3** vs ~45.5; Gemma **g3-270m k=2 → 44.4** vs 38.4;
+   GPT-OSS baseline (no small o200k draft). Details:
+   [BENCHMARKS.md](BENCHMARKS.md#idea-3-follow-up-lighter-drafts--prompt-lookup-nov-1-mlx),
+   [METHODOLOGY.md](METHODOLOGY.md).
 4. **Split each layer across both Minis (tensor parallel).** *Brenden's
    preferred direction to investigate.* Both Minis work on every layer at
    the same time instead of taking turns, each holding half of every

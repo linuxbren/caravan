@@ -63,6 +63,7 @@ import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import guess_ahead
 from typing import Optional
 
 FORMAT = "caravan-mlx-cache-1"
@@ -597,6 +598,14 @@ class Engine:
         self.prompt_lookup_n = int(getattr(args, "split_prompt_lookup", 0) or 0)
         if self.prompt_lookup_n < 0:
             self.prompt_lookup_n = 0
+        # Idea 3 auto-pair / remap / shut-off (populated in _setup when lead).
+        self.draft_remap_d2t = {}
+        self.draft_remap_t2d = {}
+        self.draft_path = None
+        self.guess_pairing = None
+        self.break_even_frac = 0.35
+        self._chat_shutoffs = {}
+        self._speculate_k_explicit = bool(getattr(args, "split_speculate_k_explicit", False))
         self.model_dir = Path(args.model).expanduser().resolve()
         ready = queue.Queue()
         self.thread = threading.Thread(target=self._main, args=(ready,), name="mlx", daemon=True)
@@ -637,20 +646,55 @@ class Engine:
                                    f"({S.stage_title('head', self.stage.range, self.stage.n_layers)})")
             log(f"split lead: {S.stage_title('head', self.stage.range, self.stage.n_layers)} here, "
                 f"{S.title_from_label(hello.get('stage'))} at {args.split_peer}")
+            no_draft = bool(getattr(args, "no_split_draft", False))
             draft = getattr(args, "split_draft_model", None)
+            if no_draft:
+                draft = None
+                log("split speculate: --no-split-draft; auto-pair off")
+            dpath = None
+            pairing = None
             if draft:
                 dpath = Path(draft).expanduser().resolve()
                 if not dpath.is_dir():
                     raise FileNotFoundError(f"split draft model not found: {dpath}")
-                self.draft_model, self.draft_tokenizer = load(str(dpath))
-                # Same tokenizer family: vocab size must match (mlx_lm speculative requirement).
-                tv = getattr(self.tokenizer, "vocab_size", None) or len(self.tokenizer)
-                dv = getattr(self.draft_tokenizer, "vocab_size", None) or len(self.draft_tokenizer)
-                if int(tv) != int(dv):
-                    raise RuntimeError(
-                        f"draft tokenizer vocab {dv} != target {tv}; need same tokenizer family")
-                log(f"split speculate: draft {dpath.name}, k={self.speculate_k} "
-                    f"(idea 3; off unless --split-draft-model)")
+                pairing = guess_ahead.find_pairing(self.model_dir)
+                if pairing and pairing.get("skip"):
+                    pairing = None
+            elif not no_draft:
+                pairing = guess_ahead.find_pairing(self.model_dir)
+                if pairing and pairing.get("skip"):
+                    log(f"split speculate: no pairing ({pairing.get('reason')})")
+                    pairing = None
+                elif pairing:
+                    cand = guess_ahead.drafts_dir() / pairing["draft"]["name"]
+                    if cand.is_dir() and (cand / "config.json").is_file():
+                        dpath = cand.resolve()
+                        log(f"split speculate: auto-pair {pairing['id']} -> {dpath.name}")
+                    else:
+                        auto = bool(getattr(args, "split_draft_auto_download", False))
+                        if guess_ahead.ask_download(pairing, auto=auto, model_label=self.model_dir.name):
+                            dpath = guess_ahead.download_draft(pairing).resolve()
+                            log(f"split speculate: downloaded helper {dpath.name}")
+                        else:
+                            log("split speculate: helper download declined; baseline")
+                            pairing = None
+            if dpath is not None:
+                vocab = guess_ahead.build_vocab_maps(self.model_dir, dpath)
+                if not vocab.get("ok"):
+                    log(f"split speculate: vocab mismatch ({vocab.get('reason')}); skipping draft")
+                    dpath = None
+                    pairing = None
+                else:
+                    self.draft_model, self.draft_tokenizer = load(str(dpath))
+                    self.draft_path = dpath
+                    self.draft_remap_d2t = {int(k): int(v) for k, v in (vocab.get("remap_draft_to_target") or {}).items()}
+                    self.draft_remap_t2d = {int(k): int(v) for k, v in (vocab.get("remap_target_to_draft") or {}).items()}
+                    self.guess_pairing = pairing
+                    if pairing and not self._speculate_k_explicit:
+                        self.speculate_k = int(pairing["draft"].get("k") or self.speculate_k)
+                    log(f"split speculate: draft {dpath.name}, k={self.speculate_k}, "
+                        f"vocab={vocab.get('mode')} remap={vocab.get('n_remap', 0)} "
+                        f"(idea 3 guess-ahead)")
             if self.prompt_lookup_n:
                 log(f"split speculate: prompt-lookup n={self.prompt_lookup_n}, "
                     f"k={self.speculate_k} (idea 3 draft-free)")
@@ -697,6 +741,9 @@ class Engine:
             self.model.end_scratch()
         self.warmup_s = time.time() - tw
         log(f"warm-up {self.warmup_s:.2f}s")
+        if (self.draft_model is not None and self.draft_path is not None
+                and not bool(getattr(args, "split_draft_skip_first_load", False))):
+            self._first_load_gate(self.draft_path, self.guess_pairing)
         log(f"loaded {self.model_dir.name} ({self.model_type}) in {time.time() - t0:.1f}s; "
             f"sessions<= {self.store.max_sessions}, bytes<= {args.prompt_cache_bytes}, "
             f"prefill step {self.prefill_step}, kv bits {args.kv_bits or 16}, persist="
@@ -824,6 +871,128 @@ class Engine:
         return list(self.tokenizer.encode(p if isinstance(p, str) else ""))
 
     # -- generation (mlx thread) ------------------------------------------
+    def _first_load_gate(self, dpath, pairing):
+        """Quality + short speed A/B; cache per model+guesser on this machine."""
+        cached = guess_ahead.get_first_load(self.model_dir, dpath)
+        if cached is not None:
+            keep = bool(cached.get("keep"))
+            self.break_even_frac = float(cached.get("break_even_frac") or self.break_even_frac)
+            if keep:
+                log(f"split speculate: first-load cache hit keep=1 "
+                    f"break_even={self.break_even_frac:.3f}")
+            else:
+                log("split speculate: first-load cache hit keep=0; disabling draft")
+                self.draft_model = None
+                self.draft_tokenizer = None
+            return keep
+        log("split speculate: running first-load quality + speed gate...")
+        quality = []
+        q_ok = 0
+        # Temporarily use a dedicated session key so we don't pollute user caches.
+        for q, expect in guess_ahead.QUALITY_PROBES:
+            try:
+                text_out = self._gate_complete(q, max_tokens=96, use_draft=True)
+            except Exception as e:
+                text_out = f"<err:{e}>"
+            ok = guess_ahead.answer_ok(text_out, expect)
+            quality.append({"q": q, "out": (text_out or "")[:80], "ok": ok})
+            if ok:
+                q_ok += 1
+        if q_ok < len(guess_ahead.QUALITY_PROBES):
+            result = {"keep": False, "quality": quality, "reason": f"quality {q_ok}/{len(guess_ahead.QUALITY_PROBES)}"}
+            guess_ahead.set_first_load(self.model_dir, dpath, result)
+            log(f"split speculate: first-load quality fail {q_ok}/3; disabling draft")
+            self.draft_model = None
+            self.draft_tokenizer = None
+            return False
+        # Short speed A/B on a count-style prompt (same session pattern as benches).
+        prompt = "Count from 1 to 30, numbers only, space-separated."
+        try:
+            off = self._gate_timed(prompt, max_tokens=40, use_draft=False)
+            on = self._gate_timed(prompt, max_tokens=40, use_draft=True)
+        except Exception as e:
+            result = {"keep": False, "quality": quality, "reason": f"speed err: {e}"}
+            guess_ahead.set_first_load(self.model_dir, dpath, result)
+            log(f"split speculate: first-load speed err ({e}); disabling draft")
+            self.draft_model = None
+            self.draft_tokenizer = None
+            return False
+        faster = on["tps"] > off["tps"] * 1.05
+        k = int(self.speculate_k)
+        be = guess_ahead.derive_break_even(off["tps"], on["tps"], k, on.get("accepted_frac") or 0.0)
+        self.break_even_frac = be
+        result = {
+            "keep": bool(faster),
+            "quality": quality,
+            "baseline_tps": round(off["tps"], 2),
+            "spec_tps": round(on["tps"], 2),
+            "accepted_frac": on.get("accepted_frac"),
+            "break_even_frac": be,
+            "k": k,
+            "pairing": (pairing or {}).get("id"),
+            "ts": time.time(),
+        }
+        guess_ahead.set_first_load(self.model_dir, dpath, result)
+        if faster:
+            log(f"split speculate: first-load keep "
+                f"baseline={result['baseline_tps']} spec={result['spec_tps']} "
+                f"break_even={be:.3f}")
+            return True
+        log(f"split speculate: first-load not faster "
+            f"({result['spec_tps']} vs {result['baseline_tps']}); disabling draft")
+        self.draft_model = None
+        self.draft_tokenizer = None
+        return False
+
+    def _gate_messages(self, user_text):
+        # Qwen3 thinking models need /no_think for short factual probes.
+        stem = str(self.model_dir.name).lower()
+        if "qwen3" in stem and "/no_think" not in user_text:
+            user_text = user_text + " /no_think"
+        return [{"role": "user", "content": user_text}]
+
+    def _gate_complete(self, user_text, max_tokens=24, use_draft=True):
+        """One-shot non-stream completion for the first-load gate."""
+        saved = self.draft_model
+        if not use_draft:
+            self.draft_model = None
+        try:
+            msgs = self._gate_messages(user_text)
+            if hasattr(self.tokenizer, "apply_chat_template"):
+                prompt = self.tokenizer.apply_chat_template(
+                    msgs, tokenize=True, add_generation_prompt=True)
+            else:
+                prompt = self.tokenizer.encode(user_text)
+            if not isinstance(prompt, list):
+                prompt = list(prompt)
+            key = f"__guess_gate_{int(time.time()*1000)}_{use_draft}"
+            pieces = []
+            import threading as _th
+            cancel = _th.Event()
+            body = {"temperature": 0.0, "max_tokens": max_tokens}
+            for ev in self._run(key, prompt, body, cancel):
+                if ev and ev[0] == "piece":
+                    pieces.append(ev[1] or "")
+            return "".join(pieces)
+        finally:
+            self.draft_model = saved
+
+    def _gate_timed(self, user_text, max_tokens=40, use_draft=True):
+        t0 = time.time()
+        text = self._gate_complete(user_text, max_tokens=max_tokens, use_draft=use_draft)
+        dt = max(time.time() - t0, 1e-6)
+        # Prefer speculate stats when present
+        st = getattr(self, "_last_speculate_stats", {}) or {}
+        # n_gen approximate from text tokens
+        n = max(1, len(self.tokenizer.encode(text)) if text else max_tokens)
+        info = getattr(self, "_last_run_info", {}) or {}
+        n_gen = int(info.get("completion_tokens") or n)
+        tps = n_gen / dt
+        frac = None
+        if info.get("speculate"):
+            frac = info["speculate"].get("accepted_frac")
+        return {"tps": tps, "n_gen": n_gen, "dt": dt, "accepted_frac": frac, "text": text[:60]}
+
     @staticmethod
     def _prompt_lookup_draft(context, ngram_max, num_draft):
         """Draft-free: find longest n-gram match in earlier context; return following tokens.
@@ -899,6 +1068,20 @@ class Engine:
         _ = can_trim_prompt_cache  # kept for rewind path
 
         draft_cache = make_prompt_cache(draft) if use_draft else None
+        remap_d2t = getattr(self, "draft_remap_d2t", None) or {}
+        remap_t2d = getattr(self, "draft_remap_t2d", None) or {}
+        shut = getattr(self, "_active_shutoff", None)
+
+        def _to_draft_ids(ids):
+            if not remap_t2d:
+                return list(ids)
+            return guess_ahead.apply_remap(list(ids), remap_t2d)
+
+        def _to_target_ids(ids):
+            if not remap_d2t:
+                return list(ids)
+            return guess_ahead.apply_remap(list(ids), remap_d2t)
+
         context = list(prompt)  # grows with accepted tokens (for prompt-lookup)
         y = mx.array([prompt[-1]], dtype=mx.uint32)  # target continues from last prompt tok
         prev_tokens = None
@@ -992,6 +1175,12 @@ class Engine:
                 toks = _draft_model_generate(draft_y, num_draft)
                 mx.eval(toks)
                 draft_s += _time.perf_counter() - t0
+                raw = toks.tolist()
+                if not isinstance(raw, list):
+                    raw = [raw]
+                self._last_draft_raw = [int(x) for x in raw]
+                if remap_d2t:
+                    toks = mx.array(_to_target_ids(raw), mx.uint32)
                 return toks, "draft_model"
             draft_s += _time.perf_counter() - t0
             return mx.array([], mx.uint32), "none"
@@ -1000,7 +1189,7 @@ class Engine:
             draft_y = None
             if use_draft:
                 t0 = _time.perf_counter()
-                draft_y = _prefill_draft(mx.array(list(prompt), dtype=mx.uint32))
+                draft_y = _prefill_draft(mx.array(_to_draft_ids(prompt), dtype=mx.uint32))
                 draft_s += _time.perf_counter() - t0
             ntoks = 0
             num_draft = 0
@@ -1012,6 +1201,8 @@ class Engine:
                     if cancel.is_set():
                         raise KeyboardInterrupt("cancelled")
                     num_draft = min(max_tokens - ntoks, num_draft_tokens)
+                    if shut is not None and shut.disabled:
+                        num_draft = 0
                     # gpt-oss RotatingKVCache: only speculate while trim room remains
                     if num_draft > 0 and not self._speculate_trim_room(cache, num_draft + 1):
                         num_draft = 0
@@ -1038,10 +1229,13 @@ class Engine:
                             break
                         y = mx.array([token_list[0]], mx.uint32)
                         if use_draft:
-                            # Advance draft with the accepted bonus token.
-                            draft_y, _ = _step(draft, draft_cache, draft_y if draft_y is not None else y)
+                            # Advance draft with the accepted bonus token (draft-space id).
+                            tid = int(token_list[0])
+                            did = remap_t2d.get(tid, tid) if remap_t2d else tid
+                            yin = draft_y if draft_y is not None else mx.array([did], mx.uint32)
+                            draft_y, _ = _step(draft, draft_cache, yin)
                             mx.eval(draft_y)
-                            draft_y = y
+                            draft_y = mx.array([did], mx.uint32)
                         continue
 
                     if prev_tokens is not None:
@@ -1077,16 +1271,18 @@ class Engine:
                         break
                     y = mx.array([token_list[n]], mx.uint32)
                     if use_draft:
+                        bonus_t = int(token_list[n]) if ntoks <= max_tokens else int(y.tolist()[0])
+                        bonus_d = remap_t2d.get(bonus_t, bonus_t) if remap_t2d else bonus_t
                         if src == "draft_model":
-                            draft_y = y
+                            draft_y = mx.array([bonus_d], mx.uint32)
                             if n == num_draft:
+                                raw = getattr(self, "_last_draft_raw", None) or draft_list
+                                last_d = int(raw[-1]) if raw else bonus_d
                                 draft_y = mx.concatenate(
-                                    [mx.array(draft_list[-1:], mx.uint32), draft_y]
+                                    [mx.array([last_d], mx.uint32), draft_y]
                                 )
                         else:
-                            # Prompt-lookup round: rebuild draft advance for accepted prefix + bonus.
-                            # Rewind happens below; then feed accepted tokens into draft.
-                            draft_y = y  # after rewind of rejected, draft cache trimmed; re-sync below
+                            draft_y = mx.array([bonus_d], mx.uint32)
                     if prev_tokens is not None:
                         prev_tokens = prev_tokens[: -max(num_draft - n, 1)]
                     _rewind(num_draft, n)
@@ -1147,8 +1343,18 @@ class Engine:
             finish = "length"
             n_from_draft = 0
             n_verify_rounds = 0
+            shut = None
+            if self.client is not None and self.draft_model is not None:
+                shut = self._chat_shutoffs.get(key)
+                if shut is None:
+                    shut = guess_ahead.ChatShutoff(self.break_even_frac)
+                    self._chat_shutoffs[key] = shut
+                elif shut.disabled:
+                    shut = shut  # keep disabled
+            self._active_shutoff = shut
             use_spec = self.client is not None and (
-                self.draft_model is not None or int(self.prompt_lookup_n) > 0)
+                (self.draft_model is not None and not (shut and shut.disabled))
+                or int(self.prompt_lookup_n) > 0)
             if use_spec:
                 # Detokenize ourselves (stream_generate path does this inside mlx_lm).
                 detok = self.tokenizer
@@ -1170,6 +1376,11 @@ class Engine:
                         n_from_draft += 1
                     else:
                         n_verify_rounds += 1  # each non-draft yield ends a verify round
+                    if shut is not None:
+                        was = shut.disabled
+                        shut.observe(bool(from_draft))
+                        if shut.disabled and not was:
+                            log(f"split speculate: {shut.reason}")
                     detokenizer.add_token(token)
                     text = detokenizer.last_segment
                     if stops.advance(token):
@@ -1212,6 +1423,7 @@ class Engine:
                     "completion_tokens": n_gen, "finish": finish, "prefill_s": round(t_prefill, 3),
                     "ttft_s": round(ttft or 0, 3), "total_s": round(time.time() - t0, 3),
                     "peak_gb": round(mx.get_peak_memory() / 1e9, 2)}
+            self._last_run_info = info
             if use_spec:
                 st = getattr(self, "_last_speculate_stats", {}) or {}
                 info["speculate"] = {
@@ -1226,6 +1438,7 @@ class Engine:
                     "pl_hits": st.get("pl_hits"),
                     "pl_misses": st.get("pl_misses"),
                     "sources": st.get("source_counts"),
+                    "shutoff": (shut.snapshot() if shut is not None else None),
                 }
             if self.client is not None:
                 st = dict(self.client.stats)
@@ -1899,13 +2112,25 @@ def build_parser():
                          "(default 1 = off; try 2 or 3). Env CARAVAN_MLX_SPLIT_PIPELINE_CHATS")
     _draft_env = os.environ.get("CARAVAN_MLX_SPLIT_DRAFT_MODEL")
     ap.add_argument("--split-draft-model", default=_draft_env or None, metavar="DIR",
-                    help="idea 3: local MLX draft model dir on the lead (same tokenizer family). "
-                         "Unset/off by default. Env CARAVAN_MLX_SPLIT_DRAFT_MODEL")
+                    help="idea 3: local MLX draft model dir on the lead (overrides auto-pair). "
+                         "Env CARAVAN_MLX_SPLIT_DRAFT_MODEL")
+    ap.add_argument("--no-split-draft", action="store_true",
+                    help="idea 3: disable draft auto-pair and ignore --split-draft-model / env")
+    _auto_env = os.environ.get("CARAVAN_MLX_SPLIT_DRAFT_AUTO_DOWNLOAD")
+    _auto_default = bool(_auto_env and _auto_env.strip().lower() in ("1", "true", "yes", "on", "y"))
+    ap.add_argument("--split-draft-auto-download", action="store_true", default=_auto_default,
+                    help="idea 3: download a matched guesser without prompting "
+                         "(non-interactive default is off). Env CARAVAN_MLX_SPLIT_DRAFT_AUTO_DOWNLOAD=1")
+    ap.add_argument("--split-draft-skip-first-load", action="store_true",
+                    help="idea 3: skip the first-load quality/speed gate (tests / already trusted)")
     _sk_env = os.environ.get("CARAVAN_MLX_SPLIT_SPECULATE_K")
-    _sk_default = int(_sk_env) if (_sk_env and _sk_env.strip().isdigit()) else 4
+    _sk_explicit = bool(_sk_env and _sk_env.strip().isdigit())
+    _sk_default = int(_sk_env) if _sk_explicit else 4
     ap.add_argument("--split-speculate-k", type=int, default=_sk_default, metavar="K",
-                    help="idea 3: draft tokens per verify round (default 4). "
+                    help="idea 3: draft tokens per verify round (default: pairing table, else 4). "
                          "Env CARAVAN_MLX_SPLIT_SPECULATE_K")
+    # Stash whether k came from env; CLI presence refined after parse.
+    ap.set_defaults(split_speculate_k_explicit=_sk_explicit)
     _pl_env = os.environ.get("CARAVAN_MLX_SPLIT_PROMPT_LOOKUP")
     _pl_default = int(_pl_env) if (_pl_env and _pl_env.strip().isdigit()) else 0
     ap.add_argument("--split-prompt-lookup", type=int, default=_pl_default, metavar="N",
@@ -1969,7 +2194,10 @@ def front_main(args):
 
 
 def main(argv=None):
-    args = build_parser().parse_args(argv)
+    ap = build_parser()
+    args = ap.parse_args(argv)
+    if any(a == '--split-speculate-k' or a.startswith('--split-speculate-k=') for a in (argv or [])):
+        args.split_speculate_k_explicit = True
     # Internal role names stay "head"/"front"; "lead"/"packer" are the user-facing ones.
     args.split_role = {"lead": "head", "packer": "front"}.get(args.split_role, args.split_role)
     if args.split_role == "front":

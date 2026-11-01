@@ -1,12 +1,3 @@
-## Unreleased
-
-### Added
-- Idea 3 prompt-lookup (`--split-prompt-lookup`) + draft prefill fix;
-  Gemma-3-270m draft path; GPT-OSS rotating-KV speculate guard.
-- Idea 3 guess-ahead prototype: `--split-draft-model`, `--split-speculate-k`
-  (off by default). Packer `trim` for speculative reject. See BENCHMARKS.
-
-
 # Changelog
 
 What changed in each Caravan version, newest first. Numbers come from
@@ -16,6 +7,19 @@ What changed in each Caravan version, newest first. Numbers come from
 "4k" and "16k" are chat lengths in tokens (a token is about ¾ of a word).
 "Reading" is how fast a prompt is taken in, "writing" is how fast the
 reply comes out.
+
+## Unreleased
+
+### Added
+- Idea 3 guess-ahead auto-pair: `agent/guessers.json`, vocab match/remap,
+  ask-once download (lead only), first-load quality/speed gate (cached),
+  mid-chat shut-off below break-even. Flags `--no-split-draft`,
+  `--split-draft-auto-download`, `--split-draft-skip-first-load`.
+  Docs: CONFIGURATION, MLX-SPLIT, ROADMAP idea 3, METHODOLOGY.md.
+- Idea 3 prompt-lookup (`--split-prompt-lookup`) + draft prefill fix;
+  Gemma-3-270m draft path; GPT-OSS rotating-KV speculate guard.
+- Idea 3 guess-ahead prototype: `--split-draft-model`, `--split-speculate-k`
+  (off by default). Packer `trim` for speculative reject. See BENCHMARKS.
 
 ## v3.4 (tag `v3.4`, Nov 1 2026)
 
