@@ -1,0 +1,19 @@
+{
+  "_stills": [2.5, 12.0, 22.0, 32.0, 42.0, 52.0, 60.0],
+  "_day": "Day 6",
+  "WRITE": {
+    "one": [44, 37, 34],
+    "two": [73, 61, 54],
+    "three": [71, 60, 53]
+  },
+  "WAIT_THREE": {
+    "before": [3.5, 4.2, 4.7],
+    "after": [0.6, 0.6, 0.6]
+  },
+  "TAKE": [
+    ["ON", "Two Macs, one model", "each Mini holds half the layers; a chat passes back and forth"],
+    ["ON", "Two chats ≈ 1.6× more writing", "Qwen3 44→73, Gemma 37→61, GPT-OSS 34→54 words/sec across chats"],
+    ["ONE", "A fair turn for chat three", "used to wait ~4 seconds; now about 0.6. A third chat doesn't raise the total much more"],
+    ["MUTED", "One chat isn't faster", "this helps when several people (or agents) chat at once. Quality checks passed"]
+  ]
+}
