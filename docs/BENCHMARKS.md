@@ -653,6 +653,54 @@ rejected (writing ~17.6 tok/s); not in the table.
   [MLX-SPLIT.md](MLX-SPLIT.md) and ROADMAP (Beating the turn-taking).
 
 
+## Idea 1: several chats at once (Oct 31, MLX)
+
+Branch tip `be19fe1` (after tag `v3.2` / `cb61970`). Test ports 8194 /
+5560. Low Power Mode off. Keepalive on. Idea-5 cuts for the pipeline
+runs (Gemma K=16, GPT-OSS K=13, Qwen3 K=24). Client:
+`bench/v3/pipeline_bench.py` (two waves of concurrent tg128; medians of
+2). Flag-off check used `split_client.py bench` with even cuts.
+
+### Flag off (single chat, even cut) — matches keepalive baseline
+
+| model | writing (tok/s) | reading 512 / 4k | quality | peak GB (lead) |
+|---|---|---|---|---|
+| Gemma 4 26B | **38.5** | 428.1 / 398.2 | 3/3 | 9.27 |
+| GPT-OSS 20B | **34.3** | 452.2 / 443.9 | 3/3 | 7.00 |
+| Qwen3 30B | **45.8** | 462.8 / 429.2 | 3/3 | 10.29 |
+
+Prior keepalive-on medians were 38.3 / 34.1 / 45.6 — within day noise.
+
+### Pipeline on (`--split-pipeline-chats 3`), idea-5 cuts
+
+Medians of 2 waves. **Wall aggregate** = decode tokens across chats /
+(wave wall − min prefill). **Sum** = sum of per-chat write tok/s
+(optimistic if fully overlapped).
+
+| model | N | per-chat writing (tok/s) | wall aggregate | sum of per-chat | peak GB | quality |
+|---|---|---|---|---|---|---|
+| Gemma 4 | 1 | 37.6 | 37.4 | 37.6 | 6.95 | 3/3 |
+| | 2 | 33.3 / 33.2 | **61.0** | 66.5 | 8.21 | 3/3 |
+| | 3 | 33.3 / 33.3 / 37.4 | 48.4 | 104.0 | 8.43 | 3/3 |
+| GPT-OSS | 1 | 33.8 | 33.5 | 33.8 | 5.70 | 3/3 |
+| | 2 | 29.1 / 29.1 | **54.0** | 58.2 | 6.37 | 3/3 |
+| | 3 | ~29 / ~29 / ~34 | 43.5 | 92.2 | 6.46 | 3/3 |
+| Qwen3 | 1 | 44.9 | 44.4 | 44.9 | 8.70 | 3/3 |
+| | 2 | 40.2 / 40.1 | **73.0** | 80.3 | 9.60 | 3/3 |
+| | 3 | ~40 / ~40 / ~45 | 57.6 | 124.9 | 10.0 | 3/3 |
+
+**What it shows.**
+
+- **Two chats work.** Wall aggregate ≈1.6× one pipeline chat (Gemma
+  37.4→61.0, GPT-OSS 33.5→54.0, Qwen 44.4→73.0). Per-chat rate falls
+  (shared halves) but both Minis stay busier.
+- **Three chats:** sum of per-chat rates rises again, but wall aggregate
+  drops vs N=2 because the current admit/round-robin leaves one chat with
+  ~4 s TTFT. Scheduler follow-up before calling N=3 a win on wall time.
+- Pipeline N=1 is a few percent under flag-off even-cut (custom decode
+  loop vs `stream_generate`); use flag off for single-chat compares.
+- Quality 3/3 on every run. Workers stopped; ports 8194/5560 free after.
+
 ## Not measured yet
 
 - The two-Mac split with the v1+ settings (flash attention, automatic
@@ -662,9 +710,12 @@ rejected (writing ~17.6 tok/s); not in the table.
 - exo on the same two Macs (exo stays paused), so there are no comparable
   exo two-Mac numbers.
 - The v3 split through the proxy under load (only smoke-tested).
-- Overlapping the two halves (not built yet).
-- Batching on one Mac (v2.1) or in the split (v3 with several chats at
-  once). The cable-timing predictions assume a step costs the same at
-  batch 4 or 16 as at batch 1.
+- Overlapping the two halves for a **single** chat (still serial per chat;
+  idea 1 overlaps across chats; idea 3 is guess-ahead).
+- Batching weights inside one step on one Mac (v2.1). Idea 1 covers
+  several chats on the split; cable-timing predictions for idea 4 still
+  assume a step costs the same at batch 4 or 16 as at batch 1.
+- Proxy-path concurrency for idea 1 (bench hit the lead directly; proxy
+  FIFO still one-at-a-time for MLX).
 - A GGUF split where the packer loads its own part from its own disk
   (stage 2; not built).

@@ -8,7 +8,24 @@ What changed in each Caravan version, newest first. Numbers come from
 "Reading" is how fast a prompt is taken in, "writing" is how fast the
 reply comes out.
 
-## Unreleased (after v3.1)
+## Unreleased (after v3.2)
+
+- **Idea 1: several chats at once (off by default).** `--split-pipeline-chats N`
+  (env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`) overlaps Packer 1's work for chat B
+  with the lead's layers for chat A when N≥2. Default N=1 is unchanged.
+  With idea-5 cuts + keepalive (Oct 31 night): two chats ≈1.6× aggregate
+  writing vs one; three chats raise the sum of per-chat rates but wall
+  aggregate drops (scheduler leaves one chat waiting ~4 s). Flag-off
+  single-chat still matches keepalive baseline (38.5 / 34.3 / 45.8 tok/s).
+  Bench: `bench/v3/pipeline_bench.py`. Details:
+  [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31-mlx).
+
+## v3.2 (tag `v3.2`, `cb61970`, Oct 31 2026)
+
+Branch `caravan-v3-mlx-split`. GPU keepalive default on (writing +28–50%)
+and Day 5 lab video LAB-2026-10-31-05. Not merged to `main`.
+
+## Notes that shipped in v3.2 (were unreleased after v3.1)
 
 On branch `caravan-v3-mlx-split`.
 

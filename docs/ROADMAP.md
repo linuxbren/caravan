@@ -4,9 +4,8 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-10-31 evening (GPU keepalive measured and on by
-default on branch `caravan-v3-mlx-split`; v3 tagged, v3.1 on the
-branch). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
+*Last updated 2026-10-31 night (idea 1 pipeline prototype behind
+`--split-pipeline-chats`; v3.2 tagged for keepalive). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -288,11 +287,18 @@ That's part of why a split chat writes 27–40% slower than one Mini
 (the rest is the per-pass overhead in the parked table below). Ideas,
 simplest first:
 
-1. **Run several chats at once.** While the lead finishes chat A's token,
-   Packer 1 already works on chat B's, and they swap. Both Minis stay
-   busy, so total throughput across chats nearly doubles; a single chat
-   is no faster. Needs the worker to keep two chats in flight and the
-   proxy to stop running MLX requests strictly one at a time.
+1. **Run several chats at once.** *Prototype Oct 31 night (`be19fe1`).*
+   While the lead finishes chat A's token, Packer 1 already works on chat
+   B's, and they swap. Both Minis stay busy, so total throughput across
+   chats rises; a single chat is no faster. Flag
+   `--split-pipeline-chats N` (default 1 = off). Lead worker multiplexes
+   up to N sessions on the MLX thread; packer `fwd` takes a session key.
+   Bench talks straight to the lead (`bench/v3/pipeline_bench.py`); proxy
+   FIFO still serializes MLX when the proxy is in the path (not required
+   for this measurement). With idea-5 cuts + keepalive: two chats ≈1.6×
+   aggregate writing (wall); three chats need a better admit/schedule
+   (one chat still waits ~4 s TTFT). Details:
+   [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31-mlx).
 2. **Chunked reading.** Cut a long prompt into chunks and read them like
    an assembly line: Packer 1 reads chunk 2 while the lead reads chunk 1.
    Faster long-prompt reads (time to first token); writing is unchanged.

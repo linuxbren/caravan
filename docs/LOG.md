@@ -2643,6 +2643,25 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
   rose and lead peak fell as K grew. Flag works; no code changes.
   Tables in BENCHMARKS.md; verdict in ROADMAP idea 5.
 
+
+## 2026-10-31 night: Idea 1 several chats at once (pipeline)
+
+- **Goal:** Keep lead and Packer 1 both busy by overlapping chat B's
+  packer half with chat A's lead half (`--split-pipeline-chats N`,
+  default 1 = off).
+- **Code:** `3d3e98a` + fix `be19fe1` on `caravan-v3-mlx-split`. Packer
+  `fwd` takes `key`; lead `begin_packer`/`finish_packer` + multiplexed
+  decode on the MLX thread. Bench: `bench/v3/pipeline_bench.py`.
+- **Flag-off baseline (even cut, keepalive on):** writing 38.5 / 34.3 /
+  45.8 tok/s (Gemma / GPT-OSS / Qwen) — matches prior keepalive 38.3 /
+  34.1 / 45.6. Quality 3/3.
+- **Pipeline (idea-5 cuts, keepalive on, medians of 2):** two chats wall
+  aggregate ≈1.6× (Gemma 61.0, GPT-OSS 54.0, Qwen 73.0). Three chats
+  raise the sum of per-chat rates but wall aggregate falls (one chat
+  ~4 s TTFT). Quality 3/3. Ports cleaned after.
+- **Tag:** `v3.2` at `cb61970` (keepalive + Day 5 video) pushed earlier
+  the same evening; idea 1 commits are local until Brenden says push.
+
 ## 2026-10-31: GPU keepalive while waiting on the peer
 
 - Found the ~5–6 ms/half/token "split tax": after each Mini sits idle
