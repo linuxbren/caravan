@@ -361,6 +361,31 @@ class FrontState:
                         return {"error": "fwd before prepare"}, b""
                     cache = self.cur.cache
             return self.forward(toks, cache)
+        if op == "trim":
+            # Idea 3: after speculative reject, trim KV by n tokens (both halves).
+            n = int(h.get("n") or 0)
+            if n <= 0:
+                return {"trimmed": 0}, b""
+            if h.get("ctx") == "scratch":
+                cache = self.scratch
+            else:
+                key = h.get("key")
+                if key:
+                    s = st.sessions.get(key)
+                    if s is None:
+                        return {"error": f"trim: unknown session {key!r}"}, b""
+                    cache = s.cache
+                else:
+                    if self.cur is None:
+                        return {"error": "trim before prepare"}, b""
+                    cache = self.cur.cache
+            if cache is None:
+                return {"error": "trim: no cache"}, b""
+            from mlx_lm.models.cache import can_trim_prompt_cache, trim_prompt_cache
+            if not can_trim_prompt_cache(cache):
+                return {"error": "trim: packer cache not trimmable"}, b""
+            trim_prompt_cache(cache, n)
+            return {"trimmed": n}, b""
         if op == "end_scratch":
             self.scratch = None
             st.ops.release()
@@ -834,3 +859,18 @@ class SplitModel:
     def end_scratch(self):
         self.client.call("end_scratch")
         self.ctx = "session"
+
+    def trim_caches(self, n: int, lead_cache):
+        """Trim lead + packer KV by n tokens (idea 3 speculative reject)."""
+        if n <= 0:
+            return
+        from mlx_lm.models.cache import can_trim_prompt_cache, trim_prompt_cache
+        if not can_trim_prompt_cache(lead_cache):
+            raise FrontError("lead cache not trimmable (need for speculative decoding)")
+        trim_prompt_cache(lead_cache, n)
+        kw = {"n": int(n), "ctx": self.ctx}
+        if self.ctx != "scratch" and self.session_key:
+            kw["key"] = self.session_key
+        rh = self.client.call("trim", **kw)[0]
+        if rh.get("trimmed") != int(n):
+            raise FrontError(f"packer trim mismatch: {rh!r}")

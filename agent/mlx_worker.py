@@ -588,6 +588,11 @@ class Engine:
         self.pipeline_chats = int(getattr(args, "split_pipeline_chats", 1) or 1)
         if self.pipeline_chats < 1:
             self.pipeline_chats = 1
+        self.draft_model = None
+        self.draft_tokenizer = None
+        self.speculate_k = int(getattr(args, "split_speculate_k", 4) or 4)
+        if self.speculate_k < 1:
+            self.speculate_k = 1
         self.model_dir = Path(args.model).expanduser().resolve()
         ready = queue.Queue()
         self.thread = threading.Thread(target=self._main, args=(ready,), name="mlx", daemon=True)
@@ -628,6 +633,20 @@ class Engine:
                                    f"({S.stage_title('head', self.stage.range, self.stage.n_layers)})")
             log(f"split lead: {S.stage_title('head', self.stage.range, self.stage.n_layers)} here, "
                 f"{S.title_from_label(hello.get('stage'))} at {args.split_peer}")
+            draft = getattr(args, "split_draft_model", None)
+            if draft:
+                dpath = Path(draft).expanduser().resolve()
+                if not dpath.is_dir():
+                    raise FileNotFoundError(f"split draft model not found: {dpath}")
+                self.draft_model, self.draft_tokenizer = load(str(dpath))
+                # Same tokenizer family: vocab size must match (mlx_lm speculative requirement).
+                tv = getattr(self.tokenizer, "vocab_size", None) or len(self.tokenizer)
+                dv = getattr(self.draft_tokenizer, "vocab_size", None) or len(self.draft_tokenizer)
+                if int(tv) != int(dv):
+                    raise RuntimeError(
+                        f"draft tokenizer vocab {dv} != target {tv}; need same tokenizer family")
+                log(f"split speculate: draft {dpath.name}, k={self.speculate_k} "
+                    f"(idea 3; off unless --split-draft-model)")
         else:
             self.model, self.tokenizer = load(str(self.model_dir))
         cfg = json.loads((self.model_dir / "config.json").read_text())
@@ -798,6 +817,129 @@ class Engine:
         return list(self.tokenizer.encode(p if isinstance(p, str) else ""))
 
     # -- generation (mlx thread) ------------------------------------------
+    def _speculate_tokens(self, prompt_tail, cache, max_tokens, sampler, procs, stream, cancel):
+        """Idea 3: draft on lead; one Thunderbolt round trip verifies k drafts.
+
+        Port of mlx_lm.generate.speculative_generate_step with packer KV trim
+        via SplitModel.trim_caches. Yields (token_id:int, from_draft:bool).
+        """
+        import mlx.core as mx
+        from mlx_lm.models.cache import make_prompt_cache, can_trim_prompt_cache, trim_prompt_cache
+
+        model, draft = self.model, self.draft_model
+        num_draft_tokens = int(self.speculate_k)
+        if not hasattr(model, "trim_caches"):
+            raise RuntimeError("idea 3 requires SplitModel.trim_caches")
+        if not can_trim_prompt_cache(cache):
+            raise RuntimeError("idea 3 needs a trimmable lead KV cache")
+
+        draft_cache = make_prompt_cache(draft)
+        y = mx.array(list(prompt_tail), dtype=mx.uint32)
+        prev_tokens = None
+        sampler = sampler
+
+        def _process_and_sample(tokens, logits):
+            nonlocal prev_tokens
+            if procs:
+                for processor in procs:
+                    logits = processor(tokens, logits)
+            logprobs = logits - mx.logsumexp(logits, axis=-1, keepdims=True)
+            sampled = sampler(logprobs)
+            return sampled, logprobs
+
+        def _step(m, c, y_in, n_predict=1):
+            nonlocal prev_tokens
+            logits = m(y_in[None], cache=c)
+            logits = logits[:, -n_predict:, :]
+            if procs:
+                out_y, out_logprobs = [], []
+                yy = y_in
+                if n_predict > 1:
+                    yy = yy[: -(n_predict - 1)]
+                for i in range(n_predict):
+                    prev_tokens = (
+                        mx.concatenate([prev_tokens, yy]) if prev_tokens is not None else yy
+                    )
+                    tok, logprobs = _process_and_sample(prev_tokens, logits[:, i, :])
+                    out_y.append(tok)
+                    out_logprobs.append(logprobs)
+                    yy = tok
+                return mx.concatenate(out_y, axis=0), mx.concatenate(out_logprobs, axis=0)
+            return _process_and_sample(None, logits.squeeze(0))
+
+        def _prefill_draft(y_in):
+            while y_in.size > 1:
+                n_to = min(self.prefill_step, int(y_in.size) - 1)
+                draft(y_in[:n_to][None], cache=draft_cache)
+                mx.eval([c.state for c in draft_cache])
+                y_in = y_in[n_to:]
+                mx.clear_cache()
+            return y_in
+
+        def _rewind(num_draft, num_accept):
+            # Lead + packer together; draft cache local.
+            model.trim_caches(num_draft - num_accept, cache)
+            trim_prompt_cache(draft_cache, max(num_draft - num_accept - 1, 0))
+
+        def _draft_generate(y_in, num_draft):
+            if num_draft == 0:
+                return mx.array([], mx.uint32)
+            ys = []
+            for _ in range(num_draft):
+                y_in, _ = _step(draft, draft_cache, y_in)
+                mx.async_eval(y_in)
+                ys.append(y_in)
+            return mx.concatenate(ys)
+
+        with mx.stream(stream):
+            draft_y = _prefill_draft(y)
+            # Target prefill already done in _run; y is prompt[-1:].
+            ntoks = 0
+            num_draft = 0
+            n = 0
+            try:
+                while True:
+                    if cancel.is_set():
+                        raise KeyboardInterrupt("cancelled")
+                    num_draft = min(max_tokens - ntoks, num_draft_tokens)
+                    draft_tokens = _draft_generate(draft_y, num_draft)
+                    if prev_tokens is not None:
+                        prev_tokens = prev_tokens[: prev_tokens.size - y.size - num_draft + 1]
+                    y = mx.concatenate([y, draft_tokens])
+                    tokens, logprobs = _step(model, cache, y, num_draft + 1)
+                    mx.eval(tokens, draft_tokens)
+                    draft_list = draft_tokens.tolist()
+                    token_list = tokens.tolist()
+                    if not isinstance(draft_list, list):
+                        draft_list = [draft_list]
+                    if not isinstance(token_list, list):
+                        token_list = [token_list]
+                    n = 0
+                    while n < num_draft:
+                        if token_list[n] != draft_list[n]:
+                            break
+                        n += 1
+                        ntoks += 1
+                        yield int(token_list[n - 1]), True
+                        if ntoks == max_tokens:
+                            break
+                    if ntoks < max_tokens:
+                        ntoks += 1
+                        yield int(token_list[n]), False
+                    if ntoks == max_tokens:
+                        break
+                    y = mx.array([token_list[n]], mx.uint32)
+                    draft_y = y
+                    if n == num_draft:
+                        draft_y = mx.concatenate(
+                            [mx.array(draft_list[-1:], mx.uint32), draft_y]
+                        )
+                    if prev_tokens is not None:
+                        prev_tokens = prev_tokens[: -max(num_draft - n, 1)]
+                    _rewind(num_draft, n)
+            finally:
+                _rewind(num_draft, n)
+
     def _run(self, key, prompt, body, cancel):
         mx, G = self.mx, self.G
         t0 = time.time()
@@ -838,30 +980,79 @@ class Engine:
             stops = G.make_stop_sequences(self.tokenizer, stop_words).matcher()
             ttft = None
             finish = "length"
-            for gen in G.stream_generate(self.model, self.tokenizer, prompt[-1:],
-                                         max_tokens=max_tokens, sampler=sampler,
-                                         logits_processors=procs, prompt_cache=s.cache,
-                                         stream=self.stream):
-                if cancel.is_set():
-                    raise KeyboardInterrupt("cancelled")
-                if ttft is None:
-                    ttft = time.time() - t0
-                if gen.finish_reason is None or gen.finish_reason == "length":
+            n_from_draft = 0
+            n_verify_rounds = 0
+            use_spec = self.draft_model is not None and self.client is not None
+            if use_spec:
+                # Detokenize ourselves (stream_generate path does this inside mlx_lm).
+                detok = self.tokenizer
+                if hasattr(detok, "detokenizer"):
+                    detokenizer = detok.detokenizer
+                else:
+                    from mlx_lm.tokenizer_utils import TokenizerWrapper
+                    detokenizer = TokenizerWrapper(detok).detokenizer
+                detokenizer.reset()
+                spec_draft_attempts = 0
+                for token, from_draft in self._speculate_tokens(
+                        prompt[-1:], s.cache, max_tokens, sampler, procs, self.stream, cancel):
+                    if cancel.is_set():
+                        raise KeyboardInterrupt("cancelled")
+                    if ttft is None:
+                        ttft = time.time() - t0
                     n_gen += 1
-                if gen.finish_reason is not None:
-                    finish = gen.finish_reason
-                if stops.advance(gen.token):
-                    yield ("piece", gen.text, True)
-                    finish = "stop"
-                    break
-                yield ("piece", gen.text, gen.finish_reason is not None)
-                if gen.finish_reason is not None:
-                    break
+                    if from_draft:
+                        n_from_draft += 1
+                    else:
+                        n_verify_rounds += 1  # each non-draft yield ends a verify round
+                    detokenizer.add_token(token)
+                    text = detokenizer.last_segment
+                    if stops.advance(token):
+                        yield ("piece", text, True)
+                        finish = "stop"
+                        break
+                    eos = getattr(self.tokenizer, "eos_token_ids", None) or []
+                    if isinstance(eos, int):
+                        eos = [eos]
+                    if token in eos:
+                        yield ("piece", text, True)
+                        finish = "stop"
+                        break
+                    yield ("piece", text, False)
+                else:
+                    finish = "length"
+                detokenizer.finalize()
+            else:
+                for gen in G.stream_generate(self.model, self.tokenizer, prompt[-1:],
+                                             max_tokens=max_tokens, sampler=sampler,
+                                             logits_processors=procs, prompt_cache=s.cache,
+                                             stream=self.stream):
+                    if cancel.is_set():
+                        raise KeyboardInterrupt("cancelled")
+                    if ttft is None:
+                        ttft = time.time() - t0
+                    if gen.finish_reason is None or gen.finish_reason == "length":
+                        n_gen += 1
+                    if gen.finish_reason is not None:
+                        finish = gen.finish_reason
+                    if stops.advance(gen.token):
+                        yield ("piece", gen.text, True)
+                        finish = "stop"
+                        break
+                    yield ("piece", gen.text, gen.finish_reason is not None)
+                    if gen.finish_reason is not None:
+                        break
             completed = True
             info = {"prompt_tokens": len(prompt), "cached_tokens": n_reused, "how": how,
                     "completion_tokens": n_gen, "finish": finish, "prefill_s": round(t_prefill, 3),
                     "ttft_s": round(ttft or 0, 3), "total_s": round(time.time() - t0, 3),
                     "peak_gb": round(mx.get_peak_memory() / 1e9, 2)}
+            if use_spec:
+                info["speculate"] = {
+                    "k": self.speculate_k,
+                    "from_draft": n_from_draft,
+                    "accepted_frac": round(n_from_draft / max(n_gen, 1), 3),
+                    "verify_rounds": n_verify_rounds,
+                }
             if self.client is not None:
                 st = dict(self.client.stats)
                 info["split"] = {"calls": st["calls"], "mb_out": round(st["bytes_out"] / 1e6, 2),
@@ -1459,7 +1650,7 @@ def make_handler(engine: "Engine"):
             usage = {"prompt_tokens": info["prompt_tokens"], "completion_tokens": info["completion_tokens"],
                      "total_tokens": info["prompt_tokens"] + info["completion_tokens"],
                      "prompt_tokens_details": {"cached_tokens": info["cached_tokens"]},
-                     "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb", "split")
+                     "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb", "split", "speculate")
                                  if k in info}}
             try:
                 if stream:
@@ -1532,6 +1723,15 @@ def build_parser():
     ap.add_argument("--split-pipeline-chats", type=int, default=_pipe_default, metavar="N",
                     help="idea 1: overlap packer/lead across up to N concurrent split chats "
                          "(default 1 = off; try 2 or 3). Env CARAVAN_MLX_SPLIT_PIPELINE_CHATS")
+    _draft_env = os.environ.get("CARAVAN_MLX_SPLIT_DRAFT_MODEL")
+    ap.add_argument("--split-draft-model", default=_draft_env or None, metavar="DIR",
+                    help="idea 3: local MLX draft model dir on the lead (same tokenizer family). "
+                         "Unset/off by default. Env CARAVAN_MLX_SPLIT_DRAFT_MODEL")
+    _sk_env = os.environ.get("CARAVAN_MLX_SPLIT_SPECULATE_K")
+    _sk_default = int(_sk_env) if (_sk_env and _sk_env.strip().isdigit()) else 4
+    ap.add_argument("--split-speculate-k", type=int, default=_sk_default, metavar="K",
+                    help="idea 3: draft tokens per verify round (default 4). "
+                         "Env CARAVAN_MLX_SPLIT_SPECULATE_K")
     return ap
 
 

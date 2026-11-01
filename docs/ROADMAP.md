@@ -5,7 +5,7 @@ Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
 *Last updated 2026-11-01 (idea 1 + N=3 stall fix shipped as v3.3; Day 6
-video v12 / techie-friend cut as v3.4; next is idea 3 guess-ahead). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
+video v12 / techie-friend cut as v3.4; idea 3 guess-ahead prototype). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -302,13 +302,20 @@ simplest first:
 2. **Chunked reading.** Cut a long prompt into chunks and read them like
    an assembly line: Packer 1 reads chunk 2 while the lead reads chunk 1.
    Faster long-prompt reads (time to first token); writing is unchanged.
-3. **Guess ahead (speculative decoding).** A small draft model on the
-   lead guesses the next few tokens; the string then checks all of them
-   in one pass (Packer 1 then the lead), keeping the ones that match.
-   One round trip can yield several tokens, so it also hides the per-pass
-   overhead. Output is identical to normal decoding. Needs a draft model
-   that shares the tokenizer (for example a small Qwen3 for Qwen3 30B) and
-   memory for it on the lead.
+3. **Guess ahead (speculative decoding).** *Prototype Nov 1 (off by
+   default).* A small draft model on the lead guesses the next few tokens;
+   the string then checks all of them in one pass (Packer 1 then the lead),
+   keeping the ones that match. One round trip can yield several tokens, so
+   it also hides the per-pass overhead. Output is identical to normal
+   decoding. Flags: `--split-draft-model DIR` /
+   `CARAVAN_MLX_SPLIT_DRAFT_MODEL`, `--split-speculate-k K` (default 4) /
+   `CARAVAN_MLX_SPLIT_SPECULATE_K`. Packer KV trim via a new `trim` op.
+   Bench (4-bit, keepalive on, LPM off, medians of 2, quality 3/3): Qwen3
+   30B + Qwen3-0.6B-4bit draft (~335 MB) peaks at **k=3 → 57.4 tok/s** vs
+   45.9 baseline (~+25%); Gemma 4 26B + gemma-4-E2B-it-4bit (~3.3 GB) is
+   slower than baseline at every k (draft too heavy / acceptance ~0.48–0.59);
+   GPT-OSS has no small same-family draft on mlx-community. Details:
+   [BENCHMARKS.md](BENCHMARKS.md#idea-3-guess-ahead-speculative-decoding-nov-1-mlx).
 4. **Split each layer across both Minis (tensor parallel).** *Brenden's
    preferred direction to investigate.* Both Minis work on every layer at
    the same time instead of taking turns, each holding half of every

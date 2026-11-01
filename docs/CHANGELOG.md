@@ -1,3 +1,10 @@
+## Unreleased
+
+### Added
+- Idea 3 guess-ahead prototype: `--split-draft-model`, `--split-speculate-k`
+  (off by default). Packer `trim` for speculative reject. See BENCHMARKS.
+
+
 # Changelog
 
 What changed in each Caravan version, newest first. Numbers come from

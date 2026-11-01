@@ -1,3 +1,14 @@
+## 2026-11-01: idea 3 guess-ahead (speculative decoding) prototype
+
+- Off-by-default `--split-draft-model` / `--split-speculate-k` on the lead;
+  packer `trim` op + `SplitModel.trim_caches`. Custom loop (mlx_lm-style)
+  because stock speculative assumes a single-process cache.
+- Drafts on EXO1 only: Qwen3-0.6B-4bit (335 MB), gemma-4-E2B-it-4bit (3.3 GB).
+- Bench vs keepalive 4-bit baseline (LPM off, test ports, medians of 2):
+  Qwen **45.9 → 57.4 tok/s at k=3** (~+25%), quality 3/3; Gemma slower at
+  every k with E2B draft; GPT-OSS no small same-family draft.
+- Commit local only (no push). Workers stopped after.
+
 # Log
 
 *Naming note: entries written before 2026-10-31's rename say "head" for

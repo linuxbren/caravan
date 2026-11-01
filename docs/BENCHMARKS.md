@@ -709,6 +709,68 @@ stopped; ports free after.
 - Pipeline N=1 is a few percent under flag-off even-cut (custom decode
   loop vs `stream_generate`); use flag off for single-chat compares.
 
+
+
+## Idea 3: guess-ahead (speculative decoding) (Nov 1, MLX)
+
+Branch tip after v3.4. Off by default: `--split-draft-model DIR` and
+`--split-speculate-k K` (or `CARAVAN_MLX_SPLIT_DRAFT_MODEL` /
+`CARAVAN_MLX_SPLIT_SPECULATE_K`). Draft runs on the lead only; each verify
+is one Packer 1 + lead multi-token forward (one Thunderbolt round trip for
+up to k drafts + bonus). Rejected tails trim both KV caches (`trim` op).
+Test ports 8194 / 5560. Low Power Mode off. Keepalive on. Even cuts.
+Client: `bench/v3/speculate_bench.py` (warm + tg128 ×2 + quality 3/3).
+Raw JSON on EXO1 under `~/.caravan/bench-2026-11-01/speculate/`. Medians
+of 2. Same writing metric as `split_client.py`
+(`(completion_tokens-1)/(total_s-ttft_s)`).
+
+**Drafts used (lead disk only):**
+
+| target | draft | on-disk size | notes |
+|---|---|---:|---|
+| Qwen3 30B-A3B-4bit | `mlx-community/Qwen3-0.6B-4bit` | 335 MB | vocab match 151643 |
+| Gemma 4 26B-A4B-it-4bit | `mlx-community/gemma-4-E2B-it-4bit` | 3.3 GB | vocab match 262144; draft ~half a lead half |
+| GPT-OSS 20B | — | — | **no suitable small same-family draft** on mlx-community (only 20B/120B quants) |
+
+**Qwen3 30B-A3B-4bit** (target from `~/.exo/models/...`; draft
+`~/.caravan/mlx-models/drafts/Qwen3-0.6B-4bit`)
+
+| k | writing (tok/s) | accepted_frac (from_draft/n_gen) | verify_rounds / 128 | peak GB (lead) | quality |
+|---|---:|---:|---:|---:|---|
+| off (baseline) | **45.9** | — | — | 8.68–8.69 | 3/3 |
+| 2 | **57.1** | 0.656 | 44 | 9.01–9.02 | 3/3 |
+| 3 | **57.4** | 0.734 | 34 | 9.01–9.02 | 3/3 |
+| 4 | 56.3 | 0.781 | 28 | 9.01–9.02 | 3/3 |
+| 5 | 55.1 | 0.812 | 24 | 9.01–9.02 | 3/3 |
+| 6 | 54.0 | 0.836 | 21 | 9.01–9.02 | 3/3 |
+
+Baseline matches the keepalive flag-off table (45.7). Best single-chat
+gain ≈ **+25% at k=3**. Higher k raises acceptance but draft+verify cost
+dominates after k=3 on this draft.
+
+**Gemma 4 26B-A4B-it-4bit** (target `~/.exo/models/...`; draft
+`gemma-4-E2B-it-4bit` 3.3 GB)
+
+| k | writing (tok/s) | accepted_frac | verify_rounds / 128 | peak GB (lead) | quality |
+|---|---:|---:|---:|---:|---|
+| off (baseline) | **38.4 / 38.5** | — | — | 7.39 | 3/3 |
+| 2 | 25.9 / 26.5 | 0.484 | 66 | 9.99–10.0 | 3/3 |
+| 3 | 22.0 | 0.539 | 59 | 9.99–10.0 | 3/3 |
+| 4 | 18.5 | 0.562 | 56 | 9.99–10.0 | 3/3 |
+| 5 | 16.3 | 0.586 | 53 | 9.99–10.0 | 3/3 |
+| 6 | 14.2 | 0.594 | 52 | 9.99–10.0 | 3/3 |
+
+Baseline matches keepalive (38.1). Speculative is **slower** at every k:
+E2B draft is heavy on the lead and acceptance stays mid (~0.5). Needs a
+much smaller same-tokenizer Gemma draft (not found / not downloaded).
+
+**GPT-OSS 20B:** skipped — no small same-family draft on mlx-community.
+
+**8-bit side note (not the keepalive baseline):** the same Qwen code path
+on 8-bit was ~27 tok/s without draft and ~35 with k=4 (still below the
+4-bit baseline); peak ~16.6 GB. Idea 3 numbers above are 4-bit only.
+
+
 ## Not measured yet
 
 - The two-Mac split with the v1+ settings (flash attention, automatic

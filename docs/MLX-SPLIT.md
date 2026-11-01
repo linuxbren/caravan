@@ -235,3 +235,19 @@ Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oc
 - Two Macs only (one packer, one lead). More stages are a roadmap item.
 - The bench talked to the lead worker directly; the proxy path was only
   smoke-tested.
+
+
+### Idea 3: guess-ahead (speculative decoding)
+
+Off by default. On the **lead only**:
+
+```sh
+--split-draft-model ~/.caravan/mlx-models/drafts/Qwen3-0.6B-4bit \
+  --split-speculate-k 3
+```
+
+Or env: `CARAVAN_MLX_SPLIT_DRAFT_MODEL`, `CARAVAN_MLX_SPLIT_SPECULATE_K`
+(default k=4). Draft must share the target tokenizer (vocab size check at
+load). Packer needs no draft weights; rejects trim packer KV over the
+existing link (`trim` op). See
+[BENCHMARKS.md](BENCHMARKS.md#idea-3-guess-ahead-speculative-decoding-nov-1-mlx).
