@@ -4,8 +4,8 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-10-31 (v3 tagged; v3.1 in progress on branch
-`caravan-v3-mlx-split`).
+*Last updated 2026-10-31 evening (idea 5 uneven split measured on
+branch `caravan-v3-mlx-split`; v3 tagged, v3.1 on the branch).
 Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
@@ -411,17 +411,23 @@ simplest first:
      [BENCHMARKS.md](BENCHMARKS.md#rerun-with-low-power-mode-off-oct-31).
 5. **Uneven layer split.** Move the cut so both halves take the same time
    (the lead also does the output layer and sampling, so it is usually
-   the slower half). Small win on its own; it matters most combined with
-   1 or 2, where the slower half sets the pace. Already possible with
-   `--split-packer-layers K`; needs measuring per model. Measured Oct 31
-   with Low Power Mode off: the packer half is 2–4 ms faster than the
-   lead on Gemma 4 and GPT-OSS (16.4 vs 18.5, 16.0 vs 20.3 ms per token),
-   0.4 ms on Qwen3, so giving the packer a layer or two more should help
-   those two.
+   the slower half). Already possible with `--split-packer-layers K`.
+   **Tried Oct 31 evening** (`845216b`, LPM off, medians of 2; details in
+   [BENCHMARKS.md](BENCHMARKS.md#uneven-layer-split-oct-31-mlx-idea-5)).
+   Packer +1 / +2 layers vs even: Gemma 4 K=15/16/17 writing 27.6 / 27.4
+   / 27.4 tok/s; GPT-OSS K=12/13/14 26.8 / 26.6 / 26.7; Qwen3 K=24/25/26
+   30.0 / 30.2 / 30.5. **No single-chat writing gain** on Gemma 4 or
+   GPT-OSS — the pipeline is serial (packer then lead), so a layer only
+   shifts ms between halves and the sum stays flat (~35.5 / ~36.6 ms).
+   Qwen3's bump is near noise. **Best balanced cuts** (for idea 1, where
+   the slower half sets the pace): Gemma 4 **K=16** (17.8 vs 17.0 ms),
+   GPT-OSS **K=13** (17.4 vs 18.5), Qwen3 **even K=24** (16.1 vs 15.6).
+   Reading flat; quality 3/3. Keep those cuts when building idea 1.
 
 **Recommendation:** for a single chat, try 3 (guess ahead) first. For
 agents or several users sending requests at once, do 1 (several chats at
-once).
+once), with the balanced cuts from idea 5 (Gemma K=16, GPT-OSS K=13,
+Qwen3 even). Idea 5 alone does not speed up a single chat.
 
 ## Deferred / parked
 
@@ -448,7 +454,7 @@ list above point to it.
 | jaccl / RDMA over Thunderbolt | Needs Thunderbolt 5 (M4 Pro/Max); our Minis are Thunderbolt 4. | If a Thunderbolt 5 Mac joins. |
 | GPT-OSS 120B split across two Minis | Needs a third Mini or more memory. The two Minis have about 2 × 19 GB of GPU memory. The stock build is 63.4 GB. Checked 2026-10-31 for heavier-compressed builds: every GGUF quant is 62.6–66 GB, even Q2_K and IQ1_S, because the experts stay in MXFP4. The smallest MLX build is `jesusoctavioas/gpt-oss-120b-mlx-2Bit` at 36.6 GB, which would be about 18.3 GB of weights per Mini, under 1 GB short of what a stage needs with chat memory (our stages peak 1.5–2.2 GB above their weights). `manjunathshiva/gpt-oss-120b-tq3a-tq2e-g32` (37.7 GB) uses a TurboQuant mode that stock mlx can't load. Pruned "REAP" 58B variants are different models. So GPT-OSS's bigger brother in v3 is the 20B at 8-bit. | When a third Mini (or a bigger-memory Mac) joins, or a ≤ 32 GB 120B build appears. |
 | Split link is unauthenticated | Thunderbolt-only cable between two trusted Macs. | Before the split runs over LAN/Tailscale. |
-| No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token, about as much as the whole model on one Mac, so the time is fixed per-pass overhead (graph build, sync), not compute or the cable (<1 ms). The lead and Packer 1 take turns, so each sits idle half the time. | After v3 merges. Ideas and a recommendation: "Beating the turn-taking in the split" under Possible future directions. Also try compiling each stage's graph. |
+| No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token, about as much as the whole model on one Mac, so the time is fixed per-pass overhead (graph build, sync), not compute or the cable (<1 ms). The lead and Packer 1 take turns, so each sits idle half the time. Idea 5 (uneven cut) confirmed the sum is what matters for a single chat: moving layers did not raise writing speed. | After v3 merges. Do ideas 1 and 3; use idea 5's balanced cuts with idea 1. Also try compiling each stage's graph. |
 | `--kv-bits` with the split | Untested. | With the 8-bit chat memory item. |
 | More than two stages (one lead, several packers) | Two Macs today. | When a third Mac joins; needs re-planning of the cut and of split downloads. |
 | Split download used for one model only | Qwen3 30B 8-bit ran from split downloads. For Gemma 4 8-bit and GPT-OSS 20B 8-bit, the lead downloaded its files plus the packer-only ones and copied them to the packer over Thunderbolt (one internet download instead of two). | When split download is wired into the agent (Next #3). |

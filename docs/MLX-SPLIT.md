@@ -161,7 +161,10 @@ Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oc
   ([BENCHMARKS.md](BENCHMARKS.md#v3-rerun-with-low-power-mode-off-oct-31-mlx-v31)). Each half costs
   16–24 ms per token, about what the whole model costs on one Mac, while
   the cable adds under 1 ms and under 10 KB per token. The Macs take turns,
-  so the time is per-pass overhead, not the cable.
+  so the time is per-pass overhead, not the cable. Uneven cut
+  (`--split-packer-layers`, idea 5) tried Oct 31: no single-chat writing
+  gain (serial pipeline); best balanced cuts Gemma K=16, GPT-OSS K=13,
+  Qwen3 even ([BENCHMARKS.md](BENCHMARKS.md#uneven-layer-split-oct-31-mlx-idea-5)).
 - Chat reuse and restart resume work across the split, at +0.1–0.4 s.
 - The 8-bit versions, which don't fit on one Mac, all run split with a 16k
   chat and pass 3/3: Qwen3 30B 8-bit (20.6 tok/s, 18.12 GB per Mac), Gemma
@@ -208,8 +211,10 @@ Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oc
 - The link is **unauthenticated**. Keep it on the Thunderbolt cable.
 - Generation is a serial pipeline: per token, the lead waits for the
   packer, then runs its half. There's no overlap of the two halves yet.
-  Ideas for fixing that, including splitting each layer across both Macs
-  instead of stacking them, are in [ROADMAP.md](ROADMAP.md#beating-the-turn-taking-in-the-split).
+  Moving the cut (`--split-packer-layers`) does not speed up a single
+  chat (measured Oct 31). Ideas for fixing the turn-taking, including
+  several chats at once and guess ahead, are in
+  [ROADMAP.md](ROADMAP.md#beating-the-turn-taking-in-the-split).
 - Not started by the agent or launchd yet; both halves are started by hand.
 - `--kv-bits` with the split is untested.
 - Two Macs only (one packer, one lead). More stages are a roadmap item.

@@ -2615,3 +2615,30 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
   memory, the two daily reminder routines, and a copy of the lab folder
   (experiment log, video scripts, all eight lab videos). No secrets; they're
   named only (`MINI_SSH_PASSWORD`). Code unchanged.
+
+## 2026-10-31: uneven layer split (ROADMAP idea 5)
+
+- Tried `--split-packer-layers K` on the v3 split: Packer 1 got the
+  default half, then +1, then +2 layers, for 4-bit Gemma 4 (K=15/16/17),
+  GPT-OSS (K=12/13/14) and Qwen3 (K=24/25/26). Same method as the LPM-off
+  rerun: EXO1 lead on test port 8194, EXO2 packer on 169.254.104.38:5560,
+  `split_client.py bench`, medians of 2, `lowpowermode 0` on both. Branch
+  tip `845216b` on both Macs. Run 20:16–20:32 CDT. Output
+  `~/.caravan/bench-2026-10-31/idea5-uneven/`.
+- Even-split writing matched the LPM-off baseline within noise: Qwen3
+  30.0 (baseline 30.4), Gemma 4 27.6 (27.7), GPT-OSS 26.8 (26.6) tok/s.
+  Reading 512 / 4k likewise. Quality 3/3 on every cut.
+- Moving the cut did **not** raise single-chat writing on Gemma 4 or
+  GPT-OSS (27.6 → 27.4 / 27.4; 26.8 → 26.6 / 26.7). The pipeline is
+  serial: packer then lead then sample, so a layer just shifts ms from
+  one half to the other and the sum stays ~35.5 ms (Gemma) / ~36.6 ms
+  (GPT-OSS). Qwen3 edged 30.0 → 30.2 → 30.5; near noise, and it was
+  already balanced.
+- Half timings (ms/token, median of the two tg128 runs): Gemma even
+  16.7 / 0.82 / 17.9 → K=16 17.8 / 0.82 / 17.0 → K=17 18.6 / 0.85 / 16.1;
+  GPT-OSS 16.0 / 0.85 / 19.7 → 17.4 / 0.85 / 18.5 → 18.5 / 0.83 / 17.2;
+  Qwen3 16.1 / 0.76 / 15.6 → 16.7 / 0.77 / 14.7 → 17.1 / 0.77 / 14.1.
+- Best balanced cuts (for idea 1 later): Gemma **K=16**, GPT-OSS **K=13**,
+  Qwen3 **K=24 (even)**. Reading flat across cuts; packer peak memory
+  rose and lead peak fell as K grew. Flag works; no code changes.
+  Tables in BENCHMARKS.md; verdict in ROADMAP idea 5.

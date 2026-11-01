@@ -401,7 +401,9 @@ in "where the time goes" above.
   one Mac.
 - The packer is now the faster half on every model: by 0.4 ms on Qwen3
   4-bit, 2–4 ms on Gemma 4 and GPT-OSS. Moving the cut (ROADMAP idea 5)
-  now has something to win.
+  was tried the same evening: no single-chat writing gain (serial
+  pipeline); best balanced cuts recorded for idea 1. See
+  [Uneven layer split](#uneven-layer-split-oct-31-mlx-idea-5).
 - Memory is 0.1–0.4 GB lower than the old snapshot; the memory code
   didn't change, and the cause wasn't looked into.
 
@@ -566,6 +568,50 @@ packer 16.1 ms, Gemma 4 lead 18.5 ms, GPT-OSS lead 20.3 ms)
 - **Verdict: still no-go.** It now ties v3 on GPT-OSS (26.7 vs 26.6
   tok/s) instead of the earlier 5% lead, loses to v3 on Qwen3 (−30%) and
   Gemma 4 (−11%), and loses to one Mini on all three (−27% to −59%).
+
+## Uneven layer split (Oct 31, MLX, idea 5)
+
+Same split bench as the LPM-off rerun, with `--split-packer-layers K` on
+both halves so Packer 1 gets the default half, then one more layer, then
+two. Branch tip `845216b` on both Macs (same speed code as v3.1). EXO1
+lead on test port 8194, EXO2 packer on 169.254.104.38:5560, worker
+defaults. `lowpowermode 0` on both. Medians of 2 runs. 20:16–20:32 CDT.
+Raw output on EXO1 in `~/.caravan/bench-2026-10-31/idea5-uneven/`. Only
+the `bench` part (warm, tg128 ×2, pp512 ×2, pp4096 ×2, quality). Half
+timings use the same formulas as the LPM-off table (packer =
+front_s/calls; cable = (wait − front)/calls; lead = (write_s −
+wait)/tokens), median of the two tg128 runs.
+
+**4-bit**
+
+| model | K (packer layers) | writing (tok/s) | reading 512 / 4k (tok/s) | wait before first word, tg128 (s) | peak mem lead / packer (GB) | packer / cable / lead (ms) | quality |
+|---|---:|---:|---|---:|---|---|---|
+| Gemma 4 26B | 15 (even) | 27.6 | 411.6 / 374.3 | 0.400 | 9.09 / 9.07 | 16.7 / 0.82 / 17.9 | 3/3 |
+| | 16 (+1) | 27.4 | 412.6 / 374.9 | 0.398 | 8.58 / 9.58 | 17.8 / 0.82 / 17.0 | 3/3 |
+| | 17 (+2) | 27.4 | 412.8 / 375.9 | 0.407 | 8.07 / 10.09 | 18.6 / 0.85 / 16.1 | 3/3 |
+| GPT-OSS 20B | 12 (even) | 26.8 | 442.1 / 425.4 | 0.383 | 6.94 / 6.94 | 16.0 / 0.85 / 19.7 | 3/3 |
+| | 13 (+1) | 26.6 | 439.3 / 426.6 | 0.381 | 6.48 / 7.40 | 17.4 / 0.85 / 18.5 | 3/3 |
+| | 14 (+2) | 26.7 | 439.6 / 431.9 | 0.385 | 6.00 / 7.87 | 18.5 / 0.83 / 17.2 | 3/3 |
+| Qwen3 30B | 24 (even) | 30.0 | 450.5 / 406.9 | 0.373 | 10.01 / 10.02 | 16.1 / 0.76 / 15.6 | 3/3 |
+| | 25 (+1) | 30.2 | 449.6 / 410.6 | 0.370 | 9.63 / 10.40 | 16.7 / 0.77 / 14.7 | 3/3 |
+| | 26 (+2) | 30.5 | 450.8 / 412.1 | 0.358 | 9.25 / 10.78 | 17.1 / 0.77 / 14.1 | 3/3 |
+
+Even-split writing matched the LPM-off baseline (30.4 / 27.7 / 26.6)
+within noise.
+
+**What it shows.**
+
+- **No single-chat writing gain** on Gemma 4 or GPT-OSS. The halves run
+  one after the other, so moving a layer shifts ms from the lead to the
+  packer and the sum stays flat (~35.5 ms Gemma, ~36.6 ms GPT-OSS).
+  Qwen3's 30.0 → 30.5 is near noise; its even cut was already balanced
+  (16.1 vs 15.6 ms).
+- **Best balanced cuts** (smallest half-timing gap, for idea 1 later):
+  Gemma 4 **K=16**, GPT-OSS **K=13**, Qwen3 **K=24 (even)**. GPT-OSS K=14
+  overshoots. Reading stayed flat; packer peak memory rose and lead peak
+  fell as K grew. Quality 3/3 on every cut.
+- Verdict and next step: ROADMAP, idea 5.
+
 
 ## Not measured yet
 

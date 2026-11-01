@@ -4,6 +4,41 @@ Each entry: date, goal, hardware, software/runtime, model + quant, config, resul
 
 <!-- entries below, newest first -->
 
+## 2026-10-31 — Uneven layer split with `--split-packer-layers` (Caravan ROADMAP idea 5)
+
+**Goal.** Move the cut so Packer 1 gets +1 or +2 layers vs the default even split, for 4-bit Gemma 4, GPT-OSS and Qwen3. Expectation from the LPM-off rerun: the packer half was 2–4 ms faster than the lead on Gemma 4 and GPT-OSS, 0.4 ms on Qwen3, so giving the packer a layer or two more should balance the halves. ROADMAP called this a small win alone and more important with idea 1 (several chats at once).
+
+**Hardware.** EXO1 (lead) and EXO2 (packer), Mac mini M4 24 GB, Thunderbolt 4 cable. `pmset -g` showed `lowpowermode 0` on both before every run.
+
+**Software.** Branch `caravan-v3-mlx-split` tip `845216b` on EXO1 `~/dev/caravan-v3` and EXO2 `~/cv3` (same speed code as v3.1). MLX 0.32.4, mlx-lm 0.32.2. Flag `--split-packer-layers K` (alias `--split-front-layers`) on both halves; hello rejects a mismatched cut. `bench/v3/split_client.py bench`.
+
+**Config.** Same as the LPM-off rerun: EXO1 lead on test port 8194, EXO2 packer on 169.254.104.38:5560, worker defaults (4 sessions, 2 GB, prefill step 2048, 16-bit cache, save on). Models 4-bit from EXO1 `~/.exo/models/...` and EXO2 `~/.caravan/mlx-models/...`. Cuts: Gemma 4 K=15/16/17, GPT-OSS K=12/13/14, Qwen3 K=24/25/26. Medians of 2 runs. 20:16–20:32 CDT. Output `~/.caravan/bench-2026-10-31/idea5-uneven/`. No services stopped; workers killed after each run.
+
+**Results: writing / reading 512 / reading 4k (tok/s), TTFT on tg128 (s), peak mem lead/packer (GB), packer/cable/lead (ms/tok), quality**
+
+| model | K | write | read 512/4k | TTFT | peak L/P | halves ms | q |
+|---|---:|---:|---|---:|---|---|---|
+| Gemma 4 | 15 (even) | 27.6 | 411.6 / 374.3 | 0.400 | 9.09 / 9.07 | 16.7 / 0.82 / 17.9 | 3/3 |
+| Gemma 4 | 16 (+1) | 27.4 | 412.6 / 374.9 | 0.398 | 8.58 / 9.58 | 17.8 / 0.82 / 17.0 | 3/3 |
+| Gemma 4 | 17 (+2) | 27.4 | 412.8 / 375.9 | 0.407 | 8.07 / 10.09 | 18.6 / 0.85 / 16.1 | 3/3 |
+| GPT-OSS | 12 (even) | 26.8 | 442.1 / 425.4 | 0.383 | 6.94 / 6.94 | 16.0 / 0.85 / 19.7 | 3/3 |
+| GPT-OSS | 13 (+1) | 26.6 | 439.3 / 426.6 | 0.381 | 6.48 / 7.40 | 17.4 / 0.85 / 18.5 | 3/3 |
+| GPT-OSS | 14 (+2) | 26.7 | 439.6 / 431.9 | 0.385 | 6.00 / 7.87 | 18.5 / 0.83 / 17.2 | 3/3 |
+| Qwen3 | 24 (even) | 30.0 | 450.5 / 406.9 | 0.373 | 10.01 / 10.02 | 16.1 / 0.76 / 15.6 | 3/3 |
+| Qwen3 | 25 (+1) | 30.2 | 449.6 / 410.6 | 0.370 | 9.63 / 10.40 | 16.7 / 0.77 / 14.7 | 3/3 |
+| Qwen3 | 26 (+2) | 30.5 | 450.8 / 412.1 | 0.358 | 9.25 / 10.78 | 17.1 / 0.77 / 14.1 | 3/3 |
+
+Even-split matched the LPM-off baseline (30.4 / 27.7 / 26.6 writing; 451/408, 411/375, 440/424 reading) within noise.
+
+**Takeaway.** No single-chat writing gain on Gemma 4 or GPT-OSS: the pipeline is serial, so moving a layer shifts time between halves and the sum stays flat (~35.5 / ~36.6 ms per token). Qwen3's 30.0 → 30.5 is near noise and it was already balanced at even. Best balanced cuts for idea 1: Gemma **K=16**, GPT-OSS **K=13**, Qwen3 **even (K=24)**. Reading flat; memory shifted as expected. Flag works; no code changes.
+
+**Deficiencies.** Two runs per cut. Half timings mix a few prefill calls into the per-call averages (133 calls for 127 write tokens); same method as the LPM-off table. No 4k/16k chat or restart under uneven cuts. Did not try fewer packer layers.
+
+**Would be faster/more robust if.** Idea 1 (several chats at once) used these balanced cuts so both Minis stay busy. Bench scripts refuse when `lowpowermode 1`. A short probe picks K from each half's ms before a long session. For single-chat writing, guess ahead (idea 3) still looks bigger than moving the cut.
+
+**Post status.** not drafted
+
+
 ## 2026-10-31 — v3 two-Mac MLX split and GPU-wait test rerun with Low Power Mode off (Caravan v3.1)
 
 **Goal.** EXO2 (the packer) turned out to be in Low Power Mode during every earlier two-Mac run. Brenden turned it off; rerun the v3 split bench and the GPU-wait test to see what it had cost and whether the split-each-layer verdict changes.
