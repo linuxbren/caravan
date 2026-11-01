@@ -314,14 +314,166 @@ QUALITY_PROBES = [
     ("Is ice cream typically hot or cold? One word.", ("cold",)),
 ]
 
+# Thinking / scratch channels we never score.
+_THOUGHT_CHANNELS = (
+    "thought", "thinking", "analysis", "commentary", "scratch", "reason", "reasoning",
+)
+_FINAL_CHANNELS = ("final", "response", "answer", "output")
+_STOP_TOKENS = (
+    "<|im_end|>", "<|end|>", "<|end_of_text|>", "<|return|>", "</s>", "<eos>",
+)
+
+
+def final_answer_text(text: str) -> str:
+    """Strip thinking/channel blocks; return only the final-answer segment.
+
+    Handles:
+    - Qwen ``<think>...</think>``
+    - GPT-OSS ``<|channel|>analysis...<|channel|>final<|message|>...``
+    - Gemma-4 ``<|channel>thought\n...\n<channel|>ANSWER<turn|>``
+      (open token ``<|channel>``, close token ``<channel|>``, answer then
+      ``<turn|>`` — there is usually no explicit ``final`` channel)
+    - Gemma/Qwen variants that do emit ``<|channel>final`` / ``<|channel|>final``
+
+    If the model only emitted an open thought channel with no closer and
+    no final channel, returns empty so the quality gate fails instead of
+    matching words inside the scratch pad.
+    """
+    import re
+    t = (text or "")
+    for stop in _STOP_TOKENS:
+        if stop in t:
+            t = t.split(stop)[0]
+    # Qwen / generic think fences (closed).
+    t = re.sub(r"<think\b[^>]*>.*?</think>", " ", t, flags=re.DOTALL | re.IGNORECASE)
+    t = re.sub(r"<\|think\|>.*?(?=<\|/?\w|$)", " ", t, flags=re.DOTALL | re.IGNORECASE)
+    m = re.search(r"</think\s*>", t, flags=re.IGNORECASE)
+    if m:
+        t = t[m.end():]
+
+    # Gemma-4 close-token form: <|channel>NAME ... <channel|>ANSWER[<turn|>...]
+    # Prefer the segment after the *last* <channel|> closer.
+    if "<channel|>" in t or "<|channel>" in t or "<|channel|>" in t:
+        # Walk opens/closes. Content after a closer (and before next open/turn)
+        # is the user-visible answer for Gemma.
+        gemma_bits: list[str] = []
+        # Split keeping delimiters.
+        pieces = re.split(r"(<\|channel\|>|<\|channel>|<channel\|>|<\|turn\|>|<turn\|>|<\|turn>)", t)
+        mode = "body"  # body | after_open | after_close
+        chan = ""
+        buf = []
+        finals: list[str] = []
+        saw_channel = False
+        for piece in pieces:
+            if piece in ("<|channel|>", "<|channel>"):
+                saw_channel = True
+                if mode == "after_close" and buf:
+                    finals.append("".join(buf))
+                mode, chan, buf = "after_open", "", []
+                continue
+            if piece == "<channel|>":
+                saw_channel = True
+                # drop thought body in buf; answer follows
+                mode, buf = "after_close", []
+                continue
+            if piece in ("<|turn|>", "<turn|>", "<|turn>"):
+                if mode == "after_close" and buf:
+                    finals.append("".join(buf))
+                mode, buf = "body", []
+                continue
+            if mode == "after_open":
+                if not chan:
+                    # first word is channel name; rest is body
+                    name_m = re.match(
+                        r"\s*([A-Za-z_][A-Za-z0-9_]*)\b(?:\s*<\|message\|>)?\s*",
+                        piece)
+                    if name_m:
+                        chan = name_m.group(1).lower()
+                        rest = piece[name_m.end():]
+                    else:
+                        chan, rest = "", piece
+                    if chan in _FINAL_CHANNELS:
+                        # GPT-OSS / explicit final: accumulate as final
+                        mode = "final_body"
+                        if rest:
+                            finals.append(rest)
+                    else:
+                        # thought/analysis: discard
+                        buf = []
+                else:
+                    # still in thought body — discard
+                    pass
+                continue
+            if mode == "final_body":
+                finals.append(piece)
+                continue
+            if mode == "after_close":
+                buf.append(piece)
+                continue
+            # plain body with no channel yet
+            buf.append(piece)
+        if mode == "after_close" and buf:
+            finals.append("".join(buf))
+        if finals:
+            t = "\n".join(finals)
+        elif saw_channel:
+            # Had channel markup but never closed / never reached final.
+            return ""
+        else:
+            t = "".join(buf) if buf else t
+
+    # Fallback Final:/Answer: markers for unmarked prose.
+    if not any(x in (text or "") for x in ("<|channel", "<channel|>", "</think", "<think")):
+        fm = re.search(
+            r"\b(?:final(?:\s+answer)?|answer)\s*[:\-]\s*",
+            t, flags=re.IGNORECASE)
+        if fm:
+            t = t[fm.end():]
+
+    t = re.sub(r"<\|/?[^|>]+\|?>", " ", t)
+    t = re.sub(r"</?think\b[^>]*>", " ", t, flags=re.IGNORECASE)
+    t = re.sub(r"<channel\|>", " ", t)
+    t = re.sub(r"<turn\|>", " ", t)
+    t = re.sub(r"<\|turn>", " ", t)
+    return re.sub(r"\s+", " ", t).strip().lower()
+
 
 def answer_ok(text: str, expect: tuple[str, ...]) -> bool:
-    t = (text or "").strip().lower()
-    # Prefer the final channel / answer segment when models emit thoughts.
-    for sep in ("</think>", "<|channel>final", "<|channel|>final"):
-        if sep in t:
-            t = t.split(sep)[-1]
-    # Keep last ~200 chars so a long thought then short answer still matches.
-    if len(t) > 200:
-        t = t[-200:]
-    return any(e in t for e in expect)
+    """True only if an expected answer appears in the *final* answer text.
+
+    Anchors to the last non-empty line (and a short whole-text fallback).
+    Uses whole-word matches so a thought that mentions "Paris" cannot
+    pass when the final line is "London".
+    """
+    import re
+    t = final_answer_text(text)
+    if not t:
+        return False
+    lines = [ln.strip() for ln in t.splitlines() if ln.strip()]
+    # Prefer the last sentence / last line. Long scratch pads without
+    # channel markers only score their ending — never the whole blob.
+    candidates = []
+    if lines:
+        last = lines[-1]
+        parts = re.split(r"(?<=[.!?])\s+", last)
+        if len(last) > 48 and len(parts) > 1:
+            candidates.append(parts[-1])
+        else:
+            candidates.append(last)
+            if len(parts) > 1:
+                candidates.append(parts[-1])
+    if len(t) <= 48:
+        candidates.append(t)
+    seen = set()
+    for c in candidates:
+        if not c or c in seen:
+            continue
+        seen.add(c)
+        c_norm = c.strip(" \t\"\'*`")
+        for e in expect:
+            e = e.lower()
+            if c_norm.strip(".!?,:; ") == e:
+                return True
+            if re.search(rf"(?<![a-z0-9]){re.escape(e)}(?![a-z0-9])", c):
+                return True
+    return False

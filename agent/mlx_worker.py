@@ -891,11 +891,11 @@ class Engine:
         # Temporarily use a dedicated session key so we don't pollute user caches.
         for q, expect in guess_ahead.QUALITY_PROBES:
             try:
-                text_out = self._gate_complete(q, max_tokens=96, use_draft=True)
+                text_out = self._gate_complete(q, max_tokens=256, use_draft=True)
             except Exception as e:
                 text_out = f"<err:{e}>"
             ok = guess_ahead.answer_ok(text_out, expect)
-            quality.append({"q": q, "out": (text_out or "")[:80], "ok": ok})
+            quality.append({"q": q, "out": (text_out or "")[:400], "ok": ok})
             if ok:
                 q_ok += 1
         if q_ok < len(guess_ahead.QUALITY_PROBES):

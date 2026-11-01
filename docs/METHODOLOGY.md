@@ -53,8 +53,12 @@ recording timed runs.
 ## Quality gate
 
 Three fixed prompts (2+2, capital of France, ice cream hot/cold). Expect
-**3/3**. Idea 3 also runs these once per model+guesser on first load and
-caches the result under `~/.caravan/mlx/guess-ahead-state.json`.
+**3/3**. Matching uses `guess_ahead.answer_ok`: strip think/channel
+blocks (Qwen `</think>`, GPT-OSS `<|channel|>…`, Gemma-4
+`<|channel>thought…<channel|>ANSWER<turn|>`) and score only the **final
+answer** (last line / last sentence, whole-word). Thought-only output
+fails. Idea 3 also runs these once per model+guesser on first load
+(max 256 tokens) and caches under `~/.caravan/mlx/guess-ahead-state.json`.
 
 ## Speed runs by prompt type
 

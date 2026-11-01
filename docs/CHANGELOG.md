@@ -10,6 +10,11 @@ reply comes out.
 
 ## Unreleased
 
+### Fixed
+- First-load / quality `answer_ok` scores only the final answer after
+  stripping think/channel blocks (Gemma `<channel|>` closer). Thought-only
+  output no longer passes. Gate probes use 256 tokens.
+
 ### Added
 - Idea 3 guess-ahead auto-pair: `agent/guessers.json`, vocab match/remap,
   ask-once download (lead only), first-load quality/speed gate (cached),

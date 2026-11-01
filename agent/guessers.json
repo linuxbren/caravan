@@ -50,7 +50,10 @@
         "spec_tps": 44.5,
         "prompt": "count",
         "quality": "3/3",
-        "notes": "auto-pair Mini verify Nov 1; remap=6187 specials; medians of 2; LPM off"
+        "notes": "auto-pair Mini verify Nov 1; remap=6187 specials; medians of 2; LPM off",
+        "strict_gate_reverify_tps": 44.3,
+        "strict_gate_nodraft_tps": 38.4,
+        "note": " Final-answer-only quality gate Nov 1; re-verify median 44.3."
       }
     }
   ],

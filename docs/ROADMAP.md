@@ -306,13 +306,16 @@ simplest first:
    lead; `--no-split-draft` restores baseline).* A small draft on the lead
    guesses the next few tokens; one Thunderbolt round trip verifies them.
    Pairing table `agent/guessers.json` + vocab match/remap, ask-once
-   download, first-load quality/speed gate (cached), mid-chat shut-off
-   below break-even. Flags: `--split-draft-model`, `--no-split-draft`,
+   download, first-load quality/speed gate (cached; scores **final answer
+   only** after stripping think/channel blocks — Gemma uses
+   `<|channel>thought…<channel|>ANSWER`), mid-chat shut-off below
+   break-even. Flags: `--split-draft-model`, `--no-split-draft`,
    `--split-draft-auto-download`, `--split-speculate-k`,
-   `--split-prompt-lookup`, `--split-draft-skip-first-load`. Measured:
-   Qwen **0.6B k=3 → 59.3** vs ~45.5; Gemma **g3-270m k=2 → 44.4** vs 38.4;
-   GPT-OSS baseline (no small o200k draft). Details:
-   [BENCHMARKS.md](BENCHMARKS.md#idea-3-follow-up-lighter-drafts--prompt-lookup-nov-1-mlx),
+   `--split-prompt-lookup`, `--split-draft-skip-first-load`. Auto-pair
+   medians of 2 (8194/5560, LPM off): Qwen **45.9 → 59.7** (k=3);
+   Gemma **38.4 → 44.5** (g3-270m k=2; strict-gate re-verify **44.3**);
+   GPT-OSS **34.3** auto-skipped (no o200k draft). Shut-off confirmed
+   (`accepted_frac 0.438 < 0.80`). Details: [LOG.md](LOG.md),
    [METHODOLOGY.md](METHODOLOGY.md).
 4. **Split each layer across both Minis (tensor parallel).** *Brenden's
    preferred direction to investigate.* Both Minis work on every layer at

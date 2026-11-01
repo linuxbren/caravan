@@ -1,3 +1,18 @@
+## 2026-11-01: first-load quality scores final answer only (Gemma channel closer)
+
+- `guess_ahead.final_answer_text` / `answer_ok` strip think/channel blocks and
+  match the final answer only (whole-word, last line/sentence). Gemma-4 form
+  `<|channel>thought…<channel|>ANSWER<turn|>` (open `<|channel>`, close
+  `<channel|>`) was matching "4"/"Paris"/"Cold" inside the thought; now
+  those fail unless the closer segment holds the answer. Gate probe
+  `max_tokens` 96→256; quality `out` store 80→400 chars. Tests: 20 in
+  `agent/test_guess_ahead.py` (prior 14 + AnswerOkCases).
+- Mini re-verify (8194/5560, LPM off, keepalive on, medians of 2, raw under
+  `~/.caravan/bench-2026-11-01/guess-ahead-strict/`):
+  first-load Gemma keep=1 quality **3/3** (baseline 31.63 / spec 34.79);
+  autopair write **44.3**; nodraft **38.4**. Prior auto-pair table unchanged
+  (Qwen 45.9→59.7, Gemma 38.4→44.5, GPT-OSS skip 34.3; shut-off 0.438<0.80).
+
 ## 2026-11-01: idea 3 guess-ahead auto-pair (ask / gate / shut-off)
 
 - Shipped behind existing speculate path: `agent/guessers.json` pairings

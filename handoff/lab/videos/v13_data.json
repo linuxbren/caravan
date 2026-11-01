@@ -1,0 +1,14 @@
+{
+  "_stills": [2.5, 12.0, 22.0, 34.0, 46.0, 58.0, 68.0],
+  "_day": "Day 7",
+  "WRITE": {
+    "off": [45.9, 38.4, 34.3],
+    "on": [59.7, 44.5, null]
+  },
+  "TAKE": [
+    ["ON", "A small guesser rides along", "same vocabulary family; lead asks once before any download"],
+    ["ON", "One cable trip verifies a handful of guesses", "accepted guesses skip a full round trip per token"],
+    ["ON", "Qwen3 45.9→59.7 · Gemma 38.4→44.5", "GPT-OSS has no small guesser yet, so Caravan skips it"],
+    ["MUTED", "Quality gate scores the final answer only", "thinking text no longer counts; shut-off kicks in when guesses stop helping"]
+  ]
+}

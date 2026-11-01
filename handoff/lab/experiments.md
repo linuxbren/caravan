@@ -4,6 +4,32 @@ Each entry: date, goal, hardware, software/runtime, model + quant, config, resul
 
 <!-- entries below, newest first -->
 
+## 2026-11-01 — Day 7 guess-ahead video (v13) + X draft + Gemma quality gate
+
+**Goal.** Tighten the first-load quality matcher so Gemma cannot pass by matching "4"/"Paris"/"Cold" inside `<|channel>thought` text; score only the final answer after the `<channel|>` closer. Ship Day 7 lab video + X draft for guess-ahead auto-pair. Docs: ROADMAP, METHODOLOGY, LOG, CHANGELOG, guessers.json.
+
+**Hardware.** EXO1 lead / EXO2 packer, Mac mini M4 24 GB, Thunderbolt 4. LPM off (`pmset` 0). Keepalive on. Test ports 8194 / 5560.
+
+**Software.** `guess_ahead.final_answer_text` + stricter `answer_ok`; gate `max_tokens` 256; 20 unit tests. Video `handoff/lab/videos/make_runtime_video_v13.py`, data `v13_data.json`, out `2026-11-01_caravan-v3-guess-ahead_v13.mp4` (+ `/workspace/out/v13.mp4`). Duration **1:02**.
+
+**Results (America/Chicago ~12:34–12:36).** First-load Gemma keep=1, quality **3/3** (thought no longer scores; closer segment does). Autopair write median **44.3**; nodraft **38.4**. Prior auto-pair table still stands: Qwen 45.9→**59.7**, Gemma 38.4→**44.5**, GPT-OSS skip **34.3**; shut-off `0.438 < 0.80`. Raw: `~/.caravan/bench-2026-11-01/guess-ahead/` and `guess-ahead-strict/`.
+
+**Takeaway.** Matcher bug fixed without killing the Gemma draft pair. Milestone/tag still waiting on Brenden's push go.
+
+**Post status.** drafted (not posted). Final Day 7 X draft:
+
+---
+Day 7 of building Caravan in the open, my homebrew app for running AI models across my Mac minis.
+
+Idea 3 is guess-ahead: a small helper model on the lead Mini drafts the next few tokens, then one Thunderbolt round trip checks them on the full split model. Same-family pairing only (vocab has to line up). Caravan asks once before downloading a helper and remembers the answer.
+
+Measured writing speed (tokens/sec, medians of 2, Low Power Mode off): Qwen3 45.9→59.7 with a 0.6B draft, Gemma 38.4→44.5 with a 270M draft. GPT-OSS has no small same-vocab helper yet, so we skip it and stay at 34.3.
+
+The first-load quality gate now scores only the final answer — Gemma's thinking channel used to leak matches. Mid-chat shut-off still kills guessing when accepts drop below break-even (we saw 0.438 < 0.80 on a nasty prompt).
+---
+
+
+
 ## 2026-11-01 — Day 6 several chats video (v12) + X draft
 
 **Goal.** Lab video for idea 1 (several chats on the two-Mini split) in a techie-friend voice: explain the layer split and pipeline crisply, no "we're teaching" framing, no elementary token definition, no lab shorthand (tg128 / TTFT / N=). Same measured numbers as the stall-fix benches.

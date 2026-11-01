@@ -181,5 +181,75 @@ class ParserFlagTests(unittest.TestCase):
         self.assertTrue(args.split_draft_auto_download)
 
 
+
+class AnswerOkTests(unittest.TestCase):
+    def test_plain_short_answers(self):
+        self.assertTrue(ga.answer_ok("4", ("4", "four")))
+        self.assertTrue(ga.answer_ok("Paris", ("paris",)))
+        self.assertTrue(ga.answer_ok("Cold.", ("cold",)))
+        self.assertTrue(ga.answer_ok("The answer is cold.", ("cold",)))
+
+    def test_qwen_think_fence(self):
+        self.assertTrue(ga.answer_ok("<think>\n\n</think>\n\n4<|im_end|>", ("4", "four")))
+        self.assertFalse(ga.answer_ok(
+            "<think>\nParis is the capital.\n</think>\nLondon", ("paris",)))
+        self.assertTrue(ga.answer_ok(
+            "<think>\nParis is the capital.\n</think>\nParis", ("paris",)))
+
+    def test_gemma_channel_thought_only_fails(self):
+        # The Nov 1 bug: expected words appeared inside <|channel>thought.
+        thought = (
+            "<|channel>thought\n"
+            "The user is asking for the result of 2+2. The answer is 4.\n"
+        )
+        self.assertEqual(ga.final_answer_text(thought), "")
+        self.assertFalse(ga.answer_ok(thought, ("4", "four")))
+        self.assertFalse(ga.answer_ok(
+            "<|channel>thought\n* Question: capital of France. Paris.\n",
+            ("paris",)))
+        self.assertFalse(ga.answer_ok(
+            "<|channel>thought\nice cream is typically cold\n",
+            ("cold",)))
+
+    def test_gemma_channel_final_only(self):
+        # Explicit final channel (some templates).
+        self.assertTrue(ga.answer_ok(
+            "<|channel>thought\nParis is famous\n<|channel>final\nParis",
+            ("paris",)))
+        self.assertFalse(ga.answer_ok(
+            "<|channel>thought\nParis is famous\n<|channel>final\nLondon",
+            ("paris",)))
+        # Real Gemma-4 closer form observed on EXO1 first-load gate:
+        # <|channel>thought ... <channel|>ANSWER<turn|>
+        self.assertTrue(ga.answer_ok(
+            "<|channel>thought\nFinal answer: 4.<channel|>4<turn|>",
+            ("4", "four")))
+        self.assertTrue(ga.answer_ok(
+            "<|channel>thought\nParis is capital.<channel|>Paris<turn|>",
+            ("paris",)))
+        self.assertTrue(ga.answer_ok(
+            "<|channel>thought\nice cream is cold.<channel|>Cold<turn|>",
+            ("cold",)))
+        self.assertFalse(ga.answer_ok(
+            "<|channel>thought\nParis.<channel|>London<turn|>",
+            ("paris",)))
+        self.assertFalse(ga.answer_ok(
+            "<|channel>thought\nice cream is cold\n<|channel>final\nhot",
+            ("cold",)))
+
+    def test_gpt_oss_channels(self):
+        self.assertFalse(ga.answer_ok(
+            "<|channel|>analysis\nParis is capital\n<|channel|>final\nBerlin",
+            ("paris",)))
+        self.assertTrue(ga.answer_ok(
+            "<|channel|>analysis\nParis\n<|channel|>final<|message|>Paris",
+            ("paris",)))
+
+    def test_final_marker_without_channels(self):
+        self.assertFalse(ga.answer_ok(
+            "Thinking: ice cream is cold. Final: hot", ("cold",)))
+        self.assertTrue(ga.answer_ok(
+            "Thinking: ice cream is cold. Final: cold", ("cold",)))
+
 if __name__ == "__main__":
     unittest.main()
