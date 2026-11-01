@@ -636,6 +636,10 @@ rejected (writing ~17.6 tok/s); not in the table.
 | | on | 45.6 | 461.5 / 429.0 | 0.324 | 10.01 | 3/3 |
 | Llama 3.1 8B | off | 21.2 | 243.0 / 227.7 | 0.372 | 3.75 | 3/3 |
 | | on | 22.8 | 243.9 / 229.5 | 0.347 | 3.75 | 3/3 |
+| Qwen2.5 14B | off | 11.7 | 120.8 / 117.9 | 0.689 | 4.35 | 3/3 |
+| | on | 12.3 | 122.9 / 118.4 | 0.667 | 4.35 | 3/3 |
+| DeepSeek-R1-Distill-Qwen 14B | off | 11.7 | 122.7 / 117.9 | 0.680 | 4.30 | 3/3 |
+| | on | 12.4 | 125.1 / 118.0 | 0.536 | 4.35 | 3/3 |
 
 **What it shows.**
 
@@ -644,6 +648,10 @@ rejected (writing ~17.6 tok/s); not in the table.
 - **Llama 3.1 8B (Nov 1 suite):** keepalive on is a smaller lift
   (21.2 → 22.8 writing; reading flat). Same method, even cut K=16,
   raw `~/.caravan/bench-2026-11-01/llama-suite/ka-*.jsonl`.
+- **Qwen2.5 14B / Distill-Qwen 14B (Nov 1 suite):** keepalive on is a
+  small lift (11.7 → 12.3 / 12.4 writing; reading flat). Even cut K=24.
+  Raw `~/.caravan/bench-2026-11-01/qwen25-suite/ka-*.jsonl` and
+  `distill-suite/ka-*.jsonl`.
 - Cause: after ~15–20 ms idle waiting on the peer, Metal's next graph
   build + eval costs ~5 ms extra. A tiny `mx.eval` on a short-lived
   side thread during the blocking recv removes that cool-down.
@@ -696,6 +704,12 @@ Medians of 2 waves. **Wall aggregate** = decode tokens across chats /
 | Llama 3.1 8B | 1 | 22.5 | **22.5** | 22.5 | 0.32 | 2.52 | 3/3 |
 | | 2 | 20.9 / 20.8 | **39.3** | 41.7 | 0.60 | 3.24 | 3/3 |
 | | 3 | ~13–14 each | **39.0** | 41.0 | **0.60** | 3.26 | 3/3 |
+| Qwen2.5 14B | 1 | 12.3 / 12.4 | **12.3** | 12.4 | 0.60 | 4.35 | 3/3 |
+| | 2 | 11.7 / 11.3 | **21.7** | 23.0 | 1.12 | 5.54 | 3/3 |
+| | 3 | ~7.5 each | **21.5** | 22.9 | **1.13** | 5.67 | 3/3 |
+| Distill-Qwen 14B | 1 | 12.3 | **12.2** | 12.3 | 0.35 | 4.36 | 3/3 |
+| | 2 | 11.7 / 11.0 | **21.5** | 22.7 | 0.98 | 5.55 | 3/3 |
+| | 3 | ~7.6 each | **21.6** | 22.9 | **0.87** | 5.69 | 3/3 |
 
 **Before the stall fix (Oct 31 night):** N=3 left one chat with ~4 s TTFT
 (Gemma 4.16 / GPT-OSS 4.71 / Qwen 3.49) and wall aggregate fell below N=2
@@ -740,6 +754,8 @@ of 2. Same writing metric as `split_client.py`
 | Gemma 4 26B-A4B-it-4bit | `mlx-community/gemma-4-E2B-it-4bit` | 3.3 GB | vocab match 262144; draft ~half a lead half |
 | GPT-OSS 20B | — | — | **no suitable small same-family draft** on mlx-community (only 20B/120B quants) |
 | Llama 3.1 8B-Instruct-4bit | `mlx-community/Llama-3.2-1B-Instruct-4bit` | 680 MB (size_mb 663) | vocab exact 128256; Mini-verified Nov 1 |
+| Qwen2.5 14B-Instruct-4bit | `mlx-community/Qwen2.5-0.5B-Instruct-4bit` | ~278 MB | vocab exact; Mini-verified Nov 1 |
+| DeepSeek-R1-Distill-Qwen 14B-4bit | same 0.5B helper | ~278 MB | vocab exact (Qwen2.5 tokenizer); Mini-verified Nov 1 |
 
 **Qwen3 30B-A3B-4bit** (target from `~/.exo/models/...`; draft
 `~/.caravan/mlx-models/drafts/Qwen3-0.6B-4bit`)
@@ -898,6 +914,85 @@ wired; `download_answers.llama3=true`. Draft restored from `.bak`.
 
 **Decision:** keep `llama3` pairing as **mini_verified** in
 `agent/guessers.json`.
+
+
+
+
+### Qwen2.5 14B-Instruct-4bit (Mini suite, Nov 1)
+
+Target `mlx-community/Qwen2.5-14B-Instruct-4bit` on both Minis; draft
+`Qwen2.5-0.5B-Instruct-4bit` on the lead only (~278 MB). Even cut K=24.
+Test ports 8194 / 5560. LPM off. Keepalive on unless noted. Medians of 2.
+Raw `~/.caravan/bench-2026-11-01/qwen25-suite/`.
+
+**Keepalive A/B** (also in the keepalive table above): off **11.7** writing /
+120.8 / 117.9 reading; on **12.3** / 122.9 / 118.4. Quality 3/3.
+
+**Pipeline** (also in the idea 1 table): wall aggregate N=1 **12.3**, N=2
+**21.7**, N=3 **21.5**; max TTFT ≤1.13 s. Same ~1.8× N=1→N=2 pattern; N=3
+wall ≈ N=2.
+
+**Guess-ahead suite** (`speculate_bench.py` count / repeat / code_edit /
+code_cont; `--no-split-draft` vs auto-pair `qwen25`):
+
+| setting | count | repeat | code_edit | code_cont | accept (count) | quality |
+|---|---:|---:|---:|---:|---:|---|
+| nodraft (baseline) | **12.4** | 12.0 | 11.4 | 12.2 | — | 3/3 |
+| **auto-pair Qwen2.5-0.5B k=3** | **33.8** | **37.1** | **46.4** | **35.9** | ~0.73 | 3/3 |
+
+Count ≈ **+173%** vs nodraft. Accept ~0.73–0.76 across prompts.
+
+**First-load gate** (cache write, skip-first-load off): keep=1, quality 3/3,
+baseline **10.49** / spec **24.73** tok/s, accepted_frac 0.75,
+break_even_frac ≈ **0.45**.
+
+**Shut-off:** with cached break_even raised to **0.80**, hex stream chat
+disabled guessing (`accepted_frac 0.729 < 0.80`).
+
+**Download prompt:** draft moved aside; PTY yes on
+`A 278 MB helper… Download Qwen2.5-0.5B-Instruct-4bit?` → download + draft
+wired; `download_answers.qwen25=true`. Draft restored from `.bak`.
+
+**Decision:** keep `qwen25` pairing as **mini_verified** in
+`agent/guessers.json`.
+
+
+### DeepSeek-R1-Distill-Qwen 14B-4bit (Mini suite, Nov 1)
+
+Target `mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit` on both Minis;
+same draft `Qwen2.5-0.5B-Instruct-4bit` (Distill-Qwen shares the Qwen2.5
+tokenizer). Even cut K=24. Test ports 8194 / 5560. LPM off. Keepalive on
+unless noted. Medians of 2. Raw
+`~/.caravan/bench-2026-11-01/distill-suite/`.
+
+**Keepalive A/B:** off **11.7** writing / 122.7 / 117.9 reading; on **12.4**
+/ 125.1 / 118.0. Quality 3/3.
+
+**Pipeline:** wall aggregate N=1 **12.2**, N=2 **21.5**, N=3 **21.6**; max
+TTFT ≤0.98 s. Same N=2 peak / N=3 ≈ N=2 pattern.
+
+**Guess-ahead suite:**
+
+| setting | count | repeat | code_edit | code_cont | accept (count) | quality |
+|---|---:|---:|---:|---:|---:|---|
+| nodraft (baseline) | **12.3** | 12.4 | 12.4 | 12.4 | — | 3/3 |
+| **auto-pair Qwen2.5-0.5B k=3** | **16.9** | **17.4** | **17.9** | **21.2** | ~0.45 | 3/3 |
+
+Count ≈ **+37%** vs nodraft. Accept ~0.45–0.46 (lower than Qwen2.5 Instruct;
+long reasoning traces). Still clears the first-load keep gate.
+
+**First-load gate:** keep=1, quality 3/3, baseline **11.17** / spec
+**13.98** tok/s, break_even_frac ≈ **0.255**.
+
+**Shut-off:** with be raised to **0.80**, hex stream disabled
+(`accepted_frac 0.542 < 0.80`).
+
+**Download prompt:** draft moved aside; PTY yes on
+`A 278 MB helper… Download Qwen2.5-0.5B-Instruct-4bit?` → download + draft
+wired; `download_answers.deepseek-r1-distill-qwen=true`. Draft restored
+from `.bak`.
+
+**Decision:** keep `deepseek-r1-distill-qwen` pairing as **mini_verified**.
 
 
 ## Not measured yet

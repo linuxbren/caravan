@@ -103,10 +103,10 @@ by a native DeepSeek-R1 skip).
 | Qwen3 | Qwen3-0.6B-4bit | 335 MB | **Mini-verified** (Nov 1; 45.9→59.7) |
 | Gemma 4 | gemma-3-270m-it-4bit | 181 MB | **Mini-verified** (Nov 1; 38.4→44.5; remap) |
 | Llama 3.x | Llama-3.2-1B-Instruct-4bit | 663 MB | **Mini-verified** (Nov 1; 22.7→51.5 count) |
-| Qwen2.5 | Qwen2.5-0.5B-Instruct-4bit | 278 MB | vocab-checked (exact) |
+| Qwen2.5 | Qwen2.5-0.5B-Instruct-4bit | 278 MB | **Mini-verified** (Nov 1; 12.4→33.8 count) |
 | Gemma 3 | gemma-3-270m-it-4bit | 181 MB | vocab-checked (exact) |
 | Gemma 2 | gemma-2-2b-it-4bit | 1403 MB | vocab-checked (exact; large draft) |
-| DeepSeek-R1-Distill-Qwen | Qwen2.5-0.5B-Instruct-4bit | 278 MB | vocab-checked (exact) |
+| DeepSeek-R1-Distill-Qwen | Qwen2.5-0.5B-Instruct-4bit | 278 MB | **Mini-verified** (Nov 1; 12.3→16.9 count) |
 | SmolLM (1.7B) | SmolLM-360M-Instruct-4bit | 204 MB | vocab-checked (exact) |
 | GPT-OSS | — | — | **skip** (no small o200k draft) |
 | Mistral / Mixtral (v0.3 SPM) | — | — | **skip** (no small same-vocab draft) |
@@ -135,3 +135,10 @@ check. Raw: `~/.caravan/bench-2026-11-01/llama-suite/dl-prompt.log`.
 ## Stop when done
 
 Kill the test packer/lead processes. Leave production workers alone.
+
+Qwen2.5 14B and DeepSeek-R1-Distill-Qwen 14B (same ports, draft moved aside):
+size prompt ("A 278 MB helper… Download Qwen2.5-0.5B-Instruct-4bit?"), yes →
+download + draft wired; remembered `qwen25` / `deepseek-r1-distill-qwen`.
+Draft restored from `.bak` after each check. Raw:
+`~/.caravan/bench-2026-11-01/qwen25-suite/dl-prompt.log` and
+`distill-suite/dl-prompt.log`.

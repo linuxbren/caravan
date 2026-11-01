@@ -1,0 +1,21 @@
+{
+  "_stills": [1.5, 8.0, 18.0, 30.0, 42.0, 54.0],
+  "_day": "Day 8",
+  "LLAMA_OFF": 22.7,
+  "LLAMA_ON": 51.5,
+  "LLAMA_RANGE": "47–65",
+  "SUITE": {
+    "keepalive": "21.2 → 22.8",
+    "pipeline": "22.5 / 39.3 / 39.0",
+    "accept": "0.75"
+  },
+  "COMPARE_OFF": [45.9, 38.4, 22.7, 34.3],
+  "COMPARE_ON": [59.7, 44.5, 51.5, null],
+  "COMPARE_LABELS": ["Qwen3", "Gemma 4", "Llama 8B", "GPT-OSS"],
+  "TAKE": [
+    ["ON", "Llama 8B jumps hardest", "22.7 → 51.5 writing with a 1B same-family helper"],
+    ["ON", "Full Mini suite still holds", "keepalive, several chats, gate, shut-off, download ask"],
+    ["ON", "Quality stayed 3/3", "first-load keep; mid-chat shut-off still fires when guesses stop helping"],
+    ["MUTED", "Next: more family pairs", "Qwen2.5 and Distill-Qwen on the same 0.5B helper"]
+  ]
+}

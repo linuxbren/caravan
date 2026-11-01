@@ -1,3 +1,84 @@
+## 2026-11-01 — Day 8 Llama 8B video (v14) + X draft
+
+**Goal.** Ship Day 8 lab video (payoff-first + burn-in captions) and X draft.
+Headline is the Llama 3.1 8B Mini suite / guess-ahead win; same day also
+Mini-verified Qwen2.5 14B and Distill-Qwen 14B on the shared 0.5B helper.
+Post shape: line 1 = headline result/number; line 2 = full Day N opener.
+
+**Hardware / software.** Same Minis. Video
+`handoff/lab/videos/make_runtime_video_v14.py`, data `v14_data.json`, out
+`2026-11-01_caravan-v3-llama8b-guess-ahead_v14.mp4` (+ `/workspace/out/v14.mp4`).
+Duration **0:54**. Payoff in first 3s + burned-in captions. Stills in
+`stills_v14/`.
+
+**Results.** Llama nodraft count **22.7** → auto-pair **51.5** (suite 51.5 /
+51.6 / 64.7 / 46.8; accept ~0.75; q 3/3; range ~47–65). Qwen2.5 14B **12.4 →
+33.8**; Distill-Qwen 14B **12.3 → 16.9** (same 0.5B helper). Both kept
+`mini_verified`. ROADMAP also gained planned item "Fewer flags…".
+
+**Post status.** drafted (not posted). Aim ~6 PM Central. Final Day 8 X draft:
+
+---
+The 8B model now writes 2–3× faster (~22 → 47–65 tokens/sec) thanks to a tiny 1B helper.
+
+Day 8 of building Caravan in the open, my homebrew app for running AI models across my Mac minis.
+
+Guess-ahead: a small same-family helper on the lead Mini drafts the next few word pieces; the big model, split across both Minis, checks them in one Thunderbolt trip. Llama 3.1 8B went 22.7 → 51.5 on the count prompt (edit hit 64.7). Quality stayed 3/3.
+
+Same day we also Mini-verified Qwen2.5 14B (12.4 → 33.8) and Distill-Qwen 14B (12.3 → 16.9) on one shared 0.5B helper.
+
+What's your best local speedup trick — helper model, quant, or something else?
+---
+
+
+## 2026-11-01 — Qwen2.5 14B + Distill-Qwen 14B full Mini suites
+
+**Goal.** Run both through every prior Mini test class (keepalive, pipeline
+N=1/2/3, guess-ahead nodraft vs auto-pair, first-load gate, shut-off,
+download prompt). Shared draft Qwen2.5-0.5B-Instruct-4bit (278 MB). Decide
+keep vs skip for `qwen25` and `deepseek-r1-distill-qwen`.
+
+**Hardware.** EXO1 lead / EXO2 packer, M4 24 GB, Thunderbolt 4. LPM off.
+Test ports 8194 / 5560. Even cut K=24. Models ~8 GB class each on both
+Minis.
+
+**Software.** Branch tip after `1c10c5f`. Clients `split_client.py`,
+`pipeline_bench.py`, `speculate_bench.py`. Raw
+`~/.caravan/bench-2026-11-01/qwen25-suite/` and `distill-suite/`.
+
+**Qwen2.5-14B-Instruct-4bit (America/Chicago ~16:16–16:37 + dl 17:23).**
+
+| test | result |
+|---|---|
+| keepalive off / on write | **11.7** / **12.3** (read 120.8/117.9 → 122.9/118.4; q 3/3) |
+| pipeline wall_agg N1 / N2 / N3 | **12.3** / **21.7** / **21.5** (max TTFT ≤1.13 s) |
+| nodraft count/repeat/edit/cont | **12.4 / 12.0 / 11.4 / 12.2** |
+| auto-pair same | **33.8 / 37.1 / 46.4 / 35.9** (accept ~0.73; q 3/3) |
+| first-load gate | keep=1; baseline **10.49** / spec **24.73**; be≈0.45 |
+| shut-off (be=0.80) | disabled (`0.729 < 0.80`) |
+| download prompt | `A 278 MB helper…` yes → download; draft restored |
+
+**DeepSeek-R1-Distill-Qwen-14B-4bit (~16:42–17:17 + dl 17:21).**
+
+| test | result |
+|---|---|
+| keepalive off / on write | **11.7** / **12.4** (read 122.7/117.9 → 125.1/118.0; q 3/3) |
+| pipeline wall_agg N1 / N2 / N3 | **12.2** / **21.5** / **21.6** (max TTFT ≤0.98 s) |
+| nodraft count/repeat/edit/cont | **12.3 / 12.4 / 12.4 / 12.4** |
+| auto-pair same | **16.9 / 17.4 / 17.9 / 21.2** (accept ~0.45; q 3/3) |
+| first-load gate | keep=1; baseline **11.17** / spec **13.98**; be≈0.255 |
+| shut-off (be=0.80) | disabled (`0.542 < 0.80`) |
+| download prompt | `A 278 MB helper…` yes → download; draft restored |
+
+**Takeaway.** Keep both pairings (`mini_verified`). Qwen2.5 Instruct gets a
+Llama-class relative lift on this smaller dense 14B (~+173% count). Distill
+gains less (~+37%) with lower accept (~0.45) on reasoning-heavy replies, but
+still clears the gate. Pipeline tops out at two chats for both.
+
+**Post status.** folded into Day 8 draft above (not posted).
+
+
+
 ## 2026-11-01 — Llama 3.1 8B full Mini suite (every prior test class)
 
 **Goal.** Run Meta-Llama-3.1-8B-Instruct-4bit through every prior Mini test
@@ -31,7 +112,7 @@ far on the Minis (~+127%). Pipeline pattern matches larger MoEs (~1.7× at
 N=2; N=3 wall ≈ N=2). Keepalive gain small on this lighter 8B (already less
 Metal cool-down than 30B-class).
 
-**Post status.** not drafted.
+**Post status.** drafted via Day 8 video/X entry (not posted).
 
 ## 2026-11-01 — download-prompt wild test + top-10 family map
 
@@ -45,7 +126,7 @@ auto-pair remembered yes. No path: decline → baseline; reload remembered no.
 Restored `.bak` + original state (2318 B). Production not stopped.
 
 **Family map.** See `agent/guessers.json` + METHODOLOGY table. Mini-verified:
-Qwen3, Gemma4, Llama3 (see Llama suite entry). Vocab-checked: Qwen2.5, Gemma3, Gemma2, Distill-Qwen,
+Qwen3, Gemma4, Llama3, Qwen2.5, Distill-Qwen (see suite entries). Vocab-checked: Gemma3, Gemma2,
 SmolLM. Skips: GPT-OSS, Mistral, Phi-4, native DeepSeek. Tests: 22.
 
 # Brenden's Mac Mini LLM Lab — Experiment Log
@@ -53,6 +134,7 @@ SmolLM. Skips: GPT-OSS, Mistral, Phi-4, native DeepSeek. Tests: 22.
 Each entry: date, goal, hardware, software/runtime, model + quant, config, results (tok/s, memory, quality), what broke, fix/next step, post status.
 
 <!-- entries below, newest first -->
+
 
 ## 2026-11-01 — Day 7 guess-ahead video (v13) + X draft + Gemma quality gate
 

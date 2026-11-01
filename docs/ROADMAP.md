@@ -235,6 +235,23 @@ Open tasks for this rule:
 12. **Packaging.** Templated launchd plists (no machine-specific paths), an
     install script, and the agent running the proxy itself.
 
+13. **Fewer flags: self-tuning defaults + settings file.** *Planned
+    (planning only; no code yet).* Cut down the number of knobs people have
+    to learn for day-to-day use, while keeping every existing flag for
+    benches and overrides.
+    - **(a) Detect and pick.** Choose pipeline chat count and the layer
+      cut (`--split-packer-layers`) from the Mini's reported memory (and
+      the model's size), so a 24 GB Mini doesn't get the same defaults as a
+      fuller box.
+    - **(b) Learn per model.** After the first measured runs, remember
+      what worked for that model (for example Llama tops out at 2 chats —
+      N=3 wall ≈ N=2 on the Nov 1 Mini suite) and reuse those settings on
+      the next load.
+    - **(c) Optional settings file.** `~/.caravan/config.toml` for human
+      overrides such as `guess_ahead = off` or a preferred pipeline N.
+      **Flags stay and win over the file**, mainly so benchmarking can pin
+      exact behavior without editing config.
+
 ## Possible future directions (not scheduled)
 
 Ideas worth writing down. None is planned or started.
@@ -315,6 +332,8 @@ simplest first:
    medians of 2 (8194/5560, LPM off): Qwen **45.9 → 59.7** (k=3);
    Gemma **38.4 → 44.5** (g3-270m k=2; strict-gate re-verify **44.3**);
    Llama 3.1 8B **22.7 → 51.5** (Llama-3.2-1B k=3; accept ~0.75);
+   Qwen2.5 14B **12.4 → 33.8** (0.5B k=3; accept ~0.73);
+   Distill-Qwen 14B **12.3 → 16.9** (same 0.5B; accept ~0.45);
    GPT-OSS **34.3** auto-skipped (no o200k draft). Shut-off confirmed
    (Qwen `accepted_frac 0.438 < 0.80`; Llama hex with be=0.80
    `0.688 < 0.80`). Full Llama suite (keepalive / pipeline N=1–3 /
