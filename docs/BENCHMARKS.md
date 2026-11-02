@@ -995,6 +995,42 @@ from `.bak`.
 **Decision:** keep `deepseek-r1-distill-qwen` pairing as **mini_verified**.
 
 
+### Auto-tune vs hand-tuned (ROADMAP #13a, Nov 1)
+
+When `--split-packer-layers` and `--split-pipeline-chats` are omitted, the
+worker picks both (explicit flags still win). Packer hello carries
+`mem_total_gb`; lead logs one plain line each for the chosen split and
+pipeline. Verified on both Minis (test ports 8194 / 5560, LPM off, keepalive
+on, warm-up, medians of 2, quality 3/3). Raw
+`~/.caravan/bench-2026-11-01/day9-autotune/`.
+
+**Auto picks (both equal-RAM ~26 GB reported):**
+
+| model | auto K | auto pipeline | reason (split / pipeline) |
+|---|---:|---:|---|
+| Qwen3-30B-A3B-4bit | **24** | **2** | balanced cut 48 layers (qwen3_moe) / headroom 3.0 GB after ~8.4 GB weights |
+| Llama-3.1-8B-Instruct-4bit | **16** | **2** | balanced cut 32 layers (llama) / headroom 7.9 GB after ~2.0 GB weights |
+| Qwen2.5-14B-Instruct-4bit | **24** | **2** | balanced cut 48 layers (qwen2) / headroom 3.9 GB after ~3.7 GB weights |
+
+Hand-tuned targets were the same: Qwen3/Qwen2.5 `K=24` pipe 2; Llama `K=16`
+pipe 2. Auto matched those cuts and chat counts on every model.
+
+**Speeds (tok/s, medians of 2):**
+
+| model | mode | write tg128 | read pp512 | read pp4096 | pipe N=2 wall agg | quality |
+|---|---|---:|---:|---:|---:|---|
+| Qwen3 | auto | **45.0** | 462.2 | 429.0 | **68.3** | 3/3 |
+| Qwen3 | tuned K24/N2 | **45.0** | 461.9 | 429.0 | **68.8** | 3/3 |
+| Llama 3.1 8B | auto | **22.5** | 242.8 | 228.9 | **37.3** | 3/3 |
+| Llama 3.1 8B | tuned K16/N2 | **22.6** | 243.2 | 229.7 | **38.2** | 3/3 |
+| Qwen2.5 14B | auto | **12.4** | 122.8 | 118.5 | **20.9** | 3/3 |
+| Qwen2.5 14B | tuned K24/N2 | **12.4** | 123.2 | 117.4 | **18.9** | 3/3 |
+
+Auto matched or beat hand-tuned within run noise (Qwen2.5 pipe wall: auto
+20.9 > tuned 18.9). **No failures** across 6 lead suites (3 models × auto|
+tuned). Unit tests: **133** pass (including `AutoTuneTest`).
+
+
 ## Not measured yet
 
 - The two-Mac split with the v1+ settings (flash attention, automatic

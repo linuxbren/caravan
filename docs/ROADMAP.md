@@ -235,22 +235,30 @@ Open tasks for this rule:
 12. **Packaging.** Templated launchd plists (no machine-specific paths), an
     install script, and the agent running the proxy itself.
 
-13. **Fewer flags: self-tuning defaults + settings file.** *Planned
-    (planning only; no code yet).* Cut down the number of knobs people have
-    to learn for day-to-day use, while keeping every existing flag for
-    benches and overrides.
-    - **(a) Detect and pick.** Choose pipeline chat count and the layer
-      cut (`--split-packer-layers`) from the Mini's reported memory (and
-      the model's size), so a 24 GB Mini doesn't get the same defaults as a
-      fuller box.
-    - **(b) Learn per model.** After the first measured runs, remember
-      what worked for that model (for example Llama tops out at 2 chats —
-      N=3 wall ≈ N=2 on the Nov 1 Mini suite) and reuse those settings on
-      the next load.
-    - **(c) Optional settings file.** `~/.caravan/config.toml` for human
-      overrides such as `guess_ahead = off` or a preferred pipeline N.
-      **Flags stay and win over the file**, mainly so benchmarking can pin
-      exact behavior without editing config.
+13. **Fewer flags: self-tuning defaults + settings file.** Cut down the
+    number of knobs people have to learn for day-to-day use, while keeping
+    every existing flag for benches and overrides.
+    - **(a) Detect and pick.** *Shipped Nov 1 (Day 9).* When
+      `--split-packer-layers` / `--split-pipeline-chats` are omitted,
+      `mlx_worker` auto-picks: (1) packer layer cut from each Mini's
+      reported memory (`mem_total_gb` in the packer hello, or the lead's
+      own reading when equal) and the model's layer count / type (idea-5
+      balanced cuts on equal-RAM 24 GB Minis: Gemma K=16, GPT-OSS K=13,
+      Qwen3/Qwen2.5 K=24, Llama K=16); (2) pipeline chat count from free
+      memory vs this side's weights, **capped at 2** (Mini benches: every
+      family tops out at N=2; never auto-pick 3; never risk swap). Explicit
+      flags still win. One plain startup log line each (`auto split: …`,
+      `auto pipeline: …`). Mini-verified auto ≡ hand-tuned on Qwen3,
+      Llama 3.1 8B, Qwen2.5 14B (quality 3/3, no failures). See
+      BENCHMARKS / METHODOLOGY.
+    - **(b) Learn per model.** *Planned.* After the first measured runs,
+      remember what worked for that model (for example Llama tops out at
+      2 chats — N=3 wall ≈ N=2 on the Nov 1 Mini suite) and reuse those
+      settings on the next load.
+    - **(c) Optional settings file.** *Planned.* `~/.caravan/config.toml`
+      for human overrides such as `guess_ahead = off` or a preferred
+      pipeline N. **Flags stay and win over the file**, mainly so
+      benchmarking can pin exact behavior without editing config.
 
 ## Possible future directions (not scheduled)
 

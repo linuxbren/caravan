@@ -229,9 +229,9 @@ Split flags (v3; see the next section):
 | `--split-role` | `none` | `lead` (serves the API, runs the last layers, picks each token) or `packer` (runs the embeddings and the first layers; no HTTP). `head` / `front` are deprecated aliases. |
 | `--split-peer HOST:PORT` | – | Lead only: Packer 1's address, normally its Thunderbolt address, port 5560. |
 | `--split-listen HOST:PORT` | – | Packer only: where to listen (its Thunderbolt address). |
-| `--split-packer-layers K` | half (the odd layer goes to the lead) | How many layers Packer 1 runs. Use the same value on both Macs; the lead refuses to start if the two disagree. `--split-front-layers` is a deprecated alias. |
+| `--split-packer-layers K` | **auto** (idea-5 balanced cut when RAM is equal) | How many layers Packer 1 runs. Omit to auto-pick from each Mini's memory + model layers (packer hello reports `mem_total_gb`). Pin the same K on both Macs for benches; the lead refuses to start if the two disagree. `--split-front-layers` is a deprecated alias. |
 | `--split-keepalive` / `--no-split-keepalive` | on | Keep Metal warm with a tiny eval on a short-lived thread while waiting for the peer (cuts ~5 ms/half cool-down). Env `CARAVAN_MLX_SPLIT_KEEPALIVE=0` / `false` / `off` / `no` also disables. |
-| `--split-pipeline-chats N` | 1 | Idea 1: overlap packer/lead across up to N concurrent split chats (1 = off). Fair `(n_gen, t0)` pick when N≥3. Env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`. |
+| `--split-pipeline-chats N` | **auto** (cap 2; never swap) | Idea 1: overlap packer/lead across up to N concurrent split chats. Omit to auto-pick from free memory vs weights (Mini benches peak at 2; never auto-picks 3). Pass `1` to force off. Fair `(n_gen, t0)` pick when N≥3. Env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`. |
 | `--split-draft-model DIR` | off | Idea 3: override draft path on the lead. Env `CARAVAN_MLX_SPLIT_DRAFT_MODEL`. |
 | `--no-split-draft` | off | Idea 3: disable auto-pair and any draft. |
 | `--split-draft-auto-download` | off | Idea 3: download a matched guesser without prompting. Env `CARAVAN_MLX_SPLIT_DRAFT_AUTO_DOWNLOAD=1`. |

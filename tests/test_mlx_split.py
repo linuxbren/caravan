@@ -289,3 +289,50 @@ class KeyFwdTest(unittest.TestCase):
         rh, rp = p.client.finish_call()
         self.assertIn("dtype", rh)
         self.assertTrue(len(rp) >= 1)
+
+
+class AutoTuneTest(unittest.TestCase):
+    """ROADMAP #13a: self-tuning packer layers + pipeline chat count."""
+
+    def test_equal_ram_idea5_cuts(self):
+        k, reason = S.choose_packer_layers(30, 24.0, 24.0, "gemma4")
+        self.assertEqual(k, 16)
+        self.assertIn("balanced", reason)
+        k, _ = S.choose_packer_layers(24, 24.0, 24.0, "gpt_oss")
+        self.assertEqual(k, 13)
+        k, _ = S.choose_packer_layers(48, 24.0, 24.0, "qwen3")
+        self.assertEqual(k, 24)
+        k, _ = S.choose_packer_layers(32, 24.0, 24.0, "llama")
+        self.assertEqual(k, 16)
+        k, _ = S.choose_packer_layers(48, 24.0, 24.0, "qwen2")
+        self.assertEqual(k, 24)
+
+    def test_memory_skew(self):
+        # Packer has half the RAM → fewer layers
+        k, reason = S.choose_packer_layers(48, 48.0, 24.0, "qwen3")
+        self.assertLess(k, 24)
+        self.assertGreaterEqual(k, 1)
+        self.assertIn("skew", reason.lower())
+        # Packer has more RAM → more layers
+        k2, _ = S.choose_packer_layers(48, 24.0, 48.0, "qwen3")
+        self.assertGreater(k2, 24)
+
+    def test_pipeline_caps_at_two(self):
+        n, reason = S.choose_pipeline_chats(total_gb=24.0, weights_gb=5.0, available_gb=18.0)
+        self.assertEqual(n, 2)
+        self.assertIn("2 chats", reason)
+        # Tiny box / huge weights → 1
+        n1, reason1 = S.choose_pipeline_chats(total_gb=8.0, weights_gb=6.0, available_gb=1.5)
+        self.assertEqual(n1, 1)
+        self.assertIn("1 chat", reason1)
+
+    def test_pipeline_never_picks_three(self):
+        # Even with huge headroom, auto stays at 2 (Mini wall tops out at 2).
+        n, _ = S.choose_pipeline_chats(total_gb=128.0, weights_gb=4.0, available_gb=100.0)
+        self.assertEqual(n, 2)
+
+    def test_host_memory_returns_positive(self):
+        total, avail = S.host_memory_gb()
+        self.assertGreater(total, 0.5)
+        self.assertGreaterEqual(avail, 0.0)
+

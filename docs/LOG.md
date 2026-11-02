@@ -1,3 +1,17 @@
+## 2026-11-01: Day 9 ROADMAP #13(a) auto-pick (split + pipeline)
+
+- Helpers `choose_packer_layers` / `choose_pipeline_chats` in `mlx_split.py`;
+  worker omits default for `--split-pipeline-chats` (None → auto); packer
+  hello carries `mem_total_gb` / `mem_available_gb`. Startup logs
+  `auto split:` / `auto pipeline:`. Explicit flags still win.
+- Mini verify (8194/5560, LPM off, warm-up, medians of 2, q 3/3): Qwen3 /
+  Llama 3.1 8B / Qwen2.5 14B × auto|tuned. Auto picked K24/N2, K16/N2,
+  K24/N2 (same as hand-tuned). Speeds matched or beat tuned (Qwen2.5 pipe
+  wall auto 20.9 > tuned 18.9). No failures. Raw
+  `~/.caravan/bench-2026-11-01/day9-autotune/`.
+- Unit tests: 133 pass. Docs: ROADMAP #13(a) shipped; METHODOLOGY auto
+  section; BENCHMARKS table; experiments entry.
+
 ## 2026-11-01: Llama 3.1 8B Mini suite (keepalive / pipeline / guess-ahead)
 
 - Target `mlx-community/Meta-Llama-3.1-8B-Instruct-4bit` (~4.2 GB) on both

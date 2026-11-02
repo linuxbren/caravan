@@ -1,3 +1,60 @@
+## 2026-11-01 — Day 9: ROADMAP #13(a) auto-pick split + pipeline
+
+**Goal.** When flags are omitted, `mlx_worker` auto-picks (1) pipeline chat
+count from free memory / model+KV size (cap 2 on 24 GB Minis; never risk
+swap) and (2) lead/packer layer cut from each Mini's detected memory and
+layer sizes (packer reports `mem_total_gb` in hello). Explicit flags win.
+One plain startup log line each. Unit tests. Mini-verify auto vs hand-tuned
+across ≥ Qwen3, Llama 3.1 8B, Qwen2.5 14B (ports 8194/5560, LPM off,
+warm-up, medians ≥2, quality 3/3). Update ROADMAP / METHODOLOGY /
+BENCHMARKS / this log. Commit on Omarchy as linuxbren noreply; sync all
+copies; stop test workers. No video / no push / no tag.
+
+**Hardware.** EXO1 lead + EXO2 packer, Thunderbolt `169.254.104.38:5560`,
+LPM off both (`lowpowermode 0`).
+
+**Software.** Branch `caravan-v3-mlx-split`. New helpers
+`choose_packer_layers` / `choose_pipeline_chats` / `host_memory_gb` /
+`read_n_layers` in `agent/mlx_split.py`; wire-up + hello mem fields +
+startup logs in `agent/mlx_worker.py`. Driver
+`handoff/lab/day9_driver.sh`. MLX 0.32.4 / mlx-lm 0.32.2. Test ports only.
+
+**Auto picks:**
+
+| model | K | pipeline | why |
+|---|---:|---:|---|
+| Qwen3-30B-A3B-4bit | 24 | 2 | equal RAM ~26/26; balanced 48-layer qwen3_moe / headroom 3.0 GB after ~8.4 GB weights |
+| Llama-3.1-8B-Instruct-4bit | 16 | 2 | equal RAM; balanced 32-layer llama / headroom 7.9 GB after ~2.0 GB |
+| Qwen2.5-14B-Instruct-4bit | 24 | 2 | equal RAM; balanced 48-layer qwen2 / headroom 3.9 GB after ~3.7 GB |
+
+Hand-tuned targets were identical (K24/N2, K16/N2, K24/N2).
+
+**Results (medians of 2; quality 3/3 every suite; no failures):**
+
+| model | mode | tg128 write | pp512 | pp4096 | pipe N=2 wall |
+|---|---|---:|---:|---:|---:|
+| Qwen3 | auto | 45.0 | 462.2 | 429.0 | 68.3 |
+| Qwen3 | tuned | 45.0 | 461.9 | 429.0 | 68.8 |
+| Llama | auto | 22.5 | 242.8 | 228.9 | 37.3 |
+| Llama | tuned | 22.6 | 243.2 | 229.7 | 38.2 |
+| Qwen2.5 | auto | 12.4 | 122.8 | 118.5 | 20.9 |
+| Qwen2.5 | tuned | 12.4 | 123.2 | 117.4 | 18.9 |
+
+Auto matched or beat tuned (Qwen2.5 pipe wall auto > tuned). Unit tests:
+**133** pass (`AutoTuneTest` covers equal-RAM idea-5 cuts, memory skew,
+pipeline cap-at-2 / never-3, host_memory). Raw
+`~/.caravan/bench-2026-11-01/day9-autotune/{qwen3,llama,qwen25}-{auto,tuned}/`.
+
+**What broke.** None on the six lead suites. (Earlier: CloudAgent unavailable
+on the executor → implemented on existing checkouts; Qwen3 4-bit path on
+EXO1 is under `~/.exo/models/…`.)
+
+**Fix / next.** ROADMAP #13(b) learn-per-model; #13(c) optional
+`~/.caravan/config.toml`. Day 9 video not made yet (Brenden: don't make it
+yet).
+
+**Post status.** Not drafted; not posted. No push / no tag.
+
 ## 2026-11-01 — Day 8 full scoreboard video (v15)
 
 **Goal.** Redo Day 8 lab video as v15 covering **all** local models Mini-tested,

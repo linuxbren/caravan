@@ -44,6 +44,25 @@ Packer first (EXO2), then lead (EXO1). Same `--split-packer-layers` on both
 pairing table. `--split-draft-skip-first-load` skips the one-time gate when
 you already trust the pair (or are measuring something else).
 
+### Auto-pick when flags are omitted (ROADMAP #13a)
+
+Omit `--split-packer-layers` and/or `--split-pipeline-chats` to let the worker
+choose. Explicit flags (and matching env) still win.
+
+- **Layer cut:** packer reports `mem_total_gb` in the hello; the lead compares
+  that to its own memory and the model's layer count / type
+  (`choose_packer_layers`). Equal-RAM 24 GB Minis get the idea-5 balanced
+  cuts (Gemma 16, GPT-OSS 13, Qwen3/Qwen2.5 24, Llama 16). Log line:
+  `auto split: packer_layers=K (reason)`.
+- **Pipeline chats:** from this side's free memory vs loaded weights
+  (`choose_pipeline_chats`). Caps at **2** (Mini benches: N=3 wall ≈ N=2 for
+  every family); never auto-picks 3; stays at 1 when headroom is tight so
+  KV never risks swap. Log line: `auto pipeline: chats=N (reason)`.
+
+For A/B vs hand-tuned, restart both roles with the same flags pinned; compare
+medians of ≥2 under this methodology (ports 8194/5560, LPM off, warm-up,
+quality 3/3).
+
 ## Warm-up
 
 The worker runs a short Metal warm-up at load. After `/health` is up, send one

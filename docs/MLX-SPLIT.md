@@ -127,15 +127,17 @@ On the lead Mac:
   --split-peer <packer-tb-ip>:5560 --model <local model dir> --port 8092
 ```
 
-Start the packer first. `--split-packer-layers K` must match on both
-Macs (the lead checks and refuses to start otherwise).
+Start the packer first. When you pin `--split-packer-layers K`, use the
+same K on both Macs (the lead checks and refuses to start otherwise).
+Omit the flag on both to let each role auto-pick the same idea-5 balanced
+cut from reported memory (ROADMAP #13a; see [METHODOLOGY.md](METHODOLOGY.md)).
 
 `--split-keepalive` (default on) keeps Metal warm on a short-lived
 side thread while this Mac waits for the peer, so the next half does
 not pay ~5 ms of cool-down after the idle. Disable with
 `--no-split-keepalive` or `CARAVAN_MLX_SPLIT_KEEPALIVE=0`. Measured
 
-`--split-pipeline-chats N` (default 1, env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`) overlaps Packer 1's half for chat B with the lead's half for chat A when N≥2. Off by default so single-chat behavior stays the old path. Two chats ≈1.6× wall aggregate writing; a fair `(n_gen, t0)` packer pick keeps a third chat's wait before the first word ~0.6 s (was ~4 s). See [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31nov-1-mlx).
+`--split-pipeline-chats N` (default **auto**, env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`) overlaps Packer 1's half for chat B with the lead's half for chat A when N≥2. Omit the flag to auto-pick from free memory (capped at 2 on 24 GB Minis; pass `1` to force the old single-chat path). Two chats ≈1.6× wall aggregate writing; a fair `(n_gen, t0)` packer pick keeps a third chat's wait before the first word ~0.6 s (was ~4 s). See [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31nov-1-mlx).
 Oct 31: writing +28–50% vs off, reading and quality unchanged
 ([BENCHMARKS.md](BENCHMARKS.md#gpu-keepalive-while-waiting-on-the-peer-oct-31-mlx)).
 

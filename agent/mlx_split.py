@@ -70,6 +70,146 @@ def plan_split(n_layers: int, front_layers=None):
     return (0, k), (k, n)
 
 
+
+def read_n_layers(model_dir) -> int:
+    """Layer count from config.json (no weight load)."""
+    import json
+    from pathlib import Path
+    cfg = json.loads((Path(model_dir) / "config.json").read_text())
+    for key in ("num_hidden_layers", "n_layer", "num_layers", "n_layers"):
+        if key in cfg and cfg[key]:
+            return int(cfg[key])
+    # text / nested
+    t = cfg.get("text_config") or cfg.get("llm_config") or {}
+    for key in ("num_hidden_layers", "n_layer", "num_layers"):
+        if key in t and t[key]:
+            return int(t[key])
+    raise ValueError(f"cannot read layer count from {model_dir}/config.json")
+
+
+def read_model_type(model_dir) -> str:
+    import json
+    from pathlib import Path
+    cfg = json.loads((Path(model_dir) / "config.json").read_text())
+    return str(cfg.get("model_type") or "")
+
+
+def host_memory_gb():
+    """(total_gb, available_gb) for this Mac. Available prefers free+speculative
+    pages; total is free+active+inactive+wired (+compressed when present)."""
+    try:
+        import system_stats as ss
+        vm = ss._vm_stat()
+    except Exception:
+        # Linux / tests: fall back to /proc or a safe synthetic.
+        try:
+            # MemAvailable / MemTotal in kB
+            info = {}
+            with open("/proc/meminfo") as f:
+                for line in f:
+                    k, _, rest = line.partition(":")
+                    info[k] = int(rest.strip().split()[0]) * 1024
+            total = info.get("MemTotal", 0)
+            avail = info.get("MemAvailable", info.get("MemFree", 0))
+            return total / 1e9, avail / 1e9
+        except Exception:
+            return 24.0, 12.0
+    page_groups = (
+        vm.get("Pages free", 0)
+        + vm.get("Pages speculative", 0)
+        + vm.get("Pages active", 0)
+        + vm.get("Pages inactive", 0)
+        + vm.get("Pages wired down", 0)
+        + vm.get("Pages occupied by compressor", 0)
+        + vm.get("Pages stored in compressor", 0)
+    )
+    # Prefer hw.memsize when we can (exact total RAM).
+    total = page_groups
+    try:
+        import subprocess, re
+        out = subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=5)
+        if out.returncode == 0 and out.stdout.strip().isdigit():
+            total = int(out.stdout.strip())
+    except Exception:
+        pass
+    avail = vm.get("Pages free", 0) + vm.get("Pages speculative", 0)
+    # purgeable + inactive are reclaimable under pressure; count half of inactive
+    avail += vm.get("Pages purgeable", 0) + vm.get("Pages inactive", 0) // 2
+    return total / 1e9, avail / 1e9
+
+
+def choose_packer_layers(n_layers: int, lead_mem_gb: float, packer_mem_gb: float,
+                         model_type: str = ""):
+    """Pick Packer 1 layer count K. Explicit caller passes K itself; this is
+    the auto path. On equal-RAM Minis use idea-5 balanced cuts when known;
+    otherwise even. When RAM differs >10%, skew K with packer's share of
+    total RAM. Returns (k, reason)."""
+    n = int(n_layers)
+    if n < 2:
+        raise ValueError("need at least 2 layers to split")
+    mt = (model_type or "").lower()
+    # Idea-5 / Mini-measured balanced defaults (same RAM both sides).
+    balanced = None
+    if "gemma4" in mt or (n == 30 and "gemma" in mt):
+        balanced = 16
+    elif "gpt_oss" in mt or "gpt-oss" in mt or (n == 24 and "gpt" in mt):
+        balanced = 13
+    elif n == 48:
+        balanced = 24          # Qwen3 / Qwen2.5 even
+    elif n == 32:
+        balanced = 16          # Llama 3.1 8B even
+    elif n == 30:
+        balanced = 16          # Gemma 4 without type
+    elif n == 24:
+        balanced = 12          # even fallback for 24-layer non-oss
+    else:
+        balanced = n // 2
+
+    lead = max(float(lead_mem_gb), 0.1)
+    pack = max(float(packer_mem_gb), 0.1)
+    ratio = pack / lead
+    if 0.90 <= ratio <= 1.10:
+        k = int(balanced)
+        reason = (f"equal RAM ~{lead:.0f}/{pack:.0f} GB; balanced cut K={k} "
+                  f"for {n} layers" + (f" ({model_type})" if model_type else ""))
+    else:
+        # Skew by memory share; keep at least 1 layer on each side.
+        share = pack / (lead + pack)
+        k = int(round(share * n))
+        k = max(1, min(n - 1, k))
+        # Prefer known balanced when skew is mild and balanced is close.
+        if abs(k - balanced) <= 1 and 0.80 <= ratio <= 1.25:
+            k = int(balanced)
+            reason = (f"RAM lead {lead:.0f} / packer {pack:.0f} GB (ratio {ratio:.2f}); "
+                      f"near-balanced → K={k}")
+        else:
+            reason = (f"RAM lead {lead:.0f} / packer {pack:.0f} GB (ratio {ratio:.2f}); "
+                      f"memory-skewed K={k} of {n}")
+    k = max(1, min(n - 1, int(k)))
+    return k, reason
+
+
+def choose_pipeline_chats(*, total_gb: float, weights_gb: float, available_gb: float | None = None):
+    """Pick concurrent pipeline chat count when the flag is unset.
+    Mini benches (Nov 1): every family tops out at 2 chats on 24 GB boxes
+    (N=3 wall aggregate ≈ N=2). Never auto-pick 3. Never risk swap: need
+    headroom beyond this side's weights for a second KV. Returns (n, reason)."""
+    total = float(total_gb)
+    weights = max(float(weights_gb), 0.0)
+    reserve = 3.0          # OS + Metal + fragmentation
+    # Extra chat KV cost grows with model half size (benches: ~0.5–1.2 GB).
+    per_extra = max(1.2, 0.2 * weights + 0.6)
+    headroom = total - weights - reserve
+    if available_gb is not None:
+        # Before-load available is a soft check; still never exceed total budget.
+        headroom = min(headroom, float(available_gb) - reserve)
+    if headroom >= per_extra:
+        return 2, (f"headroom {headroom:.1f} GB after ~{weights:.1f} GB weights "
+                   f"on {total:.0f} GB; Mini benches peak at 2 chats")
+    return 1, (f"tight headroom {headroom:.1f} GB after ~{weights:.1f} GB weights "
+               f"on {total:.0f} GB; stay at 1 chat (avoid swap)")
+
+
 def stage_label(role, rng, n):
     """Stage id stored in the session caches' metadata ("head 12-23 of 24").
     Kept in the old wording so saved caches stay valid; use stage_title()

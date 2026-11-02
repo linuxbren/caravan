@@ -18,6 +18,12 @@ reply comes out.
   output no longer passes. Gate probes use 256 tokens.
 
 ### Added
+- ROADMAP #13(a) auto-tune: when `--split-packer-layers` /
+  `--split-pipeline-chats` are omitted, pick K from Mini memories + layer
+  sizes (packer hello `mem_total_gb`) and pipeline chats from free memory
+  (cap 2, never swap). Explicit flags win. Startup logs `auto split:` /
+  `auto pipeline:`. Mini-verified auto ≡ hand-tuned on Qwen3, Llama 3.1
+  8B, Qwen2.5 14B (quality 3/3). See BENCHMARKS / METHODOLOGY.
 - Llama 3.1 8B Mini-verified guess-ahead suite (keepalive / pipeline N=1–3 /
   nodraft vs auto-pair / first-load / shut-off / download prompt). Count
   **22.7 → 51.5**; `llama3` → `mini_verified` in `guessers.json`. See

@@ -585,10 +585,13 @@ class Engine:
         self.args = args
         self.jobs = queue.Queue()
         self._queue_mod = queue
-        # Idea 1: max concurrent split chats to pipeline (0/1 = off, serial as today).
-        self.pipeline_chats = int(getattr(args, "split_pipeline_chats", 1) or 1)
-        if self.pipeline_chats < 1:
-            self.pipeline_chats = 1
+        # Idea 1: max concurrent split chats. None = resolve in _setup (ROADMAP #13a).
+        raw_pipe = getattr(args, "split_pipeline_chats", None)
+        self._pipeline_chats_explicit = raw_pipe is not None
+        if raw_pipe is None:
+            self.pipeline_chats = None
+        else:
+            self.pipeline_chats = max(1, int(raw_pipe))
         self.draft_model = None
         self.draft_tokenizer = None
         self.speculate_k = int(getattr(args, "split_speculate_k", 4) or 4)
@@ -633,11 +636,27 @@ class Engine:
             import mlx_split as S
             from mlx_lm.utils import load_tokenizer
             cfg0 = json.loads((self.model_dir / "config.json").read_text())
-            self.stage = S.Stage(self.model_dir, "head", args.split_front_layers)
             self.client = S.FrontClient(args.split_peer)
             if getattr(args, "split_keepalive", True):
                 self.client.enable_gpu_keepalive(mx)
                 log("lead GPU keepalive on (warms Metal while waiting for packer 1)")
+            # ROADMAP #13a: auto packer layers when --split-packer-layers omitted.
+            if args.split_front_layers is None:
+                hello0 = self.client.call("hello", proto=S.PROTO)[0]
+                lead_total, lead_avail = S.host_memory_gb()
+                pack_total = float(hello0.get("mem_total_gb") or lead_total)
+                n_layers = int(hello0.get("n_layers") or S.read_n_layers(self.model_dir))
+                mt = str(cfg0.get("model_type") or hello0.get("model_type") or "")
+                k, reason = S.choose_packer_layers(n_layers, lead_total, pack_total, mt)
+                pack_k = int((hello0.get("range") or [0, 0])[1] or 0)
+                if pack_k and pack_k != k:
+                    raise RuntimeError(
+                        f"auto split wants packer_layers={k} ({reason}), but packer loaded K={pack_k}. "
+                        f"Restart the packer without --split-packer-layers (or pass "
+                        f"--split-packer-layers {k} on both).")
+                args.split_front_layers = k
+                log(f"auto split: packer_layers={k} ({reason})")
+            self.stage = S.Stage(self.model_dir, "head", args.split_front_layers)
             self.model = S.SplitModel(self.stage, self.client)
             self.tokenizer = load_tokenizer(self.model_dir, eos_token_ids=cfg0.get("eos_token_id"))
             hello = self.client.call("hello", proto=S.PROTO)[0]
@@ -646,6 +665,14 @@ class Engine:
                                    f"({S.stage_title('head', self.stage.range, self.stage.n_layers)})")
             log(f"split lead: {S.stage_title('head', self.stage.range, self.stage.n_layers)} here, "
                 f"{S.title_from_label(hello.get('stage'))} at {args.split_peer}")
+            # ROADMAP #13a: auto pipeline chat count when flag/env omitted.
+            if self.pipeline_chats is None:
+                total_gb, avail_gb = S.host_memory_gb()
+                weights_gb = self.stage.nbytes() / 1e9
+                n, reason = S.choose_pipeline_chats(
+                    total_gb=total_gb, weights_gb=weights_gb, available_gb=avail_gb)
+                self.pipeline_chats = n
+                log(f"auto pipeline: chats={n} ({reason})")
             no_draft = bool(getattr(args, "no_split_draft", False))
             draft = getattr(args, "split_draft_model", None)
             if no_draft:
@@ -748,6 +775,9 @@ class Engine:
             f"sessions<= {self.store.max_sessions}, bytes<= {args.prompt_cache_bytes}, "
             f"prefill step {self.prefill_step}, kv bits {args.kv_bits or 16}, persist="
             + (f"on {self.store.cache_dir}" if self.store.persist else "off"))
+        # Non-split (or unresolved) auto → serial one chat.
+        if self.pipeline_chats is None:
+            self.pipeline_chats = 1
 
     def _main(self, ready):
         try:
@@ -776,6 +806,8 @@ class Engine:
                         out.put(("error", e))
                     out.put(None)
         else:
+            if self.pipeline_chats is None:
+                self.pipeline_chats = 1
             log(f"split pipeline chats={self.pipeline_chats} (idea 1; overlap packer/lead across sessions)")
             self._main_pipeline()
 
@@ -2097,7 +2129,8 @@ def build_parser():
     ap.add_argument("--split-peer", default=None, help="lead: Packer 1's HOST:PORT (Thunderbolt address)")
     ap.add_argument("--split-listen", default=None, help="packer: HOST:PORT to listen on (Thunderbolt address)")
     ap.add_argument("--split-packer-layers", "--split-front-layers", dest="split_front_layers", type=int, default=None, metavar="K",
-                    help="layers on Packer 1 (default: half, the odd one to the lead). "
+                    help="layers on Packer 1 (default: auto from each Mini's RAM + model; "
+                         "idea-5 balanced cuts when RAM is equal). "
                          "--split-front-layers is a deprecated alias")
     # Default on; CARAVAN_MLX_SPLIT_KEEPALIVE=0/false/off disables. --no-split-keepalive too.
     _ka_env = os.environ.get("CARAVAN_MLX_SPLIT_KEEPALIVE")
@@ -2106,10 +2139,13 @@ def build_parser():
                     help="keep Metal warm while waiting on the peer (default: on; cuts ~5 ms/half/token "
                          "idle cool-down). --no-split-keepalive or CARAVAN_MLX_SPLIT_KEEPALIVE=0 disables")
     _pipe_env = os.environ.get("CARAVAN_MLX_SPLIT_PIPELINE_CHATS")
-    _pipe_default = int(_pipe_env) if (_pipe_env and _pipe_env.strip().isdigit()) else 1
+    _pipe_env_set = bool(_pipe_env and _pipe_env.strip().isdigit())
+    _pipe_default = int(_pipe_env) if _pipe_env_set else None  # None = auto (ROADMAP #13a)
     ap.add_argument("--split-pipeline-chats", type=int, default=_pipe_default, metavar="N",
                     help="idea 1: overlap packer/lead across up to N concurrent split chats "
-                         "(default 1 = off; try 2 or 3). Env CARAVAN_MLX_SPLIT_PIPELINE_CHATS")
+                         "(default: auto from free memory / model size, capped at 2; "
+                         "pass N to pin). Env CARAVAN_MLX_SPLIT_PIPELINE_CHATS")
+    ap.set_defaults(split_pipeline_chats_from_env=_pipe_env_set)
     _draft_env = os.environ.get("CARAVAN_MLX_SPLIT_DRAFT_MODEL")
     ap.add_argument("--split-draft-model", default=_draft_env or None, metavar="DIR",
                     help="idea 3: local MLX draft model dir on the lead (overrides auto-pair). "
@@ -2146,6 +2182,15 @@ def front_main(args):
     from mlx_lm.utils import maybe_set_recommended_wired_limit
     t0 = time.time()
     model_dir = Path(args.model).expanduser().resolve()
+    mem_total, mem_avail = S.host_memory_gb()
+    if args.split_front_layers is None:
+        n_layers = S.read_n_layers(model_dir)
+        mt = S.read_model_type(model_dir)
+        # Peer RAM unknown at packer start; assume symmetric (two Minis). Lead
+        # re-checks with packer-reported mem and errors if K would differ.
+        k, reason = S.choose_packer_layers(n_layers, mem_total, mem_total, mt)
+        args.split_front_layers = k
+        log(f"auto split: packer_layers={k} ({reason})")
     stage = S.Stage(model_dir, "front", args.split_front_layers)
     wired = apply_startup_wiring(getattr(args, "wired_limit", "startup"), mx, maybe_set_recommended_wired_limit)
     if args.cache_limit_gb is not None:
@@ -2167,7 +2212,9 @@ def front_main(args):
             return stage.front_forward(tokens, cache)
 
     info = {"stage": label, "range": list(stage.range), "n_layers": stage.n_layers,
-            "model_type": stage.model_type, "mlx_lm": _version("mlx_lm")}
+            "model_type": stage.model_type, "mlx_lm": _version("mlx_lm"),
+            "mem_total_gb": round(mem_total, 2), "mem_available_gb": round(mem_avail, 2),
+            "packer_layers": int(stage.range[1])}
     state = S.FrontState(store, forward, info, new_scratch=ops.new_cache)
     if getattr(args, "split_keepalive", True):
         state.keepalive = S.GpuKeepalive(mx)
