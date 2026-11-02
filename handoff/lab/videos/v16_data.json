@@ -1,0 +1,61 @@
+{
+  "_stills": [
+    1.5,
+    8.0,
+    18.0,
+    30.0,
+    42.0
+  ],
+  "_day": "Day 9",
+  "PAYOFF_MATCH": "auto = hand-tuned",
+  "MODELS": [
+    {
+      "name": "Qwen3 30B",
+      "k": 24,
+      "n": 2,
+      "auto": 45.0,
+      "tuned": 45.0
+    },
+    {
+      "name": "Llama 8B",
+      "k": 16,
+      "n": 2,
+      "auto": 22.5,
+      "tuned": 22.6
+    },
+    {
+      "name": "Qwen2.5 14B",
+      "k": 24,
+      "n": 2,
+      "auto": 12.4,
+      "tuned": 12.4
+    }
+  ],
+  "LIVE_LOG": [
+    "auto split: packer_layers=16  (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers)",
+    "auto pipeline: chats=2  (headroom 7.0 GB after ~2.0 GB weights; benches peak at 2)",
+    "listening on http://127.0.0.1:8194"
+  ],
+  "TAKE": [
+    [
+      "ON",
+      "No flags \u2192 Caravan picks the cut and chat count",
+      "From each Mini's memory + model size; flags still win"
+    ],
+    [
+      "ONE",
+      "Matched hand-tuned on three models",
+      "Qwen3 45.0=45.0 \u00b7 Llama 22.5\u224822.6 \u00b7 Qwen2.5 12.4=12.4"
+    ],
+    [
+      "ON",
+      "One plain reason line each",
+      "auto split: \u2026 \u00b7 auto pipeline: \u2026"
+    ],
+    [
+      "MUTED",
+      "133 unit tests pass",
+      "Uneven memory covered in tests; both Minis equal RAM today"
+    ]
+  ]
+}

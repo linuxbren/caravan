@@ -50,7 +50,7 @@ on the executor → implemented on existing checkouts; Qwen3 4-bit path on
 EXO1 is under `~/.exo/models/…`.)
 
 **Fix / next.** ROADMAP #13(b) learn-per-model; #13(c) optional
-`~/.caravan/config.toml`. Day 9 video not made yet (Brenden: don't make it
+`~/.caravan/config.toml`. Day 9 video: `handoff/lab/videos/2026-11-01_caravan-v3-day9-auto-settings_v16.mp4` (0:50). X draft ready; Brenden will schedule when he can.
 yet).
 
 **Post status.** Not drafted; not posted. No push / no tag.
