@@ -260,6 +260,17 @@ Open tasks for this rule:
       pipeline N. **Flags stay and win over the file**, mainly so
       benchmarking can pin exact behavior without editing config.
 
+14. **Node view (dashboard).** A live view like exo's: each Mini, the layers
+    it holds, memory, speed, chats in flight, and whether guess-ahead is
+    helping. Most of the data is already logged; it needs a small status
+    endpoint on the proxy (for example `GET /caravan/status`, JSON) and a
+    screen that reads it. Shape left open: web page, Terminal Delight
+    Workbench items, or both.
+15. **Console via Terminal Delight (Parker's app).** Switch models, chat and
+    change options from Parker Brown's terminal. Integration guide for
+    Parker: `docs/INTEGRATING.md`. Shape left open; see "Terminal Delight as
+    Caravan's console" below for the options.
+
 ## Possible future directions (not scheduled)
 
 Ideas worth writing down. None is planned or started.
