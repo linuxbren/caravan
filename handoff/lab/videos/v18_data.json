@@ -1,0 +1,46 @@
+{
+  "_day": "Day 12",
+  "_stills": [1.5, 12.0, 28.0, 48.0, 70.0, 95.0],
+  "PREFIX": {
+    "llama_off": 17.5,
+    "llama_on": 8.9,
+    "qwen_off": 9.3,
+    "qwen_on": 5.0,
+    "llama_pct": 49,
+    "qwen_pct": 46,
+    "note": "new-session wait (first word) · ≥2048-token shared system prompt · Llama/Qwen3 hit-memory"
+  },
+  "GUESS": [
+    {"name": "Llama 8B", "off": 22.6, "on": 49.7, "pct": 120},
+    {"name": "Qwen3 30B", "off": 45.4, "on": 59.0, "pct": 30}
+  ],
+  "STACK": [
+    {"name": "Llama 8B", "n2_off": 39.4, "n2_on": 19.0, "accept": 0.10},
+    {"name": "Qwen3 30B", "n2_off": 72.5, "n2_on": 24.9, "accept": 0.27},
+    {"name": "Gemma 26B", "n2_off": 58.4, "n2_on": 30.5, "accept": 0.09}
+  ],
+  "LOOKBACK": {
+    "qwen_repeat_off": 62.0,
+    "qwen_repeat_on": 66.2,
+    "qwen_code_off": 57.5,
+    "qwen_code_on": 35.6,
+    "note": "helps when the reply copies the prompt · can hurt when it guesses wrong"
+  },
+  "FUSED": [
+    {"name": "Llama 8B", "where": "one Mini", "off": 23.75, "on": 23.7},
+    {"name": "Llama 8B", "where": "split", "off": 22.6, "on": 22.55},
+    {"name": "Qwen3 30B", "where": "split", "off": 44.75, "on": 44.55},
+    {"name": "Gemma 26B", "where": "split*", "off": 37.65, "on": 37.7}
+  ],
+  "MTP": {
+    "models_checked": 6,
+    "with_mtp": 0,
+    "waiting_on": "Qwen3-Next (ships a built-in guesser)"
+  },
+  "TAKE": [
+    ["ON", "Shared start of chats ~2× faster first word", "Llama 17.5→8.9 s · Qwen3 9.3→5.0 s when a long system prompt is reused"],
+    ["ONE", "Guess-ahead on one chat still the big writing win", "Llama 22.6→49.7 · Qwen3 45.4→59.0 tok/s writing speed"],
+    ["MUTED", "Two chats + guess-ahead do not stack", "Guesses collapse (accept ~0.09–0.27) · two chats alone still ~1.6–1.8× total"],
+    ["MUTED", "Fused kernels parked · built-in guesser blocked", "MLX already does the easy fusions (~0%) · none of our models ship MTP"]
+  ]
+}

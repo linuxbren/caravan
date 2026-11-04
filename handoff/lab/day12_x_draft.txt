@@ -1,0 +1,23 @@
+MAIN:
+17.5 → 8.9 s to first word. New chat, same long system prompt, about 2× sooner.
+
+Day 12 of building Caravan in the open, my homebrew app for running AI models across my Mac minis.
+
+I tried five easy speedups on a big model split across two Minis. Shared starts won. Fused kernels did nothing.
+
+REPLY1:
+Shared start cuts the wait for the first word: Llama 17.5→8.9 s, Qwen3 9.3→5.0 s when chats reuse a long system prompt. Writing speed doesn't change. Gemma still needs a packer fix.
+
+Guess-ahead on one chat is still the writing win: Llama 22.6→49.7, Qwen3 45.4→59.0 tok/s.
+
+REPLY2:
+Two chats + guess-ahead didn't stack. Total writing fell (Llama 39.4→19.0, Qwen3 72.5→24.9) because the guesses got worse. Two chats alone still give ~1.6–1.8× total.
+
+Look-back per message: Qwen3 copy-text 62→66, but it hurt one code prompt. Off by default.
+
+REPLY3:
+Fused kernels: ~0% on one Mini and on the split, since MLX already does the easy ones. Parked.
+
+Built-in guesser: 0/6 of our models ship one. Waiting on something like Qwen3-Next.
+
+Should shared-prefix ship on by default, or stay opt-in until Gemma's packer trim is fixed?
