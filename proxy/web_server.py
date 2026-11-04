@@ -152,19 +152,24 @@ def make_handler(app: App):
             self.wfile.write(data)
 
         def do_POST(self):
+            # Always drain Content-Length before any early return. Skipping
+            # that on HTTP/1.1 keep-alive leaves the JSON body on the socket;
+            # the next request then looks like `{"messages":...}GET /api/...`
+            # (Bad request syntax) and the UI looks "stuck".
             path = self.path.split("?", 1)[0]
+            body = self._body()
             if path == "/api/time":
-                return self._api_time(post=True)
+                return self._api_time(post=True, body=body)
             if path == "/api/models/load":
-                return self._api_load()
+                return self._api_load(body=body)
             if path == "/api/models/stop":
                 app.mgr.stop(reason="ui")
                 return self._json(200, app.mgr.snapshot())
             if path == "/api/chat":
-                return self._api_chat()
+                return self._api_chat(body=body)
             if path in ("/v1/chat/completions",):
                 # Also accept the OpenAI path so tools can hit the UI port.
-                return self._api_chat(openai_shape=True)
+                return self._api_chat(body=body, openai_shape=True)
             if path == "/api/shutdown":
                 app.want_shutdown()
                 return self._json(200, {"ok": True})
@@ -183,10 +188,14 @@ def make_handler(app: App):
             self.wfile.write(data)
 
         # ---- API impl ----
-        def _api_time(self, post=False):
+        def _api_time(self, post=False, body=None):
             """NTP-style sample. Client may send {client_send} (seconds)."""
             server_recv = time.time()
-            body = self._body() if post else {}
+            if post:
+                if body is None:
+                    body = {}
+            else:
+                body = {}
             if body is None:
                 body = {}
             # Also accept ?t= query for GET.
@@ -218,8 +227,8 @@ def make_handler(app: App):
                           "packer": app.mgr.packer_peer},
             })
 
-        def _api_load(self):
-            body = self._body() or {}
+        def _api_load(self, body=None):
+            body = body or {}
             mid = body.get("model_id") or body.get("id")
             if not mid:
                 return self._json(400, {"error": "model_id required"})
@@ -229,11 +238,11 @@ def make_handler(app: App):
                 return self._json(400, {"error": str(e)})
             return self._json(200, snap)
 
-        def _api_chat(self, openai_shape=False):
+        def _api_chat(self, body=None, openai_shape=False):
+            # body already drained in do_POST (keep-alive safe).
             snap = app.mgr.snapshot()
             if snap.get("status") != "ready":
                 return self._json(409, {"error": "no model loaded", "worker": snap})
-            body = self._body()
             if not isinstance(body, dict):
                 return self._json(400, {"error": "bad json"})
             # Stamp: Caravan received this request (Mini wall clock).
@@ -290,9 +299,11 @@ def make_handler(app: App):
                 return self._json(200, data)
 
             # Streamed: re-emit SSE, inject a caravan-meta event at the end.
+            self.close_connection = True
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
             self.send_header("Transfer-Encoding", "chunked")
             self._cors()
             self.end_headers()
@@ -300,6 +311,37 @@ def make_handler(app: App):
             def send_chunk(payload: bytes):
                 self.wfile.write(b"%x\r\n%s\r\n" % (len(payload), payload))
                 self.wfile.flush()
+
+            def _scrub_frame(frame: bytes) -> bytes:
+                """Strip end/channel markers from delta.content before forward."""
+                out_lines = []
+                changed = False
+                for line in frame.split(b"\n"):
+                    if not line.startswith(b"data: "):
+                        out_lines.append(line)
+                        continue
+                    payload = line[6:].strip()
+                    if payload == b"[DONE]":
+                        out_lines.append(line)
+                        continue
+                    try:
+                        obj = json.loads(payload)
+                    except ValueError:
+                        out_lines.append(line)
+                        continue
+                    chs = obj.get("choices") or []
+                    if chs:
+                        delta = (chs[0].get("delta") or {})
+                        for key in ("content", "reasoning_content", "reasoning"):
+                            if key in delta and isinstance(delta[key], str) and delta[key]:
+                                scrubbed = timing.strip_reply_markers(delta[key])
+                                if scrubbed != delta[key]:
+                                    delta[key] = scrubbed
+                                    changed = True
+                        chs[0]["delta"] = delta
+                        obj["choices"] = chs
+                    out_lines.append(b"data: " + json.dumps(obj, ensure_ascii=False).encode())
+                return b"\n".join(out_lines) if changed else frame
 
             t_first = None
             usage = None
@@ -331,8 +373,8 @@ def make_handler(app: App):
                                     t_first = time.time()
                             if obj.get("usage"):
                                 usage = obj["usage"]
-                        # Forward the original frame (with blank line).
-                        send_chunk(frame + b"\n\n")
+                        # Forward scrubbed frame (with blank line).
+                        send_chunk(_scrub_frame(frame) + b"\n\n")
             except (BrokenPipeError, ConnectionResetError):
                 return
             finally:

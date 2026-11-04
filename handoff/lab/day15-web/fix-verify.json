@@ -1,0 +1,41 @@
+{
+  "gemma": {
+    "ok": true,
+    "body": "Hi there!",
+    "timing": "ttft 0.24s · write 30.5 tok/s · 122 tok · total 4.24s",
+    "sawThink": true,
+    "sawPlaceholder": false,
+    "firstTokenMs": 1039,
+    "sendDisabled": false,
+    "elapsedMs": 5074,
+    "hasEndMarker": false
+  },
+  "switchSendDisabled": false,
+  "qwen3": {
+    "ok": true,
+    "body": "OK",
+    "timing": "ttft 0.27s · write 42.3 tok/s · 6 tok · total 0.41s",
+    "sawThink": false,
+    "sawPlaceholder": false,
+    "firstTokenMs": 1033,
+    "sendDisabled": false,
+    "elapsedMs": 1036,
+    "hasEndMarker": false
+  },
+  "gptReadySendDisabled": false,
+  "gptoss": {
+    "ok": true,
+    "body": "OK",
+    "timing": "ttft 0.30s · write 34.5 tok/s · 41 tok · total 1.49s",
+    "sawThink": true,
+    "sawPlaceholder": false,
+    "firstTokenMs": 1030,
+    "sendDisabled": false,
+    "elapsedMs": 2040,
+    "hasEndMarker": false
+  },
+  "final": {
+    "sendDisabled": false,
+    "status": "ready · Qwen3 30B-A3B 4-bit"
+  }
+}

@@ -316,7 +316,29 @@
     session: null,
     streaming: false,
     poll: null,
+    chatAbort: null,
   };
+
+  const REPLY_MARKERS = [
+    "<|im_end|>", "<|end|>", "<|end_of_text|>", "<|return|>", "<|eot_id|>",
+    "</s>", "<eos>", "<|turn|>", "<turn|>", "<|turn>",
+    "<channel|>", "<|channel|>", "<|channel>", "<|message|>",
+  ];
+  function stripMarkers(s) {
+    if (!s) return s;
+    let out = s;
+    for (const m of REPLY_MARKERS) {
+      if (out.includes(m)) out = out.split(m).join("");
+    }
+    return out;
+  }
+  function cancelChat() {
+    if (state.chatAbort) {
+      try { state.chatAbort.abort(); } catch (_) {}
+      state.chatAbort = null;
+    }
+    state.streaming = false;
+  }
 
   function fmt(n, digits=2) {
     if (n === null || n === undefined || Number.isNaN(n)) return "—";
@@ -489,10 +511,27 @@
     if (state.streaming) return;
     const text = $("input").value.trim();
     if (!text) return;
+    // Only send when worker reports ready.
+    const pill = ($("statusText").textContent || "");
+    if (!pill.startsWith("ready")) {
+      addMsg("assistant", "(error: model not ready — wait for ready, then send)");
+      return;
+    }
     $("input").value = "";
     addMsg("user", text);
     const asst = addMsg("assistant", "");
     const bodyEl = asst.querySelector(".body");
+    // Show thinking progress immediately so Gemma-style stalls aren't a blank bubble.
+    const th = document.createElement("div");
+    th.className = "think";
+    th.dataset.placeholder = "1";
+    th.style.cssText = "color:var(--muted);font-size:.85rem;margin-bottom:8px;white-space:pre-wrap;";
+    th.textContent = "thinking…";
+    asst.insertBefore(th, bodyEl);
+
+    cancelChat();
+    const ac = new AbortController();
+    state.chatAbort = ac;
     state.streaming = true;
     $("btnSend").disabled = true;
 
@@ -502,7 +541,7 @@
       messages: [{ role: "user", content: text }],
       stream: true,
       temperature: 0.7,
-      max_tokens: 512,
+      max_tokens: 768,
       stream_options: { include_usage: true },
     };
     // Qwen3: append /no_think for snappier short answers when that model is loaded.
@@ -513,6 +552,16 @@
 
     let full = "";
     let meta = null;
+    let sawToken = false;
+    const FIRST_MS = 45000;
+    const TOTAL_MS = 180000;
+    const firstTimer = setTimeout(() => {
+      if (!sawToken) ac.abort(new DOMException("timeout waiting for first token (45s)", "TimeoutError"));
+    }, FIRST_MS);
+    const totalTimer = setTimeout(() => {
+      ac.abort(new DOMException("chat timed out (180s)", "TimeoutError"));
+    }, TOTAL_MS);
+
     try {
       const r = await fetch("/api/chat", {
         method: "POST",
@@ -522,6 +571,7 @@
           "X-Caravan-Sent": String(sent),
         },
         body: JSON.stringify(payload),
+        signal: ac.signal,
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
@@ -547,39 +597,68 @@
             if (obj.object === "caravan.meta") { meta = obj; continue; }
             const ch = (obj.choices || [])[0] || {};
             const delta = ch.delta || {};
-            const piece = delta.content || "";
-            const think = delta.reasoning_content || delta.reasoning || "";
+            let piece = delta.content || "";
+            let think = delta.reasoning_content || delta.reasoning || "";
+            piece = stripMarkers(piece);
+            think = stripMarkers(think);
             if (think) {
+              sawToken = true;
+              const thEl = asst.querySelector(".think");
+              if (thEl && thEl.dataset.placeholder === "1") {
+                thEl.dataset.placeholder = "0";
+                thEl.textContent = "";
+              }
               if (!asst.querySelector(".think")) {
-                const th = document.createElement("div");
-                th.className = "think";
-                th.style.cssText = "color:var(--muted);font-size:.85rem;margin-bottom:8px;white-space:pre-wrap;";
-                asst.insertBefore(th, bodyEl);
+                const th2 = document.createElement("div");
+                th2.className = "think";
+                th2.style.cssText = "color:var(--muted);font-size:.85rem;margin-bottom:8px;white-space:pre-wrap;";
+                asst.insertBefore(th2, bodyEl);
               }
               asst.querySelector(".think").textContent += think;
             }
             if (piece) {
+              sawToken = true;
+              // Drop placeholder once real content arrives.
+              const thEl = asst.querySelector(".think");
+              if (thEl && thEl.dataset.placeholder === "1" && !thEl.textContent.replace("thinking…","").trim()) {
+                thEl.remove();
+              }
               full += piece;
-              bodyEl.textContent = full;
+              bodyEl.textContent = stripMarkers(full);
             }
             if (piece || think) $("messages").scrollTop = $("messages").scrollHeight;
           }
         }
       }
+      // Final scrub in case a marker arrived split across chunks.
+      full = stripMarkers(full);
+      bodyEl.textContent = full;
+      const thEl = asst.querySelector(".think");
+      if (thEl && thEl.dataset.placeholder === "1") thEl.remove();
       if (meta) {
         showStats(meta.stats || {}, meta.timestamps || {});
         const tdiv = document.createElement("div");
         tdiv.className = "timing";
-        const ts = meta.timestamps;
         const st = meta.stats || {};
         tdiv.textContent =
           `ttft ${fmt(st.ttft_s)}s · write ${fmt(st.write_tok_s,1)} tok/s · ` +
           `${st.completion_tokens ?? "?"} tok · total ${fmt(st.total_s)}s`;
         asst.appendChild(tdiv);
+      } else if (!full) {
+        bodyEl.textContent = "(no reply — try again, or reload the model)";
       }
     } catch (e) {
-      bodyEl.textContent = full || `(error: ${e.message || e})`;
+      const aborted = e && (e.name === "AbortError" || e.name === "TimeoutError");
+      const msg = aborted
+        ? (e.message || "request aborted")
+        : (e.message || String(e));
+      bodyEl.textContent = full ? stripMarkers(full) : `(error: ${msg})`;
+      const thEl = asst.querySelector(".think");
+      if (thEl && thEl.dataset.placeholder === "1") thEl.remove();
     } finally {
+      clearTimeout(firstTimer);
+      clearTimeout(totalTimer);
+      if (state.chatAbort === ac) state.chatAbort = null;
       state.streaming = false;
       refreshStatus();
     }
@@ -622,7 +701,9 @@
   });
   $("btnLoad").onclick = async () => {
     const id = $("modelSelect").value;
+    cancelChat(); // never leave Send stuck disabled across a switch
     $("btnLoad").disabled = true;
+    $("btnSend").disabled = true;
     try {
       await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: id }) });
       state.session = null; // new model → new sessions
@@ -632,11 +713,13 @@
     refreshStatus();
   };
   $("btnStop").onclick = async () => {
+    cancelChat();
     await api("/api/models/stop", { method: "POST", body: "{}" });
     state.session = null;
     refreshStatus();
   };
   $("btnClear").onclick = () => {
+    cancelChat();
     $("messages").innerHTML = "";
     state.session = crypto.randomUUID().replace(/-/g,"").slice(0,16);
     const empty = document.createElement("div");

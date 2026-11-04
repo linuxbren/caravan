@@ -62,3 +62,30 @@ Start/stop: see `docs/WEB.md`. Web PID in `~/.caravan/web-ui/web.pid` on EXO1.
   (`brenden@169.254.103.191`). Needs the existing key trust.
 - No auth; LAN/Tailscale only — do not port-forward publicly.
 - Shared-start hit not exercised in these short chats (no long system prompt).
+
+
+## Bugfixes (same day) — send state + Gemma stall
+
+**Root causes**
+1. **Stuck Send after load/switch:** UI gated Send on `status==="ready" && !streaming`. An in-flight chat left `streaming=true`; Load/Unload did not abort or clear it, so after Qwen3/GPT-OSS looked ready the button stayed disabled.
+2. **Keep-alive body leak:** `/api/chat` returned 409 (and `/api/models/stop` returned 200) *without* reading `Content-Length`. On HTTP/1.1 keep-alive the next request became `{"messages":...}GET /api/status` → `Bad request syntax`, which made the UI look hung/broken during switches.
+3. **Gemma “no answer” feel:** slow-to-first-token replies showed a blank bubble (no thinking placeholder) and no client timeout/error; end markers like `<|im_end|>` also leaked into content.
+
+**Fixes**
+- Always drain POST bodies before any response; SSE uses `Connection: close`.
+- AbortController + `cancelChat()` on Load/Unload/Clear; Send re-enables whenever ready.
+- Immediate `thinking…` placeholder; 45s first-token / 180s total timeout with visible error; strip end markers in proxy + page.
+- Tests: keep-alive drain regression, marker strip, UI contract (+5 → 21 in `test_web_server.py`).
+
+**Verified** (America/Chicago, headless Chromium via Tailscale tunnel → EXO1 :8190)
+
+| Step | Result |
+|---|---|
+| Gemma chat | ok · ttft **0.24 s** · write **30.5 tok/s** · thinking shown · no end markers · Send re-enabled |
+| Mid-stream switch → Qwen3 | **Send enabled** after ready (regression fixed) |
+| Qwen3 chat | ok · ttft **0.27 s** · write **42.3 tok/s** · body `OK` |
+| GPT-OSS load + chat | Send enabled · ok · ttft **0.30 s** · write **34.5 tok/s** |
+| Leave | **Qwen3 ready**, Send enabled |
+
+Screenshots: `fix-00-idle.png` … `fix-07-leave-qwen3-ready.png`, `fix-verify.json`.
+

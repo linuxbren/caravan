@@ -172,3 +172,35 @@ def reply_stats(usage: dict, wall_s: Optional[float] = None) -> dict:
         "split": split,
         "peak_gb": caravan.get("peak_gb"),
     }
+
+
+# Display cleanup for streamed replies (Qwen/Gemma/GPT-OSS end tokens that
+# sometimes leak into delta.content even after the worker stops).
+_REPLY_MARKERS = (
+    "<|im_end|>",
+    "<|end|>",
+    "<|end_of_text|>",
+    "<|return|>",
+    "<|eot_id|>",
+    "</s>",
+    "<eos>",
+    "<|turn|>",
+    "<turn|>",
+    "<|turn>",
+    "<channel|>",
+    "<|channel|>",
+    "<|channel>",
+    "<|message|>",
+)
+
+
+def strip_reply_markers(text: str) -> str:
+    """Remove known end/channel markers from user-visible reply text."""
+    if not text:
+        return text
+    out = text
+    for m in _REPLY_MARKERS:
+        if m in out:
+            out = out.replace(m, "")
+    return out
+

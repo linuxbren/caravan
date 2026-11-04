@@ -198,5 +198,116 @@ class WebServerHTTPTest(unittest.TestCase):
         self.assertEqual(cm.exception.code, 400)
 
 
+
+
+class StripMarkersTest(unittest.TestCase):
+    def test_strip_im_end_and_turn(self):
+        self.assertEqual(
+            timing.strip_reply_markers("hello<|im_end|>"),
+            "hello",
+        )
+        self.assertEqual(
+            timing.strip_reply_markers("hi<turn|>"),
+            "hi",
+        )
+        self.assertEqual(
+            timing.strip_reply_markers("ok<|turn|>more"),
+            "okmore",
+        )
+
+    def test_strip_empty_and_clean(self):
+        self.assertEqual(timing.strip_reply_markers(""), "")
+        self.assertEqual(timing.strip_reply_markers("plain"), "plain")
+
+
+class KeepAliveDrainTest(unittest.TestCase):
+    """Regression: chat 409 used to skip reading the POST body, so the next
+    keep-alive request on the same socket became Bad request syntax."""
+
+    @classmethod
+    def setUpClass(cls):
+        mgr = WorkerManager(lead_port=8194, packer_peer="127.0.0.1:5560",
+                            packer_ssh="nobody@127.0.0.1",
+                            state_dir=REPO / "handoff" / "lab" / "day15-web" / "test-state-ka",
+                            repo=REPO)
+        cls.app = web_server.App(mgr)
+        class _S(ThreadingHTTPServer):
+            def server_bind(self):
+                import socketserver
+                socketserver.TCPServer.server_bind(self)
+                self.server_name = self.server_address[0]
+                self.server_port = self.server_address[1]
+        cls.httpd = _S(("127.0.0.1", 0), web_server.make_handler(cls.app))
+        cls.port = cls.httpd.server_address[1]
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+
+    def test_chat_409_drains_body_keep_alive(self):
+        import http.client
+        body = json.dumps({
+            "messages": [{"role": "user", "content": "hi"}],
+            "stream": True,
+            "max_tokens": 8,
+        }).encode()
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            conn.request(
+                "POST", "/api/chat", body=body,
+                headers={"Content-Type": "application/json",
+                         "Content-Length": str(len(body)),
+                         "Connection": "keep-alive"},
+            )
+            r1 = conn.getresponse()
+            raw1 = r1.read()
+            self.assertEqual(r1.status, 409)
+            self.assertIn(b"no model loaded", raw1)
+            # Same connection must still accept a clean GET.
+            conn.request("GET", "/api/status", headers={"Connection": "close"})
+            r2 = conn.getresponse()
+            raw2 = r2.read()
+            self.assertEqual(r2.status, 200)
+            j = json.loads(raw2.decode())
+            self.assertEqual(j["worker"]["status"], "idle")
+        finally:
+            conn.close()
+
+    def test_stop_drains_body_keep_alive(self):
+        import http.client
+        body = b"{}"
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            conn.request(
+                "POST", "/api/models/stop", body=body,
+                headers={"Content-Type": "application/json",
+                         "Content-Length": str(len(body)),
+                         "Connection": "keep-alive"},
+            )
+            r1 = conn.getresponse()
+            r1.read()
+            self.assertEqual(r1.status, 200)
+            conn.request("GET", "/api/status", headers={"Connection": "close"})
+            r2 = conn.getresponse()
+            raw2 = r2.read()
+            self.assertEqual(r2.status, 200)
+            json.loads(raw2.decode())
+        finally:
+            conn.close()
+
+
+class IndexHtmlContractTest(unittest.TestCase):
+    def test_ui_has_send_guards_and_timeouts(self):
+        html = (REPO / "proxy" / "web" / "index.html").read_text()
+        self.assertIn("cancelChat", html)
+        self.assertIn("stripMarkers", html)
+        self.assertIn("thinking…", html)
+        self.assertIn("FIRST_MS", html)
+        self.assertIn("chatAbort", html)
+        self.assertIn('st !== "ready" || state.streaming', html)
+
 if __name__ == "__main__":
     unittest.main()
