@@ -1,0 +1,48 @@
+{
+  "reply": "CARAVAN_OK<|im_end|>",
+  "wall_s": 0.543,
+  "meta": {
+    "id": "caravan-meta",
+    "object": "caravan.meta",
+    "timestamps": {
+      "sent_browser": 1793807826.458137,
+      "received_mini": 1793807826.46272,
+      "first_word_mini": 1793807826.73472,
+      "first_word_proxy": 1793807827.000034,
+      "done_mini": 1793807827.001082
+    },
+    "stats": {
+      "prompt_tokens": 24,
+      "completion_tokens": 9,
+      "cached_tokens": 0,
+      "total_s": 0.41,
+      "ttft_s": 0.272,
+      "prefill_s": 0.18,
+      "read_tok_s": 133.33,
+      "write_tok_s": 65.22,
+      "how": "cold",
+      "shared_start": false,
+      "guess_ahead": {
+        "k": 3,
+        "from_draft": 6,
+        "accepted_frac": 0.667
+      },
+      "tuned": {
+        "pipeline_chats": 2,
+        "guess_ahead": true,
+        "shared_prefix": false
+      },
+      "split": {
+        "calls": 15,
+        "mb_out": 0.0,
+        "mb_in": 0.21,
+        "wait_s": 0.47,
+        "front_s": 0.233,
+        "net_s": 0.238
+      },
+      "peak_gb": 9.1
+    },
+    "session": "day15qwen0001"
+  },
+  "sent_browser": 1793807826.458137
+}

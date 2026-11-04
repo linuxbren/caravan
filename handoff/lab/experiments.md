@@ -1,3 +1,23 @@
+## 2026-11-04 — Day 15: Caravan web interface
+
+**Goal.** Browser UI on EXO1 so Brenden can use the string: switch preloaded
+models, stream chat, timestamps to 0.01 s with browser↔Mini clock sync, and
+real per-reply stats (tok/s, shared start, guess-ahead, tuned settings).
+Polished dark page — built in the open.
+
+**Build.** `proxy/web_server.py` + `web_workers.py` + `web_catalog.py` +
+`web_timing.py` + `proxy/web/{index.html,journey.json}`. Docs: `docs/WEB.md`.
+Tests: `tests/test_web_server.py` (+16). **198 OK.**
+
+**Verify (LPM off, web :8190, lead :8194, packer :5560).**
+- Qwen3 load + chat: ttft 0.272 s, write 65.22 tok/s, guess-ahead 66.7%.
+- Switch → Gemma load + chat: ttft 0.233–0.41 s, write ~28–30 tok/s.
+- UI milestones sample: send→recv +0.03 s, recv→first +0.41 s; clock
+  offset −0.1616 ±0.0020 s. Screenshots in `handoff/lab/day15-web/`.
+
+**Next.** Keep UI running for Brenden to try. Then #13c settings file / #14
+node view (partially covered by the string panel) / adaptive PL re-bench.
+
 ## 2026-11-04 — Day 13 (cont.): self-tune shared-prefix per model
 
 **Goal.** Fold `--split-shared-prefix-cache` into Day 10 learn-from-real-chats

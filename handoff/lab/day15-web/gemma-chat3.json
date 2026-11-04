@@ -1,0 +1,47 @@
+{
+  "reply": "GEMMA_OK<turn|>",
+  "thinking": "\n*   Input: \"Reply with exactly: GEMMA_OK\"\n    *   Constraint: The response must be exactly \"GEMMA_OK\".\n\n    *   The user wants a specific string as a response.\n    *   The string is \"GEMMA_OK\".\n\n    *   Does the response match the requirement? Yes.",
+  "meta": {
+    "id": "caravan-meta",
+    "object": "caravan.meta",
+    "timestamps": {
+      "sent_browser": 1793807889.429466,
+      "received_mini": 1793807889.433725,
+      "first_word_mini": 1793807889.666725,
+      "first_word_proxy": 1793807889.994588,
+      "done_mini": 1793807892.687118
+    },
+    "stats": {
+      "prompt_tokens": 24,
+      "completion_tokens": 80,
+      "cached_tokens": 0,
+      "total_s": 3.13,
+      "ttft_s": 0.233,
+      "prefill_s": 0.173,
+      "read_tok_s": 138.73,
+      "write_tok_s": 27.61,
+      "how": "cold",
+      "shared_start": false,
+      "guess_ahead": {
+        "k": 2,
+        "from_draft": 7,
+        "accepted_frac": 0.087
+      },
+      "tuned": {
+        "pipeline_chats": 2,
+        "guess_ahead": true,
+        "shared_prefix": false
+      },
+      "split": {
+        "calls": 284,
+        "mb_out": 0.02,
+        "mb_in": 2.64,
+        "wait_s": 3.446,
+        "front_s": 2.956,
+        "net_s": 0.489
+      },
+      "peak_gb": 7.54
+    },
+    "session": "day15gemma0003"
+  }
+}

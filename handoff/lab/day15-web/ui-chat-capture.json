@@ -1,0 +1,10 @@
+{
+  "total": "2.62 s",
+  "ttft": "0.41 s",
+  "read": "127.5 tok/s · 25 tok",
+  "write": "29.9 tok/s · 66 tok",
+  "milestones": "sent    09:59:16.70 (browser)\nreceived 09:59:16.73 (+0.03 s)\nfirst   09:59:17.14 (+0.41 s)\ndone    09:59:19.36 (+2.22 s)",
+  "status": "ready · Gemma 4 26B-A4B 4-bit",
+  "clock": "offset (Mini − browser): -0.1616 s\nuncertainty ±0.0020 s · RTT 4.0 ms · n=6",
+  "features": "shared start\nguess-ahead · 21%\ntuned settings\ncold"
+}

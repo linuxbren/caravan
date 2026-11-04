@@ -1,0 +1,51 @@
+{
+  "title": "How far we've come",
+  "subtitle": "Real numbers from Days 1–13. Writing speed in tok/s.",
+  "updated": "2026-11-04",
+  "versions": [
+    {"id": "v0", "label": "v0", "when": "Oct 30", "blurb": "llama.cpp on one Mini"},
+    {"id": "v1", "label": "v1", "when": "Oct 30", "blurb": "rebased llama.cpp + early MLX"},
+    {"id": "v2", "label": "v2", "when": "Oct 31", "blurb": "MLX chats kept + saved"},
+    {"id": "v2.1", "label": "v2.1", "when": "Oct 31", "blurb": "memory locked at start"},
+    {"id": "v3", "label": "v3 Day 13", "when": "Nov 4", "blurb": "split across two Minis + guess-ahead + shared start"}
+  ],
+  "series": {
+    "qwen3_write": {
+      "label": "Qwen3 write tok/s",
+      "points": [
+        {"v": "v0", "n": 41.4, "note": "llama.cpp"},
+        {"v": "v1", "n": 47.0, "note": "MLX"},
+        {"v": "v2", "n": 49.1, "note": "MLX"},
+        {"v": "v2.1", "n": 51.0, "note": "MLX one Mini"},
+        {"v": "v3", "n": 59.0, "note": "split + guess-ahead"},
+        {"v": "v3-2ch", "n": 72.5, "note": "two chats total"}
+      ]
+    },
+    "llama_write": {
+      "label": "Llama 8B write tok/s",
+      "points": [
+        {"v": "v0", "n": 21.2, "note": "llama.cpp"},
+        {"v": "v2.1", "n": 23.3, "note": "MLX one Mini"},
+        {"v": "v3", "n": 49.7, "note": "split + guess-ahead (+120%)"}
+      ]
+    },
+    "gemma_ttft": {
+      "label": "Gemma wait before first word (s, lower better)",
+      "points": [
+        {"v": "Day 12", "n": 11.8, "note": "shared start 0%"},
+        {"v": "Day 13", "n": 1.55, "note": "shared start hit (−87%)"}
+      ]
+    }
+  },
+  "highlights": [
+    {"text": "Qwen3 first word 17.5 → 8.9 s", "detail": "shared start, Day 12"},
+    {"text": "Llama write 22.6 → 49.7 tok/s", "detail": "+120% with guess-ahead"},
+    {"text": "Gemma first word 11.8 → 1.55 s", "detail": "Day 13 packer trim fix"},
+    {"text": "Caravan tunes itself", "detail": "shared start learned on in 7 chats"}
+  ],
+  "sources": [
+    "handoff/lab/videos/v22_data.json",
+    "handoff/lab/day13-gemma-prefix/RESULTS.md",
+    "handoff/lab/day12-speedups/"
+  ]
+}
