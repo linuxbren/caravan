@@ -34,6 +34,8 @@ class TunedSettingsTest(unittest.TestCase):
     def test_neighbors(self):
         self.assertEqual(set(T.neighbors("pipeline_chats", 2)), {1})
         self.assertEqual(T.neighbors("guess_ahead", True), [False])
+        self.assertEqual(T.neighbors("shared_prefix", False), [True])
+        self.assertEqual(T.neighbors("shared_prefix", True), [False])
         nbs = T.neighbors("packer_layers", 16, n_layers=32)
         self.assertIn(14, nbs)
         self.assertIn(18, nbs)
@@ -52,6 +54,7 @@ class TunedSettingsTest(unittest.TestCase):
         self.assertEqual(r["packer_layers"], 16)
         self.assertEqual(r["pipeline_chats"], 2)
         self.assertTrue(r["guess_ahead"])
+        self.assertFalse(r["shared_prefix"])
         self.assertTrue(any("Day 9" in x or "no saved" in x for x in r["reasons"]))
         T.save_store(r["store"], self.path)
 
@@ -59,7 +62,8 @@ class TunedSettingsTest(unittest.TestCase):
         st = T.load_store(self.path)
         e = T.ensure_entry(st, T.entry_key(self.model, spanned=True),
                            model=T.model_stem(self.model), hardware="spanned")
-        e["winner"] = {"packer_layers": 18, "pipeline_chats": 1, "guess_ahead": False}
+        e["winner"] = {"packer_layers": 18, "pipeline_chats": 1, "guess_ahead": False,
+                       "shared_prefix": True}
         T.save_store(st, self.path)
         r = T.resolve_startup(
             model_dir=self.model, spanned=True,
@@ -68,7 +72,9 @@ class TunedSettingsTest(unittest.TestCase):
         self.assertEqual(r["packer_layers"], 18)
         self.assertEqual(r["pipeline_chats"], 1)
         self.assertFalse(r["guess_ahead"])
+        self.assertTrue(r["shared_prefix"])
         self.assertTrue(any("learned" in x for x in r["reasons"]))
+        self.assertTrue(any("shared-prefix" in x for x in r["reasons"]))
 
     def test_flags_win(self):
         st = T.load_store(self.path)
@@ -79,10 +85,13 @@ class TunedSettingsTest(unittest.TestCase):
         r = T.resolve_startup(
             model_dir=self.model, spanned=True,
             day9_packer_layers=16, day9_pipeline_chats=2, day9_guess_ahead=True,
-            explicit={"packer_layers": 20, "pipeline_chats": 2}, path=self.path)
+            explicit={"packer_layers": 20, "pipeline_chats": 2, "shared_prefix": True},
+            path=self.path)
         self.assertEqual(r["packer_layers"], 20)
         self.assertEqual(r["pipeline_chats"], 2)
+        self.assertTrue(r["shared_prefix"])
         self.assertTrue(any("flag" in x for x in r["reasons"]))
+        self.assertTrue(any("flag shared-prefix" in x for x in r["reasons"]))
 
     def test_pending_reload_tried_once(self):
         st = T.load_store(self.path)
@@ -225,6 +234,122 @@ class TunedSettingsTest(unittest.TestCase):
             completion_tokens=32, total_s=1.5, prefill_s=0.3)
         self.assertEqual(e["winner"]["pipeline_chats"], 2)
         self.assertFalse(any(p[0] == "pipeline_chats" for p in out["promotions"]))
+
+
+
+class SharedPrefixLearnTest(unittest.TestCase):
+    """Day 13: shared-prefix on/off learned from TTFT on shared system prompts."""
+
+    def setUp(self):
+        self.entry = T.ensure_entry(
+            {"version": 1, "models": {}}, "m:spanned", model="m", hardware="spanned")
+        self.entry["winner"] = {"shared_prefix": False}
+
+    def test_score_inverse_ttft(self):
+        self.assertGreater(T.shared_prefix_score(1.0), T.shared_prefix_score(2.0))
+
+    def test_eligible(self):
+        self.assertTrue(T.shared_prefix_eligible(prompt_tokens=600, how="cold"))
+        self.assertTrue(T.shared_prefix_eligible(
+            prompt_tokens=600, how="shared-prefix-hit-memory"))
+        self.assertFalse(T.shared_prefix_eligible(prompt_tokens=100, how="cold"))
+        self.assertFalse(T.shared_prefix_eligible(prompt_tokens=600, how="hit-memory"))
+
+    def test_store_not_counted_as_on_mean(self):
+        out = T.record_shared_prefix_probe(
+            self.entry, enabled=True, ttft_s=20.0, how="cold", prompt_tokens=2048)
+        self.assertTrue(out["recorded"])
+        self.assertEqual(out["kind"], "store")
+        self.assertEqual(T.samples_of(self.entry, "shared_prefix", True), 0)
+        self.assertEqual(self.entry["stats"]["shared_prefix:on_store"]["n"], 1)
+
+    def test_promotes_on_when_hits_beat_cold(self):
+        # 3 cold-off at ~10s TTFT, 1 store, 3 hits at ~2s → on wins.
+        for _ in range(3):
+            T.record_shared_prefix_probe(
+                self.entry, enabled=False, ttft_s=10.0, how="cold", prompt_tokens=2048)
+        T.record_shared_prefix_probe(
+            self.entry, enabled=True, ttft_s=22.0, how="cold", prompt_tokens=2048)
+        out = None
+        for _ in range(3):
+            out = T.record_shared_prefix_probe(
+                self.entry, enabled=True, ttft_s=2.0,
+                how="shared-prefix-hit-memory", prompt_tokens=2048)
+        self.assertTrue(self.entry["winner"]["shared_prefix"])
+        self.assertTrue(any(p[0] == "shared_prefix" and p[1] is True
+                            for p in out["promotions"]))
+
+    def test_keeps_off_when_no_hits(self):
+        # Old Gemma shape: on never hits, only store/cold — stay off.
+        for _ in range(3):
+            T.record_shared_prefix_probe(
+                self.entry, enabled=False, ttft_s=11.0, how="cold", prompt_tokens=2048)
+        for _ in range(5):
+            out = T.record_shared_prefix_probe(
+                self.entry, enabled=True, ttft_s=12.0, how="cold", prompt_tokens=2048)
+        self.assertFalse(self.entry["winner"]["shared_prefix"])
+        self.assertEqual(T.samples_of(self.entry, "shared_prefix", True), 0)
+
+    def test_keeps_off_when_hits_not_better(self):
+        for _ in range(3):
+            T.record_shared_prefix_probe(
+                self.entry, enabled=False, ttft_s=5.0, how="cold", prompt_tokens=2048)
+        T.record_shared_prefix_probe(
+            self.entry, enabled=True, ttft_s=8.0, how="cold", prompt_tokens=2048)
+        out = None
+        for _ in range(3):
+            out = T.record_shared_prefix_probe(
+                self.entry, enabled=True, ttft_s=6.0,
+                how="shared-prefix-hit-memory", prompt_tokens=2048)
+        self.assertFalse(self.entry["winner"]["shared_prefix"])
+        self.assertTrue(out["keep_reasons"] or not out["promotions"])
+
+    def test_flag_skips_via_explicit_in_observe_path(self):
+        # resolve_startup with explicit shared_prefix pins the value.
+        import tempfile
+        tmp = tempfile.TemporaryDirectory()
+        path = Path(tmp.name) / "t.json"
+        model = Path(tmp.name) / "Model-X"
+        model.mkdir()
+        r = T.resolve_startup(
+            model_dir=model, spanned=True,
+            day9_packer_layers=16, day9_pipeline_chats=2, day9_guess_ahead=None,
+            explicit={"shared_prefix": True}, path=path)
+        self.assertTrue(r["shared_prefix"])
+        self.assertTrue(any("flag shared-prefix: on" in x for x in r["reasons"]))
+        tmp.cleanup()
+
+    def test_explore_waits_for_off_samples_then_tries_on(self):
+        e = self.entry
+        e["winner"] = {"shared_prefix": False, "pipeline_chats": 2, "guess_ahead": True}
+        e["reply_n"] = 0
+        # Saturate other live settings so shared_prefix is the interesting one.
+        for v in (True, False):
+            for _ in range(T.MIN_SAMPLES):
+                T.record_sample(e, "guess_ahead", v, 20.0)
+        for v in (1, 2):
+            for _ in range(T.MIN_SAMPLES):
+                T.record_sample(e, "pipeline_chats", v, 20.0)
+        # No off TTFT samples yet → should not explore shared_prefix on.
+        out = T.pick_exploration(
+            e, {"shared_prefix": False, "pipeline_chats": 2, "guess_ahead": True,
+                "packer_layers": 16},
+            explicit={"pipeline_chats": 2, "guess_ahead": True})
+        if out and out.get("name") == "shared_prefix":
+            self.fail("explored shared_prefix before off samples")
+        # After enough cold-off samples, early explore should try on.
+        for _ in range(T.MIN_SAMPLES):
+            T.record_shared_prefix_probe(
+                e, enabled=False, ttft_s=10.0, how="cold", prompt_tokens=2048)
+        out2 = T.pick_exploration(
+            e, {"shared_prefix": False, "pipeline_chats": 2, "guess_ahead": True,
+                "packer_layers": 16},
+            explicit={"pipeline_chats": 2, "guess_ahead": True})
+        self.assertIsNotNone(out2)
+        self.assertEqual(out2["name"], "shared_prefix")
+        self.assertTrue(out2["value"])
+        self.assertEqual(out2["trial_replies"], T.SHARED_PREFIX_TRIAL_REPLIES)
+
 
 
 if __name__ == "__main__":

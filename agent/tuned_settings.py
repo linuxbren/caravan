@@ -4,10 +4,13 @@
 Start from the Day 9 memory-based guess (or a previously saved winner).
 Serve each real chat with the best settings so far, and now and then try a
 nearby option for settings that can change live (pipeline chat count,
-guess-ahead on/off). Settings that need a reload (packer layer cut K) are
-queued and tried on the next load. Time each reply, normalize for length,
-and require several samples per option before switching. Save winners per
-model + hardware (single Mini vs spanned) to
+guess-ahead on/off, shared-prefix cache on/off). Settings that need a reload
+(packer layer cut K) are queued and tried on the next load. Time each reply,
+normalize for length, and require several samples per option before switching.
+Shared-prefix is scored by time-to-first-token on new chats that share a
+system prompt (hits vs cold); the one-time store/materialize cost is sunk
+before hits count, so a model that never hits (e.g. Day 12 Gemma) stays off.
+Save winners per model + hardware (single Mini vs spanned) to
 ~/.caravan/mlx/tuned-settings.json. Flags still win. One plain log reason
 whenever a setting changes or is kept.
 """
@@ -117,6 +120,8 @@ def neighbors(name: str, value: Any, *, n_layers: Optional[int] = None) -> list:
         return out
     if name == "guess_ahead":
         return [not bool(value)]
+    if name == "shared_prefix":
+        return [not bool(value)]
     if name == "packer_layers":
         cur = int(value)
         n = int(n_layers or 0)
@@ -181,7 +186,179 @@ def maybe_promote(entry: dict, name: str, challenger: Any, incumbent: Any,
                    f"challenger {m_c:.2f} tok/s")
 
 
-LIVE_SETTINGS = ("pipeline_chats", "guess_ahead")
+
+# Day 13: shared-prefix is scored by TTFT (faster first token = better), not
+# decode tok/s. Higher score wins (same maybe_promote path as other settings).
+SHARED_PREFIX_MIN_PROMPT = 512   # tokens; must clear shared_prefix.min_tokens
+SHARED_PREFIX_TRIAL_REPLIES = MIN_SAMPLES + 2  # 1 store + MIN_SAMPLES hits
+
+
+def shared_prefix_score(ttft_s: float) -> float:
+    """Inverse TTFT so maybe_promote's higher-is-better logic applies."""
+    return 1.0 / max(float(ttft_s), 0.001)
+
+
+def shared_prefix_eligible(*, prompt_tokens: int, how: str,
+                           min_prompt: int = SHARED_PREFIX_MIN_PROMPT) -> bool:
+    """New-chat cold or shared-prefix hit/miss with a long enough prompt."""
+    if int(prompt_tokens or 0) < int(min_prompt):
+        return False
+    h = (how or "").lower()
+    if h == "cold" or h.startswith("shared-prefix"):
+        return True
+    return False
+
+
+def shared_prefix_is_hit(how: str) -> bool:
+    h = (how or "").lower()
+    return h.startswith("shared-prefix-hit")
+
+
+def shared_prefix_is_store(how: str, *, enabled: bool, cached_tokens: int = 0) -> bool:
+    """Cold path while cache is on = paying the one-time store/materialize cost."""
+    if not enabled:
+        return False
+    if shared_prefix_is_hit(how):
+        return False
+    h = (how or "").lower()
+    return h == "cold" or h.startswith("shared-prefix-miss")
+
+
+def record_shared_prefix_probe(entry: dict, *, enabled: bool, ttft_s: float,
+                               how: str, prompt_tokens: int = 0,
+                               cached_tokens: int = 0,
+                               min_prompt: int = SHARED_PREFIX_MIN_PROMPT,
+                               min_samples: int = MIN_SAMPLES,
+                               margin: float = SWITCH_MARGIN) -> dict:
+    """Score shared_prefix on/off from one new-chat TTFT sample.
+
+    Hits while on count toward shared_prefix=True. Cold while off counts toward
+    False. The one-time store/materialize cold while on is recorded under
+    stats['shared_prefix:on_store'] only (does not inflate the on mean), so a
+    model that never hits cannot promote on. Promotion still uses maybe_promote
+    on the hit vs cold means (higher shared_prefix_score wins).
+
+    Returns {recorded, kind, promotions, keep_reasons, winner}.
+    """
+    out = {"recorded": False, "kind": None, "promotions": [], "keep_reasons": [],
+           "winner": dict(entry.get("winner") or {})}
+    if not shared_prefix_eligible(prompt_tokens=prompt_tokens, how=how,
+                                  min_prompt=min_prompt):
+        return out
+    ttft = float(ttft_s or 0.0)
+    if ttft <= 0.0:
+        return out
+    score = shared_prefix_score(ttft)
+    winner = entry.setdefault("winner", {})
+    if shared_prefix_is_store(how, enabled=enabled, cached_tokens=cached_tokens):
+        # One-time cost: track separately; do not sample into on/off means.
+        bucket = entry.setdefault("stats", {}).setdefault(
+            "shared_prefix:on_store",
+            {"n": 0, "sum_ttft": 0.0, "mean_ttft": 0.0, "samples_ttft": []})
+        bucket["samples_ttft"] = (bucket.get("samples_ttft") or [])[-19:] + [round(ttft, 3)]
+        bucket["n"] = int(bucket.get("n") or 0) + 1
+        bucket["sum_ttft"] = float(bucket.get("sum_ttft") or 0.0) + ttft
+        bucket["mean_ttft"] = bucket["sum_ttft"] / bucket["n"]
+        entry["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        out["recorded"] = True
+        out["kind"] = "store"
+        out["winner"] = dict(winner)
+        return out
+
+    if enabled and not shared_prefix_is_hit(how):
+        # On but neither hit nor store (e.g. short-reuse path) — skip.
+        return out
+
+    record_sample(entry, "shared_prefix", bool(enabled), score)
+    out["recorded"] = True
+    out["kind"] = "hit" if enabled else "cold_off"
+
+    # Amortize: if we have store + hits, require amortized TTFT still beats off.
+    # amortized_ttft = (mean_store + n_hits * mean_hit_ttft) / (1 + n_hits)
+    # Compare 1/amortized vs off score. Without a store sample yet, fall back to
+    # plain maybe_promote on hit vs cold scores.
+    incumb = winner.get("shared_prefix", False)
+    used = bool(enabled)
+    promotions, keep_reasons = [], []
+
+    def hit_ttft_mean():
+        # score = 1/ttft ⇒ ttft = 1/score
+        m = mean_of(entry, "shared_prefix", True)
+        return (1.0 / m) if m and m > 0 else None
+
+    def amortized_on_score():
+        store = (entry.get("stats") or {}).get("shared_prefix:on_store") or {}
+        n_store = int(store.get("n") or 0)
+        mean_store = float(store.get("mean_ttft") or 0.0) if n_store else None
+        n_hits = samples_of(entry, "shared_prefix", True)
+        hit_t = hit_ttft_mean()
+        if n_hits < min_samples or hit_t is None:
+            return None, n_hits
+        if mean_store is None or n_store <= 0:
+            # No store observed in this process; use hit mean alone.
+            return mean_of(entry, "shared_prefix", True), n_hits
+        amort_ttft = (mean_store + n_hits * hit_t) / (1.0 + n_hits)
+        return shared_prefix_score(amort_ttft), n_hits
+
+    def try_promote(challenger, incumbent):
+        # Fair: both on (hits) and off (cold) need min_samples before a switch.
+        # Prevents a lucky early hit streak from flipping on before cold is measured.
+        if challenger is True:
+            m_c, n_c = amortized_on_score()
+            n_c = n_c or 0
+        else:
+            n_c = samples_of(entry, "shared_prefix", challenger)
+            m_c = mean_of(entry, "shared_prefix", challenger)
+        if incumbent is True:
+            m_i, n_i = amortized_on_score()
+            n_i = n_i or 0
+        else:
+            n_i = samples_of(entry, "shared_prefix", incumbent)
+            m_i = mean_of(entry, "shared_prefix", incumbent)
+        if n_c < min_samples or n_i < min_samples:
+            return False, (f"keep shared_prefix={'on' if incumbent else 'off'}: need "
+                           f"{min_samples} TTFT samples each (have off="
+                           f"{samples_of(entry, 'shared_prefix', False)} on_hits="
+                           f"{samples_of(entry, 'shared_prefix', True)})")
+        if m_c is None or m_i is None:
+            return False, f"keep shared_prefix={'on' if incumbent else 'off'}: missing means"
+        if m_c >= m_i * margin:
+            return True, (f"switch shared_prefix {'on' if incumbent else 'off'}→"
+                          f"{'on' if challenger else 'off'}: score {m_c:.3f} beats "
+                          f"{m_i:.3f} over {n_c} vs {n_i} chats "
+                          f"(TTFT-based; store amortized when present)")
+        return False, (f"keep shared_prefix={'on' if incumbent else 'off'}: "
+                       f"score {m_i:.3f} still ahead of challenger {m_c:.3f}")
+
+    if used != incumb:
+        ok, reason = try_promote(used, incumb)
+        if ok:
+            winner["shared_prefix"] = used
+            promotions.append(("shared_prefix", used, reason))
+        else:
+            keep_reasons.append(reason)
+    else:
+        for nb in neighbors("shared_prefix", used):
+            ok, reason = try_promote(nb, used)
+            if ok:
+                winner["shared_prefix"] = nb
+                promotions.append(("shared_prefix", nb, reason))
+                break
+        else:
+            if samples_of(entry, "shared_prefix", used) >= min_samples:
+                m = mean_of(entry, "shared_prefix", used)
+                if m is not None and int(entry.get("reply_n") or 0) % EXPLORE_EVERY == 0:
+                    keep_reasons.append(
+                        f"keep shared_prefix={'on' if used else 'off'}: best so far "
+                        f"at score {m:.3f} over {samples_of(entry, 'shared_prefix', used)} chats")
+
+    out["promotions"] = promotions
+    out["keep_reasons"] = keep_reasons
+    out["winner"] = dict(winner)
+    return out
+
+
+LIVE_SETTINGS = ("shared_prefix", "pipeline_chats", "guess_ahead")
 RELOAD_SETTINGS = ("packer_layers",)
 
 
@@ -192,11 +369,12 @@ def resolve_startup(*, model_dir, spanned: bool,
                     explicit: dict,
                     store: Optional[dict] = None,
                     path: Optional[Path] = None,
-                    n_layers: Optional[int] = None) -> dict:
+                    n_layers: Optional[int] = None,
+                    day9_shared_prefix: Optional[bool] = False) -> dict:
     """Pick startup settings. Flags in `explicit` always win.
 
     Returns dict with keys: packer_layers, pipeline_chats, guess_ahead,
-    reasons (list of plain strings), store, entry, key, exploring (None).
+    shared_prefix, reasons (list of plain strings), store, entry, key.
     """
     st = store if store is not None else load_store(path)
     hw = hardware_label(spanned=spanned)
@@ -210,6 +388,7 @@ def resolve_startup(*, model_dir, spanned: bool,
     packer = day9_packer_layers
     pipe = day9_pipeline_chats
     guess = day9_guess_ahead
+    sp = False if day9_shared_prefix is None else bool(day9_shared_prefix)
 
     if "packer_layers" in winner and packer is not None:
         packer = int(winner["packer_layers"])
@@ -221,6 +400,10 @@ def resolve_startup(*, model_dir, spanned: bool,
         guess = bool(winner["guess_ahead"])
         on = "on" if guess else "off"
         reasons.append(f"learned guess-ahead: {on} (saved winner for {hw})")
+    if "shared_prefix" in winner:
+        sp = bool(winner["shared_prefix"])
+        reasons.append(
+            f"learned shared-prefix: {'on' if sp else 'off'} (saved winner for {hw})")
 
     # Pending reload trials override the winner once, then clear.
     if pending.get("packer_layers") is not None and "packer_layers" not in explicit:
@@ -242,12 +425,18 @@ def resolve_startup(*, model_dir, spanned: bool,
     if "guess_ahead" in explicit:
         guess = bool(explicit["guess_ahead"])
         reasons.append(f"flag guess-ahead: {'on' if guess else 'off'}")
+    if "shared_prefix" in explicit:
+        sp = bool(explicit["shared_prefix"])
+        reasons.append(f"flag shared-prefix: {'on' if sp else 'off'}")
 
     if not reasons:
         if packer is not None:
             reasons.append(f"auto split: packer_layers={packer} (Day 9 memory guess; no saved winner yet)")
         if pipe is not None:
             reasons.append(f"auto pipeline: chats={pipe} (Day 9 memory guess; no saved winner yet)")
+        reasons.append(
+            f"auto shared-prefix: {'on' if sp else 'off'} "
+            f"(default off until learned; no saved winner yet)")
 
     # Seed winner with current if empty so second load has something.
     w = entry.setdefault("winner", {})
@@ -257,11 +446,14 @@ def resolve_startup(*, model_dir, spanned: bool,
         w["pipeline_chats"] = int(pipe)
     if guess is not None and "guess_ahead" not in w and "guess_ahead" not in explicit:
         w["guess_ahead"] = bool(guess)
+    if "shared_prefix" not in w and "shared_prefix" not in explicit:
+        w["shared_prefix"] = bool(sp)
 
     return {
         "packer_layers": packer,
         "pipeline_chats": pipe,
         "guess_ahead": guess,
+        "shared_prefix": sp,
         "reasons": reasons,
         "store": st,
         "entry": entry,
@@ -282,15 +474,25 @@ def pick_exploration(entry: dict, current: dict, *,
     explicit = explicit or {}
     reply_n = int(entry.get("reply_n") or 0) + 1
     # Explore on a cadence; also occasionally re-check even after a winner.
+    # Shared-prefix (Day 13): once the default-off side has enough cold TTFT
+    # samples, try on promptly (do not wait for pipeline/guess to monopolize).
     due = (reply_n % explore_every == 0) or (reply_n % slow_recheck_every == 0)
-    if not due:
+    sp_ready_to_try_on = (
+        "shared_prefix" not in explicit
+        and current.get("shared_prefix") is False
+        and samples_of(entry, "shared_prefix", False) >= MIN_SAMPLES
+        and samples_of(entry, "shared_prefix", True) < MIN_SAMPLES
+    )
+    if not due and not sp_ready_to_try_on:
         return None
 
     # Prefer a live setting whose challenger still needs samples.
     # For pipeline_chats, wait until the incumbent has enough concurrent /
     # serial probes before wandering off — otherwise we never finish scoring
-    # the Day 9 starting guess.
-    for name in LIVE_SETTINGS:
+    # the Day 9 starting guess. When only sp_unproven triggered entry (not
+    # due), restrict to shared_prefix so other knobs do not steal early chats.
+    live_names = LIVE_SETTINGS if due else ("shared_prefix",)  # early path: shared_prefix only
+    for name in live_names:
         if name in explicit:
             continue
         if name not in current or current[name] is None:
@@ -298,15 +500,27 @@ def pick_exploration(entry: dict, current: dict, *,
         cur = current[name]
         if name == "pipeline_chats" and samples_of(entry, name, cur) < MIN_SAMPLES:
             continue
+        if name == "shared_prefix" and samples_of(entry, name, cur) < MIN_SAMPLES:
+            continue
         for nb in neighbors(name, cur, n_layers=n_layers):
             if samples_of(entry, name, nb) < MIN_SAMPLES:
+                if name == "pipeline_chats":
+                    trial_n = MIN_SAMPLES * 2
+                elif name == "shared_prefix":
+                    trial_n = SHARED_PREFIX_TRIAL_REPLIES
+                else:
+                    trial_n = MIN_SAMPLES
                 return {
                     "name": name,
                     "value": nb,
                     "reason": (f"try {name}={nb}: exploring near {name}={cur} "
                                f"(have {samples_of(entry, name, nb)}/{MIN_SAMPLES} samples)"),
-                    "trial_replies": (MIN_SAMPLES * 2 if name == "pipeline_chats" else MIN_SAMPLES),
+                    "trial_replies": trial_n,
                 }
+
+    # Early shared-prefix-only pass found nothing to try.
+    if not due:
+        return None
 
     # All neighbors sampled: pick the best-looking under-tested or next neighbor
     # for a slow re-check against the winner.
@@ -324,11 +538,17 @@ def pick_exploration(entry: dict, current: dict, *,
         # Prefer neighbor with fewer samples, else first.
         nbs.sort(key=lambda v: samples_of(entry, name, v))
         nb = nbs[0]
+        if name == "pipeline_chats":
+            trial_n = MIN_SAMPLES * 2
+        elif name == "shared_prefix":
+            trial_n = SHARED_PREFIX_TRIAL_REPLIES
+        else:
+            trial_n = MIN_SAMPLES
         return {
             "name": name,
             "value": nb,
             "reason": f"re-check {name}={nb} against current {name}={cur}",
-            "trial_replies": (MIN_SAMPLES * 2 if name == "pipeline_chats" else MIN_SAMPLES),
+            "trial_replies": trial_n,
         }
 
     # Queue a packer_layers trial for next reload if not explicit and we have room.
@@ -420,6 +640,7 @@ def observe_reply(entry: dict, *, settings_used: dict,
             "pipeline_chats": winner.get("pipeline_chats", settings_used.get("pipeline_chats")),
             "guess_ahead": winner.get("guess_ahead", settings_used.get("guess_ahead")),
             "packer_layers": winner.get("packer_layers", settings_used.get("packer_layers")),
+            "shared_prefix": winner.get("shared_prefix", settings_used.get("shared_prefix")),
         },
         n_layers=n_layers,
         explicit=explicit,

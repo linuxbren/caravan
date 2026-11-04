@@ -1,3 +1,38 @@
+## 2026-11-04 — Day 13 (cont.): self-tune shared-prefix per model
+
+**Goal.** Fold `--split-shared-prefix-cache` into Day 10 learn-from-real-chats
+so the first time a model is used, Caravan tries shared-prefix on vs off,
+measures TTFT on new chats that share a system prompt, accounts for the
+one-time store/materialize cost (store samples are tracked separately; only
+hits score the on mean), and keeps it on per model if it helps — off if it
+does not (e.g. Day 12 Gemma never hitting). Explicit flag still overrides.
+Saved in `~/.caravan/mlx/tuned-settings.json` like the other winners.
+
+**Build.** `agent/tuned_settings.py`: `shared_prefix` live setting,
+`record_shared_prefix_probe` (TTFT → inverse score), fair promote needing
+min samples on both sides, early explore once off has enough cold samples.
+`agent/mlx_worker.py`: live `_set_shared_prefix`, startup apply, explore/trial
+wiring. Flag/env still pins on. Tests: `SharedPrefixLearnTest` (+8).
+**182 tests OK.**
+
+**Verify (split, LPM off, ports 8194/5560, empty tuned file, no shared-prefix
+flag, pipeline pinned to 1, draft off). Same long tool-schema system preamble
+on every new session. Lab: `handoff/lab/day13-spc-learn/`.**
+
+| Model | Chose | Chats until decision | Off cold TTFT mean (s) | Store TTFT (s) | On hit TTFT mean (s) |
+|---|---|---:|---:|---:|---:|
+| Gemma 4 26B-A4B 4-bit | **on** | 7 | 12.871 | 23.158 | 2.664 |
+| Qwen3-30B-A3B 4-bit | **on** | 7 | 10.369 | 10.399 | 0.897 |
+| Llama 3.1 8B Instruct 4-bit | **on** | 7 | 19.289 | 19.321 | 1.472 |
+
+Flow each time: 3 cold-off samples → explore on → 1 store → 3 hits → promote
+on (amortized store+hits still beat cold). Winner key
+`…:spanned` → `shared_prefix: true`. Raw: `*-learn.json`.
+
+**Next.** Flag remains off-by-default for brand-new models until learn runs;
+saved winner turns it on next load. Re-bench adaptive PL; Day 14 break +
+v0→now video.
+
 ## 2026-11-04 — Day 13: Gemma shared-prefix packer trim / materialize
 
 **Goal.** Fix Day 12 Gemma `shared-prefix-split-resync` (0% TTFT) on the

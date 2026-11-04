@@ -607,12 +607,15 @@ class Engine:
         self._adaptive_pl_gate = None
         if self.prompt_lookup_adaptive and self.prompt_lookup_n > 0:
             self._adaptive_pl_gate = adaptive_pl.AdaptivePLGate(ngram_n=self.prompt_lookup_n)
-        self.shared_prefix_enabled = bool(getattr(args, "split_shared_prefix_cache", False))
+        # Day 12/13: flag/env pins on; otherwise learn may flip live (default off).
+        self._learn_spc_explicit = bool(getattr(args, "split_shared_prefix_cache", False))
+        self.shared_prefix_enabled = self._learn_spc_explicit
         self.shared_prefix_cache = (
             shared_prefix.SharedPrefixCache() if self.shared_prefix_enabled else None
         )
+        self._learn_spc_override = None  # None=follow enabled/winner; True/False force
         if self.shared_prefix_enabled:
-            log("split shared-prefix cache: on (Day 12 prototype)")
+            log("split shared-prefix cache: on (flag/env)")
         # Idea 3 auto-pair / remap / shut-off (populated in _setup when lead).
         self.draft_remap_d2t = {}
         self.draft_remap_t2d = {}
@@ -854,6 +857,24 @@ class Engine:
         # ROADMAP #13b: overlay saved per-model winners (flags still win).
         self._learn_apply_startup()
 
+
+    def _shared_prefix_on(self) -> bool:
+        if self._learn_spc_override is not None:
+            return bool(self._learn_spc_override)
+        return bool(getattr(self, "shared_prefix_enabled", False))
+
+    def _set_shared_prefix(self, enabled: bool, *, reason: str = "") -> None:
+        """Flip shared-prefix cache on/off live (Day 13 learn)."""
+        want = bool(enabled)
+        cur = bool(getattr(self, "shared_prefix_enabled", False))
+        self._learn_spc_override = want
+        self.shared_prefix_enabled = want
+        if want and self.shared_prefix_cache is None:
+            self.shared_prefix_cache = shared_prefix.SharedPrefixCache()
+        if want != cur:
+            log(f"learn: shared-prefix {'on' if want else 'off'}"
+                + (f" ({reason})" if reason else ""))
+
     def _learn_apply_startup(self):
         """ROADMAP #13b: start from saved winners when flags didn't pin a value."""
         if not self._learn_enabled:
@@ -875,6 +896,8 @@ class Engine:
             explicit["packer_layers"] = int(self.args.split_front_layers)
         if bool(getattr(self.args, "no_split_draft", False)):
             explicit["guess_ahead"] = False
+        if getattr(self, "_learn_spc_explicit", False):
+            explicit["shared_prefix"] = True
         day9_k = getattr(self.args, "split_front_layers", None)
         day9_n = self.pipeline_chats
         day9_g = True if self.draft_model is not None else (
@@ -894,6 +917,7 @@ class Engine:
             day9_packer_layers=int(day9_k) if day9_k is not None else None,
             day9_pipeline_chats=int(day9_n) if day9_n is not None else None,
             day9_guess_ahead=day9_g,
+            day9_shared_prefix=False,
             explicit=explicit,
             path=path,
             n_layers=n_layers,
@@ -919,6 +943,9 @@ class Engine:
                 self._learn_guess_override = False
             elif want:
                 self._learn_guess_override = True
+        # Shared-prefix: apply learned winner (or stay off) unless flag pinned it.
+        if "shared_prefix" not in explicit and r.get("shared_prefix") is not None:
+            self._set_shared_prefix(bool(r["shared_prefix"]), reason="startup winner")
         for line in r["reasons"]:
             if line.startswith("learned") or line.startswith("try split") or line.startswith("flag"):
                 log(line)
@@ -954,6 +981,7 @@ class Engine:
             "pipeline_chats": self.pipeline_chats,
             "guess_ahead": self._learn_guess_ahead_on() if self.client is not None else None,
             "packer_layers": getattr(self.args, "split_front_layers", None),
+            "shared_prefix": self._shared_prefix_on() if self.client is not None else None,
         }
         with self._learn_lock:
             out = TS.observe_reply(
@@ -966,6 +994,25 @@ class Engine:
                 explicit=self._learn_explicit,
                 n_layers=self._learn_n_layers,
             )
+            # Day 13: score shared-prefix by TTFT on long new chats (not decode tok/s).
+            sp_out = None
+            if (self.client is not None
+                    and "shared_prefix" not in (self._learn_explicit or {})
+                    and settings_used.get("shared_prefix") is not None):
+                sp_out = TS.record_shared_prefix_probe(
+                    self._learn_entry,
+                    enabled=bool(settings_used["shared_prefix"]),
+                    ttft_s=float(info.get("ttft_s") or 0.0),
+                    how=str(info.get("how") or ""),
+                    prompt_tokens=int(info.get("prompt_tokens") or 0),
+                    cached_tokens=int(info.get("cached_tokens") or 0),
+                )
+                for name, val, reason in sp_out.get("promotions") or []:
+                    log(f"learn: {reason}")
+                    if name == "shared_prefix":
+                        self._set_shared_prefix(bool(val), reason="promoted")
+                for reason in (sp_out.get("keep_reasons") or [])[:1]:
+                    log(f"learn: {reason}")
             # Single Mini: no concurrent pipe. Still record decode tok/s under
             # pipeline_chats=1 even though width is pinned (explicit would skip).
             if self.client is None and "pipeline_chats" not in (self._learn_explicit or {}):
@@ -1060,6 +1107,9 @@ class Engine:
                         self._learn_guess_override = bool(w["guess_ahead"])
                         log(f"learn: end trial guess_ahead; back to winner "
                             f"guess_ahead={self._learn_guess_override}")
+                    elif trial.get("name") == "shared_prefix" and "shared_prefix" in w:
+                        self._set_shared_prefix(bool(w["shared_prefix"]),
+                                               reason="end trial; back to winner")
                     self._learn_trial = None
 
             explore = out.get("explore")
@@ -1079,12 +1129,21 @@ class Engine:
                             "name": name, "value": val,
                             "remaining": int(explore.get("trial_replies") or TS.MIN_SAMPLES),
                         }
+                    elif name == "shared_prefix" and "shared_prefix" not in self._learn_explicit:
+                        self._set_shared_prefix(bool(val), reason=explore.get("reason") or "trial")
+                        self._learn_trial = {
+                            "name": name, "value": val,
+                            "remaining": int(explore.get("trial_replies")
+                                             or TS.SHARED_PREFIX_TRIAL_REPLIES),
+                        }
             path = Path(self._learn_path).expanduser() if self._learn_path else None
             try:
                 TS.save_store(self._learn_store, path)
             except OSError as e:
                 log(f"learn: save failed ({e!r})")
             winner = dict((pipe_out or {}).get("winner") or out.get("winner") or {})
+            if sp_out and sp_out.get("winner"):
+                winner.update(sp_out["winner"])
             self._last_learn = {
                 "norm_tps": round(out["norm_tps"], 3),
                 "winner": winner,
@@ -1093,6 +1152,9 @@ class Engine:
                 "pipeline_probe": (
                     {"aggregate_tps": round(agg, 3), "n": n_used}
                     if pipe_out is not None else None),
+                "shared_prefix_probe": (
+                    {"recorded": sp_out.get("recorded"), "kind": sp_out.get("kind")}
+                    if sp_out is not None else None),
                 "trial": (dict(self._learn_trial) if getattr(self, "_learn_trial", None) else None),
             }
 
@@ -2911,8 +2973,9 @@ def build_parser():
     _spc_env = os.environ.get("CARAVAN_MLX_SPLIT_SHARED_PREFIX_CACHE", "")
     _spc_default = _spc_env.strip().lower() in ("1", "true", "yes", "on")
     ap.add_argument("--split-shared-prefix-cache", action="store_true", default=_spc_default,
-                    help="Day 12: cache shared system-prompt prefixes across sessions "
-                         "(off by default; also CARAVAN_MLX_SPLIT_SHARED_PREFIX_CACHE=1)")
+                    help="Day 12/13: cache shared system-prompt prefixes across sessions "
+                         "(off by default; learn-from-chats may turn it on per model; "
+                         "flag/env pins on — also CARAVAN_MLX_SPLIT_SHARED_PREFIX_CACHE=1)")
     # ROADMAP #13b: learn from real chats (Day 10). CARAVAN_NO_LEARN=1 disables.
     _learn_env = os.environ.get("CARAVAN_NO_LEARN", "")
     _learn_off = _learn_env.strip().lower() in ("1", "true", "yes", "on")
