@@ -311,3 +311,29 @@ class IndexHtmlContractTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PageInsecureContextTest(unittest.TestCase):
+    """The page is served over plain http on the Tailscale IP (not a secure
+    context), where crypto.randomUUID is undefined. Sending must not depend on it."""
+
+    def test_no_bare_random_uuid(self):
+        html = (REPO / "proxy" / "web" / "index.html").read_text()
+        self.assertIn("function newSessionId()", html)
+        self.assertIn("getRandomValues", html)
+        bare = [ln for ln in html.splitlines()
+                if "randomUUID()" in ln and "typeof c.randomUUID" not in ln]
+        self.assertEqual(bare, [], "crypto.randomUUID() used without a fallback")
+
+
+class WorkerEndMarkerTest(unittest.TestCase):
+    def test_strip_eot(self):
+        sys.path.insert(0, str(REPO / "agent"))
+        try:
+            import mlx_worker
+        except Exception as e:  # mlx not installed on this box
+            self.skipTest(f"mlx_worker import: {e}")
+        self.assertEqual(mlx_worker.strip_end_markers("Hi there!<|eot_id|>"), "Hi there!")
+        self.assertEqual(mlx_worker.strip_end_markers("<|eot_id|>"), "")
+        self.assertEqual(mlx_worker.strip_end_markers(""), "")
+        self.assertEqual(mlx_worker.strip_end_markers("a <b> c"), "a <b> c")

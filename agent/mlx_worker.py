@@ -2819,6 +2819,7 @@ def make_handler(engine: "Engine"):
             def strip_lead(c):
                 # "<think>\n\n</think>\n\n" leaves blank lines before the answer;
                 # llama.cpp trims them, so do the same.
+                c = strip_end_markers(c)
                 if lead[0] and c:
                     c = c.lstrip()
                     if c:
@@ -2874,11 +2875,25 @@ def make_handler(engine: "Engine"):
                     self.wfile.write(b"0\r\n\r\n")
                     self.wfile.flush()
                 else:
-                    self._json(200, pack("".join(text), "".join(reasoning), finish=info["finish"], usage=usage))
+                    self._json(200, pack(strip_end_markers("".join(text)), "".join(reasoning), finish=info["finish"], usage=usage))
             except (BrokenPipeError, ConnectionResetError):
                 pass
 
     return H
+
+
+# End-of-turn tokens some tokenizers decode into the reply text (Llama 3.x
+# <|eot_id|> in particular). They are never part of the answer.
+END_MARKERS = ("<|eot_id|>", "<|eom_id|>", "<|end_of_text|>", "<|im_end|>")
+
+
+def strip_end_markers(text):
+    if not text:
+        return text
+    for m in END_MARKERS:
+        if m in text:
+            text = text.replace(m, "")
+    return text
 
 
 def parse_bytes(v):

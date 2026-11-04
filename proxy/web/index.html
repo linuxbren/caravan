@@ -332,6 +332,19 @@
     }
     return out;
   }
+  // crypto.randomUUID only exists on HTTPS/localhost pages. Over plain http on the
+  // Tailscale IP it is undefined, which threw before the chat was sent.
+  function newSessionId() {
+    const c = window.crypto;
+    if (c && typeof c.randomUUID === "function") return c.randomUUID().replace(/-/g,"").slice(0,16);
+    if (c && typeof c.getRandomValues === "function") {
+      const b = c.getRandomValues(new Uint8Array(8));
+      return Array.from(b, x => x.toString(16).padStart(2, "0")).join("");
+    }
+    let s = "";
+    while (s.length < 16) s += Math.floor(Math.random() * 16).toString(16);
+    return s;
+  }
   function cancelChat() {
     if (state.chatAbort) {
       try { state.chatAbort.abort(); } catch (_) {}
@@ -535,7 +548,7 @@
     state.streaming = true;
     $("btnSend").disabled = true;
 
-    if (!state.session) state.session = crypto.randomUUID().replace(/-/g,"").slice(0,16);
+    if (!state.session) state.session = newSessionId();
     const sent = Date.now() / 1000;
     const payload = {
       messages: [{ role: "user", content: text }],
@@ -721,7 +734,7 @@
   $("btnClear").onclick = () => {
     cancelChat();
     $("messages").innerHTML = "";
-    state.session = crypto.randomUUID().replace(/-/g,"").slice(0,16);
+    state.session = newSessionId();
     const empty = document.createElement("div");
     empty.className = "empty"; empty.id = "emptyState";
     empty.innerHTML = `<strong>Cleared.</strong> New session — shared start will pay its one-time setup on the first long system prompt.`;
