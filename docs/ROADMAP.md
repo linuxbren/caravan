@@ -128,6 +128,8 @@ Open tasks for this rule:
 
 ## Next, in order
 
+> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order: #17 fused kernels, then #16 built-in guesser, then #13c settings file, then #14 node view, then #15 Terminal Delight console.
+
 1. ~~**Publish the rebased llama.cpp branch.**~~ **Done (2026-10-31).**
    The fork moved to `linuxbren/llama.cpp`. There, `caravan-patches` is
    the rebased branch (upstream `5047748f` + the RPC patch) that the v1+
@@ -293,6 +295,24 @@ Open tasks for this rule:
     change options from Parker Brown's terminal. Integration guide for
     Parker: `docs/INTEGRATING.md`. Shape left open; see "Terminal Delight as
     Caravan's console" below for the options.
+16. **Experiment: put back the built-in guesser that MLX copies strip out.**
+    *Experiment, for possible incorporation; research not started.* Some
+    models ship with extra "draft" layers (often called MTP, multi-token
+    prediction) that guess the next few words. MLX conversions usually drop
+    them. Idea: download only those layers from the original weights,
+    compress them to match the MLX copy, attach them in Caravan's loader, and
+    use them for guess-ahead instead of a separate helper model. Check
+    quality (12/12) and speed against today's helper-model guess-ahead.
+    Only works for models that ship these layers; which ones fit on the
+    Minis is still unknown. Inspired by
+    [Jason Haddix's post](https://x.com/Jhaddix/status/2117324109185188281)
+    (about 2.2x on DeepSeek V4.1 Flash on an M3 Ultra).
+17. **Experiment: fused kernels.** *Experiment, for possible incorporation;
+    research not started.* Combine several small GPU steps into one so the
+    GPU stops and starts less. Our split's biggest cost is GPU stops and
+    per-pass overhead, not the cable, so this could help every model,
+    single Mini and spanned. Measure single-chat and two-chat speed,
+    quality and memory before adopting. Same source as #16.
 
 ## Possible future directions (not scheduled)
 
