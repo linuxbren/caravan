@@ -1,0 +1,398 @@
+{
+  "date": "2026-11-03",
+  "hardware": "EXO1 lead + EXO2 packer, Thunderbolt 169.254.103.191:5560 (link-local changed from 169.254.104.38), LPM off both, test port 8194",
+  "note": "Gemma --fuse-kernels all/force-fused crashes: head dim 512 unsupported by force_fused SDPA. metal-swiglu used for Gemma fuse A/B instead. Guess-ahead off. No pp4096.",
+  "rows": [
+    {
+      "key": "gemma-all-n1",
+      "model": "gemma",
+      "mode": "all",
+      "pipe": 1,
+      "crashed": true,
+      "error": "21:43:23 [mlx-worker] fuse kernels: force_fused on mlx_lm.models.base, mlx_lm.models.llama, mlx_lm.models.qwen2, mlx_lm.models.qwen3, mlx_lm.models.qwen3_moe, mlx_lm.models.gemma, mlx_lm.models.gpt_os"
+    },
+    {
+      "key": "gemma-all-n2",
+      "model": "gemma",
+      "mode": "all",
+      "pipe": 2,
+      "crashed": true,
+      "error": "21:49:27 [mlx-worker] fuse kernels: force_fused on mlx_lm.models.base, mlx_lm.models.llama, mlx_lm.models.qwen2, mlx_lm.models.qwen3, mlx_lm.models.qwen3_moe, mlx_lm.models.gemma, mlx_lm.models.gpt_os"
+    },
+    {
+      "key": "gemma-metal-swiglu-n1",
+      "model": "gemma",
+      "mode": "metal-swiglu",
+      "pipe": 1,
+      "crashed": false,
+      "write_med": 37.7,
+      "write": [
+        37.7,
+        37.7
+      ],
+      "pp512_med": 427.75,
+      "pp512": [
+        427.8,
+        427.7
+      ],
+      "peak_gb_max": 8.95,
+      "quality": 3,
+      "quality_detail": {
+        "code": true,
+        "mult": true,
+        "capital": true
+      }
+    },
+    {
+      "key": "gemma-metal-swiglu-n2",
+      "model": "gemma",
+      "mode": "metal-swiglu",
+      "pipe": 2,
+      "crashed": false,
+      "write_med": 31.75,
+      "write": [
+        31.8,
+        31.8,
+        31.7,
+        31.7
+      ],
+      "agg_wall_med": 58.4,
+      "agg_wall": [
+        58.5,
+        58.3
+      ],
+      "peak_gb_max": 8.71,
+      "quality": null
+    },
+    {
+      "key": "gemma-off-n1",
+      "model": "gemma",
+      "mode": "off",
+      "pipe": 1,
+      "crashed": false,
+      "write_med": 37.65,
+      "write": [
+        37.6,
+        37.7
+      ],
+      "pp512_med": 427.8,
+      "pp512": [
+        427.7,
+        427.9
+      ],
+      "peak_gb_max": 8.95,
+      "quality": 3,
+      "quality_detail": {
+        "code": true,
+        "mult": true,
+        "capital": true
+      }
+    },
+    {
+      "key": "gemma-off-n2",
+      "model": "gemma",
+      "mode": "off",
+      "pipe": 2,
+      "crashed": false,
+      "write_med": 31.75,
+      "write": [
+        31.8,
+        31.8,
+        31.7,
+        31.7
+      ],
+      "agg_wall_med": 58.35,
+      "agg_wall": [
+        58.5,
+        58.2
+      ],
+      "peak_gb_max": 8.71,
+      "quality": null
+    },
+    {
+      "key": "llama-all-n1",
+      "model": "llama",
+      "mode": "all",
+      "pipe": 1,
+      "crashed": false,
+      "write_med": 22.55,
+      "write": [
+        22.6,
+        22.5
+      ],
+      "pp512_med": 244.2,
+      "pp512": [
+        243.6,
+        244.8
+      ],
+      "peak_gb_max": 3.56,
+      "quality": 3,
+      "quality_detail": {
+        "code": true,
+        "mult": true,
+        "capital": true
+      }
+    },
+    {
+      "key": "llama-all-n2",
+      "model": "llama",
+      "mode": "all",
+      "pipe": 2,
+      "crashed": false,
+      "write_med": 20.85,
+      "write": [
+        20.9,
+        20.9,
+        20.8,
+        20.8
+      ],
+      "agg_wall_med": 39.45,
+      "agg_wall": [
+        39.5,
+        39.4
+      ],
+      "peak_gb_max": 3.26,
+      "quality": null
+    },
+    {
+      "key": "llama-off-n1",
+      "model": "llama",
+      "mode": "off",
+      "pipe": 1,
+      "crashed": false,
+      "write_med": 22.6,
+      "write": [
+        22.6,
+        22.5,
+        22.6,
+        22.6
+      ],
+      "pp512_med": 243.6,
+      "pp512": [
+        243.0,
+        243.6,
+        243.6,
+        244.6
+      ],
+      "peak_gb_max": 3.56,
+      "quality": 3,
+      "quality_detail": {
+        "code": true,
+        "mult": true,
+        "capital": true
+      }
+    },
+    {
+      "key": "llama-off-n2",
+      "model": "llama",
+      "mode": "off",
+      "pipe": 2,
+      "crashed": false,
+      "write_med": 20.8,
+      "write": [
+        20.8,
+        20.8,
+        20.8,
+        20.8
+      ],
+      "agg_wall_med": 39.4,
+      "agg_wall": [
+        39.4,
+        39.4
+      ],
+      "peak_gb_max": 3.26,
+      "quality": null
+    },
+    {
+      "key": "qwen3-all-n1",
+      "model": "qwen3",
+      "mode": "all",
+      "pipe": 1,
+      "crashed": false,
+      "write_med": 44.55,
+      "write": [
+        44.6,
+        44.5
+      ],
+      "pp512_med": 462.25,
+      "pp512": [
+        462.7,
+        461.8
+      ],
+      "peak_gb_max": 9.89,
+      "quality": 3,
+      "quality_detail": {
+        "code": true,
+        "mult": true,
+        "capital": true
+      }
+    },
+    {
+      "key": "qwen3-all-n2",
+      "model": "qwen3",
+      "mode": "all",
+      "pipe": 2,
+      "crashed": false,
+      "write_med": 39.85,
+      "write": [
+        39.9,
+        39.9,
+        39.8,
+        39.8
+      ],
+      "agg_wall_med": 72.45,
+      "agg_wall": [
+        72.6,
+        72.3
+      ],
+      "peak_gb_max": 9.64,
+      "quality": null
+    },
+    {
+      "key": "qwen3-off-n1",
+      "model": "qwen3",
+      "mode": "off",
+      "pipe": 1,
+      "crashed": false,
+      "write_med": 44.75,
+      "write": [
+        44.8,
+        44.7
+      ],
+      "pp512_med": 461.7,
+      "pp512": [
+        461.2,
+        462.2
+      ],
+      "peak_gb_max": 9.86,
+      "quality": 3,
+      "quality_detail": {
+        "code": true,
+        "mult": true,
+        "capital": true
+      }
+    },
+    {
+      "key": "qwen3-off-n2",
+      "model": "qwen3",
+      "mode": "off",
+      "pipe": 2,
+      "crashed": false,
+      "write_med": 39.95,
+      "write": [
+        40.0,
+        40.0,
+        39.9,
+        39.9
+      ],
+      "agg_wall_med": 72.45,
+      "agg_wall": [
+        72.5,
+        72.4
+      ],
+      "peak_gb_max": 9.61,
+      "quality": null
+    }
+  ],
+  "verdicts": [
+    {
+      "model": "llama",
+      "pipe": 1,
+      "off_write": 22.6,
+      "on_write": 22.55,
+      "on_mode": "all",
+      "write_gain_pct": -0.22,
+      "agg_gain_pct": null,
+      "off_pp512": 243.6,
+      "on_pp512": 244.2,
+      "off_peak": 3.56,
+      "on_peak": 3.56,
+      "quality_off": 3,
+      "quality_on": 3
+    },
+    {
+      "model": "llama",
+      "pipe": 2,
+      "off_write": 20.8,
+      "on_write": 20.85,
+      "on_mode": "all",
+      "write_gain_pct": 0.24,
+      "agg_gain_pct": 0.13,
+      "off_pp512": null,
+      "on_pp512": null,
+      "off_peak": 3.26,
+      "on_peak": 3.26,
+      "quality_off": null,
+      "quality_on": null
+    },
+    {
+      "model": "gemma",
+      "pipe": 1,
+      "off_write": 37.65,
+      "on_write": 37.7,
+      "on_mode": "metal-swiglu",
+      "write_gain_pct": 0.13,
+      "agg_gain_pct": null,
+      "off_pp512": 427.8,
+      "on_pp512": 427.75,
+      "off_peak": 8.95,
+      "on_peak": 8.95,
+      "quality_off": 3,
+      "quality_on": 3
+    },
+    {
+      "model": "gemma",
+      "pipe": 2,
+      "off_write": 31.75,
+      "on_write": 31.75,
+      "on_mode": "metal-swiglu",
+      "write_gain_pct": 0.0,
+      "agg_gain_pct": 0.09,
+      "off_pp512": null,
+      "on_pp512": null,
+      "off_peak": 8.71,
+      "on_peak": 8.71,
+      "quality_off": null,
+      "quality_on": null
+    },
+    {
+      "model": "qwen3",
+      "pipe": 1,
+      "off_write": 44.75,
+      "on_write": 44.55,
+      "on_mode": "all",
+      "write_gain_pct": -0.45,
+      "agg_gain_pct": null,
+      "off_pp512": 461.7,
+      "on_pp512": 462.25,
+      "off_peak": 9.86,
+      "on_peak": 9.89,
+      "quality_off": 3,
+      "quality_on": 3
+    },
+    {
+      "model": "qwen3",
+      "pipe": 2,
+      "off_write": 39.95,
+      "on_write": 39.85,
+      "on_mode": "all",
+      "write_gain_pct": -0.25,
+      "agg_gain_pct": 0.0,
+      "off_pp512": null,
+      "on_pp512": null,
+      "off_peak": 9.61,
+      "on_peak": 9.64,
+      "quality_off": null,
+      "quality_on": null
+    }
+  ],
+  "verdict": "park",
+  "headline_candidates": [
+    "llama n1 all: -0.22% write",
+    "llama n2 all: 0.24% write",
+    "gemma n1 metal-swiglu: 0.13% write",
+    "gemma n2 metal-swiglu: 0.0% write",
+    "qwen3 n1 all: -0.45% write",
+    "qwen3 n2 all: -0.25% write"
+  ]
+}

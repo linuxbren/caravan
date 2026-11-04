@@ -43,6 +43,7 @@ def post(msgs, max_tokens, session, name):
            "ttft_s": cv.get("ttft_s"), "total_s": cv.get("total_s"),
            "peak_gb": cv.get("peak_gb"), "split": cv.get("split"),
            "pipeline": cv.get("pipeline"),
+           "speculate": cv.get("speculate"),
            "content": (msg.get("content") or "")[:200]}
     if u.get("completion_tokens", 0) > 1 and cv.get("total_s") and cv.get("ttft_s"):
         rec["write_tps"] = round((u["completion_tokens"] - 1) / (cv["total_s"] - cv["ttft_s"]), 1)

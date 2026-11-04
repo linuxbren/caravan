@@ -1,0 +1,29 @@
+[2026-11-03 20:52:26 CST] sync scripts to Minis
+ok
+ok
+ok
+ok
+ok
+ok
+[rc=0]
+[rc=0]
+[2026-11-03 20:52:45 CST] ======== START llama-off-n1 ========
+[2026-11-03 20:53:04 CST] packer_start rc=0
+[2026-11-03 20:58:12 CST] lead_bench rc=0
+[2026-11-03 20:58:42 CST] ======== DONE llama-off-n1 ========
+[2026-11-03 20:58:42 CST] ======== START llama-off-n2 ========
+[2026-11-03 20:59:02 CST] packer_start rc=0
+[2026-11-03 21:03:48 CST] lead_bench rc=0
+[2026-11-03 21:04:19 CST] ======== DONE llama-off-n2 ========
+[2026-11-03 21:04:19 CST] ======== START llama-all-n1 ========
+[2026-11-03 21:04:38 CST] packer_start rc=0
+[2026-11-03 21:10:15 CST] lead_bench rc=0
+[2026-11-03 21:10:46 CST] ======== DONE llama-all-n1 ========
+[2026-11-03 21:10:46 CST] ======== START llama-all-n2 ========
+[2026-11-03 21:11:05 CST] packer_start rc=0
+[2026-11-03 21:21:17 CST] lead_bench rc=0
+[2026-11-03 21:21:47 CST] ======== DONE llama-all-n2 ========
+/workspace/caravan/handoff/lab/day12_fuse_spanned_orch.sh: line 90: e: command not found
+[2026-11-03 21:21:47 CST] FAIL llama all n2
+/workspace/caravan/handoff/lab/day12_fuse_spanned_orch.sh: line 91: syntax error near unexpected token `done'
+/workspace/caravan/handoff/lab/day12_fuse_spanned_orch.sh: line 91: `  done'

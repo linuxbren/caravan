@@ -1,0 +1,17 @@
+ok
+ok
+[rc=0]
+[2026-11-03 21:38:13 CST] ======== START gemma-off-n1 ========
+[2026-11-03 21:38:32 CST] packer_start rc=0
+[2026-11-03 21:40:26 CST] lead_bench rc=0
+[2026-11-03 21:40:56 CST] ======== DONE gemma-off-n1 ========
+[2026-11-03 21:40:56 CST] ======== START gemma-off-n2 ========
+[2026-11-03 21:41:15 CST] packer_start rc=0
+[2026-11-03 21:42:25 CST] lead_bench rc=0
+[2026-11-03 21:42:56 CST] ======== DONE gemma-off-n2 ========
+[2026-11-03 21:42:56 CST] ======== START gemma-all-n1 ========
+[2026-11-03 21:43:15 CST] packer_start rc=0
+[2026-11-03 21:48:29 CST] lead_bench rc=0
+[2026-11-03 21:48:51 CST] ======== DONE gemma-all-n1 ========
+[2026-11-03 21:48:51 CST] ======== START gemma-all-n2 ========
+[2026-11-03 21:49:10 CST] packer_start rc=0

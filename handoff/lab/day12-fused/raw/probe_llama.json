@@ -1,0 +1,16 @@
+{
+  "path": "/Users/brenden/.caravan/mlx-models/mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
+  "mlx": "0.32.4",
+  "baseline_ms": 42.981,
+  "baseline_tps": 23.27,
+  "force_fused_ms": 42.573,
+  "force_fused_tps": 23.49,
+  "force_fused_speedup": 1.01,
+  "swiglu_micro_ms": {
+    "eager_ms": 0.3530166600103257,
+    "compile_ms": 0.28876415999548044,
+    "metal_ms": 0.24738749998505227,
+    "metal_max_abs_err": 0.0078125
+  },
+  "metal_ok": true
+}

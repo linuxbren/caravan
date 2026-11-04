@@ -1,0 +1,8 @@
+21:03:03 [mlx-worker] fuse kernels: off
+21:03:04 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.103.191:5560
+21:03:06 [mlx-worker] session 2b0b7db846d1436b: pipeline, reused 0/39, 8 generated, total 0.63s, peak 2.42 GB
+21:03:13 [mlx-worker] session b6fea21003cd45c4: pipeline, reused 0/58, 128 generated, total 6.69s, peak 2.52 GB
+21:03:13 [mlx-worker] session ee8b5957e2604971: pipeline, reused 0/59, 128 generated, total 6.42s, peak 2.52 GB
+21:03:20 [mlx-worker] session c365563fe2b1449f: pipeline, reused 0/58, 128 generated, total 6.69s, peak 2.56 GB
+21:03:20 [mlx-worker] session 4aaa33e9baaf45bc: pipeline, reused 0/59, 128 generated, total 6.42s, peak 2.56 GB
+21:03:46 [mlx-worker] session 8ac1585b87154efc: pipeline, reused 0/5694, 19 generated, total 26.51s, peak 3.26 GB

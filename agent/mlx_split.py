@@ -561,6 +561,29 @@ class FrontState:
             return {"dropped": st.drop(keys)}, b""
         if op == "flush":
             return {"saved": st.flush()}, b""
+        if op == "clone_to":
+            # Day 12 shared-prefix: deep-copy session src -> dst (tokens + KV).
+            src_k = h.get("src"); dst_k = h.get("dst")
+            if not src_k or not dst_k:
+                return {"error": "clone_to needs src and dst"}, b""
+            src = st.sessions.get(src_k)
+            if src is None:
+                return {"error": f"clone_to: unknown src {src_k!r}"}, b""
+            ops = st.ops
+            new_cache = []
+            for c in src.cache:
+                snap = ops.snapshot(c)
+                new_cache.append(ops.from_snapshot(snap))
+            dst = st.sessions.get(dst_k)
+            if dst is None:
+                dst = type(src)(dst_k, new_cache)
+                st.sessions[dst_k] = dst
+            else:
+                dst.cache = new_cache
+            dst.tokens = list(src.tokens)
+            dst.snaps = None
+            dst.dirty = True
+            return {"n": len(dst.tokens), "key": dst_k}, b""
         if op == "describe":
             return {"sessions": st.describe()}, b""
         return {"error": f"unknown op {op!r}"}, b""
@@ -979,6 +1002,13 @@ class SplitModel:
         h = self.stage.run_layers(h, cache)
         return self.stage.logits(h)
 
+    def packer_fwd(self, tokens):
+        """Synchronous packer-only forward (safe before trim; no begin/finish)."""
+        if getattr(self.client, "_inflight", False):
+            raise FrontError("packer_fwd while a begin_packer reply is still outstanding")
+        rh, rp = self.client.call("fwd", **self._fwd_kw(list(tokens)))
+        return array_from(self.mx, rh, rp)
+
     def begin_packer(self, tokens):
         """Start packer fwd without waiting (idea 1 pipeline). tokens: list[int]."""
         self.client.begin_call("fwd", **self._fwd_kw(list(tokens)))
@@ -1005,6 +1035,8 @@ class SplitModel:
         if n <= 0:
             return
         from mlx_lm.models.cache import can_trim_prompt_cache, trim_prompt_cache
+        if getattr(self.client, "_inflight", False):
+            raise FrontError("trim_caches while a begin_packer reply is still outstanding")
         if not can_trim_prompt_cache(lead_cache):
             raise FrontError("lead cache not trimmable (need for speculative decoding)")
         trim_prompt_cache(lead_cache, n)

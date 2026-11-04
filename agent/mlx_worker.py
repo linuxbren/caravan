@@ -64,6 +64,8 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import guess_ahead
+import adaptive_pl
+import shared_prefix
 from typing import Optional
 
 FORMAT = "caravan-mlx-cache-1"
@@ -601,6 +603,16 @@ class Engine:
         self.prompt_lookup_n = int(getattr(args, "split_prompt_lookup", 0) or 0)
         if self.prompt_lookup_n < 0:
             self.prompt_lookup_n = 0
+        self.prompt_lookup_adaptive = bool(getattr(args, "split_prompt_lookup_adaptive", False))
+        self._adaptive_pl_gate = None
+        if self.prompt_lookup_adaptive and self.prompt_lookup_n > 0:
+            self._adaptive_pl_gate = adaptive_pl.AdaptivePLGate(ngram_n=self.prompt_lookup_n)
+        self.shared_prefix_enabled = bool(getattr(args, "split_shared_prefix_cache", False))
+        self.shared_prefix_cache = (
+            shared_prefix.SharedPrefixCache() if self.shared_prefix_enabled else None
+        )
+        if self.shared_prefix_enabled:
+            log("split shared-prefix cache: on (Day 12 prototype)")
         # Idea 3 auto-pair / remap / shut-off (populated in _setup when lead).
         self.draft_remap_d2t = {}
         self.draft_remap_t2d = {}
@@ -632,6 +644,14 @@ class Engine:
     def _setup(self):
         import importlib
         import mlx.core as mx
+        # ROADMAP #17: fuse patches must run before mlx_lm model imports bind SDPA.
+        try:
+            import fuse_kernels as FK
+            self._fuse_mode = FK.resolve_mode(getattr(self.args, "fuse_kernels", None))
+            FK.apply_fuse_kernels(self._fuse_mode, log=log)
+        except Exception as e:
+            self._fuse_mode = "off"
+            log(f"fuse kernels: skipped ({type(e).__name__}: {e})")
         from mlx_lm import load
         from mlx_lm.sample_utils import make_sampler, make_logits_processors
         G = importlib.import_module("mlx_lm.generate")
@@ -774,6 +794,8 @@ class Engine:
             if self.prompt_lookup_n:
                 log(f"split speculate: prompt-lookup n={self.prompt_lookup_n}, "
                     f"k={self.speculate_k} (idea 3 draft-free)")
+            if self.prompt_lookup_adaptive and self.prompt_lookup_n:
+                log(f"split speculate: prompt-lookup adaptive on (n={self.prompt_lookup_n})")
         else:
             self._learn_packer_was_explicit = getattr(args, "split_front_layers", None) is not None
             self.model, self.tokenizer = load(str(self.model_dir))
@@ -1081,10 +1103,16 @@ class Engine:
             ready.put(e)
             return
         ready.put(None)
-        # Spanned lead always uses the pipeline loop so live learn trials can
-        # raise pipeline_chats from 1→2 without a process restart. N=1 simply
-        # admits one decoding slot. Single-Mini (no client) stays serial.
-        if self.client is None:
+        # Single-Mini (no client) stays serial (_run).
+        # Spanned: N=1 uses _run so guess-ahead/PL work (pipeline decode is
+        # single-token). N>=2 uses the pipeline loop; Day 12 wires speculate
+        # into _pipe_lead_sample when a draft/PL is loaded.
+        if self.pipeline_chats is None or int(self.pipeline_chats) < 1:
+            self.pipeline_chats = 1
+        use_pipeline = self.client is not None and int(self.pipeline_chats) >= 2
+        if not use_pipeline:
+            if self.client is not None:
+                log(f"split pipeline chats=1 (serial _run; guess-ahead/PL enabled)")
             while True:
                 job = self.jobs.get()
                 if job is None:
@@ -1104,10 +1132,120 @@ class Engine:
                         out.put(("error", e))
                     out.put(None)
         else:
-            if self.pipeline_chats is None or int(self.pipeline_chats) < 1:
-                self.pipeline_chats = 1
             log(f"split pipeline chats={self.pipeline_chats} (idea 1; overlap packer/lead across sessions)")
             self._main_pipeline()
+
+
+    def _spc_reserved_key(self, pkey: str) -> str:
+        # Fits KEY_RE: A-Za-z0-9_- {1,64}
+        k = f"spc_{pkey}"
+        return k[:64]
+
+    def _clone_lead_session(self, src_key: str, dst_key: str):
+        src = self.store.sessions.get(src_key)
+        if src is None:
+            raise RuntimeError(f"shared-prefix: missing lead src {src_key}")
+        ops = self.store.ops
+        new_cache = [ops.from_snapshot(ops.snapshot(c)) for c in src.cache]
+        dst = self.store.sessions.get(dst_key)
+        if dst is None:
+            dst = Session(dst_key, new_cache)
+            self.store.sessions[dst_key] = dst
+        else:
+            dst.cache = new_cache
+        dst.tokens = list(src.tokens)
+        dst.snaps = None
+        dst.dirty = True
+        return dst
+
+    def _prepare_with_shared_prefix(self, key, prompt):
+        """Like s_prepare, but seed from shared-prefix library on cold start."""
+        spc = getattr(self, "shared_prefix_cache", None)
+        if spc is None or not getattr(self, "shared_prefix_enabled", False):
+            return self.s_prepare(key, prompt)
+        # Only help brand-new sessions (not mid-chat continuation).
+        store = self.store
+        existing = store.sessions.get(key)
+        if existing is not None and existing.tokens:
+            return self.s_prepare(key, prompt)
+        n, ent = spc.lookup(prompt)
+        if not ent or n <= 0:
+            return self.s_prepare(key, prompt)
+        reserved = self._spc_reserved_key(ent.key)
+        if reserved not in store.sessions:
+            spc.misses += 1  # library entry stale
+            return self.s_prepare(key, prompt)
+        try:
+            self._clone_lead_session(reserved, key)
+            if self.client is not None:
+                fr = self.client.call("clone_to", src=reserved, dst=key)[0]
+                if fr.get("error"):
+                    log(f"shared-prefix packer clone failed: {fr.get('error')}")
+                    store.drop([key])
+                    return self.s_prepare(key, prompt)
+            s, n2, how = self.s_prepare(key, prompt)
+            how = f"shared-prefix-{how}"
+            log(f"shared-prefix hit n={n2} key={reserved} -> {key}")
+            return s, n2, how
+        except Exception as e:
+            log(f"shared-prefix seed failed: {type(e).__name__}: {e}")
+            return self.s_prepare(key, prompt)
+
+    def _maybe_store_shared_prefix(self, key, prompt, session):
+        spc = getattr(self, "shared_prefix_cache", None)
+        if spc is None or not getattr(self, "shared_prefix_enabled", False):
+            return
+        if session is None or not session.tokens:
+            return
+        # Store longest eligible length that is fully inside the checkpointed prompt.
+        n_tok = len(session.tokens)
+        candidates = [n for n in spc.lengths if spc.min_tokens <= n <= n_tok]
+        if not candidates:
+            return
+        n = max(candidates)
+        # Only store if prompt actually starts with these tokens
+        if list(prompt[:n]) != list(session.tokens[:n]):
+            return
+        pkey = shared_prefix.prefix_key(prompt, n)
+        reserved = self._spc_reserved_key(pkey)
+        if reserved in self.store.sessions and spc.entries.get(pkey):
+            return  # already have it
+        try:
+            # Ensure session is positioned at exactly n tokens for the reserved copy.
+            # session.tokens should equal prompt[:-1] after checkpoint (= full prompt minus last).
+            # We store min(n, len(session.tokens)).
+            n_store = min(n, len(session.tokens))
+            if n_store < spc.min_tokens:
+                return
+            # Temporarily clone current session to reserved (full current tokens), then trim
+            self._clone_lead_session(key, reserved)
+            rs = self.store.sessions[reserved]
+            drop = len(rs.tokens) - n_store
+            if drop > 0:
+                for c in rs.cache:
+                    self.store.ops.trim(c, drop)
+                rs.tokens = rs.tokens[:n_store]
+            if self.client is not None:
+                fr = self.client.call("clone_to", src=key, dst=reserved)[0]
+                if fr.get("error"):
+                    log(f"shared-prefix packer store clone failed: {fr.get('error')}")
+                    self.store.drop([reserved])
+                    return
+                # Trim packer half to n_store via prepare with truncated prompt? 
+                # clone_to copied full session; call prepare with prompt[:n_store]+dummy
+                # to trim. Simpler: send trim of (len_src - n_store) if we know lengths.
+                # After clone_to, packer has same tokens as lead src (full). Trim.
+                if drop > 0:
+                    # No direct packer trim-by-session without speculative trim op on session...
+                    # Use prepare with prefix prompt to trim via common_prefix path.
+                    pad = list(prompt[:n_store]) + [prompt[n_store] if n_store < len(prompt) else 0]
+                    self.client.call("prepare", key=reserved, prompt=pad)
+            nbytes = self.store.ops.nbytes(rs.cache)
+            spc.store(prompt, n_store, lead_snaps=None, nbytes=nbytes)
+            # Fix entry key to match prefix_key(prompt, n_store)
+            log(f"shared-prefix stored n={n_store} reserved={reserved} bytes={nbytes}")
+        except Exception as e:
+            log(f"shared-prefix store failed: {type(e).__name__}: {e}")
 
     # -- session ops: local store, or both halves of a split ---------------
     def s_prepare(self, key, prompt):
@@ -1386,6 +1524,9 @@ class Engine:
         draft = self.draft_model
         use_draft = draft is not None
         use_pl = int(self.prompt_lookup_n) > 0
+        gate = getattr(self, "_adaptive_pl_gate", None) if getattr(self, "prompt_lookup_adaptive", False) else None
+        if gate is not None:
+            gate.begin_request(prompt)
         if not use_draft and not use_pl:
             raise RuntimeError("speculate called with neither draft nor prompt-lookup")
         num_draft_tokens = int(self.speculate_k)
@@ -1479,7 +1620,10 @@ class Engine:
             """Return (draft_tokens mx.uint32[n], source:str). Prefer prompt-lookup when it hits."""
             nonlocal draft_s, pl_hits, pl_misses
             t0 = _time.perf_counter()
-            if use_pl:
+            if gate is not None:
+                gate.note_context(context)
+            try_pl = use_pl and (gate is None or gate.should_try_pl(has_draft=use_draft))
+            if try_pl:
                 pl = self._prompt_lookup_draft(context, self.prompt_lookup_n, num_draft)
                 if pl:
                     pl_hits += 1
@@ -1593,6 +1737,8 @@ class Engine:
                         yield int(token_list[n - 1]), True
                         if ntoks == max_tokens:
                             break
+                    if gate is not None and src == "prompt_lookup":
+                        gate.observe_pl_round(proposed=num_draft, accepted=n)
                     if ntoks < max_tokens:
                         ntoks += 1
                         context.append(int(token_list[n]))
@@ -1628,6 +1774,8 @@ class Engine:
                 stats["verify_s"] = round(verify_s, 4)
                 stats["pl_hits"] = pl_hits
                 stats["pl_misses"] = pl_misses
+                if gate is not None:
+                    stats["adaptive_pl"] = gate.snapshot()
                 # Stash on self for _run to pick up into info
                 self._last_speculate_stats = stats
 
@@ -1638,7 +1786,7 @@ class Engine:
             self.client.reset_stats()
         if self.client is not None and hasattr(self.model, "session_key"):
             self.model.session_key = key
-        s, n_reused, how = self.s_prepare(key, prompt)
+        s, n_reused, how = self._prepare_with_shared_prefix(key, prompt)
         completed = False
         n_gen = 0
         try:
@@ -1654,6 +1802,8 @@ class Engine:
                         mx.eval([c.state for c in s.cache])
                         mx.clear_cache()
             self.s_checkpoint(s, prompt[:-1])
+            if n_reused == 0:
+                self._maybe_store_shared_prefix(key, prompt, s)
             t_prefill = time.time() - t0
             if body.get("seed") is not None:
                 mx.random.seed(int(body["seed"]))
@@ -1774,6 +1924,7 @@ class Engine:
                     "pl_hits": st.get("pl_hits"),
                     "pl_misses": st.get("pl_misses"),
                     "sources": st.get("source_counts"),
+                    "adaptive_pl": st.get("adaptive_pl"),
                     "shutoff": (shut.snapshot() if shut is not None else None),
                 }
             if self.client is not None:
@@ -1957,6 +2108,30 @@ class Engine:
                          how=how, n_reused=n_reused, t0=t0, t_prefill=t_prefill,
                          sampler=sampler, procs=procs, max_tokens=max_tokens, stops=stops,
                          next_tokens=list(prompt[-1:]))
+        # Day 12: draft state for pipeline guess-ahead (N>=2 path).
+        if self.draft_model is not None:
+            import mlx.core as mx
+            from mlx_lm.models.cache import make_prompt_cache
+            draft = self.draft_model
+            dcache = make_prompt_cache(draft)
+            remap_t2d = getattr(self, "draft_remap_t2d", None) or {}
+            ids = list(prompt)
+            if remap_t2d:
+                ids = guess_ahead.apply_remap(ids, remap_t2d)
+            y_in = mx.array(ids, dtype=mx.uint32)
+            while y_in.size > 1:
+                n_to = min(self.prefill_step, int(y_in.size) - 1)
+                draft(y_in[:n_to][None], cache=dcache)
+                mx.eval([c.state for c in dcache])
+                y_in = y_in[n_to:]
+                mx.clear_cache()
+            slot.draft_cache = dcache
+            slot.draft_y = y_in
+            shut = self._chat_shutoffs.get(key)
+            if shut is None:
+                shut = guess_ahead.ChatShutoff(self.break_even_frac)
+                self._chat_shutoffs[key] = shut
+            slot.shut = shut
         return slot
 
     def _pipe_round(self, decoding):
@@ -1982,16 +2157,63 @@ class Engine:
         if not active:
             return
 
+        def _pipe_make_drafts(slot, k):
+            """Append up to k draft tokens onto slot; return draft id list (target space)."""
+            if (self.draft_model is None or slot.draft_cache is None or k <= 0
+                    or (slot.shut is not None and slot.shut.disabled)):
+                slot.pending_draft = []
+                return []
+            import mlx.core as mx
+            draft = self.draft_model
+            remap_d2t = getattr(self, "draft_remap_d2t", None) or {}
+            ys = []
+            y_in = slot.draft_y
+            with mx.stream(self.stream):
+                for _ in range(k):
+                    logits = draft(y_in[None], cache=slot.draft_cache)
+                    logits = logits[:, -1, :]
+                    # greedy for draft proposals (temp 0 sampler on target is separate)
+                    tok = mx.argmax(logits, axis=-1)
+                    mx.eval(tok)
+                    ys.append(tok)
+                    y_in = tok
+                slot.draft_y = y_in
+            raw = [int(t.flatten()[0].item()) if hasattr(t, "flatten") else int(t) for t in ys]
+            if remap_d2t:
+                raw_t = guess_ahead.apply_remap(raw, remap_d2t)
+            else:
+                raw_t = raw
+            slot.pending_draft = list(raw_t)
+            return list(raw_t)
+
         def packer_fetch(slot):
             model.session_key = slot.key
+            toks = list(slot.next_tokens)
+            room = max(0, slot.max_tokens - slot.n_gen)
+            k = min(int(self.speculate_k), room) if self.draft_model is not None else 0
+            drafts = _pipe_make_drafts(slot, k)
+            if drafts:
+                toks = toks + drafts
+            slot.h_n = len(toks)
             with mx.stream(self.stream):
-                model.begin_packer(slot.next_tokens)
-                slot.h = model.finish_packer()
+                # Sync fwd when drafting: begin/finish + later trim desyncs the TB socket.
+                if drafts and hasattr(model, "packer_fwd"):
+                    slot.h = model.packer_fwd(toks)
+                else:
+                    model.begin_packer(toks)
+                    slot.h = model.finish_packer()
 
         def packer_begin(slot):
             model.session_key = slot.key
+            toks = list(slot.next_tokens)
+            room = max(0, slot.max_tokens - slot.n_gen)
+            k = min(int(self.speculate_k), room) if self.draft_model is not None else 0
+            drafts = _pipe_make_drafts(slot, k)
+            if drafts:
+                toks = toks + drafts
+            slot.h_n = len(toks)
             with mx.stream(self.stream):
-                model.begin_packer(slot.next_tokens)
+                model.begin_packer(toks)
 
         def packer_finish(slot):
             model.session_key = slot.key
@@ -2007,6 +2229,16 @@ class Engine:
         # Nobody has hidden states yet: prime the neediest (serial); next rounds overlap.
         if not ready:
             packer_fetch(need[0])
+            return
+
+        # Draft/speculate issues trim RPCs during lead_sample. Overlapping that with
+        # packer_begin/finish on the same TB socket desyncs the protocol (trim
+        # response vs hidden-state). Keep chats multiplexed but serialize TB.
+        if self.draft_model is not None or int(getattr(self, "prompt_lookup_n", 0) or 0) > 0:
+            slot = ready[0]
+            self._pipe_lead_sample(slot)
+            if not slot.finished:
+                packer_fetch(slot)
             return
 
         if len(active) == 1:
@@ -2049,35 +2281,19 @@ class Engine:
         packer_finish(B)
         # A now needs next h if still running — leave A.h None for next round.
 
-    def _pipe_lead_sample(self, slot):
-        """Run lead layers on slot.h, sample one token, emit piece; clear h."""
-        mx, G = self.mx, self.G
-        model = self.model
-        if slot.h is None or slot.finished:
-            return
-        if slot.cancel.is_set():
-            slot.finished = True
-            slot.cancelled = True
-            slot.h = None
-            return
-        model.session_key = slot.key
-        with request_wiring(self.wired_mode, G, self.model, self.stream):
-            with mx.stream(self.stream):
-                logits = model.lead_logits(slot.h, slot.session.cache)
-                mx.eval(logits, [c.state for c in slot.session.cache])
-                logits = logits[:, -1, :]
-                if slot.procs:
-                    for p in slot.procs:
-                        logits = p(slot.all_tokens, logits)
-                y = slot.sampler(logits)
-                mx.eval(y)
-                token = int(y.flatten()[0].item()) if hasattr(y, "flatten") else int(y)
-        slot.h = None
+    def _pipe_emit_token(self, slot, token, from_draft=False):
+        """Detokenize + emit one piece; update counters; return finish reason or None."""
         if slot.ttft is None:
             slot.ttft = time.time() - slot.t0
         slot.n_gen += 1
+        if from_draft:
+            slot.n_from_draft += 1
         slot.all_tokens.append(token)
-        # Detokenize like mlx_lm.generate
+        if slot.shut is not None:
+            was = slot.shut.disabled
+            slot.shut.observe(bool(from_draft))
+            if slot.shut.disabled and not was:
+                log(f"split speculate: {slot.shut.reason}")
         if slot._detok is None:
             detok = getattr(self.tokenizer, "detokenizer", None)
             if detok is not None:
@@ -2091,7 +2307,6 @@ class Engine:
             try:
                 slot._detok.add_token(token)
                 text_piece = getattr(slot._detok, "last_segment", None) or getattr(slot._detok, "text", "") or ""
-                # Prefer last_segment; fall back to full text delta
                 if not text_piece and hasattr(slot._detok, "text"):
                     full = slot._detok.text
                     prev = getattr(slot, "_detok_prev", "")
@@ -2114,12 +2329,103 @@ class Engine:
         if slot.n_gen >= slot.max_tokens:
             finish = finish or "length"
         slot.out.put(("piece", text_piece, finish is not None))
+        return finish
+
+    def _pipe_lead_sample(self, slot):
+        """Run lead layers on slot.h, sample; multi-token verify when drafts pending."""
+        mx, G = self.mx, self.G
+        model = self.model
+        if slot.h is None or slot.finished:
+            return
+        if slot.cancel.is_set():
+            slot.finished = True
+            slot.cancelled = True
+            slot.h = None
+            return
+        model.session_key = slot.key
+        drafts = list(slot.pending_draft or [])
+        n_in = int(getattr(slot, "h_n", 1) or 1)
+        with request_wiring(self.wired_mode, G, self.model, self.stream):
+            with mx.stream(self.stream):
+                logits = model.lead_logits(slot.h, slot.session.cache)
+                mx.eval(logits, [c.state for c in slot.session.cache])
+                # logits: [1, n_in, vocab] for multi-token packer fwd
+                if logits.ndim == 2:
+                    logits = logits[:, None, :]
+                n_pred = int(logits.shape[1])
+                # Sample each position sequentially (processors see growing prefix)
+                sampled = []
+                prev = list(slot.all_tokens)
+                for i in range(n_pred):
+                    lg = logits[:, i, :]
+                    if slot.procs:
+                        for p in slot.procs:
+                            lg = p(prev, lg)
+                    y = slot.sampler(lg)
+                    mx.eval(y)
+                    tok = int(y.flatten()[0].item()) if hasattr(y, "flatten") else int(y)
+                    sampled.append(tok)
+                    prev.append(tok)
+        slot.h = None
+        # Accept draft prefix then bonus token
+        n_draft = len(drafts)
+        accepted = 0
+        finish = None
+        if n_draft > 0 and n_pred >= n_draft:
+            while accepted < n_draft:
+                if sampled[accepted] != drafts[accepted]:
+                    break
+                finish = self._pipe_emit_token(slot, sampled[accepted], from_draft=True)
+                accepted += 1
+                if finish is not None:
+                    slot.finished = True
+                    slot.finish = finish
+                    slot.next_tokens = [sampled[accepted - 1]]
+                    slot.pending_draft = []
+                    return
+            # bonus / reject token
+            if slot.n_gen < slot.max_tokens:
+                finish = self._pipe_emit_token(slot, sampled[accepted], from_draft=False)
+        else:
+            # single-token path
+            finish = self._pipe_emit_token(slot, sampled[0], from_draft=False)
+            accepted = 0
+        # Target KV advanced n_pred tokens; keep accepted drafts + bonus (if any).
+        if finish is not None and accepted > 0 and accepted <= n_draft and n_draft > 0 and accepted == slot.n_gen:
+            # finished entirely inside accepted drafts (edge): kept = accepted
+            kept = accepted
+        elif n_draft == 0:
+            kept = 1
+        elif finish is not None and accepted < n_draft and slot.n_gen == accepted:
+            kept = accepted
+        else:
+            kept = accepted + 1  # accepted drafts + bonus token
+        trim_n = max(n_pred - kept, 0)
+        if trim_n > 0 and hasattr(model, "trim_caches"):
+            try:
+                model.trim_caches(trim_n, slot.session.cache)
+            except Exception as e:
+                log(f"pipeline speculate trim failed: {e!r}")
+        # Draft cache: drop rejected draft tail; point draft_y at last emitted token.
+        if slot.draft_cache is not None and self.draft_model is not None and n_draft > 0:
+            try:
+                from mlx_lm.models.cache import trim_prompt_cache
+                rej = n_draft - accepted
+                if rej > 0:
+                    trim_prompt_cache(slot.draft_cache, rej)
+            except Exception as e:
+                log(f"pipeline draft trim failed: {e!r}")
+            remap_t2d = getattr(self, "draft_remap_t2d", None) or {}
+            last = slot.all_tokens[-1]
+            did = remap_t2d.get(last, last) if remap_t2d else last
+            slot.draft_y = self.mx.array([did], self.mx.uint32)
+        slot.pending_draft = []
         if finish is not None:
             slot.finished = True
             slot.finish = finish
-            slot.next_tokens = [token]
+            slot.next_tokens = [slot.all_tokens[-1]]
             return
-        slot.next_tokens = [token]
+        slot.next_tokens = [slot.all_tokens[-1]]
 
     def _pipe_finish(self, slot):
         completed = not slot.cancelled and slot.finished
@@ -2146,6 +2452,13 @@ class Engine:
                 "t0": float(slot.t0),
                 "peak_gb": round(mx.get_peak_memory() / 1e9, 2),
                 "pipeline": True}
+        if self.draft_model is not None:
+            info["speculate"] = {
+                "k": self.speculate_k,
+                "from_draft": slot.n_from_draft,
+                "accepted_frac": round(slot.n_from_draft / max(slot.n_gen, 1), 3),
+                "pipeline": True,
+            }
         if self.client is not None:
             st = dict(self.client.stats)
             info["split"] = {"calls": st["calls"], "mb_out": round(st["bytes_out"] / 1e6, 2),
@@ -2170,7 +2483,8 @@ class _PipeSlot:
     __slots__ = ("key", "session", "prompt", "body", "cancel", "out", "how", "n_reused",
                  "t0", "t_prefill", "sampler", "procs", "max_tokens", "stops",
                  "next_tokens", "all_tokens", "h", "n_gen", "ttft", "finished",
-                 "cancelled", "finish", "_detok")
+                 "cancelled", "finish", "_detok", "draft_cache", "draft_y",
+                 "pending_draft", "h_n", "n_from_draft", "shut")
 
     def __init__(self, **kw):
         for k, v in kw.items():
@@ -2183,6 +2497,12 @@ class _PipeSlot:
         self.cancelled = False
         self.finish = None
         self._detok = None
+        self.draft_cache = None
+        self.draft_y = None
+        self.pending_draft = []
+        self.h_n = 1
+        self.n_from_draft = 0
+        self.shut = None
 
 
 
@@ -2483,6 +2803,17 @@ def build_parser():
     ap.add_argument("--split-prompt-lookup", type=int, default=_pl_default, metavar="N",
                     help="idea 3 draft-free: prompt-lookup / n-gram max size N (0=off). "
                          "Env CARAVAN_MLX_SPLIT_PROMPT_LOOKUP")
+    _pla_env = os.environ.get("CARAVAN_MLX_SPLIT_PROMPT_LOOKUP_ADAPTIVE", "")
+    _pla_default = _pla_env.strip().lower() in ("1", "true", "yes", "on")
+    ap.add_argument("--split-prompt-lookup-adaptive", action="store_true", default=_pla_default,
+                    help="Day 12: only use prompt-lookup when overlapping/accepting "
+                         "(needs --split-prompt-lookup N>0; also "
+                         "CARAVAN_MLX_SPLIT_PROMPT_LOOKUP_ADAPTIVE=1)")
+    _spc_env = os.environ.get("CARAVAN_MLX_SPLIT_SHARED_PREFIX_CACHE", "")
+    _spc_default = _spc_env.strip().lower() in ("1", "true", "yes", "on")
+    ap.add_argument("--split-shared-prefix-cache", action="store_true", default=_spc_default,
+                    help="Day 12: cache shared system-prompt prefixes across sessions "
+                         "(off by default; also CARAVAN_MLX_SPLIT_SHARED_PREFIX_CACHE=1)")
     # ROADMAP #13b: learn from real chats (Day 10). CARAVAN_NO_LEARN=1 disables.
     _learn_env = os.environ.get("CARAVAN_NO_LEARN", "")
     _learn_off = _learn_env.strip().lower() in ("1", "true", "yes", "on")
@@ -2492,6 +2823,11 @@ def build_parser():
                     metavar="PATH",
                     help="ROADMAP #13b: path for per-model learned settings "
                          "(default ~/.caravan/mlx/tuned-settings.json; env CARAVAN_TUNED_SETTINGS)")
+    # ROADMAP #17 fused kernels (Day 12). Off by default. Env CARAVAN_FUSE_KERNELS.
+    _fuse_env = os.environ.get("CARAVAN_FUSE_KERNELS")
+    ap.add_argument("--fuse-kernels", default=_fuse_env or None, metavar="MODE",
+                    help="ROADMAP #17: off|force-fused|metal-swiglu|all (default off; "
+                         "also CARAVAN_FUSE_KERNELS). Off-by-default experiment.")
     return ap
 
 
@@ -2499,6 +2835,11 @@ def front_main(args):
     """v3 front stage: embeddings + the first layers, its own session caches."""
     import mlx.core as mx
     import mlx_split as S
+    try:
+        import fuse_kernels as FK
+        FK.apply_fuse_kernels(FK.resolve_mode(getattr(args, "fuse_kernels", None)), log=log)
+    except Exception as e:
+        log(f"fuse kernels: skipped ({type(e).__name__}: {e})")
     from mlx_lm.utils import maybe_set_recommended_wired_limit
     t0 = time.time()
     model_dir = Path(args.model).expanduser().resolve()

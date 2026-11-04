@@ -1,0 +1,344 @@
+[
+  {
+    "tag": "llama-off-n1",
+    "phase": "packer_start",
+    "ts": "2026-11-03T20:52:45",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-off-n1",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T20:57:03",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-off-n1",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T20:58:12",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-off-n1",
+    "phase": "done",
+    "ts": "2026-11-03T20:58:42",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-off-n2",
+    "phase": "packer_start",
+    "ts": "2026-11-03T20:58:42",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-off-n2",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T21:02:59",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-off-n2",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T21:03:48",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-off-n2",
+    "phase": "done",
+    "ts": "2026-11-03T21:04:19",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-all-n1",
+    "phase": "packer_start",
+    "ts": "2026-11-03T21:04:19",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-all-n1",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T21:09:06",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-all-n1",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T21:10:15",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-all-n1",
+    "phase": "done",
+    "ts": "2026-11-03T21:10:46",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-all-n2",
+    "phase": "packer_start",
+    "ts": "2026-11-03T21:10:46",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-all-n2",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T21:20:28",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-all-n2",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T21:21:17",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "llama-all-n2",
+    "phase": "done",
+    "ts": "2026-11-03T21:21:47",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-off-n1",
+    "phase": "packer_start",
+    "ts": "2026-11-03T21:23:47",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-off-n1",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T21:24:40",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-off-n1",
+    "phase": "packer_start",
+    "ts": "2026-11-03T21:38:13",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-off-n1",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T21:39:14",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-off-n1",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T21:40:26",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-off-n1",
+    "phase": "done",
+    "ts": "2026-11-03T21:40:56",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-off-n2",
+    "phase": "packer_start",
+    "ts": "2026-11-03T21:40:56",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-off-n2",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T21:41:26",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-off-n2",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T21:42:25",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-off-n2",
+    "phase": "done",
+    "ts": "2026-11-03T21:42:56",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-all-n1",
+    "phase": "packer_start",
+    "ts": "2026-11-03T21:42:56",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-all-n1",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T21:43:18",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-all-n1",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T21:48:29",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-all-n1",
+    "phase": "done",
+    "ts": "2026-11-03T21:48:51",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-all-n2",
+    "phase": "packer_start",
+    "ts": "2026-11-03T21:48:51",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-all-n2",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T21:49:24",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-metal-swiglu-n1",
+    "phase": "packer_start",
+    "ts": "2026-11-03T21:56:54",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-metal-swiglu-n1",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T21:57:13",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-metal-swiglu-n1",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T21:58:25",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-metal-swiglu-n1",
+    "phase": "done",
+    "ts": "2026-11-03T21:58:55",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-metal-swiglu-n2",
+    "phase": "packer_start",
+    "ts": "2026-11-03T21:58:55",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-metal-swiglu-n2",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T21:59:14",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-metal-swiglu-n2",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T22:00:14",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma-metal-swiglu-n2",
+    "phase": "done",
+    "ts": "2026-11-03T22:00:44",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-off-n1",
+    "phase": "packer_start",
+    "ts": "2026-11-03T22:00:44",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-off-n1",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T22:01:03",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-off-n1",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T22:01:53",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-off-n1",
+    "phase": "done",
+    "ts": "2026-11-03T22:02:25",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-off-n2",
+    "phase": "packer_start",
+    "ts": "2026-11-03T22:02:25",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-off-n2",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T22:02:44",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-off-n2",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T22:03:20",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-off-n2",
+    "phase": "done",
+    "ts": "2026-11-03T22:03:50",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-all-n1",
+    "phase": "packer_start",
+    "ts": "2026-11-03T22:03:50",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-all-n1",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T22:04:09",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-all-n1",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T22:04:57",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-all-n1",
+    "phase": "done",
+    "ts": "2026-11-03T22:05:27",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-all-n2",
+    "phase": "packer_start",
+    "ts": "2026-11-03T22:05:27",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-all-n2",
+    "phase": "lead_bench_start",
+    "ts": "2026-11-03T22:05:46",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-all-n2",
+    "phase": "lead_bench_rc_0",
+    "ts": "2026-11-03T22:06:23",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3-all-n2",
+    "phase": "done",
+    "ts": "2026-11-03T22:06:52",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "ALL",
+    "phase": "done",
+    "ts": "2026-11-03T22:06:52",
+    "zone": "America/Chicago"
+  }
+]

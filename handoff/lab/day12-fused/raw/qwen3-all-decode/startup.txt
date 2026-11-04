@@ -1,0 +1,3 @@
+20:41:40 [mlx-worker] fuse kernels: force_fused on mlx_lm.models.base, mlx_lm.models.llama, mlx_lm.models.qwen2, mlx_lm.models.qwen3, mlx_lm.models.qwen3_moe, mlx_lm.models.gemma, mlx_lm.models.gpt_oss; metal_swiglu
+20:41:50 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 9.5s; sessions<= 1, bytes<= 536870912, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+20:41:50 [mlx-worker] listening on http://127.0.0.1:8194

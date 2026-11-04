@@ -1,0 +1,5 @@
+22:01:07 [mlx-worker] fuse kernels: off
+22:01:11 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.103.191:5560
+22:01:11 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 3.2s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+22:01:11 [mlx-worker] split pipeline chats=1 (idea 1; overlap packer/lead across sessions)
+22:01:11 [mlx-worker] listening on http://127.0.0.1:8194

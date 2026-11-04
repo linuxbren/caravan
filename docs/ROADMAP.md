@@ -128,7 +128,7 @@ Open tasks for this rule:
 
 ## Next, in order
 
-> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order: #17 fused kernels, then #16 built-in guesser, then #13c settings file, then #14 node view, then #15 Terminal Delight console.
+> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order after Day 12 speedups: fix Gemma shared-prefix packer trim + re-bench adaptive PL (overlap_on=0.50); then #16 built-in guesser (blocked on MTP/NEXTN MLX weights — GPT-OSS still undrafted); then fewer hand-offs / multi-token verify for N≥2+draft; then #13c settings file, #14 node view, #15 Terminal Delight. Parked: #17 fused kernels; true batched decode = later/bigger. Shared-prefix flag ships off-by-default (Llama/Qwen3 TTFT ~−50%).
 
 1. ~~**Publish the rebased llama.cpp branch.**~~ **Done (2026-10-31).**
    The fork moved to `linuxbren/llama.cpp`. There, `caravan-patches` is
@@ -295,7 +295,7 @@ Open tasks for this rule:
     change options from Parker Brown's terminal. Integration guide for
     Parker: `docs/INTEGRATING.md`. Shape left open; see "Terminal Delight as
     Caravan's console" below for the options.
-16. **Experiment: put back the built-in guesser that MLX copies strip out.**
+16. **Experiment: put back the built-in guesser that MLX copies strip out.** *Day 12 research: blocked — no MTP tensors in any local MLX copy; Qwen3-30B-A3B not MTP-trained; need Qwen3-Next/NEXTN or similar.*
     *Experiment, for possible incorporation; research not started.* Some
     models ship with extra "draft" layers (often called MTP, multi-token
     prediction) that guess the next few words. MLX conversions usually drop
@@ -307,12 +307,21 @@ Open tasks for this rule:
     Minis is still unknown. Inspired by
     [Jason Haddix's post](https://x.com/Jhaddix/status/2117324109185188281)
     (about 2.2x on DeepSeek V4.1 Flash on an M3 Ultra).
-17. **Experiment: fused kernels.** *Experiment, for possible incorporation;
-    research not started.* Combine several small GPU steps into one so the
-    GPU stops and starts less. Our split's biggest cost is GPU stops and
-    per-pass overhead, not the cable, so this could help every model,
-    single Mini and spanned. Measure single-chat and two-chat speed,
-    quality and memory before adopting. Same source as #16.
+17. **Experiment: fused kernels.** *Parked (Day 12, 2026-11-03).* Goal was
+    to fuse small GPU steps so the GPU stops and starts less. Research:
+    MLX 0.32 / mlx-lm 0.32 already use `mx.fast` for rms_norm, rope, SDPA
+    and already `mx.compile` SwiGLU; the long tail is MoE routing and
+    custom qmm (oMLX-style). Tried off-by-default `--fuse-kernels`
+    (`force_fused` SDPA + Metal SwiGLU) plus `mx.compile` on layers. One
+    Mini (LPM off): Llama 8B write 23.75 → 23.7 tok/s, Qwen3 30B-A3B 50.6 →
+    50.8; quality 3/3 both; memory flat. Spanned follow-up (EXO1+EXO2,
+    single + two chats, guess-ahead off): Llama / Qwen3 off→all and Gemma
+    off→metal-swiglu all within about ±0.5% write; Gemma `all`/`force-fused`
+    crashes (head dim 512). Still below the 5% go bar. Flag plumbing kept
+    (default off). Revisit only with custom quantized-matmul / verify
+    kernels. Details:
+    [handoff/lab/experiments.md](../handoff/lab/experiments.md) Day 12 and
+    `handoff/lab/day12-fused/` (+ `spanned/`).
 
 ## Possible future directions (not scheduled)
 

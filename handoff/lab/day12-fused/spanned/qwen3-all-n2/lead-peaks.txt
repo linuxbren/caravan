@@ -1,0 +1,8 @@
+22:05:51 [mlx-worker] fuse kernels: force_fused on mlx_lm.models.base, mlx_lm.models.llama, mlx_lm.models.qwen2, mlx_lm.models.qwen3, mlx_lm.models.qwen3_moe, mlx_lm.models.gemma, mlx_lm.models.gpt_oss; metal_swiglu
+22:05:52 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.103.191:5560
+22:05:53 [mlx-worker] session 7544273e8ccf4a04: pipeline, reused 0/16, 8 generated, total 0.32s, peak 8.64 GB
+22:05:57 [mlx-worker] session e941dab7308544bf: pipeline, reused 0/40, 128 generated, total 3.75s, peak 8.7 GB
+22:05:57 [mlx-worker] session d5bf45d494a44d7f: pipeline, reused 0/41, 128 generated, total 3.48s, peak 8.7 GB
+22:06:01 [mlx-worker] session 911a3f7ae65e4d4a: pipeline, reused 0/42, 128 generated, total 3.77s, peak 8.73 GB
+22:06:01 [mlx-worker] session 292244ebb5534b72: pipeline, reused 0/41, 128 generated, total 3.49s, peak 8.73 GB
+22:06:20 [mlx-worker] session dcc95127eedf4d1a: pipeline, reused 0/6918, 26 generated, total 19.29s, peak 9.64 GB

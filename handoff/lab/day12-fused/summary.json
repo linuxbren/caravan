@@ -1,0 +1,140 @@
+{
+  "date": "2026-11-03",
+  "hardware": "EXO1 Mac mini M4 24GB, LPM off",
+  "software": "MLX 0.32.4 / mlx-lm 0.32.2 / caravan-v3-mlx-split uncommitted Day12",
+  "llama_one_mini": {
+    "off": {
+      "write_tps": [
+        23.8,
+        23.7
+      ],
+      "write_median": 23.75,
+      "pp512": [
+        244.0,
+        244.5
+      ],
+      "pp512_median": 244.25,
+      "pp4096": [
+        228.9,
+        230.4
+      ],
+      "pp4096_median": 229.65,
+      "peak_gb_max": 7.04,
+      "quality": {
+        "name": "quality_score",
+        "score": 3,
+        "detail": {
+          "code": true,
+          "mult": true,
+          "capital": true
+        },
+        "score_incl_reasoning": 3,
+        "finish": 18
+      }
+    },
+    "all": {
+      "write_tps": [
+        23.7,
+        23.7
+      ],
+      "write_median": 23.7,
+      "pp512": [
+        246.2,
+        231.8
+      ],
+      "pp512_median": 239.0,
+      "pp4096": [
+        230.4,
+        225.8
+      ],
+      "pp4096_median": 228.10000000000002,
+      "peak_gb_max": 7.11,
+      "quality": {
+        "name": "quality_score",
+        "score": 3,
+        "detail": {
+          "code": true,
+          "mult": true,
+          "capital": true
+        },
+        "score_incl_reasoning": 3,
+        "finish": 18
+      }
+    }
+  },
+  "qwen3_one_mini_decode": {
+    "off": {
+      "name": "summary",
+      "quality": 3,
+      "detail": {
+        "code": true,
+        "mult": true,
+        "capital": true
+      },
+      "writes": [
+        50.8,
+        50.6,
+        49.9
+      ],
+      "pp512": {
+        "name": "pp512",
+        "ok": true,
+        "wall_s": 2.188,
+        "prompt_n": 1044,
+        "gen_n": 1,
+        "prefill_s": 2.137,
+        "ttft_s": 2.179,
+        "total_s": 2.183,
+        "peak_gb": 17.87,
+        "content": "",
+        "read_tps": 488.5
+      }
+    },
+    "all": {
+      "name": "summary",
+      "quality": 3,
+      "detail": {
+        "code": true,
+        "mult": true,
+        "capital": true
+      },
+      "writes": [
+        50.4,
+        50.9,
+        50.8
+      ],
+      "pp512": {
+        "name": "pp512",
+        "ok": true,
+        "wall_s": 2.187,
+        "prompt_n": 1044,
+        "gen_n": 1,
+        "prefill_s": 2.135,
+        "ttft_s": 2.177,
+        "total_s": 2.181,
+        "peak_gb": 17.91,
+        "content": "",
+        "read_tps": 489.0
+      }
+    },
+    "note": "Full split_client pp4096 OOM on one Mini after first 4k prefill; decode suite used instead."
+  },
+  "probes": {
+    "path": "/Users/brenden/.caravan/mlx-models/mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
+    "mlx": "0.32.4",
+    "baseline_ms": 42.981,
+    "baseline_tps": 23.27,
+    "force_fused_ms": 42.573,
+    "force_fused_tps": 23.49,
+    "force_fused_speedup": 1.01,
+    "swiglu_micro_ms": {
+      "eager_ms": 0.3530166600103257,
+      "compile_ms": 0.28876415999548044,
+      "metal_ms": 0.24738749998505227,
+      "metal_max_abs_err": 0.0078125
+    },
+    "metal_ok": true
+  },
+  "spanned": "skipped \u2014 one Mini gain < 5% go/no-go threshold",
+  "verdict": "park"
+}

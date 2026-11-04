@@ -1,0 +1,28 @@
+ok
+ok
+[rc=0]
+[2026-11-03 21:56:54 CST] ======== START gemma-metal-swiglu-n1 ========
+[2026-11-03 21:57:13 CST] packer_start remote_rc=0
+[2026-11-03 21:58:25 CST] lead_bench remote_rc=0
+[2026-11-03 21:58:55 CST] ======== DONE gemma-metal-swiglu-n1 rows=8 ========
+[2026-11-03 21:58:55 CST] ======== START gemma-metal-swiglu-n2 ========
+[2026-11-03 21:59:14 CST] packer_start remote_rc=0
+[2026-11-03 22:00:14 CST] lead_bench remote_rc=0
+[2026-11-03 22:00:44 CST] ======== DONE gemma-metal-swiglu-n2 rows=8 ========
+[2026-11-03 22:00:44 CST] ======== START qwen3-off-n1 ========
+[2026-11-03 22:01:03 CST] packer_start remote_rc=0
+[2026-11-03 22:01:53 CST] lead_bench remote_rc=0
+[2026-11-03 22:02:25 CST] ======== DONE qwen3-off-n1 rows=8 ========
+[2026-11-03 22:02:25 CST] ======== START qwen3-off-n2 ========
+[2026-11-03 22:02:44 CST] packer_start remote_rc=0
+[2026-11-03 22:03:20 CST] lead_bench remote_rc=0
+[2026-11-03 22:03:50 CST] ======== DONE qwen3-off-n2 rows=8 ========
+[2026-11-03 22:03:50 CST] ======== START qwen3-all-n1 ========
+[2026-11-03 22:04:08 CST] packer_start remote_rc=0
+[2026-11-03 22:04:57 CST] lead_bench remote_rc=0
+[2026-11-03 22:05:27 CST] ======== DONE qwen3-all-n1 rows=8 ========
+[2026-11-03 22:05:27 CST] ======== START qwen3-all-n2 ========
+[2026-11-03 22:05:46 CST] packer_start remote_rc=0
+[2026-11-03 22:06:23 CST] lead_bench remote_rc=0
+[2026-11-03 22:06:52 CST] ======== DONE qwen3-all-n2 rows=8 ========
+[2026-11-03 22:06:52 CST] ALL_SPANNED_DONE

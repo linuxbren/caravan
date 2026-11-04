@@ -1,0 +1,3 @@
+20:33:04 [mlx-worker] fuse kernels: off
+20:33:17 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 12.0s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+20:33:17 [mlx-worker] listening on http://127.0.0.1:8194

@@ -1,3 +1,146 @@
+## 2026-11-03 — Day 12 (cont.): cheap/medium speedups for split big models
+
+**Goal.** Easy+medium ideas only (Brenden): make a *bigger* model fast across two
+Minis — not idle-Mini draft. Ideas: (1) N-chats × guess-ahead, (2) per-message
+adaptive prompt-lookup, (3/#16) built-in MTP research, (4) shared prefix cache.
+Keepalive already shipped (Oct 31); cited, not re-benched. Go bar ≥5% write
+(or TTFT for #4) with quality unchanged.
+
+**Claims check (Claude paste).** All true from prior logs: Qwen3 +30.3%
+(45.5→59.3), Llama +126.9% (22.7→51.5), Qwen2.5-14B +172.6% (12.4→33.8),
+GPT-OSS ~34.0–34.3 no draft. See `handoff/lab/day12-speedups/claims-verified.md`.
+
+### Idea 1 — two chats + guess-ahead
+N=1+draft **GO**: Llama 22.6→49.7 (+120%), Qwen3 45.4→59.0 (+30%), Gemma
+37.9→38.6 (marginal; wave2 40.4). N=2 off aggregate still ~1.6–1.8×. N=2+draft
+**NO-GO** (accept ~0.09–0.27, TB serialized). Details:
+`day12-speedups/idea1-results.md`.
+
+### Idea 2 — adaptive prompt-lookup
+Prototype behind `--split-prompt-lookup-adaptive` (off by default). Qwen3
+repeat 62.0→66.2 (+6.8%) when PL accepts; false-positive overlap hurt Gemma
+count and Qwen3 code_cont at threshold 0.25. Defaults tightened to
+`overlap_on=0.50`, `window=4`. Not a blanket GO. `day12-speedups/idea2-results.md`.
+
+### #16 — built-in MTP / guesser
+**Not feasible tonight.** All local MLX copies NO_MTP; Qwen3-30B-A3B not
+MTP-trained; GPT-OSS has no sibling draft. Needs Qwen3-Next / NEXTN MLX build.
+`day12-speedups/mtp-research.md`.
+
+### Idea 4 — shared prefix across sessions
+**GO for TTFT** on Llama/Qwen3 (~46–50% faster new-session prefill/ttft when
+≥2048-token system preamble shared). Gemma `split-resync` (packer reuse
+mismatch) — follow-up. Off by default: `--split-shared-prefix-cache`.
+`day12-speedups/idea4-results.md`.
+
+### Keepalive / Apple Metal
+Already default-on since Oct 31 (`GpuKeepalive`). See
+`day12-speedups/keepalive-note.md`. No deeper Apple-kernel patch this day.
+
+**Headline.** Split guess-ahead on one chat is still the big lever (+120% Llama /
++30% Qwen3); stacking it with two chats does not compose yet; shared prefixes
+cut new-session wait ~in half for Llama/Qwen3.
+
+**Software.** `agent/adaptive_pl.py`, `agent/shared_prefix.py`, mlx_worker /
+mlx_split wiring (N=1→`_run`, adaptive PL, shared-prefix, pipeline draft
+serialize), tests; lab scripts under `handoff/lab/day12_speedups_*`.
+**No commit/tag/push** (await Brenden go).
+
+**Next.** Re-bench adaptive PL at overlap_on=0.50; fix Gemma shared-prefix
+packer trim; keep #16 blocked on MTP-capable MLX weights; true batched decode
+stays later/bigger.
+
+## 2026-11-03 — Day 12: ROADMAP #17 fused kernels experiment
+
+**Goal.** Find out whether fusing GPU operations makes Caravan faster on the
+Minis. Go/no-go: adopt if ≥5% decode or prefill gain with quality unchanged
+and no memory blow-up; otherwise park with numbers.
+
+**Research (real sources).** On MLX 0.32.4 / mlx-lm 0.32.2 (what the Minis run):
+
+Already fused / fast paths mlx-lm already uses:
+- `mx.fast.rms_norm` (via `nn.RMSNorm`)
+- `mx.fast.rope` (via `nn.RoPE`)
+- `mx.fast.scaled_dot_product_attention` (via mlx_lm `scaled_dot_product_attention`)
+- Quantized matmul kernels inside MLX
+- SwiGLU already `@partial(mx.compile, shapeless=True)` in `mlx_lm.models.activations`
+
+Still mostly unfused / long-tail (harder): MoE routing (`softmax` +
+`argpartition` + gather/scatter in Qwen3), residual adds, Python dispatch
+between matmuls. Custom Metal for those is what oMLX/Strata-style stacks
+chase (oMLX custom qmv / verify kernels; Jhaddix Strata path leaned on
+built-in MTP + engine work more than generic fuse). Compiling MoE routing
+with `mx.compile` failed here (`Slice cannot infer output shapes`).
+
+**What we tried (behind off-by-default `--fuse-kernels` /
+`CARAVAN_FUSE_KERNELS`):**
+1. `mx.compile` on whole TransformerBlocks / model forward — Llama 8B
+   decode ~0.99–1.00× (no win).
+2. `force_fused=True` on SDPA — probe ~1.01× on Llama 8B.
+3. Custom `mx.fast.metal_kernel` SwiGLU — microbench faster than eager/compile
+   on a flat vector, but model path already uses compiled swiglu; full-model
+   A/B flat.
+4. Wired as modes `off|force-fused|metal-swiglu|all` in `agent/fuse_kernels.py`
+   + `mlx_worker` / packer startup. Default remains off.
+
+**Hardware.** EXO1 lead + EXO2 packer, Mac mini M4 24 GB each. Low Power
+Mode off on both (checked). Lead test port 8194. Packer Thunderbolt
+`169.254.103.191:5560` (link-local moved from the older `169.254.104.38`).
+Guess-ahead off (`--no-split-draft`); `--no-learn`; even/hand cuts K=16/15/24
+for Llama/Gemma/Qwen3. No pp4096 (avoid the one-Mini OOM path).
+
+**Numbers (one Mini; never invent):**
+
+| model | mode | write tok/s | read (pp512) | peak GB | quality |
+|---|---|---:|---:|---:|---|
+| Llama 3.1 8B 4-bit | off | 23.75 median (23.8/23.7) | 244.3 | 7.04 | 3/3 |
+| Llama 3.1 8B 4-bit | all | 23.7 median (23.7/23.7) | 239.0 | 7.11 | 3/3 |
+| Qwen3 30B-A3B 4-bit | off | 50.6 median (50.8/50.6/49.9) | 488.5 | 17.33 | 3/3 |
+| Qwen3 30B-A3B 4-bit | all | 50.8 median (50.4/50.9/50.8) | 489.0 | 17.33 | 3/3 |
+
+Llama used full `bench/v3/split_client.py bench` (incl. pp4096). Qwen3 one-Mini
+hit Metal OOM on the second pp4096 in that suite after peak ~18.8 GB; decode
+suite (warm + tg128×3 + short quality + one pp512) used for the A/B above.
+
+**Numbers (spanned, stacked split; never invent).** Single chat = light bench
+(warm + tg128×2 + pp512×2 + quality). Two chats = `pipeline_bench` N=2
+(aggregate wall tok/s). Peak GB is lead `caravan.peak_gb` (packer layer load
+~2.0 / 6.9 / ~half of model GB on EXO2).
+
+| model | chats | mode | write tok/s | read pp512 | lead peak GB | quality |
+|---|---:|---|---:|---:|---:|---|
+| Llama 3.1 8B 4-bit | 1 | off | 22.6 med (22.6/22.6) | 243.6 | 3.56 | 3/3 |
+| Llama 3.1 8B 4-bit | 1 | all | 22.55 med (22.6/22.5) | 244.2 | 3.56 | 3/3 |
+| Llama 3.1 8B 4-bit | 2 | off | 20.8 per-chat; agg wall 39.4 | — | 3.26 | — |
+| Llama 3.1 8B 4-bit | 2 | all | 20.85 per-chat; agg wall 39.45 | — | 3.26 | — |
+| Gemma 4 26B-A4B 4-bit | 1 | off | 37.65 med (37.6/37.7) | 427.8 | 8.95 | 3/3 |
+| Gemma 4 26B-A4B 4-bit | 1 | metal-swiglu | 37.7 med (37.7/37.7) | 427.8 | 8.95 | 3/3 |
+| Gemma 4 26B-A4B 4-bit | 2 | off | 31.75 per-chat; agg wall 58.35 | — | 8.71 | — |
+| Gemma 4 26B-A4B 4-bit | 2 | metal-swiglu | 31.75 per-chat; agg wall 58.4 | — | 8.71 | — |
+| Qwen3 30B-A3B 4-bit | 1 | off | 44.75 med (44.8/44.7) | 461.7 | 9.86 | 3/3 |
+| Qwen3 30B-A3B 4-bit | 1 | all | 44.55 med (44.6/44.5) | 462.3 | 9.89 | 3/3 |
+| Qwen3 30B-A3B 4-bit | 2 | off | 39.95 per-chat; agg wall 72.45 | — | 9.61 | — |
+| Qwen3 30B-A3B 4-bit | 2 | all | 39.85 per-chat; agg wall 72.45 | — | 9.64 | — |
+
+Gemma `--fuse-kernels all` / `force-fused` **crashes** on span: SDPA
+`force_fused=True` rejects Gemma 4 head dim 512. So Gemma fuse A/B used
+`metal-swiglu` only. Largest write delta anywhere: about **+0.2%** (Llama N=2)
+or **−0.5%** (Qwen3 N=1); none near the 5% bar.
+
+**Takeaway.** One Mini and spanned agree: cheap fusions are already in
+MLX/mlx-lm, and our Day 12 patches do not clear 5%. **Park #17** unless/until
+custom quantized-matmul / verify kernels (oMLX-style). Flag plumbing stays
+(default off). Do not enable `force-fused`/`all` on Gemma 4 until MLX supports
+head dim 512.
+
+**Next.** Performance-first list moves to #16 (built-in guesser). Not
+committed yet — Brenden review first.
+
+**Raw.** `handoff/lab/day12-fused/` (one-Mini summary.json + raw/) and
+`handoff/lab/day12-fused/spanned/` (spanned summary.json + per-run jsonl).
+Unit tests: 7 new in `tests/test_fuse_kernels.py`; full suite **155** pass
+on the box.
+
 ## 2026-11-02 — Day 10: ROADMAP #13(b) learn from real chats
 
 **Goal.** Caravan learns best live settings from real chats (not an up-front sweep),
