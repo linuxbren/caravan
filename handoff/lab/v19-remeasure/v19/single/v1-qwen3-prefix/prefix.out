@@ -1,0 +1,63 @@
+{
+  "model": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+  "url": "http://127.0.0.1:8194",
+  "target_preamble_chars": 17710,
+  "runs": [
+    {
+      "name": "cold_store",
+      "ok": true,
+      "wall_s": 16.169,
+      "session": "56d1a4ba1a7f4973",
+      "prompt_n": 3983,
+      "gen_n": 6,
+      "how": null,
+      "prefill_s": null,
+      "ttft_s": null,
+      "total_s": null,
+      "peak_gb": null,
+      "content": "\n\nOK"
+    },
+    {
+      "name": "new_session_0",
+      "ok": true,
+      "wall_s": 0.383,
+      "session": "3a64a49ecdb943cc",
+      "prompt_n": 3984,
+      "gen_n": 7,
+      "how": null,
+      "prefill_s": null,
+      "ttft_s": null,
+      "total_s": null,
+      "peak_gb": null,
+      "content": "\n\nOK0"
+    },
+    {
+      "name": "new_session_1",
+      "ok": true,
+      "wall_s": 0.376,
+      "session": "fa4aa21fa5b54990",
+      "prompt_n": 3984,
+      "gen_n": 7,
+      "how": null,
+      "prefill_s": null,
+      "ttft_s": null,
+      "total_s": null,
+      "peak_gb": null,
+      "content": "\n\nOK1"
+    },
+    {
+      "name": "miss_control",
+      "ok": true,
+      "wall_s": 1.915,
+      "session": "42956d7b0869444f",
+      "prompt_n": 826,
+      "gen_n": 6,
+      "how": null,
+      "prefill_s": null,
+      "ttft_s": null,
+      "total_s": null,
+      "peak_gb": null,
+      "content": "\n\nOK"
+    }
+  ]
+}

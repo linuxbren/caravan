@@ -1,0 +1,20 @@
+00:22:45 server cmd: /Users/brenden/dev/llama.cpp/build/bin/llama-server -m /Users/brenden/.caravan/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf --tensor-split 1 --port 8194 -c 16384 --slot-save-path /Users/brenden/.caravan/bench-2026-11-04/v19/v0/v0-llama-write/slots/ --parallel 2 --no-kv-unified -ngl 999 -fa on -ctk q8_0 -ctv q8_0 --cache-ram 0 -b 2048 -ub 2048
+00:22:48 start #1: server ready 2.6s, proxy ready, total 3.1s; pids 62652/62654
+00:22:48 {"name": "warm", "wall_s": 0.18, "prompt_n": 11, "cache_n": 0, "prompt_tps": 64.3, "gen_n": 1, "gen_tps": null}
+00:23:07 {"name": "calib200", "wall_s": 18.51, "prompt_n": 3868, "cache_n": 0, "prompt_tps": 209.0, "gen_n": 1, "gen_tps": null}
+00:23:07 tokens/line 19.34
+00:23:10 {"name": "pp512_r0", "wall_s": 2.72, "prompt_n": 511, "cache_n": 1, "prompt_tps": 222.6, "gen_n": 1, "gen_tps": null}
+00:23:12 {"name": "pp512_r1", "wall_s": 2.29, "prompt_n": 508, "cache_n": 5, "prompt_tps": 222.1, "gen_n": 1, "gen_tps": null}
+00:23:14 {"name": "pp512_r2", "wall_s": 2.29, "prompt_n": 508, "cache_n": 5, "prompt_tps": 221.6, "gen_n": 1, "gen_tps": null}
+00:23:34 {"name": "pp4096_r0", "wall_s": 19.65, "prompt_n": 4082, "cache_n": 3, "prompt_tps": 207.8, "gen_n": 1, "gen_tps": null}
+00:23:54 {"name": "pp4096_r1", "wall_s": 20.34, "prompt_n": 4083, "cache_n": 2, "prompt_tps": 204.1, "gen_n": 1, "gen_tps": null}
+00:24:15 {"name": "pp4096_r2", "wall_s": 20.88, "prompt_n": 4079, "cache_n": 6, "prompt_tps": 198.5, "gen_n": 1, "gen_tps": null}
+00:24:22 {"name": "tg128_r0", "wall_s": 6.41, "prompt_n": 32, "cache_n": 1, "prompt_tps": 184.5, "gen_n": 128, "gen_tps": 21.2}
+00:24:28 {"name": "tg128_r1", "wall_s": 6.18, "prompt_n": 28, "cache_n": 4, "prompt_tps": 166.9, "gen_n": 128, "gen_tps": 21.1}
+00:24:34 {"name": "tg128_r2", "wall_s": 6.17, "prompt_n": 30, "cache_n": 4, "prompt_tps": 179.8, "gen_n": 128, "gen_tps": 21.2}
+00:24:35 {"name": "short", "ttft_s": 0.45, "wall_s": 1.25, "prompt_n": 91, "cache_n": 1, "prompt_ms": 438.346, "prompt_tps": 207.6, "gen_n": 18, "gen_tps": 21.2, "finish": "stop", "content": "1. ORCHID-7419\n2. 391\n3. Canberra", "reasoning_chars": 0, "score": {"code": true, "mult": true, "capital": true}}
+00:25:06 {"name": "long", "ttft_s": 29.752, "wall_s": 30.66, "prompt_n": 5693, "cache_n": 1, "prompt_ms": 29743.431, "prompt_tps": 191.4, "gen_n": 18, "gen_tps": 18.8, "finish": "stop", "content": "1. ORCHID-7419\n2. 391\n3. Canberra", "reasoning_chars": 0, "score": {"code": true, "mult": true, "capital": true}}
+00:25:06 mem {'peak_rss_gb': 6.27, 'peak_footprint_gb': 1.38, 'min_free_pct': 63}
+00:25:06 [proxy] stopped rc=-15
+00:25:07 [server] stopped rc=0
+00:25:07 DONE v0-llama-write

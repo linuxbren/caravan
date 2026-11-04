@@ -1,0 +1,1 @@
+/Users/brenden/.caravan/venvs/mlx/bin/python -m mlx_lm server --model /Users/brenden/.caravan/models/mlx/mlx-community--Meta-Llama-3.1-8B-Instruct-4bit --host 127.0.0.1 --port 8194

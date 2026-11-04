@@ -1,0 +1,31 @@
+=== MAIN (268 chars) ===
+17.5 → 8.9 s — new chat, same long system prompt, first word ~2× sooner.
+
+Day 12 of building Caravan in the open, my homebrew app for running AI models across my Mac minis.
+
+Five easy speedups on a big model split across two Minis. Shared starts won; fuse did nothing.
+
+intent: https://x.com/intent/post?text=17.5%20%E2%86%92%208.9%20s%20%E2%80%94%20new%20chat%2C%20same%20long%20system%20prompt%2C%20first%20word%20~2%C3%97%20sooner.%0A%0ADay%2012%20of%20building%20Caravan%20in%20the%20open%2C%20my%20homebrew%20app%20for%20running%20AI%20models%20across%20my%20Mac%20minis.%0A%0AFive%20easy%20speedups%20on%20a%20big%20model%20split%20across%20two%20Minis.%20Shared%20starts%20won%3B%20fuse%20did%20nothing.
+
+=== REPLY1 (272 chars) ===
+Shared start (wait before first word): Llama 17.5→8.9 s, Qwen3 9.3→5.0 s when chats reuse a long system prompt. Not writing speed — just a shorter wait. Gemma still needs a packer fix.
+
+Guess-ahead on one chat still the writing win: Llama 22.6→49.7, Qwen3 45.4→59.0 tok/s.
+
+intent: https://x.com/intent/post?text=Shared%20start%20%28wait%20before%20first%20word%29%3A%20Llama%2017.5%E2%86%928.9%20s%2C%20Qwen3%209.3%E2%86%925.0%20s%20when%20chats%20reuse%20a%20long%20system%20prompt.%20Not%20writing%20speed%20%E2%80%94%20just%20a%20shorter%20wait.%20Gemma%20still%20needs%20a%20packer%20fix.%0A%0AGuess-ahead%20on%20one%20chat%20still%20the%20writing%20win%3A%20Llama%2022.6%E2%86%9249.7%2C%20Qwen3%2045.4%E2%86%9259.0%20tok/s.
+
+=== REPLY2 (251 chars) ===
+Two chats + guess-ahead did not stack: total writing fell (Llama 39.4→19.0, Qwen3 72.5→24.9) because guesses got worse. Two chats alone still ~1.6–1.8× total.
+
+Look-back per message: Qwen3 copy-text 62→66, but one code prompt got hurt. Off by default.
+
+intent: https://x.com/intent/post?text=Two%20chats%20%2B%20guess-ahead%20did%20not%20stack%3A%20total%20writing%20fell%20%28Llama%2039.4%E2%86%9219.0%2C%20Qwen3%2072.5%E2%86%9224.9%29%20because%20guesses%20got%20worse.%20Two%20chats%20alone%20still%20~1.6%E2%80%931.8%C3%97%20total.%0A%0ALook-back%20per%20message%3A%20Qwen3%20copy-text%2062%E2%86%9266%2C%20but%20one%20code%20prompt%20got%20hurt.%20Off%20by%20default.
+
+=== REPLY3 (263 chars) ===
+Fused kernels: ~0% on one Mini and on the split (MLX already does the easy ones). Parked.
+
+Built-in guesser: 0/6 of our models ship one. Waiting on something like Qwen3-Next.
+
+Ship shared-prefix on by default, or keep it opt-in until Gemma's packer trim is fixed?
+
+intent: https://x.com/intent/post?text=Fused%20kernels%3A%20~0%25%20on%20one%20Mini%20and%20on%20the%20split%20%28MLX%20already%20does%20the%20easy%20ones%29.%20Parked.%0A%0ABuilt-in%20guesser%3A%200/6%20of%20our%20models%20ship%20one.%20Waiting%20on%20something%20like%20Qwen3-Next.%0A%0AShip%20shared-prefix%20on%20by%20default%2C%20or%20keep%20it%20opt-in%20until%20Gemma%27s%20packer%20trim%20is%20fixed%3F

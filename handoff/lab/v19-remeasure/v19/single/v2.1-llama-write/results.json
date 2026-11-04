@@ -1,0 +1,299 @@
+{
+ "config": {
+  "model": "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit",
+  "max_tokens": 800,
+  "no_think": "",
+  "mlx_port": 8194,
+  "proxy_port": 8190,
+  "caravan_commit": "24adc11",
+  "cmd": [
+   "/Users/brenden/.caravan/venvs/mlx/bin/python",
+   "/Users/brenden/dev/caravan-v2.1/agent/mlx_worker.py",
+   "--model",
+   "/Users/brenden/.caravan/models/mlx/mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "8194",
+   "--cache-dir",
+   "/Users/brenden/.caravan/bench-2026-11-04/v19/single/v2.1-llama-write/mlx-cache"
+  ],
+  "resume_sizes": [
+   4000,
+   16000
+  ]
+ },
+ "start_s": 2.1,
+ "main": {
+  "tok_per_line": 19.52,
+  "runs": {
+   "pp512": [
+    {
+     "name": "pp512_r0",
+     "ttft_s": null,
+     "wall_s": 3.15,
+     "prompt_n": 526,
+     "gen_n": 1,
+     "finish": "length",
+     "cached_n": 0,
+     "reread_n": 526,
+     "caravan": {
+      "how": "cold",
+      "prefill_s": 2.265,
+      "ttft_s": 2.345,
+      "total_s": 2.365,
+      "peak_gb": 5.63
+     },
+     "markup_in_content": false,
+     "content": "Based",
+     "reasoning": "",
+     "reasoning_chars": 0,
+     "score": {
+      "code": false,
+      "mult": false,
+      "capital": false
+     },
+     "prompt_tps": 167.0
+    },
+    {
+     "name": "pp512_r1",
+     "ttft_s": null,
+     "wall_s": 2.52,
+     "prompt_n": 526,
+     "gen_n": 1,
+     "finish": "length",
+     "cached_n": 0,
+     "reread_n": 526,
+     "caravan": {
+      "how": "cold",
+      "prefill_s": 2.354,
+      "ttft_s": 2.439,
+      "total_s": 2.459,
+      "peak_gb": 5.66
+     },
+     "markup_in_content": false,
+     "content": "Based",
+     "reasoning": "",
+     "reasoning_chars": 0,
+     "score": {
+      "code": false,
+      "mult": false,
+      "capital": false
+     },
+     "prompt_tps": 208.6
+    },
+    {
+     "name": "pp512_r2",
+     "ttft_s": null,
+     "wall_s": 2.58,
+     "prompt_n": 528,
+     "gen_n": 1,
+     "finish": "length",
+     "cached_n": 0,
+     "reread_n": 528,
+     "caravan": {
+      "how": "cold",
+      "prefill_s": 2.401,
+      "ttft_s": 2.478,
+      "total_s": 2.498,
+      "peak_gb": 5.76
+     },
+     "markup_in_content": false,
+     "content": "Based",
+     "reasoning": "",
+     "reasoning_chars": 0,
+     "score": {
+      "code": false,
+      "mult": false,
+      "capital": false
+     },
+     "prompt_tps": 204.5
+    }
+   ],
+   "pp4096": [
+    {
+     "name": "pp4096_r0",
+     "ttft_s": null,
+     "wall_s": 19.25,
+     "prompt_n": 4080,
+     "gen_n": 1,
+     "finish": "length",
+     "cached_n": 0,
+     "reread_n": 4080,
+     "caravan": {
+      "how": "cold",
+      "prefill_s": 19.089,
+      "ttft_s": 19.171,
+      "total_s": 19.188,
+      "peak_gb": 6.48
+     },
+     "markup_in_content": false,
+     "content": "To",
+     "reasoning": "",
+     "reasoning_chars": 0,
+     "score": {
+      "code": false,
+      "mult": false,
+      "capital": false
+     },
+     "prompt_tps": 212.0
+    },
+    {
+     "name": "pp4096_r1",
+     "ttft_s": null,
+     "wall_s": 20.26,
+     "prompt_n": 4078,
+     "gen_n": 1,
+     "finish": "length",
+     "cached_n": 0,
+     "reread_n": 4078,
+     "caravan": {
+      "how": "cold",
+      "prefill_s": 19.074,
+      "ttft_s": 19.158,
+      "total_s": 19.175,
+      "peak_gb": 6.48
+     },
+     "markup_in_content": false,
+     "content": "To",
+     "reasoning": "",
+     "reasoning_chars": 0,
+     "score": {
+      "code": false,
+      "mult": false,
+      "capital": false
+     },
+     "prompt_tps": 201.3
+    },
+    {
+     "name": "pp4096_r2",
+     "ttft_s": null,
+     "wall_s": 19.63,
+     "prompt_n": 4079,
+     "gen_n": 1,
+     "finish": "length",
+     "cached_n": 0,
+     "reread_n": 4079,
+     "caravan": {
+      "how": "cold",
+      "prefill_s": 19.067,
+      "ttft_s": 19.15,
+      "total_s": 19.167,
+      "peak_gb": 6.92
+     },
+     "markup_in_content": false,
+     "content": "To",
+     "reasoning": "",
+     "reasoning_chars": 0,
+     "score": {
+      "code": false,
+      "mult": false,
+      "capital": false
+     },
+     "prompt_tps": 207.8
+    }
+   ],
+   "tg128": [
+    {
+     "name": "tg128_r0",
+     "ttft_s": 1.296,
+     "wall_s": 6.85,
+     "prompt_n": 66,
+     "gen_n": 128,
+     "finish": "length",
+     "cached_n": 0,
+     "reread_n": 66,
+     "caravan": {
+      "how": "cold",
+      "prefill_s": 0.437,
+      "ttft_s": 0.511,
+      "total_s": 6.065,
+      "peak_gb": 6.92
+     },
+     "markup_in_content": false,
+     "content": "I'll continue the list for you. Here are the numbers from 1 to 1000 in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-four, thirty-five, thirty-six, thirty-seven, thirty-eight, thirty-nine, forty, forty-one, forty",
+     "reasoning": "",
+     "reasoning_chars": 0,
+     "score": {
+      "code": false,
+      "mult": false,
+      "capital": false
+     },
+     "gen_tps": 22.9,
+     "prompt_tps_ttft": 50.9
+    },
+    {
+     "name": "tg128_r1",
+     "ttft_s": 0.473,
+     "wall_s": 5.92,
+     "prompt_n": 67,
+     "gen_n": 128,
+     "finish": "length",
+     "cached_n": 0,
+     "reread_n": 67,
+     "caravan": {
+      "how": "cold",
+      "prefill_s": 0.397,
+      "ttft_s": 0.466,
+      "total_s": 5.91,
+      "peak_gb": 6.92
+     },
+     "markup_in_content": false,
+     "content": "I can continue the list for you. Here are the numbers from 1 to 1000 in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-four, thirty-five, thirty-six, thirty-seven, thirty-eight, thirty-nine, forty, forty-one, forty",
+     "reasoning": "",
+     "reasoning_chars": 0,
+     "score": {
+      "code": false,
+      "mult": false,
+      "capital": false
+     },
+     "gen_tps": 23.3,
+     "prompt_tps_ttft": 141.7
+    },
+    {
+     "name": "tg128_r2",
+     "ttft_s": 0.475,
+     "wall_s": 5.88,
+     "prompt_n": 67,
+     "gen_n": 128,
+     "finish": "length",
+     "cached_n": 0,
+     "reread_n": 67,
+     "caravan": {
+      "how": "cold",
+      "prefill_s": 0.398,
+      "ttft_s": 0.468,
+      "total_s": 5.868,
+      "peak_gb": 6.92
+     },
+     "markup_in_content": false,
+     "content": "I can continue the list for you. Here are the numbers from 1 to 1000 in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-four, thirty-five, thirty-six, thirty-seven, thirty-eight, thirty-nine, forty, forty-one, forty",
+     "reasoning": "",
+     "reasoning_chars": 0,
+     "score": {
+      "code": false,
+      "mult": false,
+      "capital": false
+     },
+     "gen_tps": 23.5,
+     "prompt_tps_ttft": 140.9
+    }
+   ]
+  },
+  "pp512": 204.5,
+  "pp512_ntok": 526,
+  "pp4096": 207.8,
+  "pp4096_ntok": 4079,
+  "tg128": 23.3
+ },
+ "mem": {
+  "peak_rss_gb": 5.31,
+  "peak_footprint_gb": 7.5,
+  "min_free_pct": 59
+ },
+ "mem_resume": {
+  "peak_rss_gb": 0.0,
+  "peak_footprint_gb": 0.0,
+  "min_free_pct": 100
+ }
+}

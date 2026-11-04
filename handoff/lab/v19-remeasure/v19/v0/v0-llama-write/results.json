@@ -1,0 +1,181 @@
+{
+ "config": {
+  "model": "/Users/brenden/.caravan/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+  "n_slots": 2,
+  "ctx_per_slot": 8192,
+  "ubatch": 2048,
+  "batch": 2048,
+  "kv": "q8_0",
+  "kv_decision": null,
+  "swa_full": false,
+  "fa": "on",
+  "ngl": 999,
+  "max_tokens": 200,
+  "no_think": "",
+  "caravan_dir": "/Users/brenden/.caravan/bench-2026-11-04/v19/caravan-v0",
+  "llama_bin": "/Users/brenden/dev/llama.cpp/build/bin",
+  "llama_version": [
+   "version: 0.4.0-dev (build 1, commit 6a1a922)",
+   "built with AppleClang 21.0.0.21000101 for Darwin arm64"
+  ],
+  "caravan_commit": "45ed2c2"
+ },
+ "main": {
+  "tok_per_line": 19.34,
+  "runs": {
+   "pp512": [
+    {
+     "name": "pp512_r0",
+     "wall_s": 2.72,
+     "prompt_n": 511,
+     "cache_n": 1,
+     "prompt_tps": 222.6,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp512_r1",
+     "wall_s": 2.29,
+     "prompt_n": 508,
+     "cache_n": 5,
+     "prompt_tps": 222.1,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp512_r2",
+     "wall_s": 2.29,
+     "prompt_n": 508,
+     "cache_n": 5,
+     "prompt_tps": 221.6,
+     "gen_n": 1,
+     "gen_tps": null
+    }
+   ],
+   "pp4096": [
+    {
+     "name": "pp4096_r0",
+     "wall_s": 19.65,
+     "prompt_n": 4082,
+     "cache_n": 3,
+     "prompt_tps": 207.8,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp4096_r1",
+     "wall_s": 20.34,
+     "prompt_n": 4083,
+     "cache_n": 2,
+     "prompt_tps": 204.1,
+     "gen_n": 1,
+     "gen_tps": null
+    },
+    {
+     "name": "pp4096_r2",
+     "wall_s": 20.88,
+     "prompt_n": 4079,
+     "cache_n": 6,
+     "prompt_tps": 198.5,
+     "gen_n": 1,
+     "gen_tps": null
+    }
+   ],
+   "tg128": [
+    {
+     "name": "tg128_r0",
+     "wall_s": 6.41,
+     "prompt_n": 32,
+     "cache_n": 1,
+     "prompt_tps": 184.5,
+     "gen_n": 128,
+     "gen_tps": 21.2
+    },
+    {
+     "name": "tg128_r1",
+     "wall_s": 6.18,
+     "prompt_n": 28,
+     "cache_n": 4,
+     "prompt_tps": 166.9,
+     "gen_n": 128,
+     "gen_tps": 21.1
+    },
+    {
+     "name": "tg128_r2",
+     "wall_s": 6.17,
+     "prompt_n": 30,
+     "cache_n": 4,
+     "prompt_tps": 179.8,
+     "gen_n": 128,
+     "gen_tps": 21.2
+    }
+   ]
+  },
+  "pp512": 222.1,
+  "pp512_ntok": 508,
+  "pp4096": 204.1,
+  "pp4096_ntok": 4082,
+  "tg128": 21.2
+ },
+ "quality": {
+  "short": {
+   "name": "short",
+   "ttft_s": 0.45,
+   "wall_s": 1.25,
+   "prompt_n": 91,
+   "cache_n": 1,
+   "prompt_ms": 438.346,
+   "prompt_tps": 207.6,
+   "gen_n": 18,
+   "gen_tps": 21.2,
+   "usage": {
+    "completion_tokens": 18,
+    "prompt_tokens": 92,
+    "total_tokens": 110,
+    "prompt_tokens_details": {
+     "cached_tokens": 1
+    }
+   },
+   "finish": "stop",
+   "content": "1. ORCHID-7419\n2. 391\n3. Canberra",
+   "reasoning_chars": 0,
+   "score": {
+    "code": true,
+    "mult": true,
+    "capital": true
+   }
+  },
+  "long": {
+   "name": "long",
+   "ttft_s": 29.752,
+   "wall_s": 30.66,
+   "prompt_n": 5693,
+   "cache_n": 1,
+   "prompt_ms": 29743.431,
+   "prompt_tps": 191.4,
+   "gen_n": 18,
+   "gen_tps": 18.8,
+   "usage": {
+    "completion_tokens": 18,
+    "prompt_tokens": 5694,
+    "total_tokens": 5712,
+    "prompt_tokens_details": {
+     "cached_tokens": 1
+    }
+   },
+   "finish": "stop",
+   "content": "1. ORCHID-7419\n2. 391\n3. Canberra",
+   "reasoning_chars": 0,
+   "score": {
+    "code": true,
+    "mult": true,
+    "capital": true
+   }
+  }
+ },
+ "mem": {
+  "peak_rss_gb": 6.27,
+  "peak_footprint_gb": 1.38,
+  "min_free_pct": 63
+ }
+}

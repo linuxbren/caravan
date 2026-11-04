@@ -1,0 +1,1 @@
+/Users/brenden/.caravan/venvs/mlx/bin/python -m mlx_lm server --model /Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit --host 127.0.0.1 --port 8194 --prompt-cache-size 1 --prompt-cache-bytes 536870912 --prefill-step-size 512

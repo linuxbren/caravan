@@ -1,0 +1,63 @@
+{
+  "model": "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit",
+  "url": "http://127.0.0.1:8194",
+  "target_preamble_chars": 17710,
+  "runs": [
+    {
+      "name": "cold_store",
+      "ok": true,
+      "wall_s": 19.873,
+      "session": "fae01aa29e844b5c",
+      "prompt_n": 4000,
+      "gen_n": 2,
+      "how": null,
+      "prefill_s": null,
+      "ttft_s": null,
+      "total_s": null,
+      "peak_gb": null,
+      "content": "OK"
+    },
+    {
+      "name": "new_session_0",
+      "ok": true,
+      "wall_s": 0.428,
+      "session": "43a14978f32b4a54",
+      "prompt_n": 4001,
+      "gen_n": 3,
+      "how": null,
+      "prefill_s": null,
+      "ttft_s": null,
+      "total_s": null,
+      "peak_gb": null,
+      "content": "OK0"
+    },
+    {
+      "name": "new_session_1",
+      "ok": true,
+      "wall_s": 0.426,
+      "session": "bd161a91d00646b4",
+      "prompt_n": 4001,
+      "gen_n": 3,
+      "how": null,
+      "prefill_s": null,
+      "ttft_s": null,
+      "total_s": null,
+      "peak_gb": null,
+      "content": "OK1"
+    },
+    {
+      "name": "miss_control",
+      "ok": true,
+      "wall_s": 4.003,
+      "session": "513f94b739f6432f",
+      "prompt_n": 843,
+      "gen_n": 2,
+      "how": null,
+      "prefill_s": null,
+      "ttft_s": null,
+      "total_s": null,
+      "peak_gb": null,
+      "content": "OK"
+    }
+  ]
+}
