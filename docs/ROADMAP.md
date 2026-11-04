@@ -128,7 +128,7 @@ Open tasks for this rule:
 
 ## Next, in order
 
-> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order after Day 12 speedups: fix Gemma shared-prefix packer trim + re-bench adaptive PL (overlap_on=0.50); then #16 built-in guesser (blocked on MTP/NEXTN MLX weights — GPT-OSS still undrafted); then fewer hand-offs / multi-token verify for N≥2+draft; then #13c settings file, #14 node view, #15 Terminal Delight. Parked: #17 fused kernels; true batched decode = later/bigger. Shared-prefix flag ships off-by-default (Llama/Qwen3 TTFT ~−50%).
+> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order after Day 13 Gemma shared-prefix fix (Gemma TTFT −86.8% via materialize; Qwen3/Llama fresh −45.9/−49.1% via trim; flag still off-by-default): re-bench adaptive PL (overlap_on=0.50); then #16 built-in guesser (blocked on MTP/NEXTN MLX weights — GPT-OSS still undrafted); then fewer hand-offs / multi-token verify for N≥2+draft; then #13c settings file, #14 node view, #15 Terminal Delight. Parked: #17 fused kernels; true batched decode = later/bigger. Day 14 planned as break + v0→now improvements video.
 
 1. ~~**Publish the rebased llama.cpp branch.**~~ **Done (2026-10-31).**
    The fork moved to `linuxbren/llama.cpp`. There, `caravan-patches` is

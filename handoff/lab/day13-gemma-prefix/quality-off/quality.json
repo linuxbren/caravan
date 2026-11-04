@@ -1,0 +1,29 @@
+{
+  "flag": "off",
+  "warm": {
+    "content": "PING",
+    "how": "cold",
+    "ttft_s": 6.241,
+    "prefill_s": 6.18,
+    "finish": "stop",
+    "keys": [
+      "role",
+      "content",
+      "reasoning_content",
+      "reasoning"
+    ]
+  },
+  "new": {
+    "content": "PING",
+    "how": "cold",
+    "ttft_s": 6.218,
+    "prefill_s": 6.16,
+    "finish": "stop",
+    "keys": [
+      "role",
+      "content",
+      "reasoning_content",
+      "reasoning"
+    ]
+  }
+}

@@ -108,7 +108,10 @@ class Pair:
             try:
                 while True:
                     h, p = S.read_frame(b)
-                    rh, rp = self.state.handle(h, p)
+                    try:
+                        rh, rp = self.state.handle(h, p)
+                    except Exception as e:
+                        rh, rp = {"error": f"{type(e).__name__}: {e}"}, b""
                     b.sendall(S.encode_frame(rh, rp))
             except (ConnectionError, OSError):
                 pass
@@ -252,6 +255,91 @@ class SplitSessionsTest(unittest.TestCase):
         st = self.p.client.stats
         self.assertGreater(st["calls"], 0)
         self.assertGreater(st["bytes_out"], 0)
+
+
+
+class SharedPrefixTrimTest(unittest.TestCase):
+    """Day 13: packer trim_to + lead/packer agreement for shared-prefix store."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.p = Pair(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_trim_to_shortens_both_halves(self):
+        # All-KVCache layouts: trim_to must shorten packer in lockstep with lead.
+        self.tmp.cleanup()
+        self.tmp = tempfile.TemporaryDirectory()
+        p = Pair(self.tmp.name,
+                 layout_head=("KVCache", "KVCache"),
+                 layout_front=("KVCache", "KVCache"))
+        prompt = list(range(100, 100 + 300))
+        p.turn(KEY, prompt, [1])
+        reserved = "spc_test_prefix_key_001"
+        src = p.head.sessions[KEY]
+        target = 256
+        drop = len(src.tokens) - target
+        new_cache = [p.head.ops.from_snapshot(p.head.ops.snapshot(c)) for c in src.cache]
+        dst = W.Session(reserved, new_cache)
+        dst.tokens = list(src.tokens)
+        p.head.sessions[reserved] = dst
+        fr = p.client.call("clone_to", src=KEY, dst=reserved)[0]
+        self.assertEqual(fr["n"], len(src.tokens))
+        for c in dst.cache:
+            p.head.ops.trim(c, drop)
+        dst.tokens = dst.tokens[:target]
+        fr = p.client.call("trim_to", key=reserved, n=target)[0]
+        self.assertEqual(fr.get("n"), target)
+        self.assertEqual(fr.get("trimmed"), drop)
+        self.assertEqual(len(p.front_session(reserved).tokens), target)
+        self.assertEqual(len(dst.tokens), target)
+
+    def test_trim_to_refuses_wrapped_rotating(self):
+        # Default Pair layouts include RotatingKVCache (window=8).
+        prompt = list(range(100, 100 + 40))
+        self.p.turn(KEY, prompt, [1])
+        reserved = "spc_rot_refuse_001"
+        fr = self.p.client.call("clone_to", src=KEY, dst=reserved)[0]
+        self.assertGreater(fr["n"], 8)
+        before = len(self.p.front_session(reserved).tokens)
+        # FrontClient raises on error; call handle directly to inspect the payload.
+        rh, _ = self.p.state.handle({"op": "trim_to", "key": reserved, "n": 8}, b"")
+        self.assertIn("error", rh)
+        self.assertIn("not trimmable", rh["error"])
+        self.assertEqual(len(self.p.front_session(reserved).tokens), before)
+        with self.assertRaises(S.FrontError):
+            self.p.client.call("trim_to", key=reserved, n=8)
+
+    def test_can_trim_helpers_on_engine_mixin(self):
+        # Exercise Engine._can_trim_session / _trim_session_to with a minimal stub.
+        eng = W.Engine.__new__(W.Engine)
+        eng.store = self.p.head
+        prompt = list(range(50, 50 + 20))
+        # all-KVCache store
+        tmp = tempfile.TemporaryDirectory()
+        try:
+            p = Pair(tmp.name, layout_head=("KVCache", "KVCache"),
+                     layout_front=("KVCache", "KVCache"))
+            p.turn(KEY, prompt, [1])
+            eng.store = p.head
+            s = p.head.sessions[KEY]
+            self.assertTrue(eng._can_trim_session(s, 5))
+            self.assertTrue(eng._trim_session_to(s, len(s.tokens) - 5))
+            self.assertEqual(len(s.tokens), len(prompt) - 1 - 5)
+        finally:
+            tmp.cleanup()
+        # rotating wrapped: FakeOps window 8, prompt >> 8
+        prompt = list(range(100, 100 + 40))
+        self.p.turn(KEY, prompt, [1])
+        eng.store = self.p.head
+        s = self.p.head.sessions[KEY]
+        self.assertFalse(eng._can_trim_session(s, 10))
+        n_before = len(s.tokens)
+        self.assertFalse(eng._trim_session_to(s, 8))
+        self.assertEqual(len(s.tokens), n_before)
+
 
 
 if __name__ == "__main__":

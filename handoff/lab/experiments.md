@@ -1,3 +1,33 @@
+## 2026-11-04 — Day 13: Gemma shared-prefix packer trim / materialize
+
+**Goal.** Fix Day 12 Gemma `shared-prefix-split-resync` (0% TTFT) on the
+two-Mini split so a new chat that shares a long system prompt reuses lead +
+packer KV. Keep Qwen3/Llama gains. Quality unchanged.
+
+**Cause.** After clone-into-reserved, lead trimmed every layer. Gemma's
+RotatingKVCache / sliding-window layers refuse trim once wrapped; packer `n`
+then disagreed → split-resync full re-prefill.
+
+**Fix.** Packer `trim_to` op; lead `_can_trim_session` / `_trim_session_to`;
+`_materialize_shared_prefix` re-prefills the exact prefix on both halves when
+trim is unsafe; store path logs `via=trim|materialize`; hit path checks packer
+reserved length before clone. Tests: `SharedPrefixTrimTest` (+3). **174 OK.**
+
+**Numbers (split, LPM off, ports 8194/5560, ~4k shared system prompt; Qwen3/Llama freshly re-measured off vs on 2026-11-04).**
+- Gemma off new TTFT 11.764 s → on hit 1.554 s (**−86.8%**, reuse 4096,
+  `via=materialize`). Day 12 was ~0% / split-resync.
+- Qwen3 off new 9.303 → on hit 5.029 (**−45.9%**, `via=trim`, reuse 2048).
+- Llama off new 17.473 → on hit 8.898 (**−49.1%**, `via=trim`, reuse 2048).
+- Write sanity (short-prompt streamed, draft off): Qwen3 27.4→27.3, Llama 15.8→15.9 (no regression).
+- Quality Gemma seed=42 "Reply with exactly: PING": off and on both `PING`.
+
+**Software.** `agent/mlx_split.py`, `agent/mlx_worker.py`, tests. Lab:
+`handoff/lab/day13-gemma-prefix/`. Flag still **off by default**.
+
+**Next.** Re-bench adaptive PL at overlap_on=0.50; #16 still blocked on MTP
+MLX weights; then #13c settings file / #14 node view. Day 14 planned as break
++ v0→now improvements video.
+
 ## 2026-11-03 — Day 12 (cont.): cheap/medium speedups for split big models
 
 **Goal.** Easy+medium ideas only (Brenden): make a *bigger* model fast across two

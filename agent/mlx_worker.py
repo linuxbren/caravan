@@ -1172,10 +1172,21 @@ class Engine:
         if not ent or n <= 0:
             return self.s_prepare(key, prompt)
         reserved = self._spc_reserved_key(ent.key)
-        if reserved not in store.sessions:
-            spc.misses += 1  # library entry stale
+        src = store.sessions.get(reserved)
+        if src is None or len(src.tokens) != int(ent.n_tokens):
+            spc.misses += 1  # library entry stale / lead half missing
             return self.s_prepare(key, prompt)
         try:
+            # Day 13: require packer reserved length to match before seeding,
+            # otherwise SplitSessions.prepare would split-resync to cold.
+            if self.client is not None:
+                fr = self.client.call("prepare", key=reserved,
+                                      prompt=list(src.tokens) + [0])[0]
+                pn = int(fr.get("n") or -1) if not fr.get("error") else -1
+                if pn != int(ent.n_tokens):
+                    log(f"shared-prefix packer reserved n={pn} want={ent.n_tokens}; cold")
+                    spc.misses += 1
+                    return self.s_prepare(key, prompt)
             self._clone_lead_session(reserved, key)
             if self.client is not None:
                 fr = self.client.call("clone_to", src=reserved, dst=key)[0]
@@ -1190,6 +1201,84 @@ class Engine:
         except Exception as e:
             log(f"shared-prefix seed failed: {type(e).__name__}: {e}")
             return self.s_prepare(key, prompt)
+
+    def _can_trim_session(self, session, drop: int) -> bool:
+        """True if every layer can drop `drop` tokens (sliding-window may refuse)."""
+        if drop <= 0:
+            return True
+        ops = self.store.ops
+        for c in session.cache:
+            if ops.always_trimmable(c):
+                continue
+            if not c_trimmable(ops, c):
+                return False
+        return True
+
+    def _trim_session_to(self, session, target_n: int) -> bool:
+        """Trim lead-side session tokens+KV to target_n. False if not trimmable."""
+        drop = len(session.tokens) - int(target_n)
+        if drop < 0:
+            return False
+        if drop == 0:
+            return True
+        if not self._can_trim_session(session, drop):
+            return False
+        for c in session.cache:
+            self.store.ops.trim(c, drop)
+        session.tokens = session.tokens[:target_n]
+        session.snaps = None
+        return True
+
+    def _materialize_shared_prefix(self, reserved: str, tokens: list) -> bool:
+        """Cold-prefill `tokens` into reserved on lead (+ packer if split).
+
+        Used when clone+trim is unsafe (Gemma/GPT-OSS sliding-window layers have
+        wrapped). Returns True when both halves end with exactly len(tokens).
+        """
+        if not tokens:
+            return False
+        self.store.drop([reserved])
+        if self.client is not None:
+            try:
+                self.client.call("drop", keys=[reserved])
+            except Exception as e:
+                log(f"shared-prefix materialize packer drop: {e}")
+        pad = list(tokens) + [0]
+        old_key = getattr(self.model, "session_key", None) if hasattr(self, "model") else None
+        try:
+            s, n, how = self.s_prepare(reserved, pad)
+            if n != 0:
+                self.s_reset(s)
+                s, n, how = self.s_prepare(reserved, pad)
+            if n != 0:
+                log(f"shared-prefix materialize expected cold, got n={n} how={how}")
+                return False
+            if self.client is not None and hasattr(self.model, "session_key"):
+                self.model.session_key = reserved
+            mx = self.mx
+            with request_wiring(self.wired_mode, self.G, self.model, self.stream):
+                with mx.stream(self.stream):
+                    for i in range(0, len(tokens), self.prefill_step):
+                        chunk = mx.array(tokens[i:i + self.prefill_step])
+                        self.model(chunk[None], cache=s.cache)
+                        mx.eval([c.state for c in s.cache])
+                        mx.clear_cache()
+            self.s_checkpoint(s, tokens)
+            if self.client is not None:
+                fr = self.client.call("prepare", key=reserved, prompt=pad)[0]
+                if fr.get("error"):
+                    log(f"shared-prefix materialize packer check: {fr.get('error')}")
+                    return False
+                if int(fr.get("n") or -1) != len(tokens):
+                    log(f"shared-prefix materialize packer n={fr.get('n')} want={len(tokens)}")
+                    return False
+            return True
+        except Exception as e:
+            log(f"shared-prefix materialize failed: {type(e).__name__}: {e}")
+            return False
+        finally:
+            if old_key is not None and hasattr(self, "model") and hasattr(self.model, "session_key"):
+                self.model.session_key = old_key
 
     def _maybe_store_shared_prefix(self, key, prompt, session):
         spc = getattr(self, "shared_prefix_cache", None)
@@ -1211,39 +1300,49 @@ class Engine:
         if reserved in self.store.sessions and spc.entries.get(pkey):
             return  # already have it
         try:
-            # Ensure session is positioned at exactly n tokens for the reserved copy.
-            # session.tokens should equal prompt[:-1] after checkpoint (= full prompt minus last).
-            # We store min(n, len(session.tokens)).
             n_store = min(n, len(session.tokens))
             if n_store < spc.min_tokens:
                 return
-            # Temporarily clone current session to reserved (full current tokens), then trim
+            # Clone full session to reserved on both halves, then either trim
+            # (plain KV) or re-prefill the prefix (sliding-window wrapped).
             self._clone_lead_session(key, reserved)
-            rs = self.store.sessions[reserved]
-            drop = len(rs.tokens) - n_store
-            if drop > 0:
-                for c in rs.cache:
-                    self.store.ops.trim(c, drop)
-                rs.tokens = rs.tokens[:n_store]
             if self.client is not None:
                 fr = self.client.call("clone_to", src=key, dst=reserved)[0]
                 if fr.get("error"):
                     log(f"shared-prefix packer store clone failed: {fr.get('error')}")
                     self.store.drop([reserved])
                     return
-                # Trim packer half to n_store via prepare with truncated prompt? 
-                # clone_to copied full session; call prepare with prompt[:n_store]+dummy
-                # to trim. Simpler: send trim of (len_src - n_store) if we know lengths.
-                # After clone_to, packer has same tokens as lead src (full). Trim.
-                if drop > 0:
-                    # No direct packer trim-by-session without speculative trim op on session...
-                    # Use prepare with prefix prompt to trim via common_prefix path.
-                    pad = list(prompt[:n_store]) + [prompt[n_store] if n_store < len(prompt) else 0]
-                    self.client.call("prepare", key=reserved, prompt=pad)
+            rs = self.store.sessions[reserved]
+            drop = len(rs.tokens) - n_store
+            path = "exact"
+            if drop > 0 and self._can_trim_session(rs, drop):
+                if not self._trim_session_to(rs, n_store):
+                    path = "materialize"
+                else:
+                    path = "trim"
+                    if self.client is not None:
+                        fr = self.client.call("trim_to", key=reserved, n=n_store)[0]
+                        if fr.get("error") or int(fr.get("n") or -1) != n_store:
+                            log(f"shared-prefix packer trim_to failed: {fr!r}; materializing")
+                            path = "materialize"
+            elif drop > 0:
+                path = "materialize"
+            if path == "materialize":
+                if not self._materialize_shared_prefix(reserved, list(prompt[:n_store])):
+                    self.store.drop([reserved])
+                    if self.client is not None:
+                        try:
+                            self.client.call("drop", keys=[reserved])
+                        except Exception:
+                            pass
+                    return
+                rs = self.store.sessions.get(reserved)
+                if rs is None or len(rs.tokens) != n_store:
+                    log(f"shared-prefix materialize missing reserved n={None if rs is None else len(rs.tokens)}")
+                    return
             nbytes = self.store.ops.nbytes(rs.cache)
             spc.store(prompt, n_store, lead_snaps=None, nbytes=nbytes)
-            # Fix entry key to match prefix_key(prompt, n_store)
-            log(f"shared-prefix stored n={n_store} reserved={reserved} bytes={nbytes}")
+            log(f"shared-prefix stored n={n_store} reserved={reserved} bytes={nbytes} via={path}")
         except Exception as e:
             log(f"shared-prefix store failed: {type(e).__name__}: {e}")
 

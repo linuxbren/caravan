@@ -1,0 +1,29 @@
+{
+  "model": "mlx-community/Qwen3-30B-A3B-4bit",
+  "flag": "on",
+  "runs": [
+    {
+      "name": "tg128_r0",
+      "ttft_s": 0.283,
+      "wall_s": 3.176,
+      "gen_n": 79,
+      "gen_tps": 27.0,
+      "finish": "stop",
+      "how": null,
+      "content": "1. **Screwdriver** \u2013 Used to tighten or loosen screws in various household repairs.  \n2. **Hammer** \u2013 Strikes nails into surfaces or removes them during constru",
+      "caravan": {}
+    },
+    {
+      "name": "tg128_r1",
+      "ttft_s": 0.276,
+      "wall_s": 3.175,
+      "gen_n": 80,
+      "gen_tps": 27.3,
+      "finish": "stop",
+      "how": null,
+      "content": "1. **Screwdriver** \u2013 Used to tighten or loosen screws in various household repairs.  \n2. **Hammer** \u2013 Essential for driving nails into surfaces or breaking apar",
+      "caravan": {}
+    }
+  ],
+  "tg128_median": 27.3
+}

@@ -584,6 +584,30 @@ class FrontState:
             dst.snaps = None
             dst.dirty = True
             return {"n": len(dst.tokens), "key": dst_k}, b""
+        if op == "trim_to":
+            # Day 13: trim a named session to exactly n tokens (lead/packer lockstep
+            # for shared-prefix store). Refuses when sliding-window layers can't trim.
+            key = h.get("key")
+            n = int(h.get("n") or 0)
+            if not key:
+                return {"error": "trim_to needs key"}, b""
+            s = st.sessions.get(key)
+            if s is None:
+                return {"error": f"trim_to: unknown session {key!r}"}, b""
+            if n < 0 or n > len(s.tokens):
+                return {"error": f"trim_to: bad n={n} len={len(s.tokens)}"}, b""
+            drop = len(s.tokens) - n
+            if drop == 0:
+                return {"n": n, "trimmed": 0}, b""
+            ops = st.ops
+            if not all(ops.always_trimmable(c) or (
+                    hasattr(c, "is_trimmable") and bool(c.is_trimmable())) for c in s.cache):
+                return {"error": "trim_to: not trimmable", "n": len(s.tokens)}, b""
+            for c in s.cache:
+                ops.trim(c, drop)
+            s.tokens = s.tokens[:n]
+            s.snaps = None
+            return {"n": n, "trimmed": drop}, b""
         if op == "describe":
             return {"sessions": st.describe()}, b""
         return {"error": f"unknown op {op!r}"}, b""

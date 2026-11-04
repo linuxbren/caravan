@@ -70,9 +70,16 @@ class FakeOps:
         return len(c.toks) if isinstance(c, KVCache) else c.offset
 
     def snapshot(self, c):
+        if isinstance(c, KVCache):
+            return ("kv", list(c.toks))
         return ("rot", c.window, list(c.toks), c.offset)
 
     def from_snapshot(self, snap):
+        kind = snap[0]
+        if kind == "kv":
+            r = KVCache()
+            r.toks = list(snap[1])
+            return r
         _, w, toks, off = snap
         r = RotatingKVCache(w)
         r.toks, r.offset = list(toks), off

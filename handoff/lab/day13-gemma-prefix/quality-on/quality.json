@@ -1,0 +1,29 @@
+{
+  "flag": "on",
+  "warm": {
+    "content": "PING",
+    "how": "cold",
+    "ttft_s": 11.179,
+    "prefill_s": 11.119,
+    "finish": "stop",
+    "keys": [
+      "role",
+      "content",
+      "reasoning_content",
+      "reasoning"
+    ]
+  },
+  "new": {
+    "content": "PING",
+    "how": "shared-prefix-hit-memory",
+    "ttft_s": 1.357,
+    "prefill_s": 1.3,
+    "finish": "stop",
+    "keys": [
+      "role",
+      "content",
+      "reasoning_content",
+      "reasoning"
+    ]
+  }
+}
