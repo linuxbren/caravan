@@ -81,3 +81,49 @@ Env knobs (optional):
 - UI clears in-flight chat on Load/Unload/Clear (`AbortController`), so Send re-enables whenever status is `ready`.
 - Chat shows a `thinking…` placeholder immediately, enforces a 45s first-token / 180s total timeout with a visible error, and strips end markers (`<|im_end|>`, `<turn|>`, …) in the proxy and the page.
 
+
+## Optimization toggles (Day 15)
+
+The **Optimizations** card (right column) sets how the current model runs.
+Each option is **Auto** (Caravan decides, using what it learned for that model)
+or pinned. **Apply & restart** reloads the current model on both Minis with
+those choices (same path as Load model, about 10–40 s). Every option maps to a
+real `agent/mlx_worker.py` flag; nothing else is changed.
+
+| Option | Choices | What it does | Worker flag |
+|---|---|---|---|
+| Guess-ahead | Auto / On / Off | A small helper model guesses a few words; the big model checks them in one pass. | Off `--no-split-draft`, On `--pin-guess-ahead` (learn can't turn it off) |
+| Self-tuning | Auto / Off | Tries settings on real chats and keeps the faster ones per model. | Off `--no-learn` |
+| Shared start (trim / rebuild) | Auto / On / Off | Reuses the already-read start of a repeated system prompt — trims memory back to it, or rebuilds it on both Minis for models that can't be trimmed (Gemma). | On `--split-shared-prefix-cache`, Off `--no-split-shared-prefix-cache` |
+| Two chats | Auto / 1 / 2 | Overlaps two chats across the Minis. | `--split-pipeline-chats N` |
+| Fused kernels | Auto (off) / On | Experimental combined GPU steps. | `--fuse-kernels all` (both Minis) |
+| Memory compression | Auto (16-bit) / 8 / 4 | Stores chat memory in fewer bits (less RAM, slightly lower quality). | `--kv-bits N` (both Minis) |
+| GPU keep-warm | Auto (on) / Off | Keeps the lead's GPU warm while waiting on the packer. | `--no-split-keepalive` |
+
+What's actually running is shown three ways:
+
+- **Next to the model** ("running with …" chips), read from the lead's new
+  `GET /caravan/settings` endpoint (`/api/status` → `active`).
+- **Under every reply**: `ran with: …` is what the worker used *for that reply*
+  (guess-ahead shows how many words came from the helper), and `chosen: …`
+  is what you picked. "(pinned)" means self-tuning can't change it.
+- **In the lead log**: one `active settings: {...}` line at startup
+  (`~/.caravan/web-ui/lead.log` on EXO1).
+
+With Auto, self-tuning may flip guess-ahead, shared start, or two chats
+between replies while it explores — the per-reply line shows when it did.
+
+Fix that came with this: with two chats on, a learned "guess-ahead off" was
+ignored (the two-chat path always used the helper). It's honored now.
+
+### How to test it yourself
+
+1. Open http://100.68.62.20:8190/ and refresh. Load a model with everything on **Auto**.
+2. Send the same short message twice (e.g. "Name one planet."). Note *To first word*,
+   *Write* tok/s, and the `ran with:` line under each reply.
+3. Set one option (say Guess-ahead **Off**), click **Apply & restart**, wait for *ready*.
+4. Send the same message twice again. The `ran with:` line should now say
+   `guess-ahead off (pinned)`; compare the speeds with step 2.
+5. Put it back to **Auto** and Apply. Repeat for any other option.
+   Tip: compare the *second* reply of each pair (the first pays a one-time warm-up),
+   and keep Low Power Mode off on both Minis.
