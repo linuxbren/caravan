@@ -1,0 +1,65 @@
+{
+  "_day": "Day 10",
+  "_stills": [1.5, 12.0, 28.0, 48.0, 70.0, 95.0],
+  "PAYOFF": "It tunes itself from real chats",
+  "PAYOFF_SUB": "Day 9's guess was already right on all 6 models — then the trap forced a relearn",
+  "RACE": [
+    {"name": "Llama 8B", "day9": 2, "learned": 2, "single": 22.1, "hand": 22.6},
+    {"name": "Qwen3 30B", "day9": 2, "learned": 2, "single": 44.5, "hand": 45.0},
+    {"name": "Gemma 26B", "day9": 2, "learned": 2, "single": 37.3, "hand": 38.4},
+    {"name": "GPT-OSS 20B", "day9": 2, "learned": 2, "single": 33.7, "hand": 34.3},
+    {"name": "Qwen2.5 14B", "day9": 2, "learned": 2, "single": 12.3, "hand": 12.4},
+    {"name": "Distill 14B", "day9": 2, "learned": 2, "single": 12.4, "hand": 12.3}
+  ],
+  "TRAP": {
+    "model": "Qwen3 30B",
+    "start_n": 1,
+    "switch_at": 6,
+    "probe_n1": 37.2,
+    "probe_n2": 67.8,
+    "final_n": 2
+  },
+  "SECOND_LOAD": [
+    "auto split: packer_layers=16  (equal RAM ~26/26 GB)",
+    "learned pipeline: chats=2  (saved winner for spanned)",
+    "learned guess-ahead: off  (saved winner for spanned)",
+    "learn: keep packer_layers=16: best so far at 16.93 tok/s"
+  ],
+  "SINGLE_VS_BOTH": {
+    "one_mini_mean": 16.4,
+    "both_single_mean": 22.1,
+    "hand_tuned_both": 22.6,
+    "one_winner_chats": 1,
+    "both_winner_chats": 2
+  },
+  "QUALITY": {"passed": 12, "total": 12, "models": 6},
+  "COST": {
+    "explore_n": 3,
+    "total_n": 11,
+    "explore_mean": 11.5,
+    "keep_mean": 16.3,
+    "slowdown_pct": 30
+  },
+  "PULL_PLUG": {
+    "mid_exists": true,
+    "after_winner_chats": 2,
+    "after_tps": [22.1, 22.0, 22.2, 22.2]
+  },
+  "LONG_PROMPT": {
+    "winner_chats": 2,
+    "short_sample": [21.1, 19.6, 21.5, 22.1],
+    "long_sample": [20.8, 20.3, 20.6, 22.0]
+  },
+  "TAKE1": [
+    ["ON", "Day 9's guess held on every model", "Race with no flags and no saved file: all six stayed at 2 overlapping chats"],
+    ["ONE", "The trap still forced a relearn", "Seeded wrong at 1 chat; Qwen3 flipped back to 2 by reply 6"],
+    ["ON", "Second load reads the saved file", "learned pipeline: chats=2 — no need to rediscover from scratch"],
+    ["MUTED", "One Mini cannot learn two-chat overlap", "Solo Llama ~16.4 writing speed; both Minis ~22.1 (hand-tuned 22.6)"]
+  ],
+  "TAKE2": [
+    ["ON", "Quality held: 12/12 on all six", "Scored the final answer only — thinking models still counted right"],
+    ["ONE", "Learning costs about 30% on explore replies", "3 of 11 Llama test replies probed a slower setting (~11.5 vs ~16.3)"],
+    ["ON", "Pull the plug — it resumes from the file", "Restart kept chats=2; next replies ~22 writing speed"],
+    ["MUTED", "Long prompts did not flip the winner", "Short and long stayed at 2 overlapping chats"]
+  ]
+}

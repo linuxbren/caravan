@@ -1,0 +1,1019 @@
+{
+  "experiment": "long_prompt",
+  "model": "llama",
+  "short_rows": [
+    {
+      "wall_s": 0.165,
+      "prompt": "Say hello in one short sentence.",
+      "text": "Hello.<|eot_id|>",
+      "completion_tokens": 3,
+      "prompt_tokens": 42,
+      "total_s": 0.143,
+      "prefill_s": 0.001,
+      "tps": 21.127,
+      "learn": {
+        "norm_tps": 16.729,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "hit-disk",
+        "prefill_s": 0.001,
+        "ttft_s": 0.053,
+        "total_s": 0.143,
+        "peak_gb": 2.38,
+        "split": {
+          "calls": 13,
+          "mb_out": 0.0,
+          "mb_in": 0.16,
+          "wait_s": 0.227,
+          "front_s": 0.136,
+          "net_s": 0.092
+        },
+        "learn": {
+          "norm_tps": 16.729,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "i": 0
+    },
+    {
+      "wall_s": 0.117,
+      "prompt": "What is 17+4? Reply with just the number.",
+      "text": "21<|eot_id|>",
+      "completion_tokens": 2,
+      "prompt_tokens": 48,
+      "total_s": 0.104,
+      "prefill_s": 0.002,
+      "tps": 19.608,
+      "learn": {
+        "norm_tps": 15.196,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "hit-disk",
+        "prefill_s": 0.002,
+        "ttft_s": 0.056,
+        "total_s": 0.104,
+        "peak_gb": 2.38,
+        "split": {
+          "calls": 19,
+          "mb_out": 0.0,
+          "mb_in": 0.17,
+          "wait_s": 0.28,
+          "front_s": 0.178,
+          "net_s": 0.102
+        },
+        "learn": {
+          "norm_tps": 15.196,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "i": 1
+    },
+    {
+      "wall_s": 0.34,
+      "prompt": "Name one primary color.",
+      "text": "Red is a primary color.<|eot_id|>",
+      "completion_tokens": 7,
+      "prompt_tokens": 40,
+      "total_s": 0.328,
+      "prefill_s": 0.002,
+      "tps": 21.472,
+      "learn": {
+        "norm_tps": 18.044,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "pipeline_chats",
+          "value": 1
+        },
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 6
+        }
+      },
+      "caravan": {
+        "how": "hit-disk",
+        "prefill_s": 0.002,
+        "ttft_s": 0.055,
+        "total_s": 0.328,
+        "peak_gb": 2.38,
+        "split": {
+          "calls": 30,
+          "mb_out": 0.0,
+          "mb_in": 0.23,
+          "wait_s": 0.437,
+          "front_s": 0.321,
+          "net_s": 0.115
+        },
+        "learn": {
+          "norm_tps": 18.044,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 6
+          }
+        }
+      },
+      "i": 2
+    },
+    {
+      "pair": true,
+      "wall_s": 2.705,
+      "aggregate_tps": 17.747,
+      "a": {
+        "wall_s": 0.43,
+        "prompt": "Give a one-word synonym for fast.",
+        "text": "Quick.<|eot_id|>",
+        "completion_tokens": 3,
+        "prompt_tokens": 43,
+        "total_s": 0.42,
+        "prefill_s": 0.286,
+        "tps": 22.388,
+        "learn": {
+          "norm_tps": 17.728,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 5
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.286,
+          "ttft_s": 0.33,
+          "total_s": 0.42,
+          "peak_gb": 2.49,
+          "split": {
+            "calls": 38,
+            "mb_out": 0.0,
+            "mb_in": 0.6,
+            "wait_s": 0.647,
+            "front_s": 0.521,
+            "net_s": 0.126
+          },
+          "learn": {
+            "norm_tps": 17.728,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 5
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 2.704,
+        "prompt": "Is water wet? Yes or no.",
+        "text": "No. \n\nThe term \"wet\" generally refers to a liquid that has a high level of moisture or humidity. Since water is already ",
+        "completion_tokens": 45,
+        "prompt_tokens": 43,
+        "total_s": 2.272,
+        "prefill_s": 0.27,
+        "tps": 22.478,
+        "learn": {
+          "norm_tps": 22.478,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 17.819,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 4
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.27,
+          "ttft_s": 0.315,
+          "total_s": 2.272,
+          "peak_gb": 2.51,
+          "split": {
+            "calls": 89,
+            "mb_out": 0.01,
+            "mb_in": 1.32,
+            "wait_s": 1.734,
+            "front_s": 1.578,
+            "net_s": 0.156
+          },
+          "learn": {
+            "norm_tps": 22.478,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 17.819,
+              "n": 1
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 4
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 22.478,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": {
+          "aggregate_tps": 17.819,
+          "n": 1
+        },
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 4
+        }
+      },
+      "i": 3
+    },
+    {
+      "wall_s": 0.705,
+      "prompt": "Count to 5 with commas.",
+      "text": "1,1, 2,1, 2, 3,1, 2, 3, 4,1, 2, 3, 4, 5.<|eot_id|>",
+      "completion_tokens": 15,
+      "prompt_tokens": 42,
+      "total_s": 0.682,
+      "prefill_s": 0.002,
+      "tps": 22.059,
+      "learn": {
+        "norm_tps": 19.972,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 3
+        }
+      },
+      "caravan": {
+        "how": "hit-disk",
+        "prefill_s": 0.002,
+        "ttft_s": 0.054,
+        "total_s": 0.682,
+        "peak_gb": 2.51,
+        "split": {
+          "calls": 109,
+          "mb_out": 0.01,
+          "mb_in": 1.44,
+          "wait_s": 2.062,
+          "front_s": 1.889,
+          "net_s": 0.173
+        },
+        "learn": {
+          "norm_tps": 19.972,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 3
+          }
+        }
+      },
+      "i": 5
+    },
+    {
+      "pair": true,
+      "wall_s": 1.301,
+      "aggregate_tps": 12.298,
+      "a": {
+        "wall_s": 0.889,
+        "prompt": "Translate 'cat' to Spanish, one word.",
+        "text": "The Spanish translation for 'cat' is 'gato'.<|eot_id|>",
+        "completion_tokens": 13,
+        "prompt_tokens": 45,
+        "total_s": 0.879,
+        "prefill_s": 0.288,
+        "tps": 21.997,
+        "learn": {
+          "norm_tps": 19.604,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": {
+            "aggregate_tps": 15.715,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 2
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.288,
+          "ttft_s": 0.335,
+          "total_s": 0.879,
+          "peak_gb": 2.51,
+          "split": {
+            "calls": 128,
+            "mb_out": 0.01,
+            "mb_in": 1.91,
+            "wait_s": 2.491,
+            "front_s": 2.3,
+            "net_s": 0.19
+          },
+          "learn": {
+            "norm_tps": 19.604,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": {
+              "name": "pipeline_chats",
+              "value": 1
+            },
+            "pipeline_probe": {
+              "aggregate_tps": 15.715,
+              "n": 1
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 2
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 1.3,
+        "prompt": "What day comes after Monday? One word.",
+        "text": "Tuesday.<|eot_id|>",
+        "completion_tokens": 3,
+        "prompt_tokens": 44,
+        "total_s": 0.41,
+        "prefill_s": 0.27,
+        "tps": 21.429,
+        "learn": {
+          "norm_tps": 16.968,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 1
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.27,
+          "ttft_s": 0.316,
+          "total_s": 0.41,
+          "peak_gb": 2.51,
+          "split": {
+            "calls": 137,
+            "mb_out": 0.01,
+            "mb_in": 2.29,
+            "wait_s": 2.699,
+            "front_s": 2.504,
+            "net_s": 0.196
+          },
+          "learn": {
+            "norm_tps": 16.968,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 1
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 16.968,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 1
+        }
+      },
+      "i": 6
+    }
+  ],
+  "long_rows": [
+    {
+      "wall_s": 3.544,
+      "prompt": "Summarize the following in exactly two short sentences.\n\nThe Mac Mini cluster ru",
+      "text": "The Mac Mini cluster runs one shared model across two machines. This setup allows for a unified model to be used across ",
+      "completion_tokens": 27,
+      "prompt_tokens": 526,
+      "total_s": 3.532,
+      "prefill_s": 2.232,
+      "tps": 20.769,
+      "learn": {
+        "norm_tps": 20.262,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": {
+          "aggregate_tps": 7.207,
+          "n": 1
+        },
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 2.232,
+        "ttft_s": 2.281,
+        "total_s": 3.532,
+        "peak_gb": 2.75,
+        "split": {
+          "calls": 170,
+          "mb_out": 0.02,
+          "mb_in": 6.81,
+          "wait_s": 4.515,
+          "front_s": 4.294,
+          "net_s": 0.221
+        },
+        "learn": {
+          "norm_tps": 20.262,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 7.207,
+            "n": 1
+          },
+          "trial": null
+        }
+      },
+      "i": 0
+    },
+    {
+      "wall_s": 3.57,
+      "prompt": "Summarize the following in exactly two short sentences.\n\nThe Mac Mini cluster ru",
+      "text": "The Mac Mini cluster runs one shared model across two machines. This setup allows for a unified model to be used across ",
+      "completion_tokens": 27,
+      "prompt_tokens": 526,
+      "total_s": 3.567,
+      "prefill_s": 2.238,
+      "tps": 20.316,
+      "learn": {
+        "norm_tps": 19.82,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 2.238,
+        "ttft_s": 2.286,
+        "total_s": 3.567,
+        "peak_gb": 2.79,
+        "split": {
+          "calls": 203,
+          "mb_out": 0.03,
+          "mb_in": 11.34,
+          "wait_s": 6.365,
+          "front_s": 6.122,
+          "net_s": 0.242
+        },
+        "learn": {
+          "norm_tps": 19.82,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "i": 1
+    },
+    {
+      "wall_s": 3.554,
+      "prompt": "Summarize the following in exactly two short sentences.\n\nThe Mac Mini cluster ru",
+      "text": "The Mac Mini cluster runs one shared model across two machines. This setup allows for a unified model to be used across ",
+      "completion_tokens": 27,
+      "prompt_tokens": 526,
+      "total_s": 3.551,
+      "prefill_s": 2.239,
+      "tps": 20.579,
+      "learn": {
+        "norm_tps": 20.076,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "pipeline_chats",
+          "value": 1
+        },
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 6
+        }
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 2.239,
+        "ttft_s": 2.289,
+        "total_s": 3.551,
+        "peak_gb": 2.82,
+        "split": {
+          "calls": 236,
+          "mb_out": 0.04,
+          "mb_in": 15.86,
+          "wait_s": 8.196,
+          "front_s": 7.932,
+          "net_s": 0.264
+        },
+        "learn": {
+          "norm_tps": 20.076,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 6
+          }
+        }
+      },
+      "i": 2
+    },
+    {
+      "wall_s": 3.467,
+      "prompt": "Summarize the following in exactly two short sentences.\n\nThe Mac Mini cluster ru",
+      "text": "The Mac Mini cluster runs one shared model across two machines. This setup allows for a unified model to be used across ",
+      "completion_tokens": 27,
+      "prompt_tokens": 526,
+      "total_s": 3.464,
+      "prefill_s": 2.239,
+      "tps": 22.041,
+      "learn": {
+        "norm_tps": 21.502,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 5
+        }
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 2.239,
+        "ttft_s": 2.284,
+        "total_s": 3.464,
+        "peak_gb": 2.85,
+        "split": {
+          "calls": 269,
+          "mb_out": 0.04,
+          "mb_in": 20.38,
+          "wait_s": 9.94,
+          "front_s": 9.655,
+          "net_s": 0.285
+        },
+        "learn": {
+          "norm_tps": 21.502,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 5
+          }
+        }
+      },
+      "i": 3
+    },
+    {
+      "wall_s": 3.476,
+      "prompt": "Summarize the following in exactly two short sentences.\n\nThe Mac Mini cluster ru",
+      "text": "The Mac Mini cluster runs one shared model across two machines. This setup allows for a unified model to be used across ",
+      "completion_tokens": 27,
+      "prompt_tokens": 526,
+      "total_s": 3.473,
+      "prefill_s": 2.231,
+      "tps": 21.739,
+      "learn": {
+        "norm_tps": 21.208,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": {
+          "aggregate_tps": 7.781,
+          "n": 1
+        },
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 4
+        }
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 2.231,
+        "ttft_s": 2.277,
+        "total_s": 3.473,
+        "peak_gb": 2.88,
+        "split": {
+          "calls": 302,
+          "mb_out": 0.05,
+          "mb_in": 24.91,
+          "wait_s": 11.684,
+          "front_s": 11.377,
+          "net_s": 0.307
+        },
+        "learn": {
+          "norm_tps": 21.208,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 7.781,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 4
+          }
+        }
+      },
+      "i": 4
+    },
+    {
+      "wall_s": 3.477,
+      "prompt": "Summarize the following in exactly two short sentences.\n\nThe Mac Mini cluster ru",
+      "text": "The Mac Mini cluster runs one shared model across two machines. This setup allows for a unified model to be used across ",
+      "completion_tokens": 27,
+      "prompt_tokens": 526,
+      "total_s": 3.474,
+      "prefill_s": 2.23,
+      "tps": 21.704,
+      "learn": {
+        "norm_tps": 21.174,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 3
+        }
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 2.23,
+        "ttft_s": 2.276,
+        "total_s": 3.474,
+        "peak_gb": 2.88,
+        "split": {
+          "calls": 335,
+          "mb_out": 0.06,
+          "mb_in": 29.43,
+          "wait_s": 13.427,
+          "front_s": 13.099,
+          "net_s": 0.328
+        },
+        "learn": {
+          "norm_tps": 21.174,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 3
+          }
+        }
+      },
+      "i": 5
+    },
+    {
+      "wall_s": 3.477,
+      "prompt": "Summarize the following in exactly two short sentences.\n\nThe Mac Mini cluster ru",
+      "text": "The Mac Mini cluster runs one shared model across two machines. This setup allows for a unified model to be used across ",
+      "completion_tokens": 27,
+      "prompt_tokens": 526,
+      "total_s": 3.474,
+      "prefill_s": 2.233,
+      "tps": 21.757,
+      "learn": {
+        "norm_tps": 21.225,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "pipeline_chats",
+          "value": 1
+        },
+        "pipeline_probe": {
+          "aggregate_tps": 7.769,
+          "n": 1
+        },
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 2
+        }
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 2.233,
+        "ttft_s": 2.279,
+        "total_s": 3.474,
+        "peak_gb": 2.88,
+        "split": {
+          "calls": 368,
+          "mb_out": 0.06,
+          "mb_in": 33.96,
+          "wait_s": 15.173,
+          "front_s": 14.824,
+          "net_s": 0.349
+        },
+        "learn": {
+          "norm_tps": 21.225,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": {
+            "aggregate_tps": 7.769,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 2
+          }
+        }
+      },
+      "i": 6
+    },
+    {
+      "wall_s": 3.474,
+      "prompt": "Summarize the following in exactly two short sentences.\n\nThe Mac Mini cluster ru",
+      "text": "The Mac Mini cluster runs one shared model across two machines. This setup allows for a unified model to be used across ",
+      "completion_tokens": 27,
+      "prompt_tokens": 526,
+      "total_s": 3.471,
+      "prefill_s": 2.231,
+      "tps": 21.774,
+      "learn": {
+        "norm_tps": 21.242,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 1
+        }
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 2.231,
+        "ttft_s": 2.277,
+        "total_s": 3.471,
+        "peak_gb": 2.88,
+        "split": {
+          "calls": 401,
+          "mb_out": 0.07,
+          "mb_in": 38.48,
+          "wait_s": 16.916,
+          "front_s": 16.545,
+          "net_s": 0.371
+        },
+        "learn": {
+          "norm_tps": 21.242,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 1
+          }
+        }
+      },
+      "i": 7
+    }
+  ],
+  "tuned_file": {
+    "key": "mlx-community--Meta-Llama-3.1-8B-Instruct-4bit:spanned",
+    "hardware": "spanned",
+    "model": "mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
+    "pending_reload": {},
+    "reply_n": 36,
+    "stats": {
+      "packer_layers:16": {
+        "mean": 17.435220767293274,
+        "n": 36,
+        "samples": [
+          20.24,
+          22.422,
+          5.629,
+          19.277,
+          16.729,
+          15.196,
+          18.044,
+          17.728,
+          22.478,
+          19.972,
+          19.604,
+          16.968,
+          20.262,
+          19.82,
+          20.076,
+          21.502,
+          21.208,
+          21.174,
+          21.225,
+          21.242
+        ],
+        "sum": 627.6679476225578
+      },
+      "pipeline_chats:1": {
+        "mean": 10.09423093202858,
+        "n": 8,
+        "samples": [
+          6.984,
+          4.974,
+          12.505,
+          17.819,
+          15.715,
+          7.207,
+          7.781,
+          7.769
+        ],
+        "sum": 80.75384745622864
+      },
+      "pipeline_chats:2": {
+        "mean": 16.167304509286826,
+        "n": 4,
+        "samples": [
+          11.299,
+          22.672,
+          13.913,
+          16.785
+        ],
+        "sum": 64.6692180371473
+      }
+    },
+    "updated_at": "2026-11-03T01:41:07Z",
+    "winner": {
+      "packer_layers": 16,
+      "pipeline_chats": 2
+    }
+  },
+  "learn_log": [
+    "19:40:31 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers (llama))",
+    "19:40:31 [mlx-worker] learn: want packer_layers=14 (queued from last run), packer has K=16; keeping loaded K=16 (restart packer without --split-packer-layers to try 14)",
+    "19:40:32 [mlx-worker] auto pipeline: chats=2 (headroom 3.1 GB after ~2.0 GB weights on 26 GB; Mini benches peak at 2 chats)",
+    "19:40:32 [mlx-worker] learned split: packer_layers=16 (saved winner for spanned)",
+    "19:40:32 [mlx-worker] learned pipeline: chats=2 (saved winner for spanned)",
+    "19:40:34 [mlx-worker] learn: re-check pipeline_chats=1 against current pipeline_chats=2",
+    "19:40:34 [mlx-worker] learn: keep packer_layers=16: best so far at 15.92 tok/s over 24 replies",
+    "19:40:37 [mlx-worker] learn: keep pipeline_chats=2: concurrent 16.17 still ahead of 10.57 tok/s",
+    "19:40:39 [mlx-worker] learn: keep pipeline_chats=2: concurrent 16.17 still ahead of 11.60 tok/s",
+    "19:40:39 [mlx-worker] learn: keep packer_layers=16: best so far at 16.47 tok/s over 28 replies",
+    "19:40:43 [mlx-worker] learn: keep pipeline_chats=2: concurrent 16.17 still ahead of 10.87 tok/s",
+    "19:40:43 [mlx-worker] learn: end trial pipeline_chats=1; back to winner pipeline_chats=2",
+    "19:40:50 [mlx-worker] learn: re-check pipeline_chats=1 against current pipeline_chats=2",
+    "19:40:53 [mlx-worker] learn: keep packer_layers=16: best so far at 16.96 tok/s over 32 replies",
+    "19:40:57 [mlx-worker] learn: keep pipeline_chats=2: concurrent 16.17 still ahead of 10.43 tok/s",
+    "19:41:04 [mlx-worker] learn: keep pipeline_chats=2: concurrent 16.17 still ahead of 10.09 tok/s",
+    "19:41:07 [mlx-worker] learn: keep packer_layers=16: best so far at 17.44 tok/s over 36 replies"
+  ]
+}

@@ -1,0 +1,206 @@
+[
+  {
+    "tag": "qwen25",
+    "phase": "packer_start",
+    "ts": "2026-11-02T20:38:36",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen25",
+    "phase": "race_start",
+    "ts": "2026-11-02T20:38:44",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen25",
+    "phase": "race_rc_0",
+    "ts": "2026-11-02T20:39:40",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen25",
+    "phase": "quality_start",
+    "ts": "2026-11-02T20:39:48",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen25",
+    "phase": "quality_rc_0",
+    "ts": "2026-11-02T20:40:13",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen25",
+    "phase": "trap_start",
+    "ts": "2026-11-02T20:40:20",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen25",
+    "phase": "trap_rc_0",
+    "ts": "2026-11-02T20:41:12",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen25",
+    "phase": "done",
+    "ts": "2026-11-02T20:41:18",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "distill",
+    "phase": "packer_start",
+    "ts": "2026-11-02T20:41:18",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "distill",
+    "phase": "race_start",
+    "ts": "2026-11-02T20:41:26",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "distill",
+    "phase": "race_rc_0",
+    "ts": "2026-11-02T20:43:20",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "distill",
+    "phase": "quality_start",
+    "ts": "2026-11-02T20:43:28",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "distill",
+    "phase": "quality_rc_0",
+    "ts": "2026-11-02T20:43:54",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "distill",
+    "phase": "trap_start",
+    "ts": "2026-11-02T20:44:02",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "distill",
+    "phase": "trap_rc_0",
+    "ts": "2026-11-02T20:48:16",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "distill",
+    "phase": "done",
+    "ts": "2026-11-02T20:48:27",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gptoss",
+    "phase": "packer_start",
+    "ts": "2026-11-02T20:48:27",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gptoss",
+    "phase": "race_start",
+    "ts": "2026-11-02T20:48:35",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gptoss",
+    "phase": "race_rc_0",
+    "ts": "2026-11-02T20:49:28",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gptoss",
+    "phase": "quality_start",
+    "ts": "2026-11-02T20:49:35",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gptoss",
+    "phase": "quality_rc_0",
+    "ts": "2026-11-02T20:49:52",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gptoss",
+    "phase": "trap_start",
+    "ts": "2026-11-02T20:50:00",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gptoss",
+    "phase": "trap_rc_0",
+    "ts": "2026-11-02T20:50:50",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gptoss",
+    "phase": "done",
+    "ts": "2026-11-02T20:50:57",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma",
+    "phase": "packer_start",
+    "ts": "2026-11-02T20:50:57",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma",
+    "phase": "race_start",
+    "ts": "2026-11-02T20:51:05",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma",
+    "phase": "race_rc_0",
+    "ts": "2026-11-02T20:51:56",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma",
+    "phase": "quality_start",
+    "ts": "2026-11-02T20:52:04",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma",
+    "phase": "quality_rc_0",
+    "ts": "2026-11-02T20:52:20",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma",
+    "phase": "trap_start",
+    "ts": "2026-11-02T20:52:28",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma",
+    "phase": "trap_rc_0",
+    "ts": "2026-11-02T20:53:17",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "gemma",
+    "phase": "done",
+    "ts": "2026-11-02T20:53:24",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3",
+    "phase": "packer_start",
+    "ts": "2026-11-02T20:53:24",
+    "zone": "America/Chicago"
+  },
+  {
+    "tag": "qwen3",
+    "phase": "race_start",
+    "ts": "2026-11-02T20:53:32",
+    "zone": "America/Chicago"
+  }
+]

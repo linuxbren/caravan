@@ -1,0 +1,29 @@
+=== MAIN (267 chars) ===
+67.8 vs 37.2 tok/s — seeded wrong at 1 chat, fixed by reply 6.
+
+Day 10 of building Caravan in the open, my homebrew app for running AI models across my Mac minis.
+
+Day 9 guessed chat counts from Mini memory. Can Caravan learn that from replies — and recover if wrong?
+
+intent: https://x.com/intent/post?text=67.8%20vs%2037.2%20tok%2Fs%20%E2%80%94%20seeded%20wrong%20at%201%20chat%2C%20fixed%20by%20reply%206.%0A%0ADay%2010%20of%20building%20Caravan%20in%20the%20open%2C%20my%20homebrew%20app%20for%20running%20AI%20models%20across%20my%20Mac%20minis.%0A%0ADay%209%20guessed%20chat%20counts%20from%20Mini%20memory.%20Can%20Caravan%20learn%20that%20from%20replies%20%E2%80%94%20and%20recover%20if%20wrong%3F
+
+=== REPLY1 (262 chars) ===
+Race: no flags, no saved file. Day 9's guess (2 overlapping chats) was already right on all 6 models — honest, the race never climbed.
+
+Trap (Qwen3): 1 chat ~37.2 writing speed vs 2 at once ~67.8. Flipped back to 2 by reply 6. Second load reads the saved winner.
+
+intent: https://x.com/intent/post?text=Race%3A%20no%20flags%2C%20no%20saved%20file.%20Day%209%27s%20guess%20%282%20overlapping%20chats%29%20was%20already%20right%20on%20all%206%20models%20%E2%80%94%20honest%2C%20the%20race%20never%20climbed.%0A%0ATrap%20%28Qwen3%29%3A%201%20chat%20~37.2%20writing%20speed%20vs%202%20at%20once%20~67.8.%20Flipped%20back%20to%202%20by%20reply%206.%20Second%20load%20reads%20the%20saved%20winner.
+
+=== REPLY2 (248 chars) ===
+Trust: quality 12/12 on all six (final answer only). Explore cost ~30% slower on 3 of 11 Llama replies, then back. Kill mid-run → restart resumes from the file. Long prompts did not flip the winner.
+
+Hand-tuned vs learned wall time wasn't measured.
+
+intent: https://x.com/intent/post?text=Trust%3A%20quality%2012%2F12%20on%20all%20six%20%28final%20answer%20only%29.%20Explore%20cost%20~30%25%20slower%20on%203%20of%2011%20Llama%20replies%2C%20then%20back.%20Kill%20mid-run%20%E2%86%92%20restart%20resumes%20from%20the%20file.%20Long%20prompts%20did%20not%20flip%20the%20winner.%0A%0AHand-tuned%20vs%20learned%20wall%20time%20wasn%27t%20measured.
+
+=== REPLY3 (176 chars) ===
+Next: optional ~/.caravan/config.toml so defaults can live in a file, not only flags and the learn cache.
+
+Ship learn-from-chats on by default, or keep it opt-in behind a flag?
+
+intent: https://x.com/intent/post?text=Next%3A%20optional%20~%2F.caravan%2Fconfig.toml%20so%20defaults%20can%20live%20in%20a%20file%2C%20not%20only%20flags%20and%20the%20learn%20cache.%0A%0AShip%20learn-from-chats%20on%20by%20default%2C%20or%20keep%20it%20opt-in%20behind%20a%20flag%3F

@@ -1,0 +1,649 @@
+{
+  "experiment": "quality",
+  "model": "gptoss",
+  "passed": 12,
+  "total": 12,
+  "max_tokens": 1024,
+  "scoring": "guess_ahead.final_answer_text + answer_ok / whole-word in final / letter-form of expect",
+  "rows": [
+    {
+      "wall_s": 1.474,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4",
+      "reasoning_content": "The user asks: \"What isThe user asks: \"What is 2+2? Reply with only the digit.\" So answer:The user asks: \"What is 2+2? Reply with only the digit.\" So answer: 4. Just the digit.",
+      "completion_tokens": 39,
+      "prompt_tokens": 80,
+      "total_s": 1.435,
+      "prefill_s": 0.276,
+      "tps": 33.65,
+      "learn": {
+        "norm_tps": 33.65,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.276,
+        "ttft_s": 0.307,
+        "total_s": 1.435,
+        "peak_gb": 5.68,
+        "split": {
+          "calls": 49,
+          "mb_out": 0.0,
+          "mb_in": 0.78,
+          "wait_s": 0.871,
+          "front_s": 0.739,
+          "net_s": 0.132
+        },
+        "learn": {
+          "norm_tps": 33.65,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 0
+    },
+    {
+      "wall_s": 1.623,
+      "prompt": "Spell the word cat.",
+      "text": "C\u2011A\u2011T",
+      "reasoning_content": "The user asks: \"Spell the word cat.\" They want the spelling. So answer: C-A-T. Probably just \"cat\". Provide the spelling.",
+      "completion_tokens": 46,
+      "prompt_tokens": 72,
+      "total_s": 1.614,
+      "prefill_s": 0.252,
+      "tps": 33.774,
+      "learn": {
+        "norm_tps": 33.774,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.252,
+        "ttft_s": 0.282,
+        "total_s": 1.614,
+        "peak_gb": 5.68,
+        "split": {
+          "calls": 100,
+          "mb_out": 0.01,
+          "mb_in": 1.45,
+          "wait_s": 1.613,
+          "front_s": 1.452,
+          "net_s": 0.161
+        },
+        "learn": {
+          "norm_tps": 33.774,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c\u2011a\u2011t",
+      "i": 1
+    },
+    {
+      "wall_s": 1.458,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.",
+      "reasoning_content": "The user asks: \"Is the sky usually blue? Yes or no.\" They want a simple yes or no. The answer: Yes.",
+      "completion_tokens": 40,
+      "prompt_tokens": 77,
+      "total_s": 1.448,
+      "prefill_s": 0.262,
+      "tps": 33.727,
+      "learn": {
+        "norm_tps": 33.727,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "packer_layers",
+          "value": 11
+        },
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.262,
+        "ttft_s": 0.292,
+        "total_s": 1.448,
+        "peak_gb": 5.68,
+        "split": {
+          "calls": 145,
+          "mb_out": 0.01,
+          "mb_in": 2.12,
+          "wait_s": 2.285,
+          "front_s": 2.099,
+          "net_s": 0.186
+        },
+        "learn": {
+          "norm_tps": 33.727,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "packer_layers",
+            "value": 11
+          },
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 2
+    },
+    {
+      "wall_s": 1.434,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4",
+      "reasoning_content": "The user asks: \"What isThe user asks: \"What is 2+2? Reply with only the digit.\" So answer:The user asks: \"What is 2+2? Reply with only the digit.\" So answer: 4. Just the digit.",
+      "completion_tokens": 39,
+      "prompt_tokens": 80,
+      "total_s": 1.424,
+      "prefill_s": 0.266,
+      "tps": 33.679,
+      "learn": {
+        "norm_tps": 33.679,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.266,
+        "ttft_s": 0.296,
+        "total_s": 1.424,
+        "peak_gb": 5.69,
+        "split": {
+          "calls": 189,
+          "mb_out": 0.02,
+          "mb_in": 2.81,
+          "wait_s": 2.948,
+          "front_s": 2.738,
+          "net_s": 0.211
+        },
+        "learn": {
+          "norm_tps": 33.679,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 3
+    },
+    {
+      "wall_s": 1.63,
+      "prompt": "Spell the word cat.",
+      "text": "C\u2011A\u2011T",
+      "reasoning_content": "The user asks: \"Spell the word cat.\" They want the spelling. So answer: C-A-T. Probably just \"cat\". Provide the spelling.",
+      "completion_tokens": 46,
+      "prompt_tokens": 72,
+      "total_s": 1.621,
+      "prefill_s": 0.252,
+      "tps": 33.601,
+      "learn": {
+        "norm_tps": 33.601,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.252,
+        "ttft_s": 0.282,
+        "total_s": 1.621,
+        "peak_gb": 5.69,
+        "split": {
+          "calls": 241,
+          "mb_out": 0.02,
+          "mb_in": 3.48,
+          "wait_s": 3.696,
+          "front_s": 3.456,
+          "net_s": 0.24
+        },
+        "learn": {
+          "norm_tps": 33.601,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c\u2011a\u2011t",
+      "i": 4
+    },
+    {
+      "wall_s": 1.462,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.",
+      "reasoning_content": "The user asks: \"Is the sky usually blue? Yes or no.\" They want a simple yes or no. The answer: Yes.",
+      "completion_tokens": 40,
+      "prompt_tokens": 77,
+      "total_s": 1.454,
+      "prefill_s": 0.263,
+      "tps": 33.585,
+      "learn": {
+        "norm_tps": 33.585,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.263,
+        "ttft_s": 0.293,
+        "total_s": 1.454,
+        "peak_gb": 5.69,
+        "split": {
+          "calls": 287,
+          "mb_out": 0.02,
+          "mb_in": 4.16,
+          "wait_s": 4.372,
+          "front_s": 4.107,
+          "net_s": 0.265
+        },
+        "learn": {
+          "norm_tps": 33.585,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 5
+    },
+    {
+      "wall_s": 1.437,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4",
+      "reasoning_content": "The user asks: \"What isThe user asks: \"What is 2+2? Reply with only the digit.\" So answer:The user asks: \"What is 2+2? Reply with only the digit.\" So answer: 4. Just the digit.",
+      "completion_tokens": 39,
+      "prompt_tokens": 80,
+      "total_s": 1.428,
+      "prefill_s": 0.266,
+      "tps": 33.563,
+      "learn": {
+        "norm_tps": 33.563,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.266,
+        "ttft_s": 0.297,
+        "total_s": 1.428,
+        "peak_gb": 5.69,
+        "split": {
+          "calls": 332,
+          "mb_out": 0.03,
+          "mb_in": 4.84,
+          "wait_s": 5.037,
+          "front_s": 4.747,
+          "net_s": 0.29
+        },
+        "learn": {
+          "norm_tps": 33.563,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 6
+    },
+    {
+      "wall_s": 1.632,
+      "prompt": "Spell the word cat.",
+      "text": "C\u2011A\u2011T",
+      "reasoning_content": "The user asks: \"Spell the word cat.\" They want the spelling. So answer: C-A-T. Probably just \"cat\". Provide the spelling.",
+      "completion_tokens": 46,
+      "prompt_tokens": 72,
+      "total_s": 1.624,
+      "prefill_s": 0.252,
+      "tps": 33.528,
+      "learn": {
+        "norm_tps": 33.528,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.252,
+        "ttft_s": 0.282,
+        "total_s": 1.624,
+        "peak_gb": 5.69,
+        "split": {
+          "calls": 384,
+          "mb_out": 0.03,
+          "mb_in": 5.52,
+          "wait_s": 5.785,
+          "front_s": 5.467,
+          "net_s": 0.319
+        },
+        "learn": {
+          "norm_tps": 33.528,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c\u2011a\u2011t",
+      "i": 7
+    },
+    {
+      "wall_s": 1.457,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.",
+      "reasoning_content": "The user asks: \"Is the sky usually blue? Yes or no.\" They want a simple yes or no. The answer: Yes.",
+      "completion_tokens": 40,
+      "prompt_tokens": 77,
+      "total_s": 1.454,
+      "prefill_s": 0.262,
+      "tps": 33.557,
+      "learn": {
+        "norm_tps": 33.557,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.262,
+        "ttft_s": 0.292,
+        "total_s": 1.454,
+        "peak_gb": 5.69,
+        "split": {
+          "calls": 430,
+          "mb_out": 0.03,
+          "mb_in": 6.19,
+          "wait_s": 6.457,
+          "front_s": 6.113,
+          "net_s": 0.344
+        },
+        "learn": {
+          "norm_tps": 33.557,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 8
+    },
+    {
+      "wall_s": 1.43,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4",
+      "reasoning_content": "The user asks: \"What isThe user asks: \"What is 2+2? Reply with only the digit.\" So answer:The user asks: \"What is 2+2? Reply with only the digit.\" So answer: 4. Just the digit.",
+      "completion_tokens": 39,
+      "prompt_tokens": 80,
+      "total_s": 1.428,
+      "prefill_s": 0.266,
+      "tps": 33.563,
+      "learn": {
+        "norm_tps": 33.563,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.266,
+        "ttft_s": 0.296,
+        "total_s": 1.428,
+        "peak_gb": 5.69,
+        "split": {
+          "calls": 475,
+          "mb_out": 0.04,
+          "mb_in": 6.87,
+          "wait_s": 7.117,
+          "front_s": 6.749,
+          "net_s": 0.368
+        },
+        "learn": {
+          "norm_tps": 33.563,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 9
+    },
+    {
+      "wall_s": 1.624,
+      "prompt": "Spell the word cat.",
+      "text": "C\u2011A\u2011T",
+      "reasoning_content": "The user asks: \"Spell the word cat.\" They want the spelling. So answer: C-A-T. Probably just \"cat\". Provide the spelling.",
+      "completion_tokens": 46,
+      "prompt_tokens": 72,
+      "total_s": 1.622,
+      "prefill_s": 0.252,
+      "tps": 33.577,
+      "learn": {
+        "norm_tps": 33.577,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.252,
+        "ttft_s": 0.282,
+        "total_s": 1.622,
+        "peak_gb": 5.69,
+        "split": {
+          "calls": 527,
+          "mb_out": 0.04,
+          "mb_in": 7.55,
+          "wait_s": 7.86,
+          "front_s": 7.464,
+          "net_s": 0.397
+        },
+        "learn": {
+          "norm_tps": 33.577,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c\u2011a\u2011t",
+      "i": 10
+    },
+    {
+      "wall_s": 1.46,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.",
+      "reasoning_content": "The user asks: \"Is the sky usually blue? Yes or no.\" They want a simple yes or no. The answer: Yes.",
+      "completion_tokens": 40,
+      "prompt_tokens": 77,
+      "total_s": 1.457,
+      "prefill_s": 0.263,
+      "tps": 33.501,
+      "learn": {
+        "norm_tps": 33.501,
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.263,
+        "ttft_s": 0.293,
+        "total_s": 1.457,
+        "peak_gb": 5.69,
+        "split": {
+          "calls": 573,
+          "mb_out": 0.05,
+          "mb_in": 8.22,
+          "wait_s": 8.534,
+          "front_s": 8.111,
+          "net_s": 0.423
+        },
+        "learn": {
+          "norm_tps": 33.501,
+          "winner": {
+            "packer_layers": 13,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 11
+    }
+  ],
+  "learn_log": [
+    "21:39:30 [mlx-worker] auto split: packer_layers=13 (equal RAM ~26/26 GB; balanced cut K=13 for 24 layers (gpt_oss))",
+    "21:39:32 [mlx-worker] auto pipeline: chats=2 (headroom 2.9 GB after ~5.0 GB weights on 26 GB; Mini benches peak at 2 chats)",
+    "21:39:38 [mlx-worker] learn: queue split packer_layers=11 for next load (near current 13)",
+    "21:39:39 [mlx-worker] learn: keep packer_layers=13: best so far at 33.71 tok/s over 4 replies",
+    "21:39:45 [mlx-worker] learn: keep packer_layers=13: best so far at 33.64 tok/s over 8 replies",
+    "21:39:51 [mlx-worker] learn: keep packer_layers=13: best so far at 33.61 tok/s over 12 replies"
+  ],
+  "rescored_note": "letter-form accept for spell-outs like C-A-T == cat; thinking still excluded"
+}

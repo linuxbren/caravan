@@ -1,0 +1,16 @@
+{
+  "models": {
+    "mlx-community--Meta-Llama-3.1-8B-Instruct-4bit:single": {
+      "hardware": "single",
+      "model": "mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
+      "pending_reload": {},
+      "reply_n": 8,
+      "stats": {},
+      "updated_at": null,
+      "winner": {
+        "pipeline_chats": 1
+      }
+    }
+  },
+  "version": 1
+}

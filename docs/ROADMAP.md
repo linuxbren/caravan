@@ -251,11 +251,34 @@ Open tasks for this rule:
       `auto pipeline: …`). Mini-verified auto ≡ hand-tuned on Qwen3,
       Llama 3.1 8B, Qwen2.5 14B (quality 3/3, no failures). See
       BENCHMARKS / METHODOLOGY.
-    - **(b) Learn per model.** *Planned.* After the first measured runs,
-      remember what worked for that model (for example Llama tops out at
-      2 chats — N=3 wall ≈ N=2 on the Nov 1 Mini suite) and reuse those
-      settings on the next load.
-    - **(c) Optional settings file.** *Planned.* `~/.caravan/config.toml`
+    - **(b) Learn per model.** *Shipped Nov 2 (Day 10).* Learn from real
+      chats instead of an up-front sweep: start from the Day 9 memory
+      guess (or a saved winner), serve each reply with the best settings
+      so far, and now and then try a nearby option for live knobs
+      (`pipeline_chats`, guess-ahead on/off). Reload-only knobs (packer
+      layer cut K) are queued and tried on the next load. Replies are
+      timed and length-normalized; several samples are required before
+      a switch. Winners are saved per model + hardware (`single` vs
+      `spanned`) to `~/.caravan/mlx/tuned-settings.json` and reused on
+      the next load, with slow re-checks so the tune adapts when things
+      change. Flags still win (`--no-learn` / `CARAVAN_NO_LEARN=1`
+      disables). One plain `learn:` log line on each keep/switch/try.
+      Module: `agent/tuned_settings.py`.
+      **Results (Mini-verified on all six models):** race with no flags and
+      no saved file kept the Day 9 guess (2 chats) on every model, so the
+      Day 9 guess was already right; learned single-chat writing speed
+      Llama 22.1 / Qwen3 44.5 / Gemma 37.3 / GPT-OSS 33.7 / Qwen2.5 12.3 /
+      Distill 12.4 tok/s (hand-tuned 22.6 / 45.0 / 38.4 / 34.3 / 12.4 /
+      12.3). Trap (seeded at 1 chat) relearned 2 chats by reply 6–10 on
+      every model (Qwen3: ~67.8 vs ~37.2 tok/s, switch at reply 6).
+      Quality 12/12 on all six (final answer only). Explore cost ~30%
+      slower on 3 of 11 Llama test replies. Second load and a mid-run
+      kill both resume from the saved file; long prompts kept 2 chats.
+      Hand-tuned vs learned time-to-tune was not measured. Note: the Day 10
+      Llama single-Mini vs spanned numbers (~16.4 vs ~22.1) came from a
+      different setup than the Oct 31 single-vs-split table and are not
+      directly comparable to it.
+    - **(c) Optional settings file.** *Next.* `~/.caravan/config.toml`
       for human overrides such as `guess_ahead = off` or a preferred
       pipeline N. **Flags stay and win over the file**, mainly so
       benchmarking can pin exact behavior without editing config.

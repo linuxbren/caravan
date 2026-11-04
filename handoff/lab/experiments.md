@@ -1,3 +1,49 @@
+## 2026-11-02 — Day 10: ROADMAP #13(b) learn from real chats
+
+**Goal.** Caravan learns best live settings from real chats (not an up-front sweep),
+saves per model/hardware to a tuned-settings file, and reuses them on the next load.
+Capture metrics for video slides (no video yet).
+
+**Build.** `agent/tuned_settings.py` + hooks in `agent/mlx_worker.py`. Live knobs:
+pipeline chat count and guess-ahead. Reload-only packer_layers K queued for next load.
+Length-normalized tok/s; MIN_SAMPLES=3; explore every 4 after incumbent has samples;
+SWITCH_MARGIN=1.03; fair concurrent probes for pipeline width; temporary explore trials
+that restore the winner. Flags still win (`--no-learn` / `CARAVAN_NO_LEARN` /
+`--tuned-settings`). Default save path `~/.caravan/mlx/tuned-settings.json` (lab used
+`~/.caravan/bench-2026-11-02/day10-learn/tuned-settings.json` via env). Unit tests:
+15 in `tests/test_tuned_settings.py`.
+
+**Hardware.** EXO1 lead + EXO2 packer, Thunderbolt 169.254.104.38:5560, lead test port
+8194, Low Power Mode off. Llama 3.1 8B Instruct 4-bit for all Day 10 metric runs.
+
+**Slide metrics (Llama, real numbers from result JSON under
+`~/.caravan/bench-2026-11-02/day10-learn/llama-*/result.json` on EXO1):**
+
+1. **Race** (no flags, no saved file): Day 9 guess already `pipeline_chats=2`.
+   `reached_best_pipeline_at_reply=0`. Single-chat decode ~22.1 tok/s mean (hand-tuned
+   22.6). Concurrent probe means: N=2 16.081 tok/s (n=4) vs N=1 10.795 (n=5). Winner stayed 2.
+2. **Trap** (seeded bad winner N=1): switched to N=2 at reply **8**. Final probe means
+   N=2 17.574 (n=5) vs N=1 10.098 (n=10).
+3. **Second load:** startup logged `learned pipeline: chats=2` (and learned split /
+   guess-ahead). First replies ~21.0 / 19.2 / 21.6 tok/s at winner 2.
+4. **Single vs both:** single Mini mean ~16.4 tok/s (winner `pipeline_chats=1`, key
+   `:single`); spanned race single-chat ~22.1, concurrent N=2 probe ~16.1.
+5. **Long-prompt mid-run:** short mean 19.052 tok/s, long mean 21.335; winner stayed
+   N=2 (N=2 probe 16.167 vs N=1 10.094). No retune away from 2 on this prompt mix.
+6. **Quality while exploring:** **12/12** fixed checks passed.
+7. **Cost of learning:** explore_mean 11.471 tok/s (n=3) vs keep_mean 16.32 (n=8) —
+   explore replies ~30% slower on this run.
+8. **Pull the plug:** tuned file existed mid-run; after kill/restart, startup
+   `learned pipeline: chats=2` / `learned split: packer_layers=16`; winner still 2.
+9. **Hand-tuned vs learned time:** lab log has Days 5–9 work but no single clockable
+   "hours spent hand-tuning pipeline_chats" figure — **not cleanly measurable** from
+   the log. Learned race confirmed the Day 9 guess in 0 replies (already best) and
+   trap climbed out in 8 replies.
+10. **All-models scoreboard:** only Llama fully run this session; Qwen3 / Qwen2.5
+    scoreboard **not captured** (time).
+
+**Post status.** Code and metrics on disk; not committed/pushed/tagged. No Day 10 video yet.
+
 ## 2026-11-01 — Day 9: ROADMAP #13(a) auto-pick split + pipeline
 
 **Goal.** When flags are omitted, `mlx_worker` auto-picks (1) pipeline chat
@@ -1526,3 +1572,53 @@ The short version asks right after the needle. The long version buries the needl
 - The first quality prompt was 10,040 tokens and was rejected (400, larger than the 8,192-token slot). Shortened to 6,915 tokens and re-run.
 
 **Post status:** not drafted.
+
+
+## Day 10 — learn-from-chats all-models scoreboard (2026-11-02, America/Chicago)
+
+Suite: race + quality + trap on Llama (earlier) plus Qwen3, Gemma 4, GPT-OSS, Qwen2.5-14B, Distill-Qwen-14B. No flags, no saved file on race. Scoreboard JSON: `handoff/lab/day10-all-models-scoreboard.json` and `~/.caravan/bench-2026-11-02/day10-learn/day10-all-models-scoreboard.json`.
+
+| model | Day9 guess | learned | wrong? | single tok/s | hand-tuned | quality | trap 1→2 |
+|---|---|---|---|---|---|---|---|
+| Llama 3.1 8B | 2 | 2 | no | 22.1 | 22.6 | 12/12 | @8 |
+| Qwen3 30B-A3B | 2 | 2 | no | 44.5 | 45.0 | 0/12 (empty; thinking) | @6 |
+| Gemma 4 26B | 2 | 2 | no | 37.3 | 38.4 | 0/12 (empty) | @8 |
+| GPT-OSS 20B | 2 | 2 | no | 33.7 | 34.3 | 0/12 (empty) | @8 |
+| Qwen2.5 14B | 2 | 2 | no | 12.3 | 12.4 | 12/12 | @10 |
+| Distill-Qwen 14B | 2 | 2 | no | 12.4 | 12.3 | 0/12 (empty; reasoning) | @6 |
+
+No model had a wrong Day 9 pipeline guess in the race (all kept N=2 from reply 0). Trap climbs prove learning still recovers from a bad N=1 seed. Best race story: **Qwen3** (99% of hand-tuned single, trap climb @6, probe N=2 ~67.8 vs N=1 ~37.2).
+
+
+### Day 10 quality fix (thinking models)
+
+Root cause: quality used `max_tokens=16`. Qwen3/Gemma/GPT-OSS/Distill burned the whole budget inside `<think>` / `<|channel>thought` / analysis, so the worker’s visible `content` was empty after stripping scratch channels.
+
+Fix (same idea as guess-ahead first-load gate): `max_tokens=1024`, score with `guess_ahead.final_answer_text` + `answer_ok` (final answer only). Letter-form of the expected word counts for “spell” answers (`C-A-T` == `cat`); thinking channels still do not. Re-ran all six; all **12/12**.
+
+
+## 2026-11-02 — Day 10 lab video (v17a/v17b) + X draft
+
+**Goal.** Lab video for #13b learn-from-chats in the same style as Day 9 v16
+(payoff first 3s, plain captions). Recommend two parts from length/content:
+“It tunes itself” and “Can you trust it?”. Draft Day 10 X; do not post.
+
+**Hardware / software.** Numbers from `day10-all-models-scoreboard.json` and
+llama/qwen3 result JSONs. Script `make_runtime_video_v17.py`, data
+`v17_data.json`.
+
+| part | file | dur |
+|---|---|---|
+| 1 It tunes itself | `2026-11-02_caravan-v3-day10-learn-it-tunes-itself_v17a.mp4` | 1:05 |
+| 2 Can you trust it? | `2026-11-02_caravan-v3-day10-learn-can-you-trust-it_v17b.mp4` | 1:11 |
+
+Also copied to `/workspace/out/`. IDs LAB-2026-11-02-01 / -02.
+
+**Llama single vs spanned caveat.** Day 10 Llama one-Mini (~16.4) vs
+both-Minis (~22.1) came from the Day 10 learn driver setup (test ports
+8194/5560, learn on, mixed explore replies), not the Oct 31 single-vs-split
+table setup; do not compare them directly.
+
+**Post status.** Scheduled by Brenden: Day 10 X post with v17a and Day 11
+X post with v17b (Day 9 also scheduled/posted). Committed as v3.8.
+

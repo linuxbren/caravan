@@ -609,6 +609,18 @@ class Engine:
         self.break_even_frac = 0.35
         self._chat_shutoffs = {}
         self._speculate_k_explicit = bool(getattr(args, "split_speculate_k_explicit", False))
+        # ROADMAP #13b learn-from-chats state (filled in _setup / _learn_apply_startup).
+        self._learn_enabled = not bool(getattr(args, "no_learn", False))
+        self._learn_path = getattr(args, "tuned_settings", None)
+        self._learn_store = None
+        self._learn_entry = None
+        self._learn_key = None
+        self._learn_explicit = {}
+        self._learn_guess_override = None  # None = follow draft_model; True/False force
+        self._learn_n_layers = None
+        self._learn_lock = threading.Lock()
+        self._learn_trial = None
+        self._learn_conc_window = []
         self.model_dir = Path(args.model).expanduser().resolve()
         ready = queue.Queue()
         self.thread = threading.Thread(target=self._main, args=(ready,), name="mlx", daemon=True)
@@ -641,6 +653,7 @@ class Engine:
                 self.client.enable_gpu_keepalive(mx)
                 log("lead GPU keepalive on (warms Metal while waiting for packer 1)")
             # ROADMAP #13a: auto packer layers when --split-packer-layers omitted.
+            self._learn_packer_was_explicit = args.split_front_layers is not None
             if args.split_front_layers is None:
                 hello0 = self.client.call("hello", proto=S.PROTO)[0]
                 lead_total, lead_avail = S.host_memory_gb()
@@ -656,6 +669,42 @@ class Engine:
                         f"--split-packer-layers {k} on both).")
                 args.split_front_layers = k
                 log(f"auto split: packer_layers={k} ({reason})")
+            # ROADMAP #13b: overlay saved/pending packer_layers BEFORE weights load.
+            if self._learn_enabled and not self._learn_packer_was_explicit:
+                try:
+                    import tuned_settings as TS
+                except ImportError:
+                    import importlib
+                    TS = importlib.import_module("tuned_settings")
+                tpath = Path(self._learn_path).expanduser() if self._learn_path else None
+                st = TS.load_store(tpath)
+                key = TS.entry_key(self.model_dir, spanned=True)
+                entry = (st.get("models") or {}).get(key) or {}
+                winner_k = (entry.get("winner") or {}).get("packer_layers")
+                pending = dict(entry.get("pending_reload") or {})
+                pending_k = pending.get("packer_layers")
+                chosen, why = None, None
+                if pending_k is not None:
+                    chosen, why = int(pending_k), "queued from last run"
+                elif winner_k is not None:
+                    chosen, why = int(winner_k), "saved winner for spanned"
+                if chosen is not None and int(args.split_front_layers) != chosen:
+                    hello_chk = self.client.call("hello", proto=S.PROTO)[0]
+                    pack_k = int((hello_chk.get("range") or [0, 0])[1] or 0)
+                    if pack_k and pack_k != chosen:
+                        log(f"learn: want packer_layers={chosen} ({why}), packer has K={pack_k}; "
+                            f"keeping loaded K={args.split_front_layers} "
+                            f"(restart packer without --split-packer-layers to try {chosen})")
+                    else:
+                        log(f"learned split: packer_layers={chosen} ({why})")
+                        args.split_front_layers = chosen
+                        if pending_k is not None and key in (st.get("models") or {}):
+                            # Consume pending so next load doesn't re-try forever.
+                            st["models"][key].setdefault("pending_reload", {}).pop("packer_layers", None)
+                            try:
+                                TS.save_store(st, tpath)
+                            except OSError:
+                                pass
             self.stage = S.Stage(self.model_dir, "head", args.split_front_layers)
             self.model = S.SplitModel(self.stage, self.client)
             self.tokenizer = load_tokenizer(self.model_dir, eos_token_ids=cfg0.get("eos_token_id"))
@@ -726,6 +775,7 @@ class Engine:
                 log(f"split speculate: prompt-lookup n={self.prompt_lookup_n}, "
                     f"k={self.speculate_k} (idea 3 draft-free)")
         else:
+            self._learn_packer_was_explicit = getattr(args, "split_front_layers", None) is not None
             self.model, self.tokenizer = load(str(self.model_dir))
         cfg = json.loads((self.model_dir / "config.json").read_text())
         self.model_type = cfg.get("model_type", "")
@@ -776,8 +826,253 @@ class Engine:
             f"prefill step {self.prefill_step}, kv bits {args.kv_bits or 16}, persist="
             + (f"on {self.store.cache_dir}" if self.store.persist else "off"))
         # Non-split (or unresolved) auto → serial one chat.
+        # Must run before learn startup so single-Mini seeds winner pipeline_chats=1.
         if self.pipeline_chats is None:
             self.pipeline_chats = 1
+        # ROADMAP #13b: overlay saved per-model winners (flags still win).
+        self._learn_apply_startup()
+
+    def _learn_apply_startup(self):
+        """ROADMAP #13b: start from saved winners when flags didn't pin a value."""
+        if not self._learn_enabled:
+            return
+        try:
+            import tuned_settings as TS
+        except ImportError:
+            import importlib
+            TS = importlib.import_module("tuned_settings")
+        spanned = self.client is not None
+        explicit = {}
+        if self._pipeline_chats_explicit:
+            explicit["pipeline_chats"] = self.pipeline_chats
+        # Packer layers already applied (or kept) before weight load; treat as pinned
+        # for this process so resolve_startup only handles live settings here.
+        # Only pin packer_layers when the user passed the flag — Day 9 auto
+        # also writes args.split_front_layers, and that must stay learnable.
+        if getattr(self, "_learn_packer_was_explicit", False):
+            explicit["packer_layers"] = int(self.args.split_front_layers)
+        if bool(getattr(self.args, "no_split_draft", False)):
+            explicit["guess_ahead"] = False
+        day9_k = getattr(self.args, "split_front_layers", None)
+        day9_n = self.pipeline_chats
+        day9_g = True if self.draft_model is not None else (
+            False if bool(getattr(self.args, "no_split_draft", False)) else None)
+        n_layers = None
+        if hasattr(self, "stage") and self.stage is not None:
+            n_layers = getattr(self.stage, "n_layers", None)
+            self._learn_n_layers = n_layers
+        # Detect whether packer layers came from CLI: args keep the value either way.
+        # We stash before auto in _setup; if missing, treat as not explicit.
+        if not hasattr(self, "_learn_packer_was_explicit"):
+            # Reconstruct: AutoTune only runs when initially None; we set a marker there.
+            self._learn_packer_was_explicit = False
+        path = Path(self._learn_path).expanduser() if self._learn_path else None
+        r = TS.resolve_startup(
+            model_dir=self.model_dir, spanned=spanned,
+            day9_packer_layers=int(day9_k) if day9_k is not None else None,
+            day9_pipeline_chats=int(day9_n) if day9_n is not None else None,
+            day9_guess_ahead=day9_g,
+            explicit=explicit,
+            path=path,
+            n_layers=n_layers,
+        )
+        self._learn_store = r["store"]
+        self._learn_entry = r["entry"]
+        self._learn_key = r["key"]
+        self._learn_explicit = dict(explicit)
+        # Single Mini: only width 1 exists; don't explore 2.
+        if not spanned and "pipeline_chats" not in self._learn_explicit:
+            self._learn_explicit["pipeline_chats"] = 1
+            self.pipeline_chats = 1
+            w = (self._learn_entry.setdefault("winner", {}))
+            w["pipeline_chats"] = 1
+        # Apply pipeline chats from learned winner when not flagged.
+        if "pipeline_chats" not in explicit and r["pipeline_chats"] is not None:
+            if self.pipeline_chats != int(r["pipeline_chats"]):
+                self.pipeline_chats = int(r["pipeline_chats"])
+        # Guess-ahead: only force-off/on when we have a draft available or an explicit off.
+        if "guess_ahead" not in explicit and r["guess_ahead"] is not None:
+            want = bool(r["guess_ahead"])
+            if not want and self.draft_model is not None:
+                self._learn_guess_override = False
+            elif want:
+                self._learn_guess_override = True
+        for line in r["reasons"]:
+            if line.startswith("learned") or line.startswith("try split") or line.startswith("flag"):
+                log(line)
+            elif "saved winner" in line or "queued" in line:
+                log(line)
+        # Persist seeded winner so a crash still remembers the Day 9 starting point.
+        try:
+            TS.save_store(self._learn_store, path)
+        except OSError as e:
+            log(f"learn: could not save tuned settings ({e!r})")
+
+    def _learn_guess_ahead_on(self):
+        if self._learn_guess_override is not None:
+            return bool(self._learn_guess_override)
+        return self.draft_model is not None
+
+    def _learn_observe(self, info: dict):
+        """Record one finished reply; maybe promote a winner or explore next.
+
+        pipeline_chats is NOT scored from single-chat decode tok/s (N=1 and N=2
+        look the same alone). Concurrent completions feed record_pipeline_probe()
+        with aggregate tok/s; near-back-to-back serial completions (N=1) do too.
+        Explore trials are temporary: after trial_replies we restore the winner.
+        """
+        if not self._learn_enabled or self._learn_entry is None or not info:
+            return
+        try:
+            import tuned_settings as TS
+        except ImportError:
+            import importlib
+            TS = importlib.import_module("tuned_settings")
+        settings_used = {
+            "pipeline_chats": self.pipeline_chats,
+            "guess_ahead": self._learn_guess_ahead_on() if self.client is not None else None,
+            "packer_layers": getattr(self.args, "split_front_layers", None),
+        }
+        with self._learn_lock:
+            out = TS.observe_reply(
+                self._learn_entry,
+                settings_used=settings_used,
+                completion_tokens=int(info.get("completion_tokens") or 0),
+                total_s=float(info.get("total_s") or 0.0),
+                prefill_s=float(info.get("prefill_s") or 0.0),
+                prompt_tokens=int(info.get("prompt_tokens") or 0),
+                explicit=self._learn_explicit,
+                n_layers=self._learn_n_layers,
+            )
+            # Single Mini: no concurrent pipe. Still record decode tok/s under
+            # pipeline_chats=1 even though width is pinned (explicit would skip).
+            if self.client is None and "pipeline_chats" not in (self._learn_explicit or {}):
+                pass  # observe_reply already recorded if not pinned
+            elif self.client is None:
+                TS.record_sample(self._learn_entry, "pipeline_chats", 1, out["norm_tps"])
+            # Window of recent replies for pipeline_chats scoring.
+            now = time.time()
+            total_s = float(info.get("total_s") or 0.0)
+            start = float(info["t0"]) if info.get("t0") is not None else (now - total_s)
+            end = start + total_s if info.get("t0") is not None else now
+            if end > now + 0.05:
+                end = now
+            if not hasattr(self, "_learn_conc_window"):
+                self._learn_conc_window = []
+            self._learn_conc_window = [
+                w for w in self._learn_conc_window if now - w["end"] < 4.0
+            ]
+            self._learn_conc_window.append({
+                "start": start,
+                "end": end,
+                "ct": int(info.get("completion_tokens") or 0),
+                "total_s": total_s,
+                "n": int(self.pipeline_chats or 1),
+            })
+            pipe_out = None
+            agg = None
+            n_used = None
+            if ("pipeline_chats" not in self._learn_explicit
+                    and self.client is not None
+                    and len(self._learn_conc_window) >= 2):
+                # Prefer true overlaps (concurrent N>=2). Else score a serial
+                # pair (typical when exploring pipeline_chats=1).
+                overlapped = []
+                for w in self._learn_conc_window:
+                    if any(w["start"] < o["end"] and o["start"] < w["end"] and w is not o
+                           for o in self._learn_conc_window):
+                        overlapped.append(w)
+                same = []
+                if len(overlapped) >= 2:
+                    n_used = int(overlapped[-1]["n"])
+                    same = [w for w in overlapped if int(w["n"]) == n_used]
+                if len(same) < 2:
+                    # Serial burst only scores pipeline_chats=1 (two requests
+                    # that had to wait on each other). Never treat sequential
+                    # singles at N>=2 as a concurrent probe — that would fake
+                    # samples for the Day 9 guess without exercising the pipe.
+                    a, b = self._learn_conc_window[-2], self._learn_conc_window[-1]
+                    if (int(a["n"]) == int(b["n"]) == 1
+                            and not (a["start"] < b["end"] and b["start"] < a["end"])
+                            and b["start"] - a["end"] < 1.5):
+                        n_used = 1
+                        same = [a, b]
+                if len(same) >= 2 and n_used is not None:
+                    wall0 = min(w["start"] for w in same)
+                    wall1 = max(w["end"] for w in same)
+                    wall = max(0.001, wall1 - wall0)
+                    toks = sum(w["ct"] for w in same)
+                    agg = toks / wall
+                    pipe_out = TS.record_pipeline_probe(
+                        self._learn_entry, n_chats=n_used, aggregate_tps=agg,
+                        explicit=self._learn_explicit)
+                    for name, val, reason in pipe_out.get("promotions") or []:
+                        log(f"learn: {reason}")
+                        if name == "pipeline_chats":
+                            self.pipeline_chats = max(1, int(val))
+                    for reason in (pipe_out.get("keep_reasons") or [])[:1]:
+                        log(f"learn: {reason}")
+                    self._learn_conc_window = [
+                        w for w in self._learn_conc_window if w not in same
+                    ]
+
+            for name, val, reason in out.get("promotions") or []:
+                log(f"learn: {reason}")
+                if name == "pipeline_chats":
+                    self.pipeline_chats = max(1, int(val))
+            for reason in (out.get("keep_reasons") or [])[:1]:
+                log(f"learn: {reason}")
+
+            # Tick down an explore trial; restore the winner when it ends so we
+            # don't get stuck on a challenger that never earned promotion.
+            trial = getattr(self, "_learn_trial", None)
+            if trial:
+                trial["remaining"] = int(trial.get("remaining") or 0) - 1
+                if trial["remaining"] <= 0:
+                    w = dict((self._learn_entry or {}).get("winner") or {})
+                    if trial.get("name") == "pipeline_chats" and "pipeline_chats" in w:
+                        self.pipeline_chats = max(1, int(w["pipeline_chats"]))
+                        log(f"learn: end trial pipeline_chats={trial.get('value')}; "
+                            f"back to winner pipeline_chats={self.pipeline_chats}")
+                    elif trial.get("name") == "guess_ahead" and "guess_ahead" in w:
+                        self._learn_guess_override = bool(w["guess_ahead"])
+                        log(f"learn: end trial guess_ahead; back to winner "
+                            f"guess_ahead={self._learn_guess_override}")
+                    self._learn_trial = None
+
+            explore = out.get("explore")
+            if explore and not getattr(self, "_learn_trial", None):
+                name, val = explore["name"], explore["value"]
+                log(f"learn: {explore['reason']}")
+                if not explore.get("deferred"):
+                    if name == "pipeline_chats" and "pipeline_chats" not in self._learn_explicit:
+                        self.pipeline_chats = max(1, int(val))
+                        self._learn_trial = {
+                            "name": name, "value": val,
+                            "remaining": int(explore.get("trial_replies") or TS.MIN_SAMPLES),
+                        }
+                    elif name == "guess_ahead" and "guess_ahead" not in self._learn_explicit:
+                        self._learn_guess_override = bool(val)
+                        self._learn_trial = {
+                            "name": name, "value": val,
+                            "remaining": int(explore.get("trial_replies") or TS.MIN_SAMPLES),
+                        }
+            path = Path(self._learn_path).expanduser() if self._learn_path else None
+            try:
+                TS.save_store(self._learn_store, path)
+            except OSError as e:
+                log(f"learn: save failed ({e!r})")
+            winner = dict((pipe_out or {}).get("winner") or out.get("winner") or {})
+            self._last_learn = {
+                "norm_tps": round(out["norm_tps"], 3),
+                "winner": winner,
+                "explore": ({"name": explore["name"], "value": explore["value"]}
+                            if explore else None),
+                "pipeline_probe": (
+                    {"aggregate_tps": round(agg, 3), "n": n_used}
+                    if pipe_out is not None else None),
+                "trial": (dict(self._learn_trial) if getattr(self, "_learn_trial", None) else None),
+            }
 
     def _main(self, ready):
         try:
@@ -786,7 +1081,10 @@ class Engine:
             ready.put(e)
             return
         ready.put(None)
-        if self.pipeline_chats <= 1 or self.client is None:
+        # Spanned lead always uses the pipeline loop so live learn trials can
+        # raise pipeline_chats from 1→2 without a process restart. N=1 simply
+        # admits one decoding slot. Single-Mini (no client) stays serial.
+        if self.client is None:
             while True:
                 job = self.jobs.get()
                 if job is None:
@@ -806,7 +1104,7 @@ class Engine:
                         out.put(("error", e))
                     out.put(None)
         else:
-            if self.pipeline_chats is None:
+            if self.pipeline_chats is None or int(self.pipeline_chats) < 1:
                 self.pipeline_chats = 1
             log(f"split pipeline chats={self.pipeline_chats} (idea 1; overlap packer/lead across sessions)")
             self._main_pipeline()
@@ -1384,9 +1682,15 @@ class Engine:
                 elif shut.disabled:
                     shut = shut  # keep disabled
             self._active_shutoff = shut
+            # ROADMAP #13b: learn override can force guess-ahead off (or on when draft loaded).
+            if self._learn_guess_override is False:
+                draft_ok = False
+            elif self._learn_guess_override is True:
+                draft_ok = self.draft_model is not None and not (shut and shut.disabled)
+            else:
+                draft_ok = self.draft_model is not None and not (shut and shut.disabled)
             use_spec = self.client is not None and (
-                (self.draft_model is not None and not (shut and shut.disabled))
-                or int(self.prompt_lookup_n) > 0)
+                draft_ok or int(self.prompt_lookup_n) > 0)
             if use_spec:
                 # Detokenize ourselves (stream_generate path does this inside mlx_lm).
                 detok = self.tokenizer
@@ -1500,6 +1804,9 @@ class Engine:
             f"total {info['total_s']:.2f}s, peak {info['peak_gb']} GB")
         if self.client is not None and hasattr(self.model, "session_key"):
             self.model.session_key = None
+        self._learn_observe(info)
+        if getattr(self, "_last_learn", None):
+            info["learn"] = self._last_learn
         yield ("done", info)
 
 
@@ -1836,6 +2143,7 @@ class Engine:
                 "completion_tokens": slot.n_gen, "finish": slot.finish or "length",
                 "prefill_s": round(slot.t_prefill, 3),
                 "ttft_s": round(slot.ttft or 0, 3), "total_s": round(time.time() - slot.t0, 3),
+                "t0": float(slot.t0),
                 "peak_gb": round(mx.get_peak_memory() / 1e9, 2),
                 "pipeline": True}
         if self.client is not None:
@@ -1846,6 +2154,9 @@ class Engine:
                              "net_s": round(st["wait_s"] - st["front_s"], 3)}
         log(f"session {slot.key}: pipeline, reused {slot.n_reused}/{len(slot.prompt)}, "
             f"{slot.n_gen} generated, total {info['total_s']:.2f}s, peak {info['peak_gb']} GB")
+        self._learn_observe(info)
+        if getattr(self, "_last_learn", None):
+            info["learn"] = self._last_learn
         slot.out.put(("done", info))
 
 
@@ -2069,7 +2380,7 @@ def make_handler(engine: "Engine"):
             usage = {"prompt_tokens": info["prompt_tokens"], "completion_tokens": info["completion_tokens"],
                      "total_tokens": info["prompt_tokens"] + info["completion_tokens"],
                      "prompt_tokens_details": {"cached_tokens": info["cached_tokens"]},
-                     "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb", "split", "speculate")
+                     "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb", "split", "speculate", "learn")
                                  if k in info}}
             try:
                 if stream:
@@ -2172,6 +2483,15 @@ def build_parser():
     ap.add_argument("--split-prompt-lookup", type=int, default=_pl_default, metavar="N",
                     help="idea 3 draft-free: prompt-lookup / n-gram max size N (0=off). "
                          "Env CARAVAN_MLX_SPLIT_PROMPT_LOOKUP")
+    # ROADMAP #13b: learn from real chats (Day 10). CARAVAN_NO_LEARN=1 disables.
+    _learn_env = os.environ.get("CARAVAN_NO_LEARN", "")
+    _learn_off = _learn_env.strip().lower() in ("1", "true", "yes", "on")
+    ap.add_argument("--no-learn", action="store_true", default=_learn_off,
+                    help="ROADMAP #13b: disable learn-from-real-chats (also CARAVAN_NO_LEARN=1)")
+    ap.add_argument("--tuned-settings", default=os.environ.get("CARAVAN_TUNED_SETTINGS") or None,
+                    metavar="PATH",
+                    help="ROADMAP #13b: path for per-model learned settings "
+                         "(default ~/.caravan/mlx/tuned-settings.json; env CARAVAN_TUNED_SETTINGS)")
     return ap
 
 

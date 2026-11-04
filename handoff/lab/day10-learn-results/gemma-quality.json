@@ -1,0 +1,649 @@
+{
+  "experiment": "quality",
+  "model": "gemma",
+  "passed": 12,
+  "total": 12,
+  "max_tokens": 1024,
+  "scoring": "guess_ahead.final_answer_text + answer_ok / whole-word in final / letter-form of expect",
+  "rows": [
+    {
+      "wall_s": 2.394,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<turn|>",
+      "reasoning_content": "\n*   Question: \"What is 2+2?\"\n    *   Constraint: \"Reply with only the digit.\"\n\n    *   2 + 2 = 4.\n\n    *   The result is 4.\n    *   The constraint is \"only the digit\".\n    *   The digit is 4.\n\n    *   4.",
+      "completion_tokens": 81,
+      "prompt_tokens": 29,
+      "total_s": 2.343,
+      "prefill_s": 0.197,
+      "tps": 37.745,
+      "learn": {
+        "norm_tps": 37.745,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.197,
+        "ttft_s": 0.229,
+        "total_s": 2.343,
+        "peak_gb": 6.92,
+        "split": {
+          "calls": 91,
+          "mb_out": 0.01,
+          "mb_in": 0.71,
+          "wait_s": 1.289,
+          "front_s": 1.109,
+          "net_s": 0.18
+        },
+        "learn": {
+          "norm_tps": 37.745,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 0
+    },
+    {
+      "wall_s": 1.081,
+      "prompt": "Spell the word cat.",
+      "text": "C-A-T<turn|>",
+      "reasoning_content": "\nThe user wants me to spell the word \"cat\".\nThe word is \"cat\".\nC-A-T.",
+      "completion_tokens": 35,
+      "prompt_tokens": 21,
+      "total_s": 1.073,
+      "prefill_s": 0.148,
+      "tps": 37.838,
+      "learn": {
+        "norm_tps": 37.838,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.148,
+        "ttft_s": 0.176,
+        "total_s": 1.073,
+        "peak_gb": 6.92,
+        "split": {
+          "calls": 131,
+          "mb_out": 0.01,
+          "mb_in": 1.02,
+          "wait_s": 1.798,
+          "front_s": 1.595,
+          "net_s": 0.203
+        },
+        "learn": {
+          "norm_tps": 37.838,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c-a-t",
+      "i": 1
+    },
+    {
+      "wall_s": 3.019,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<turn|>",
+      "reasoning_content": "\n*   Question: \"Is the sky usually blue? Yes or no.\"\n    *   Constraint: \"Yes or no.\"\n\n    *   The sky appears blue during the day due to Rayleigh scattering of sunlight by the atmosphere.\n    *   Under typical daytime conditions on Earth, the sky is blue.\n    *   Therefore, the answer is \"Yes.\"\n\n    *   The user requested a \"Yes or no\" answer.\n    *   Direct answer: \"Yes.\"",
+      "completion_tokens": 107,
+      "prompt_tokens": 26,
+      "total_s": 3.01,
+      "prefill_s": 0.173,
+      "tps": 37.716,
+      "learn": {
+        "norm_tps": 37.716,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "packer_layers",
+          "value": 14
+        },
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.173,
+        "ttft_s": 0.202,
+        "total_s": 3.01,
+        "peak_gb": 6.93,
+        "split": {
+          "calls": 243,
+          "mb_out": 0.02,
+          "mb_in": 1.77,
+          "wait_s": 3.193,
+          "front_s": 2.927,
+          "net_s": 0.266
+        },
+        "learn": {
+          "norm_tps": 37.716,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "packer_layers",
+            "value": 14
+          },
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 2
+    },
+    {
+      "wall_s": 2.338,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<turn|>",
+      "reasoning_content": "\n*   Question: \"What is 2+2?\"\n    *   Constraint: \"Reply with only the digit.\"\n\n    *   2 + 2 = 4.\n\n    *   The result is 4.\n    *   The constraint is \"only the digit\".\n    *   The digit is 4.\n\n    *   4.",
+      "completion_tokens": 81,
+      "prompt_tokens": 29,
+      "total_s": 2.33,
+      "prefill_s": 0.188,
+      "tps": 37.815,
+      "learn": {
+        "norm_tps": 37.815,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.188,
+        "ttft_s": 0.217,
+        "total_s": 2.33,
+        "peak_gb": 6.94,
+        "split": {
+          "calls": 329,
+          "mb_out": 0.02,
+          "mb_in": 2.39,
+          "wait_s": 4.279,
+          "front_s": 3.965,
+          "net_s": 0.313
+        },
+        "learn": {
+          "norm_tps": 37.815,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 3
+    },
+    {
+      "wall_s": 1.087,
+      "prompt": "Spell the word cat.",
+      "text": "C-A-T<turn|>",
+      "reasoning_content": "\nThe user wants me to spell the word \"cat\".\nThe word is \"cat\".\nC-A-T.",
+      "completion_tokens": 35,
+      "prompt_tokens": 21,
+      "total_s": 1.08,
+      "prefill_s": 0.148,
+      "tps": 37.554,
+      "learn": {
+        "norm_tps": 37.554,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.148,
+        "ttft_s": 0.177,
+        "total_s": 1.08,
+        "peak_gb": 6.94,
+        "split": {
+          "calls": 370,
+          "mb_out": 0.03,
+          "mb_in": 2.71,
+          "wait_s": 4.792,
+          "front_s": 4.456,
+          "net_s": 0.336
+        },
+        "learn": {
+          "norm_tps": 37.554,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c-a-t",
+      "i": 4
+    },
+    {
+      "wall_s": 3.024,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<turn|>",
+      "reasoning_content": "\n*   Question: \"Is the sky usually blue? Yes or no.\"\n    *   Constraint: \"Yes or no.\"\n\n    *   The sky appears blue during the day due to Rayleigh scattering of sunlight by the atmosphere.\n    *   Under typical daytime conditions on Earth, the sky is blue.\n    *   Therefore, the answer is \"Yes.\"\n\n    *   The user requested a \"Yes or no\" answer.\n    *   Direct answer: \"Yes.\"",
+      "completion_tokens": 107,
+      "prompt_tokens": 26,
+      "total_s": 3.018,
+      "prefill_s": 0.174,
+      "tps": 37.623,
+      "learn": {
+        "norm_tps": 37.623,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.174,
+        "ttft_s": 0.203,
+        "total_s": 3.018,
+        "peak_gb": 6.94,
+        "split": {
+          "calls": 483,
+          "mb_out": 0.03,
+          "mb_in": 3.46,
+          "wait_s": 6.191,
+          "front_s": 5.793,
+          "net_s": 0.399
+        },
+        "learn": {
+          "norm_tps": 37.623,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 5
+    },
+    {
+      "wall_s": 2.353,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<turn|>",
+      "reasoning_content": "\n*   Question: \"What is 2+2?\"\n    *   Constraint: \"Reply with only the digit.\"\n\n    *   2 + 2 = 4.\n\n    *   The result is 4.\n    *   The constraint is \"only the digit\".\n    *   The digit is 4.\n\n    *   4.",
+      "completion_tokens": 81,
+      "prompt_tokens": 29,
+      "total_s": 2.346,
+      "prefill_s": 0.189,
+      "tps": 37.552,
+      "learn": {
+        "norm_tps": 37.552,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.189,
+        "ttft_s": 0.218,
+        "total_s": 2.346,
+        "peak_gb": 6.94,
+        "split": {
+          "calls": 570,
+          "mb_out": 0.04,
+          "mb_in": 4.08,
+          "wait_s": 7.286,
+          "front_s": 6.839,
+          "net_s": 0.446
+        },
+        "learn": {
+          "norm_tps": 37.552,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 6
+    },
+    {
+      "wall_s": 1.086,
+      "prompt": "Spell the word cat.",
+      "text": "C-A-T<turn|>",
+      "reasoning_content": "\nThe user wants me to spell the word \"cat\".\nThe word is \"cat\".\nC-A-T.",
+      "completion_tokens": 35,
+      "prompt_tokens": 21,
+      "total_s": 1.08,
+      "prefill_s": 0.148,
+      "tps": 37.554,
+      "learn": {
+        "norm_tps": 37.554,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.148,
+        "ttft_s": 0.177,
+        "total_s": 1.08,
+        "peak_gb": 6.94,
+        "split": {
+          "calls": 611,
+          "mb_out": 0.04,
+          "mb_in": 4.39,
+          "wait_s": 7.796,
+          "front_s": 7.327,
+          "net_s": 0.469
+        },
+        "learn": {
+          "norm_tps": 37.554,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c-a-t",
+      "i": 7
+    },
+    {
+      "wall_s": 3.022,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<turn|>",
+      "reasoning_content": "\n*   Question: \"Is the sky usually blue? Yes or no.\"\n    *   Constraint: \"Yes or no.\"\n\n    *   The sky appears blue during the day due to Rayleigh scattering of sunlight by the atmosphere.\n    *   Under typical daytime conditions on Earth, the sky is blue.\n    *   Therefore, the answer is \"Yes.\"\n\n    *   The user requested a \"Yes or no\" answer.\n    *   Direct answer: \"Yes.\"",
+      "completion_tokens": 107,
+      "prompt_tokens": 26,
+      "total_s": 3.02,
+      "prefill_s": 0.173,
+      "tps": 37.583,
+      "learn": {
+        "norm_tps": 37.583,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.173,
+        "ttft_s": 0.202,
+        "total_s": 3.02,
+        "peak_gb": 6.94,
+        "split": {
+          "calls": 724,
+          "mb_out": 0.05,
+          "mb_in": 5.14,
+          "wait_s": 9.195,
+          "front_s": 8.663,
+          "net_s": 0.532
+        },
+        "learn": {
+          "norm_tps": 37.583,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 8
+    },
+    {
+      "wall_s": 2.342,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<turn|>",
+      "reasoning_content": "\n*   Question: \"What is 2+2?\"\n    *   Constraint: \"Reply with only the digit.\"\n\n    *   2 + 2 = 4.\n\n    *   The result is 4.\n    *   The constraint is \"only the digit\".\n    *   The digit is 4.\n\n    *   4.",
+      "completion_tokens": 81,
+      "prompt_tokens": 29,
+      "total_s": 2.34,
+      "prefill_s": 0.188,
+      "tps": 37.639,
+      "learn": {
+        "norm_tps": 37.639,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.188,
+        "ttft_s": 0.218,
+        "total_s": 2.34,
+        "peak_gb": 6.94,
+        "split": {
+          "calls": 811,
+          "mb_out": 0.06,
+          "mb_in": 5.76,
+          "wait_s": 10.284,
+          "front_s": 9.704,
+          "net_s": 0.579
+        },
+        "learn": {
+          "norm_tps": 37.639,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 9
+    },
+    {
+      "wall_s": 1.081,
+      "prompt": "Spell the word cat.",
+      "text": "C-A-T<turn|>",
+      "reasoning_content": "\nThe user wants me to spell the word \"cat\".\nThe word is \"cat\".\nC-A-T.",
+      "completion_tokens": 35,
+      "prompt_tokens": 21,
+      "total_s": 1.079,
+      "prefill_s": 0.148,
+      "tps": 37.594,
+      "learn": {
+        "norm_tps": 37.594,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.148,
+        "ttft_s": 0.177,
+        "total_s": 1.079,
+        "peak_gb": 6.94,
+        "split": {
+          "calls": 852,
+          "mb_out": 0.06,
+          "mb_in": 6.08,
+          "wait_s": 10.793,
+          "front_s": 10.191,
+          "net_s": 0.602
+        },
+        "learn": {
+          "norm_tps": 37.594,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c-a-t",
+      "i": 10
+    },
+    {
+      "wall_s": 3.02,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<turn|>",
+      "reasoning_content": "\n*   Question: \"Is the sky usually blue? Yes or no.\"\n    *   Constraint: \"Yes or no.\"\n\n    *   The sky appears blue during the day due to Rayleigh scattering of sunlight by the atmosphere.\n    *   Under typical daytime conditions on Earth, the sky is blue.\n    *   Therefore, the answer is \"Yes.\"\n\n    *   The user requested a \"Yes or no\" answer.\n    *   Direct answer: \"Yes.\"",
+      "completion_tokens": 107,
+      "prompt_tokens": 26,
+      "total_s": 3.018,
+      "prefill_s": 0.173,
+      "tps": 37.61,
+      "learn": {
+        "norm_tps": 37.61,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.173,
+        "ttft_s": 0.203,
+        "total_s": 3.018,
+        "peak_gb": 6.94,
+        "split": {
+          "calls": 965,
+          "mb_out": 0.07,
+          "mb_in": 6.83,
+          "wait_s": 12.19,
+          "front_s": 11.525,
+          "net_s": 0.665
+        },
+        "learn": {
+          "norm_tps": 37.61,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 11
+    }
+  ],
+  "learn_log": [
+    "21:38:38 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 30 layers (gemma4))",
+    "21:38:41 [mlx-worker] auto pipeline: chats=2 (headroom 3.3 GB after ~6.4 GB weights on 26 GB; Mini benches peak at 2 chats)",
+    "21:38:49 [mlx-worker] learn: queue split packer_layers=14 for next load (near current 16)",
+    "21:38:51 [mlx-worker] learn: keep packer_layers=16: best so far at 37.78 tok/s over 4 replies",
+    "21:38:58 [mlx-worker] learn: keep packer_layers=16: best so far at 37.67 tok/s over 8 replies",
+    "21:39:08 [mlx-worker] learn: keep packer_layers=16: best so far at 37.65 tok/s over 12 replies"
+  ],
+  "rescored_note": "letter-form accept for spell-outs like C-A-T == cat; thinking still excluded"
+}

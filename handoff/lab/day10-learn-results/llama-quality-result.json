@@ -1,0 +1,598 @@
+{
+  "experiment": "quality",
+  "model": "llama",
+  "passed": 12,
+  "total": 12,
+  "rows": [
+    {
+      "wall_s": 0.394,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|eot_id|>",
+      "completion_tokens": 2,
+      "prompt_tokens": 48,
+      "total_s": 0.374,
+      "prefill_s": 0.284,
+      "tps": 22.222,
+      "learn": {
+        "norm_tps": 17.222,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.284,
+        "ttft_s": 0.329,
+        "total_s": 0.374,
+        "peak_gb": 2.45,
+        "split": {
+          "calls": 12,
+          "mb_out": 0.0,
+          "mb_in": 0.53,
+          "wait_s": 0.354,
+          "front_s": 0.256,
+          "net_s": 0.098
+        },
+        "learn": {
+          "norm_tps": 17.222,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "4",
+      "passed": true,
+      "i": 0
+    },
+    {
+      "wall_s": 0.849,
+      "prompt": "Spell the word cat.",
+      "text": "The word \"cat\" spelled out is C-A-T.<|eot_id|>",
+      "completion_tokens": 13,
+      "prompt_tokens": 40,
+      "total_s": 0.846,
+      "prefill_s": 0.27,
+      "tps": 22.569,
+      "learn": {
+        "norm_tps": 20.114,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.27,
+        "ttft_s": 0.315,
+        "total_s": 0.846,
+        "peak_gb": 2.45,
+        "split": {
+          "calls": 30,
+          "mb_out": 0.0,
+          "mb_in": 0.96,
+          "wait_s": 0.768,
+          "front_s": 0.659,
+          "net_s": 0.109
+        },
+        "learn": {
+          "norm_tps": 20.114,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "cat",
+      "passed": true,
+      "i": 1
+    },
+    {
+      "wall_s": 0.407,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<|eot_id|>",
+      "completion_tokens": 3,
+      "prompt_tokens": 45,
+      "total_s": 0.405,
+      "prefill_s": 0.271,
+      "tps": 22.388,
+      "learn": {
+        "norm_tps": 17.728,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "packer_layers",
+          "value": 14
+        },
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.271,
+        "ttft_s": 0.315,
+        "total_s": 0.405,
+        "peak_gb": 2.47,
+        "split": {
+          "calls": 38,
+          "mb_out": 0.0,
+          "mb_in": 1.35,
+          "wait_s": 0.973,
+          "front_s": 0.86,
+          "net_s": 0.114
+        },
+        "learn": {
+          "norm_tps": 17.728,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "packer_layers",
+            "value": 14
+          },
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "yes",
+      "passed": true,
+      "i": 2
+    },
+    {
+      "wall_s": 0.362,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|eot_id|>",
+      "completion_tokens": 2,
+      "prompt_tokens": 48,
+      "total_s": 0.36,
+      "prefill_s": 0.271,
+      "tps": 22.472,
+      "learn": {
+        "norm_tps": 17.416,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.271,
+        "ttft_s": 0.315,
+        "total_s": 0.36,
+        "peak_gb": 2.5,
+        "split": {
+          "calls": 45,
+          "mb_out": 0.0,
+          "mb_in": 1.75,
+          "wait_s": 1.157,
+          "front_s": 1.039,
+          "net_s": 0.118
+        },
+        "learn": {
+          "norm_tps": 17.416,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "4",
+      "passed": true,
+      "i": 3
+    },
+    {
+      "wall_s": 0.856,
+      "prompt": "Spell the word cat.",
+      "text": "The word \"cat\" spelled out is C-A-T.<|eot_id|>",
+      "completion_tokens": 13,
+      "prompt_tokens": 40,
+      "total_s": 0.854,
+      "prefill_s": 0.269,
+      "tps": 22.222,
+      "learn": {
+        "norm_tps": 19.805,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.269,
+        "ttft_s": 0.314,
+        "total_s": 0.854,
+        "peak_gb": 2.5,
+        "split": {
+          "calls": 64,
+          "mb_out": 0.01,
+          "mb_in": 2.18,
+          "wait_s": 1.576,
+          "front_s": 1.447,
+          "net_s": 0.129
+        },
+        "learn": {
+          "norm_tps": 19.805,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "cat",
+      "passed": true,
+      "i": 4
+    },
+    {
+      "wall_s": 0.412,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<|eot_id|>",
+      "completion_tokens": 3,
+      "prompt_tokens": 45,
+      "total_s": 0.41,
+      "prefill_s": 0.271,
+      "tps": 21.583,
+      "learn": {
+        "norm_tps": 17.09,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.271,
+        "ttft_s": 0.316,
+        "total_s": 0.41,
+        "peak_gb": 2.51,
+        "split": {
+          "calls": 73,
+          "mb_out": 0.01,
+          "mb_in": 2.56,
+          "wait_s": 1.783,
+          "front_s": 1.65,
+          "net_s": 0.134
+        },
+        "learn": {
+          "norm_tps": 17.09,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "yes",
+      "passed": true,
+      "i": 5
+    },
+    {
+      "wall_s": 0.368,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|eot_id|>",
+      "completion_tokens": 2,
+      "prompt_tokens": 48,
+      "total_s": 0.366,
+      "prefill_s": 0.271,
+      "tps": 21.053,
+      "learn": {
+        "norm_tps": 16.316,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.271,
+        "ttft_s": 0.317,
+        "total_s": 0.366,
+        "peak_gb": 2.52,
+        "split": {
+          "calls": 81,
+          "mb_out": 0.01,
+          "mb_in": 2.96,
+          "wait_s": 1.971,
+          "front_s": 1.833,
+          "net_s": 0.138
+        },
+        "learn": {
+          "norm_tps": 16.316,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "4",
+      "passed": true,
+      "i": 6
+    },
+    {
+      "wall_s": 0.854,
+      "prompt": "Spell the word cat.",
+      "text": "The word \"cat\" spelled out is C-A-T.<|eot_id|>",
+      "completion_tokens": 13,
+      "prompt_tokens": 40,
+      "total_s": 0.852,
+      "prefill_s": 0.27,
+      "tps": 22.337,
+      "learn": {
+        "norm_tps": 19.907,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.27,
+        "ttft_s": 0.314,
+        "total_s": 0.852,
+        "peak_gb": 2.52,
+        "split": {
+          "calls": 100,
+          "mb_out": 0.01,
+          "mb_in": 3.39,
+          "wait_s": 2.389,
+          "front_s": 2.24,
+          "net_s": 0.149
+        },
+        "learn": {
+          "norm_tps": 19.907,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "cat",
+      "passed": true,
+      "i": 7
+    },
+    {
+      "wall_s": 0.411,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<|eot_id|>",
+      "completion_tokens": 3,
+      "prompt_tokens": 45,
+      "total_s": 0.409,
+      "prefill_s": 0.271,
+      "tps": 21.739,
+      "learn": {
+        "norm_tps": 17.214,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.271,
+        "ttft_s": 0.315,
+        "total_s": 0.409,
+        "peak_gb": 2.52,
+        "split": {
+          "calls": 109,
+          "mb_out": 0.01,
+          "mb_in": 3.78,
+          "wait_s": 2.597,
+          "front_s": 2.443,
+          "net_s": 0.154
+        },
+        "learn": {
+          "norm_tps": 17.214,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "yes",
+      "passed": true,
+      "i": 8
+    },
+    {
+      "wall_s": 0.368,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|eot_id|>",
+      "completion_tokens": 2,
+      "prompt_tokens": 48,
+      "total_s": 0.366,
+      "prefill_s": 0.271,
+      "tps": 21.053,
+      "learn": {
+        "norm_tps": 16.316,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.271,
+        "ttft_s": 0.316,
+        "total_s": 0.366,
+        "peak_gb": 2.52,
+        "split": {
+          "calls": 117,
+          "mb_out": 0.01,
+          "mb_in": 4.18,
+          "wait_s": 2.784,
+          "front_s": 2.626,
+          "net_s": 0.159
+        },
+        "learn": {
+          "norm_tps": 16.316,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "4",
+      "passed": true,
+      "i": 9
+    },
+    {
+      "wall_s": 0.854,
+      "prompt": "Spell the word cat.",
+      "text": "The word \"cat\" spelled out is C-A-T.<|eot_id|>",
+      "completion_tokens": 13,
+      "prompt_tokens": 40,
+      "total_s": 0.852,
+      "prefill_s": 0.269,
+      "tps": 22.298,
+      "learn": {
+        "norm_tps": 19.873,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.269,
+        "ttft_s": 0.315,
+        "total_s": 0.852,
+        "peak_gb": 2.52,
+        "split": {
+          "calls": 136,
+          "mb_out": 0.01,
+          "mb_in": 4.6,
+          "wait_s": 3.202,
+          "front_s": 3.032,
+          "net_s": 0.169
+        },
+        "learn": {
+          "norm_tps": 19.873,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "cat",
+      "passed": true,
+      "i": 10
+    },
+    {
+      "wall_s": 0.41,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<|eot_id|>",
+      "completion_tokens": 3,
+      "prompt_tokens": 45,
+      "total_s": 0.408,
+      "prefill_s": 0.27,
+      "tps": 21.739,
+      "learn": {
+        "norm_tps": 17.214,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.27,
+        "ttft_s": 0.316,
+        "total_s": 0.408,
+        "peak_gb": 2.52,
+        "split": {
+          "calls": 145,
+          "mb_out": 0.01,
+          "mb_in": 4.99,
+          "wait_s": 3.409,
+          "front_s": 3.235,
+          "net_s": 0.174
+        },
+        "learn": {
+          "norm_tps": 17.214,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": "yes",
+      "passed": true,
+      "i": 11
+    }
+  ],
+  "learn_log": [
+    "19:39:56 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers (llama))",
+    "19:39:56 [mlx-worker] auto pipeline: chats=2 (headroom 3.1 GB after ~2.0 GB weights on 26 GB; Mini benches peak at 2 chats)",
+    "19:39:59 [mlx-worker] learn: queue split packer_layers=14 for next load (near current 16)",
+    "19:39:59 [mlx-worker] learn: keep packer_layers=16: best so far at 18.12 tok/s over 4 replies",
+    "19:40:02 [mlx-worker] learn: keep packer_layers=16: best so far at 18.20 tok/s over 8 replies",
+    "19:40:04 [mlx-worker] learn: keep packer_layers=16: best so far at 18.02 tok/s over 12 replies"
+  ]
+}

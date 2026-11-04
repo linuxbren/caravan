@@ -1,0 +1,1571 @@
+{
+  "experiment": "race",
+  "model": "llama",
+  "hand_tuned_tps": 22.6,
+  "rows": [
+    {
+      "wall_s": 0.439,
+      "prompt": "Say hello in one short sentence.",
+      "text": "Hello.<|eot_id|>",
+      "completion_tokens": 3,
+      "prompt_tokens": 42,
+      "total_s": 0.416,
+      "prefill_s": 0.281,
+      "tps": 22.222,
+      "learn": {
+        "norm_tps": 17.597,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.281,
+        "ttft_s": 0.326,
+        "total_s": 0.416,
+        "peak_gb": 2.43,
+        "split": {
+          "calls": 14,
+          "mb_out": 0.0,
+          "mb_in": 0.49,
+          "wait_s": 0.369,
+          "front_s": 0.273,
+          "net_s": 0.096
+        },
+        "learn": {
+          "norm_tps": 17.597,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "i": 0
+    },
+    {
+      "wall_s": 0.391,
+      "prompt": "What is 17+4? Reply with just the number.",
+      "text": "21<|eot_id|>",
+      "completion_tokens": 2,
+      "prompt_tokens": 48,
+      "total_s": 0.375,
+      "prefill_s": 0.284,
+      "tps": 21.978,
+      "learn": {
+        "norm_tps": 17.033,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.284,
+        "ttft_s": 0.329,
+        "total_s": 0.375,
+        "peak_gb": 2.47,
+        "split": {
+          "calls": 22,
+          "mb_out": 0.0,
+          "mb_in": 0.89,
+          "wait_s": 0.562,
+          "front_s": 0.456,
+          "net_s": 0.106
+        },
+        "learn": {
+          "norm_tps": 17.033,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "i": 1
+    },
+    {
+      "pair": true,
+      "wall_s": 0.911,
+      "aggregate_tps": 10.972,
+      "a": {
+        "wall_s": 0.911,
+        "prompt": "Name one primary color.",
+        "text": "Red is a primary color.<|eot_id|>",
+        "completion_tokens": 7,
+        "prompt_tokens": 40,
+        "total_s": 0.592,
+        "prefill_s": 0.27,
+        "tps": 21.739,
+        "learn": {
+          "norm_tps": 18.268,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 11.105,
+            "n": 2
+          },
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.27,
+          "ttft_s": 0.317,
+          "total_s": 0.592,
+          "peak_gb": 2.47,
+          "split": {
+            "calls": 42,
+            "mb_out": 0.0,
+            "mb_in": 1.64,
+            "wait_s": 1.076,
+            "front_s": 0.938,
+            "net_s": 0.138
+          },
+          "learn": {
+            "norm_tps": 18.268,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 11.105,
+              "n": 2
+            },
+            "trial": null
+          }
+        }
+      },
+      "b": {
+        "wall_s": 0.708,
+        "prompt": "Give a one-word synonym for fast.",
+        "text": "Quick.<|eot_id|>",
+        "completion_tokens": 3,
+        "prompt_tokens": 43,
+        "total_s": 0.698,
+        "prefill_s": 0.286,
+        "tps": 7.282,
+        "learn": {
+          "norm_tps": 5.766,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "packer_layers",
+            "value": 14
+          },
+          "pipeline_probe": null,
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.286,
+          "ttft_s": 0.602,
+          "total_s": 0.698,
+          "peak_gb": 2.47,
+          "split": {
+            "calls": 37,
+            "mb_out": 0.0,
+            "mb_in": 1.61,
+            "wait_s": 0.99,
+            "front_s": 0.856,
+            "net_s": 0.135
+          },
+          "learn": {
+            "norm_tps": 5.766,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": {
+              "name": "packer_layers",
+              "value": 14
+            },
+            "pipeline_probe": null,
+            "trial": null
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 5.766,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "packer_layers",
+          "value": 14
+        },
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "i": 2
+    },
+    {
+      "pair": true,
+      "wall_s": 3.501,
+      "aggregate_tps": 22.562,
+      "a": {
+        "wall_s": 3.501,
+        "prompt": "Is water wet? Yes or no.",
+        "text": "No. \n\nThe term \"wet\" generally refers to a liquid that is a common misconception. Water is not wet. Wet is a term that d",
+        "completion_tokens": 64,
+        "prompt_tokens": 43,
+        "total_s": 3.179,
+        "prefill_s": 0.27,
+        "tps": 22.001,
+        "learn": {
+          "norm_tps": 22.001,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 22.629,
+            "n": 2
+          },
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.27,
+          "ttft_s": 0.318,
+          "total_s": 3.179,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 132,
+            "mb_out": 0.01,
+            "mb_in": 2.97,
+            "wait_s": 3.121,
+            "front_s": 2.842,
+            "net_s": 0.279
+          },
+          "learn": {
+            "norm_tps": 22.001,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 22.629,
+              "n": 2
+            },
+            "trial": null
+          }
+        }
+      },
+      "b": {
+        "wall_s": 1.296,
+        "prompt": "Count to 5 with commas.",
+        "text": "1,1, 2,1, 2, 3,1, 2, 3, 4,1, 2, 3, 4, 5.<|eot_id|>",
+        "completion_tokens": 15,
+        "prompt_tokens": 42,
+        "total_s": 1.286,
+        "prefill_s": 0.289,
+        "tps": 15.045,
+        "learn": {
+          "norm_tps": 13.622,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.289,
+          "ttft_s": 0.606,
+          "total_s": 1.286,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 82,
+            "mb_out": 0.01,
+            "mb_in": 2.57,
+            "wait_s": 2.087,
+            "front_s": 1.836,
+            "net_s": 0.251
+          },
+          "learn": {
+            "norm_tps": 13.622,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": null
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 13.622,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "i": 4
+    },
+    {
+      "pair": true,
+      "wall_s": 1.169,
+      "aggregate_tps": 13.687,
+      "a": {
+        "wall_s": 1.168,
+        "prompt": "Translate 'cat' to Spanish, one word.",
+        "text": "The Spanish translation for 'cat' is 'gato'.<|eot_id|>",
+        "completion_tokens": 13,
+        "prompt_tokens": 45,
+        "total_s": 1.159,
+        "prefill_s": 0.288,
+        "tps": 14.925,
+        "learn": {
+          "norm_tps": 13.302,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 13.805,
+            "n": 2
+          },
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.288,
+          "ttft_s": 0.605,
+          "total_s": 1.159,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 159,
+            "mb_out": 0.02,
+            "mb_in": 3.82,
+            "wait_s": 3.771,
+            "front_s": 3.451,
+            "net_s": 0.321
+          },
+          "learn": {
+            "norm_tps": 13.302,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 13.805,
+              "n": 2
+            },
+            "trial": null
+          }
+        }
+      },
+      "b": {
+        "wall_s": 0.741,
+        "prompt": "What day comes after Monday? One word.",
+        "text": "Tuesday.<|eot_id|>",
+        "completion_tokens": 3,
+        "prompt_tokens": 44,
+        "total_s": 0.421,
+        "prefill_s": 0.27,
+        "tps": 19.868,
+        "learn": {
+          "norm_tps": 15.732,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.27,
+          "ttft_s": 0.318,
+          "total_s": 0.421,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 149,
+            "mb_out": 0.02,
+            "mb_in": 3.75,
+            "wait_s": 3.58,
+            "front_s": 3.266,
+            "net_s": 0.314
+          },
+          "learn": {
+            "norm_tps": 15.732,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": null
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 15.732,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "i": 6
+    },
+    {
+      "pair": true,
+      "wall_s": 1.024,
+      "aggregate_tps": 16.609,
+      "a": {
+        "wall_s": 0.953,
+        "prompt": "Name a fruit that is yellow.",
+        "text": "A banana is a yellow fruit.<|eot_id|>",
+        "completion_tokens": 8,
+        "prompt_tokens": 42,
+        "total_s": 0.944,
+        "prefill_s": 0.284,
+        "tps": 12.121,
+        "learn": {
+          "norm_tps": 10.303,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.284,
+          "ttft_s": 0.601,
+          "total_s": 0.944,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 185,
+            "mb_out": 0.02,
+            "mb_in": 4.64,
+            "wait_s": 4.444,
+            "front_s": 4.061,
+            "net_s": 0.383
+          },
+          "learn": {
+            "norm_tps": 10.303,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": null
+          }
+        }
+      },
+      "b": {
+        "wall_s": 1.023,
+        "prompt": "Write a 6-word sentence about rain.",
+        "text": "Heavy rain fell throughout the entire city.<|eot_id|>",
+        "completion_tokens": 9,
+        "prompt_tokens": 44,
+        "total_s": 0.706,
+        "prefill_s": 0.27,
+        "tps": 20.642,
+        "learn": {
+          "norm_tps": 17.734,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 16.784,
+            "n": 2
+          },
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.27,
+          "ttft_s": 0.318,
+          "total_s": 0.706,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 187,
+            "mb_out": 0.02,
+            "mb_in": 4.65,
+            "wait_s": 4.466,
+            "front_s": 4.081,
+            "net_s": 0.385
+          },
+          "learn": {
+            "norm_tps": 17.734,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 16.784,
+              "n": 2
+            },
+            "trial": null
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 17.734,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": {
+          "aggregate_tps": 16.784,
+          "n": 2
+        },
+        "trial": null
+      },
+      "i": 8
+    },
+    {
+      "pair": true,
+      "wall_s": 0.962,
+      "aggregate_tps": 11.43,
+      "a": {
+        "wall_s": 0.715,
+        "prompt": "What is the opposite of hot? One word.",
+        "text": "Cold.<|eot_id|>",
+        "completion_tokens": 3,
+        "prompt_tokens": 45,
+        "total_s": 0.705,
+        "prefill_s": 0.285,
+        "tps": 7.143,
+        "learn": {
+          "norm_tps": 5.656,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 6
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.285,
+          "ttft_s": 0.602,
+          "total_s": 0.705,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 203,
+            "mb_out": 0.02,
+            "mb_in": 5.4,
+            "wait_s": 4.9,
+            "front_s": 4.485,
+            "net_s": 0.415
+          },
+          "learn": {
+            "norm_tps": 5.656,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": {
+              "name": "pipeline_chats",
+              "value": 1
+            },
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 6
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 0.961,
+        "prompt": "List three vowels separated by commas.",
+        "text": "A, E, I, O<|eot_id|>",
+        "completion_tokens": 8,
+        "prompt_tokens": 42,
+        "total_s": 0.645,
+        "prefill_s": 0.27,
+        "tps": 21.333,
+        "learn": {
+          "norm_tps": 18.133,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 5
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.27,
+          "ttft_s": 0.318,
+          "total_s": 0.645,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 209,
+            "mb_out": 0.02,
+            "mb_in": 5.44,
+            "wait_s": 5.006,
+            "front_s": 4.588,
+            "net_s": 0.418
+          },
+          "learn": {
+            "norm_tps": 18.133,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 5
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 18.133,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 5
+        }
+      },
+      "i": 10
+    },
+    {
+      "pair": true,
+      "wall_s": 0.797,
+      "aggregate_tps": 6.27,
+      "a": {
+        "wall_s": 0.797,
+        "prompt": "Say hello in one short sentence.",
+        "text": "Hello.<|eot_id|>",
+        "completion_tokens": 3,
+        "prompt_tokens": 42,
+        "total_s": 0.41,
+        "prefill_s": 0.271,
+        "tps": 21.583,
+        "learn": {
+          "norm_tps": 17.09,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 3
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.271,
+          "ttft_s": 0.316,
+          "total_s": 0.41,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 226,
+            "mb_out": 0.02,
+            "mb_in": 6.2,
+            "wait_s": 5.406,
+            "front_s": 4.972,
+            "net_s": 0.434
+          },
+          "learn": {
+            "norm_tps": 17.09,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 3
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 0.384,
+        "prompt": "What is 17+4? Reply with just the number.",
+        "text": "21<|eot_id|>",
+        "completion_tokens": 2,
+        "prompt_tokens": 48,
+        "total_s": 0.377,
+        "prefill_s": 0.283,
+        "tps": 21.277,
+        "learn": {
+          "norm_tps": 16.489,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 8.062,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 4
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.283,
+          "ttft_s": 0.328,
+          "total_s": 0.377,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 217,
+            "mb_out": 0.02,
+            "mb_in": 5.84,
+            "wait_s": 5.197,
+            "front_s": 4.769,
+            "net_s": 0.428
+          },
+          "learn": {
+            "norm_tps": 16.489,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 8.062,
+              "n": 1
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 4
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 16.489,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": {
+          "aggregate_tps": 8.062,
+          "n": 1
+        },
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 4
+        }
+      },
+      "i": 12
+    },
+    {
+      "pair": true,
+      "wall_s": 1.007,
+      "aggregate_tps": 9.926,
+      "a": {
+        "wall_s": 0.596,
+        "prompt": "Name one primary color.",
+        "text": "Red is a primary color.<|eot_id|>",
+        "completion_tokens": 7,
+        "prompt_tokens": 40,
+        "total_s": 0.586,
+        "prefill_s": 0.27,
+        "tps": 22.152,
+        "learn": {
+          "norm_tps": 18.615,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": {
+            "aggregate_tps": 8.218,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 2
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.27,
+          "ttft_s": 0.315,
+          "total_s": 0.586,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 239,
+            "mb_out": 0.03,
+            "mb_in": 6.58,
+            "wait_s": 5.701,
+            "front_s": 5.255,
+            "net_s": 0.446
+          },
+          "learn": {
+            "norm_tps": 18.615,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": {
+              "name": "pipeline_chats",
+              "value": 1
+            },
+            "pipeline_probe": {
+              "aggregate_tps": 8.218,
+              "n": 1
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 2
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 1.007,
+        "prompt": "Give a one-word synonym for fast.",
+        "text": "Quick.<|eot_id|>",
+        "completion_tokens": 3,
+        "prompt_tokens": 43,
+        "total_s": 0.409,
+        "prefill_s": 0.27,
+        "tps": 21.583,
+        "learn": {
+          "norm_tps": 17.09,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 1
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.27,
+          "ttft_s": 0.314,
+          "total_s": 0.409,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 248,
+            "mb_out": 0.03,
+            "mb_in": 6.95,
+            "wait_s": 5.909,
+            "front_s": 5.457,
+            "net_s": 0.452
+          },
+          "learn": {
+            "norm_tps": 17.09,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 1
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 17.09,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 1
+        }
+      },
+      "i": 14
+    },
+    {
+      "pair": true,
+      "wall_s": 3.248,
+      "aggregate_tps": 18.474,
+      "a": {
+        "wall_s": 2.304,
+        "prompt": "Is water wet? Yes or no.",
+        "text": "No. \n\nThe term \"wet\" generally refers to a liquid that has a high level of moisture or humidity. Since water is already ",
+        "completion_tokens": 45,
+        "prompt_tokens": 43,
+        "total_s": 2.298,
+        "prefill_s": 0.287,
+        "tps": 22.377,
+        "learn": {
+          "norm_tps": 22.377,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 16.413,
+            "n": 1
+          },
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.287,
+          "ttft_s": 0.333,
+          "total_s": 2.298,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 299,
+            "mb_out": 0.03,
+            "mb_in": 7.66,
+            "wait_s": 7.01,
+            "front_s": 6.522,
+            "net_s": 0.488
+          },
+          "learn": {
+            "norm_tps": 22.377,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 16.413,
+              "n": 1
+            },
+            "trial": null
+          }
+        }
+      },
+      "b": {
+        "wall_s": 3.247,
+        "prompt": "Count to 5 with commas.",
+        "text": "1,1, 2,1, 2, 3,1, 2, 3, 4,1, 2, 3, 4, 5.<|eot_id|>",
+        "completion_tokens": 15,
+        "prompt_tokens": 42,
+        "total_s": 0.941,
+        "prefill_s": 0.27,
+        "tps": 22.355,
+        "learn": {
+          "norm_tps": 20.24,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.27,
+          "ttft_s": 0.315,
+          "total_s": 0.941,
+          "peak_gb": 2.52,
+          "split": {
+            "calls": 320,
+            "mb_out": 0.03,
+            "mb_in": 8.12,
+            "wait_s": 7.47,
+            "front_s": 6.971,
+            "net_s": 0.5
+          },
+          "learn": {
+            "norm_tps": 20.24,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": null
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 20.24,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "i": 16
+    },
+    {
+      "pair": true,
+      "wall_s": 1.188,
+      "aggregate_tps": 13.465,
+      "a": {
+        "wall_s": 1.188,
+        "prompt": "Translate 'cat' to Spanish, one word.",
+        "text": "The Spanish translation for 'cat' is 'gato'.<|eot_id|>",
+        "completion_tokens": 13,
+        "prompt_tokens": 45,
+        "total_s": 0.871,
+        "prefill_s": 0.271,
+        "tps": 21.667,
+        "learn": {
+          "norm_tps": 19.31,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 5
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.271,
+          "ttft_s": 0.318,
+          "total_s": 0.871,
+          "peak_gb": 2.53,
+          "split": {
+            "calls": 347,
+            "mb_out": 0.04,
+            "mb_in": 8.97,
+            "wait_s": 8.117,
+            "front_s": 7.583,
+            "net_s": 0.535
+          },
+          "learn": {
+            "norm_tps": 19.31,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 5
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 0.715,
+        "prompt": "What day comes after Monday? One word.",
+        "text": "Tuesday.<|eot_id|>",
+        "completion_tokens": 3,
+        "prompt_tokens": 44,
+        "total_s": 0.705,
+        "prefill_s": 0.284,
+        "tps": 7.126,
+        "learn": {
+          "norm_tps": 5.643,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 6
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.284,
+          "ttft_s": 0.601,
+          "total_s": 0.705,
+          "peak_gb": 2.53,
+          "split": {
+            "calls": 336,
+            "mb_out": 0.04,
+            "mb_in": 8.89,
+            "wait_s": 7.904,
+            "front_s": 7.376,
+            "net_s": 0.528
+          },
+          "learn": {
+            "norm_tps": 5.643,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": {
+              "name": "pipeline_chats",
+              "value": 1
+            },
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 6
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 5.643,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "pipeline_chats",
+          "value": 1
+        },
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 6
+        }
+      },
+      "i": 18
+    },
+    {
+      "pair": true,
+      "wall_s": 1.33,
+      "aggregate_tps": 12.779,
+      "a": {
+        "wall_s": 0.652,
+        "prompt": "Name a fruit that is yellow.",
+        "text": "A banana is a yellow fruit.<|eot_id|>",
+        "completion_tokens": 8,
+        "prompt_tokens": 42,
+        "total_s": 0.643,
+        "prefill_s": 0.282,
+        "tps": 22.161,
+        "learn": {
+          "norm_tps": 18.837,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 12.108,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 4
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.282,
+          "ttft_s": 0.326,
+          "total_s": 0.643,
+          "peak_gb": 2.53,
+          "split": {
+            "calls": 361,
+            "mb_out": 0.04,
+            "mb_in": 9.37,
+            "wait_s": 8.436,
+            "front_s": 7.887,
+            "net_s": 0.548
+          },
+          "learn": {
+            "norm_tps": 18.837,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 12.108,
+              "n": 1
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 4
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 1.329,
+        "prompt": "Write a 6-word sentence about rain.",
+        "text": "Heavy rain fell throughout the entire city.<|eot_id|>",
+        "completion_tokens": 9,
+        "prompt_tokens": 44,
+        "total_s": 0.676,
+        "prefill_s": 0.271,
+        "tps": 22.222,
+        "learn": {
+          "norm_tps": 19.091,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 3
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.271,
+          "ttft_s": 0.316,
+          "total_s": 0.676,
+          "peak_gb": 2.53,
+          "split": {
+            "calls": 376,
+            "mb_out": 0.04,
+            "mb_in": 9.8,
+            "wait_s": 8.77,
+            "front_s": 8.213,
+            "net_s": 0.558
+          },
+          "learn": {
+            "norm_tps": 19.091,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 3
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 19.091,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 3
+        }
+      },
+      "i": 20
+    },
+    {
+      "pair": true,
+      "wall_s": 0.975,
+      "aggregate_tps": 9.228,
+      "a": {
+        "wall_s": 0.429,
+        "prompt": "What is the opposite of hot? One word.",
+        "text": "Cold.<|eot_id|>",
+        "completion_tokens": 3,
+        "prompt_tokens": 45,
+        "total_s": 0.419,
+        "prefill_s": 0.282,
+        "tps": 21.898,
+        "learn": {
+          "norm_tps": 17.34,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": {
+            "aggregate_tps": 9.174,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 2
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.282,
+          "ttft_s": 0.326,
+          "total_s": 0.419,
+          "peak_gb": 2.53,
+          "split": {
+            "calls": 385,
+            "mb_out": 0.04,
+            "mb_in": 10.18,
+            "wait_s": 8.982,
+            "front_s": 8.414,
+            "net_s": 0.568
+          },
+          "learn": {
+            "norm_tps": 17.34,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": {
+              "name": "pipeline_chats",
+              "value": 1
+            },
+            "pipeline_probe": {
+              "aggregate_tps": 9.174,
+              "n": 1
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 2
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 0.974,
+        "prompt": "List three vowels separated by commas.",
+        "text": "A, E, I<|eot_id|>",
+        "completion_tokens": 6,
+        "prompt_tokens": 42,
+        "total_s": 0.544,
+        "prefill_s": 0.271,
+        "tps": 21.978,
+        "learn": {
+          "norm_tps": 18.24,
+          "winner": {
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 1
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.271,
+          "ttft_s": 0.315,
+          "total_s": 0.544,
+          "peak_gb": 2.53,
+          "split": {
+            "calls": 397,
+            "mb_out": 0.04,
+            "mb_in": 10.57,
+            "wait_s": 9.254,
+            "front_s": 8.678,
+            "net_s": 0.576
+          },
+          "learn": {
+            "norm_tps": 18.24,
+            "winner": {
+              "packer_layers": 16,
+              "pipeline_chats": 2
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 1
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 18.24,
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 1
+        }
+      },
+      "i": 22
+    }
+  ],
+  "tuned_file": {
+    "key": "mlx-community--Meta-Llama-3.1-8B-Instruct-4bit:spanned",
+    "hardware": "spanned",
+    "model": "mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
+    "pending_reload": {
+      "packer_layers": 14
+    },
+    "reply_n": 24,
+    "stats": {
+      "packer_layers:16": {
+        "mean": 16.062788937277627,
+        "n": 24,
+        "samples": [
+          13.622,
+          22.001,
+          15.732,
+          13.302,
+          10.303,
+          17.734,
+          5.656,
+          18.133,
+          16.489,
+          17.09,
+          18.615,
+          17.09,
+          22.377,
+          20.24,
+          5.643,
+          19.31,
+          18.837,
+          19.091,
+          17.34,
+          18.24
+        ],
+        "sum": 385.5069344946631
+      },
+      "pipeline_chats:1": {
+        "mean": 10.795082681156924,
+        "n": 5,
+        "samples": [
+          8.062,
+          8.218,
+          16.413,
+          12.108,
+          9.174
+        ],
+        "sum": 53.975413405784614
+      },
+      "pipeline_chats:2": {
+        "mean": 16.080887818074856,
+        "n": 4,
+        "samples": [
+          11.105,
+          22.629,
+          13.805,
+          16.784
+        ],
+        "sum": 64.32355127229943
+      }
+    },
+    "updated_at": "2026-11-03T01:41:47Z",
+    "winner": {
+      "packer_layers": 16,
+      "pipeline_chats": 2
+    }
+  },
+  "learn_log": [
+    "19:41:26 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers (llama))",
+    "19:41:26 [mlx-worker] auto pipeline: chats=2 (headroom 4.6 GB after ~2.0 GB weights on 26 GB; Mini benches peak at 2 chats)",
+    "19:41:29 [mlx-worker] learn: queue split packer_layers=14 for next load (near current 16)",
+    "19:41:30 [mlx-worker] learn: keep packer_layers=16: best so far at 14.67 tok/s over 4 replies",
+    "19:41:35 [mlx-worker] learn: keep pipeline_chats=2: best concurrent probe so far at 15.85 tok/s over 3 probes",
+    "19:41:35 [mlx-worker] learn: keep packer_layers=16: best so far at 15.41 tok/s over 8 replies",
+    "19:41:36 [mlx-worker] learn: keep pipeline_chats=2: best concurrent probe so far at 16.08 tok/s over 4 probes",
+    "19:41:37 [mlx-worker] learn: try pipeline_chats=1: exploring near pipeline_chats=2 (have 0/3 samples)",
+    "19:41:37 [mlx-worker] learn: keep packer_layers=16: best so far at 14.60 tok/s over 12 replies",
+    "19:41:38 [mlx-worker] learn: keep pipeline_chats=2: need 3 concurrent probes each (have 4 vs challenger 1=1)",
+    "19:41:39 [mlx-worker] learn: keep pipeline_chats=2: need 3 concurrent probes each (have 4 vs challenger 1=2)",
+    "19:41:39 [mlx-worker] learn: keep packer_layers=16: best so far at 15.28 tok/s over 16 replies",
+    "19:41:42 [mlx-worker] learn: keep pipeline_chats=2: concurrent 16.08 still ahead of 10.90 tok/s",
+    "19:41:42 [mlx-worker] learn: end trial pipeline_chats=1; back to winner pipeline_chats=2",
+    "19:41:44 [mlx-worker] learn: re-check pipeline_chats=1 against current pipeline_chats=2",
+    "19:41:44 [mlx-worker] learn: keep packer_layers=16: best so far at 15.60 tok/s over 20 replies",
+    "19:41:45 [mlx-worker] learn: keep pipeline_chats=2: concurrent 16.08 still ahead of 11.20 tok/s",
+    "19:41:46 [mlx-worker] learn: keep pipeline_chats=2: concurrent 16.08 still ahead of 10.80 tok/s",
+    "19:41:47 [mlx-worker] learn: keep packer_layers=16: best so far at 16.06 tok/s over 24 replies"
+  ],
+  "reached_best_pipeline_at_reply": 0,
+  "final_mean_tps": 12.774,
+  "note": "Best live setting on spanned Minis is pipeline_chats=2 (Day 9). Race measures replies until learning confirms/keeps that winner."
+}

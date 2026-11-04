@@ -1,0 +1,313 @@
+{
+  "created_at": "2026-11-02T21:03:00-06:00",
+  "timezone": "America/Chicago",
+  "lab": "bench-2026-11-02/day10-learn",
+  "notes": [
+    "Race: no flags, no saved tuned file; Day 9 auto guess vs learned winner.",
+    "final_mean_tps is mean of last ~5 race rows (includes pair aggregates / explore noise).",
+    "single_chat_mean_tps is mean of non-pair race replies.",
+    "pipeline_probe_stats means are fair concurrent/serial probe means from tuned-settings.",
+    "Quality empty text on qwen3/gemma/gptoss/distill: short max_tokens=16 with thinking/reasoning models yields blank visible answers; tok/s still recorded.",
+    "Quality fix 2026-11-02 evening: max_tokens 16\u21921024; score via guess_ahead.final_answer_text/answer_ok (thinking channels excluded); letter-form of expect accepted for spell-outs (C-A-T==cat)."
+  ],
+  "models": {
+    "llama": {
+      "model_tag": "llama",
+      "model_name": "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit",
+      "hand_tuned_tps": 22.6,
+      "race": {
+        "day9_pipeline_guess": 2,
+        "final_pipeline_winner": 2,
+        "day9_guess_was_wrong": false,
+        "reached_best_pipeline_at_reply": 0,
+        "final_mean_tps": 12.774,
+        "single_chat_mean_tps": 22.1,
+        "pipeline_probe_stats": {
+          "pipeline_chats:1": {
+            "n": 5,
+            "mean": 10.795
+          },
+          "pipeline_chats:2": {
+            "n": 4,
+            "mean": 16.081
+          }
+        },
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "reply_n": 24
+      },
+      "quality": {
+        "passed": 12,
+        "total": 12,
+        "max_tokens": 1024,
+        "scoring": "guess_ahead.final_answer_text + answer_ok / whole-word in final / letter-form of expect",
+        "empty_text_replies": 0
+      },
+      "trap": {
+        "switched_to_2_at_reply": 8,
+        "start_winner_pipeline": 1,
+        "final_winner": {
+          "guess_ahead": false,
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        }
+      }
+    },
+    "qwen3": {
+      "model_tag": "qwen3",
+      "model_name": "mlx-community/Qwen3-30B-A3B-4bit",
+      "hand_tuned_tps": 45.0,
+      "race": {
+        "day9_pipeline_guess": 2,
+        "final_pipeline_winner": 2,
+        "day9_guess_was_wrong": false,
+        "reached_best_pipeline_at_reply": 0,
+        "final_mean_tps": 45.758,
+        "single_chat_mean_tps": 44.507,
+        "pipeline_probe_stats": {
+          "pipeline_chats:1": {
+            "n": 5,
+            "mean": 37.197
+          },
+          "pipeline_chats:2": {
+            "n": 4,
+            "mean": 67.804
+          }
+        },
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "reply_n": 24
+      },
+      "quality": {
+        "passed": 12,
+        "total": 12,
+        "max_tokens": 1024,
+        "scoring": "guess_ahead.final_answer_text + answer_ok / whole-word in final / letter-form of expect",
+        "empty_text_replies": 0
+      },
+      "trap": {
+        "switched_to_2_at_reply": 6,
+        "start_winner_pipeline": 1,
+        "final_winner": {
+          "guess_ahead": false,
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        }
+      }
+    },
+    "gemma": {
+      "model_tag": "gemma",
+      "model_name": "mlx-community/gemma-4-26b-a4b-it-4bit",
+      "hand_tuned_tps": 38.4,
+      "race": {
+        "day9_pipeline_guess": 2,
+        "final_pipeline_winner": 2,
+        "day9_guess_was_wrong": false,
+        "reached_best_pipeline_at_reply": 0,
+        "final_mean_tps": 37.97,
+        "single_chat_mean_tps": 37.341,
+        "pipeline_probe_stats": {
+          "pipeline_chats:1": {
+            "n": 5,
+            "mean": 31.31
+          },
+          "pipeline_chats:2": {
+            "n": 4,
+            "mean": 55.476
+          }
+        },
+        "winner": {
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "reply_n": 24
+      },
+      "quality": {
+        "passed": 12,
+        "total": 12,
+        "max_tokens": 1024,
+        "scoring": "guess_ahead.final_answer_text + answer_ok / whole-word in final / letter-form of expect",
+        "empty_text_replies": 0
+      },
+      "trap": {
+        "switched_to_2_at_reply": 8,
+        "start_winner_pipeline": 1,
+        "final_winner": {
+          "guess_ahead": false,
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        }
+      }
+    },
+    "gptoss": {
+      "model_tag": "gptoss",
+      "model_name": "mlx-community/gpt-oss-20b-MXFP4-Q8",
+      "hand_tuned_tps": 34.3,
+      "race": {
+        "day9_pipeline_guess": 2,
+        "final_pipeline_winner": 2,
+        "day9_guess_was_wrong": false,
+        "reached_best_pipeline_at_reply": 0,
+        "final_mean_tps": 31.2,
+        "single_chat_mean_tps": 33.659,
+        "pipeline_probe_stats": {
+          "pipeline_chats:1": {
+            "n": 5,
+            "mean": 26.621
+          },
+          "pipeline_chats:2": {
+            "n": 4,
+            "mean": 44.376
+          }
+        },
+        "winner": {
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        },
+        "reply_n": 24
+      },
+      "quality": {
+        "passed": 12,
+        "total": 12,
+        "max_tokens": 1024,
+        "scoring": "guess_ahead.final_answer_text + answer_ok / whole-word in final / letter-form of expect",
+        "empty_text_replies": 0
+      },
+      "trap": {
+        "switched_to_2_at_reply": 8,
+        "start_winner_pipeline": 1,
+        "final_winner": {
+          "guess_ahead": false,
+          "packer_layers": 13,
+          "pipeline_chats": 2
+        }
+      }
+    },
+    "qwen25": {
+      "model_tag": "qwen25",
+      "model_name": "mlx-community/Qwen2.5-14B-Instruct-4bit",
+      "hand_tuned_tps": 12.4,
+      "race": {
+        "day9_pipeline_guess": 2,
+        "final_pipeline_winner": 2,
+        "day9_guess_was_wrong": false,
+        "reached_best_pipeline_at_reply": 0,
+        "final_mean_tps": 8.64,
+        "single_chat_mean_tps": 12.289,
+        "pipeline_probe_stats": {
+          "pipeline_chats:1": {
+            "n": 4,
+            "mean": 7.677
+          },
+          "pipeline_chats:2": {
+            "n": 3,
+            "mean": 10.789
+          }
+        },
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "reply_n": 24
+      },
+      "quality": {
+        "passed": 12,
+        "total": 12,
+        "max_tokens": 1024,
+        "scoring": "guess_ahead.final_answer_text + answer_ok / whole-word in final / letter-form of expect",
+        "empty_text_replies": 0
+      },
+      "trap": {
+        "switched_to_2_at_reply": 10,
+        "start_winner_pipeline": 1,
+        "final_winner": {
+          "guess_ahead": false,
+          "packer_layers": 24,
+          "pipeline_chats": 1
+        }
+      }
+    },
+    "distill": {
+      "model_tag": "distill",
+      "model_name": "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit",
+      "hand_tuned_tps": 12.3,
+      "race": {
+        "day9_pipeline_guess": 2,
+        "final_pipeline_winner": 2,
+        "day9_guess_was_wrong": false,
+        "reached_best_pipeline_at_reply": 0,
+        "final_mean_tps": 13.592,
+        "single_chat_mean_tps": 12.354,
+        "pipeline_probe_stats": {
+          "pipeline_chats:2": {
+            "n": 4,
+            "mean": 21.114
+          }
+        },
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "reply_n": 24
+      },
+      "quality": {
+        "passed": 12,
+        "total": 12,
+        "max_tokens": 1024,
+        "scoring": "guess_ahead.final_answer_text + answer_ok / whole-word in final / letter-form of expect",
+        "empty_text_replies": 0
+      },
+      "trap": {
+        "switched_to_2_at_reply": 6,
+        "start_winner_pipeline": 1,
+        "final_winner": {
+          "guess_ahead": false,
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        }
+      }
+    }
+  },
+  "best_race_story": {
+    "tag": "qwen3",
+    "why": "Day9 guess 2 already correct (kept 2); trap climb 1\u21922 at reply 6; single 44.507 tok/s vs hand-tuned 45.0 (99%); probe N=2 67.804 vs N=1 37.197",
+    "note": "No model had a wrong Day9 pipeline guess in the race; best story is closest-to-hand-tuned + fastest trap climb.",
+    "ranked": [
+      {
+        "tag": "qwen3",
+        "score": 79,
+        "why": "Day9 guess 2 already correct (kept 2); trap climb 1\u21922 at reply 6; single 44.507 tok/s vs hand-tuned 45.0 (99%); probe N=2 67.804 vs N=1 37.197"
+      },
+      {
+        "tag": "llama",
+        "score": 77,
+        "why": "Day9 guess 2 already correct (kept 2); trap climb 1\u21922 at reply 8; single 22.1 tok/s vs hand-tuned 22.6 (98%); probe N=2 16.081 vs N=1 10.795"
+      },
+      {
+        "tag": "gptoss",
+        "score": 77,
+        "why": "Day9 guess 2 already correct (kept 2); trap climb 1\u21922 at reply 8; single 33.659 tok/s vs hand-tuned 34.3 (98%); probe N=2 44.376 vs N=1 26.621"
+      },
+      {
+        "tag": "gemma",
+        "score": 77,
+        "why": "Day9 guess 2 already correct (kept 2); trap climb 1\u21922 at reply 8; single 37.341 tok/s vs hand-tuned 38.4 (97%); probe N=2 55.476 vs N=1 31.31"
+      },
+      {
+        "tag": "qwen25",
+        "score": 75,
+        "why": "Day9 guess 2 already correct (kept 2); trap climb 1\u21922 at reply 10; single 12.289 tok/s vs hand-tuned 12.4 (99%); probe N=2 10.789 vs N=1 7.677"
+      },
+      {
+        "tag": "distill",
+        "score": 69,
+        "why": "Day9 guess 2 already correct (kept 2); trap climb 1\u21922 at reply 6; single 12.354 tok/s vs hand-tuned 12.3 (100%)"
+      }
+    ]
+  },
+  "updated_at": "2026-11-02T21:45:00-06:00"
+}

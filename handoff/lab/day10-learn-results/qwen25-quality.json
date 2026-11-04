@@ -1,0 +1,649 @@
+{
+  "experiment": "quality",
+  "model": "qwen25",
+  "passed": 12,
+  "total": 12,
+  "max_tokens": 1024,
+  "scoring": "guess_ahead.final_answer_text + answer_ok / whole-word in final / letter-form of expect",
+  "rows": [
+    {
+      "wall_s": 0.7,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 2,
+      "prompt_tokens": 42,
+      "total_s": 0.679,
+      "prefill_s": 0.513,
+      "tps": 12.048,
+      "learn": {
+        "norm_tps": 9.337,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.513,
+        "ttft_s": 0.597,
+        "total_s": 0.679,
+        "peak_gb": 4.27,
+        "split": {
+          "calls": 12,
+          "mb_out": 0.0,
+          "mb_in": 0.61,
+          "wait_s": 0.565,
+          "front_s": 0.481,
+          "net_s": 0.084
+        },
+        "learn": {
+          "norm_tps": 9.337,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 0
+    },
+    {
+      "wall_s": 2.377,
+      "prompt": "Spell the word cat.",
+      "text": "The word \"cat\" is already correctly spelled. Do you need any more information or help with something else?<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 23,
+      "prompt_tokens": 34,
+      "total_s": 2.369,
+      "prefill_s": 0.51,
+      "tps": 12.372,
+      "learn": {
+        "norm_tps": 11.807,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.51,
+        "ttft_s": 0.592,
+        "total_s": 2.369,
+        "peak_gb": 4.28,
+        "split": {
+          "calls": 40,
+          "mb_out": 0.0,
+          "mb_in": 1.18,
+          "wait_s": 1.718,
+          "front_s": 1.617,
+          "net_s": 0.101
+        },
+        "learn": {
+          "norm_tps": 11.807,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "the word \"cat\" is already correctly spelled. do you need any more information or help with something else?",
+      "i": 1
+    },
+    {
+      "wall_s": 4.641,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes, the sky is usually blue due to a phenomenon called Rayleigh scattering, where the sun's light is scattered by the gases and particles in the atmosphere, and blue light is scattered more than other colors because it travels as shorter, smaller waves.<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 51,
+      "prompt_tokens": 39,
+      "total_s": 4.633,
+      "prefill_s": 0.511,
+      "tps": 12.373,
+      "learn": {
+        "norm_tps": 12.373,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "packer_layers",
+          "value": 22
+        },
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.511,
+        "ttft_s": 0.592,
+        "total_s": 4.633,
+        "peak_gb": 4.31,
+        "split": {
+          "calls": 96,
+          "mb_out": 0.01,
+          "mb_in": 2.1,
+          "wait_s": 3.957,
+          "front_s": 3.823,
+          "net_s": 0.134
+        },
+        "learn": {
+          "norm_tps": 12.373,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "packer_layers",
+            "value": 22
+          },
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes, the sky is usually blue due to a phenomenon called rayleigh scattering, where the sun's light is scattered by the gases and particles in the atmosphere, and blue light is scattered more than othe",
+      "i": 2
+    },
+    {
+      "wall_s": 0.681,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 2,
+      "prompt_tokens": 42,
+      "total_s": 0.674,
+      "prefill_s": 0.512,
+      "tps": 12.346,
+      "learn": {
+        "norm_tps": 9.568,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.512,
+        "ttft_s": 0.593,
+        "total_s": 0.674,
+        "peak_gb": 4.35,
+        "split": {
+          "calls": 103,
+          "mb_out": 0.01,
+          "mb_in": 2.54,
+          "wait_s": 4.301,
+          "front_s": 4.162,
+          "net_s": 0.138
+        },
+        "learn": {
+          "norm_tps": 9.568,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 3
+    },
+    {
+      "wall_s": 2.383,
+      "prompt": "Spell the word cat.",
+      "text": "The word \"cat\" is already correctly spelled. Do you need any more information or help with something else?<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 23,
+      "prompt_tokens": 34,
+      "total_s": 2.376,
+      "prefill_s": 0.509,
+      "tps": 12.319,
+      "learn": {
+        "norm_tps": 11.757,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.509,
+        "ttft_s": 0.59,
+        "total_s": 2.376,
+        "peak_gb": 4.35,
+        "split": {
+          "calls": 132,
+          "mb_out": 0.01,
+          "mb_in": 3.11,
+          "wait_s": 5.461,
+          "front_s": 5.305,
+          "net_s": 0.156
+        },
+        "learn": {
+          "norm_tps": 11.757,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "the word \"cat\" is already correctly spelled. do you need any more information or help with something else?",
+      "i": 4
+    },
+    {
+      "wall_s": 4.65,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes, the sky is usually blue due to a phenomenon called Rayleigh scattering, where the sun's light is scattered by the gases and particles in the atmosphere, and blue light is scattered more than other colors because it travels as shorter, smaller waves.<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 51,
+      "prompt_tokens": 39,
+      "total_s": 4.644,
+      "prefill_s": 0.511,
+      "tps": 12.34,
+      "learn": {
+        "norm_tps": 12.34,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.511,
+        "ttft_s": 0.592,
+        "total_s": 4.644,
+        "peak_gb": 4.36,
+        "split": {
+          "calls": 189,
+          "mb_out": 0.01,
+          "mb_in": 4.03,
+          "wait_s": 7.703,
+          "front_s": 7.515,
+          "net_s": 0.189
+        },
+        "learn": {
+          "norm_tps": 12.34,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes, the sky is usually blue due to a phenomenon called rayleigh scattering, where the sun's light is scattered by the gases and particles in the atmosphere, and blue light is scattered more than othe",
+      "i": 5
+    },
+    {
+      "wall_s": 0.687,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 2,
+      "prompt_tokens": 42,
+      "total_s": 0.68,
+      "prefill_s": 0.512,
+      "tps": 11.905,
+      "learn": {
+        "norm_tps": 9.226,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.512,
+        "ttft_s": 0.594,
+        "total_s": 0.68,
+        "peak_gb": 4.37,
+        "split": {
+          "calls": 197,
+          "mb_out": 0.02,
+          "mb_in": 4.47,
+          "wait_s": 8.05,
+          "front_s": 7.857,
+          "net_s": 0.193
+        },
+        "learn": {
+          "norm_tps": 9.226,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 6
+    },
+    {
+      "wall_s": 2.385,
+      "prompt": "Spell the word cat.",
+      "text": "The word \"cat\" is already correctly spelled. Do you need any more information or help with something else?<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 23,
+      "prompt_tokens": 34,
+      "total_s": 2.378,
+      "prefill_s": 0.51,
+      "tps": 12.313,
+      "learn": {
+        "norm_tps": 11.75,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.51,
+        "ttft_s": 0.591,
+        "total_s": 2.378,
+        "peak_gb": 4.37,
+        "split": {
+          "calls": 226,
+          "mb_out": 0.02,
+          "mb_in": 5.04,
+          "wait_s": 9.211,
+          "front_s": 9.0,
+          "net_s": 0.211
+        },
+        "learn": {
+          "norm_tps": 11.75,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "the word \"cat\" is already correctly spelled. do you need any more information or help with something else?",
+      "i": 7
+    },
+    {
+      "wall_s": 4.652,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes, the sky is usually blue due to a phenomenon called Rayleigh scattering, where the sun's light is scattered by the gases and particles in the atmosphere, and blue light is scattered more than other colors because it travels as shorter, smaller waves.<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 51,
+      "prompt_tokens": 39,
+      "total_s": 4.65,
+      "prefill_s": 0.511,
+      "tps": 12.322,
+      "learn": {
+        "norm_tps": 12.322,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.511,
+        "ttft_s": 0.593,
+        "total_s": 4.65,
+        "peak_gb": 4.37,
+        "split": {
+          "calls": 283,
+          "mb_out": 0.02,
+          "mb_in": 5.96,
+          "wait_s": 11.456,
+          "front_s": 11.212,
+          "net_s": 0.244
+        },
+        "learn": {
+          "norm_tps": 12.322,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes, the sky is usually blue due to a phenomenon called rayleigh scattering, where the sun's light is scattered by the gases and particles in the atmosphere, and blue light is scattered more than othe",
+      "i": 8
+    },
+    {
+      "wall_s": 0.682,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 2,
+      "prompt_tokens": 42,
+      "total_s": 0.68,
+      "prefill_s": 0.512,
+      "tps": 11.905,
+      "learn": {
+        "norm_tps": 9.226,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.512,
+        "ttft_s": 0.593,
+        "total_s": 0.68,
+        "peak_gb": 4.37,
+        "split": {
+          "calls": 291,
+          "mb_out": 0.02,
+          "mb_in": 6.4,
+          "wait_s": 11.801,
+          "front_s": 11.552,
+          "net_s": 0.249
+        },
+        "learn": {
+          "norm_tps": 9.226,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 9
+    },
+    {
+      "wall_s": 2.383,
+      "prompt": "Spell the word cat.",
+      "text": "The word \"cat\" is already correctly spelled. Do you need any more information or help with something else?<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 23,
+      "prompt_tokens": 34,
+      "total_s": 2.381,
+      "prefill_s": 0.51,
+      "tps": 12.293,
+      "learn": {
+        "norm_tps": 11.732,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.51,
+        "ttft_s": 0.591,
+        "total_s": 2.381,
+        "peak_gb": 4.37,
+        "split": {
+          "calls": 320,
+          "mb_out": 0.02,
+          "mb_in": 6.98,
+          "wait_s": 12.96,
+          "front_s": 12.694,
+          "net_s": 0.266
+        },
+        "learn": {
+          "norm_tps": 11.732,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "the word \"cat\" is already correctly spelled. do you need any more information or help with something else?",
+      "i": 10
+    },
+    {
+      "wall_s": 4.656,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes, the sky is usually blue due to a phenomenon called Rayleigh scattering, where the sun's light is scattered by the gases and particles in the atmosphere, and blue light is scattered more than other colors because it travels as shorter, smaller waves.<|im_end|>",
+      "reasoning_content": "",
+      "completion_tokens": 51,
+      "prompt_tokens": 39,
+      "total_s": 4.654,
+      "prefill_s": 0.511,
+      "tps": 12.31,
+      "learn": {
+        "norm_tps": 12.31,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.511,
+        "ttft_s": 0.592,
+        "total_s": 4.654,
+        "peak_gb": 4.37,
+        "split": {
+          "calls": 377,
+          "mb_out": 0.03,
+          "mb_in": 7.89,
+          "wait_s": 15.21,
+          "front_s": 14.911,
+          "net_s": 0.299
+        },
+        "learn": {
+          "norm_tps": 12.31,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes, the sky is usually blue due to a phenomenon called rayleigh scattering, where the sun's light is scattered by the gases and particles in the atmosphere, and blue light is scattered more than othe",
+      "i": 11
+    }
+  ],
+  "learn_log": [
+    "21:36:22 [mlx-worker] auto split: packer_layers=24 (equal RAM ~26/26 GB; balanced cut K=24 for 48 layers (qwen2))",
+    "21:36:23 [mlx-worker] auto pipeline: chats=2 (headroom 3.4 GB after ~3.7 GB weights on 26 GB; Mini benches peak at 2 chats)",
+    "21:36:32 [mlx-worker] learn: queue split packer_layers=22 for next load (near current 24)",
+    "21:36:33 [mlx-worker] learn: keep packer_layers=24: best so far at 10.77 tok/s over 4 replies",
+    "21:36:43 [mlx-worker] learn: keep packer_layers=24: best so far at 11.02 tok/s over 8 replies",
+    "21:36:55 [mlx-worker] learn: keep packer_layers=24: best so far at 11.15 tok/s over 12 replies"
+  ],
+  "rescored_note": "letter-form accept for spell-outs like C-A-T == cat; thinking still excluded"
+}

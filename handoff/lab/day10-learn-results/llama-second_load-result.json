@@ -1,0 +1,327 @@
+{
+  "experiment": "second_load",
+  "model": "llama",
+  "tuned_before": {
+    "models": {
+      "mlx-community--Meta-Llama-3.1-8B-Instruct-4bit:spanned": {
+        "hardware": "spanned",
+        "model": "mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
+        "pending_reload": {},
+        "reply_n": 29,
+        "stats": {
+          "packer_layers:16": {
+            "mean": 16.971424161228867,
+            "n": 24,
+            "samples": [
+              18.732,
+              20.177,
+              15.837,
+              13.348,
+              17.481,
+              10.952,
+              17.467,
+              18.374,
+              17.34,
+              16.489,
+              17.214,
+              18.674,
+              13.649,
+              22.046,
+              19.941,
+              17.34,
+              19.138,
+              18.889,
+              17.09,
+              18.374
+            ],
+            "sum": 407.3141798694928
+          },
+          "pipeline_chats:1": {
+            "mean": 10.098144842446406,
+            "n": 10,
+            "samples": [
+              10,
+              10,
+              10,
+              10.656,
+              9.336,
+              6.364,
+              9.916,
+              12.533,
+              12.904,
+              9.272
+            ],
+            "sum": 100.98144842446405
+          },
+          "pipeline_chats:2": {
+            "mean": 17.573941374695927,
+            "n": 5,
+            "samples": [
+              11.442,
+              22.865,
+              13.781,
+              17.103,
+              22.679
+            ],
+            "sum": 87.86970687347963
+          }
+        },
+        "updated_at": "2026-11-03T01:32:47Z",
+        "winner": {
+          "guess_ahead": false,
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        }
+      }
+    },
+    "version": 1
+  },
+  "startup_log": [
+    "19:37:44 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers (llama))",
+    "19:37:45 [mlx-worker] auto pipeline: chats=2 (headroom 3.1 GB after ~2.0 GB weights on 26 GB; Mini benches peak at 2 chats)",
+    "19:37:45 [mlx-worker] learned split: packer_layers=16 (saved winner for spanned)",
+    "19:37:45 [mlx-worker] learned pipeline: chats=2 (saved winner for spanned)",
+    "19:37:45 [mlx-worker] learned guess-ahead: off (saved winner for spanned)",
+    "19:37:46 [mlx-worker] learn: re-check pipeline_chats=1 against current pipeline_chats=2",
+    "19:37:47 [mlx-worker] learn: keep packer_layers=16: best so far at 16.93 tok/s over 27 replies"
+  ],
+  "first_replies": [
+    {
+      "wall_s": 0.165,
+      "prompt": "Say hello in one short sentence.",
+      "text": "Hello.<|eot_id|>",
+      "completion_tokens": 3,
+      "prompt_tokens": 42,
+      "total_s": 0.144,
+      "prefill_s": 0.001,
+      "tps": 20.979,
+      "learn": {
+        "norm_tps": 16.612,
+        "winner": {
+          "guess_ahead": false,
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "hit-disk",
+        "prefill_s": 0.001,
+        "ttft_s": 0.053,
+        "total_s": 0.144,
+        "peak_gb": 2.38,
+        "split": {
+          "calls": 12,
+          "mb_out": 0.0,
+          "mb_in": 0.16,
+          "wait_s": 0.225,
+          "front_s": 0.136,
+          "net_s": 0.089
+        },
+        "learn": {
+          "norm_tps": 16.612,
+          "winner": {
+            "guess_ahead": false,
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "i": 0
+    },
+    {
+      "wall_s": 0.119,
+      "prompt": "What is 17+4? Reply with just the number.",
+      "text": "21<|eot_id|>",
+      "completion_tokens": 2,
+      "prompt_tokens": 48,
+      "total_s": 0.106,
+      "prefill_s": 0.002,
+      "tps": 19.231,
+      "learn": {
+        "norm_tps": 14.904,
+        "winner": {
+          "guess_ahead": false,
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "pipeline_chats",
+          "value": 1
+        },
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 6
+        }
+      },
+      "caravan": {
+        "how": "hit-disk",
+        "prefill_s": 0.002,
+        "ttft_s": 0.057,
+        "total_s": 0.106,
+        "peak_gb": 2.38,
+        "split": {
+          "calls": 18,
+          "mb_out": 0.0,
+          "mb_in": 0.17,
+          "wait_s": 0.278,
+          "front_s": 0.179,
+          "net_s": 0.099
+        },
+        "learn": {
+          "norm_tps": 14.904,
+          "winner": {
+            "guess_ahead": false,
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 6
+          }
+        }
+      },
+      "i": 1
+    },
+    {
+      "wall_s": 0.34,
+      "prompt": "Name one primary color.",
+      "text": "Red is a primary color.<|eot_id|>",
+      "completion_tokens": 7,
+      "prompt_tokens": 40,
+      "total_s": 0.326,
+      "prefill_s": 0.002,
+      "tps": 21.605,
+      "learn": {
+        "norm_tps": 18.155,
+        "winner": {
+          "guess_ahead": false,
+          "packer_layers": 16,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 5
+        }
+      },
+      "caravan": {
+        "how": "hit-disk",
+        "prefill_s": 0.002,
+        "ttft_s": 0.055,
+        "total_s": 0.326,
+        "peak_gb": 2.38,
+        "split": {
+          "calls": 29,
+          "mb_out": 0.0,
+          "mb_in": 0.23,
+          "wait_s": 0.434,
+          "front_s": 0.324,
+          "net_s": 0.111
+        },
+        "learn": {
+          "norm_tps": 18.155,
+          "winner": {
+            "guess_ahead": false,
+            "packer_layers": 16,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 5
+          }
+        }
+      },
+      "i": 2
+    }
+  ],
+  "tuned_after": {
+    "key": "mlx-community--Meta-Llama-3.1-8B-Instruct-4bit:spanned",
+    "hardware": "spanned",
+    "model": "mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
+    "pending_reload": {},
+    "reply_n": 32,
+    "stats": {
+      "packer_layers:16": {
+        "mean": 16.92538070399613,
+        "n": 27,
+        "samples": [
+          13.348,
+          17.481,
+          10.952,
+          17.467,
+          18.374,
+          17.34,
+          16.489,
+          17.214,
+          18.674,
+          13.649,
+          22.046,
+          19.941,
+          17.34,
+          19.138,
+          18.889,
+          17.09,
+          18.374,
+          16.612,
+          14.904,
+          18.155
+        ],
+        "sum": 456.9852790078955
+      },
+      "pipeline_chats:1": {
+        "mean": 10.098144842446406,
+        "n": 10,
+        "samples": [
+          10,
+          10,
+          10,
+          10.656,
+          9.336,
+          6.364,
+          9.916,
+          12.533,
+          12.904,
+          9.272
+        ],
+        "sum": 100.98144842446405
+      },
+      "pipeline_chats:2": {
+        "mean": 17.573941374695927,
+        "n": 5,
+        "samples": [
+          11.442,
+          22.865,
+          13.781,
+          17.103,
+          22.679
+        ],
+        "sum": 87.86970687347963
+      }
+    },
+    "updated_at": "2026-11-03T01:37:47Z",
+    "winner": {
+      "guess_ahead": false,
+      "packer_layers": 16,
+      "pipeline_chats": 2
+    }
+  }
+}

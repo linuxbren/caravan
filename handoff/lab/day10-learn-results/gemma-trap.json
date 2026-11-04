@@ -1,0 +1,1807 @@
+{
+  "experiment": "trap",
+  "model": "gemma",
+  "start_winner_pipeline": 1,
+  "switched_to_2_at_reply": 8,
+  "climb": [
+    {
+      "i": 0,
+      "winner_pipeline": 1,
+      "tps": 37.537,
+      "explore": null
+    },
+    {
+      "i": 1,
+      "winner_pipeline": 1,
+      "tps": 37.296,
+      "explore": {
+        "name": "pipeline_chats",
+        "value": 2
+      }
+    },
+    {
+      "i": 2,
+      "winner_pipeline": 1,
+      "tps": null,
+      "explore": null
+    },
+    {
+      "i": 4,
+      "winner_pipeline": 1,
+      "tps": null,
+      "explore": null
+    },
+    {
+      "i": 6,
+      "winner_pipeline": 1,
+      "tps": null,
+      "explore": null
+    },
+    {
+      "i": 8,
+      "winner_pipeline": 2,
+      "tps": null,
+      "explore": null
+    },
+    {
+      "i": 10,
+      "winner_pipeline": 2,
+      "tps": null,
+      "explore": null
+    },
+    {
+      "i": 12,
+      "winner_pipeline": 2,
+      "tps": null,
+      "explore": null
+    },
+    {
+      "i": 14,
+      "winner_pipeline": 2,
+      "tps": null,
+      "explore": null
+    },
+    {
+      "i": 16,
+      "winner_pipeline": 2,
+      "tps": null,
+      "explore": null
+    },
+    {
+      "i": 18,
+      "winner_pipeline": 2,
+      "tps": null,
+      "explore": null
+    },
+    {
+      "i": 20,
+      "winner_pipeline": 2,
+      "tps": null,
+      "explore": null
+    },
+    {
+      "i": 22,
+      "winner_pipeline": 2,
+      "tps": null,
+      "explore": null
+    }
+  ],
+  "rows": [
+    {
+      "wall_s": 1.771,
+      "prompt": "Say hello in one short sentence.",
+      "text": "",
+      "completion_tokens": 64,
+      "prompt_tokens": 23,
+      "total_s": 1.711,
+      "prefill_s": 0.006,
+      "tps": 37.537,
+      "learn": {
+        "norm_tps": 37.537,
+        "winner": {
+          "pipeline_chats": 1,
+          "packer_layers": 15,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "hit-disk",
+        "prefill_s": 0.006,
+        "ttft_s": 0.039,
+        "total_s": 1.711,
+        "peak_gb": 6.9,
+        "split": {
+          "calls": 74,
+          "mb_out": 0.01,
+          "mb_in": 0.46,
+          "wait_s": 1.009,
+          "front_s": 0.812,
+          "net_s": 0.197
+        },
+        "learn": {
+          "norm_tps": 37.537,
+          "winner": {
+            "pipeline_chats": 1,
+            "packer_layers": 15,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "i": 0
+    },
+    {
+      "wall_s": 1.755,
+      "prompt": "What is 17+4? Reply with just the number.",
+      "text": "",
+      "completion_tokens": 64,
+      "prompt_tokens": 30,
+      "total_s": 1.725,
+      "prefill_s": 0.009,
+      "tps": 37.296,
+      "learn": {
+        "norm_tps": 37.296,
+        "winner": {
+          "pipeline_chats": 1,
+          "packer_layers": 15,
+          "guess_ahead": false
+        },
+        "explore": {
+          "name": "pipeline_chats",
+          "value": 2
+        },
+        "pipeline_probe": {
+          "aggregate_tps": 34.823,
+          "n": 1
+        },
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 2,
+          "remaining": 6
+        }
+      },
+      "caravan": {
+        "how": "hit-disk",
+        "prefill_s": 0.009,
+        "ttft_s": 0.046,
+        "total_s": 1.725,
+        "peak_gb": 6.9,
+        "split": {
+          "calls": 142,
+          "mb_out": 0.01,
+          "mb_in": 0.82,
+          "wait_s": 1.801,
+          "front_s": 1.563,
+          "net_s": 0.238
+        },
+        "learn": {
+          "norm_tps": 37.296,
+          "winner": {
+            "pipeline_chats": 1,
+            "packer_layers": 15,
+            "guess_ahead": false
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 2
+          },
+          "pipeline_probe": {
+            "aggregate_tps": 34.823,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 2,
+            "remaining": 6
+          }
+        }
+      },
+      "i": 1
+    },
+    {
+      "pair": true,
+      "wall_s": 2.298,
+      "aggregate_tps": 55.709,
+      "a": {
+        "wall_s": 2.281,
+        "prompt": "Name one primary color.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 21,
+        "total_s": 2.269,
+        "prefill_s": 0.17,
+        "tps": 30.491,
+        "learn": {
+          "norm_tps": 30.491,
+          "winner": {
+            "pipeline_chats": 1,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 2,
+            "remaining": 5
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.17,
+          "ttft_s": 0.372,
+          "total_s": 2.269,
+          "peak_gb": 6.94,
+          "split": {
+            "calls": 279,
+            "mb_out": 0.02,
+            "mb_in": 1.8,
+            "wait_s": 3.911,
+            "front_s": 3.22,
+            "net_s": 0.691
+          },
+          "learn": {
+            "norm_tps": 30.491,
+            "winner": {
+              "pipeline_chats": 1,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 2,
+              "remaining": 5
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 2.297,
+        "prompt": "Give a one-word synonym for fast.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 25,
+        "total_s": 2.1,
+        "prefill_s": 0.17,
+        "tps": 33.161,
+        "learn": {
+          "norm_tps": 33.161,
+          "winner": {
+            "pipeline_chats": 1,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 55.992,
+            "n": 2
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 2,
+            "remaining": 4
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.17,
+          "ttft_s": 0.202,
+          "total_s": 2.1,
+          "peak_gb": 6.94,
+          "split": {
+            "calls": 280,
+            "mb_out": 0.02,
+            "mb_in": 1.8,
+            "wait_s": 3.911,
+            "front_s": 3.22,
+            "net_s": 0.691
+          },
+          "learn": {
+            "norm_tps": 33.161,
+            "winner": {
+              "pipeline_chats": 1,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 55.992,
+              "n": 2
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 2,
+              "remaining": 4
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 33.161,
+        "winner": {
+          "pipeline_chats": 1,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": {
+          "aggregate_tps": 55.992,
+          "n": 2
+        },
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 2,
+          "remaining": 4
+        }
+      },
+      "i": 2
+    },
+    {
+      "pair": true,
+      "wall_s": 2.312,
+      "aggregate_tps": 55.357,
+      "a": {
+        "wall_s": 2.312,
+        "prompt": "Is water wet? Yes or no.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 24,
+        "total_s": 2.11,
+        "prefill_s": 0.164,
+        "tps": 32.888,
+        "learn": {
+          "norm_tps": 32.888,
+          "winner": {
+            "pipeline_chats": 1,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 2
+          },
+          "pipeline_probe": {
+            "aggregate_tps": 55.613,
+            "n": 2
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 2,
+            "remaining": 2
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.164,
+          "ttft_s": 0.197,
+          "total_s": 2.11,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 419,
+            "mb_out": 0.04,
+            "mb_in": 2.78,
+            "wait_s": 6.037,
+            "front_s": 4.883,
+            "net_s": 1.154
+          },
+          "learn": {
+            "norm_tps": 32.888,
+            "winner": {
+              "pipeline_chats": 1,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": {
+              "name": "pipeline_chats",
+              "value": 2
+            },
+            "pipeline_probe": {
+              "aggregate_tps": 55.613,
+              "n": 2
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 2,
+              "remaining": 2
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 2.296,
+        "prompt": "Count to 5 with commas.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 23,
+        "total_s": 2.286,
+        "prefill_s": 0.176,
+        "tps": 30.332,
+        "learn": {
+          "norm_tps": 30.332,
+          "winner": {
+            "pipeline_chats": 1,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 2,
+            "remaining": 3
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.176,
+          "ttft_s": 0.372,
+          "total_s": 2.286,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 418,
+            "mb_out": 0.04,
+            "mb_in": 2.78,
+            "wait_s": 6.037,
+            "front_s": 4.883,
+            "net_s": 1.154
+          },
+          "learn": {
+            "norm_tps": 30.332,
+            "winner": {
+              "pipeline_chats": 1,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 2,
+              "remaining": 3
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 30.332,
+        "winner": {
+          "pipeline_chats": 1,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 2,
+          "remaining": 3
+        }
+      },
+      "i": 4
+    },
+    {
+      "pair": true,
+      "wall_s": 2.323,
+      "aggregate_tps": 54.673,
+      "a": {
+        "wall_s": 2.322,
+        "prompt": "Translate 'cat' to Spanish, one word.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 26,
+        "total_s": 2.105,
+        "prefill_s": 0.173,
+        "tps": 33.126,
+        "learn": {
+          "norm_tps": 33.126,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 54.938,
+            "n": 2
+          },
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.173,
+          "ttft_s": 0.205,
+          "total_s": 2.105,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 557,
+            "mb_out": 0.05,
+            "mb_in": 3.79,
+            "wait_s": 8.147,
+            "front_s": 6.547,
+            "net_s": 1.601
+          },
+          "learn": {
+            "norm_tps": 33.126,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 54.938,
+              "n": 2
+            },
+            "trial": null
+          }
+        }
+      },
+      "b": {
+        "wall_s": 2.277,
+        "prompt": "What day comes after Monday? One word.",
+        "text": "Tuesday<turn|>",
+        "completion_tokens": 63,
+        "prompt_tokens": 25,
+        "total_s": 2.266,
+        "prefill_s": 0.19,
+        "tps": 30.347,
+        "learn": {
+          "norm_tps": 30.347,
+          "winner": {
+            "pipeline_chats": 1,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 2,
+            "remaining": 1
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.19,
+          "ttft_s": 0.396,
+          "total_s": 2.266,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 555,
+            "mb_out": 0.05,
+            "mb_in": 3.78,
+            "wait_s": 8.131,
+            "front_s": 6.532,
+            "net_s": 1.599
+          },
+          "learn": {
+            "norm_tps": 30.347,
+            "winner": {
+              "pipeline_chats": 1,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 2,
+              "remaining": 1
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 30.347,
+        "winner": {
+          "pipeline_chats": 1,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 2,
+          "remaining": 1
+        }
+      },
+      "i": 6
+    },
+    {
+      "pair": true,
+      "wall_s": 2.312,
+      "aggregate_tps": 55.355,
+      "a": {
+        "wall_s": 2.312,
+        "prompt": "Name a fruit that is yellow.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 23,
+        "total_s": 2.092,
+        "prefill_s": 0.159,
+        "tps": 33.109,
+        "learn": {
+          "norm_tps": 33.109,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": {
+            "aggregate_tps": 55.615,
+            "n": 2
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 6
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.159,
+          "ttft_s": 0.191,
+          "total_s": 2.092,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 696,
+            "mb_out": 0.06,
+            "mb_in": 4.78,
+            "wait_s": 10.266,
+            "front_s": 8.215,
+            "net_s": 2.052
+          },
+          "learn": {
+            "norm_tps": 33.109,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": {
+              "name": "pipeline_chats",
+              "value": 1
+            },
+            "pipeline_probe": {
+              "aggregate_tps": 55.615,
+              "n": 2
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 6
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 2.296,
+        "prompt": "Write a 6-word sentence about rain.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 26,
+        "total_s": 2.286,
+        "prefill_s": 0.194,
+        "tps": 30.593,
+        "learn": {
+          "norm_tps": 30.593,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.194,
+          "ttft_s": 0.385,
+          "total_s": 2.286,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 695,
+            "mb_out": 0.06,
+            "mb_in": 4.78,
+            "wait_s": 10.266,
+            "front_s": 8.215,
+            "net_s": 2.051
+          },
+          "learn": {
+            "norm_tps": 30.593,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": null
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 30.593,
+        "winner": {
+          "pipeline_chats": 2,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "i": 8
+    },
+    {
+      "pair": true,
+      "wall_s": 3.787,
+      "aggregate_tps": 33.796,
+      "a": {
+        "wall_s": 1.918,
+        "prompt": "What is the opposite of hot? One word.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 26,
+        "total_s": 1.909,
+        "prefill_s": 0.191,
+        "tps": 37.253,
+        "learn": {
+          "norm_tps": 37.253,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 5
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.191,
+          "ttft_s": 0.225,
+          "total_s": 1.909,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 766,
+            "mb_out": 0.07,
+            "mb_in": 5.29,
+            "wait_s": 11.151,
+            "front_s": 9.053,
+            "net_s": 2.097
+          },
+          "learn": {
+            "norm_tps": 37.253,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 5
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 3.787,
+        "prompt": "List three vowels separated by commas.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 23,
+        "total_s": 1.868,
+        "prefill_s": 0.159,
+        "tps": 37.449,
+        "learn": {
+          "norm_tps": 37.449,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 33.876,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 4
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.159,
+          "ttft_s": 0.188,
+          "total_s": 1.868,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 836,
+            "mb_out": 0.08,
+            "mb_in": 5.78,
+            "wait_s": 12.022,
+            "front_s": 9.886,
+            "net_s": 2.135
+          },
+          "learn": {
+            "norm_tps": 37.449,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 33.876,
+              "n": 1
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 4
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 37.449,
+        "winner": {
+          "pipeline_chats": 2,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": {
+          "aggregate_tps": 33.876,
+          "n": 1
+        },
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 4
+        }
+      },
+      "i": 10
+    },
+    {
+      "pair": true,
+      "wall_s": 3.835,
+      "aggregate_tps": 33.379,
+      "a": {
+        "wall_s": 3.834,
+        "prompt": "Say hello in one short sentence.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 23,
+        "total_s": 1.898,
+        "prefill_s": 0.159,
+        "tps": 36.803,
+        "learn": {
+          "norm_tps": 36.803,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": {
+            "aggregate_tps": 33.475,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 2
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.159,
+          "ttft_s": 0.189,
+          "total_s": 1.898,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 976,
+            "mb_out": 0.09,
+            "mb_in": 6.79,
+            "wait_s": 13.817,
+            "front_s": 11.599,
+            "net_s": 2.217
+          },
+          "learn": {
+            "norm_tps": 36.803,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": {
+              "name": "pipeline_chats",
+              "value": 1
+            },
+            "pipeline_probe": {
+              "aggregate_tps": 33.475,
+              "n": 1
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 2
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 1.934,
+        "prompt": "What is 17+4? Reply with just the number.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 30,
+        "total_s": 1.924,
+        "prefill_s": 0.213,
+        "tps": 37.405,
+        "learn": {
+          "norm_tps": 37.405,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 3
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.213,
+          "ttft_s": 0.245,
+          "total_s": 1.924,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 906,
+            "mb_out": 0.08,
+            "mb_in": 6.31,
+            "wait_s": 12.914,
+            "front_s": 10.735,
+            "net_s": 2.179
+          },
+          "learn": {
+            "norm_tps": 37.405,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 3
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 37.405,
+        "winner": {
+          "pipeline_chats": 2,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 3
+        }
+      },
+      "i": 12
+    },
+    {
+      "pair": true,
+      "wall_s": 3.778,
+      "aggregate_tps": 33.885,
+      "a": {
+        "wall_s": 3.777,
+        "prompt": "Name one primary color.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 21,
+        "total_s": 1.86,
+        "prefill_s": 0.15,
+        "tps": 37.427,
+        "learn": {
+          "norm_tps": 37.427,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 33.983,
+            "n": 1
+          },
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.15,
+          "ttft_s": 0.18,
+          "total_s": 1.86,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 1116,
+            "mb_out": 0.1,
+            "mb_in": 7.77,
+            "wait_s": 15.563,
+            "front_s": 13.261,
+            "net_s": 2.302
+          },
+          "learn": {
+            "norm_tps": 37.427,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 33.983,
+              "n": 1
+            },
+            "trial": null
+          }
+        }
+      },
+      "b": {
+        "wall_s": 1.915,
+        "prompt": "Give a one-word synonym for fast.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 25,
+        "total_s": 1.905,
+        "prefill_s": 0.185,
+        "tps": 37.209,
+        "learn": {
+          "norm_tps": 37.209,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 1
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.185,
+          "ttft_s": 0.218,
+          "total_s": 1.905,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 1046,
+            "mb_out": 0.1,
+            "mb_in": 7.3,
+            "wait_s": 14.699,
+            "front_s": 12.436,
+            "net_s": 2.263
+          },
+          "learn": {
+            "norm_tps": 37.209,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 1
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 37.209,
+        "winner": {
+          "pipeline_chats": 2,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 1
+        }
+      },
+      "i": 14
+    },
+    {
+      "pair": true,
+      "wall_s": 2.296,
+      "aggregate_tps": 55.743,
+      "a": {
+        "wall_s": 2.296,
+        "prompt": "Is water wet? Yes or no.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 24,
+        "total_s": 2.094,
+        "prefill_s": 0.164,
+        "tps": 33.161,
+        "learn": {
+          "norm_tps": 33.161,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": {
+            "aggregate_tps": 55.999,
+            "n": 2
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 6
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.164,
+          "ttft_s": 0.196,
+          "total_s": 2.094,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 1255,
+            "mb_out": 0.12,
+            "mb_in": 8.76,
+            "wait_s": 17.673,
+            "front_s": 14.925,
+            "net_s": 2.748
+          },
+          "learn": {
+            "norm_tps": 33.161,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": {
+              "name": "pipeline_chats",
+              "value": 1
+            },
+            "pipeline_probe": {
+              "aggregate_tps": 55.999,
+              "n": 2
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 6
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 2.281,
+        "prompt": "Count to 5 with commas.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 23,
+        "total_s": 2.27,
+        "prefill_s": 0.175,
+        "tps": 30.549,
+        "learn": {
+          "norm_tps": 30.549,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.175,
+          "ttft_s": 0.372,
+          "total_s": 2.27,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 1254,
+            "mb_out": 0.12,
+            "mb_in": 8.76,
+            "wait_s": 17.672,
+            "front_s": 14.925,
+            "net_s": 2.747
+          },
+          "learn": {
+            "norm_tps": 30.549,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": null
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 30.549,
+        "winner": {
+          "pipeline_chats": 2,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "i": 16
+    },
+    {
+      "pair": true,
+      "wall_s": 3.771,
+      "aggregate_tps": 33.677,
+      "a": {
+        "wall_s": 3.771,
+        "prompt": "Translate 'cat' to Spanish, one word.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 26,
+        "total_s": 1.879,
+        "prefill_s": 0.174,
+        "tps": 37.537,
+        "learn": {
+          "norm_tps": 37.537,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 33.774,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 4
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.174,
+          "ttft_s": 0.204,
+          "total_s": 1.879,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 1394,
+            "mb_out": 0.13,
+            "mb_in": 9.76,
+            "wait_s": 19.419,
+            "front_s": 16.587,
+            "net_s": 2.832
+          },
+          "learn": {
+            "norm_tps": 37.537,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 33.774,
+              "n": 1
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 4
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 1.889,
+        "prompt": "What day comes after Monday? One word.",
+        "text": "Tuesday<turn|>",
+        "completion_tokens": 63,
+        "prompt_tokens": 25,
+        "total_s": 1.88,
+        "prefill_s": 0.19,
+        "tps": 37.278,
+        "learn": {
+          "norm_tps": 37.278,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 5
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.19,
+          "ttft_s": 0.223,
+          "total_s": 1.88,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 1324,
+            "mb_out": 0.12,
+            "mb_in": 9.25,
+            "wait_s": 18.541,
+            "front_s": 15.748,
+            "net_s": 2.794
+          },
+          "learn": {
+            "norm_tps": 37.278,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 5
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 37.278,
+        "winner": {
+          "pipeline_chats": 2,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 5
+        }
+      },
+      "i": 18
+    },
+    {
+      "pair": true,
+      "wall_s": 3.782,
+      "aggregate_tps": 33.845,
+      "a": {
+        "wall_s": 3.781,
+        "prompt": "Name a fruit that is yellow.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 23,
+        "total_s": 1.863,
+        "prefill_s": 0.159,
+        "tps": 37.559,
+        "learn": {
+          "norm_tps": 37.559,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": {
+            "name": "pipeline_chats",
+            "value": 1
+          },
+          "pipeline_probe": {
+            "aggregate_tps": 33.938,
+            "n": 1
+          },
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 2
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.159,
+          "ttft_s": 0.188,
+          "total_s": 1.863,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 1534,
+            "mb_out": 0.14,
+            "mb_in": 10.75,
+            "wait_s": 21.167,
+            "front_s": 18.25,
+            "net_s": 2.917
+          },
+          "learn": {
+            "norm_tps": 37.559,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": {
+              "name": "pipeline_chats",
+              "value": 1
+            },
+            "pipeline_probe": {
+              "aggregate_tps": 33.938,
+              "n": 1
+            },
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 2
+            }
+          }
+        }
+      },
+      "b": {
+        "wall_s": 1.917,
+        "prompt": "Write a 6-word sentence about rain.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 26,
+        "total_s": 1.907,
+        "prefill_s": 0.193,
+        "tps": 37.34,
+        "learn": {
+          "norm_tps": 37.34,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 3
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.193,
+          "ttft_s": 0.226,
+          "total_s": 1.907,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 1464,
+            "mb_out": 0.14,
+            "mb_in": 10.26,
+            "wait_s": 20.3,
+            "front_s": 17.423,
+            "net_s": 2.878
+          },
+          "learn": {
+            "norm_tps": 37.34,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 3
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 37.34,
+        "winner": {
+          "pipeline_chats": 2,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 3
+        }
+      },
+      "i": 20
+    },
+    {
+      "pair": true,
+      "wall_s": 3.786,
+      "aggregate_tps": 33.806,
+      "a": {
+        "wall_s": 3.786,
+        "prompt": "What is the opposite of hot? One word.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 26,
+        "total_s": 1.879,
+        "prefill_s": 0.174,
+        "tps": 37.537,
+        "learn": {
+          "norm_tps": 37.537,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": {
+            "aggregate_tps": 33.899,
+            "n": 1
+          },
+          "trial": null
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.174,
+          "ttft_s": 0.204,
+          "total_s": 1.879,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 1674,
+            "mb_out": 0.15,
+            "mb_in": 11.75,
+            "wait_s": 22.917,
+            "front_s": 19.916,
+            "net_s": 3.001
+          },
+          "learn": {
+            "norm_tps": 37.537,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": {
+              "aggregate_tps": 33.899,
+              "n": 1
+            },
+            "trial": null
+          }
+        }
+      },
+      "b": {
+        "wall_s": 1.905,
+        "prompt": "List three vowels separated by commas.",
+        "text": "",
+        "completion_tokens": 64,
+        "prompt_tokens": 23,
+        "total_s": 1.895,
+        "prefill_s": 0.178,
+        "tps": 37.274,
+        "learn": {
+          "norm_tps": 37.274,
+          "winner": {
+            "pipeline_chats": 2,
+            "packer_layers": 16,
+            "guess_ahead": false
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": {
+            "name": "pipeline_chats",
+            "value": 1,
+            "remaining": 1
+          }
+        },
+        "caravan": {
+          "how": "cold",
+          "prefill_s": 0.178,
+          "ttft_s": 0.213,
+          "total_s": 1.895,
+          "peak_gb": 6.95,
+          "split": {
+            "calls": 1604,
+            "mb_out": 0.15,
+            "mb_in": 11.24,
+            "wait_s": 22.042,
+            "front_s": 19.079,
+            "net_s": 2.963
+          },
+          "learn": {
+            "norm_tps": 37.274,
+            "winner": {
+              "pipeline_chats": 2,
+              "packer_layers": 16,
+              "guess_ahead": false
+            },
+            "explore": null,
+            "pipeline_probe": null,
+            "trial": {
+              "name": "pipeline_chats",
+              "value": 1,
+              "remaining": 1
+            }
+          }
+        }
+      },
+      "learn": {
+        "norm_tps": 37.274,
+        "winner": {
+          "pipeline_chats": 2,
+          "packer_layers": 16,
+          "guess_ahead": false
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": {
+          "name": "pipeline_chats",
+          "value": 1,
+          "remaining": 1
+        }
+      },
+      "i": 22
+    }
+  ],
+  "tuned_file": {
+    "key": "mlx-community--gemma-4-26b-a4b-it-4bit:spanned",
+    "hardware": "spanned",
+    "model": "mlx-community--gemma-4-26b-a4b-it-4bit",
+    "pending_reload": {},
+    "reply_n": 29,
+    "stats": {
+      "packer_layers:16": {
+        "mean": 35.02740397773467,
+        "n": 24,
+        "samples": [
+          30.332,
+          32.888,
+          30.347,
+          33.126,
+          30.593,
+          33.109,
+          37.253,
+          37.449,
+          37.405,
+          36.803,
+          37.209,
+          37.427,
+          30.549,
+          33.161,
+          37.278,
+          37.537,
+          37.34,
+          37.559,
+          37.274,
+          37.537
+        ],
+        "sum": 840.6576954656321
+      },
+      "pipeline_chats:1": {
+        "mean": 26.776857597674127,
+        "n": 10,
+        "samples": [
+          10,
+          10,
+          10,
+          34.823,
+          33.876,
+          33.475,
+          33.983,
+          33.774,
+          33.938,
+          33.899
+        ],
+        "sum": 267.76857597674126
+      },
+      "pipeline_chats:2": {
+        "mean": 55.631053597354764,
+        "n": 5,
+        "samples": [
+          55.992,
+          55.613,
+          54.938,
+          55.615,
+          55.999
+        ],
+        "sum": 278.1552679867738
+      }
+    },
+    "updated_at": "2026-11-03T02:53:17Z",
+    "winner": {
+      "guess_ahead": false,
+      "packer_layers": 16,
+      "pipeline_chats": 2
+    }
+  },
+  "learn_log": [
+    "20:52:34 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 30 layers (gemma4))",
+    "20:52:34 [mlx-worker] learn: want packer_layers=15 (saved winner for spanned), packer has K=16; keeping loaded K=16 (restart packer without --split-packer-layers to try 15)",
+    "20:52:36 [mlx-worker] auto pipeline: chats=2 (headroom 3.3 GB after ~6.4 GB weights on 26 GB; Mini benches peak at 2 chats)",
+    "20:52:36 [mlx-worker] learned split: packer_layers=15 (saved winner for spanned)",
+    "20:52:36 [mlx-worker] learned pipeline: chats=1 (saved winner for spanned)",
+    "20:52:36 [mlx-worker] learned guess-ahead: off (saved winner for spanned)",
+    "20:52:38 [mlx-worker] learn: keep packer_layers=15: challenger packer_layers=16 only has 1/3 samples",
+    "20:52:40 [mlx-worker] learn: keep pipeline_chats=1: best concurrent probe so far at 16.21 tok/s over 4 probes",
+    "20:52:40 [mlx-worker] learn: keep packer_layers=15: challenger packer_layers=16 only has 2/3 samples",
+    "20:52:40 [mlx-worker] learn: try pipeline_chats=2: exploring near pipeline_chats=1 (have 0/3 samples)",
+    "20:52:43 [mlx-worker] learn: switch packer_layers 15\u219216: challenger mean 35.11 tok/s over 3 replies; incumbent unproven",
+    "20:52:43 [mlx-worker] learn: keep pipeline_chats=1: need 3 concurrent probes each (have 4 vs challenger 2=1)",
+    "20:52:45 [mlx-worker] learn: keep pipeline_chats=1: need 3 concurrent probes each (have 4 vs challenger 2=2)",
+    "20:52:48 [mlx-worker] learn: keep packer_layers=16: best so far at 33.15 tok/s over 7 replies",
+    "20:52:48 [mlx-worker] learn: switch pipeline_chats 1\u21922: concurrent 55.51 beats 16.21 tok/s over 3 vs 4 probes",
+    "20:52:48 [mlx-worker] learn: end trial pipeline_chats=2; back to winner pipeline_chats=2",
+    "20:52:50 [mlx-worker] learn: keep pipeline_chats=2: best concurrent probe so far at 55.54 tok/s over 4 probes",
+    "20:52:50 [mlx-worker] learn: re-check pipeline_chats=1 against current pipeline_chats=2",
+    "20:52:52 [mlx-worker] learn: keep packer_layers=16: best so far at 33.28 tok/s over 11 replies",
+    "20:52:54 [mlx-worker] learn: keep pipeline_chats=2: concurrent 55.54 still ahead of 19.74 tok/s",
+    "20:52:58 [mlx-worker] learn: keep pipeline_chats=2: concurrent 55.54 still ahead of 22.03 tok/s",
+    "20:53:01 [mlx-worker] learn: keep packer_layers=16: best so far at 34.33 tok/s over 15 replies",
+    "20:53:02 [mlx-worker] learn: keep pipeline_chats=2: concurrent 55.54 still ahead of 23.74 tok/s",
+    "20:53:02 [mlx-worker] learn: end trial pipeline_chats=1; back to winner pipeline_chats=2",
+    "20:53:05 [mlx-worker] learn: keep pipeline_chats=2: best concurrent probe so far at 55.63 tok/s over 5 probes",
+    "20:53:05 [mlx-worker] learn: re-check pipeline_chats=1 against current pipeline_chats=2",
+    "20:53:07 [mlx-worker] learn: keep packer_layers=16: best so far at 34.39 tok/s over 19 replies",
+    "20:53:09 [mlx-worker] learn: keep pipeline_chats=2: concurrent 55.63 still ahead of 24.99 tok/s",
+    "20:53:13 [mlx-worker] learn: keep pipeline_chats=2: concurrent 55.63 still ahead of 25.99 tok/s",
+    "20:53:15 [mlx-worker] learn: keep packer_layers=16: best so far at 34.92 tok/s over 23 replies",
+    "20:53:17 [mlx-worker] learn: keep pipeline_chats=2: concurrent 55.63 still ahead of 26.78 tok/s",
+    "20:53:17 [mlx-worker] learn: end trial pipeline_chats=1; back to winner pipeline_chats=2"
+  ]
+}

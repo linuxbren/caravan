@@ -1,0 +1,649 @@
+{
+  "experiment": "quality",
+  "model": "qwen3",
+  "passed": 12,
+  "total": 12,
+  "max_tokens": 1024,
+  "scoring": "guess_ahead.final_answer_text + answer_ok / whole-word in final / letter-form of expect",
+  "rows": [
+    {
+      "wall_s": 3.653,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|im_end|>",
+      "reasoning_content": "\nOkay, the user is asking \"What is<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic.<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 +<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number 4. Let me make sure there's no trick here. Sometimes people might ask<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number 4. Let me make sure there's no trick here. Sometimes people might ask 2+2 in a different context, like binary or something, but the question doesn't mention anything like that. So it's safe to assume it's regular base<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. ",
+      "completion_tokens": 155,
+      "prompt_tokens": 21,
+      "total_s": 3.628,
+      "prefill_s": 0.165,
+      "tps": 44.759,
+      "learn": {
+        "norm_tps": 44.759,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.165,
+        "ttft_s": 0.193,
+        "total_s": 3.628,
+        "peak_gb": 8.65,
+        "split": {
+          "calls": 165,
+          "mb_out": 0.01,
+          "mb_in": 0.79,
+          "wait_s": 1.932,
+          "front_s": 1.684,
+          "net_s": 0.248
+        },
+        "learn": {
+          "norm_tps": 44.759,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 0
+    },
+    {
+      "wall_s": 4.327,
+      "prompt": "Spell the word cat.",
+      "text": "C-A-T.<|im_end|>",
+      "reasoning_content": "\nOkay, the user asked to spell the word \"cat.\" Let me make sure I do this correctly. First, I need to confirm the word is \"cat.\" It's a common three-letter word. Let me break it down. C-A-T. Each letter is straightforward. C is the first letter, then A, then T. I should check if there's any alternative spelling, but \"cat\" is pretty standard. No common misspellings here. Maybe the user is testing if I know basic spelling, or they might be a non-native speaker. Either way, the answer is simple. Just write out the letters in order. I should present it clearly, maybe with each letter separated. Let me double-check: C, A, T. Yep, that's correct. No need for extra information unless the user asks for more. So the response should be \"C-A-T.\"\n",
+      "completion_tokens": 189,
+      "prompt_tokens": 13,
+      "total_s": 4.316,
+      "prefill_s": 0.105,
+      "tps": 44.882,
+      "learn": {
+        "norm_tps": 44.882,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.105,
+        "ttft_s": 0.127,
+        "total_s": 4.316,
+        "peak_gb": 8.65,
+        "split": {
+          "calls": 359,
+          "mb_out": 0.02,
+          "mb_in": 1.63,
+          "wait_s": 3.966,
+          "front_s": 3.613,
+          "net_s": 0.353
+        },
+        "learn": {
+          "norm_tps": 44.882,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c-a-t.",
+      "i": 1
+    },
+    {
+      "wall_s": 5.961,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<|im_end|>",
+      "reasoning_content": "\nOkay, the user is asking if the sky is usually blue. I need to answer with a simple yes or no. Let me think about this.\n\nFirst, I know that the sky appears blue during the day because of the way sunlight interacts with the atmosphere. The molecules in the air scatter the blue light more than other colors, which is why we see it as blue. But wait, does that mean it's always blue? Well, the sky can change colors depending on the time of day and weather conditions. For example, during sunrise or sunset, the sky can look red or orange. Also, on cloudy days, the sky might appear gray. But the question is about \"usually.\" So, in most clear weather conditions, the sky is indeed blue. However, there are exceptions. But the user is asking for a yes or no answer. So, even though there are times when it's not blue, the general answer would be yes. But I should make sure that the answer is accurate. Maybe the user is looking for a straightforward answer. I think the correct answer is yes, but I need to confirm. Let me check a reliable source. According to scientific explanations, the sky is usually blue during the day. So the answer is yes.\n",
+      "completion_tokens": 260,
+      "prompt_tokens": 18,
+      "total_s": 5.952,
+      "prefill_s": 0.138,
+      "tps": 44.72,
+      "learn": {
+        "norm_tps": 44.72,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": {
+          "name": "packer_layers",
+          "value": 22
+        },
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.138,
+        "ttft_s": 0.161,
+        "total_s": 5.952,
+        "peak_gb": 8.67,
+        "split": {
+          "calls": 624,
+          "mb_out": 0.04,
+          "mb_in": 2.79,
+          "wait_s": 6.766,
+          "front_s": 6.267,
+          "net_s": 0.498
+        },
+        "learn": {
+          "norm_tps": 44.72,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": {
+            "name": "packer_layers",
+            "value": 22
+          },
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 2
+    },
+    {
+      "wall_s": 3.617,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|im_end|>",
+      "reasoning_content": "\nOkay, the user is asking \"What is<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic.<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 +<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number 4. Let me make sure there's no trick here. Sometimes people might ask<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number 4. Let me make sure there's no trick here. Sometimes people might ask 2+2 in a different context, like binary or something, but the question doesn't mention anything like that. So it's safe to assume it's regular base<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. ",
+      "completion_tokens": 155,
+      "prompt_tokens": 21,
+      "total_s": 3.609,
+      "prefill_s": 0.153,
+      "tps": 44.85,
+      "learn": {
+        "norm_tps": 44.85,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.153,
+        "ttft_s": 0.175,
+        "total_s": 3.609,
+        "peak_gb": 8.7,
+        "split": {
+          "calls": 784,
+          "mb_out": 0.05,
+          "mb_in": 3.51,
+          "wait_s": 8.467,
+          "front_s": 7.883,
+          "net_s": 0.583
+        },
+        "learn": {
+          "norm_tps": 44.85,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 3
+    },
+    {
+      "wall_s": 4.334,
+      "prompt": "Spell the word cat.",
+      "text": "C-A-T.<|im_end|>",
+      "reasoning_content": "\nOkay, the user asked to spell the word \"cat.\" Let me make sure I do this correctly. First, I need to confirm the word is \"cat.\" It's a common three-letter word. Let me break it down. C-A-T. Each letter is straightforward. C is the first letter, then A, then T. I should check if there's any alternative spelling, but \"cat\" is pretty standard. No common misspellings here. Maybe the user is testing if I know basic spelling, or they might be a non-native speaker. Either way, the answer is simple. Just write out the letters in order. I should present it clearly, maybe with each letter separated. Let me double-check: C, A, T. Yep, that's correct. No need for extra information unless the user asks for more. So the response should be \"C-A-T.\"\n",
+      "completion_tokens": 189,
+      "prompt_tokens": 13,
+      "total_s": 4.325,
+      "prefill_s": 0.106,
+      "tps": 44.797,
+      "learn": {
+        "norm_tps": 44.797,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.106,
+        "ttft_s": 0.128,
+        "total_s": 4.325,
+        "peak_gb": 8.7,
+        "split": {
+          "calls": 979,
+          "mb_out": 0.07,
+          "mb_in": 4.35,
+          "wait_s": 10.504,
+          "front_s": 9.816,
+          "net_s": 0.688
+        },
+        "learn": {
+          "norm_tps": 44.797,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c-a-t.",
+      "i": 4
+    },
+    {
+      "wall_s": 5.98,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<|im_end|>",
+      "reasoning_content": "\nOkay, the user is asking if the sky is usually blue. I need to answer with a simple yes or no. Let me think about this.\n\nFirst, I know that the sky appears blue during the day because of the way sunlight interacts with the atmosphere. The molecules in the air scatter the blue light more than other colors, which is why we see it as blue. But wait, does that mean it's always blue? Well, the sky can change colors depending on the time of day and weather conditions. For example, during sunrise or sunset, the sky can look red or orange. Also, on cloudy days, the sky might appear gray. But the question is about \"usually.\" So, in most clear weather conditions, the sky is indeed blue. However, there are exceptions. But the user is asking for a yes or no answer. So, even though there are times when it's not blue, the general answer would be yes. But I should make sure that the answer is accurate. Maybe the user is looking for a straightforward answer. I think the correct answer is yes, but I need to confirm. Let me check a reliable source. According to scientific explanations, the sky is usually blue during the day. So the answer is yes.\n",
+      "completion_tokens": 260,
+      "prompt_tokens": 18,
+      "total_s": 5.973,
+      "prefill_s": 0.138,
+      "tps": 44.559,
+      "learn": {
+        "norm_tps": 44.559,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.138,
+        "ttft_s": 0.16,
+        "total_s": 5.973,
+        "peak_gb": 8.71,
+        "split": {
+          "calls": 1245,
+          "mb_out": 0.08,
+          "mb_in": 5.5,
+          "wait_s": 13.312,
+          "front_s": 12.479,
+          "net_s": 0.833
+        },
+        "learn": {
+          "norm_tps": 44.559,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 5
+    },
+    {
+      "wall_s": 3.628,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|im_end|>",
+      "reasoning_content": "\nOkay, the user is asking \"What is<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic.<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 +<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number 4. Let me make sure there's no trick here. Sometimes people might ask<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number 4. Let me make sure there's no trick here. Sometimes people might ask 2+2 in a different context, like binary or something, but the question doesn't mention anything like that. So it's safe to assume it's regular base<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. ",
+      "completion_tokens": 155,
+      "prompt_tokens": 21,
+      "total_s": 3.621,
+      "prefill_s": 0.154,
+      "tps": 44.707,
+      "learn": {
+        "norm_tps": 44.707,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.154,
+        "ttft_s": 0.176,
+        "total_s": 3.621,
+        "peak_gb": 8.73,
+        "split": {
+          "calls": 1406,
+          "mb_out": 0.1,
+          "mb_in": 6.23,
+          "wait_s": 15.018,
+          "front_s": 14.098,
+          "net_s": 0.92
+        },
+        "learn": {
+          "norm_tps": 44.707,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 6
+    },
+    {
+      "wall_s": 4.345,
+      "prompt": "Spell the word cat.",
+      "text": "C-A-T.<|im_end|>",
+      "reasoning_content": "\nOkay, the user asked to spell the word \"cat.\" Let me make sure I do this correctly. First, I need to confirm the word is \"cat.\" It's a common three-letter word. Let me break it down. C-A-T. Each letter is straightforward. C is the first letter, then A, then T. I should check if there's any alternative spelling, but \"cat\" is pretty standard. No common misspellings here. Maybe the user is testing if I know basic spelling, or they might be a non-native speaker. Either way, the answer is simple. Just write out the letters in order. I should present it clearly, maybe with each letter separated. Let me double-check: C, A, T. Yep, that's correct. No need for extra information unless the user asks for more. So the response should be \"C-A-T.\"\n",
+      "completion_tokens": 189,
+      "prompt_tokens": 13,
+      "total_s": 4.338,
+      "prefill_s": 0.106,
+      "tps": 44.66,
+      "learn": {
+        "norm_tps": 44.66,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.106,
+        "ttft_s": 0.128,
+        "total_s": 4.338,
+        "peak_gb": 8.73,
+        "split": {
+          "calls": 1601,
+          "mb_out": 0.11,
+          "mb_in": 7.07,
+          "wait_s": 17.059,
+          "front_s": 16.033,
+          "net_s": 1.026
+        },
+        "learn": {
+          "norm_tps": 44.66,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c-a-t.",
+      "i": 7
+    },
+    {
+      "wall_s": 5.979,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<|im_end|>",
+      "reasoning_content": "\nOkay, the user is asking if the sky is usually blue. I need to answer with a simple yes or no. Let me think about this.\n\nFirst, I know that the sky appears blue during the day because of the way sunlight interacts with the atmosphere. The molecules in the air scatter the blue light more than other colors, which is why we see it as blue. But wait, does that mean it's always blue? Well, the sky can change colors depending on the time of day and weather conditions. For example, during sunrise or sunset, the sky can look red or orange. Also, on cloudy days, the sky might appear gray. But the question is about \"usually.\" So, in most clear weather conditions, the sky is indeed blue. However, there are exceptions. But the user is asking for a yes or no answer. So, even though there are times when it's not blue, the general answer would be yes. But I should make sure that the answer is accurate. Maybe the user is looking for a straightforward answer. I think the correct answer is yes, but I need to confirm. Let me check a reliable source. According to scientific explanations, the sky is usually blue during the day. So the answer is yes.\n",
+      "completion_tokens": 260,
+      "prompt_tokens": 18,
+      "total_s": 5.977,
+      "prefill_s": 0.138,
+      "tps": 44.528,
+      "learn": {
+        "norm_tps": 44.528,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.138,
+        "ttft_s": 0.16,
+        "total_s": 5.977,
+        "peak_gb": 8.73,
+        "split": {
+          "calls": 1867,
+          "mb_out": 0.13,
+          "mb_in": 8.22,
+          "wait_s": 19.866,
+          "front_s": 18.698,
+          "net_s": 1.168
+        },
+        "learn": {
+          "norm_tps": 44.528,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 8
+    },
+    {
+      "wall_s": 3.62,
+      "prompt": "What is 2+2? Reply with only the digit.",
+      "text": "4<|im_end|>",
+      "reasoning_content": "\nOkay, the user is asking \"What is<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic.<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 +<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number 4. Let me make sure there's no trick here. Sometimes people might ask<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. 2 + 2 equals 4. The instruction says to reply with only the digit, so I shouldn't add any extra text or explanations. Just the number 4. Let me make sure there's no trick here. Sometimes people might ask 2+2 in a different context, like binary or something, but the question doesn't mention anything like that. So it's safe to assume it's regular base<think>\nOkay, the user is asking \"What is 2+2? Reply with only the digit.\" So first, I need to calculate 2 plus 2. That's straightforward arithmetic. ",
+      "completion_tokens": 155,
+      "prompt_tokens": 21,
+      "total_s": 3.618,
+      "prefill_s": 0.154,
+      "tps": 44.746,
+      "learn": {
+        "norm_tps": 44.746,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.154,
+        "ttft_s": 0.177,
+        "total_s": 3.618,
+        "peak_gb": 8.73,
+        "split": {
+          "calls": 2028,
+          "mb_out": 0.14,
+          "mb_in": 8.95,
+          "wait_s": 21.571,
+          "front_s": 20.317,
+          "net_s": 1.254
+        },
+        "learn": {
+          "norm_tps": 44.746,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "4"
+      ],
+      "passed": true,
+      "final_answer": "4",
+      "i": 9
+    },
+    {
+      "wall_s": 4.329,
+      "prompt": "Spell the word cat.",
+      "text": "C-A-T.<|im_end|>",
+      "reasoning_content": "\nOkay, the user asked to spell the word \"cat.\" Let me make sure I do this correctly. First, I need to confirm the word is \"cat.\" It's a common three-letter word. Let me break it down. C-A-T. Each letter is straightforward. C is the first letter, then A, then T. I should check if there's any alternative spelling, but \"cat\" is pretty standard. No common misspellings here. Maybe the user is testing if I know basic spelling, or they might be a non-native speaker. Either way, the answer is simple. Just write out the letters in order. I should present it clearly, maybe with each letter separated. Let me double-check: C, A, T. Yep, that's correct. No need for extra information unless the user asks for more. So the response should be \"C-A-T.\"\n",
+      "completion_tokens": 189,
+      "prompt_tokens": 13,
+      "total_s": 4.327,
+      "prefill_s": 0.106,
+      "tps": 44.776,
+      "learn": {
+        "norm_tps": 44.776,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.106,
+        "ttft_s": 0.129,
+        "total_s": 4.327,
+        "peak_gb": 8.73,
+        "split": {
+          "calls": 2223,
+          "mb_out": 0.15,
+          "mb_in": 9.79,
+          "wait_s": 23.603,
+          "front_s": 22.243,
+          "net_s": 1.359
+        },
+        "learn": {
+          "norm_tps": 44.776,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "cat"
+      ],
+      "passed": true,
+      "final_answer": "c-a-t.",
+      "i": 10
+    },
+    {
+      "wall_s": 5.975,
+      "prompt": "Is the sky usually blue? Yes or no.",
+      "text": "Yes.<|im_end|>",
+      "reasoning_content": "\nOkay, the user is asking if the sky is usually blue. I need to answer with a simple yes or no. Let me think about this.\n\nFirst, I know that the sky appears blue during the day because of the way sunlight interacts with the atmosphere. The molecules in the air scatter the blue light more than other colors, which is why we see it as blue. But wait, does that mean it's always blue? Well, the sky can change colors depending on the time of day and weather conditions. For example, during sunrise or sunset, the sky can look red or orange. Also, on cloudy days, the sky might appear gray. But the question is about \"usually.\" So, in most clear weather conditions, the sky is indeed blue. However, there are exceptions. But the user is asking for a yes or no answer. So, even though there are times when it's not blue, the general answer would be yes. But I should make sure that the answer is accurate. Maybe the user is looking for a straightforward answer. I think the correct answer is yes, but I need to confirm. Let me check a reliable source. According to scientific explanations, the sky is usually blue during the day. So the answer is yes.\n",
+      "completion_tokens": 260,
+      "prompt_tokens": 18,
+      "total_s": 5.972,
+      "prefill_s": 0.138,
+      "tps": 44.566,
+      "learn": {
+        "norm_tps": 44.566,
+        "winner": {
+          "packer_layers": 24,
+          "pipeline_chats": 2
+        },
+        "explore": null,
+        "pipeline_probe": null,
+        "trial": null
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.138,
+        "ttft_s": 0.161,
+        "total_s": 5.972,
+        "peak_gb": 8.73,
+        "split": {
+          "calls": 2489,
+          "mb_out": 0.17,
+          "mb_in": 10.94,
+          "wait_s": 26.409,
+          "front_s": 24.906,
+          "net_s": 1.504
+        },
+        "learn": {
+          "norm_tps": 44.566,
+          "winner": {
+            "packer_layers": 24,
+            "pipeline_chats": 2
+          },
+          "explore": null,
+          "pipeline_probe": null,
+          "trial": null
+        }
+      },
+      "expect": [
+        "yes"
+      ],
+      "passed": true,
+      "final_answer": "yes.",
+      "i": 11
+    }
+  ],
+  "learn_log": [
+    "21:37:17 [mlx-worker] auto split: packer_layers=24 (equal RAM ~26/26 GB; balanced cut K=24 for 48 layers (qwen3_moe))",
+    "21:37:19 [mlx-worker] auto pipeline: chats=2 (headroom 2.6 GB after ~8.4 GB weights on 26 GB; Mini benches peak at 2 chats)",
+    "21:37:34 [mlx-worker] learn: queue split packer_layers=22 for next load (near current 24)",
+    "21:37:37 [mlx-worker] learn: keep packer_layers=24: best so far at 44.80 tok/s over 4 replies",
+    "21:37:56 [mlx-worker] learn: keep packer_layers=24: best so far at 44.74 tok/s over 8 replies",
+    "21:38:16 [mlx-worker] learn: keep packer_layers=24: best so far at 44.71 tok/s over 12 replies"
+  ],
+  "rescored_note": "letter-form accept for spell-outs like C-A-T == cat; thinking still excluded"
+}
