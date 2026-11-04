@@ -1,0 +1,15 @@
+11.8 → 1.55 s to first word. Gemma on the split, same long system prompt, about 7.6× sooner.
+
+Day 13 of building Caravan in the open, my homebrew app for running AI models across my Mac minis.
+
+On Day 12, Gemma got 0% from shared start. Its sliding-window layers couldn't trim, so the two Minis disagreed and re-read everything. The fix rebuilds the shared start on both Minis when trimming isn't safe. Replies came out identical with it off and on.
+
+Qwen3 and Llama still about halve the wait on the paired test: 9.3→5.0 s and 17.5→8.9 s.
+
+Caravan now tunes shared start per model on its own. All three turned it on after 7 chats. The first chat pays a one-time setup cost (Gemma ~23 s).
+
+One caveat: the learning-run times aren't comparable to the paired test, because those chats reused a longer chunk.
+
+Day 14 is a break. I'll post a video of the improvements from v0 to now, then add a settings file.
+
+Should shared start turn on by default once a model learns it, or stay off until each model proves itself?

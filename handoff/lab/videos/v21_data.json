@@ -1,0 +1,20 @@
+{
+  "_day": "Day 13",
+  "_stills": [1.5, 12.0, 28.0, 45.0, 62.0],
+  "GEMMA": {"off": 11.764, "on": 1.554, "pct": 86.8, "x": 7.6, "store": 22.041},
+  "QWEN": {"off": 9.303, "on": 5.029, "pct": 45.9},
+  "LLAMA": {"off": 17.473, "on": 8.898, "pct": 49.1},
+  "QUALITY": "PING",
+  "LEARN": {
+    "chats": 7,
+    "chose": "on",
+    "models": ["Gemma", "Qwen3", "Llama"],
+    "gemma_store": 23.158
+  },
+  "TAKE": [
+    ["ON", "Gemma shared start fixed", "11.8 → 1.55 s wait · ~7.6× sooner · same answers"],
+    ["ON", "Qwen3 and Llama still ~halve the wait", "9.3 → 5.0 s · 17.5 → 8.9 s on the paired test"],
+    ["ONE", "Self-tunes per model", "All three chose on after 7 chats · one-time setup (Gemma ~23 s first chat)"],
+    ["OFF", "Next: Day 14 break", "v0→now improvements video · then a settings file (#13c)"]
+  ]
+}
