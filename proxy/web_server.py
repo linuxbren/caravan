@@ -28,7 +28,8 @@ WEB_DIR = HERE / "web"
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "agent"))
 
-import web_catalog as catalog  # noqa: E402
+import web_catalog as catalog
+import web_settings  # noqa: E402
 import web_timing as timing  # noqa: E402
 from web_workers import WorkerManager  # noqa: E402
 
@@ -131,6 +132,9 @@ def make_handler(app: App):
             if path == "/api/models":
                 return self._json(200, {"models": catalog.list_models(),
                                        "current": app.mgr.snapshot().get("model_id")})
+            if path == "/api/settings":
+                return self._json(200, {"options": web_settings.OPTIONS,
+                                       "current": app.mgr.snapshot().get("settings")})
             if path == "/api/journey":
                 return self._json(200, load_journey())
             if path == "/api/split":
@@ -222,6 +226,7 @@ def make_handler(app: App):
                 "worker": snap,
                 "lead_healthy": healthy,
                 "split": split,
+                "active": app.mgr.lead_active_settings() if healthy else None,
                 "uptime_s": round(time.time() - app.started, 1),
                 "ports": {"web": DEFAULT_PORT, "lead": app.mgr.lead_port,
                           "packer": app.mgr.packer_peer},
@@ -233,7 +238,7 @@ def make_handler(app: App):
             if not mid:
                 return self._json(400, {"error": "model_id required"})
             try:
-                snap = app.mgr.switch(mid, wait=False)
+                snap = app.mgr.switch(mid, wait=False, settings=body.get("settings"))
             except (ValueError, FileNotFoundError, RuntimeError) as e:
                 return self._json(400, {"error": str(e)})
             return self._json(200, snap)
@@ -293,7 +298,7 @@ def make_handler(app: App):
                         "first_word_mini": t_received + float(stats["ttft_s"] or 0),
                         "done_mini": t_done,
                     },
-                    "stats": stats,
+                    "stats": stats, "settings": app.mgr.snapshot().get("settings"),
                     "session": session,
                 }
                 return self._json(200, data)
@@ -404,6 +409,7 @@ def make_handler(app: App):
                     "done_mini": round(t_done, 6),
                 },
                 "stats": stats,
+                "settings": app.mgr.snapshot().get("settings"),
                 "session": session,
             }
             try:

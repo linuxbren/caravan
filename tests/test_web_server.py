@@ -337,3 +337,74 @@ class WorkerEndMarkerTest(unittest.TestCase):
         self.assertEqual(mlx_worker.strip_end_markers("<|eot_id|>"), "")
         self.assertEqual(mlx_worker.strip_end_markers(""), "")
         self.assertEqual(mlx_worker.strip_end_markers("a <b> c"), "a <b> c")
+
+
+import web_settings  # noqa: E402
+
+
+class WebSettingsTest(unittest.TestCase):
+    def test_all_auto_adds_no_flags(self):
+        self.assertEqual(web_settings.to_args({}), ([], []))
+        self.assertTrue(all(v == "auto" for v in web_settings.normalize(None).values()))
+
+    def test_each_toggle_maps_to_real_flags(self):
+        lead, packer = web_settings.to_args({
+            "guess_ahead": "off", "self_tune": "off", "shared_start": "on",
+            "pipeline_chats": "1", "fuse_kernels": "on", "kv_bits": "8", "keepalive": "off"})
+        for f in ("--no-split-draft", "--no-learn", "--split-shared-prefix-cache",
+                  "--no-split-keepalive"):
+            self.assertIn(f, lead)
+        self.assertEqual(lead[lead.index("--split-pipeline-chats") + 1], "1")
+        self.assertEqual(packer, ["--fuse-kernels", "all", "--kv-bits", "8"])
+        self.assertIn("--pin-guess-ahead", web_settings.to_args({"guess_ahead": "on"})[0])
+        self.assertIn("--no-split-shared-prefix-cache",
+                      web_settings.to_args({"shared_start": "off"})[0])
+
+    def test_flags_parse_in_worker(self):
+        """Every flag the page can emit must be accepted by mlx_worker's parser."""
+        sys.path.insert(0, str(REPO / "agent"))
+        try:
+            import mlx_worker
+        except Exception as e:
+            self.skipTest(f"mlx_worker import: {e}")
+        combos = [{"guess_ahead": "on", "shared_start": "off", "kv_bits": "4"},
+                  {"guess_ahead": "off", "self_tune": "off", "shared_start": "on",
+                   "pipeline_chats": "2", "fuse_kernels": "on", "keepalive": "off"}]
+        for c in combos:
+            lead, packer = web_settings.to_args(c)
+            a = mlx_worker.build_parser().parse_args(["--model", "/m"] + lead)
+            mlx_worker.build_parser().parse_args(["--model", "/m"] + packer)
+            if "--no-learn" in lead:
+                self.assertTrue(a.no_learn)
+            if c.get("shared_start") == "off":
+                self.assertTrue(a.no_split_shared_prefix_cache)
+            if c.get("guess_ahead") == "on":
+                self.assertTrue(a.pin_guess_ahead)
+
+    def test_rejects_unknown(self):
+        with self.assertRaises(ValueError):
+            web_settings.normalize({"turbo": "on"})
+        with self.assertRaises(ValueError):
+            web_settings.normalize({"kv_bits": "3"})
+
+    def test_active_in_reply_stats(self):
+        st = timing.reply_stats({"caravan": {"active": {"guess_ahead": True, "kv_bits": 16}}})
+        self.assertEqual(st["active"]["kv_bits"], 16)
+        self.assertIsNone(timing.reply_stats({})["active"])
+
+
+class WebSettingsHTTPTest(WebServerHTTPTest):
+    def test_settings_endpoint(self):
+        code, j = self._get("/api/settings")
+        self.assertEqual(code, 200)
+        ids = [o["id"] for o in j["options"]]
+        self.assertIn("guess_ahead", ids)
+        self.assertIn("shared_start", ids)
+        self.assertEqual(j["current"]["guess_ahead"], "auto")
+
+    def test_page_has_toggles(self):
+        with urlopen(self.base + "/", timeout=5) as r:
+            html = r.read().decode()
+        for needle in ('id="optRows"', 'id="btnApply"', 'id="activeChips"', "ran with:",
+                       "settings: state.choice"):
+            self.assertIn(needle, html)

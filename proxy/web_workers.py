@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 import web_catalog as catalog
+import web_settings
 
 REPO = Path(__file__).resolve().parent.parent
 WORKER = REPO / "agent" / "mlx_worker.py"
@@ -53,6 +54,7 @@ class WorkerManager:
             "lead_url": f"http://127.0.0.1:{lead_port}",
             "split": True,
             "lpm_ok": None,
+            "settings": web_settings.normalize({}),
         }
         self._lead_proc: Optional[subprocess.Popen] = None
         self._switch_thread: Optional[threading.Thread] = None
@@ -97,7 +99,8 @@ class WorkerManager:
                   lead_pid=None, packer_pid=None)
         self._note("idle")
 
-    def switch(self, model_id: str, *, wait: bool = False) -> dict:
+    def switch(self, model_id: str, *, wait: bool = False, settings=None) -> dict:
+        settings = web_settings.normalize(settings)
         entry = catalog.get_model(model_id)
         if not entry:
             raise ValueError(f"unknown model: {model_id}")
@@ -108,7 +111,7 @@ class WorkerManager:
 
         def run():
             try:
-                self._do_switch(entry)
+                self._do_switch(entry, settings)
             except Exception as e:  # noqa: BLE001 — surface to UI
                 self._set(status="error", error=f"{type(e).__name__}: {e}")
                 self._note(f"error: {e}")
@@ -121,12 +124,18 @@ class WorkerManager:
 
     # ----- internals ------------------------------------------------------
 
-    def _do_switch(self, entry: dict) -> None:
+    def _do_switch(self, entry: dict, settings=None) -> None:
+        settings = web_settings.normalize(settings)
+        self._set(settings=settings)
         if not self.check_lpm():
             raise RuntimeError("Low Power Mode is on — turn it off before loading a model")
         self._set(status="stopping", error=None, model_id=entry["id"],
                   model_name=entry["name"], progress=[])
         self._note(f"switching to {entry['name']}")
+        lead_x, packer_x = web_settings.to_args(settings)
+        self._extra_lead, self._extra_packer = lead_x, packer_x
+        self._note("settings: " + ", ".join(f"{k}={v}" for k, v in settings.items())
+                   + (f" -> {' '.join(lead_x)}" if lead_x else " (all auto)"))
         self._kill_lead()
         self._kill_packer()
         time.sleep(1.5)
@@ -217,7 +226,8 @@ class WorkerManager:
             f"--model {shlex.quote(packer_path)} "
             f"--split-role packer --split-listen {shlex.quote(self.packer_peer)} "
             f"--split-packer-layers {k} --no-split-draft --split-draft-skip-first-load "
-            f"> ~/.caravan/web-ui/packer.log 2>&1 & echo $! > ~/.caravan/web-ui/packer.pid; "
+            + "".join(f"{shlex.quote(a)} " for a in getattr(self, "_extra_packer", []))
+            + f"> ~/.caravan/web-ui/packer.log 2>&1 & echo $! > ~/.caravan/web-ui/packer.pid; "
             "cat ~/.caravan/web-ui/packer.pid"
         )
         r = self._ssh(remote, timeout=30)
@@ -272,6 +282,7 @@ class WorkerManager:
         ]
         if os.environ.get("CARAVAN_WEB_NO_DRAFT", "").strip() in ("1", "true", "yes"):
             args.append("--no-split-draft")
+        args += list(getattr(self, "_extra_lead", []))
         # Shared-prefix: leave to learn / saved tuned settings (Day 13).
         env = os.environ.copy()
         lf = open(log_path, "ab", buffering=0)
@@ -319,6 +330,16 @@ class WorkerManager:
                 return r.status == 200
         except Exception:
             return False
+
+    def lead_active_settings(self):
+        """Day 15: settings the running lead reports (learned winners applied)."""
+        import urllib.request
+        try:
+            with urllib.request.urlopen(
+                    f"http://127.0.0.1:{self.lead_port}/caravan/settings", timeout=3) as r:
+                return json.loads(r.read().decode()).get("active")
+        except Exception:
+            return None
 
     def lead_split_info(self):
         import urllib.request

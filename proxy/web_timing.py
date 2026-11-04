@@ -171,6 +171,8 @@ def reply_stats(usage: dict, wall_s: Optional[float] = None) -> dict:
         "tuned": tuned,
         "split": split,
         "peak_gb": caravan.get("peak_gb"),
+        # Day 15: what the worker actually ran this reply with (None if not reported).
+        "active": caravan.get("active") if isinstance(caravan.get("active"), dict) else None,
     }
 
 

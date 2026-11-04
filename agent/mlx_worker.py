@@ -856,6 +856,10 @@ class Engine:
             self.pipeline_chats = 1
         # ROADMAP #13b: overlay saved per-model winners (flags still win).
         self._learn_apply_startup()
+        try:
+            log("active settings: " + json.dumps(self.active_settings(), sort_keys=True))
+        except Exception as e:
+            log(f"active settings: unavailable ({e!r})")
 
 
     def _shared_prefix_on(self) -> bool:
@@ -898,6 +902,11 @@ class Engine:
             explicit["guess_ahead"] = False
         if getattr(self, "_learn_spc_explicit", False):
             explicit["shared_prefix"] = True
+        if bool(getattr(self.args, "no_split_shared_prefix_cache", False)):
+            explicit["shared_prefix"] = False
+        if bool(getattr(self.args, "pin_guess_ahead", False)) and self.draft_model is not None:
+            explicit["guess_ahead"] = True
+            self._learn_guess_override = True
         day9_k = getattr(self.args, "split_front_layers", None)
         day9_n = self.pipeline_chats
         day9_g = True if self.draft_model is not None else (
@@ -956,6 +965,33 @@ class Engine:
             TS.save_store(self._learn_store, path)
         except OSError as e:
             log(f"learn: could not save tuned settings ({e!r})")
+
+    def active_settings(self, info=None) -> dict:
+        """Day 15: what was actually in effect (per reply when info is given)."""
+        a = self.args
+        try:
+            import fuse_kernels as FK
+            fuse = FK.resolve_mode(getattr(a, "fuse_kernels", None))
+        except Exception:
+            fuse = str(getattr(a, "fuse_kernels", None) or "off")
+        spec = (info or {}).get("speculate")
+        out = {
+            "guess_ahead": (bool(spec) if info is not None
+                            else (self.client is not None and self.draft_model is not None
+                                  and self._learn_guess_override is not False)),
+            "guess_ahead_loaded": self.draft_model is not None,
+            "self_tune": bool(self._learn_enabled),
+            "shared_start": bool(self._shared_prefix_on()),
+            "pipeline_chats": self.pipeline_chats,
+            "fuse_kernels": fuse,
+            "kv_bits": int(getattr(a, "kv_bits", None) or 16),
+            "keepalive": bool(getattr(a, "split_keepalive", False)) if self.client is not None else None,
+            "pinned": sorted(k for k in (self._learn_explicit or {})
+                             if k in ("guess_ahead", "shared_prefix", "pipeline_chats")),
+        }
+        if spec:
+            out["guess_ahead_from_draft"] = spec.get("from_draft")
+        return out
 
     def _learn_guess_ahead_on(self):
         if self._learn_guess_override is not None:
@@ -2119,6 +2155,7 @@ class Engine:
         self._learn_observe(info)
         if getattr(self, "_last_learn", None):
             info["learn"] = self._last_learn
+        info["active"] = self.active_settings(info)
         yield ("done", info)
 
 
@@ -2270,7 +2307,8 @@ class Engine:
                          sampler=sampler, procs=procs, max_tokens=max_tokens, stops=stops,
                          next_tokens=list(prompt[-1:]))
         # Day 12: draft state for pipeline guess-ahead (N>=2 path).
-        if self.draft_model is not None:
+        # Day 15: honor a learned/pinned guess-ahead off here too (was single-chat only).
+        if self.draft_model is not None and self._learn_guess_override is not False:
             import mlx.core as mx
             from mlx_lm.models.cache import make_prompt_cache
             draft = self.draft_model
@@ -2613,7 +2651,7 @@ class Engine:
                 "t0": float(slot.t0),
                 "peak_gb": round(mx.get_peak_memory() / 1e9, 2),
                 "pipeline": True}
-        if self.draft_model is not None:
+        if self.draft_model is not None and slot.draft_cache is not None:
             info["speculate"] = {
                 "k": self.speculate_k,
                 "from_draft": slot.n_from_draft,
@@ -2631,6 +2669,7 @@ class Engine:
         self._learn_observe(info)
         if getattr(self, "_last_learn", None):
             info["learn"] = self._last_learn
+        info["active"] = self.active_settings(info)
         slot.out.put(("done", info))
 
 
@@ -2728,6 +2767,14 @@ def make_handler(engine: "Engine"):
                 return None
 
         def do_GET(self):
+            if self.path.startswith("/caravan/settings"):
+                fn = getattr(engine, "active_settings", None)
+                if fn is None:
+                    return self._json(404, {"error": "no settings on this worker"})
+                try:
+                    return self._json(200, {"active": fn()})
+                except Exception as e:
+                    return self._json(500, {"error": f"{type(e).__name__}: {e}"})
             if self.path.startswith("/health"):
                 return self._json(200, {"status": "ok", "worker": "caravan",
                                         "split": bool(engine.split)})
@@ -2862,7 +2909,7 @@ def make_handler(engine: "Engine"):
             usage = {"prompt_tokens": info["prompt_tokens"], "completion_tokens": info["completion_tokens"],
                      "total_tokens": info["prompt_tokens"] + info["completion_tokens"],
                      "prompt_tokens_details": {"cached_tokens": info["cached_tokens"]},
-                     "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb", "split", "speculate", "learn")
+                     "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb", "split", "speculate", "learn", "active")
                                  if k in info}}
             try:
                 if stream:
@@ -2994,6 +3041,10 @@ def build_parser():
     # ROADMAP #13b: learn from real chats (Day 10). CARAVAN_NO_LEARN=1 disables.
     _learn_env = os.environ.get("CARAVAN_NO_LEARN", "")
     _learn_off = _learn_env.strip().lower() in ("1", "true", "yes", "on")
+    ap.add_argument("--no-split-shared-prefix-cache", action="store_true",
+                    help="Day 15: pin shared start off (learn won't turn it on)")
+    ap.add_argument("--pin-guess-ahead", action="store_true",
+                    help="Day 15: pin guess-ahead on when a draft is loaded (learn won't turn it off)")
     ap.add_argument("--no-learn", action="store_true", default=_learn_off,
                     help="ROADMAP #13b: disable learn-from-real-chats (also CARAVAN_NO_LEARN=1)")
     ap.add_argument("--tuned-settings", default=os.environ.get("CARAVAN_TUNED_SETTINGS") or None,

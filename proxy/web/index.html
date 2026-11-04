@@ -217,6 +217,26 @@
   .spark svg { width: 100%; height: 64px; display: block; }
   .spark .caption { margin-top: 6px; font-size: .75rem; color: var(--muted); }
 
+  /* Day 15: optimization toggles */
+  .opt { display: grid; gap: 4px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .opt:last-of-type { border-bottom: none; }
+  .opt .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .opt .name { font-size: .82rem; font-weight: 600; }
+  .opt .help { font-size: .7rem; color: var(--muted); line-height: 1.35; }
+  .opt .now { font-family: var(--mono); font-size: .66rem; color: var(--teal2); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .seg button {
+    border: none; border-radius: 0; padding: 4px 10px; font-size: .72rem;
+    background: transparent; color: var(--muted);
+  }
+  .seg button:hover { transform: none; color: var(--text); }
+  .seg button.sel { background: linear-gradient(135deg, var(--amber), #d4783a); color: #1a1008; font-weight: 650; }
+  .seg button.sel.auto { background: rgba(62,207,191,.18); color: var(--teal2); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chips .tag { font-size: .68rem; }
+  .msg .timing .set { color: var(--teal2); }
+  .applyrow { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .applyrow small { color: var(--muted); font-size: .7rem; }
   .empty {
     margin: auto; text-align: center; color: var(--muted); padding: 40px 12px;
   }
@@ -264,6 +284,7 @@
       <button class="ghost" id="btnStop" title="Unload">Unload</button>
       <button class="ghost" id="btnClear">Clear chat</button>
     </div>
+    <div class="chips" id="activeChips" title="Settings the running model reports right now"></div>
     <div class="messages" id="messages">
       <div class="empty" id="emptyState">
         <strong>Ready when you are.</strong>
@@ -278,6 +299,14 @@
   </main>
 
   <aside class="stats">
+    <div class="card">
+      <h2>Optimizations</h2>
+      <div id="optRows"></div>
+      <div class="applyrow">
+        <button class="primary" id="btnApply">Apply &amp; restart</button>
+        <small id="optNote">Auto = Caravan decides (learned per model)</small>
+      </div>
+    </div>
     <div class="card">
       <h2>Last reply</h2>
       <div class="stat-grid" id="statGrid">
@@ -405,6 +434,70 @@
     return mini - state.offset_s;
   }
 
+  // ---- Day 15: optimization toggles -------------------------------------
+  state.opts = [];          // option specs from /api/settings
+  state.choice = {};        // what the user picked (sent on load)
+  const VAL_LABEL = { auto: "Auto", on: "On", off: "Off" };
+  function describeActive(a) {
+    // Plain words for the settings the worker actually ran with.
+    if (!a) return [];
+    const out = [];
+    const pin = new Set(a.pinned || []);
+    const p = (k) => pin.has(k) ? " (pinned)" : "";
+    out.push(["guess-ahead " + (a.guess_ahead ? "on" : "off")
+              + (a.guess_ahead_from_draft != null ? ` · ${a.guess_ahead_from_draft} from helper` : "")
+              + p("guess_ahead"), !!a.guess_ahead]);
+    out.push(["self-tuning " + (a.self_tune ? "on" : "off"), !!a.self_tune]);
+    out.push(["shared start " + (a.shared_start ? "on" : "off") + p("shared_prefix"), !!a.shared_start]);
+    if (a.pipeline_chats != null) out.push([`two chats: ${a.pipeline_chats}` + p("pipeline_chats"), a.pipeline_chats > 1]);
+    out.push([`memory ${a.kv_bits}-bit`, a.kv_bits && a.kv_bits < 16]);
+    out.push(["fused " + (a.fuse_kernels || "off"), a.fuse_kernels && a.fuse_kernels !== "off"]);
+    if (a.keepalive != null) out.push(["keep-warm " + (a.keepalive ? "on" : "off"), !!a.keepalive]);
+    return out;
+  }
+  function renderActive(a) {
+    const el = $("activeChips");
+    const items = describeActive(a);
+    el.innerHTML = items.length
+      ? `<span class="tag" style="border:none;padding-left:0">running with</span>` +
+        items.map(([t, on]) => `<span class="tag ${on ? "on" : "off"}">${t}</span>`).join("")
+      : "";
+    if (a) {
+      for (const o of state.opts) {
+        const now = document.querySelector(`.opt[data-id="${o.id}"] .now`);
+        if (!now) continue;
+        const v = {
+          guess_ahead: a.guess_ahead ? "on" : "off", self_tune: a.self_tune ? "on" : "off",
+          shared_start: a.shared_start ? "on" : "off", pipeline_chats: a.pipeline_chats,
+          fuse_kernels: a.fuse_kernels, kv_bits: `${a.kv_bits}-bit`,
+          keepalive: a.keepalive == null ? "—" : (a.keepalive ? "on" : "off"),
+        }[o.id];
+        now.textContent = `now: ${v ?? "—"}`;
+      }
+    }
+  }
+  function renderOpts() {
+    $("optRows").innerHTML = state.opts.map(o => `
+      <div class="opt" data-id="${o.id}">
+        <div class="row"><span class="name">${o.label}</span>
+          <span class="seg">${o.values.map(v =>
+            `<button type="button" data-v="${v}" class="${state.choice[o.id] === v ? "sel" : ""} ${v === "auto" ? "auto" : ""}">${VAL_LABEL[v] || v}</button>`).join("")}</span></div>
+        <div class="help">${o.help}</div>
+        <div class="now"></div>
+      </div>`).join("");
+    for (const row of document.querySelectorAll(".opt")) {
+      for (const b of row.querySelectorAll(".seg button")) {
+        b.onclick = () => { state.choice[row.dataset.id] = b.dataset.v; renderOpts(); renderActive(state.active); };
+      }
+    }
+  }
+  async function loadOpts() {
+    const j = await api("/api/settings");
+    state.opts = j.options || [];
+    state.choice = Object.assign(Object.fromEntries(state.opts.map(o => [o.id, "auto"])), j.current || {});
+    renderOpts();
+  }
+
   async function refreshModels() {
     const j = await api("/api/models");
     const sel = $("modelSelect");
@@ -434,6 +527,7 @@
     $("progressLog").textContent = prog;
 
     $("btnLoad").disabled = ["starting_lead","starting_packer","stopping"].includes(st);
+    $("btnApply").disabled = $("btnLoad").disabled;
     $("btnSend").disabled = st !== "ready" || state.streaming;
   }
 
@@ -441,6 +535,8 @@
     try {
       const j = await api("/api/status");
       setStatus(j.worker);
+      state.active = j.active || null;
+      renderActive(state.active);
       const split = j.split;
       if (split && split.lead) {
         $("leadName").textContent = split.lead.name || "lead";
@@ -656,6 +752,16 @@
         tdiv.textContent =
           `ttft ${fmt(st.ttft_s)}s · write ${fmt(st.write_tok_s,1)} tok/s · ` +
           `${st.completion_tokens ?? "?"} tok · total ${fmt(st.total_s)}s`;
+        // Day 15: exactly which settings this reply ran with, so on/off can be compared.
+        const ran = describeActive(st.active).map(([t]) => t).join(" · ");
+        const chose = meta.settings ? Object.entries(meta.settings)
+          .filter(([, v]) => v !== "auto").map(([k, v]) => `${k}=${v}`).join(", ") : "";
+        const sdiv = document.createElement("div");
+        sdiv.className = "set";
+        sdiv.textContent = "ran with: " + (ran || "not reported") +
+          " · chosen: " + (chose || "all auto");
+        tdiv.appendChild(document.createElement("br"));
+        tdiv.appendChild(sdiv);
         asst.appendChild(tdiv);
       } else if (!full) {
         bodyEl.textContent = "(no reply — try again, or reload the model)";
@@ -718,13 +824,14 @@
     $("btnLoad").disabled = true;
     $("btnSend").disabled = true;
     try {
-      await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: id }) });
+      await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: id, settings: state.choice }) });
       state.session = null; // new model → new sessions
     } catch (e) {
       alert(e.error || e.message || String(e));
     }
     refreshStatus();
   };
+  $("btnApply").onclick = () => $("btnLoad").onclick();
   $("btnStop").onclick = async () => {
     cancelChat();
     await api("/api/models/stop", { method: "POST", body: "{}" });
@@ -743,6 +850,7 @@
 
   (async () => {
     await refreshModels();
+    await loadOpts();
     await syncClock();
     await loadJourney();
     await refreshStatus();
