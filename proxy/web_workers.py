@@ -59,7 +59,10 @@ class WorkerManager:
             "lead_url": f"http://127.0.0.1:{lead_port}",
             "split": True,
             "lpm_ok": None,
-            "settings": web_settings.normalize({}),
+            "settings": web_settings.normalize({}),   # what the load used (page + file)
+            "page_settings": web_settings.normalize({}),  # what the page asked for
+            "from_file": {},                              # options filled from config.toml
+            "config_errors": [],
         }
         self._lead_proc: Optional[subprocess.Popen] = None
         self._switch_thread: Optional[threading.Thread] = None
@@ -133,8 +136,40 @@ class WorkerManager:
     # ----- internals ------------------------------------------------------
 
     def _do_switch(self, entry: dict, settings=None) -> None:
-        settings = web_settings.normalize(settings)
-        self._set(settings=settings)
+        page = web_settings.normalize(settings)
+        cfg = web_settings.load_config()
+        fsets = web_settings.file_settings(entry.get("id"), entry.get("lead_path"), cfg)
+        fsets.pop("thinking", None)   # the page's Thinking button reads that one
+        settings, from_file = web_settings.merge_with_file(page, fsets)
+        self._set(settings=settings, page_settings=page, from_file=from_file,
+                  config_errors=cfg.get("errors") or [])
+        for err in cfg.get("errors") or []:
+            self._note("config.toml: " + err)
+        if from_file:
+            self._note("config.toml pins: " + ", ".join(f"{k}={v}" for k, v in from_file.items()))
+        try:
+            self._load_once(entry, settings)
+        except Exception as e:  # noqa: BLE001
+            trial = getattr(self, "_reload_trial", None)
+            if not trial:
+                raise
+            # A self-tune reload trial broke the load: never try that value
+            # again for this model, go back to the winner and load that.
+            why = f"{type(e).__name__}: {str(e)[-200:]}"
+            self._note(f"self-tuning: {TS.RELOAD_LABEL.get(trial['name'], trial['name'])} "
+                       f"{TS.reload_value_label(trial['name'], trial['value'])} failed to load; "
+                       f"rejected, rolling back")
+            try:
+                st, ent = self._tuned_entry(entry["lead_path"], create=True)
+                TS.block_value(ent, trial["name"], trial["value"], why)
+                ent["reload_trial"] = None
+                TS.save_store(st, self.tuned_path)
+            except (OSError, ValueError) as ex:
+                self._note(f"could not record rejected trial ({ex})")
+            self._load_once(entry, settings)
+
+    def _load_once(self, entry: dict, settings: dict) -> None:
+        self._reload_trial = None
         if not self.check_lpm():
             raise RuntimeError("Low Power Mode is on — turn it off before loading a model")
         self._set(status="stopping", error=None, model_id=entry["id"],
@@ -189,7 +224,11 @@ class WorkerManager:
             return []
         try:
             st, e = self._tuned_entry(entry["lead_path"], create=True)
+            if not TS.kv_quant_supported(entry["lead_path"]):
+                for b in (8, 4):   # attention sinks (gpt-oss): quantized KV crashes the load
+                    TS.block_value(e, "kv_bits", b, "model can't use quantized KV (attention sinks)")
             plan = TS.plan_reload(e, auto)
+            self._reload_trial = plan.get("trial")
             TS.save_store(st, self.tuned_path)
         except (OSError, ValueError) as ex:
             return [f"reload plan skipped ({ex})"]
@@ -240,8 +279,9 @@ class WorkerManager:
             lp = m.get("lead_path")
             if lp and f"--model {lp}" in cmd:
                 self._lead_path = lp
+                cur = web_settings.from_args(cmd)
                 self._set(status="ready", model_id=m["id"], model_name=m["name"],
-                          lead_pid=pid, settings=web_settings.from_args(cmd))
+                          lead_pid=pid, settings=cur, page_settings=cur)
                 self._note(f"adopted running lead (pid {pid}) after web restart")
                 return True
         return False

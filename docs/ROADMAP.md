@@ -292,10 +292,15 @@ Open tasks for this rule:
       feeds itself fixed prompts and reloads between trials when no chat
       is in flight (cancelable). Only the web launcher turns reload
       learning on (`--learn-reload-auto`); plain CLI runs behave as before.
-    - **(c) Optional settings file.** *Next.* `~/.caravan/config.toml`
+    - [x] **(c) Optional settings file.** *Built Nov 5.* `~/.caravan/config.toml`
       for human overrides such as `guess_ahead = off` or a preferred
-      pipeline N. **Flags stay and win over the file**, mainly so
-      benchmarking can pin exact behavior without editing config.
+      pipeline N, with `[defaults]` and `[models."<id>"]` tables
+      (docs/CONFIGURATION.md, docs/config.example.toml). **Flags stay and
+      win over the file**, mainly so benchmarking can pin exact behavior
+      without editing config; page choices win too, the file fills Auto.
+      Also: self-tune never tries kv_bits 8/4 on models with attention
+      sinks (gpt-oss), and a reload trial that breaks the load is rejected
+      and rolled back to the winner.
 
 14. **Node view (dashboard).** A live view like exo's, in Caravan's own
     style: each Mini, the layers it holds, memory, speed, chats in flight,

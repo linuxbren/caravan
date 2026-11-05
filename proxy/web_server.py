@@ -145,8 +145,7 @@ def make_handler(app: App):
                 return self._json(200, {"models": catalog.list_models(),
                                        "current": app.mgr.snapshot().get("model_id")})
             if path == "/api/settings":
-                return self._json(200, {"options": web_settings.OPTIONS,
-                                       "current": app.mgr.snapshot().get("settings")})
+                return self._api_settings()
             if path == "/api/optimize":
                 return self._json(200, app.optimizer.snapshot())
             if path == "/api/journey":
@@ -260,6 +259,21 @@ def make_handler(app: App):
                 "ports": {"web": DEFAULT_PORT, "lead": app.mgr.lead_port,
                           "packer": app.mgr.packer_peer},
             })
+
+        def _api_settings(self):
+            # ?model=<id>: what ~/.caravan/config.toml pins for that model (ROADMAP #13c).
+            from urllib.parse import parse_qs, urlparse
+            snap = app.mgr.snapshot()
+            q = parse_qs(urlparse(self.path).query)
+            mid = (q.get("model") or [None])[0] or snap.get("model_id")
+            entry = catalog.get_model(mid) if mid else None
+            cfg = web_settings.load_config()
+            fsets = web_settings.file_settings(mid, (entry or {}).get("lead_path"), cfg) if mid else {}
+            return self._json(200, {"options": web_settings.OPTIONS,
+                                   "current": snap.get("page_settings") or snap.get("settings"),
+                                   "file": {"path": cfg["path"], "exists": cfg["exists"],
+                                            "errors": cfg["errors"], "model": mid, "pins": fsets},
+                                   "from_file_loaded": snap.get("from_file") or {}})
 
         def _api_load(self, body=None):
             body = body or {}

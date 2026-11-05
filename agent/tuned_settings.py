@@ -737,8 +737,47 @@ def reload_value_label(name: str, value: Any) -> str:
     return str(value)
 
 
-def reload_neighbors(name: str, value: Any) -> list:
-    return [v for v in RELOAD_VALUES.get(name, ()) if v != value]
+def reload_neighbors(name: str, value: Any, entry: Optional[dict] = None) -> list:
+    bad = set(blocked_values(entry, name))
+    return [v for v in RELOAD_VALUES.get(name, ()) if v != value and v not in bad]
+
+
+# Models whose attention can't run on a quantized KV cache. mlx's quantized
+# SDPA refuses attention sinks ("Quantized SDPA does not support attention
+# sinks"), and gpt-oss uses sinks, so kv_bits 8/4 crash the load there.
+NO_KV_QUANT_TYPES = ("gpt_oss",)
+
+
+def kv_quant_supported(model_dir) -> bool:
+    """False when the model's config says it can't take kv_bits 8/4."""
+    try:
+        cfg = json.loads((Path(model_dir) / "config.json").read_text())
+    except (OSError, ValueError, TypeError):
+        return True
+    if str(cfg.get("model_type") or "") in NO_KV_QUANT_TYPES:
+        return False
+    return not any("sink" in str(k).lower() for k in cfg)
+
+
+def blocked_values(entry: Optional[dict], name: str) -> list:
+    """Reload values self-tuning must never try for this model (entry['reload_blocked'])."""
+    vals = ((entry or {}).get("reload_blocked") or {}).get(name) or []
+    return [_norm_reload(name, v) for v in vals]
+
+
+def block_value(entry: dict, name: str, value: Any, reason: str = "") -> None:
+    """Record a reload value as rejected (e.g. the load crashed with it)."""
+    b = entry.setdefault("reload_blocked", {})
+    v = _norm_reload(name, value)
+    cur = [_norm_reload(name, x) for x in b.get(name) or []]
+    if v not in cur:
+        cur.append(v)
+    b[name] = cur
+    if reason:
+        entry.setdefault("reload_blocked_why", {})[f"{name}={v}"] = reason[:200]
+    pend = entry.get("pending_reload") or {}
+    if pend.get(name) is not None and _norm_reload(name, pend[name]) == v:
+        pend.pop(name, None)
 
 
 def _norm_reload(name: str, value: Any) -> Any:
@@ -765,6 +804,14 @@ def plan_reload(entry: dict, auto_names) -> dict:
         if n not in winner:
             winner[n] = RELOAD_DEFAULTS[n]
         values[n] = _norm_reload(n, winner[n])
+    for n in auto:
+        bad = blocked_values(entry, n)
+        if values[n] in bad:
+            values[n] = _norm_reload(n, RELOAD_DEFAULTS[n])
+            winner[n] = values[n]
+        if pending.get(n) is not None and _norm_reload(n, pending[n]) in bad:
+            reasons.append(f"skip {RELOAD_LABEL[n]} {reload_value_label(n, pending.pop(n))} "
+                           f"(this model can't use it)")
     for n in auto:
         if pending.get(n) is not None:
             v = _norm_reload(n, pending.pop(n))
@@ -814,7 +861,7 @@ def observe_reload(entry: dict, *, settings_used: dict, norm_tps: float,
             inc = _norm_reload(n, winner.get(n, used.get(n, RELOAD_DEFAULTS[n])))
             if samples_of(entry, n, inc) < MIN_SAMPLES:
                 continue
-            nbs = sorted(reload_neighbors(n, inc), key=lambda v: samples_of(entry, n, v))
+            nbs = sorted(reload_neighbors(n, inc, entry), key=lambda v: samples_of(entry, n, v))
             if nbs and samples_of(entry, n, nbs[0]) < MIN_SAMPLES:
                 pending[n] = nbs[0]
                 out["queued"] = {"name": n, "value": nbs[0]}
@@ -873,6 +920,8 @@ def coverage(entry: Optional[dict], *, mode: str = "deep", pinned=()) -> dict:
         if n in pinned:
             continue
         for v in vs:
+            if n in RELOAD_VALUES and v in blocked_values(entry, n):
+                continue
             have = samples_of(entry, n, v)
             need += max(0, MIN_SAMPLES - have)
             items.append({"name": n, "value": reload_value_label(n, v),

@@ -328,3 +328,31 @@ existing caches still load. `GET /caravan/split` reports `lead` and
 the lead's slots are idle, stops the lead, restarts the packer, then starts
 the lead. Set `CARAVAN_NODE_B_HOST` and `CARAVAN_NODE_B_USER` to reach the
 packer.
+
+## Web UI per-model settings: `~/.caravan/config.toml`
+
+Optional (ROADMAP #13c). Holds your own pins for the web page's
+Optimizations options, globally and per model. Separate from
+`config.json` above; change its path with `CARAVAN_CONFIG_TOML`.
+Example: [`docs/config.example.toml`](config.example.toml).
+
+- `[defaults]` applies to every model; `[models."<id>"]` to one model,
+  keyed by the web model id (e.g. `gpt-oss-20b-mxfp4`) or its folder name.
+  The model table wins over `[defaults]`.
+- Keys: `self_tune` (auto/off), `guess_ahead` (auto/on/off),
+  `shared_start` (auto/on/off), `pipeline_chats` (auto/1/2),
+  `fuse_kernels` (auto/on), `kv_bits` (auto/16/8/4; `16` pins it
+  uncompressed), `keepalive` (auto/off), and `thinking`
+  (on/off, or low/medium/high for gpt-oss) for the Thinking button default.
+- Order: **a choice made on the web page (not Auto) > the file > Auto**.
+  A pinned value from the file also stops self-tuning from changing that
+  option. The Settings drawer shows "config.toml: …" under an option the
+  file pins, and the load log lists `config.toml pins: …`.
+  The Thinking button uses the file's `thinking` until you click it.
+- Bad keys or values are skipped and shown in the load log; they never stop
+  a load. Read when a model loads, so edits apply on the next load.
+- Command-line flags still win: the file is only read by the web launcher
+  (`proxy/web_server.py`). A plain `mlx_worker.py` run ignores it.
+- Python 3.9 (the web server) has no `tomllib`, so Caravan reads a small
+  TOML subset there: tables, `key = "string" | number | true/false`, `#`
+  comments.

@@ -1,0 +1,19 @@
+# Example ~/.caravan/config.toml (ROADMAP #13c). Copy what you want; every
+# line is optional and a missing file is fine.
+#
+# Order: a choice you make on the web page (anything not Auto) wins, then
+# this file, then Auto (self-tuning / Caravan's defaults).
+
+[defaults]
+# pipeline_chats = 2
+
+# Keyed by the web model id (qwen3-30b-a3b-4bit, gemma-4-26b-a4b-4bit,
+# gpt-oss-20b-mxfp4) or the model folder name.
+[models."gpt-oss-20b-mxfp4"]
+kv_bits = "16"        # gpt-oss can't use compressed chat memory (attention sinks)
+guess_ahead = "off"
+pipeline_chats = 2
+thinking = "medium"   # gpt-oss: low / medium / high
+
+[models."qwen3-30b-a3b-4bit"]
+thinking = "off"      # on / off: default for the Thinking button

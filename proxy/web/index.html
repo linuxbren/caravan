@@ -365,6 +365,7 @@
   .opt .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .opt .name { font-size: .82rem; font-weight: 600; }
   .opt .help { font-size: .7rem; color: var(--muted); line-height: 1.35; }
+  .opt .help.filepin { color: var(--accent); }
   .opt .now { font-family: var(--mono); font-size: .66rem; color: var(--teal2); }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
   .seg button {
@@ -874,6 +875,8 @@
           <span class="seg">${o.values.map(v =>
             `<button type="button" data-v="${v}" class="${state.choice[o.id] === v ? "sel" : ""} ${v === "auto" ? "auto" : ""}">${VAL_LABEL[v] || v}</button>`).join("")}</span></div>
         <div class="help">${o.help}</div>
+        ${state.filePins[o.id] && state.choice[o.id] === "auto"
+          ? `<div class="help filepin">config.toml: ${VAL_LABEL[state.filePins[o.id]] || state.filePins[o.id]} (used while this is Auto)</div>` : ""}
         <div class="now"></div>
       </div>`).join("");
     for (const row of document.querySelectorAll(".opt")) {
@@ -890,14 +893,20 @@
       }
     }
   }
+  state.filePins = {};      // what ~/.caravan/config.toml pins for the picked model
   async function loadOpts() {
-    const j = await api("/api/settings");
+    const sel = $("modelSelect");
+    const j = await api("/api/settings" + (sel && sel.value ? `?model=${encodeURIComponent(sel.value)}` : ""));
+    state.filePins = (j.file && j.file.pins) || {};
+    state.fileErrors = (j.file && j.file.errors) || [];
     state.opts = j.options || [];
     // Brenden: self-tuning first; others keep their order.
     state.opts.sort((a, b) => (b.id === "self_tune") - (a.id === "self_tune"));
     state.choice = Object.assign(Object.fromEntries(state.opts.map(o => [o.id, "auto"])), j.current || {});
     renderOpts();
     renderActive(state.active);
+    renderThink();
+    if (state.fileErrors.length) $("optTip").textContent = "config.toml: " + state.fileErrors.join("; ");
   }
 
   async function refreshModels() {
@@ -1046,7 +1055,12 @@
   function thinkPrefs() {
     let p = {};
     try { p = JSON.parse(localStorage.getItem("caravan.thinking") || "{}"); } catch (_) {}
-    return { on: p.on === true, effort: ["low","medium","high"].includes(p.effort) ? p.effort : "medium" };
+    // No click yet: use config.toml's thinking = ... for this model, if any.
+    const f = (state.filePins || {}).thinking;
+    const fOn = f === "on" ? true : f === "off" ? false : undefined;
+    const fEff = ["low","medium","high"].includes(f) ? f : undefined;
+    return { on: typeof p.on === "boolean" ? p.on : fOn === true,
+             effort: ["low","medium","high"].includes(p.effort) ? p.effort : (fEff || "medium") };
   }
   function renderThink() {
     const b = $("btnThink"); if (!b) return;
@@ -1061,7 +1075,11 @@
     } else {
       p.on = !p.on;
     }
-    try { localStorage.setItem("caravan.thinking", JSON.stringify(p)); } catch (_) {}
+    try {
+      const prev = JSON.parse(localStorage.getItem("caravan.thinking") || "{}");
+      if (thinkKind() === "effort") prev.effort = p.effort; else prev.on = p.on;
+      localStorage.setItem("caravan.thinking", JSON.stringify(prev));
+    } catch (_) {}
     renderThink();
   };
   function thinkKwargs() {
@@ -1335,6 +1353,7 @@
   (async () => {
     await refreshModels();
     await loadOpts();
+    $("modelSelect").addEventListener("change", () => { loadOpts().catch(() => {}); });
     await syncClock();
     await loadJourney();
     await refreshStatus();
