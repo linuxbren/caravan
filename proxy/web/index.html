@@ -458,8 +458,15 @@
   }
 
 
+  /* Buttons float over the chat's top-right; messages flow full width underneath. */
+  .chat { position: relative; }
   .chathead-actions {
+    position: absolute; top: 12px; right: 18px; z-index: 5; width: 132px;
     display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+  }
+  .chathead-actions button {
+    background: color-mix(in srgb, var(--bg2) 82%, transparent) !important;
+    backdrop-filter: blur(2px);
   }
   .chathead-actions .btn-settings,
   .chathead-actions .btn-topo,
@@ -1127,8 +1134,11 @@
       max_tokens: 768,
       stream_options: { include_usage: true },
     };
-    // Thinking button: passed to the model's chat template.
-    payload.chat_template_kwargs = thinkKwargs();
+    // Thinking button. gpt-oss gets its reasoning level; every other model gets a
+    // plain thinking on/off that the worker maps onto its own template (or, with no
+    // template switch, an empty think block so it answers straight away).
+    if (thinkKind() === "effort") payload.chat_template_kwargs = thinkKwargs();
+    else payload.thinking = thinkPrefs().on;
 
     let full = "";
     let meta = null;

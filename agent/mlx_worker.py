@@ -1550,10 +1550,22 @@ class Engine:
         kw = dict(body.get("chat_template_kwargs") or {})
         if body.get("tools"):
             kw["tools"] = body["tools"]
+        prefill_close = False
+        think = body.get("thinking")
+        if isinstance(think, bool):
+            kw, prefill_close = thinking_kwargs(self.tokenizer, think, kw)
         toks = self.tokenizer.apply_chat_template(msgs, add_generation_prompt=True, tokenize=True, **kw)
         if isinstance(toks, dict):
             toks = toks["input_ids"]
-        return list(toks)
+        toks = list(toks)
+        if prefill_close:
+            # Template has no thinking switch but the model thinks in tags:
+            # open and close an empty think block so it answers straight away.
+            start = getattr(self.tokenizer, "think_start", None)
+            end = getattr(self.tokenizer, "think_end", None)
+            if start and end:
+                toks += list(self.tokenizer.encode(f"{start}\n\n{end}\n\n", add_special_tokens=False))
+        return toks
 
     def text_prompt(self, body):
         p = body.get("prompt")
@@ -2710,6 +2722,32 @@ class Engine:
             return HarmonyAdapter()
         return StateMachineAdapter(self.G, self.tokenizer, prompt, stop_words)
 
+
+
+def thinking_kwargs(tokenizer, on, kw):
+    """Turn a plain thinking on/off into whatever this model's template understands.
+
+    Returns (kwargs, prefill_close). Explicit chat_template_kwargs win.
+    - templates with a thinking switch (enable_thinking / thinking; mlx_lm maps
+      enable_thinking to the model's own name): pass it through
+    - gpt-oss style reasoning_effort (no off switch): off -> "low"
+    - no switch but the model thinks in tags: off -> prefill an empty think block
+    """
+    kw = dict(kw)
+    tpl = getattr(tokenizer, "chat_template", None) or ""
+    if not isinstance(tpl, str):
+        tpl = str(tpl)
+    if "reasoning_effort" in tpl:
+        if not on:
+            kw.setdefault("reasoning_effort", "low")
+        return kw, False
+    if "enable_thinking" in tpl or getattr(tokenizer, "_thinking_kwarg", None) not in (None, "enable_thinking") \
+            or "thinking" in tpl:
+        kw.setdefault("enable_thinking", bool(on))
+        return kw, False
+    if not on and getattr(tokenizer, "has_thinking", False):
+        return kw, True
+    return kw, False
 
 
 # Chat templates whose end-of-turn marker isn't in the model's eos list.
