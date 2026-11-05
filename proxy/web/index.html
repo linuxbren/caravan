@@ -61,6 +61,10 @@
   .a-settings .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
   .a-settings .chips { margin-bottom: 12px; }
   .optcard h2 { font-size: .72rem; }
+  .tunenote { font-size: 12px; margin-top: 8px; }
+  .tunenote:empty, .optbox .help:empty { display: none; }
+  .optbox { margin-top: 10px; border-top: 1px solid rgba(127,127,127,.25); padding-top: 8px; }
+  .optbox .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pinnote { grid-column: 1 / -1; font-size: 12px; color: #b26b00; background: #fff4e0; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; }
   #optRows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
   .a-string .node + .cable + .node { margin-top: 0; }
@@ -322,6 +326,20 @@
         <button class="primary" id="btnApply">Apply &amp; restart</button>
         <small id="optNote">Auto = Caravan decides (learned per model)</small>
       </div>
+      <div class="tunenote" id="tuneNote"></div>
+      <div class="optbox" id="optBox">
+        <div class="row">
+          <b>Optimize this model</b>
+          <select id="optMode" aria-label="Optimize mode">
+            <option value="deep" selected>Deep (all options, reloads itself)</option>
+            <option value="quick">Quick (live options only)</option>
+          </select>
+          <button class="primary" id="btnOptStart">Start</button>
+          <button class="ghost" id="btnOptCancel">Cancel</button>
+        </div>
+        <div class="help" id="optTip"></div>
+        <div class="help" id="optProgress"></div>
+      </div>
     </div>
     </div>
   </section>
@@ -520,6 +538,49 @@
       b.textContent = v != null ? `Auto (${v})` : "Auto";
     }
   }
+  function fmtMin(s) {
+    if (s == null) return "measuring…";
+    return s < 90 ? `${Math.round(s)} s` : `${Math.round(s / 60)} min`;
+  }
+  function renderTuning(t, opt) {
+    // Day 15: reload trials (memory, fused kernels, keep-warm) + optimize tip.
+    const el = $("tuneNote");
+    const lines = [];
+    if (t && t.trial) lines.push(`Self-tuning is trying ${t.trial.label} ${t.trial.value}: ${t.trial.remaining} replies left.`);
+    for (const c of (t && t.reload_wanted) || []) {
+      lines.push(c.why === "try"
+        ? `Self-tuning wants to try ${c.label} ${c.to} — click Apply &amp; restart (or Deep optimize) to try it.`
+        : `${c.label} ${c.from} didn't win — Apply &amp; restart goes back to ${c.to}.`);
+    }
+    if (opt && opt.running && /reloading/.test(opt.phase || "")) lines.unshift(`<b>${opt.phase}…</b>`);
+    el.innerHTML = lines.join("<br>");
+    const few = t && t.known && (t.replies_learned || 0) < 10;
+    $("optTip").textContent = few && !(opt && opt.running)
+      ? "Tip: Deep optimize can tune this model while you wait." : "";
+  }
+  async function refreshOptimize() {
+    let j;
+    try { j = await api("/api/optimize"); } catch (e) { return; }
+    $("btnOptStart").disabled = !!j.running || $("btnLoad").disabled;
+    $("btnOptCancel").disabled = !j.running;
+    const el = $("optProgress");
+    if (!j.mode) { el.textContent = ""; return; }
+    const cov = j.coverage;
+    const done = cov ? cov.items.filter(i => i.have >= i.need).length : 0;
+    let txt = `${j.mode === "quick" ? "Quick" : "Deep"}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
+    if (cov) txt += ` · ${done}/${cov.items.length} option values tested`;
+    if (j.running) txt += ` · about ${fmtMin(j.eta_s)} left`;
+    if (j.reply_s != null) txt += ` · ${j.reply_s}s per reply`;
+    if (j.reload_s != null) txt += ` · ${j.reload_s}s per reload`;
+    if (j.error) txt += ` · ${j.error}`;
+    if (j.summary) {
+      const w = j.summary.winner || {};
+      const pick = Object.entries(w).map(([k, v]) => `${k}=${v === true ? "on" : v === false ? "off" : v}`).join(", ");
+      txt += `\n${j.summary.complete ? "Done" : "Stopped"} in ${j.summary.minutes} min. Learned winners (kept for this model): ${pick}`;
+    }
+    el.style.whiteSpace = "pre-line";
+    el.textContent = txt;
+  }
   function renderOpts() {
     const pins = pinnedUnderSelfTune();
     const note = pins.length
@@ -596,6 +657,7 @@
       setStatus(j.worker);
       state.active = j.active || null;
       renderActive(state.active);
+      renderTuning(j.tuning, j.optimize);
       const split = j.split;
       if (split && split.lead) {
         $("leadName").textContent = split.lead.name || "lead";
@@ -891,6 +953,14 @@
     refreshStatus();
   };
   $("btnApply").onclick = () => $("btnLoad").onclick();
+  $("btnOptStart").onclick = async () => {
+    try {
+      await api("/api/optimize/start", { method: "POST", body: JSON.stringify({ mode: $("optMode").value }) });
+    } catch (e) { $("optProgress").textContent = String(e.error || e.message || e); }
+    refreshOptimize();
+  };
+  $("btnOptCancel").onclick = async () => { await api("/api/optimize/cancel", { method: "POST", body: "{}" }); refreshOptimize(); };
+  setInterval(refreshOptimize, 3000); refreshOptimize();
   $("btnStop").onclick = async () => {
     cancelChat();
     await api("/api/models/stop", { method: "POST", body: "{}" });

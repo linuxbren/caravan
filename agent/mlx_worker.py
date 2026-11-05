@@ -626,6 +626,11 @@ class Engine:
         self._speculate_k_explicit = bool(getattr(args, "split_speculate_k_explicit", False))
         # ROADMAP #13b learn-from-chats state (filled in _setup / _learn_apply_startup).
         self._learn_enabled = not bool(getattr(args, "no_learn", False))
+        # Day 15: reload options (kv_bits, fuse_kernels, keepalive) the web
+        # launcher left on Auto. Empty = old behavior (not learned).
+        self._learn_reload_auto = [
+            n.strip() for n in str(getattr(args, "learn_reload_auto", "") or "").split(",")
+            if n.strip() in ("kv_bits", "fuse_kernels", "keepalive")]
         self._learn_path = getattr(args, "tuned_settings", None)
         self._learn_store = None
         self._learn_entry = None
@@ -988,6 +993,8 @@ class Engine:
             "keepalive": bool(getattr(a, "split_keepalive", False)) if self.client is not None else None,
             "pinned": sorted(k for k in (self._learn_explicit or {})
                              if k in ("guess_ahead", "shared_prefix", "pipeline_chats")),
+            "reload_auto": list(self._learn_reload_auto or []),
+            "reload_trial": dict((self._learn_entry or {}).get("reload_trial") or {}) or None,
         }
         if spec:
             out["guess_ahead_from_draft"] = spec.get("from_draft")
@@ -1030,6 +1037,23 @@ class Engine:
                 explicit=self._learn_explicit,
                 n_layers=self._learn_n_layers,
             )
+            # Day 15: score reload options and finish / queue reload trials.
+            rl_out = None
+            if self._learn_reload_auto:
+                try:
+                    fuse_on = str(getattr(self, "_fuse_mode", "off") or "off") != "off"
+                    rl_out = TS.observe_reload(
+                        self._learn_entry,
+                        settings_used={
+                            "kv_bits": int(getattr(self.args, "kv_bits", None) or 16),
+                            "fuse_kernels": "on" if fuse_on else "off",
+                            "keepalive": bool(getattr(self.args, "split_keepalive", False)),
+                        },
+                        norm_tps=out["norm_tps"], auto_names=self._learn_reload_auto)
+                    for reason in rl_out.get("reasons") or []:
+                        log(f"learn: {reason}")
+                except Exception as e:  # never break a reply over learning
+                    log(f"learn: reload scoring skipped ({type(e).__name__}: {e})")
             # Day 13: score shared-prefix by TTFT on long new chats (not decode tok/s).
             sp_out = None
             if (self.client is not None
@@ -3047,6 +3071,10 @@ def build_parser():
                     help="Day 15: pin guess-ahead on when a draft is loaded (learn won't turn it off)")
     ap.add_argument("--no-learn", action="store_true", default=_learn_off,
                     help="ROADMAP #13b: disable learn-from-real-chats (also CARAVAN_NO_LEARN=1)")
+    ap.add_argument("--learn-reload-auto", default="", metavar="NAMES",
+                    help="Day 15: comma list of reload options left on Auto "
+                         "(kv_bits,fuse_kernels,keepalive); self-tuning scores them "
+                         "and queues reload trials. The web launcher sets this.")
     ap.add_argument("--tuned-settings", default=os.environ.get("CARAVAN_TUNED_SETTINGS") or None,
                     metavar="PATH",
                     help="ROADMAP #13b: path for per-model learned settings "

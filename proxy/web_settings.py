@@ -75,3 +75,34 @@ def to_args(settings) -> tuple[list, list]:
     if s["keepalive"] == "off":
         lead.append("--no-split-keepalive")
     return lead, packer
+
+
+def from_args(cmd: str) -> dict:
+    """Best-effort inverse of to_args() for a running lead's command line."""
+    a = f" {cmd} "
+    out = normalize({})
+    if " --no-split-draft " in a:
+        out["guess_ahead"] = "off"
+    elif " --pin-guess-ahead " in a:
+        out["guess_ahead"] = "on"
+    if " --no-learn " in a:
+        out["self_tune"] = "off"
+    if " --split-shared-prefix-cache " in a:
+        out["shared_start"] = "on"
+    elif " --no-split-shared-prefix-cache " in a:
+        out["shared_start"] = "off"
+    for n in ("1", "2"):
+        if f" --split-pipeline-chats {n} " in a:
+            out["pipeline_chats"] = n
+    learned = ""
+    if " --learn-reload-auto " in a:
+        learned = a.split(" --learn-reload-auto ", 1)[1].split(" ", 1)[0]
+    if "fuse_kernels" not in learned and " --fuse-kernels all " in a:
+        out["fuse_kernels"] = "on"
+    if "kv_bits" not in learned:
+        for n in ("8", "4"):
+            if f" --kv-bits {n} " in a:
+                out["kv_bits"] = n
+    if "keepalive" not in learned and " --no-split-keepalive " in a:
+        out["keepalive"] = "off"
+    return out

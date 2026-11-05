@@ -712,3 +712,169 @@ def record_pipeline_probe(entry: dict, *, n_chats: int, aggregate_tps: float,
                     f"{m:.2f} tok/s over {samples_of(entry, 'pipeline_chats', n)} probes")
     return {"promotions": promotions, "keep_reasons": keep_reasons, "winner": dict(winner)}
 
+
+
+# ---- Day 15: reload trials for every Optimizations option ------------------
+# Self-tuning covers ALL options in the web Optimizations panel (design
+# decision, docs/ROADMAP.md). The three below only change when the model is
+# loaded, so trials are queued in pending_reload, applied on the next load
+# (Load / Apply & restart / Deep optimize auto-reload), scored over
+# RELOAD_TRIAL_REPLIES replies, then kept (promoted) or rolled back.
+RELOAD_TRIO = ("kv_bits", "fuse_kernels", "keepalive")
+RELOAD_DEFAULTS = {"kv_bits": 16, "fuse_kernels": "off", "keepalive": True}
+RELOAD_VALUES = {"kv_bits": (16, 8, 4), "fuse_kernels": ("off", "on"),
+                 "keepalive": (True, False)}
+RELOAD_TRIAL_REPLIES = MIN_SAMPLES
+RELOAD_LABEL = {"kv_bits": "memory compression", "fuse_kernels": "fused kernels",
+                "keepalive": "GPU keep-warm"}
+
+
+def reload_value_label(name: str, value: Any) -> str:
+    if name == "kv_bits":
+        return f"{int(value)}-bit"
+    if isinstance(value, bool):
+        return "on" if value else "off"
+    return str(value)
+
+
+def reload_neighbors(name: str, value: Any) -> list:
+    return [v for v in RELOAD_VALUES.get(name, ()) if v != value]
+
+
+def _norm_reload(name: str, value: Any) -> Any:
+    if name == "kv_bits":
+        return int(value or 16)
+    if name == "fuse_kernels":
+        return "off" if str(value or "off").lower() in ("off", "0", "false", "no") else "on"
+    if name == "keepalive":
+        return bool(value)
+    return value
+
+
+def plan_reload(entry: dict, auto_names) -> dict:
+    """At load time: pick values for auto reload options. Mutates entry.
+
+    Uses the saved winner (or default), then one queued pending trial.
+    Returns {values: {name: value}, trial: dict|None, reasons: [str]}.
+    """
+    auto = [n for n in RELOAD_TRIO if n in set(auto_names or ())]
+    winner = entry.setdefault("winner", {})
+    pending = entry.setdefault("pending_reload", {})
+    values, reasons, trial = {}, [], None
+    for n in auto:
+        if n not in winner:
+            winner[n] = RELOAD_DEFAULTS[n]
+        values[n] = _norm_reload(n, winner[n])
+    for n in auto:
+        if pending.get(n) is not None:
+            v = _norm_reload(n, pending.pop(n))
+            if v != values[n]:
+                trial = {"name": n, "value": v, "incumbent": values[n],
+                         "remaining": RELOAD_TRIAL_REPLIES}
+                values[n] = v
+                reasons.append(f"try {RELOAD_LABEL[n]} {reload_value_label(n, v)} "
+                               f"(queued; winner is {reload_value_label(n, trial['incumbent'])})")
+            break  # one reload trial at a time
+    for n in auto:
+        if not trial or trial["name"] != n:
+            reasons.append(f"learned {RELOAD_LABEL[n]}: {reload_value_label(n, values[n])}")
+    entry["reload_trial"] = trial
+    return {"values": values, "trial": trial, "reasons": reasons}
+
+
+def observe_reload(entry: dict, *, settings_used: dict, norm_tps: float,
+                   auto_names) -> dict:
+    """After each reply: score auto reload options, finish/queue trials."""
+    auto = [n for n in RELOAD_TRIO if n in set(auto_names or ())]
+    out = {"promotions": [], "rolled_back": [], "queued": None, "reasons": []}
+    if not auto:
+        return out
+    used = {n: _norm_reload(n, settings_used.get(n)) for n in auto if n in settings_used}
+    for n, v in used.items():
+        record_sample(entry, n, v, norm_tps)
+    winner = entry.setdefault("winner", {})
+    trial = entry.get("reload_trial")
+    if trial and trial.get("name") in used and used[trial["name"]] == trial["value"]:
+        trial["remaining"] = int(trial.get("remaining") or 0) - 1
+        if trial["remaining"] <= 0:
+            n = trial["name"]
+            ok, reason = maybe_promote(entry, n, trial["value"], trial["incumbent"])
+            if ok:
+                winner[n] = trial["value"]
+                out["promotions"].append((n, trial["value"], reason))
+            else:
+                winner[n] = trial["incumbent"]
+                out["rolled_back"].append((n, trial["incumbent"], reason))
+            out["reasons"].append(reason)
+            entry["reload_trial"] = None
+            trial = None
+    pending = entry.setdefault("pending_reload", {})
+    if not trial and not any(pending.get(n) is not None for n in RELOAD_TRIO):
+        for n in auto:
+            inc = _norm_reload(n, winner.get(n, used.get(n, RELOAD_DEFAULTS[n])))
+            if samples_of(entry, n, inc) < MIN_SAMPLES:
+                continue
+            nbs = sorted(reload_neighbors(n, inc), key=lambda v: samples_of(entry, n, v))
+            if nbs and samples_of(entry, n, nbs[0]) < MIN_SAMPLES:
+                pending[n] = nbs[0]
+                out["queued"] = {"name": n, "value": nbs[0]}
+                out["reasons"].append(
+                    f"queue {RELOAD_LABEL[n]} {reload_value_label(n, nbs[0])} for next load "
+                    f"(winner {reload_value_label(n, inc)} has {samples_of(entry, n, inc)} replies)")
+                break
+    return out
+
+
+def reload_status(entry: Optional[dict], running: Optional[dict], auto_names) -> dict:
+    """Plain status for the UI: running trial and any reload that is wanted."""
+    entry = entry or {}
+    running = running or {}
+    auto = [n for n in RELOAD_TRIO if n in set(auto_names or ())]
+    winner = entry.get("winner") or {}
+    pending = entry.get("pending_reload") or {}
+    trial = entry.get("reload_trial")
+    changes = []
+    for n in auto:
+        if running.get(n) is None:
+            continue
+        cur = _norm_reload(n, running[n])
+        if pending.get(n) is not None:
+            want, why = _norm_reload(n, pending[n]), "try"
+        elif trial and trial.get("name") == n:
+            continue
+        else:
+            want, why = _norm_reload(n, winner.get(n, cur)), "back to winner"
+        if want != cur:
+            changes.append({"name": n, "label": RELOAD_LABEL[n],
+                            "from": reload_value_label(n, cur),
+                            "to": reload_value_label(n, want), "why": why})
+    return {
+        "trial": ({"name": trial["name"], "label": RELOAD_LABEL[trial["name"]],
+                   "value": reload_value_label(trial["name"], trial["value"]),
+                   "remaining": int(trial.get("remaining") or 0)} if trial else None),
+        "reload_wanted": changes,
+    }
+
+
+# ---- Day 15: Deep / Quick optimize coverage ------------------------------
+LIVE_VALUES = {"guess_ahead": (True, False), "shared_prefix": (False, True),
+               "pipeline_chats": (1, 2)}
+
+
+def coverage(entry: Optional[dict], *, mode: str = "deep", pinned=()) -> dict:
+    """Samples each option value has vs needs. done when all reach MIN_SAMPLES."""
+    entry = entry or {}
+    pinned = set(pinned or ())
+    vals = dict(LIVE_VALUES)
+    if mode == "deep":
+        vals.update(RELOAD_VALUES)
+    items, need = [], 0
+    for n, vs in vals.items():
+        if n in pinned:
+            continue
+        for v in vs:
+            have = samples_of(entry, n, v)
+            need += max(0, MIN_SAMPLES - have)
+            items.append({"name": n, "value": reload_value_label(n, v),
+                          "have": have, "need": MIN_SAMPLES})
+    return {"items": items, "missing": need, "done": need == 0}

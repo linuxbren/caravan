@@ -280,6 +280,18 @@ Open tasks for this rule:
       Llama single-Mini vs spanned numbers (~16.4 vs ~22.1) came from a
       different setup than the Oct 31 single-vs-split table and are not
       directly comparable to it.
+    - **(b2) Self-tuning covers every option.** *Built Nov 5 (Day 15),
+      not yet Mini-verified.* Design decision (Brenden): "Self-tuning"
+      means all Optimizations options, not "self-tuning except". Besides
+      the live trio, it now learns memory compression (kv_bits 16/8/4),
+      fused kernels (off/on) and GPU keep-warm (on/off). Those need a
+      reload, so a trial is queued, applied on the next load (Load / Apply
+      & restart / Deep optimize), scored over 3 replies, then kept or
+      rolled back. On/Off pins still win. The web page shows "wants to try
+      X — Apply & restart" and a **Deep / Quick optimize** runner that
+      feeds itself fixed prompts and reloads between trials when no chat
+      is in flight (cancelable). Only the web launcher turns reload
+      learning on (`--learn-reload-auto`); plain CLI runs behave as before.
     - **(c) Optional settings file.** *Next.* `~/.caravan/config.toml`
       for human overrides such as `guess_ahead = off` or a preferred
       pipeline N. **Flags stay and win over the file**, mainly so

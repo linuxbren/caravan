@@ -32,6 +32,7 @@ import web_catalog as catalog
 import web_settings  # noqa: E402
 import web_timing as timing  # noqa: E402
 from web_workers import WorkerManager  # noqa: E402
+import web_optimize  # noqa: E402
 
 DEFAULT_HOST = os.environ.get("CARAVAN_WEB_HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.environ.get("CARAVAN_WEB_PORT", "8190"))
@@ -53,6 +54,17 @@ class App:
         self.started = time.time()
         self._shutdown = threading.Event()
         self.httpd = None
+        self._inflight = 0
+        self._inflight_lock = threading.Lock()
+        self.optimizer = web_optimize.Optimizer(mgr, inflight=lambda: self._inflight)
+
+    def chat_begin(self):
+        with self._inflight_lock:
+            self._inflight += 1
+
+    def chat_end(self):
+        with self._inflight_lock:
+            self._inflight = max(0, self._inflight - 1)
 
     def want_shutdown(self):
         self._shutdown.set()
@@ -135,6 +147,8 @@ def make_handler(app: App):
             if path == "/api/settings":
                 return self._json(200, {"options": web_settings.OPTIONS,
                                        "current": app.mgr.snapshot().get("settings")})
+            if path == "/api/optimize":
+                return self._json(200, app.optimizer.snapshot())
             if path == "/api/journey":
                 return self._json(200, load_journey())
             if path == "/api/split":
@@ -169,11 +183,22 @@ def make_handler(app: App):
             if path == "/api/models/stop":
                 app.mgr.stop(reason="ui")
                 return self._json(200, app.mgr.snapshot())
-            if path == "/api/chat":
-                return self._api_chat(body=body)
-            if path in ("/v1/chat/completions",):
-                # Also accept the OpenAI path so tools can hit the UI port.
-                return self._api_chat(body=body, openai_shape=True)
+            if path == "/api/optimize/start":
+                if app.mgr._switch_thread and app.mgr._switch_thread.is_alive():
+                    return self._json(409, {"error": "a model load is in progress"})
+                try:
+                    return self._json(200, app.optimizer.start((body or {}).get("mode") or "deep"))
+                except RuntimeError as e:
+                    return self._json(409, {"error": str(e)})
+            if path == "/api/optimize/cancel":
+                return self._json(200, app.optimizer.cancel())
+            if path in ("/api/chat", "/v1/chat/completions"):
+                # /v1 path too so tools can hit the UI port.
+                app.chat_begin()
+                try:
+                    return self._api_chat(body=body, openai_shape=(path != "/api/chat"))
+                finally:
+                    app.chat_end()
             if path == "/api/shutdown":
                 app.want_shutdown()
                 return self._json(200, {"ok": True})
@@ -222,11 +247,15 @@ def make_handler(app: App):
             snap = app.mgr.snapshot()
             healthy = app.mgr.lead_healthy() if snap.get("status") == "ready" else False
             split = app.mgr.lead_split_info() if healthy else None
+            active = app.mgr.lead_active_settings() if healthy else None
             return self._json(200, {
+                "tuning": app.mgr.tuning_status(active) if healthy else None,
+                "optimize": {k: v for k, v in app.optimizer.snapshot().items()
+                             if k in ("running", "mode", "phase", "eta_s")},
                 "worker": snap,
                 "lead_healthy": healthy,
                 "split": split,
-                "active": app.mgr.lead_active_settings() if healthy else None,
+                "active": active,
                 "uptime_s": round(time.time() - app.started, 1),
                 "ports": {"web": DEFAULT_PORT, "lead": app.mgr.lead_port,
                           "packer": app.mgr.packer_peer},
@@ -439,6 +468,11 @@ def main(argv=None):
         packer_ssh=args.packer_ssh,
         repo=Path(args.repo),
     )
+    try:
+        if mgr.adopt_running():
+            print("[caravan-web] adopted running lead from before restart", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"[caravan-web] adopt skipped: {e}", flush=True)
     app = App(mgr)
     # Skip getfqdn reverse-DNS (same issue as health_server on the Minis).
     class _Server(ThreadingHTTPServer):

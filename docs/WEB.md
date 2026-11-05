@@ -136,3 +136,26 @@ Milestones → How far we've come → Load progress | The string** (the
 lead/packer diagram: which layers sit on EXO1 and EXO2). On wide screens the
 paired cards sit side by side in that order; under 820 px everything is one
 column in the same order. `tests/test_web_server.py::PageOrderTest` guards it.
+
+## Self-tuning for every option + Deep optimize (Day 15)
+
+- With Self-tuning on Auto, the learner now also tries **memory compression,
+  fused kernels and GPU keep-warm**. These only change on a model load, so a
+  trial is queued, used on the next Load / Apply & restart, scored over 3
+  replies, then kept or rolled back. Pinned values (On/Off/8/4) are never
+  touched.
+- Under the Optimizations list the page says what is going on, e.g. "Self-tuning
+  wants to try memory compression 8-bit — click Apply & restart" or "trying …:
+  2 replies left".
+- **Optimize this model**: pick **Deep** (default; all options, reloads itself
+  between trials, only when no chat is in flight) or **Quick** (live options
+  only), press Start, and walk away. Progress shows the phase, prompts, reloads,
+  option values tested and a time-left estimate built from measured reply and
+  reload times. Cancel stops after the current step. The final winners stay
+  saved for that model (`~/.caravan/mlx/tuned-settings.json`).
+- A tip appears when a model has fewer than 10 learned replies.
+- Each run uses a fixed prompt set (short, long, predictable, and a >512-token
+  shared opening) in fresh sessions, plus a pair sent together every 5th
+  prompt so "two chats" gets concurrent samples. Caps: Quick 60 prompts, Deep
+  180, and it stops early if 30 prompts add no new coverage.
+- The web server now re-adopts a lead it started earlier after a web-only restart.

@@ -17,8 +17,13 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import sys
+
 import web_catalog as catalog
 import web_settings
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "agent"))
+import tuned_settings as TS  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 WORKER = REPO / "agent" / "mlx_worker.py"
@@ -58,6 +63,9 @@ class WorkerManager:
         }
         self._lead_proc: Optional[subprocess.Popen] = None
         self._switch_thread: Optional[threading.Thread] = None
+        tp = os.environ.get("CARAVAN_TUNED_SETTINGS")
+        self.tuned_path: Optional[Path] = Path(tp).expanduser() if tp else None
+        self._lead_path: Optional[str] = None
 
     # ----- public ---------------------------------------------------------
 
@@ -133,6 +141,9 @@ class WorkerManager:
                   model_name=entry["name"], progress=[])
         self._note(f"switching to {entry['name']}")
         lead_x, packer_x = web_settings.to_args(settings)
+        self._lead_path = entry.get("lead_path")
+        for line in self.plan_reload_args(entry, settings, lead_x, packer_x):
+            self._note("self-tuning: " + line)
         self._extra_lead, self._extra_packer = lead_x, packer_x
         self._note("settings: " + ", ".join(f"{k}={v}" for k, v in settings.items())
                    + (f" -> {' '.join(lead_x)}" if lead_x else " (all auto)"))
@@ -155,6 +166,85 @@ class WorkerManager:
 
         self._set(status="ready")
         self._note("ready")
+
+    # ----- Day 15: reload trials (kv_bits, fuse_kernels, keepalive) -------
+
+    def _tuned_entry(self, lead_path, *, create=False):
+        st = TS.load_store(self.tuned_path)
+        key = TS.entry_key(lead_path, spanned=True)
+        if create:
+            return st, TS.ensure_entry(st, key, model=TS.model_stem(lead_path),
+                                       hardware=TS.hardware_label(spanned=True))
+        return st, (st.get("models") or {}).get(key)
+
+    def plan_reload_args(self, entry: dict, settings: dict, lead_x: list, packer_x: list) -> list:
+        """Apply learned winners / one queued trial for reload options left on Auto.
+
+        Pinned options (On/Off/8/4 in the panel) are untouched. Returns log lines.
+        """
+        if settings.get("self_tune") == "off" or not entry.get("lead_path"):
+            return []
+        auto = [n for n in TS.RELOAD_TRIO if settings.get(n) == "auto"]
+        if not auto:
+            return []
+        try:
+            st, e = self._tuned_entry(entry["lead_path"], create=True)
+            plan = TS.plan_reload(e, auto)
+            TS.save_store(st, self.tuned_path)
+        except (OSError, ValueError) as ex:
+            return [f"reload plan skipped ({ex})"]
+        v = plan["values"]
+        both = []
+        if "kv_bits" in v and int(v["kv_bits"]) != 16:
+            both += ["--kv-bits", str(int(v["kv_bits"]))]
+        if "fuse_kernels" in v:
+            both += ["--fuse-kernels", "all" if v["fuse_kernels"] == "on" else "off"]
+        if "keepalive" in v:
+            both.append("--split-keepalive" if v["keepalive"] else "--no-split-keepalive")
+        lead_x += both + ["--learn-reload-auto", ",".join(auto)]
+        packer_x += both
+        return plan["reasons"]
+
+    def tuning_status(self, active: Optional[dict]) -> dict:
+        """What self-tuning is doing with reload options, for the page."""
+        lp = self._lead_path
+        if not lp:
+            return {"known": False}
+        try:
+            _, e = self._tuned_entry(lp)
+        except (OSError, ValueError):
+            e = None
+        a = active or {}
+        running = {"kv_bits": a.get("kv_bits"), "keepalive": a.get("keepalive"),
+                   "fuse_kernels": a.get("fuse_kernels")}
+        out = TS.reload_status(e, running, a.get("reload_auto") or [])
+        out["known"] = True
+        out["replies_learned"] = int((e or {}).get("reply_n") or 0)
+        out["winner"] = dict((e or {}).get("winner") or {})
+        return out
+
+    def adopt_running(self) -> bool:
+        """After a web-server restart, adopt a lead we started earlier.
+
+        Reads our own lead.pid + its command line; never starts or stops anything.
+        """
+        try:
+            pid = int((self.state_dir / "lead.pid").read_text().strip())
+            cmd = subprocess.check_output(["ps", "-o", "command=", "-p", str(pid)],
+                                          text=True, timeout=5).strip()
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return False
+        if "mlx_worker.py" not in cmd or not self.lead_healthy():
+            return False
+        for m in catalog.list_models():
+            lp = m.get("lead_path")
+            if lp and f"--model {lp}" in cmd:
+                self._lead_path = lp
+                self._set(status="ready", model_id=m["id"], model_name=m["name"],
+                          lead_pid=pid, settings=web_settings.from_args(cmd))
+                self._note(f"adopted running lead (pid {pid}) after web restart")
+                return True
+        return False
 
     def _lead_log(self) -> Path:
         return self.state_dir / "lead.log"
