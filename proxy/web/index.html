@@ -528,6 +528,11 @@
   .nstat .kv { display: flex; justify-content: space-between; margin: 3px 0; }
   .nstat .kv b { color: var(--text); font-weight: 400; }
   .nstat .err { color: var(--warn); }
+  .nstat.stale { opacity: .55; transition: opacity .3s; }
+  .nstat.stale::after {
+    content: "stale"; float: right; font-size: .65rem; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--muted);
+  }
 
 
   .a-string { display: none !important; }
@@ -705,6 +710,9 @@
     streaming: false,
     poll: null,
     chatAbort: null,
+    history: [],           // [{role, content}] for the model — survives refresh
+    nodeLast: { lead: null, packer: null },
+    nodeFreshAt: { lead: 0, packer: 0 },
   };
 
   const REPLY_MARKERS = [
@@ -1119,11 +1127,48 @@
 
   // Keep the chat across page refreshes: session id + messages live in localStorage.
   // Clear chat (or switching/stopping the model) starts fresh as before.
-  const LS_SID = "caravan.session", LS_MSGS = "caravan.messages";
+  const LS_SID = "caravan.session", LS_MSGS = "caravan.messages", LS_HIST = "caravan.history";
+  const CTX_TOKENS = 32768;   // trim history to leave room for max_tokens
+  function approxTokens(s) { return Math.ceil(String(s || "").length / 4); }
+  function isBadAssistantText(s) {
+    const t = String(s || "").trim();
+    if (!t) return true;
+    if (t.startsWith("(error:")) return true;
+    if (t.startsWith("(no reply")) return true;
+    return false;
+  }
+  function historyFromDom() {
+    const out = [];
+    for (const el of $("messages").querySelectorAll(".msg")) {
+      const role = el.classList.contains("user") ? "user" : "assistant";
+      const body = el.querySelector(".body");
+      const text = (body ? body.textContent : "") || "";
+      if (role === "assistant" && isBadAssistantText(text)) continue;
+      if (!text.trim()) continue;
+      out.push({ role, content: text });
+    }
+    return out;
+  }
+  function trimHistory(hist, maxTokens) {
+    const budget = Math.max(1024, CTX_TOKENS - (maxTokens || 768) - 256);
+    let used = 0;
+    const kept = [];
+    for (let i = hist.length - 1; i >= 0; i--) {
+      const cost = approxTokens(hist[i].content) + 4;
+      if (kept.length && used + cost > budget) break;
+      kept.push(hist[i]);
+      used += cost;
+    }
+    kept.reverse();
+    // Don't start mid-turn with a lone assistant message.
+    while (kept.length && kept[0].role === "assistant") kept.shift();
+    return kept;
+  }
   function saveChat() {
     try {
       if (state.session) localStorage.setItem(LS_SID, state.session);
       else localStorage.removeItem(LS_SID);
+      localStorage.setItem(LS_HIST, JSON.stringify(state.history || []));
       const m = $("messages");
       if (!m.querySelector(".msg")) { localStorage.removeItem(LS_MSGS); return; }
       const keep = m.cloneNode(true);
@@ -1135,12 +1180,23 @@
       localStorage.setItem(LS_MSGS, keep.innerHTML);
     } catch (_) {}
   }
+  function resetHistory() {
+    state.history = [];
+    try { localStorage.removeItem(LS_HIST); } catch (_) {}
+  }
   try {
     state.session = localStorage.getItem(LS_SID) || null;
     const saved = localStorage.getItem(LS_MSGS);
     if (saved) {
       $("messages").innerHTML = saved;
       $("messages").scrollTop = $("messages").scrollHeight;
+    }
+    const rawHist = localStorage.getItem(LS_HIST);
+    if (rawHist) {
+      const parsed = JSON.parse(rawHist);
+      state.history = Array.isArray(parsed) ? parsed.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string") : [];
+    } else if (saved) {
+      state.history = historyFromDom();
     }
   } catch (_) {}
 
@@ -1174,12 +1230,15 @@
 
     if (!state.session) state.session = newSessionId();
     const sent = Date.now() / 1000;
+    // Thinking eats tokens before the answer starts, so give it more room.
+    const maxTok = (thinkKind() === "effort" ? thinkPrefs().effort !== "low" : thinkPrefs().on) ? 4096 : 768;
+    // Full conversation for the model (answer text only — never .think reasoning).
+    const prior = trimHistory(state.history || [], maxTok);
     const payload = {
-      messages: [{ role: "user", content: text }],
+      messages: prior.concat([{ role: "user", content: text }]),
       stream: true,
       temperature: 0.7,
-      // Thinking eats tokens before the answer starts, so give it more room.
-      max_tokens: (thinkKind() === "effort" ? thinkPrefs().effort !== "low" : thinkPrefs().on) ? 4096 : 768,
+      max_tokens: maxTok,
       stream_options: { include_usage: true },
     };
     // Thinking button. gpt-oss gets its reasoning level; every other model gets a
@@ -1285,6 +1344,13 @@
       } else if (!full) {
         bodyEl.textContent = "(no reply — try again, or reload the model)";
       }
+      // Commit this turn to history only when we got a real answer (not error/empty).
+      if (full && !isBadAssistantText(full)) {
+        state.history = (state.history || []).concat([
+          { role: "user", content: text },
+          { role: "assistant", content: full },
+        ]);
+      }
     } catch (e) {
       const aborted = e && (e.name === "AbortError" || e.name === "TimeoutError");
       const msg = aborted
@@ -1346,6 +1412,7 @@
     try {
       await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: id, settings: state.choice }) });
       state.session = null; // new model → new sessions
+      resetHistory();
       saveChat();
     } catch (e) {
       alert(e.error || e.message || String(e));
@@ -1365,6 +1432,7 @@
     cancelChat();
     await api("/api/models/stop", { method: "POST", body: "{}" });
     state.session = null;
+    resetHistory();
     saveChat();
     refreshStatus();
   };
@@ -1372,6 +1440,7 @@
     cancelChat();
     $("messages").innerHTML = "";
     state.session = newSessionId();
+    resetHistory();
     const empty = document.createElement("div");
     empty.className = "empty"; empty.id = "emptyState";
     empty.innerHTML = `<strong>Cleared.</strong> New session — shared start will pay its one-time setup on the first long system prompt.`;
@@ -1399,31 +1468,69 @@
     const p = Math.max(0, Math.min(100, Number(pct) || 0));
     return `<div class="bar"><span>${label}</span><span class="track"><span class="fill ${hot ? "hot" : ""}" style="width:${p}%;display:block"></span></span><span class="v">${esc(txt)}</span></div>`;
   }
+  // Merge field-by-field so a partial/failed poll never blanks a card.
+  function mergeNode(prev, next) {
+    if (!next || typeof next !== "object") return prev;
+    if (next.error && next.cpu_pct == null && next.gpu_pct == null && !next.ram && !next.disk) {
+      // Hard failure with no stats — keep prior card entirely.
+      return prev ? Object.assign({}, prev, { error: next.error }) : next;
+    }
+    const out = Object.assign({}, prev || {});
+    for (const [k, v] of Object.entries(next)) {
+      if (v == null) continue;
+      if (k === "ram" || k === "disk") {
+        out[k] = Object.assign({}, (prev && prev[k]) || {}, v);
+      } else if (k === "error" && next.cpu_pct == null && (prev && prev.cpu_pct != null)) {
+        // Keep showing last good metrics; remember the error softly.
+        out._lastError = v;
+      } else {
+        out[k] = v;
+      }
+    }
+    return out;
+  }
   function renderNode(n) {
-    if (!n) return "no data";
-    if (n.error && n.cpu_pct == null) return `<span class="err">can't reach: ${esc(n.error)}</span>`;
+    if (!n) return `<span class="err">waiting for first sample…</span>`;
     const ram = n.ram || {}, dk = n.disk || {};
     const ramPct = ram.total_gb ? 100 * ram.used_gb / ram.total_gb : 0;
     const dPct = dk.total_gb ? 100 * dk.used_gb / dk.total_gb : 0;
     let h = "";
-    h += nbar("CPU", n.cpu_pct, `${n.cpu_pct ?? "?"}%`, n.cpu_pct > 85);
+    if (n.cpu_pct != null) h += nbar("CPU", n.cpu_pct, `${n.cpu_pct}%`, n.cpu_pct > 85);
     if (n.gpu_pct != null) {
       const gp = n.gpu_power_w != null ? `${n.gpu_pct}% · ${n.gpu_power_w} W` : `${n.gpu_pct}%`;
       h += nbar("GPU", n.gpu_pct, gp, n.gpu_pct > 95);
     }
-    h += nbar("RAM", ramPct, `${ram.free_gb ?? "?"} GB free`, ramPct > 90);
-    h += nbar("Disk", dPct, `${dk.free_gb ?? "?"} GB free`, dk.free_gb != null && dk.free_gb < 20);
+    if (ram.total_gb != null) h += nbar("RAM", ramPct, `${ram.free_gb ?? "?"} GB free`, ramPct > 90);
+    if (dk.total_gb != null) h += nbar("Disk", dPct, `${dk.free_gb ?? "?"} GB free`, dk.free_gb != null && dk.free_gb < 20);
     // Temp bar: 20 °C (empty) → 100 °C (full). No degrees → thermal level text only.
     if (n.temp_c != null) {
       const tempPct = Math.max(0, Math.min(100, (n.temp_c - 20) / 80 * 100));
       h += nbar("Temp", tempPct, `${n.temp_c.toFixed(0)}°C`, n.temp_c >= 85);
-      h += `<div class="kv"><span>Thermal pressure</span><b>${esc(n.thermal_pressure || "?")}</b></div>`;
-    } else {
-      h += `<div class="kv"><span>Temp</span><b>${esc(n.thermal_pressure || "no reading")}</b></div>`;
+      if (n.thermal_pressure) h += `<div class="kv"><span>Thermal pressure</span><b>${esc(n.thermal_pressure)}</b></div>`;
+    } else if (n.thermal_pressure) {
+      h += `<div class="kv"><span>Temp</span><b>${esc(n.thermal_pressure)}</b></div>`;
     }
     if (n.model) h += `<div class="kv"><span>Model</span><b>${esc(n.model)}</b></div>`;
-    if (n.layers) h += `<div class="kv"><span>Holds</span><b>${esc(n.layers.replace(/^[^:]*:\s*/, ""))}${n.weights_gb ? ` · ${n.weights_gb} GB` : ""}</b></div>`;
+    if (n.layers) h += `<div class="kv"><span>Holds</span><b>${esc(String(n.layers).replace(/^[^:]*:\s*/, ""))}${n.weights_gb ? ` · ${n.weights_gb} GB` : ""}</b></div>`;
+    if (!h) {
+      if (n.error) return `<span class="err">can't reach: ${esc(n.error)}</span>`;
+      return `<span class="err">waiting for first sample…</span>`;
+    }
     return h;
+  }
+  function paintNode(key, elId, incoming) {
+    const merged = mergeNode(state.nodeLast[key], incoming);
+    if (merged) state.nodeLast[key] = merged;
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const n = state.nodeLast[key];
+    if (!n) { el.innerHTML = renderNode(null); return; }
+    // Fresh if this poll carried real metrics (not a hard-empty error).
+    const gotFresh = incoming && (incoming.cpu_pct != null || incoming.gpu_pct != null || incoming.ram || incoming.temp_c != null);
+    if (gotFresh) state.nodeFreshAt[key] = Date.now();
+    el.innerHTML = renderNode(n);
+    const age = Date.now() - (state.nodeFreshAt[key] || 0);
+    el.classList.toggle("stale", !!(state.nodeFreshAt[key] && age > 5000));
   }
   async function pollNodes() {
     if (nodesInflight) return;
@@ -1434,10 +1541,20 @@
     try {
       const r = await fetch("/api/nodes"); const j = await r.json();
       const [lead, pk] = j.nodes || [];
-      document.getElementById("leadStats").innerHTML = renderNode(lead);
-      document.getElementById("packerStats").innerHTML = renderNode(pk);
+      paintNode("lead", "leadStats", lead);
+      paintNode("packer", "packerStats", pk);
     } catch (e) {
-      document.getElementById("leadStats").textContent = "node stats unavailable";
+      // Keep last good cards; just mark them stale.
+      for (const [key, id] of [["lead","leadStats"],["packer","packerStats"]]) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (state.nodeLast[key]) {
+          el.innerHTML = renderNode(state.nodeLast[key]);
+          el.classList.add("stale");
+        } else if (!el.innerHTML || el.textContent === "loading…") {
+          el.innerHTML = `<span class="err">waiting for first sample…</span>`;
+        }
+      }
     } finally {
       nodesInflight = false;
     }
