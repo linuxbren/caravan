@@ -711,8 +711,6 @@
     poll: null,
     chatAbort: null,
     history: [],           // [{role, content}] for the model — survives refresh
-    nodeLast: { lead: null, packer: null },
-    nodeFreshAt: { lead: 0, packer: 0 },
   };
 
   const REPLY_MARKERS = [
@@ -1461,6 +1459,8 @@
 
   // ROADMAP #14: live node stats from /api/nodes.
   // Poll ~500ms while drawer is open AND the tab is visible; skip ticks if a request is in flight.
+  const nodeLast = { lead: null, packer: null };
+  const nodeFreshAt = { lead: 0, packer: 0 };
   let nodesTimer = null;
   let nodesInflight = false;
   const esc = (t) => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1519,18 +1519,18 @@
     return h;
   }
   function paintNode(key, elId, incoming) {
-    const merged = mergeNode(state.nodeLast[key], incoming);
-    if (merged) state.nodeLast[key] = merged;
+    const merged = mergeNode(nodeLast[key], incoming);
+    if (merged) nodeLast[key] = merged;
     const el = document.getElementById(elId);
     if (!el) return;
-    const n = state.nodeLast[key];
+    const n = nodeLast[key];
     if (!n) { el.innerHTML = renderNode(null); return; }
     // Fresh if this poll carried real metrics (not a hard-empty error).
     const gotFresh = incoming && (incoming.cpu_pct != null || incoming.gpu_pct != null || incoming.ram || incoming.temp_c != null);
-    if (gotFresh) state.nodeFreshAt[key] = Date.now();
+    if (gotFresh) nodeFreshAt[key] = Date.now();
     el.innerHTML = renderNode(n);
-    const age = Date.now() - (state.nodeFreshAt[key] || 0);
-    el.classList.toggle("stale", !!(state.nodeFreshAt[key] && age > 5000));
+    const age = Date.now() - (nodeFreshAt[key] || 0);
+    el.classList.toggle("stale", !!(nodeFreshAt[key] && age > 5000));
   }
   async function pollNodes() {
     if (nodesInflight) return;
@@ -1548,8 +1548,8 @@
       for (const [key, id] of [["lead","leadStats"],["packer","packerStats"]]) {
         const el = document.getElementById(id);
         if (!el) continue;
-        if (state.nodeLast[key]) {
-          el.innerHTML = renderNode(state.nodeLast[key]);
+        if (nodeLast[key]) {
+          el.innerHTML = renderNode(nodeLast[key]);
           el.classList.add("stale");
         } else if (!el.innerHTML || el.textContent === "loading…") {
           el.innerHTML = `<span class="err">waiting for first sample…</span>`;
