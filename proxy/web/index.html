@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="amber">
+<html lang="en" data-theme="amber" data-bar-colors="theme">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -523,7 +523,31 @@
   .nstat .bar { display: grid; grid-template-columns: 4.2em 1fr 8.5em; gap: 8px; align-items: center; margin: 4px 0; }
   .nstat .track { height: 8px; border: 1px solid var(--line); border-radius: 2px; background: var(--bg); overflow: hidden; }
   .nstat .fill { height: 100%; background: var(--accent); }
-  .nstat .fill.hot { background: var(--warn); }
+  /* Topology bar colors: Theme (accent phosphor) or Heat (green/yellow/red). */
+  html[data-bar-colors="theme"] .nstat .fill.lvl-lo {
+    background: color-mix(in srgb, var(--accent) 38%, var(--bg));
+    box-shadow: none;
+  }
+  html[data-bar-colors="theme"] .nstat .fill.lvl-mid {
+    background: var(--accent);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  html[data-bar-colors="theme"] .nstat .fill.lvl-hi {
+    background: var(--accent2);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--accent2) 70%, transparent);
+  }
+  html[data-bar-colors="heat"] .nstat .fill.lvl-lo {
+    background: #2fd65a;
+    box-shadow: 0 0 6px rgba(47, 214, 90, .45);
+  }
+  html[data-bar-colors="heat"] .nstat .fill.lvl-mid {
+    background: #efc923;
+    box-shadow: 0 0 6px rgba(239, 201, 35, .5);
+  }
+  html[data-bar-colors="heat"] .nstat .fill.lvl-hi {
+    background: #ff5a4a;
+    box-shadow: 0 0 8px rgba(255, 90, 74, .55);
+  }
   .nstat .v { text-align: right; color: var(--text); }
   .nstat .kv { display: flex; justify-content: space-between; margin: 3px 0; }
   .nstat .kv b { color: var(--text); font-weight: 400; }
@@ -657,6 +681,14 @@
         <div class="help" id="optTip">Optimize as used stays on when options are Auto — Caravan learns from real chats.</div>
         <div class="help" id="optProgress"></div>
       </div>
+    </div>
+    <div class="optcard" id="topoBarsCard">
+      <h2><span class="tip" title="How Topology fills the CPU / GPU / RAM / Disk / Temp bars.">Topology bars</span></h2>
+      <div class="theme-switch" id="barColorSwitch" title="Bar colors">
+        <button type="button" data-bars="theme" class="on">Theme</button>
+        <button type="button" data-bars="heat">Heat</button>
+      </div>
+      <small id="barColorNote">Theme = dim / accent / bright of the current color. Heat = green / yellow / red by level.</small>
     </div>
     </div>
   </aside>
@@ -1457,6 +1489,27 @@
   })();
 })();
 
+  // Topology bar colors (module-level — Topology lives outside the main IIFE).
+  const LS_BARS = "caravan.barColors";
+  function applyBarColors(mode) {
+    const m = mode === "heat" ? "heat" : "theme";
+    document.documentElement.setAttribute("data-bar-colors", m);
+    try { localStorage.setItem(LS_BARS, m); } catch (_) {}
+    document.querySelectorAll("#barColorSwitch button").forEach((b) => {
+      b.classList.toggle("on", b.dataset.bars === m);
+    });
+  }
+  (() => {
+    let saved = "theme";
+    try { saved = localStorage.getItem(LS_BARS) || "theme"; } catch (_) {}
+    applyBarColors(saved);
+    const sw = document.getElementById("barColorSwitch");
+    if (sw) sw.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-bars]");
+      if (b) applyBarColors(b.dataset.bars);
+    });
+  })();
+
   // ROADMAP #14: live node stats from /api/nodes.
   // Poll ~500ms while drawer is open AND the tab is visible; skip ticks if a request is in flight.
   const nodeLast = { lead: null, packer: null };
@@ -1464,9 +1517,15 @@
   let nodesTimer = null;
   let nodesInflight = false;
   const esc = (t) => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  function nbar(label, pct, txt, hot) {
+  function barLevel(pct) {
+    const p = Number(pct) || 0;
+    if (p > 85) return "lvl-hi";
+    if (p >= 60) return "lvl-mid";
+    return "lvl-lo";
+  }
+  function nbar(label, pct, txt) {
     const p = Math.max(0, Math.min(100, Number(pct) || 0));
-    return `<div class="bar"><span>${label}</span><span class="track"><span class="fill ${hot ? "hot" : ""}" style="width:${p}%;display:block"></span></span><span class="v">${esc(txt)}</span></div>`;
+    return `<div class="bar"><span>${label}</span><span class="track"><span class="fill ${barLevel(p)}" style="width:${p}%;display:block"></span></span><span class="v">${esc(txt)}</span></div>`;
   }
   // Merge field-by-field so a partial/failed poll never blanks a card.
   function mergeNode(prev, next) {
@@ -1495,17 +1554,17 @@
     const ramPct = ram.total_gb ? 100 * ram.used_gb / ram.total_gb : 0;
     const dPct = dk.total_gb ? 100 * dk.used_gb / dk.total_gb : 0;
     let h = "";
-    if (n.cpu_pct != null) h += nbar("CPU", n.cpu_pct, `${n.cpu_pct}%`, n.cpu_pct > 85);
+    if (n.cpu_pct != null) h += nbar("CPU", n.cpu_pct, `${n.cpu_pct}%`);
     if (n.gpu_pct != null) {
       const gp = n.gpu_power_w != null ? `${n.gpu_pct}% · ${n.gpu_power_w} W` : `${n.gpu_pct}%`;
-      h += nbar("GPU", n.gpu_pct, gp, n.gpu_pct > 95);
+      h += nbar("GPU", n.gpu_pct, gp);
     }
-    if (ram.total_gb != null) h += nbar("RAM", ramPct, `${ram.free_gb ?? "?"} GB free`, ramPct > 90);
-    if (dk.total_gb != null) h += nbar("Disk", dPct, `${dk.free_gb ?? "?"} GB free`, dk.free_gb != null && dk.free_gb < 20);
+    if (ram.total_gb != null) h += nbar("RAM", ramPct, `${ram.free_gb ?? "?"} GB free`);
+    if (dk.total_gb != null) h += nbar("Disk", dPct, `${dk.free_gb ?? "?"} GB free`);
     // Temp bar: 20 °C (empty) → 100 °C (full). No degrees → thermal level text only.
     if (n.temp_c != null) {
       const tempPct = Math.max(0, Math.min(100, (n.temp_c - 20) / 80 * 100));
-      h += nbar("Temp", tempPct, `${n.temp_c.toFixed(0)}°C`, n.temp_c >= 85);
+      h += nbar("Temp", tempPct, `${n.temp_c.toFixed(0)}°C`);
       if (n.thermal_pressure) h += `<div class="kv"><span>Thermal pressure</span><b>${esc(n.thermal_pressure)}</b></div>`;
     } else if (n.thermal_pressure) {
       h += `<div class="kv"><span>Temp</span><b>${esc(n.thermal_pressure)}</b></div>`;
