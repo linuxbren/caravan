@@ -521,6 +521,8 @@
   async function loadOpts() {
     const j = await api("/api/settings");
     state.opts = j.options || [];
+    // Brenden: self-tuning first; others keep their order.
+    state.opts.sort((a, b) => (b.id === "self_tune") - (a.id === "self_tune"));
     state.choice = Object.assign(Object.fromEntries(state.opts.map(o => [o.id, "auto"])), j.current || {});
     renderOpts();
   }

@@ -422,3 +422,13 @@ class PageOrderTest(unittest.TestCase):
         self.assertEqual(pos, sorted(pos))
         self.assertLess(body.index('id="modelSelect"'), body.index('id="optRows"'))
         self.assertGreater(body.index('id="modelSelect"'), body.index('a-settings"'))
+
+
+class SelfTuneFirstTest(unittest.TestCase):
+    def test_self_tune_first(self):
+        self.assertEqual(web_settings.OPTIONS[0]["id"], "self_tune")
+        self.assertEqual([o["id"] for o in web_settings.OPTIONS[1:]],
+                         ["guess_ahead", "shared_start", "pipeline_chats",
+                          "fuse_kernels", "kv_bits", "keepalive"])
+        html = (REPO / "proxy" / "web" / "index.html").read_text()
+        self.assertIn('(b.id === "self_tune") - (a.id === "self_tune")', html)

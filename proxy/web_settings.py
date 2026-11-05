@@ -7,12 +7,12 @@ from __future__ import annotations
 
 # id -> label, plain help, allowed values (first is "auto")
 OPTIONS = [
-    {"id": "guess_ahead", "label": "Guess-ahead",
-     "help": "A small helper model guesses the next few words; the big model checks them in one go.",
-     "values": ["auto", "on", "off"]},
     {"id": "self_tune", "label": "Self-tuning",
      "help": "Caravan tries settings on real chats and keeps the faster ones (saved per model).",
      "values": ["auto", "off"]},
+    {"id": "guess_ahead", "label": "Guess-ahead",
+     "help": "A small helper model guesses the next few words; the big model checks them in one go.",
+     "values": ["auto", "on", "off"]},
     {"id": "shared_start", "label": "Shared start (trim / rebuild)",
      "help": "Reuse the already-read start of a repeated system prompt. Trims memory back to it, "
              "or rebuilds it on both Minis for models that can't be trimmed (Gemma).",
