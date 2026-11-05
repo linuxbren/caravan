@@ -2531,12 +2531,10 @@ class Engine:
         if slot._detok is not None:
             try:
                 slot._detok.add_token(token)
-                text_piece = getattr(slot._detok, "last_segment", None) or getattr(slot._detok, "text", "") or ""
-                if not text_piece and hasattr(slot._detok, "text"):
-                    full = slot._detok.text
-                    prev = getattr(slot, "_detok_prev", "")
-                    text_piece = full[len(prev):]
-                    slot._detok_prev = full
+                # last_segment is "" while the detokenizer holds back a partial
+                # word/byte; that's normal. Never fall back to .text (the whole
+                # reply so far) or the stream re-sends everything from the start.
+                text_piece = slot._detok.last_segment or ""
             except Exception:
                 text_piece = self.tokenizer.decode([token])
         else:
@@ -2555,6 +2553,12 @@ class Engine:
             finish = "stop"
         if slot.n_gen >= slot.max_tokens:
             finish = finish or "length"
+        if finish is not None and slot._detok is not None:
+            try:
+                slot._detok.finalize()
+                text_piece += slot._detok.last_segment or ""
+            except Exception:
+                pass
         slot.out.put(("piece", text_piece, finish is not None))
         return finish
 
