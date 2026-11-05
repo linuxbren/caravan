@@ -98,7 +98,10 @@ class CatalogTest(unittest.TestCase):
         ids = {m["id"] for m in catalog.CATALOG}
         self.assertIn("qwen3-30b-a3b-4bit", ids)
         self.assertIn("gemma-4-26b-a4b-4bit", ids)
-        self.assertIn("llama-3.1-8b-4bit", ids)
+        self.assertIn("gpt-oss-20b-mxfp4", ids)
+        # single-node models dropped Nov 5 (shard-sized only)
+        self.assertNotIn("llama-3.1-8b-4bit", ids)
+        self.assertNotIn("qwen2.5-14b-4bit", ids)
 
     def test_get_model(self):
         m = catalog.get_model("qwen3-30b-a3b-4bit")

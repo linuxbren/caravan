@@ -566,6 +566,18 @@ once), with the balanced cuts from idea 5 (Gemma K=16, GPT-OSS K=13,
 Qwen3 even). Idea 5 alone does not speed up a single chat. Idea 6 (keepalive)
 is already the default and raises single-chat writing ~28–50%.
 
+### Auto-prune single-node models (keep disk lean for the split)
+
+Not started. Caravan now runs shard-sized models only, so small one-Mini
+models (e.g. Llama 3.1 8B, Qwen2.5 14B, removed by hand Nov 5) just eat disk.
+Idea: classify each local model as one-Mini vs shard-worthy (size vs one
+Mini's memory), then offer to remove (or, opt-in, auto-remove) the
+redundant MLX/GGUF copies on both Minis. Never delete the currently loaded
+model or the guess-ahead draft helpers; always keep the shard workhorses
+(Qwen3 30B, Gemma 26B, GPT-OSS 20B, Qwen3.6 35B) and drafts. Also drop
+catalog rows whose files are gone. Performance-first disk hygiene, not a
+flashy UI.
+
 ## Deferred / parked
 
 Things we chose not to do now, so they don't get lost. Each has why it's

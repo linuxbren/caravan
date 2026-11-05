@@ -45,19 +45,6 @@ CATALOG = [
         "notes": "Day 13 shared-start fix",
     },
     {
-        "id": "llama-3.1-8b-4bit",
-        "name": "Llama 3.1 8B Instruct 4-bit",
-        "hf": "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit",
-        "packer_layers": 16,
-        "lead_paths": [
-            "~/.caravan/mlx-models/mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
-        ],
-        "packer_paths": [
-            "~/.caravan/mlx-models/mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
-        ],
-        "notes": "Guess-ahead +120% write (Day 12)",
-    },
-    {
         "id": "gpt-oss-20b-mxfp4",
         "name": "GPT-OSS 20B MXFP4",
         "hf": "mlx-community/gpt-oss-20b-MXFP4-Q8",
@@ -71,19 +58,6 @@ CATALOG = [
             "~/.exo/models/mlx-community--gpt-oss-20b-MXFP4-Q8",
         ],
         "notes": "No draft pair yet",
-    },
-    {
-        "id": "qwen2.5-14b-4bit",
-        "name": "Qwen2.5 14B Instruct 4-bit",
-        "hf": "mlx-community/Qwen2.5-14B-Instruct-4bit",
-        "packer_layers": 24,
-        "lead_paths": [
-            "~/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit",
-        ],
-        "packer_paths": [
-            "~/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit",
-        ],
-        "notes": "",
     },
 ]
 
