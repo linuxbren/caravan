@@ -53,6 +53,31 @@
     --bloom: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent);
     --scan: rgba(120, 255, 150, 0.035);
   }
+  /* Omarchy desktop — Cross Country palette (viewer system theme) */
+  [data-theme="omarchy"] {
+    --bg: #0c1018;
+    --bg2: #151b26;
+    --bg3: #202a38;
+    --line: #2b3647;
+    --text: #ddd9ce;
+    --muted: #99a3b1;
+    --accent: #d2a66c;
+    --accent2: #e4c78e;
+    --glow: rgba(210,166,108,.28);
+    --amber: var(--accent);
+    --amber2: var(--accent2);
+    --teal: var(--accent);
+    --teal2: var(--accent2);
+    --rose: #d69289;
+    --ok: #a7b58b;
+    --warn: #d2b57e;
+    --shadow: 0 12px 40px rgba(0,0,0,.45);
+    --radius: 10px;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --sans: "Inter", "SF Pro Text", system-ui, -apple-system, sans-serif;
+    --bloom: none;
+    --scan: transparent;
+  }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
@@ -101,6 +126,26 @@
     z-index: 999;
     background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,.35) 100%);
   }
+  html[data-theme="omarchy"] body::before,
+  html[data-theme="omarchy"] body::after,
+  html[data-theme="omarchy"] .crt-wash { display: none; }
+  html[data-theme="omarchy"] body {
+    font-family: var(--sans);
+    letter-spacing: normal;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, var(--glow), transparent 55%),
+      var(--bg);
+  }
+  html[data-theme="omarchy"] .chat.tube {
+    box-shadow: var(--shadow);
+    background: var(--bg2);
+  }
+  html[data-theme="omarchy"] .brand h1 {
+    text-transform: none; letter-spacing: .02em; text-shadow: none;
+  }
+  html[data-theme="omarchy"] .msg.assistant { text-shadow: none; }
+  html[data-theme="omarchy"] .stat .v { text-shadow: none; }
+  html[data-theme="omarchy"] button.primary { box-shadow: none; color: #10151f; }
   .wrap {
     max-width: 1100px;
     margin: 0 auto;
@@ -425,9 +470,10 @@
         <p>Two Mac minis. One model. Built in the open.</p>
       </div>
     </div>
-    <div class="theme-switch" id="themeSwitch" title="Console phosphor">
+    <div class="theme-switch" id="themeSwitch" title="Theme">
       <button type="button" data-theme="amber" class="on">Amber</button>
       <button type="button" data-theme="green">Green</button>
+      <button type="button" data-theme="omarchy">Omarchy</button>
     </div>
     <div class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">starting…</span></div>
   </header>
@@ -536,7 +582,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const applyTheme = (name) => {
-    const t = (name === "green") ? "green" : "amber";
+    const t = (name === "green" || name === "omarchy") ? name : "amber";
     document.documentElement.setAttribute("data-theme", t);
     try { localStorage.setItem("caravan-theme", t); } catch (e) {}
     document.querySelectorAll("#themeSwitch button").forEach((b) => {
