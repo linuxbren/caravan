@@ -510,7 +510,6 @@
     <div class="theme-switch" id="themeSwitch" title="Theme">
       <button type="button" data-theme="amber" class="on">Amber</button>
       <button type="button" data-theme="green">Green</button>
-      <button type="button" data-theme="omarchy">Omarchy</button>
     </div>
     <div class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">starting…</span></div>
   </header>
@@ -628,7 +627,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const applyTheme = (name) => {
-    const t = (name === "green" || name === "omarchy") ? name : "amber";
+    const t = name === "green" ? "green" : "amber";
     document.documentElement.setAttribute("data-theme", t);
     try { localStorage.setItem("caravan-theme", t); } catch (e) {}
     document.querySelectorAll("#themeSwitch button").forEach((b) => {
