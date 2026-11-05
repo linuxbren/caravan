@@ -4,8 +4,11 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-11-01 (idea 1 + N=3 stall fix shipped as v3.3; Day 6
-video v12 / techie-friend cut as v3.4; idea 3 guess-ahead auto-pair). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
+*Last updated 2026-11-05 (flash, after performance: #14 web topology
+adds live disk, temperature, and CPU; #18 downloadable models list).
+Earlier, 2026-11-01: idea 1 + N=3 stall fix shipped as v3.3; Day 6
+video v12 / techie-friend cut as v3.4; idea 3 guess-ahead auto-pair.
+Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -128,7 +131,7 @@ Open tasks for this rule:
 
 ## Next, in order
 
-> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order after **Day 15 web UI** (EXO1 `:8190`, model switch + streamed chat + 0.01 s timestamps + real stats; see [WEB.md](WEB.md)) and Day 13 self-tune shared-prefix: re-bench adaptive PL (overlap_on=0.50); then #16 built-in guesser (blocked on MTP/NEXTN MLX weights — GPT-OSS still undrafted); then fewer hand-offs / multi-token verify for N≥2+draft; then #13c settings file; #14 node view partly covered by the web string panel; #15 Terminal Delight still open. Parked: #17 fused kernels; true batched decode = later/bigger. Day 14 was the v0→now improvements video break.
+> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order after **Day 15 web UI** (EXO1 `:8190`, model switch + streamed chat + 0.01 s timestamps + real stats; see [WEB.md](WEB.md)) and Day 13 self-tune shared-prefix: re-bench adaptive PL (overlap_on=0.50); then #16 built-in guesser (blocked on MTP/NEXTN MLX weights — GPT-OSS still undrafted); then fewer hand-offs / multi-token verify for N≥2+draft; then #13c settings file. **Flash, only after that performance work:** #14 node view (the web string panel covers part of it; still to add a network topology in Caravan's own style, with live per-Mini disk space, temperature, and CPU, plus layers, memory, speed, chats, and guess-ahead); #18 downloadable models list (Hugging Face now, other sources later; what fits with headroom for Caravan and a running model); #15 Terminal Delight still open. Parked: #17 fused kernels; true batched decode = later/bigger. Day 14 was the v0→now improvements video break.
 
 1. ~~**Publish the rebased llama.cpp branch.**~~ **Done (2026-10-31).**
    The fork moved to `linuxbren/llama.cpp`. There, `caravan-patches` is
@@ -297,12 +300,18 @@ Open tasks for this rule:
       pipeline N. **Flags stay and win over the file**, mainly so
       benchmarking can pin exact behavior without editing config.
 
-14. **Node view (dashboard).** A live view like exo's: each Mini, the layers
-    it holds, memory, speed, chats in flight, and whether guess-ahead is
-    helping. Most of the data is already logged; it needs a small status
-    endpoint on the proxy (for example `GET /caravan/status`, JSON) and a
-    screen that reads it. Shape left open: web page, Terminal Delight
-    Workbench items, or both.
+14. **Node view (dashboard).** A live view of the string: each Mini, the
+    layers it holds, memory, speed, chats in flight, and whether
+    guess-ahead is helping. Most of the data is already logged; it needs a
+    small status endpoint on the proxy (for example `GET /caravan/status`,
+    JSON) and a screen that reads it. Shape left open: web page, Terminal
+    Delight Workbench items, or both.
+    - **Web network topology** (flash, after the performance work). On the
+      web interface, draw the string in Caravan's own style (do not copy
+      exo's look). Live, per Mini: **disk space, temperature, and CPU**,
+      plus the layers, memory, speed, chats in flight, and guess-ahead
+      already listed above. The status endpoint above is what that screen
+      reads.
 15. **Console via Terminal Delight (Parker's app).** Switch models, chat and
     change options from Parker Brown's terminal. Integration guide for
     Parker: `docs/INTEGRATING.md`. Shape left open; see "Terminal Delight as
@@ -334,6 +343,17 @@ Open tasks for this rule:
     kernels. Details:
     [handoff/lab/experiments.md](../handoff/lab/experiments.md) Day 12 and
     `handoff/lab/day12-fused/` (+ `spanned/`).
+18. **Downloadable models list (web UI).** *Flash, after the performance
+    work, with #14 and #15.* A catalog in the web interface of models that
+    can be downloaded. Browse Hugging Face first; other sources can be
+    added later. This is separate from the Day 15 picker, which only lists
+    models already on the Minis. For each candidate, show **what will fit**
+    on the cluster with **headroom left for Caravan and a running model**
+    (not just raw free disk and RAM).
+    Today: GGUF comes in through Ollama store pulls
+    (`agent/ollama_store.py`); MLX comes from a local Hugging Face
+    download or `mlx_split_fetch.py`. The agent never auto-downloads a
+    model for chat.
 
 ## Possible future directions (not scheduled)
 
