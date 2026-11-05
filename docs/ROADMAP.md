@@ -128,7 +128,7 @@ Open tasks for this rule:
 
 ## Next, in order
 
-> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order after **Day 15 web UI** (EXO1 `:8190`, model switch + streamed chat + 0.01 s timestamps + real stats; see [WEB.md](WEB.md)) and Day 13 self-tune shared-prefix: re-bench adaptive PL (overlap_on=0.50); then #16 built-in guesser (blocked on MTP/NEXTN MLX weights — GPT-OSS still undrafted); then fewer hand-offs / multi-token verify for N≥2+draft; then #13c settings file; #14 node view partly covered by the web string panel; #15 Terminal Delight still open. Parked: #17 fused kernels; true batched decode = later/bigger. Day 14 was the v0→now improvements video break.
+> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order after **Day 15 web UI** (EXO1 `:8190`, model switch + streamed chat + 0.01 s timestamps + real stats; see [WEB.md](WEB.md)) and Day 13 self-tune shared-prefix: re-bench adaptive PL (overlap_on=0.50); then #16 built-in guesser (blocked on MTP/NEXTN MLX weights — GPT-OSS still undrafted); then fewer hand-offs / multi-token verify for N≥2+draft; then #13c settings file; #14 node view (add disk/temp/CPU; partly covered by the web string panel); model picker (any Ollama local/cloud or HF, with fit/headroom recommendation) parked as flash; #15 Terminal Delight still open. Parked: #17 fused kernels; true batched decode = later/bigger. Day 14 was the v0→now improvements video break.
 
 1. ~~**Publish the rebased llama.cpp branch.**~~ **Done (2026-10-31).**
    The fork moved to `linuxbren/llama.cpp`. There, `caravan-patches` is
@@ -297,12 +297,13 @@ Open tasks for this rule:
       pipeline N. **Flags stay and win over the file**, mainly so
       benchmarking can pin exact behavior without editing config.
 
-14. **Node view (dashboard).** A live view like exo's: each Mini, the layers
-    it holds, memory, speed, chats in flight, and whether guess-ahead is
-    helping. Most of the data is already logged; it needs a small status
+14. **Node view (dashboard).** A live view like exo's, in Caravan's own
+    style: each Mini, the layers it holds, memory, speed, chats in flight,
+    whether guess-ahead is helping, plus **disk space, temperature, and
+    CPU**. Most of the data is already logged; it needs a small status
     endpoint on the proxy (for example `GET /caravan/status`, JSON) and a
     screen that reads it. Shape left open: web page, Terminal Delight
-    Workbench items, or both.
+    Workbench items, or both. *Flash second — after performance work.*
 15. **Console via Terminal Delight (Parker's app).** Switch models, chat and
     change options from Parker Brown's terminal. Integration guide for
     Parker: `docs/INTEGRATING.md`. Shape left open; see "Terminal Delight as
@@ -577,6 +578,18 @@ model or the guess-ahead draft helpers; always keep the shard workhorses
 (Qwen3 30B, Gemma 26B, GPT-OSS 20B, Qwen3.6 35B) and drafts. Also drop
 catalog rows whose files are gone. Performance-first disk hygiene, not a
 flashy UI.
+
+### Model picker: Ollama / Hugging Face with fit check
+
+Not started. Flash/UI (after performance). Let a user pick **any Ollama
+model** (local or Ollama cloud) or **any Hugging Face model** (and later
+other sources). Today Caravan does not download for chat: GGUF lands via
+the local Ollama store (`ollama pull`, including `hf.co/…` ids); MLX
+weights are placed on disk by hand or with `agent/mlx_split_fetch.py`
+(Hugging Face `snapshot_download` for each Mini's shards). The picker
+should still **size the choice** (disk + memory across the Minis, with
+**headroom for Caravan and a running model**) and give a clear
+recommendation: will work / tight / won't fit — before any download.
 
 ## Deferred / parked
 
