@@ -9,25 +9,25 @@
     --bg: #070605;
     --bg2: #100e0a;
     --bg3: #18140e;
-    --line: #4a3a22;
-    --text: #ffd9a0;
-    --muted: #a8895c;
-    --accent: #f0a35e;
-    --accent2: #ffc98a;
-    --glow: rgba(240,163,94,.45);
+    --line: #4a3c18;
+    --text: #ffe9a8;
+    --muted: #b89a4a;
+    --accent: #f0c040;
+    --accent2: #ffe07a;
+    --glow: rgba(240,192,64,.40);
     --amber: var(--accent);
     --amber2: var(--accent2);
     --teal: var(--accent);
     --teal2: var(--accent2);
     --rose: #ff7b8a;
     --ok: #c9a227;
-    --warn: #f0c35e;
+    --warn: #f0d060;
     --shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
     --radius: 2px;
     --mono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
     --sans: var(--mono);
     --bloom: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent);
-    --scan: rgba(255, 200, 120, 0.035);
+    --scan: rgba(255, 220, 100, 0.035);
   }
   [data-theme="green"] {
     --bg: #030704;
@@ -60,14 +60,22 @@
     font-family: var(--mono);
     color: var(--text);
     letter-spacing: 0.01em;
-    background:
-      radial-gradient(ellipse 90% 70% at 50% 40%, transparent 40%, rgba(0,0,0,.55) 100%),
-      radial-gradient(1200px 600px at 10% -10%, var(--glow), transparent 55%),
-      radial-gradient(800px 400px at 100% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 50%),
-      var(--bg);
+    background: var(--bg);
     min-height: 100vh;
     position: relative;
   }
+  /* Fixed CRT wash — stays put while the page scrolls */
+  .crt-wash {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 40%, transparent 40%, rgba(0,0,0,.55) 100%),
+      radial-gradient(1200px 600px at 10% -10%, var(--glow), transparent 55%),
+      radial-gradient(800px 400px at 100% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 50%);
+  }
+  .wrap { position: relative; z-index: 1; }
   body::before {
     content: "";
     pointer-events: none;
@@ -218,7 +226,7 @@
   button:hover { border-color: var(--accent); color: var(--accent2); }
   button.primary {
     background: var(--accent);
-    color: #0a0804; font-weight: 650; border-color: var(--accent);
+    color: #121000; font-weight: 650; border-color: var(--accent);
     text-shadow: none; box-shadow: var(--bloom);
   }
   button.primary:disabled { opacity: .5; cursor: wait; box-shadow: none; }
@@ -407,6 +415,7 @@
 </style>
 </head>
 <body>
+<div class="crt-wash" aria-hidden="true"></div>
 <div class="wrap">
   <header class="top">
     <div class="brand">
