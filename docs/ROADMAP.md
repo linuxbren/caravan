@@ -283,15 +283,22 @@ Open tasks for this rule:
     - **(b2) Self-tuning covers every option.** *Built Nov 5 (Day 15),
       not yet Mini-verified.* Design decision (Brenden): "Self-tuning"
       means all Optimizations options, not "self-tuning except". Besides
-      the live trio, it now learns memory compression (kv_bits 16/8/4),
-      fused kernels (off/on) and GPU keep-warm (on/off). Those need a
-      reload, so a trial is queued, applied on the next load (Load / Apply
-      & restart / Deep optimize), scored over 3 replies, then kept or
-      rolled back. On/Off pins still win. The web page shows "wants to try
-      X — Apply & restart" and a **Deep / Quick optimize** runner that
-      feeds itself fixed prompts and reloads between trials when no chat
-      is in flight (cancelable). Only the web launcher turns reload
-      learning on (`--learn-reload-auto`); plain CLI runs behave as before.
+      the live trio, it learns memory compression (kv_bits 16/8/4),
+      fused kernels (off/on), GPU keep-warm (on/off), and the packer
+      layer cut. Reload-only knobs are queued and applied on the next
+      load. On/Off pins still win.
+      **Optimize as used** is that everyday path: light probes on real
+      chats, unchanged.
+      **Optimize now** is the optional walk-away. One A/B per option
+      against the current best (Day 9 guess or the saved winner), not a
+      full grid of combinations. Live options flip without a reload. A
+      reload happens only when a reload-only knob still on Auto needs
+      its trial. A value that already lost for this model and hardware
+      is skipped until the hardware fingerprint changes. The page shows
+      progress, cancel, and an ETA from measured reply and reload times.
+      Winners are saved to `~/.caravan/mlx/tuned-settings.json`. The web
+      launcher turns reload learning on (`--learn-reload-auto`); plain
+      CLI runs behave as before.
     - **(c) Optional settings file.** *Next.* `~/.caravan/config.toml`
       for human overrides such as `guess_ahead = off` or a preferred
       pipeline N. **Flags stay and win over the file**, mainly so

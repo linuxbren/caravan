@@ -329,14 +329,12 @@
       <div class="tunenote" id="tuneNote"></div>
       <div class="optbox" id="optBox">
         <div class="row">
-          <b>Optimize this model</b>
-          <select id="optMode" aria-label="Optimize mode">
-            <option value="deep" selected>Deep (all options, reloads itself)</option>
-            <option value="quick">Quick (live options only)</option>
-          </select>
+          <b>Optimize now</b>
           <button class="primary" id="btnOptStart">Start</button>
           <button class="ghost" id="btnOptCancel">Cancel</button>
         </div>
+        <div class="help">Walk away. Each option is tried once against the current best. Caravan reloads only when a reload-only option still on Auto needs that trial (memory compression, fused kernels, GPU keep-warm, packer layer cut). Cancel any time.</div>
+        <div class="help" id="optAsUsed">Optimize as used: with Self-tuning on Auto, everyday chats keep learning with light probes. That path is already running; nothing else starts.</div>
         <div class="help" id="optTip"></div>
         <div class="help" id="optProgress"></div>
       </div>
@@ -549,14 +547,14 @@
     if (t && t.trial) lines.push(`Self-tuning is trying ${t.trial.label} ${t.trial.value}: ${t.trial.remaining} replies left.`);
     for (const c of (t && t.reload_wanted) || []) {
       lines.push(c.why === "try"
-        ? `Self-tuning wants to try ${c.label} ${c.to} — click Apply &amp; restart (or Deep optimize) to try it.`
+        ? `Self-tuning wants to try ${c.label} ${c.to} — click Apply &amp; restart (or Optimize now) to try it.`
         : `${c.label} ${c.from} didn't win — Apply &amp; restart goes back to ${c.to}.`);
     }
     if (opt && opt.running && /reloading/.test(opt.phase || "")) lines.unshift(`<b>${opt.phase}…</b>`);
     el.innerHTML = lines.join("<br>");
     const few = t && t.known && (t.replies_learned || 0) < 10;
     $("optTip").textContent = few && !(opt && opt.running)
-      ? "Tip: Deep optimize can tune this model while you wait." : "";
+      ? "Tip: Optimize now can tune this model while you wait." : "";
   }
   async function refreshOptimize() {
     let j;
@@ -565,10 +563,10 @@
     $("btnOptCancel").disabled = !j.running;
     const el = $("optProgress");
     if (!j.mode) { el.textContent = ""; return; }
-    const cov = j.coverage;
-    const done = cov ? cov.items.filter(i => i.have >= i.need).length : 0;
-    let txt = `${j.mode === "quick" ? "Quick" : "Deep"}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
-    if (cov) txt += ` · ${done}/${cov.items.length} option values tested`;
+    const sched = j.schedule || [];
+    const done = sched.filter(s => s.state === "kept" || s.state === "skipped").length;
+    let txt = `Optimize now: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
+    if (sched.length) txt += ` · ${done}/${sched.length} options`;
     if (j.running) txt += ` · about ${fmtMin(j.eta_s)} left`;
     if (j.reply_s != null) txt += ` · ${j.reply_s}s per reply`;
     if (j.reload_s != null) txt += ` · ${j.reload_s}s per reload`;
@@ -576,7 +574,10 @@
     if (j.summary) {
       const w = j.summary.winner || {};
       const pick = Object.entries(w).map(([k, v]) => `${k}=${v === true ? "on" : v === false ? "off" : v}`).join(", ");
-      txt += `\n${j.summary.complete ? "Done" : "Stopped"} in ${j.summary.minutes} min. Learned winners (kept for this model): ${pick}`;
+      txt += `\n${j.summary.complete ? "Done" : "Stopped"} in ${j.summary.minutes} min. Saved winners (kept for this model): ${pick}`;
+    }
+    if (sched.length) {
+      txt += `\n` + sched.map(s => `${s.label}: ${s.state}${s.detail ? " " + s.detail : ""}`).join(" · ");
     }
     el.style.whiteSpace = "pre-line";
     el.textContent = txt;
@@ -955,7 +956,7 @@
   $("btnApply").onclick = () => $("btnLoad").onclick();
   $("btnOptStart").onclick = async () => {
     try {
-      await api("/api/optimize/start", { method: "POST", body: JSON.stringify({ mode: $("optMode").value }) });
+      await api("/api/optimize/start", { method: "POST", body: "{}" });
     } catch (e) { $("optProgress").textContent = String(e.error || e.message || e); }
     refreshOptimize();
   };

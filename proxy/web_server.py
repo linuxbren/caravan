@@ -187,7 +187,8 @@ def make_handler(app: App):
                 if app.mgr._switch_thread and app.mgr._switch_thread.is_alive():
                     return self._json(409, {"error": "a model load is in progress"})
                 try:
-                    return self._json(200, app.optimizer.start((body or {}).get("mode") or "deep"))
+                    # One walk-away. Deep/Quick modes are gone.
+                    return self._json(200, app.optimizer.start())
                 except RuntimeError as e:
                     return self._json(409, {"error": str(e)})
             if path == "/api/optimize/cancel":

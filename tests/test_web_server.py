@@ -451,3 +451,10 @@ class SelfTuneAutoResetTest(unittest.TestCase):
 
     def test_auto_shows_resolved(self):
         self.assertIn("`Auto (${v})`", self.html)
+
+    def test_optimize_now_replaces_deep_quick(self):
+        self.assertIn(">Optimize now<", self.html)
+        self.assertIn("Optimize as used", self.html)
+        self.assertNotIn('id="optMode"', self.html)
+        self.assertNotIn('value="deep"', self.html)
+        self.assertNotIn('value="quick"', self.html)

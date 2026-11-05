@@ -640,6 +640,7 @@ class Engine:
         self._learn_n_layers = None
         self._learn_lock = threading.Lock()
         self._learn_trial = None
+        self._sweep_pause = False  # Optimize now pauses everyday probes
         self._learn_conc_window = []
         self.model_dir = Path(args.model).expanduser().resolve()
         ready = queue.Queue()
@@ -1005,6 +1006,10 @@ class Engine:
             return bool(self._learn_guess_override)
         return self.draft_model is not None
 
+    def apply_sweep(self, body):
+        """Optimize now: pause everyday probes, hold live knobs, commit a winner."""
+        return apply_sweep_hold(self, body)
+
     def _learn_observe(self, info: dict):
         """Record one finished reply; maybe promote a winner or explore next.
 
@@ -1012,7 +1017,10 @@ class Engine:
         look the same alone). Concurrent completions feed record_pipeline_probe()
         with aggregate tok/s; near-back-to-back serial completions (N=1) do too.
         Explore trials are temporary: after trial_replies we restore the winner.
+        Optimize now sets _sweep_pause so these probes stay off during an A/B.
         """
+        if getattr(self, "_sweep_pause", False):
+            return
         if not self._learn_enabled or self._learn_entry is None or not info:
             return
         try:
@@ -2768,6 +2776,113 @@ def _version(pkg):
         return "?"
 
 
+def _learn_disk_path(engine):
+    path = getattr(engine, "_learn_path", None)
+    return Path(path).expanduser() if path else None
+
+
+def _ensure_learn_entry(engine, TS):
+    """In-memory learn entry, creating it from the tuned-settings file if needed."""
+    entry = getattr(engine, "_learn_entry", None)
+    if entry is not None:
+        return entry
+    model_dir = getattr(engine, "model_dir", None)
+    if model_dir is None:
+        return None
+    spanned = getattr(engine, "client", None) is not None
+    st = TS.load_store(_learn_disk_path(engine))
+    key = TS.entry_key(model_dir, spanned=spanned)
+    entry = TS.ensure_entry(st, key, model=TS.model_stem(model_dir),
+                            hardware=TS.hardware_label(spanned=spanned))
+    engine._learn_store = st
+    engine._learn_entry = entry
+    engine._learn_key = key
+    return entry
+
+
+def _save_learn_store(engine, TS):
+    store = getattr(engine, "_learn_store", None)
+    if not store:
+        return
+    try:
+        TS.save_store(store, _learn_disk_path(engine))
+    except OSError as e:
+        log(f"learn: save failed ({e!r})")
+
+
+def _apply_live_hold(engine, explicit, name, value):
+    """Flip one live knob. Explicit flags stay pinned."""
+    if name in explicit:
+        return
+    if name == "guess_ahead":
+        engine._learn_guess_override = bool(value)
+    elif name == "shared_prefix" and getattr(engine, "client", None) is not None:
+        if hasattr(engine, "_set_shared_prefix"):
+            engine._set_shared_prefix(bool(value), reason="optimize now")
+    elif name == "pipeline_chats" and getattr(engine, "client", None) is not None:
+        engine.pipeline_chats = max(1, int(value))
+
+
+def _restore_live_winner(engine, explicit):
+    winner = (getattr(engine, "_learn_entry", None) or {}).get("winner") or {}
+    for name in ("guess_ahead", "shared_prefix", "pipeline_chats"):
+        if name in winner:
+            _apply_live_hold(engine, explicit, name, winner[name])
+
+
+def apply_sweep_hold(engine, body: dict) -> dict:
+    """Pause everyday probes and hold live knobs for one Optimize now arm.
+
+    `commit` writes the A/B winner into the learn entry and the tuned-settings
+    file so the next real chat and the next reload see it. Everyday
+    pick_exploration is unchanged; it simply does not run while paused.
+    """
+    try:
+        import tuned_settings as TS
+    except ImportError:
+        import importlib
+        TS = importlib.import_module("tuned_settings")
+    body = body or {}
+    lock = getattr(engine, "_learn_lock", None)
+
+    def run():
+        explicit = getattr(engine, "_learn_explicit", None) or {}
+        if body.get("release"):
+            engine._sweep_pause = False
+            _restore_live_winner(engine, explicit)
+            _save_learn_store(engine, TS)
+            winner = dict((getattr(engine, "_learn_entry", None) or {}).get("winner") or {})
+            return {"paused": False, "winner": winner}
+        engine._sweep_pause = True
+        engine._learn_trial = None
+        if body.get("clear_pending"):
+            entry = _ensure_learn_entry(engine, TS)
+            if entry is not None:
+                pending = entry.setdefault("pending_reload", {})
+                for n in ("kv_bits", "fuse_kernels", "keepalive", "packer_layers"):
+                    pending.pop(n, None)
+                entry["reload_trial"] = None
+                _save_learn_store(engine, TS)
+        for name, value in (body.get("hold") or {}).items():
+            _apply_live_hold(engine, explicit, name, value)
+        commit = body.get("commit")
+        if commit and commit.get("name"):
+            entry = _ensure_learn_entry(engine, TS)
+            if entry is not None:
+                TS.commit_ab(entry, fingerprint=str(commit.get("fingerprint") or ""),
+                             name=commit["name"], winner_value=commit.get("winner"),
+                             lost_value=commit.get("lost"))
+                _save_learn_store(engine, TS)
+                _apply_live_hold(engine, explicit, commit["name"], commit.get("winner"))
+        winner = dict((getattr(engine, "_learn_entry", None) or {}).get("winner") or {})
+        return {"paused": True, "winner": winner}
+
+    if lock is None:
+        return run()
+    with lock:
+        return run()
+
+
 def make_handler(engine: "Engine"):
     class H(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
@@ -2830,6 +2945,14 @@ def make_handler(engine: "Engine"):
                 if op == "restore":
                     return self._json(200, {"result": engine.call(lambda: engine.s_restore(key))})
                 return self._json(404, {"error": "unknown op"})
+            if self.path.startswith("/caravan/sweep"):
+                fn = getattr(engine, "apply_sweep", None)
+                if fn is None:
+                    return self._json(404, {"error": "no sweep on this worker"})
+                try:
+                    return self._json(200, engine.call(lambda: fn(body)))
+                except Exception as e:
+                    return self._json(500, {"error": f"{type(e).__name__}: {e}"})
             if self.path.startswith("/v1/chat/completions"):
                 return self._complete(body, chat=True)
             if self.path.startswith("/v1/completions"):

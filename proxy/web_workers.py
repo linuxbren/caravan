@@ -66,6 +66,7 @@ class WorkerManager:
         tp = os.environ.get("CARAVAN_TUNED_SETTINGS")
         self.tuned_path: Optional[Path] = Path(tp).expanduser() if tp else None
         self._lead_path: Optional[str] = None
+        self._switch_opts: dict = {}
 
     # ----- public ---------------------------------------------------------
 
@@ -107,7 +108,9 @@ class WorkerManager:
                   lead_pid=None, packer_pid=None)
         self._note("idle")
 
-    def switch(self, model_id: str, *, wait: bool = False, settings=None) -> dict:
+    def switch(self, model_id: str, *, wait: bool = False, settings=None,
+               packer_layers=None, hold_trials: bool = False,
+               reload_force=None, freeze_forced: bool = False) -> dict:
         settings = web_settings.normalize(settings)
         entry = catalog.get_model(model_id)
         if not entry:
@@ -116,6 +119,12 @@ class WorkerManager:
             raise FileNotFoundError(f"model not on this Mini: {model_id}")
         if self._switch_thread and self._switch_thread.is_alive():
             raise RuntimeError("a model switch is already in progress")
+        self._switch_opts = {
+            "packer_layers": packer_layers,
+            "hold_trials": bool(hold_trials),
+            "reload_force": dict(reload_force or {}),
+            "freeze_forced": bool(freeze_forced),
+        }
 
         def run():
             try:
@@ -142,7 +151,12 @@ class WorkerManager:
         self._note(f"switching to {entry['name']}")
         lead_x, packer_x = web_settings.to_args(settings)
         self._lead_path = entry.get("lead_path")
-        for line in self.plan_reload_args(entry, settings, lead_x, packer_x):
+        opts = getattr(self, "_switch_opts", None) or {}
+        for line in self.plan_reload_args(
+                entry, settings, lead_x, packer_x,
+                hold_trials=bool(opts.get("hold_trials")),
+                reload_force=opts.get("reload_force"),
+                freeze_forced=bool(opts.get("freeze_forced"))):
             self._note("self-tuning: " + line)
         self._extra_lead, self._extra_packer = lead_x, packer_x
         self._note("settings: " + ", ".join(f"{k}={v}" for k, v in settings.items())
@@ -177,33 +191,132 @@ class WorkerManager:
                                        hardware=TS.hardware_label(spanned=True))
         return st, (st.get("models") or {}).get(key)
 
-    def plan_reload_args(self, entry: dict, settings: dict, lead_x: list, packer_x: list) -> list:
+    def plan_reload_args(self, entry: dict, settings: dict, lead_x: list, packer_x: list, *,
+                         hold_trials: bool = False, reload_force=None,
+                         freeze_forced: bool = False) -> list:
         """Apply learned winners / one queued trial for reload options left on Auto.
 
         Pinned options (On/Off/8/4 in the panel) are untouched. Returns log lines.
+        reload_force pins Auto knobs for an Optimize now arm. hold_trials leaves
+        the everyday pending queue alone. freeze_forced keeps those knobs out of
+        --learn-reload-auto for the duration of the arm.
         """
-        if settings.get("self_tune") == "off" or not entry.get("lead_path"):
+        if not entry.get("lead_path"):
             return []
         auto = [n for n in TS.RELOAD_TRIO if settings.get(n) == "auto"]
+        force = {}
+        for n, val in (reload_force or {}).items():
+            if n in auto:
+                force[n] = TS.norm_knob(n, val)
+        if settings.get("self_tune") == "off":
+            if not force:
+                return []
+            both = self._reload_flags(force)
+            lead_x += both
+            packer_x += both
+            return ["optimize now trial (self-tuning pinned off): "
+                    + ", ".join(f"{k}={v}" for k, v in sorted(force.items()))]
         if not auto:
             return []
         try:
             st, e = self._tuned_entry(entry["lead_path"], create=True)
-            plan = TS.plan_reload(e, auto)
+            plan = TS.plan_reload(e, auto, apply_pending=not hold_trials)
             TS.save_store(st, self.tuned_path)
         except (OSError, ValueError) as ex:
             return [f"reload plan skipped ({ex})"]
-        v = plan["values"]
-        both = []
-        if "kv_bits" in v and int(v["kv_bits"]) != 16:
-            both += ["--kv-bits", str(int(v["kv_bits"]))]
-        if "fuse_kernels" in v:
-            both += ["--fuse-kernels", "all" if v["fuse_kernels"] == "on" else "off"]
-        if "keepalive" in v:
-            both.append("--split-keepalive" if v["keepalive"] else "--no-split-keepalive")
-        lead_x += both + ["--learn-reload-auto", ",".join(auto)]
+        v = dict(plan["values"])
+        v.update(force)
+        both = self._reload_flags(v)
+        learn = [n for n in auto if not (freeze_forced and n in force)]
+        if learn:
+            lead_x += both + ["--learn-reload-auto", ",".join(learn)]
+        else:
+            lead_x += both
         packer_x += both
-        return plan["reasons"]
+        reasons = list(plan["reasons"])
+        if force:
+            reasons.append("optimize now holds "
+                           + ", ".join(f"{k}={v}" for k, v in sorted(force.items())))
+        return reasons
+
+    @staticmethod
+    def _reload_flags(values: dict) -> list:
+        both = []
+        if "kv_bits" in values and int(values["kv_bits"]) != 16:
+            both += ["--kv-bits", str(int(values["kv_bits"]))]
+        if "fuse_kernels" in values:
+            both += ["--fuse-kernels", "all" if values["fuse_kernels"] == "on" else "off"]
+        if "keepalive" in values:
+            both.append("--split-keepalive" if values["keepalive"] else "--no-split-keepalive")
+        return both
+
+    def _packer_k(self, entry: dict) -> int:
+        """Catalog cut, unless a saved winner, a queued trial, or this reload overrides it."""
+        override = (getattr(self, "_switch_opts", None) or {}).get("packer_layers")
+        if override is not None:
+            return int(override)
+        catalog_k = int(entry["packer_layers"])
+        lp = entry.get("lead_path")
+        if not lp:
+            return catalog_k
+        try:
+            st, e = self._tuned_entry(lp, create=False)
+        except (OSError, ValueError, TypeError):
+            return catalog_k
+        if not e:
+            return catalog_k
+        pending = (e.get("pending_reload") or {}).get("packer_layers")
+        if pending is not None:
+            e.setdefault("pending_reload", {}).pop("packer_layers", None)
+            try:
+                TS.save_store(st, self.tuned_path)
+            except OSError:
+                pass
+            return int(pending)
+        winner = (e.get("winner") or {}).get("packer_layers")
+        if winner is not None:
+            return int(winner)
+        return catalog_k
+
+    def catalog_packer_layers(self):
+        mid = self.snapshot().get("model_id")
+        if not mid:
+            return None
+        m = catalog.get_model(mid)
+        if not m or m.get("packer_layers") is None:
+            return None
+        return int(m["packer_layers"])
+
+    def n_layers(self):
+        lp = self._lead_path
+        if not lp:
+            return None
+        try:
+            raw = json.loads((Path(lp) / "config.json").read_text())
+        except (OSError, ValueError, TypeError):
+            return None
+        for key in ("num_hidden_layers", "n_layer", "num_layers"):
+            if raw.get(key):
+                return int(raw[key])
+        text = raw.get("text_config") or raw.get("llm_config") or {}
+        for key in ("num_hidden_layers", "n_layer", "num_layers"):
+            if text.get(key):
+                return int(text[key])
+        return None
+
+    def hardware_fingerprint(self) -> str:
+        return TS.hardware_fingerprint(spanned=True, lead_mem_gb=TS.local_mem_gb())
+
+    def sweep(self, body: dict) -> dict:
+        """POST /caravan/sweep on the running lead (Optimize now hold / commit)."""
+        import urllib.request
+        data = json.dumps(body or {}).encode()
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{self.lead_port}/caravan/sweep",
+            data=data, method="POST",
+            headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read().decode())
 
     def tuning_status(self, active: Optional[dict]) -> dict:
         """What self-tuning is doing with reload options, for the page."""
@@ -306,7 +419,7 @@ class WorkerManager:
             f"err={(r.stderr or '')[:200]}")
 
     def _start_packer(self, entry: dict, packer_path: str) -> Optional[int]:
-        k = int(entry["packer_layers"])
+        k = self._packer_k(entry)
         # Prefer EXO2's own clone of the repo (~/cv3).
         remote = (
             "mkdir -p ~/.caravan/web-ui; "
@@ -354,7 +467,7 @@ class WorkerManager:
         raise TimeoutError("packer did not become ready in time")
 
     def _start_lead(self, entry: dict) -> int:
-        k = int(entry["packer_layers"])
+        k = self._packer_k(entry)
         log_path = self._lead_log()
         log_path.parent.mkdir(parents=True, exist_ok=True)
         # Truncate log.

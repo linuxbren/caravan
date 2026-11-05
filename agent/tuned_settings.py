@@ -718,7 +718,7 @@ def record_pipeline_probe(entry: dict, *, n_chats: int, aggregate_tps: float,
 # Self-tuning covers ALL options in the web Optimizations panel (design
 # decision, docs/ROADMAP.md). The three below only change when the model is
 # loaded, so trials are queued in pending_reload, applied on the next load
-# (Load / Apply & restart / Deep optimize auto-reload), scored over
+# (Load / Apply & restart / Optimize now), scored over
 # RELOAD_TRIAL_REPLIES replies, then kept (promoted) or rolled back.
 RELOAD_TRIO = ("kv_bits", "fuse_kernels", "keepalive")
 RELOAD_DEFAULTS = {"kv_bits": 16, "fuse_kernels": "off", "keepalive": True}
@@ -751,10 +751,12 @@ def _norm_reload(name: str, value: Any) -> Any:
     return value
 
 
-def plan_reload(entry: dict, auto_names) -> dict:
+def plan_reload(entry: dict, auto_names, *, apply_pending: bool = True) -> dict:
     """At load time: pick values for auto reload options. Mutates entry.
 
     Uses the saved winner (or default), then one queued pending trial.
+    apply_pending=False keeps the winner and leaves the queue alone (Optimize
+    now holds the values it is measuring).
     Returns {values: {name: value}, trial: dict|None, reasons: [str]}.
     """
     auto = [n for n in RELOAD_TRIO if n in set(auto_names or ())]
@@ -766,6 +768,8 @@ def plan_reload(entry: dict, auto_names) -> dict:
             winner[n] = RELOAD_DEFAULTS[n]
         values[n] = _norm_reload(n, winner[n])
     for n in auto:
+        if not apply_pending:
+            break
         if pending.get(n) is not None:
             v = _norm_reload(n, pending.pop(n))
             if v != values[n]:
@@ -856,25 +860,215 @@ def reload_status(entry: Optional[dict], running: Optional[dict], auto_names) ->
     }
 
 
-# ---- Day 15: Deep / Quick optimize coverage ------------------------------
-LIVE_VALUES = {"guess_ahead": (True, False), "shared_prefix": (False, True),
-               "pipeline_chats": (1, 2)}
+# ---- Optimize now: one A/B per option, not a grid -------------------------
+# Everyday Auto learning (observe_reply / pick_exploration / observe_reload)
+# is unchanged. This schedule is only the walk-away pass.
+OPTIMIZE_KNOBS = (
+    {"ui": "guess_ahead", "name": "guess_ahead", "reload": False, "label": "guess-ahead"},
+    {"ui": "shared_start", "name": "shared_prefix", "reload": False, "label": "shared start"},
+    {"ui": "pipeline_chats", "name": "pipeline_chats", "reload": False, "label": "two chats"},
+    {"ui": "kv_bits", "name": "kv_bits", "reload": True, "label": "memory compression"},
+    {"ui": "fuse_kernels", "name": "fuse_kernels", "reload": True, "label": "fused kernels"},
+    {"ui": "keepalive", "name": "keepalive", "reload": True, "label": "GPU keep-warm"},
+    {"ui": None, "name": "packer_layers", "reload": True, "label": "packer layer cut"},
+)
 
 
-def coverage(entry: Optional[dict], *, mode: str = "deep", pinned=()) -> dict:
-    """Samples each option value has vs needs. done when all reach MIN_SAMPLES."""
-    entry = entry or {}
-    pinned = set(pinned or ())
-    vals = dict(LIVE_VALUES)
-    if mode == "deep":
-        vals.update(RELOAD_VALUES)
-    items, need = [], 0
-    for n, vs in vals.items():
-        if n in pinned:
+def norm_knob(name: str, value: Any) -> Any:
+    """Canonical value stored on a winner and in loss records."""
+    if name in ("kv_bits", "fuse_kernels", "keepalive"):
+        return _norm_reload(name, value)
+    if name in ("guess_ahead", "shared_prefix"):
+        return bool(value)
+    if name in ("pipeline_chats", "packer_layers"):
+        return int(value)
+    return value
+
+
+def knob_value_label(name: str, value: Any) -> str:
+    if name in ("pipeline_chats", "packer_layers") and value is not None:
+        return str(int(value))
+    return reload_value_label(name, value)
+
+
+def local_mem_gb():
+    """Lead RAM in GB when /proc/meminfo exists, else None."""
+    try:
+        with open("/proc/meminfo") as f:
+            for line in f:
+                if line.startswith("MemTotal:"):
+                    return int(line.split()[1]) / 1e6
+    except OSError:
+        return None
+    return None
+
+
+def hardware_fingerprint(*, spanned: bool, lead_mem_gb=None, packer_mem_gb=None) -> str:
+    """Coarse hardware id. A change makes previously lost values worth retrying."""
+    def bucket(x):
+        if x is None:
+            return "na"
+        return str(int(round(float(x))))
+    hw = "spanned" if spanned else "single"
+    return f"{hw}:{bucket(lead_mem_gb)}:{bucket(packer_mem_gb)}"
+
+
+def ab_losses(entry, fingerprint: str) -> set:
+    box = (entry or {}).get("ab_lost") or {}
+    if box.get("fingerprint") != fingerprint:
+        return set()
+    return set(box.get("values") or [])
+
+
+def remember_loss(entry: dict, fingerprint: str, name: str, value: Any) -> None:
+    """Record one challenger/incumbent value that lost an A/B on this hardware."""
+    if not fingerprint or value is None:
+        return
+    box = entry.setdefault("ab_lost", {"fingerprint": fingerprint, "values": []})
+    if box.get("fingerprint") != fingerprint:
+        box["fingerprint"] = fingerprint
+        box["values"] = []
+    oid = option_id(name, norm_knob(name, value))
+    vals = box.setdefault("values", [])
+    if oid not in vals:
+        vals.append(oid)
+
+
+def challenger_for(name: str, incumbent: Any, lost, *, n_layers: Optional[int] = None):
+    """One alternative vs the current best. None when every alternative already lost."""
+    if incumbent is None:
+        return None
+    inc = norm_knob(name, incumbent)
+    lost = set(lost or ())
+    if name == "packer_layers":
+        nbs = neighbors("packer_layers", int(inc), n_layers=n_layers)
+        nbs.sort(key=lambda v: (abs(int(v) - int(inc)), int(v)))
+        for v in nbs:
+            if option_id(name, int(v)) not in lost:
+                return int(v)
+        return None
+    if name == "kv_bits":
+        order = {16: (8, 4), 8: (4, 16), 4: (8, 16)}.get(int(inc), ())
+        for v in order:
+            if option_id(name, int(v)) not in lost:
+                return int(v)
+        return None
+    alts = {
+        "guess_ahead": (True, False),
+        "shared_prefix": (False, True),
+        "pipeline_chats": (1, 2),
+        "fuse_kernels": ("off", "on"),
+        "keepalive": (True, False),
+    }.get(name, ())
+    for v in alts:
+        v = norm_knob(name, v)
+        if v != inc and option_id(name, v) not in lost:
+            return v
+    return None
+
+
+def baseline_values(entry, active=None, *, packer_layers=None) -> dict:
+    """Day 9 / running values, with a saved winner overlaid."""
+    w = dict((entry or {}).get("winner") or {})
+    a = active or {}
+    out = {}
+
+    def put(name, value):
+        if value is None:
+            return
+        out[name] = norm_knob(name, value)
+
+    put("guess_ahead", w["guess_ahead"] if "guess_ahead" in w else a.get("guess_ahead"))
+    if "shared_prefix" in w:
+        put("shared_prefix", w["shared_prefix"])
+    elif a.get("shared_start") is not None:
+        put("shared_prefix", a.get("shared_start"))
+    else:
+        put("shared_prefix", False)
+    put("pipeline_chats", w["pipeline_chats"] if "pipeline_chats" in w else a.get("pipeline_chats"))
+    put("kv_bits", w["kv_bits"] if "kv_bits" in w else a.get("kv_bits", 16))
+    put("fuse_kernels", w["fuse_kernels"] if "fuse_kernels" in w else a.get("fuse_kernels", "off"))
+    if "keepalive" in w:
+        put("keepalive", w["keepalive"])
+    elif a.get("keepalive") is not None:
+        put("keepalive", a.get("keepalive"))
+    put("packer_layers", w["packer_layers"] if "packer_layers" in w else packer_layers)
+    return out
+
+
+def build_schedule(entry, *, fingerprint: str, settings=None, baseline=None,
+                   unavailable=None, n_layers: Optional[int] = None) -> list:
+    """One A/B per knob. Pinned, unavailable, and already-lost values are skipped.
+
+    Reload knobs are marked reload=True. One challenger each — not every value,
+    and not combinations across knobs.
+    """
+    lost = ab_losses(entry, fingerprint)
+    winner = dict((entry or {}).get("winner") or {})
+    baseline = baseline or {}
+    unavailable = set(unavailable or ())
+    settings = settings or {}
+    items = []
+    for spec in OPTIMIZE_KNOBS:
+        name = spec["name"]
+        item = {"ui": spec["ui"], "name": name, "label": spec["label"],
+                "reload": bool(spec["reload"]), "incumbent": None,
+                "challenger": None, "skip": None}
+        if name in unavailable:
+            item["skip"] = "unavailable"
+            items.append(item)
             continue
-        for v in vs:
-            have = samples_of(entry, n, v)
-            need += max(0, MIN_SAMPLES - have)
-            items.append({"name": n, "value": reload_value_label(n, v),
-                          "have": have, "need": MIN_SAMPLES})
-    return {"items": items, "missing": need, "done": need == 0}
+        ui = spec["ui"]
+        if ui and str(settings.get(ui, "auto")) != "auto":
+            item["skip"] = "pinned"
+            items.append(item)
+            continue
+        if name in winner:
+            inc = norm_knob(name, winner[name])
+        elif baseline.get(name) is not None:
+            inc = norm_knob(name, baseline[name])
+        else:
+            item["skip"] = "no baseline"
+            items.append(item)
+            continue
+        item["incumbent"] = inc
+        ch = challenger_for(name, inc, lost, n_layers=n_layers)
+        if ch is None:
+            item["skip"] = "already lost"
+        else:
+            item["challenger"] = ch
+        items.append(item)
+    return items
+
+
+def ab_pick(inc_scores, ch_scores, *, margin: float = SWITCH_MARGIN) -> str:
+    """'challenger' only when its mean beats the incumbent by the switch margin.
+
+    Higher score is better. A missing side keeps the incumbent, except when
+    the incumbent has no score at all and the challenger does.
+    """
+    def mean(xs):
+        vals = [float(x) for x in (xs or []) if x is not None]
+        if not vals:
+            return None
+        return sum(vals) / len(vals)
+
+    m_i, m_c = mean(inc_scores), mean(ch_scores)
+    if m_c is None:
+        return "incumbent"
+    if m_i is None:
+        return "challenger"
+    if m_c >= m_i * margin:
+        return "challenger"
+    return "incumbent"
+
+
+def commit_ab(entry: dict, *, fingerprint: str, name: str, winner_value: Any,
+              lost_value: Any = None) -> dict:
+    """Save one knob's winner and the value that lost, for this hardware."""
+    winner = entry.setdefault("winner", {})
+    winner[name] = norm_knob(name, winner_value)
+    if lost_value is not None:
+        remember_loss(entry, fingerprint, name, lost_value)
+    entry["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    return {"winner": dict(winner), "lost": sorted(ab_losses(entry, fingerprint))}

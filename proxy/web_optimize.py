@@ -1,14 +1,17 @@
-"""Day 15: Quick / Deep optimize — Caravan feeds itself prompts until tuned.
+"""Optimize now: one A/B per option against the current best, then stop.
 
-Quick: live options only (guess-ahead, shared start, two chats). No reloads
-except one at the start if those options are pinned.
-Deep: Quick plus reload options (memory compression, fused kernels, GPU
-keep-warm). Between trials it reloads the model itself, but only when no chat
-is in flight. Cancel any time; a reload already started finishes first.
+Walk-away pass the user starts. Each Optimizations option (and the packer
+layer cut) is tried once versus the Day 9 guess or the saved winner. Live
+options flip in place. A reload happens only when a reload-only knob still
+on Auto needs that trial. Values that already lost for this model and
+hardware are skipped until the hardware fingerprint changes.
 
-Everything is scored by the worker's normal self-tuning (tuned_settings.py);
-this runner only supplies prompts, reloads when a trial is queued, and reports
-progress. Winners stay saved as the learned settings for that model.
+Optimize as used — everyday Auto learning on real chats — is the worker's
+existing light probes. This runner does not replace that path and does not
+search combinations of options.
+
+Cancel any time. Progress and the time left come from measured reply and
+reload times. Winners are saved per model + hardware.
 """
 from __future__ import annotations
 
@@ -16,14 +19,14 @@ import json
 import threading
 import time
 import uuid
-from typing import Callable, Optional
+from typing import Optional
 from urllib.request import Request, urlopen
 
 import tuned_settings as TS
 import web_settings
 
-# Fixed prompt set: short, long, predictable (guess-ahead friendly), and a long
-# shared opening (> 512 tokens) so shared start has something to reuse.
+# Fixed prompt set: short, predictable, long, and a long shared opening
+# (> 512 tokens) so shared start has something to reuse.
 _PREAMBLE = " ".join(
     f"Section {i}: Caravan runs one language model across two Mac minis. The lead "
     f"holds the last layers and the packer holds the first layers. Each reply "
@@ -50,8 +53,9 @@ SHARED_Q = [
     "In one sentence: what does self-tuning keep?",
     "In one sentence: what does each reply cross?",
 ]
-MAX_PROMPTS = {"quick": 60, "deep": 180}
-STALL_AFTER = 30  # prompts with no new coverage => stop and say so
+# One arm is a few replies, not a sweep of every value.
+AB_ARM = 3
+VERIFY_ARM = 2
 
 
 def prompt_plan(i: int) -> list:
@@ -68,70 +72,108 @@ def prompt_plan(i: int) -> list:
 
 
 def unavailable(active: Optional[dict]) -> set:
-    """Options this model/setup can't vary (skip in coverage)."""
+    """Options this model/setup can't vary."""
     a = active or {}
     out = set()
     if not a.get("guess_ahead_loaded"):
         out.add("guess_ahead")
-    if a.get("keepalive") is None:  # single Mini: no keep-warm, no two-chat pipe
-        out |= {"keepalive", "pipeline_chats"}
+    if a.get("keepalive") is None:  # single Mini: no pipe, keep-warm, or packer cut
+        out |= {"keepalive", "pipeline_chats", "shared_prefix", "packer_layers"}
     return out
 
 
-def eta_s(cov: dict, *, mode: str, reply_s: Optional[float], reload_s: Optional[float]) -> Optional[float]:
-    """Rough time left from measured reply and reload times. None until measured."""
-    if reply_s is None:
+def eta_s(*, prompts_left: int, reloads_left: int,
+          reply_s: Optional[float], reload_s: Optional[float]) -> Optional[float]:
+    """Time left from measured reply and reload times. None until those exist."""
+    prompts_left = max(0, int(prompts_left or 0))
+    reloads_left = max(0, int(reloads_left or 0))
+    if prompts_left and reply_s is None:
         return None
-    per = {}
-    for it in cov.get("items") or []:
-        per.setdefault(it["name"], 0)
-        per[it["name"]] += max(0, it["need"] - it["have"])
-    replies_left = max(per.values() or [0])
-    t = replies_left * reply_s
-    if mode == "deep":
-        reloads_left = sum(1 for n in TS.RELOAD_TRIO for it in cov["items"]
-                           if it["name"] == n and it["have"] < it["need"])
-        if reloads_left:
-            t += (reloads_left + 1) * (reload_s if reload_s is not None else 0)
-            if reload_s is None:
-                return None
-    return t
+    if reloads_left and reload_s is None:
+        return None
+    return prompts_left * float(reply_s or 0) + reloads_left * float(reload_s or 0)
+
+
+def _arm_kind(name: str) -> str:
+    if name == "shared_prefix":
+        return "ttft"
+    if name == "pipeline_chats":
+        return "pipeline"
+    return "tps"
+
+
+def _as_result(raw) -> dict:
+    if isinstance(raw, dict):
+        out = dict(raw)
+        out.setdefault("elapsed", float(raw.get("elapsed") or 0))
+        return out
+    return {"elapsed": float(raw)}
+
+
+def score_result(kind: str, result: dict) -> float:
+    """Higher is better. Shared start uses time-to-first-token; pipeline uses wall time."""
+    elapsed = max(float(result.get("elapsed") or 0), 0.001)
+    if kind == "ttft":
+        ttft = result.get("ttft")
+        return TS.shared_prefix_score(elapsed if ttft is None else ttft)
+    if kind == "pipeline":
+        return 1.0 / elapsed
+    ct = result.get("completion_tokens")
+    total = result.get("total_s")
+    if ct is not None and total is not None:
+        return TS.normalized_tps(
+            completion_tokens=int(ct), total_s=float(total),
+            prefill_s=float(result.get("prefill_s") or 0),
+            prompt_tokens=int(result.get("prompt_tokens") or 0))
+    return 1.0 / elapsed
 
 
 class Optimizer:
-    def __init__(self, mgr, *, inflight: Callable[[], int],
-                 send: Optional[Callable] = None, sleep=time.sleep):
+    def __init__(self, mgr, *, inflight=None, send=None, sleep=time.sleep):
         self.mgr = mgr
-        self.inflight = inflight      # user chats in flight right now
-        self._send = send or self._http_send
+        self.inflight = inflight or (lambda: 0)
+        self._send_fn = send or self._http_send
         self._sleep = sleep
         self._cancel = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._lock = threading.Lock()
+        self._items = []
+        self._states = {}
+        self._phase = "idle"
+        self._prompts_left = 0
+        self._reloads_left = 0
+        self.best = {}
+        self.running = {}
+        self.packer_k = None
+        self.fp = ""
         self.state = {"running": False, "mode": None, "phase": "idle", "prompts": 0,
                       "reloads": 0, "started": None, "eta_s": None, "reply_s": None,
-                      "reload_s": None, "coverage": None, "log": [], "summary": None,
+                      "reload_s": None, "schedule": None, "log": [], "summary": None,
                       "error": None}
 
-    # ---- public ----
     def snapshot(self) -> dict:
         with self._lock:
             s = dict(self.state)
             s["log"] = list(self.state["log"][-30:])
+            if s.get("schedule"):
+                s["schedule"] = [dict(x) for x in s["schedule"]]
         return s
 
-    def start(self, mode: str = "deep") -> dict:
-        mode = "quick" if mode == "quick" else "deep"
+    def start(self, mode: str = "now") -> dict:
+        """Start Optimize now. `mode` is ignored — there is no Quick-only path."""
+        del mode
         if self._thread and self._thread.is_alive():
             raise RuntimeError("optimize already running")
         snap = self.mgr.snapshot()
         if snap.get("status") != "ready" or not snap.get("model_id"):
             raise RuntimeError("load a model first")
         self._cancel.clear()
-        self._set(running=True, mode=mode, phase="starting", prompts=0, reloads=0,
+        self._items, self._states = [], {}
+        self._phase = "starting"
+        self._set(running=True, mode="now", phase="starting", prompts=0, reloads=0,
                   started=time.time(), eta_s=None, reply_s=None, reload_s=None,
-                  summary=None, error=None, log=[])
-        self._thread = threading.Thread(target=self._run_safe, args=(mode,), daemon=True)
+                  schedule=None, summary=None, error=None, log=[])
+        self._thread = threading.Thread(target=self._run_safe, daemon=True)
         self._thread.start()
         return self.snapshot()
 
@@ -140,7 +182,6 @@ class Optimizer:
         self._log("cancel requested")
         return self.snapshot()
 
-    # ---- internals ----
     def _set(self, **kw):
         with self._lock:
             self.state.update(kw)
@@ -150,130 +191,379 @@ class Optimizer:
             self.state["log"].append({"t": round(time.time(), 1), "msg": msg})
             self.state["log"] = self.state["log"][-60:]
 
-    def _settings_for(self, mode: str) -> dict:
-        cur = web_settings.normalize(self.mgr.snapshot().get("settings") or {})
-        want = dict(cur)
-        want["self_tune"] = "auto"
-        for k in ("guess_ahead", "shared_start", "pipeline_chats"):
-            want[k] = "auto"
-        if mode == "deep":
-            for k in ("fuse_kernels", "kv_bits", "keepalive"):
-                want[k] = "auto"
-        return want
+    def _publish(self):
+        self._set(phase=self._phase, schedule=self._view(),
+                  eta_s=eta_s(prompts_left=self._prompts_left, reloads_left=self._reloads_left,
+                              reply_s=self.state["reply_s"], reload_s=self.state["reload_s"]))
 
-    def _reload(self, settings: dict, why: str):
-        model_id = self.mgr.snapshot().get("model_id")
+    def _view(self) -> list:
+        out = []
+        for it in self._items:
+            state = self._states.get(it["name"], "skipped" if it["skip"] else "pending")
+            if state == "kept" and it["name"] in self.best:
+                detail = TS.knob_value_label(it["name"], self.best[it["name"]])
+            else:
+                detail = it["skip"] or ""
+            out.append({"name": it["name"], "label": it["label"], "state": state,
+                        "detail": detail, "reload": it["reload"]})
+        return out
+
+    def _user_settings(self) -> dict:
+        return web_settings.normalize(self.mgr.snapshot().get("settings") or {})
+
+    def _n_layers(self):
+        n = getattr(self.mgr, "n_layers", None)
+        if callable(n):
+            try:
+                return n()
+            except Exception:
+                return None
+        return n
+
+    def _sweep(self, body: dict) -> dict:
+        fn = getattr(self.mgr, "sweep", None)
+        if fn is None:
+            raise RuntimeError("lead has no optimize-now control")
+        return fn(body)
+
+    def _release(self):
+        fn = getattr(self.mgr, "sweep", None)
+        if fn is None:
+            return
+        try:
+            fn({"release": True})
+        except Exception as e:  # noqa: BLE001 — surface on the log, still finish
+            self._log(f"could not resume everyday learning ({e})")
+
+    def _wait(self, phase: str):
         while self.inflight() > 0 and not self._cancel.is_set():
-            self._set(phase="waiting for your chat to finish before reloading")
-            self._sleep(2)
-        self._set(phase=f"reloading to {why}")
+            self._phase = phase
+            self._publish()
+            self._sleep(1)
+
+    def _note_reply(self, result: dict):
+        dt = float(result.get("elapsed") or 0)
+        n = self.state["prompts"]
+        prev = self.state["reply_s"]
+        avg = dt if prev is None else (prev * n + dt) / (n + 1)
+        self._prompts_left = max(0, self._prompts_left - 1)
+        self._set(prompts=n + 1, reply_s=round(avg, 2))
+        self._publish()
+
+    def _note_reload(self, dt: float):
+        n = self.state["reloads"]
+        prev = self.state["reload_s"]
+        avg = dt if prev is None else (prev * n + dt) / (n + 1)
+        self._reloads_left = max(0, self._reloads_left - 1)
+        self._set(reloads=n + 1, reload_s=round(avg, 1))
+        self._publish()
+
+    def _pull_running(self):
+        active = self.mgr.lead_active_settings() or {}
+        for n in TS.RELOAD_TRIO:
+            if active.get(n) is not None:
+                self.running[n] = TS.norm_knob(n, active[n])
+
+    def _running_is(self, name: str, value) -> bool:
+        if name == "packer_layers":
+            return self.packer_k is not None and int(self.packer_k) == int(value)
+        if name not in self.running or value is None:
+            return False
+        return TS.norm_knob(name, self.running[name]) == TS.norm_knob(name, value)
+
+    def _force_map(self, overrides=None) -> dict:
+        force = {}
+        for n in TS.RELOAD_TRIO:
+            if n in self.best:
+                force[n] = self.best[n]
+        if overrides:
+            force.update(overrides)
+        return force
+
+    def _reload(self, why: str, *, packer_layers, reload_force, freeze: bool = True):
+        self._wait("waiting for your chat to finish before reloading")
+        if self._cancel.is_set():
+            return
+        self._phase = f"reloading to {why}"
+        self._publish()
         self._log(f"reloading to {why}")
         t0 = time.time()
-        self.mgr.switch(model_id, wait=True, settings=settings)
-        dt = time.time() - t0
+        self.mgr.switch(
+            self.mgr.snapshot().get("model_id"), wait=True, settings=self._user_settings(),
+            packer_layers=packer_layers, hold_trials=True, reload_force=reload_force,
+            freeze_forced=freeze)
+        self._note_reload(time.time() - t0)
+        self._pull_running()
+        if packer_layers is not None:
+            self.packer_k = int(packer_layers)
         snap = self.mgr.snapshot()
         if snap.get("status") != "ready":
             raise RuntimeError(f"reload failed: {snap.get('error')}")
-        st = self.state
-        n = st["reloads"]
-        avg = dt if st["reload_s"] is None else (st["reload_s"] * n + dt) / (n + 1)
-        self._set(reloads=n + 1, reload_s=round(avg, 1))
-        self._log(f"reloaded in {dt:.0f}s")
+        self._log(f"reloaded in {time.time() - t0:.0f}s")
+        if freeze:
+            self._sweep({"pause": True})
 
-    def _entry_and_active(self):
-        active = self.mgr.lead_active_settings()
-        try:
-            _, e = self.mgr._tuned_entry(self.mgr._lead_path)
-        except (OSError, ValueError, TypeError):
-            e = None
-        return e, active
+    def _extra_reload(self, why: str, *, packer_layers, reload_force):
+        self._reloads_left += 1
+        self._publish()
+        self._reload(why, packer_layers=packer_layers, reload_force=reload_force, freeze=True)
 
-    def _http_send(self, messages: list, max_tokens: int = 160) -> float:
-        body = json.dumps({"messages": messages, "max_tokens": max_tokens,
-                           "stream": False}).encode()
+    def _apply_value(self, name: str, value, why: str):
+        if name == "packer_layers":
+            self._reload(why, packer_layers=int(value), reload_force=self._force_map(), freeze=True)
+            return
+        self._reload(why, packer_layers=self.packer_k,
+                     reload_force=self._force_map({name: value}), freeze=True)
+
+    def _hold_live(self, extra=None):
+        hold = {}
+        settings = self._user_settings()
+        ui_for = {"guess_ahead": "guess_ahead", "shared_prefix": "shared_start",
+                  "pipeline_chats": "pipeline_chats"}
+        for name, ui in ui_for.items():
+            if settings.get(ui) != "auto":
+                continue
+            if name in self.best:
+                hold[name] = self.best[name]
+        if extra:
+            for name, value in extra.items():
+                ui = ui_for.get(name)
+                if ui and settings.get(ui) != "auto":
+                    continue
+                hold[name] = value
+        if hold:
+            self._sweep({"pause": True, "hold": hold})
+
+    def _one(self, messages) -> dict:
+        return _as_result(self._send_fn(messages))
+
+    def _http_send(self, messages: list, max_tokens: int = 160) -> dict:
+        body = json.dumps(
+            {"messages": messages, "max_tokens": max_tokens, "stream": False}).encode()
         req = Request(f"http://127.0.0.1:{self.mgr.lead_port}/v1/chat/completions",
                       data=body, method="POST",
                       headers={"Content-Type": "application/json",
                                "X-Caravan-Session": "opt-" + uuid.uuid4().hex[:12]})
         t0 = time.time()
         with urlopen(req, timeout=600) as r:
-            r.read()
-        return time.time() - t0
-
-    def _run_safe(self, mode):
+            raw = r.read()
+        elapsed = time.time() - t0
+        out = {"elapsed": elapsed}
         try:
-            self._run(mode)
+            full = json.loads(raw).get("usage") or {}
+            caravan = full.get("caravan") or {}
+            out["ttft"] = caravan.get("ttft_s")
+            out["total_s"] = caravan.get("total_s") or elapsed
+            out["prefill_s"] = caravan.get("prefill_s")
+            out["completion_tokens"] = full.get("completion_tokens")
+            out["prompt_tokens"] = full.get("prompt_tokens")
+        except (ValueError, TypeError):
+            pass
+        return out
+
+    def _round(self, kind: str, i: int, n_chats: Optional[int]) -> dict:
+        if kind == "pipeline":
+            # Real replies overlap only when the worker can run two chats.
+            # Measured wall time is the score. A simulated reply (tests) reports
+            # its own elapsed; width 2 keeps the max and width 1 adds them.
+            results, errors = [], []
+
+            def run(m):
+                try:
+                    results.append(self._one(m))
+                except Exception as e:  # noqa: BLE001 — raised after join
+                    errors.append(e)
+
+            t0 = time.time()
+            threads = [threading.Thread(target=run, args=(m,))
+                       for m in (prompt_plan(1), prompt_plan(2))]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            if errors:
+                raise errors[0]
+            wall = max(time.time() - t0, 0.001)
+            if results and all(r.get("simulated") for r in results):
+                sim = [r["elapsed"] for r in results]
+                elapsed = max(sim) if int(n_chats or 1) >= 2 else sum(sim)
+            else:
+                elapsed = wall
+            return {"elapsed": elapsed, "ttft": elapsed, "total_s": elapsed,
+                    "prefill_s": 0, "completion_tokens": None}
+        if kind == "ttft":
+            return self._one(prompt_plan(0))
+        return self._one(prompt_plan(i))
+
+    def _measure(self, kind: str, n_chats: Optional[int] = None) -> list:
+        scores = []
+        for i in range(AB_ARM):
+            if self._cancel.is_set():
+                break
+            self._wait("paused while your chat runs")
+            if self._cancel.is_set():
+                break
+            result = self._round(kind, i, n_chats)
+            self._note_reply(result)
+            scores.append(score_result(kind, result))
+            self._phase = self._phase_base + f" · prompt {i + 1}/{AB_ARM}"
+            self._publish()
+        return scores
+
+    def _commit(self, name: str, winner_value, lost_value):
+        self._sweep({"pause": True, "commit": {
+            "fingerprint": self.fp, "name": name,
+            "winner": winner_value, "lost": lost_value,
+        }})
+        self.best[name] = TS.norm_knob(name, winner_value)
+
+    def _drift(self) -> bool:
+        settings = self._user_settings()
+        for n in TS.RELOAD_TRIO:
+            if settings.get(n) != "auto" or n not in self.best or n not in self.running:
+                continue
+            if TS.norm_knob(n, self.running[n]) != TS.norm_knob(n, self.best[n]):
+                return True
+        if "packer_layers" in self.best and self.packer_k is not None:
+            if int(self.packer_k) != int(self.best["packer_layers"]):
+                return True
+        return False
+
+    def _run_safe(self):
+        try:
+            self._run()
         except Exception as e:  # noqa: BLE001 — surface to UI
             self._set(error=f"{type(e).__name__}: {e}", phase="stopped (error)")
             self._log(f"error: {e}")
         finally:
+            self._release()
             self._set(running=False)
 
-    def _run(self, mode: str):
-        settings = self._settings_for(mode)
-        cur = web_settings.normalize(self.mgr.snapshot().get("settings") or {})
-        if settings != cur:
-            pinned = [k for k in settings if settings[k] != cur[k]]
-            self._reload(settings, "set " + ", ".join(pinned) + " to Auto")
-        best_missing, since_gain, i = None, 0, 0
-        while not self._cancel.is_set():
-            e, active = self._entry_and_active()
-            cov = TS.coverage(e, mode=mode, pinned=unavailable(active))
-            self._set(coverage=cov, eta_s=eta_s(cov, mode=mode, reply_s=self.state["reply_s"],
-                                                 reload_s=self.state["reload_s"]))
-            if cov["done"]:
+    def _run(self):
+        settings = self._user_settings()
+        path = getattr(self.mgr, "_lead_path", None)
+        try:
+            _st, entry = self.mgr._tuned_entry(path, create=True)
+        except (OSError, ValueError, TypeError):
+            entry = None
+        active = self.mgr.lead_active_settings() or {}
+        packer = None
+        cat = getattr(self.mgr, "catalog_packer_layers", None)
+        if callable(cat):
+            packer = cat()
+        self.fp = self.mgr.hardware_fingerprint() if hasattr(self.mgr, "hardware_fingerprint") else (
+            TS.hardware_fingerprint(spanned=True))
+        baseline = TS.baseline_values(entry, active, packer_layers=packer)
+        self._items = TS.build_schedule(
+            entry, fingerprint=self.fp, settings=settings, baseline=baseline,
+            unavailable=unavailable(active), n_layers=self._n_layers())
+        self.best = dict(baseline)
+        for it in self._items:
+            if it["incumbent"] is not None:
+                self.best[it["name"]] = it["incumbent"]
+            self._states[it["name"]] = "skipped" if it["skip"] else "pending"
+        self._pull_running()
+        self.packer_k = self.best.get("packer_layers", packer)
+        trials = [it for it in self._items if not it["skip"]]
+        self._prompts_left = len(trials) * AB_ARM * 2 + (VERIFY_ARM if trials else 0)
+        self._reloads_left = sum(1 for it in trials if it["reload"])
+        self._log(f"optimize now: {len(trials)} option(s) to try, "
+                  f"{sum(1 for it in self._items if it['skip'])} skipped")
+        for it in self._items:
+            if it["skip"]:
+                self._log(f"skip {it['label']}: {it['skip']}")
+        self._phase = "starting"
+        self._publish()
+        if trials:
+            self._sweep({"pause": True, "clear_pending": True})
+
+        for it in trials:
+            if self._cancel.is_set():
                 break
-            if best_missing is None or cov["missing"] < best_missing:
-                best_missing, since_gain = cov["missing"], 0
-            elif since_gain >= STALL_AFTER:
-                self._log(f"no new coverage in {STALL_AFTER} prompts; stopping")
-                break
-            if i >= MAX_PROMPTS[mode]:
-                self._log(f"hit the {MAX_PROMPTS[mode]}-prompt cap; stopping")
-                break
-            if mode == "deep":
-                rs = TS.reload_status(e, active, (active or {}).get("reload_auto") or [])
-                tries = [c for c in rs["reload_wanted"] if c["why"] == "try"]
-                if tries or (rs["reload_wanted"] and not rs["trial"]):
-                    c = (tries or rs["reload_wanted"])[0]
-                    verb = "try" if c["why"] == "try" else "go back to"
-                    self._reload(settings, f"{verb} {c['label']} {c['to']}")
-                    continue
-            while self.inflight() > 0 and not self._cancel.is_set():
-                self._set(phase="paused while your chat runs")
-                self._sleep(1)
-            msgs = prompt_plan(i)
-            self._set(phase=f"prompt {i + 1}")
-            if i % 5 == 4:
-                # Two chats at once so "two chats" gets concurrent samples.
-                res = []
-                th = [threading.Thread(target=lambda m=m: res.append(self._send(m)))
-                      for m in (msgs, prompt_plan(i + 2))]
-                for t in th:
-                    t.start()
-                for t in th:
-                    t.join()
-                dt = max(res) if res else 0.0
+            name = it["name"]
+            self._states[name] = "running"
+            inc, ch = it["incumbent"], it["challenger"]
+            kind = _arm_kind(name)
+            self._phase_base = (
+                f"A/B {it['label']} {TS.knob_value_label(name, ch)} vs "
+                f"{TS.knob_value_label(name, inc)}")
+            self._phase = self._phase_base
+            self._publish()
+            self._log(self._phase_base)
+            if it["reload"]:
+                if not self._running_is(name, inc):
+                    self._extra_reload(
+                        f"{it['label']} {TS.knob_value_label(name, inc)}",
+                        packer_layers=inc if name == "packer_layers" else self.packer_k,
+                        reload_force=self._force_map(
+                            {} if name == "packer_layers" else {name: inc}))
+                    if self._cancel.is_set():
+                        break
+                inc_scores = self._measure(kind, inc if name == "pipeline_chats" else None)
+                if self._cancel.is_set():
+                    break
+                self._apply_value(name, ch, f"try {it['label']} {TS.knob_value_label(name, ch)}")
+                if self._cancel.is_set():
+                    break
+                ch_scores = self._measure(kind, ch if name == "pipeline_chats" else None)
             else:
-                dt = self._send(msgs)
-            n = self.state["prompts"]
-            avg = dt if self.state["reply_s"] is None else (self.state["reply_s"] * n + dt) / (n + 1)
-            self._set(prompts=n + 1, reply_s=round(avg, 2))
-            i += 1
-            since_gain += 1
-        # Finish on the winners (one last reload if the model is on a trial value).
-        e, active = self._entry_and_active()
-        if mode == "deep" and not self._cancel.is_set():
-            rs = TS.reload_status(e, active, (active or {}).get("reload_auto") or [])
-            back = [c for c in rs["reload_wanted"] if c["why"] == "back to winner"]
-            if back:
-                self._reload(settings, "finish on the winners")
-                e, active = self._entry_and_active()
-        cov = TS.coverage(e, mode=mode, pinned=unavailable(active))
-        self._set(coverage=cov, eta_s=0 if cov["done"] else None,
-                  phase="canceled" if self._cancel.is_set() else ("done" if cov["done"] else "stopped"),
-                  summary={"winner": dict((e or {}).get("winner") or {}),
-                           "prompts": self.state["prompts"], "reloads": self.state["reloads"],
-                           "minutes": round((time.time() - self.state["started"]) / 60, 1),
-                           "complete": cov["done"]})
-        self._log("done" if cov["done"] else "stopped before full coverage")
+                self._hold_live({name: inc})
+                inc_scores = self._measure(kind, inc if name == "pipeline_chats" else None)
+                if self._cancel.is_set():
+                    break
+                self._hold_live({name: ch})
+                ch_scores = self._measure(kind, ch if name == "pipeline_chats" else None)
+            if self._cancel.is_set():
+                break
+            kept, lost = (ch, inc) if TS.ab_pick(inc_scores, ch_scores) == "challenger" else (inc, ch)
+            self._commit(name, kept, lost)
+            if it["reload"] and not self._running_is(name, kept):
+                self._extra_reload(
+                    f"{it['label']} {TS.knob_value_label(name, kept)}",
+                    packer_layers=kept if name == "packer_layers" else self.packer_k,
+                    reload_force=self._force_map(
+                        {} if name == "packer_layers" else {name: kept}))
+            elif not it["reload"]:
+                self._hold_live({name: kept})
+            self._states[name] = "kept"
+            self._log(f"kept {it['label']} {TS.knob_value_label(name, kept)}")
+            self._publish()
+
+        if trials and not self._cancel.is_set():
+            self._phase = "verify winner"
+            self._publish()
+            if self._drift():
+                self._extra_reload(
+                    "finish on the winners", packer_layers=self.best.get("packer_layers", self.packer_k),
+                    reload_force=self._force_map())
+            self._hold_live()
+            for i in range(VERIFY_ARM):
+                if self._cancel.is_set():
+                    break
+                self._wait("paused while your chat runs")
+                if self._cancel.is_set():
+                    break
+                self._note_reply(self._one(prompt_plan(i)))
+            self._log("verify pass on the winner")
+
+        try:
+            _st, entry = self.mgr._tuned_entry(path, create=False)
+        except (OSError, ValueError, TypeError):
+            entry = None
+        canceled = self._cancel.is_set()
+        complete = (not canceled) and all(
+            self._states.get(it["name"]) in ("kept", "skipped") for it in self._items)
+        self._prompts_left = 0
+        self._reloads_left = 0
+        self._phase = "canceled" if canceled else ("done" if complete else "stopped")
+        winner = dict((entry or {}).get("winner") or {})
+        self._set(summary={
+            "winner": winner,
+            "prompts": self.state["prompts"],
+            "reloads": self.state["reloads"],
+            "minutes": round((time.time() - (self.state["started"] or time.time())) / 60, 1),
+            "complete": complete,
+        })
+        self._publish()
+        self._set(eta_s=0 if complete else None)
+        self._log("done" if complete else "stopped before every option was tried")

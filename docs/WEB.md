@@ -137,25 +137,30 @@ lead/packer diagram: which layers sit on EXO1 and EXO2). On wide screens the
 paired cards sit side by side in that order; under 820 px everything is one
 column in the same order. `tests/test_web_server.py::PageOrderTest` guards it.
 
-## Self-tuning for every option + Deep optimize (Day 15)
+## Self-tuning for every option (Day 15)
 
-- With Self-tuning on Auto, the learner now also tries **memory compression,
-  fused kernels and GPU keep-warm**. These only change on a model load, so a
-  trial is queued, used on the next Load / Apply & restart, scored over 3
-  replies, then kept or rolled back. Pinned values (On/Off/8/4) are never
-  touched.
-- Under the Optimizations list the page says what is going on, e.g. "Self-tuning
-  wants to try memory compression 8-bit — click Apply & restart" or "trying …:
-  2 replies left".
-- **Optimize this model**: pick **Deep** (default; all options, reloads itself
-  between trials, only when no chat is in flight) or **Quick** (live options
-  only), press Start, and walk away. Progress shows the phase, prompts, reloads,
-  option values tested and a time-left estimate built from measured reply and
-  reload times. Cancel stops after the current step. The final winners stay
-  saved for that model (`~/.caravan/mlx/tuned-settings.json`).
-- A tip appears when a model has fewer than 10 learned replies.
-- Each run uses a fixed prompt set (short, long, predictable, and a >512-token
-  shared opening) in fresh sessions, plus a pair sent together every 5th
-  prompt so "two chats" gets concurrent samples. Caps: Quick 60 prompts, Deep
-  180, and it stops early if 30 prompts add no new coverage.
-- The web server now re-adopts a lead it started earlier after a web-only restart.
+Two different things, on purpose:
+
+- **Optimize as used.** With Self-tuning on Auto, everyday chats keep the
+  light probes already running. The learner may try guess-ahead, shared
+  start, two chats, and (after a reload) memory compression, fused kernels,
+  GPU keep-warm, and the packer layer cut. Pinned values are never touched.
+  Under the list the page says what is going on, e.g. "Self-tuning wants to
+  try memory compression 8-bit — click Apply & restart" or "trying …: 2
+  replies left".
+- **Optimize now.** Optional walk-away. Press Start. Each Optimizations
+  option is tried **once** against the current best (one A/B, not a grid of
+  combinations). Live options flip in place. Caravan reloads only when a
+  reload-only option still on Auto needs that trial. A value that already
+  lost for this model and hardware is skipped until the hardware changes.
+  Progress shows the option, prompts, reloads, and a time-left estimate from
+  measured reply and reload times. Cancel stops after the current step.
+  Winners stay saved for that model (`~/.caravan/mlx/tuned-settings.json`).
+
+A tip appears when a model has fewer than 10 learned replies.
+
+Each Optimize now arm uses a short fixed prompt set (short, predictable, and
+a >512-token shared opening) in fresh sessions. Two chats are scored by
+sending a pair together. Then a two-prompt check runs on the winner.
+
+The web server re-adopts a lead it started earlier after a web-only restart.
