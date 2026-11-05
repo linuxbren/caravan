@@ -482,12 +482,14 @@
   .chathead-actions .btn-topo:hover,
   .chathead-actions .btn-clear:hover,
   .chathead-actions .btn-think:hover { border-color: var(--accent); color: var(--accent); }
+  /* Topology: non-modal left dock — no backdrop; chat stays usable. */
+  #topoBackdrop { display: none !important; pointer-events: none !important; }
   .drawer-left {
-    position: fixed; top: 0; left: 0; height: 100%; width: min(380px, 33vw);
+    position: fixed; top: 0; left: 0; height: 100%; width: min(440px, 40vw);
     min-width: 280px; background: var(--bg2); border-right: 1px solid var(--line);
     box-shadow: var(--shadow); transform: translateX(-100%);
-    transition: transform .22s ease; z-index: 50; overflow: auto;
-    padding: 16px 16px 40px;
+    transition: transform .22s ease; z-index: 30; overflow: auto;
+    padding: 16px 16px 40px; pointer-events: auto;
   }
   .drawer-left.open { transform: translateX(0); }
   .drawer-left .drawer-head {
@@ -501,10 +503,24 @@
   }
   .topo-body { display: flex; flex-direction: column; gap: 12px; }
   .topo-body .node { margin: 0; }
-  /* ROADMAP #14 live node view: hard 2px panels, 1px phosphor lines, mono. */
-  .drawer-left { width: min(440px, 40vw); }
+  .chathead-actions .btn-topo.on {
+    border-color: var(--accent); color: var(--accent2);
+    background: color-mix(in srgb, var(--accent) 18%, transparent) !important;
+  }
+  /* Wide: dock beside chat — shift wrap so messages are not under the drawer. */
+  @media (min-width: 1100px) {
+    body.topo-open .wrap {
+      margin-left: min(440px, 40vw);
+      max-width: min(920px, calc(100vw - min(440px, 40vw) - 24px));
+      transition: margin-left .22s ease, max-width .22s ease;
+    }
+  }
+  /* Narrow: overlay left without a click-blocking backdrop; input on the right stays free. */
+  @media (max-width: 1099px) {
+    .drawer-left { width: min(360px, 88vw); z-index: 35; }
+  }
   .nstat { margin-top: 10px; font-family: var(--mono); font-size: .7rem; color: var(--muted); }
-  .nstat .bar { display: grid; grid-template-columns: 4.2em 1fr 7.5em; gap: 8px; align-items: center; margin: 4px 0; }
+  .nstat .bar { display: grid; grid-template-columns: 4.2em 1fr 8.5em; gap: 8px; align-items: center; margin: 4px 0; }
   .nstat .track { height: 8px; border: 1px solid var(--line); border-radius: 2px; background: var(--bg); overflow: hidden; }
   .nstat .fill { height: 100%; background: var(--accent); }
   .nstat .fill.hot { background: var(--warn); }
@@ -584,7 +600,8 @@
   </main>
 
   
-<div class="drawer-backdrop" id="topoBackdrop"></div>
+<!-- Topology docks non-modally; backdrop kept hidden for back-compat with old JS ids. -->
+<div class="drawer-backdrop" id="topoBackdrop" hidden aria-hidden="true"></div>
 <aside class="drawer-left" id="topoDrawer" aria-hidden="true">
   <div class="drawer-head">
     <h2>Topology</h2>
@@ -1378,8 +1395,10 @@
   })();
 })();
 
-  // ROADMAP #14: live node stats from /api/nodes, polled only while the drawer is open.
+  // ROADMAP #14: live node stats from /api/nodes.
+  // Poll ~1s while drawer is open AND the tab is visible; skip ticks if a request is in flight.
   let nodesTimer = null;
+  let nodesInflight = false;
   const esc = (t) => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   function nbar(label, pct, txt, hot) {
     const p = Math.max(0, Math.min(100, Number(pct) || 0));
@@ -1391,14 +1410,22 @@
     const ram = n.ram || {}, dk = n.disk || {};
     const ramPct = ram.total_gb ? 100 * ram.used_gb / ram.total_gb : 0;
     const dPct = dk.total_gb ? 100 * dk.used_gb / dk.total_gb : 0;
-    const temp = n.temp_c != null ? `${n.temp_c.toFixed(0)}°C CPU` : "no reading";
     let h = "";
     h += nbar("CPU", n.cpu_pct, `${n.cpu_pct ?? "?"}%`, n.cpu_pct > 85);
-    if (n.gpu_pct != null) h += nbar("GPU", n.gpu_pct, `${n.gpu_pct}%`, n.gpu_pct > 95);
+    if (n.gpu_pct != null) {
+      const gp = n.gpu_power_w != null ? `${n.gpu_pct}% · ${n.gpu_power_w} W` : `${n.gpu_pct}%`;
+      h += nbar("GPU", n.gpu_pct, gp, n.gpu_pct > 95);
+    }
     h += nbar("RAM", ramPct, `${ram.free_gb ?? "?"} GB free`, ramPct > 90);
     h += nbar("Disk", dPct, `${dk.free_gb ?? "?"} GB free`, dk.free_gb != null && dk.free_gb < 20);
-    h += `<div class="kv"><span>Temp</span><b>${esc(temp)}</b></div>`;
-    h += `<div class="kv"><span>Thermal pressure</span><b>${esc(n.thermal_pressure || "?")}</b></div>`;
+    // Temp bar: 20 °C (empty) → 100 °C (full). No degrees → thermal level text only.
+    if (n.temp_c != null) {
+      const tempPct = Math.max(0, Math.min(100, (n.temp_c - 20) / 80 * 100));
+      h += nbar("Temp", tempPct, `${n.temp_c.toFixed(0)}°C`, n.temp_c >= 85);
+      h += `<div class="kv"><span>Thermal pressure</span><b>${esc(n.thermal_pressure || "?")}</b></div>`;
+    } else {
+      h += `<div class="kv"><span>Temp</span><b>${esc(n.thermal_pressure || "no reading")}</b></div>`;
+    }
     if (n.layers) h += `<div class="kv"><span>Holds</span><b>${esc(n.layers.replace(/^[^:]*:\s*/, ""))}${n.weights_gb ? ` · ${n.weights_gb} GB` : ""}</b></div>`;
     const ms = n.models || [];
     h += `<div class="models"><div><span>Models on disk (${ms.length})</span><span></span></div>` +
@@ -1406,6 +1433,11 @@
     return h;
   }
   async function pollNodes() {
+    if (nodesInflight) return;
+    if (document.visibilityState !== "visible") return;
+    const drawer = document.getElementById("topoDrawer");
+    if (!drawer || !drawer.classList.contains("open")) return;
+    nodesInflight = true;
     try {
       const r = await fetch("/api/nodes"); const j = await r.json();
       const [lead, pk] = j.nodes || [];
@@ -1415,25 +1447,45 @@
       if (cab && j.link) cab.textContent = `Thunderbolt · ${j.link}`;
     } catch (e) {
       document.getElementById("leadStats").textContent = "node stats unavailable";
+    } finally {
+      nodesInflight = false;
     }
   }
-  function openTopo() {
+  function startNodesPoll() {
     pollNodes();
     clearInterval(nodesTimer);
-    nodesTimer = setInterval(pollNodes, 5000);
+    nodesTimer = setInterval(pollNodes, 1000);
+  }
+  function stopNodesPoll() {
+    clearInterval(nodesTimer); nodesTimer = null;
+  }
+  function openTopo() {
+    document.body.classList.add("topo-open");
     document.getElementById("topoDrawer").classList.add("open");
-    document.getElementById("topoBackdrop").classList.add("open");
     document.getElementById("topoDrawer").setAttribute("aria-hidden", "false");
+    const btn = document.getElementById("btnOpenTopo");
+    if (btn) { btn.classList.add("on"); btn.setAttribute("aria-pressed", "true"); }
+    if (document.visibilityState === "visible") startNodesPoll();
   }
   function closeTopo() {
-    clearInterval(nodesTimer); nodesTimer = null;
+    stopNodesPoll();
+    document.body.classList.remove("topo-open");
     document.getElementById("topoDrawer").classList.remove("open");
-    document.getElementById("topoBackdrop").classList.remove("open");
     document.getElementById("topoDrawer").setAttribute("aria-hidden", "true");
+    const btn = document.getElementById("btnOpenTopo");
+    if (btn) { btn.classList.remove("on"); btn.setAttribute("aria-pressed", "false"); }
   }
-  document.getElementById("btnOpenTopo").addEventListener("click", openTopo);
+  function toggleTopo() {
+    if (document.getElementById("topoDrawer").classList.contains("open")) closeTopo();
+    else openTopo();
+  }
+  document.getElementById("btnOpenTopo").addEventListener("click", toggleTopo);
   document.getElementById("btnCloseTopo").addEventListener("click", closeTopo);
-  document.getElementById("topoBackdrop").addEventListener("click", closeTopo);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.getElementById("topoDrawer").classList.contains("open")) return;
+    if (document.visibilityState === "visible") startNodesPoll();
+    else stopNodesPoll();
+  });
 
 </script>
 </body>

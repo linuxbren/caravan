@@ -62,10 +62,10 @@ class App:
         self.optimizer = web_optimize.Optimizer(mgr, inflight=lambda: self._inflight)
 
     # ---- ROADMAP #14: live node view (GET /api/nodes) -------------------
-    NODES_TTL = 4.0
+    NODES_TTL = 1.0
 
     def nodes(self) -> dict:
-        """Cached a few seconds; refreshed in the background so polls stay fast."""
+        """Cached ~1s; refreshed in the background so polls stay fast."""
         with self._nodes_lock:
             c = self._nodes_cache
             stale = c is None or time.time() - c["t"] > self.NODES_TTL

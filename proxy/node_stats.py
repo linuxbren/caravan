@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """One node's live stats for the Topology drawer (ROADMAP #14).
 
-Runs locally on a Mini and prints JSON: CPU use, temperature (only when a
-real reading is available), thermal pressure, RAM, disk free, and the
-models on disk. Python 3.9-compatible, stdlib only, no sudo.
+Runs locally on a Mini and prints JSON: CPU use, GPU Device Utilization %
+(from ioreg), optional GPU power W (macmon), temperature (only when a real
+reading is available), thermal pressure, RAM, disk free, and the models on
+disk. Python 3.9-compatible, stdlib only, no sudo.
+
+GPU % uses IOAccelerator's "Device Utilization %" — macmon's gpu_usage can
+read 100% while --split-keepalive only keeps the clock up.
 
 Temperature: macOS has no unprivileged temperature API. If `macmon`
 (github.com/vladkens/macmon, reads the SMC without sudo) is installed we
-use its cpu_temp_avg. Otherwise temp_c is null — never a guess — and the
-page shows thermal pressure from `pmset -g therm` instead.
+use its cpu_temp_avg (file-cached ~2.5s so 1s polls stay light). Otherwise
+temp_c is null — never a guess — and the page shows thermal pressure from
+`pmset -g therm` instead.
 
     python3 proxy/node_stats.py            # JSON to stdout
 """
@@ -28,6 +33,11 @@ SKIP = {"caches", "drafts"}
 MACMON = [HOME / ".cargo" / "bin" / "macmon", Path("/opt/homebrew/bin/macmon"),
           Path("/usr/local/bin/macmon")]
 _SIZE_CACHE = HOME / ".caravan" / "web-ui" / "model_sizes.json"
+_MM_CACHE = HOME / ".caravan" / "web-ui" / "macmon_cache.json"
+_MODELS_LIST_CACHE = HOME / ".caravan" / "web-ui" / "models_list_cache.json"
+# macmon pipe takes ~1.5s on these Minis; reuse across 1s polls / SSH gathers.
+_MM_TTL = 2.5
+_MODELS_TTL = 60.0
 
 
 def _run(cmd, timeout=6):
@@ -37,15 +47,57 @@ def _run(cmd, timeout=6):
         return ""
 
 
-def macmon():
+def _read_json_cache(path, ttl):
+    try:
+        c = json.loads(path.read_text())
+        if time.time() - float(c.get("t", 0)) <= ttl:
+            return c.get("data")
+    except (OSError, ValueError, TypeError):
+        pass
+    return None
+
+
+def _write_json_cache(path, data):
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"t": time.time(), "data": data}))
+    except OSError:
+        pass
+
+
+def macmon(*, force=False):
+    """SMC sample via macmon. File-cached so 1s polls do not stack 1.5s samples."""
+    if not force:
+        try:
+            c = json.loads(_MM_CACHE.read_text())
+            if time.time() - float(c.get("t", 0)) <= _MM_TTL:
+                return c.get("data")
+        except (OSError, ValueError, TypeError):
+            pass
     exe = next((str(p) for p in MACMON if p.exists()), shutil.which("macmon"))
     if not exe:
+        _write_json_cache(_MM_CACHE, None)
         return None
-    out = _run([exe, "pipe", "-s", "1", "-i", "400"], timeout=8).strip().splitlines()
+    # -i 200: one sample; wall time is still ~1.5s (SMC warmup), hence the cache.
+    out = _run([exe, "pipe", "-s", "1", "-i", "200"], timeout=8).strip().splitlines()
     try:
-        return json.loads(out[-1]) if out else None
+        data = json.loads(out[-1]) if out else None
     except ValueError:
+        data = None
+    _write_json_cache(_MM_CACHE, data)
+    return data
+
+
+
+
+def gpu_util_ioreg():
+    """GPU busy % from IOAccelerator — fast, no sudo. Prefer over macmon gpu_usage,
+    which can stick at 100% while --split-keepalive only keeps the clock up."""
+    out = _run(["ioreg", "-r", "-c", "IOAccelerator", "-d", "1"], timeout=3)
+    vals = [int(x) for x in re.findall(r'"Device Utilization %"=(\d+)', out)]
+    if not vals:
         return None
+    return float(max(vals))
 
 
 def cpu_pct_ps():
@@ -142,11 +194,20 @@ def models_on_disk():
     return out
 
 
+def models_on_disk_cached():
+    cached = _read_json_cache(_MODELS_LIST_CACHE, _MODELS_TTL)
+    if cached is not None:
+        return cached
+    out = models_on_disk()
+    _write_json_cache(_MODELS_LIST_CACHE, out)
+    return out
+
+
 def gather():
     mm = macmon()
     cpu = None
     temp = None
-    gpu = None
+    gpu_power = None
     if mm:
         c = mm.get("cpu_usage_pct")
         if isinstance(c, (int, float)):
@@ -154,16 +215,18 @@ def gather():
         t = (mm.get("temp") or {}).get("cpu_temp_avg")
         if isinstance(t, (int, float)) and t > 5:   # 0-ish = no sensor reading
             temp = round(t, 1)
-        g = mm.get("gpu_usage")
-        if isinstance(g, list) and len(g) == 2:
-            gpu = round(g[1] * 100, 1)
+        p = mm.get("gpu_power")
+        if isinstance(p, (int, float)):
+            gpu_power = round(p, 1)
     if cpu is None:
         cpu = cpu_pct_ps()
+    gpu = gpu_util_ioreg()
     return {
         "host": socket.gethostname().split(".")[0],
         "t": time.time(),
         "cpu_pct": cpu,
         "gpu_pct": gpu,
+        "gpu_power_w": gpu_power,
         "cpus": os.cpu_count(),
         "load_1m": round(os.getloadavg()[0], 2),
         "temp_c": temp,
@@ -171,7 +234,7 @@ def gather():
         "thermal_pressure": thermal_pressure(),
         "ram": memory(),
         "disk": disk(),
-        "models": models_on_disk(),
+        "models": models_on_disk_cached(),
     }
 
 
