@@ -432,3 +432,19 @@ class SelfTuneFirstTest(unittest.TestCase):
                           "fuse_kernels", "kv_bits", "keepalive"])
         html = (REPO / "proxy" / "web" / "index.html").read_text()
         self.assertIn('(b.id === "self_tune") - (a.id === "self_tune")', html)
+
+
+class SelfTuneAutoResetTest(unittest.TestCase):
+    def setUp(self):
+        self.html = (REPO / "proxy" / "web" / "index.html").read_text()
+
+    def test_self_tune_auto_resets_all(self):
+        self.assertIn('row.dataset.id === "self_tune" && b.dataset.v === "auto"', self.html)
+        self.assertIn('for (const o of state.opts) state.choice[o.id] = "auto";', self.html)
+
+    def test_pinned_note(self):
+        self.assertIn("pinned — self-tuning can't change these", self.html)
+        self.assertIn('state.choice.self_tune !== "auto"', self.html)
+
+    def test_auto_shows_resolved(self):
+        self.assertIn("`Auto (${v})`", self.html)

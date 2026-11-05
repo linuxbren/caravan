@@ -61,6 +61,7 @@
   .a-settings .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
   .a-settings .chips { margin-bottom: 12px; }
   .optcard h2 { font-size: .72rem; }
+  .pinnote { grid-column: 1 / -1; font-size: 12px; color: #b26b00; background: #fff4e0; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; }
   #optRows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
   .a-string .node + .cable + .node { margin-top: 0; }
   .a-progress .progress { max-height: 220px; }
@@ -482,6 +483,21 @@
     if (a.keepalive != null) out.push(["keep-warm " + (a.keepalive ? "on" : "off"), !!a.keepalive]);
     return out;
   }
+  function activeValue(id, a) {
+    // What the running worker actually uses for one option.
+    if (!a) return null;
+    return {
+      guess_ahead: a.guess_ahead ? "on" : "off", self_tune: a.self_tune ? "on" : "off",
+      shared_start: a.shared_start ? "on" : "off", pipeline_chats: a.pipeline_chats,
+      fuse_kernels: a.fuse_kernels, kv_bits: a.kv_bits == null ? null : `${a.kv_bits}-bit`,
+      keepalive: a.keepalive == null ? null : (a.keepalive ? "on" : "off"),
+    }[id] ?? null;
+  }
+  function pinnedUnderSelfTune() {
+    // Options self-tuning can't change because they're pinned.
+    if (state.choice.self_tune !== "auto") return [];
+    return state.opts.filter(o => o.id !== "self_tune" && state.choice[o.id] && state.choice[o.id] !== "auto");
+  }
   function renderActive(a) {
     const el = $("activeChips");
     const items = describeActive(a);
@@ -493,18 +509,23 @@
       for (const o of state.opts) {
         const now = document.querySelector(`.opt[data-id="${o.id}"] .now`);
         if (!now) continue;
-        const v = {
-          guess_ahead: a.guess_ahead ? "on" : "off", self_tune: a.self_tune ? "on" : "off",
-          shared_start: a.shared_start ? "on" : "off", pipeline_chats: a.pipeline_chats,
-          fuse_kernels: a.fuse_kernels, kv_bits: `${a.kv_bits}-bit`,
-          keepalive: a.keepalive == null ? "—" : (a.keepalive ? "on" : "off"),
-        }[o.id];
+        const v = activeValue(o.id, a);
         now.textContent = `now: ${v ?? "—"}`;
       }
     }
+    for (const o of state.opts) {
+      const b = document.querySelector(`.opt[data-id="${o.id}"] button[data-v="auto"]`);
+      if (!b) continue;
+      const v = activeValue(o.id, a);
+      b.textContent = v != null ? `Auto (${v})` : "Auto";
+    }
   }
   function renderOpts() {
-    $("optRows").innerHTML = state.opts.map(o => `
+    const pins = pinnedUnderSelfTune();
+    const note = pins.length
+      ? `<div class="pinnote" id="pinNote">${pins.length} pinned — self-tuning can't change these: ${pins.map(o => o.label).join(", ")}</div>`
+      : "";
+    $("optRows").innerHTML = note + state.opts.map(o => `
       <div class="opt" data-id="${o.id}">
         <div class="row"><span class="name">${o.label}</span>
           <span class="seg">${o.values.map(v =>
@@ -514,7 +535,15 @@
       </div>`).join("");
     for (const row of document.querySelectorAll(".opt")) {
       for (const b of row.querySelectorAll(".seg button")) {
-        b.onclick = () => { state.choice[row.dataset.id] = b.dataset.v; renderOpts(); renderActive(state.active); };
+        b.onclick = () => {
+          state.choice[row.dataset.id] = b.dataset.v;
+          // Self-tuning set to Auto puts every option back on Auto.
+          // Pinning one afterwards leaves self-tuning alone.
+          if (row.dataset.id === "self_tune" && b.dataset.v === "auto") {
+            for (const o of state.opts) state.choice[o.id] = "auto";
+          }
+          renderOpts(); renderActive(state.active);
+        };
       }
     }
   }
@@ -525,6 +554,7 @@
     state.opts.sort((a, b) => (b.id === "self_tune") - (a.id === "self_tune"));
     state.choice = Object.assign(Object.fromEntries(state.opts.map(o => [o.id, "auto"])), j.current || {});
     renderOpts();
+    renderActive(state.active);
   }
 
   async function refreshModels() {
