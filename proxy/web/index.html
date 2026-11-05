@@ -1,26 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="amber">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Caravan — built in the open</title>
 <style>
-  :root {
-    --bg: #0b0f14;
-    --bg2: #121821;
-    --bg3: #1a2230;
-    --line: #243044;
-    --text: #e8eef7;
-    --muted: #8b9bb4;
-    --amber: #f0a35e;
-    --amber2: #ffc98a;
-    --teal: #f0a35e; /* was teal; amber console */
-    --teal2: #ffc98a;
+  :root, [data-theme="amber"] {
+    --bg: #0a0c0b;
+    --bg2: #12100c;
+    --bg3: #1a160f;
+    --line: #3a2e1c;
+    --text: #ffd9a0;
+    --muted: #a8895c;
+    --accent: #f0a35e;
+    --accent2: #ffc98a;
+    --glow: rgba(240,163,94,.35);
+    --amber: var(--accent);
+    --amber2: var(--accent2);
+    --teal: var(--accent);
+    --teal2: var(--accent2);
+    --rose: #ff7b8a;
+    --ok: #c9a227;
+    --warn: #f0c35e;
+    --shadow: 0 12px 40px rgba(0,0,0,.55);
+    --radius: 12px;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --sans: "Inter", "SF Pro Text", system-ui, -apple-system, sans-serif;
+  }
+  [data-theme="green"] {
+    --bg: #050a06;
+    --bg2: #0a120c;
+    --bg3: #101a12;
+    --line: #1e3a24;
+    --text: #b8f5c0;
+    --muted: #5f9a68;
+    --accent: #3ecf5a;
+    --accent2: #7afe8e;
+    --glow: rgba(62,207,90,.35);
+    --amber: var(--accent);
+    --amber2: var(--accent2);
+    --teal: var(--accent);
+    --teal2: var(--accent2);
     --rose: #ff7b8a;
     --ok: #5dde8a;
-    --warn: #f0c35e;
-    --shadow: 0 12px 40px rgba(0,0,0,.45);
-    --radius: 16px;
+    --warn: #c9f06e;
+    --shadow: 0 12px 40px rgba(0,0,0,.55);
+    --radius: 12px;
     --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
     --sans: "Inter", "SF Pro Text", system-ui, -apple-system, sans-serif;
   }
@@ -31,8 +56,8 @@
     font-family: var(--sans);
     color: var(--text);
     background:
-      radial-gradient(1200px 600px at 10% -10%, rgba(240,163,94,.14), transparent 55%),
-      radial-gradient(800px 400px at 100% 100%, rgba(196,93,42,.10), transparent 50%),
+      radial-gradient(1200px 600px at 10% -10%, var(--glow), transparent 55%),
+      radial-gradient(800px 400px at 100% 100%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 50%),
       var(--bg);
     min-height: 100vh;
   }
@@ -86,7 +111,7 @@
   .brand { display: flex; align-items: center; gap: 14px; }
   .mark {
     width: 42px; height: 42px; border-radius: 12px;
-    background: linear-gradient(135deg, var(--amber2), var(--amber) 45%, #c45d2a);
+    background: linear-gradient(135deg, var(--accent2), var(--accent) 50%, color-mix(in srgb, var(--accent) 55%, #000));
     box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 8px 24px rgba(240,163,94,.35);
     position: relative;
   }
@@ -309,6 +334,21 @@
   .card { border-color: rgba(240,163,94,.18); }
   body { font-feature-settings: "tnum"; }
 
+
+  .theme-switch {
+    display: inline-flex; gap: 4px; padding: 3px;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--bg2);
+  }
+  .theme-switch button {
+    font-family: var(--mono); font-size: .65rem; letter-spacing: .06em;
+    text-transform: uppercase; border: 0; border-radius: 999px;
+    padding: 6px 10px; cursor: pointer; background: transparent; color: var(--muted);
+  }
+  .theme-switch button.on {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--accent2);
+  }
+
 </style>
 </head>
 <body>
@@ -320,6 +360,10 @@
         <h1>Caravan</h1>
         <p>Two Mac minis. One model. Built in the open.</p>
       </div>
+    </div>
+    <div class="theme-switch" id="themeSwitch" title="Console phosphor">
+      <button type="button" data-theme="amber" class="on">Amber</button>
+      <button type="button" data-theme="green">Green</button>
     </div>
     <div class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">starting…</span></div>
   </header>
@@ -427,6 +471,24 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
+  const applyTheme = (name) => {
+    const t = (name === "green") ? "green" : "amber";
+    document.documentElement.setAttribute("data-theme", t);
+    try { localStorage.setItem("caravan-theme", t); } catch (e) {}
+    document.querySelectorAll("#themeSwitch button").forEach((b) => {
+      b.classList.toggle("on", b.dataset.theme === t);
+    });
+  };
+  (() => {
+    let saved = "amber";
+    try { saved = localStorage.getItem("caravan-theme") || "amber"; } catch (e) {}
+    applyTheme(saved);
+    $("themeSwitch").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-theme]");
+      if (b) applyTheme(b.dataset.theme);
+    });
+  })();
+
   const openDrawer = () => {
     $("settingsDrawer").classList.add("open");
     const b = $("drawerBackdrop"); b.hidden = false; b.classList.add("open");
