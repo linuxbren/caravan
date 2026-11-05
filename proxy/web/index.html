@@ -14,8 +14,8 @@
     --muted: #8b9bb4;
     --amber: #f0a35e;
     --amber2: #ffc98a;
-    --teal: #3ecfbf;
-    --teal2: #7aefe3;
+    --teal: #f0a35e; /* was teal; amber console */
+    --teal2: #ffc98a;
     --rose: #ff7b8a;
     --ok: #5dde8a;
     --warn: #f0c35e;
@@ -31,8 +31,8 @@
     font-family: var(--sans);
     color: var(--text);
     background:
-      radial-gradient(1200px 600px at 10% -10%, rgba(240,163,94,.12), transparent 55%),
-      radial-gradient(900px 500px at 90% 0%, rgba(62,207,191,.10), transparent 50%),
+      radial-gradient(1200px 600px at 10% -10%, rgba(240,163,94,.14), transparent 55%),
+      radial-gradient(800px 400px at 100% 100%, rgba(196,93,42,.10), transparent 50%),
       var(--bg);
     min-height: 100vh;
   }
@@ -42,15 +42,12 @@
     padding: 20px 20px 48px;
     display: grid;
     gap: 16px;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    max-width: 920px;
     grid-template-areas:
-      "top top"
-      "chat chat"
-      "last last"
-      "settings settings"
-      "clock miles"
-      "journey journey"
-      "progress string";
+      "top"
+      "chat"
+      "string";
   }
   .a-chat { grid-area: chat; } .a-last { grid-area: last; } .a-settings { grid-area: settings; }
   .a-clock { grid-area: clock; } .a-miles { grid-area: miles; } .a-journey { grid-area: journey; }
@@ -73,7 +70,7 @@
     .wrap {
       grid-template-columns: 1fr;
       padding: 12px 10px 32px;
-      grid-template-areas: "top" "chat" "last" "settings" "clock" "miles" "journey" "progress" "string";
+      grid-template-areas: "top" "chat" "string";
     }
     .a-last .stat-grid { grid-template-columns: 1fr 1fr; }
     #optRows { grid-template-columns: 1fr; }
@@ -89,7 +86,7 @@
   .brand { display: flex; align-items: center; gap: 14px; }
   .mark {
     width: 42px; height: 42px; border-radius: 12px;
-    background: linear-gradient(135deg, var(--amber), #c45d2a 55%, var(--teal));
+    background: linear-gradient(135deg, var(--amber2), var(--amber) 45%, #c45d2a);
     box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 8px 24px rgba(240,163,94,.35);
     position: relative;
   }
@@ -142,7 +139,7 @@
   }
   .cable span {
     padding: 4px 10px; border-radius: 999px; border: 1px dashed var(--line);
-    background: rgba(62,207,191,.06); color: var(--teal2);
+    background: rgba(240,163,94,.10); color: var(--amber2);
   }
 
   .chat { display: flex; flex-direction: column; min-height: 560px; }
@@ -254,7 +251,7 @@
   }
   .seg button:hover { transform: none; color: var(--text); }
   .seg button.sel { background: linear-gradient(135deg, var(--amber), #d4783a); color: #1a1008; font-weight: 650; }
-  .seg button.sel.auto { background: rgba(62,207,191,.18); color: var(--teal2); }
+  .seg button.sel.auto { background: rgba(240,163,94,.22); color: var(--amber2); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .chips .tag { font-size: .68rem; }
   .msg .timing .set { color: var(--teal2); }
@@ -264,6 +261,54 @@
     margin: auto; text-align: center; color: var(--muted); padding: 40px 12px;
   }
   .empty strong { color: var(--amber2); display: block; font-size: 1.1rem; margin-bottom: 6px; }
+
+  /* Amber Console — chat-first layout */
+  .sr-only, .demoted { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+  .a-progress.problem { position: static !important; width: auto; height: auto; margin: 0 0 12px; overflow: visible; clip: auto; }
+  .a-progress.problem { display: block; border-color: var(--rose); }
+  .a-progress:not(.problem) { display: none !important; }
+  .composer-meta { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .chips.under-input { margin: 0; }
+  details.specs {
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px;
+    background: rgba(240,163,94,.04);
+  }
+  details.specs > summary {
+    cursor: pointer; font-family: var(--mono); font-size: .72rem;
+    color: var(--amber2); letter-spacing: .04em; list-style: none;
+  }
+  details.specs > summary::-webkit-details-marker { display: none; }
+  details.specs .stat-grid { margin-top: 10px; grid-template-columns: repeat(4, 1fr); }
+  .btn-settings {
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .06em;
+    text-transform: uppercase; border: 1px solid var(--line);
+    background: var(--bg2); color: var(--amber2); border-radius: 999px;
+    padding: 8px 14px; cursor: pointer;
+  }
+  .btn-settings:hover { border-color: var(--amber); color: var(--amber); }
+  .drawer-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40;
+  }
+  .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: fixed; top: 0; right: 0; height: 100%; width: min(380px, 33vw);
+    min-width: 280px; background: var(--bg2); border-left: 1px solid var(--line);
+    box-shadow: var(--shadow); transform: translateX(100%);
+    transition: transform .22s ease; z-index: 50; overflow: auto;
+    padding: 16px 16px 40px;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer .drawer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; position: sticky; top: 0; background: var(--bg2);
+    padding-bottom: 8px; z-index: 1;
+  }
+  .drawer .drawer-head h2 { margin: 0; font-size: .85rem; color: var(--amber2); letter-spacing: .08em; text-transform: uppercase; font-family: var(--mono); }
+  .tip[title] { border-bottom: 1px dotted rgba(240,163,94,.45); cursor: help; }
+  .card { border-color: rgba(240,163,94,.18); }
+  body { font-feature-settings: "tnum"; }
+
 </style>
 </head>
 <body>
@@ -279,48 +324,62 @@
     <div class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">starting…</span></div>
   </header>
 
-  <!-- Day 15 layout: most important first (chat, last reply, settings, clock, milestones, journey, load progress, the string) -->
+  <!-- Amber Console: chat-first; settings in right drawer -->
 
   <main class="card chat a-chat">
-    <div class="chathead"><h2>Chat</h2><button class="ghost" id="btnClear">Clear chat</button></div>
-    
-    
+    <div class="chathead">
+      <h2>Chat</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button type="button" class="btn-settings" id="btnOpenSettings">Settings</button>
+        <button class="ghost" id="btnClear">Clear chat</button>
+      </div>
+    </div>
+
+    <div class="card a-progress demoted" id="progressCard">
+      <h2>Load progress</h2>
+      <div class="progress" id="progressLog">idle</div>
+    </div>
+
     <div class="messages" id="messages">
       <div class="empty" id="emptyState">
         <strong>Ready when you are.</strong>
-        Pick a model that’s already on the Minis, load it across the string, and talk to it.
-        Every timestamp below is real — browser clock synced to the Mini.
+        Pick a model that’s already on the Minis, open Settings to load it, and talk to it.
       </div>
     </div>
     <div class="composer">
       <textarea id="input" placeholder="Ask Caravan…" rows="2"></textarea>
       <button class="primary" id="btnSend">Send</button>
     </div>
+    <div class="composer-meta">
+      <div class="chips under-input" id="activeChips" title="Settings the running model reports right now"></div>
+      <details class="specs a-last">
+        <summary>Specifications</summary>
+        <div class="stat-grid" id="statGrid">
+          <div class="stat"><div class="k">Total</div><div class="v" id="sTotal">—</div></div>
+          <div class="stat"><div class="k">To first word</div><div class="v" id="sTtft">—</div></div>
+          <div class="stat"><div class="k">Read</div><div class="v" id="sRead">—</div></div>
+          <div class="stat"><div class="k">Write</div><div class="v" id="sWrite">—</div></div>
+        </div>
+        <div style="height:8px"></div>
+        <div class="features" id="featTags"></div>
+      </details>
+    </div>
   </main>
 
-  <div class="card a-last">
-      <h2>Last reply</h2>
-      <div class="stat-grid" id="statGrid">
-        <div class="stat"><div class="k">Total</div><div class="v" id="sTotal">—</div></div>
-        <div class="stat"><div class="k">To first word</div><div class="v" id="sTtft">—</div></div>
-        <div class="stat"><div class="k">Read</div><div class="v" id="sRead">—</div></div>
-        <div class="stat"><div class="k">Write</div><div class="v" id="sWrite">—</div></div>
-      </div>
-      <div style="height:10px"></div>
-      <div class="features" id="featTags"></div>
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <aside class="drawer a-settings" id="settingsDrawer" aria-label="Settings">
+    <div class="drawer-head">
+      <h2>Settings</h2>
+      <button type="button" class="ghost" id="btnCloseSettings">Close</button>
     </div>
-
-  <section class="card a-settings">
-    <h2>Settings</h2>
     <div class="toolbar">
       <select id="modelSelect" aria-label="Model"></select>
       <button class="primary" id="btnLoad">Load model</button>
       <button class="ghost" id="btnStop" title="Unload">Unload</button>
     </div>
-    <div class="chips" id="activeChips" title="Settings the running model reports right now"></div>
     <div class="optgrid" id="optWrap">
 <div class="optcard">
-      <h2>Optimizations</h2>
+      <h2><span class="tip" title="Caravan learns which Optimizations help this model on your Minis.">Optimizations</span></h2>
       <div id="optRows"></div>
       <div class="applyrow">
         <button class="primary" id="btnApply">Apply &amp; restart</button>
@@ -329,41 +388,25 @@
       <div class="tunenote" id="tuneNote"></div>
       <div class="optbox" id="optBox">
         <div class="row">
-          <b>Optimize this model</b>
-          <select id="optMode" aria-label="Optimize mode">
-            <option value="deep" selected>Deep (all options, reloads itself)</option>
-            <option value="quick">Quick (live options only)</option>
+          <b class="tip" title="Walk-away pass: try each option once against the current best, reload only when a reload option needs a trial, then save the winner.">Optimize now</b>
+          <select id="optMode" aria-label="Optimize mode" style="display:none">
+            <option value="deep" selected>deep</option>
+            <option value="quick">quick</option>
           </select>
           <button class="primary" id="btnOptStart">Start</button>
           <button class="ghost" id="btnOptCancel">Cancel</button>
         </div>
-        <div class="help" id="optTip"></div>
+        <div class="help" id="optTip">Optimize as used stays on when options are Auto — Caravan learns from real chats.</div>
         <div class="help" id="optProgress"></div>
       </div>
     </div>
     </div>
-  </section>
+  </aside>
 
-  <div class="card a-clock">
-      <h2>Clock sync</h2>
-      <div class="clock" id="clockInfo">syncing…</div>
-    </div>
-
-  <div class="card a-miles">
-      <h2>Milestones</h2>
-      <div class="clock" id="mileInfo">send a message to see timestamps to 0.01 s</div>
-    </div>
-
-  <section class="card journey a-journey">
-    <h2>How far we’ve come</h2>
-    <div class="strip" id="hlStrip"></div>
-    <div class="spark" id="sparkRow"></div>
-  </section>
-
-  <div class="card a-progress">
-      <h2>Load progress</h2>
-      <div class="progress" id="progressLog">idle</div>
-    </div>
+  <!-- Demoted: kept for JS clocks/journey; not on the front page -->
+  <div class="demoted a-clock"><h2>Clock sync</h2><div class="clock" id="clockInfo">syncing…</div></div>
+  <div class="demoted a-miles"><h2>Milestones</h2><div class="clock" id="mileInfo">send a message to see timestamps to 0.01 s</div></div>
+  <section class="demoted journey a-journey"><h2>How far we’ve come</h2><div class="strip" id="hlStrip"></div><div class="spark" id="sparkRow"></div></section>
 
   <div class="card a-string">
       <h2>The string</h2>
@@ -384,6 +427,19 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
+  const openDrawer = () => {
+    $("settingsDrawer").classList.add("open");
+    const b = $("drawerBackdrop"); b.hidden = false; b.classList.add("open");
+  };
+  const closeDrawer = () => {
+    $("settingsDrawer").classList.remove("open");
+    const b = $("drawerBackdrop"); b.classList.remove("open"); b.hidden = true;
+  };
+  $("btnOpenSettings").addEventListener("click", openDrawer);
+  $("btnCloseSettings").addEventListener("click", closeDrawer);
+  $("drawerBackdrop").addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+
   const state = {
     offset_s: null,
     uncertainty_s: null,
@@ -549,14 +605,14 @@
     if (t && t.trial) lines.push(`Self-tuning is trying ${t.trial.label} ${t.trial.value}: ${t.trial.remaining} replies left.`);
     for (const c of (t && t.reload_wanted) || []) {
       lines.push(c.why === "try"
-        ? `Self-tuning wants to try ${c.label} ${c.to} — click Apply &amp; restart (or Deep optimize) to try it.`
+        ? `Self-tuning wants to try ${c.label} ${c.to} — click Apply &amp; restart (or Optimize now) to try it.`
         : `${c.label} ${c.from} didn't win — Apply &amp; restart goes back to ${c.to}.`);
     }
     if (opt && opt.running && /reloading/.test(opt.phase || "")) lines.unshift(`<b>${opt.phase}…</b>`);
     el.innerHTML = lines.join("<br>");
     const few = t && t.known && (t.replies_learned || 0) < 10;
     $("optTip").textContent = few && !(opt && opt.running)
-      ? "Tip: Deep optimize can tune this model while you wait." : "";
+      ? "Tip: Optimize now can tune this model while you wait." : "";
   }
   async function refreshOptimize() {
     let j;
@@ -567,7 +623,7 @@
     if (!j.mode) { el.textContent = ""; return; }
     const cov = j.coverage;
     const done = cov ? cov.items.filter(i => i.have >= i.need).length : 0;
-    let txt = `${j.mode === "quick" ? "Quick" : "Deep"}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
+    let txt = `${j.mode === "quick" ? "Optimize now (live)" : "Optimize now"}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
     if (cov) txt += ` · ${done}/${cov.items.length} option values tested`;
     if (j.running) txt += ` · about ${fmtMin(j.eta_s)} left`;
     if (j.reply_s != null) txt += ` · ${j.reply_s}s per reply`;
@@ -645,6 +701,12 @@
 
     const prog = (snap.progress || []).slice(-12).map(p => p.msg).join("\n") || "idle";
     $("progressLog").textContent = prog;
+    const pc = $("progressCard");
+    if (pc) {
+      const bad = /error|fail|Errno|No space|OSError/i.test(prog || "");
+      pc.classList.toggle("problem", bad);
+      pc.classList.toggle("demoted", !bad);
+    }
 
     $("btnLoad").disabled = ["starting_lead","starting_packer","stopping"].includes(st);
     $("btnApply").disabled = $("btnLoad").disabled;
