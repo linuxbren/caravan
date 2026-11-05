@@ -736,6 +736,7 @@ class Engine:
             self.stage = S.Stage(self.model_dir, "head", args.split_front_layers)
             self.model = S.SplitModel(self.stage, self.client)
             self.tokenizer = load_tokenizer(self.model_dir, eos_token_ids=cfg0.get("eos_token_id"))
+            add_turn_end_stops(self.tokenizer, log=log)
             hello = self.client.call("hello", proto=S.PROTO)[0]
             if hello.get("range") != [0, self.stage.range[0]] or hello.get("n_layers") != self.stage.n_layers:
                 raise RuntimeError(f"Packer 1 ({S.title_from_label(hello.get('stage'))}) doesn't match the lead "
@@ -807,6 +808,7 @@ class Engine:
         else:
             self._learn_packer_was_explicit = getattr(args, "split_front_layers", None) is not None
             self.model, self.tokenizer = load(str(self.model_dir))
+            add_turn_end_stops(self.tokenizer, log=log)
         cfg = json.loads((self.model_dir / "config.json").read_text())
         self.model_type = cfg.get("model_type", "")
         self.wired_mode = getattr(args, "wired_limit", "startup")
@@ -2542,8 +2544,10 @@ class Engine:
         finish = None
         if slot.stops.advance(token):
             finish = "stop"
-        eos = self.tokenizer.eos_token_id
-        if isinstance(eos, (list, tuple)):
+        eos = getattr(self.tokenizer, "eos_token_ids", None)
+        if eos is None:
+            eos = self.tokenizer.eos_token_id
+        if isinstance(eos, (list, tuple, set, frozenset)):
             eos_set = set(eos)
         else:
             eos_set = {eos} if eos is not None else set()
@@ -2702,6 +2706,37 @@ class Engine:
             return HarmonyAdapter()
         return StateMachineAdapter(self.G, self.tokenizer, prompt, stop_words)
 
+
+
+# Chat templates whose end-of-turn marker isn't in the model's eos list.
+# Gemma 4 ends a reply with <turn|> but only lists <eos>; without this it
+# keeps talking (often looping its own reasoning) until max_tokens.
+TURN_END_TOKENS = ("<turn|>", "<end_of_turn>")
+
+
+def add_turn_end_stops(tokenizer, log=None):
+    """Add known end-of-turn tokens to the tokenizer's stop set when present."""
+    vocab = {}
+    try:
+        vocab = tokenizer.get_vocab()
+    except Exception:
+        pass
+    added = []
+    for tok in TURN_END_TOKENS:
+        if tok not in vocab:
+            continue
+        tid = vocab[tok]
+        ids = getattr(tokenizer, "eos_token_ids", None)
+        if ids is not None and tid in ids:
+            continue
+        try:
+            tokenizer.add_eos_token(tok)
+            added.append(tok)
+        except Exception:
+            pass
+    if added and log:
+        log(f"stop tokens: added {', '.join(added)}")
+    return added
 
 class _PipeSlot:
     __slots__ = ("key", "session", "prompt", "body", "cancel", "out", "how", "n_reused",
