@@ -1011,9 +1011,19 @@
     el.innerHTML = `<div class="who">${role === "user" ? "You" : "Caravan"}</div><div class="body"></div>`;
     el.querySelector(".body").textContent = text;
     $("messages").appendChild(el);
-    $("messages").scrollTop = $("messages").scrollHeight;
+    // Your own new message always jumps to the bottom and resumes following.
+    if (role === "user") state.followChat = true;
+    if (state.followChat !== false) $("messages").scrollTop = $("messages").scrollHeight;
     return el;
   }
+
+  // Follow streaming text only while the reader is at (or near) the bottom.
+  // Scroll up to read and it stays put; scroll back down to catch up and it follows again.
+  state.followChat = true;
+  $("messages").addEventListener("scroll", () => {
+    const m = $("messages");
+    state.followChat = m.scrollHeight - m.scrollTop - m.clientHeight < 40;
+  }, { passive: true });
 
   async function sendChat() {
     if (state.streaming) return;
@@ -1134,7 +1144,7 @@
               full += piece;
               bodyEl.textContent = stripMarkers(full);
             }
-            if (piece || think) $("messages").scrollTop = $("messages").scrollHeight;
+            if ((piece || think) && state.followChat) $("messages").scrollTop = $("messages").scrollHeight;
           }
         }
       }
