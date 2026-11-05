@@ -408,3 +408,17 @@ class WebSettingsHTTPTest(WebServerHTTPTest):
         for needle in ('id="optRows"', 'id="btnApply"', 'id="activeChips"', "ran with:",
                        "settings: state.choice"):
             self.assertIn(needle, html)
+
+
+class PageOrderTest(unittest.TestCase):
+    """Day 15: Brenden's order, most important first."""
+
+    def test_section_order(self):
+        html = (REPO / "proxy" / "web" / "index.html").read_text()
+        body = html[html.index("<body>"):]
+        order = ["a-chat", "a-last", "a-settings", "a-clock", "a-miles",
+                 "a-journey", "a-progress", "a-string"]
+        pos = [body.index(f'{c}"') for c in order]
+        self.assertEqual(pos, sorted(pos))
+        self.assertLess(body.index('id="modelSelect"'), body.index('id="optRows"'))
+        self.assertGreater(body.index('id="modelSelect"'), body.index('a-settings"'))
