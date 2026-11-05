@@ -463,7 +463,8 @@
   }
   .chathead-actions .btn-settings,
   .chathead-actions .btn-topo,
-  .chathead-actions .btn-clear {
+  .chathead-actions .btn-clear,
+  .chathead-actions .btn-think {
     font-family: var(--mono); font-size: .72rem; letter-spacing: .06em;
     text-transform: uppercase; border: 1px solid var(--line);
     background: var(--bg2); color: var(--amber2); border-radius: var(--radius);
@@ -471,7 +472,8 @@
   }
   .chathead-actions .btn-settings:hover,
   .chathead-actions .btn-topo:hover,
-  .chathead-actions .btn-clear:hover { border-color: var(--accent); color: var(--accent); }
+  .chathead-actions .btn-clear:hover,
+  .chathead-actions .btn-think:hover { border-color: var(--accent); color: var(--accent); }
   .drawer-left {
     position: fixed; top: 0; left: 0; height: 100%; width: min(380px, 33vw);
     min-width: 280px; background: var(--bg2); border-right: 1px solid var(--line);
@@ -523,6 +525,7 @@
         <button type="button" class="btn-settings" id="btnOpenSettings">Settings</button>
         <button type="button" class="btn-topo" id="btnOpenTopo">Topology</button>
         <button type="button" class="btn-clear" id="btnClear">Clear chat</button>
+        <button type="button" class="btn-think" id="btnThink" title="Click to change how much the model thinks before answering">Thinking: off</button>
       </div>
     </div>
 
@@ -907,6 +910,8 @@
 
   function setStatus(snap) {
     const st = (snap && snap.status) || "idle";
+    state.loadedModel = (snap && (snap.model_id || snap.model_name)) || "";
+    renderThink();
     const dot = $("statusDot");
     const text = $("statusText");
     dot.className = "dot";
@@ -1025,6 +1030,39 @@
     state.followChat = m.scrollHeight - m.scrollTop - m.clientHeight < 40;
   }, { passive: true });
 
+  // Thinking button (under Clear chat). Qwen3 / Gemma 4: on or off.
+  // gpt-oss can't switch thinking off, so it cycles reasoning low / medium / high.
+  function thinkKind() {
+    const m = (state.loadedModel || "").toLowerCase();
+    return /gpt-oss|gpt_oss/.test(m) ? "effort" : "onoff";
+  }
+  function thinkPrefs() {
+    let p = {};
+    try { p = JSON.parse(localStorage.getItem("caravan.thinking") || "{}"); } catch (_) {}
+    return { on: p.on === true, effort: ["low","medium","high"].includes(p.effort) ? p.effort : "medium" };
+  }
+  function renderThink() {
+    const b = $("btnThink"); if (!b) return;
+    const p = thinkPrefs();
+    b.textContent = thinkKind() === "effort" ? `Thinking: ${p.effort}` : `Thinking: ${p.on ? "on" : "off"}`;
+  }
+  $("btnThink").onclick = () => {
+    const p = thinkPrefs();
+    if (thinkKind() === "effort") {
+      const order = ["low","medium","high"];
+      p.effort = order[(order.indexOf(p.effort) + 1) % order.length];
+    } else {
+      p.on = !p.on;
+    }
+    try { localStorage.setItem("caravan.thinking", JSON.stringify(p)); } catch (_) {}
+    renderThink();
+  };
+  function thinkKwargs() {
+    const p = thinkPrefs();
+    return thinkKind() === "effort" ? { reasoning_effort: p.effort } : { enable_thinking: p.on };
+  }
+  renderThink();
+
   // Keep the chat across page refreshes: session id + messages live in localStorage.
   // Clear chat (or switching/stopping the model) starts fresh as before.
   const LS_SID = "caravan.session", LS_MSGS = "caravan.messages";
@@ -1089,11 +1127,8 @@
       max_tokens: 768,
       stream_options: { include_usage: true },
     };
-    // Qwen3: append /no_think for snappier short answers when that model is loaded.
-    const modelLabel = ($("modelSelect").selectedOptions[0] || {}).textContent || "";
-    if (/qwen3/i.test(modelLabel) && !/\/no_think/i.test(text)) {
-      payload.messages[0].content = text + " /no_think";
-    }
+    // Thinking button: passed to the model's chat template.
+    payload.chat_template_kwargs = thinkKwargs();
 
     let full = "";
     let meta = null;
