@@ -302,7 +302,12 @@ Open tasks for this rule:
       sinks (gpt-oss), and a reload trial that breaks the load is rejected
       and rolled back to the winner.
 
-14. **Node view (dashboard).** A live view like exo's, in Caravan's own
+14. **Node view (dashboard).** *First cut built Nov 5:* `GET /api/nodes`
+    on the web server (proxy/node_stats.py on each Mini, EXO2 over the
+    packer ssh link, cached ~4 s) and live panels in the Topology drawer:
+    model + layers held, models on disk, CPU/GPU, RAM, disk free,
+    temperature via macmon when installed (else thermal pressure only).
+    A live view like exo's, in Caravan's own
     style: each Mini, the layers it holds, memory, speed, chats in flight,
     whether guess-ahead is helping, plus **disk space, temperature, and
     CPU**. Most of the data is already logged; it needs a small status

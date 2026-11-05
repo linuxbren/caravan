@@ -501,6 +501,21 @@
   }
   .topo-body { display: flex; flex-direction: column; gap: 12px; }
   .topo-body .node { margin: 0; }
+  /* ROADMAP #14 live node view: hard 2px panels, 1px phosphor lines, mono. */
+  .drawer-left { width: min(440px, 40vw); }
+  .nstat { margin-top: 10px; font-family: var(--mono); font-size: .7rem; color: var(--muted); }
+  .nstat .bar { display: grid; grid-template-columns: 4.2em 1fr 7.5em; gap: 8px; align-items: center; margin: 4px 0; }
+  .nstat .track { height: 8px; border: 1px solid var(--line); border-radius: 2px; background: var(--bg); overflow: hidden; }
+  .nstat .fill { height: 100%; background: var(--accent); }
+  .nstat .fill.hot { background: var(--warn); }
+  .nstat .v { text-align: right; color: var(--text); }
+  .nstat .kv { display: flex; justify-content: space-between; margin: 3px 0; }
+  .nstat .kv b { color: var(--text); font-weight: 400; }
+  .nstat .models { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 6px; }
+  .nstat .models div { display: flex; justify-content: space-between; gap: 8px; }
+  .nstat .models div span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nstat .models .on { color: var(--accent); }
+  .nstat .err { color: var(--warn); }
 
 
   .a-string { display: none !important; }
@@ -580,12 +595,14 @@
       <div class="role">Lead · EXO1</div>
       <div class="name" id="leadName">—</div>
       <div class="meta" id="leadMeta">waiting</div>
+      <div class="nstat" id="leadStats">loading…</div>
     </div>
     <div class="cable"><span>Thunderbolt · packer ↔ lead</span></div>
     <div class="node packer">
       <div class="role">Packer 1 · EXO2</div>
       <div class="name" id="packerName">—</div>
       <div class="meta" id="packerMeta">waiting</div>
+      <div class="nstat" id="packerStats">loading…</div>
     </div>
   </div>
 </aside>
@@ -1361,12 +1378,55 @@
   })();
 })();
 
+  // ROADMAP #14: live node stats from /api/nodes, polled only while the drawer is open.
+  let nodesTimer = null;
+  const esc = (t) => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  function nbar(label, pct, txt, hot) {
+    const p = Math.max(0, Math.min(100, Number(pct) || 0));
+    return `<div class="bar"><span>${label}</span><span class="track"><span class="fill ${hot ? "hot" : ""}" style="width:${p}%;display:block"></span></span><span class="v">${esc(txt)}</span></div>`;
+  }
+  function renderNode(n) {
+    if (!n) return "no data";
+    if (n.error && n.cpu_pct == null) return `<span class="err">can't reach: ${esc(n.error)}</span>`;
+    const ram = n.ram || {}, dk = n.disk || {};
+    const ramPct = ram.total_gb ? 100 * ram.used_gb / ram.total_gb : 0;
+    const dPct = dk.total_gb ? 100 * dk.used_gb / dk.total_gb : 0;
+    const temp = n.temp_c != null ? `${n.temp_c.toFixed(0)}°C CPU` : "no reading";
+    let h = "";
+    h += nbar("CPU", n.cpu_pct, `${n.cpu_pct ?? "?"}%`, n.cpu_pct > 85);
+    if (n.gpu_pct != null) h += nbar("GPU", n.gpu_pct, `${n.gpu_pct}%`, n.gpu_pct > 95);
+    h += nbar("RAM", ramPct, `${ram.free_gb ?? "?"} GB free`, ramPct > 90);
+    h += nbar("Disk", dPct, `${dk.free_gb ?? "?"} GB free`, dk.free_gb != null && dk.free_gb < 20);
+    h += `<div class="kv"><span>Temp</span><b>${esc(temp)}</b></div>`;
+    h += `<div class="kv"><span>Thermal pressure</span><b>${esc(n.thermal_pressure || "?")}</b></div>`;
+    if (n.layers) h += `<div class="kv"><span>Holds</span><b>${esc(n.layers.replace(/^[^:]*:\s*/, ""))}${n.weights_gb ? ` · ${n.weights_gb} GB` : ""}</b></div>`;
+    const ms = n.models || [];
+    h += `<div class="models"><div><span>Models on disk (${ms.length})</span><span></span></div>` +
+      ms.map(m => `<div title="${esc(m.where)}/${esc(m.name)}"><span>${esc(m.name.replace(/^[^-]+--/, ""))}</span><span>${m.size_gb} GB</span></div>`).join("") + `</div>`;
+    return h;
+  }
+  async function pollNodes() {
+    try {
+      const r = await fetch("/api/nodes"); const j = await r.json();
+      const [lead, pk] = j.nodes || [];
+      document.getElementById("leadStats").innerHTML = renderNode(lead);
+      document.getElementById("packerStats").innerHTML = renderNode(pk);
+      const cab = document.querySelector("#topoBody .cable span");
+      if (cab && j.link) cab.textContent = `Thunderbolt · ${j.link}`;
+    } catch (e) {
+      document.getElementById("leadStats").textContent = "node stats unavailable";
+    }
+  }
   function openTopo() {
+    pollNodes();
+    clearInterval(nodesTimer);
+    nodesTimer = setInterval(pollNodes, 5000);
     document.getElementById("topoDrawer").classList.add("open");
     document.getElementById("topoBackdrop").classList.add("open");
     document.getElementById("topoDrawer").setAttribute("aria-hidden", "false");
   }
   function closeTopo() {
+    clearInterval(nodesTimer); nodesTimer = null;
     document.getElementById("topoDrawer").classList.remove("open");
     document.getElementById("topoBackdrop").classList.remove("open");
     document.getElementById("topoDrawer").setAttribute("aria-hidden", "true");

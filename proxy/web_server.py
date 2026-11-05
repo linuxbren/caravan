@@ -56,7 +56,73 @@ class App:
         self.httpd = None
         self._inflight = 0
         self._inflight_lock = threading.Lock()
+        self._nodes_lock = threading.Lock()
+        self._nodes_cache = None
+        self._nodes_busy = False
         self.optimizer = web_optimize.Optimizer(mgr, inflight=lambda: self._inflight)
+
+    # ---- ROADMAP #14: live node view (GET /api/nodes) -------------------
+    NODES_TTL = 4.0
+
+    def nodes(self) -> dict:
+        """Cached a few seconds; refreshed in the background so polls stay fast."""
+        with self._nodes_lock:
+            c = self._nodes_cache
+            stale = c is None or time.time() - c["t"] > self.NODES_TTL
+            if stale and not self._nodes_busy:
+                self._nodes_busy = True
+                threading.Thread(target=self._nodes_refresh, daemon=True).start()
+        if c is None:
+            # First call: wait for the first gather.
+            for _ in range(150):
+                time.sleep(0.1)
+                if self._nodes_cache is not None:
+                    break
+            c = self._nodes_cache or {"t": time.time(), "nodes": [], "error": "gathering"}
+        return c
+
+    def _nodes_refresh(self):
+        try:
+            import node_stats
+            out = {"lead": None, "packer": None}
+
+            def local():
+                try:
+                    out["lead"] = node_stats.gather()
+                except Exception as e:  # noqa: BLE001
+                    out["lead"] = {"error": str(e)}
+
+            def remote():
+                try:
+                    r = self.mgr._ssh("/usr/bin/python3 ~/cv3/proxy/node_stats.py", timeout=25)
+                    out["packer"] = (json.loads(r.stdout.strip().splitlines()[-1]) if r.returncode == 0
+                                     else {"error": (r.stderr or r.stdout or "ssh failed")[-200:]})
+                except Exception as e:  # noqa: BLE001
+                    out["packer"] = {"error": str(e)}
+
+            ts = [threading.Thread(target=local), threading.Thread(target=remote)]
+            for t in ts:
+                t.start()
+            snap = self.mgr.snapshot()
+            split = self.mgr.lead_split_info() if snap.get("status") == "ready" else None
+            for t in ts:
+                t.join(30)
+            lead_l = (split or {}).get("lead") or {}
+            pk = ((split or {}).get("packers") or [{}])[0] if split and not split.get("error") else {}
+            model = snap.get("model_name") if snap.get("status") == "ready" else None
+            nodes = [
+                dict(out["lead"] or {}, role="lead", label="EXO1", model=model,
+                     layers=lead_l.get("name"), weights_gb=lead_l.get("weights_gb"),
+                     active_gb=lead_l.get("active_gb")),
+                dict(out["packer"] or {}, role="packer", label="EXO2", model=model,
+                     layers=pk.get("name"), weights_gb=pk.get("weights_gb"),
+                     active_gb=pk.get("active_gb"), sessions=pk.get("sessions")),
+            ]
+            self._nodes_cache = {"t": time.time(), "status": snap.get("status"),
+                                 "link": (split or {}).get("peer") or self.mgr.packer_peer,
+                                 "nodes": nodes}
+        finally:
+            self._nodes_busy = False
 
     def chat_begin(self):
         with self._inflight_lock:
@@ -146,6 +212,8 @@ def make_handler(app: App):
                                        "current": app.mgr.snapshot().get("model_id")})
             if path == "/api/settings":
                 return self._api_settings()
+            if path == "/api/nodes":
+                return self._json(200, app.nodes())
             if path == "/api/optimize":
                 return self._json(200, app.optimizer.snapshot())
             if path == "/api/journey":
