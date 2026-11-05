@@ -238,14 +238,12 @@
 
   .nodes { display: flex; flex-direction: column; gap: 12px; }
   .node {
-    padding: 14px; border-radius: var(--radius); background: var(--bg3);
-    border: 1px solid var(--line); position: relative; overflow: hidden;
+    padding: 0; border: 0; background: transparent;
+    border-radius: 0; position: relative; overflow: visible;
   }
-  .node.lead { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
-  .node.packer { border-color: color-mix(in srgb, var(--accent) 28%, transparent); }
-  .node .role { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-  .node .name { font-size: 1.05rem; font-weight: 600; margin-top: 4px; }
-  .node .meta { margin-top: 8px; font-family: var(--mono); font-size: .72rem; color: var(--muted); line-height: 1.45; }
+  .node .role { font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .node .name { font-size: .95rem; font-weight: 600; margin-top: 2px; color: var(--text); text-shadow: var(--bloom); }
+  .node .meta { margin-top: 6px; font-family: var(--mono); font-size: .68rem; color: var(--muted); line-height: 1.4; }
   .cable {
     height: 28px; display: flex; align-items: center; justify-content: center;
     color: var(--muted); font-size: .72rem; letter-spacing: .08em;
@@ -501,8 +499,88 @@
     margin: 0; font-size: .85rem; color: var(--amber2); letter-spacing: .08em;
     text-transform: uppercase; font-family: var(--mono);
   }
-  .topo-body { display: flex; flex-direction: column; gap: 12px; }
+  .topo-body { display: flex; flex-direction: column; gap: 18px; padding-bottom: 8px; }
   .topo-body .node { margin: 0; }
+
+  /* ---- Mac mini silhouette (top-down + front edge) — CRT phosphor ---- */
+  .mini-shell {
+    position: relative;
+    width: 100%;
+    color: var(--accent);
+    border-radius: 22px;
+    background:
+      radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
+      linear-gradient(180deg, color-mix(in srgb, var(--bg3) 92%, var(--accent)), var(--bg2));
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    box-shadow:
+      var(--bloom),
+      inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
+      inset 0 0 28px rgba(0,0,0,.35);
+    overflow: hidden;
+  }
+  .mini-shell::before {
+    /* soft top vent hint */
+    content: ""; position: absolute; left: 18%; right: 18%; top: 10px; height: 2px; z-index: 0;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    opacity: .55;
+  }
+  .mini-face {
+    position: relative; z-index: 1;
+    padding: 14px 14px 10px;
+  }
+  .mini-front {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    height: 28px;
+    border-top: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 40%, #000), color-mix(in srgb, var(--bg2) 80%, #000));
+  }
+  .mini-front .port {
+    display: inline-block; flex: 0 0 auto;
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    background: color-mix(in srgb, var(--bg) 70%, #000);
+    box-shadow: inset 0 0 4px rgba(0,0,0,.55);
+  }
+  .mini-front .port.usbc {
+    width: 14px; height: 5px; border-radius: 1px;
+  }
+  .mini-front .port.jack {
+    width: 7px; height: 7px; border-radius: 50%;
+    margin-left: 4px;
+  }
+  .mini-front .led {
+    width: 8px; height: 8px; border-radius: 50%; margin-left: auto;
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    background: color-mix(in srgb, var(--accent) 18%, #000);
+    box-shadow: none;
+    transition: background .25s, box-shadow .25s, opacity .25s;
+  }
+  .node.fresh .mini-front .led {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    box-shadow: 0 0 8px var(--accent), 0 0 2px var(--accent2);
+    opacity: 1;
+  }
+  .node.stale .mini-front .led,
+  .node:not(.fresh) .mini-front .led {
+    opacity: .4;
+    box-shadow: none;
+  }
+  .node.fresh:not(.stale) .mini-front .led { opacity: 1; }
+  /* LED carries freshness; drop the text "stale" chip on nstat. */
+  .topo-body .nstat.stale::after { content: none; }
+  .topo-body .nstat.stale { opacity: 1; }
+  .node .name[hidden] { display: none !important; }
+
+  .node.lead .mini-shell {
+    border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+  .node.packer .mini-shell {
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  }
   .chathead-actions .btn-topo.on {
     border-color: var(--accent); color: var(--accent2);
     background: color-mix(in srgb, var(--accent) 18%, transparent) !important;
@@ -633,17 +711,37 @@
     <button type="button" class="ghost" id="btnCloseTopo">Close</button>
   </div>
   <div class="topo-body" id="topoBody">
-    <div class="node lead">
-      <div class="role">Lead · EXO1</div>
-      <div class="name" id="leadName">—</div>
-      <div class="meta" id="leadMeta">waiting</div>
-      <div class="nstat" id="leadStats">loading…</div>
+    <div class="node lead" id="leadCard">
+      <div class="mini-shell" aria-label="Mac mini · EXO1">
+        <div class="mini-face">
+          <div class="role">Lead · EXO1</div>
+          <div class="name" id="leadName">—</div>
+          <div class="meta" id="leadMeta">waiting</div>
+          <div class="nstat" id="leadStats">loading…</div>
+        </div>
+        <div class="mini-front" title="Front: USB-C · USB-C · headphone · power">
+          <span class="port usbc" aria-hidden="true"></span>
+          <span class="port usbc" aria-hidden="true"></span>
+          <span class="port jack" aria-hidden="true"></span>
+          <span class="led" id="leadLed" title="Power / live"></span>
+        </div>
+      </div>
     </div>
-    <div class="node packer">
-      <div class="role">Packer 1 · EXO2</div>
-      <div class="name" id="packerName">—</div>
-      <div class="meta" id="packerMeta">waiting</div>
-      <div class="nstat" id="packerStats">loading…</div>
+    <div class="node packer" id="packerCard">
+      <div class="mini-shell" aria-label="Mac mini · EXO2">
+        <div class="mini-face">
+          <div class="role">Packer 1 · EXO2</div>
+          <div class="name" id="packerName">—</div>
+          <div class="meta" id="packerMeta">waiting</div>
+          <div class="nstat" id="packerStats">loading…</div>
+        </div>
+        <div class="mini-front" title="Front: USB-C · USB-C · headphone · power">
+          <span class="port usbc" aria-hidden="true"></span>
+          <span class="port usbc" aria-hidden="true"></span>
+          <span class="port jack" aria-hidden="true"></span>
+          <span class="led" id="packerLed" title="Power / live"></span>
+        </div>
+      </div>
     </div>
   </div>
 </aside>
@@ -1025,22 +1123,29 @@
       renderActive(state.active);
       renderTuning(j.tuning, j.optimize);
       const split = j.split;
+      const modelName = (j.worker && j.worker.status === "ready" && j.worker.model_name)
+        ? String(j.worker.model_name).trim() : "";
+      const setName = (id, name) => {
+        const el = $(id);
+        if (!el) return;
+        if (name) { el.textContent = name; el.hidden = false; }
+        else { el.textContent = ""; el.hidden = true; }
+      };
+      // Name line = loaded model (same on both Minis). Hide when nothing is loaded.
+      setName("leadName", modelName);
+      setName("packerName", modelName);
       if (split && split.lead) {
-        $("leadName").textContent = split.lead.name || "lead";
         $("leadMeta").textContent =
           `weights ${split.lead.weights_gb ?? "?"} GB · active ${split.lead.active_gb ?? "?"} GB\n` +
           `peak ${split.lead.peak_gb ?? "?"} GB`;
       } else {
-        $("leadName").textContent = j.worker.model_name || "—";
-        $("leadMeta").textContent = j.worker.status === "ready" ? "healthy" : j.worker.status;
+        $("leadMeta").textContent = j.worker.status === "ready" ? "healthy" : (j.worker.status || "waiting");
       }
       if (split && split.packers && split.packers[0]) {
         const p = split.packers[0];
-        $("packerName").textContent = p.name || "packer 1";
         $("packerMeta").textContent =
           `stage ${p.stage || "?"} · weights ${p.weights_gb ?? p.gb ?? "?"} GB`;
       } else {
-        $("packerName").textContent = "—";
         $("packerMeta").textContent = j.worker.status === "ready" ? "connected" : "waiting";
       }
     } catch (e) {
@@ -1589,7 +1694,19 @@
     if (gotFresh) nodeFreshAt[key] = Date.now();
     el.innerHTML = renderNode(n);
     const age = Date.now() - (nodeFreshAt[key] || 0);
-    el.classList.toggle("stale", !!(nodeFreshAt[key] && age > 5000));
+    const stale = !!(nodeFreshAt[key] && age > 5000);
+    el.classList.toggle("stale", stale);
+    const card = el.closest(".node");
+    if (card) {
+      card.classList.toggle("stale", stale);
+      card.classList.toggle("fresh", !stale && !!nodeFreshAt[key]);
+      const nameEl = card.querySelector(".name");
+      if (nameEl) {
+        const nm = (n && n.model) ? String(n.model).trim() : "";
+        if (nm) { nameEl.textContent = nm; nameEl.hidden = false; }
+        else { nameEl.textContent = ""; nameEl.hidden = true; }
+      }
+    }
   }
   async function pollNodes() {
     if (nodesInflight) return;
@@ -1610,6 +1727,8 @@
         if (nodeLast[key]) {
           el.innerHTML = renderNode(nodeLast[key]);
           el.classList.add("stale");
+          const card = el.closest(".node");
+          if (card) { card.classList.add("stale"); card.classList.remove("fresh"); }
         } else if (!el.innerHTML || el.textContent === "loading…") {
           el.innerHTML = `<span class="err">waiting for first sample…</span>`;
         }
