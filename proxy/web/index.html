@@ -1025,6 +1025,33 @@
     state.followChat = m.scrollHeight - m.scrollTop - m.clientHeight < 40;
   }, { passive: true });
 
+  // Keep the chat across page refreshes: session id + messages live in localStorage.
+  // Clear chat (or switching/stopping the model) starts fresh as before.
+  const LS_SID = "caravan.session", LS_MSGS = "caravan.messages";
+  function saveChat() {
+    try {
+      if (state.session) localStorage.setItem(LS_SID, state.session);
+      else localStorage.removeItem(LS_SID);
+      const m = $("messages");
+      if (!m.querySelector(".msg")) { localStorage.removeItem(LS_MSGS); return; }
+      const keep = m.cloneNode(true);
+      keep.querySelectorAll('.think[data-placeholder="1"]').forEach(e => e.remove());
+      // Stay well under the browser's ~5 MB budget: drop the oldest messages first.
+      while (keep.innerHTML.length > 1500000 && keep.querySelectorAll(".msg").length > 2) {
+        keep.querySelector(".msg").remove();
+      }
+      localStorage.setItem(LS_MSGS, keep.innerHTML);
+    } catch (_) {}
+  }
+  try {
+    state.session = localStorage.getItem(LS_SID) || null;
+    const saved = localStorage.getItem(LS_MSGS);
+    if (saved) {
+      $("messages").innerHTML = saved;
+      $("messages").scrollTop = $("messages").scrollHeight;
+    }
+  } catch (_) {}
+
   async function sendChat() {
     if (state.streaming) return;
     const text = $("input").value.trim();
@@ -1178,6 +1205,7 @@
       clearTimeout(totalTimer);
       if (state.chatAbort === ac) state.chatAbort = null;
       state.streaming = false;
+      saveChat();
       refreshStatus();
     }
   }
@@ -1225,6 +1253,7 @@
     try {
       await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: id, settings: state.choice }) });
       state.session = null; // new model → new sessions
+      saveChat();
     } catch (e) {
       alert(e.error || e.message || String(e));
     }
@@ -1243,6 +1272,7 @@
     cancelChat();
     await api("/api/models/stop", { method: "POST", body: "{}" });
     state.session = null;
+    saveChat();
     refreshStatus();
   };
   $("btnClear").onclick = () => {
@@ -1253,6 +1283,7 @@
     empty.className = "empty"; empty.id = "emptyState";
     empty.innerHTML = `<strong>Cleared.</strong> New session — shared start will pay its one-time setup on the first long system prompt.`;
     $("messages").appendChild(empty);
+    saveChat();
   };
 
   (async () => {
