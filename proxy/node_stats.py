@@ -3,24 +3,26 @@
 
 Runs locally on a Mini and prints JSON: CPU use, GPU Device Utilization %
 (from ioreg), optional GPU power W (macmon), temperature (only when a real
-reading is available), thermal pressure, RAM, disk free, and the models on
-disk. Python 3.9-compatible, stdlib only, no sudo.
+reading is available), thermal pressure, RAM, and disk free.
+Python 3.9-compatible, stdlib only, no sudo.
 
 GPU % uses IOAccelerator's "Device Utilization %" — macmon's gpu_usage can
 read 100% while --split-keepalive only keeps the clock up.
 
-Temperature: macOS has no unprivileged temperature API. If `macmon`
-(github.com/vladkens/macmon, reads the SMC without sudo) is installed we
-use its cpu_temp_avg (file-cached ~2.5s so 1s polls stay light). Otherwise
-temp_c is null — never a guess — and the page shows thermal pressure from
-`pmset -g therm` instead.
+Temperature / CPU / GPU watts come from a long-lived `macmon pipe -i 500`
+daemon started on first poll and stopped after ~30s with no polls. That keeps
+500ms Topology refreshes fresh without paying macmon's ~1.5s cold start each
+time. `models_on_disk()` stays here for the future model picker but is not
+gathered for /api/nodes.
 
-    python3 proxy/node_stats.py            # JSON to stdout
+    python3 proxy/node_stats.py                 # JSON to stdout
+    python3 proxy/node_stats.py --macmon-daemon # background pipe writer
 """
 import json
 import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -32,12 +34,13 @@ MODEL_DIRS = [HOME / ".exo" / "models", HOME / ".caravan" / "mlx-models"]
 SKIP = {"caches", "drafts"}
 MACMON = [HOME / ".cargo" / "bin" / "macmon", Path("/opt/homebrew/bin/macmon"),
           Path("/usr/local/bin/macmon")]
-_SIZE_CACHE = HOME / ".caravan" / "web-ui" / "model_sizes.json"
-_MM_CACHE = HOME / ".caravan" / "web-ui" / "macmon_cache.json"
-_MODELS_LIST_CACHE = HOME / ".caravan" / "web-ui" / "models_list_cache.json"
-# macmon pipe takes ~1.5s on these Minis; reuse across 1s polls / SSH gathers.
-_MM_TTL = 2.5
-_MODELS_TTL = 60.0
+_UI = HOME / ".caravan" / "web-ui"
+_SIZE_CACHE = _UI / "model_sizes.json"
+_MM_LIVE = _UI / "macmon_live.json"          # {"t": epoch, "data": {...}}
+_MM_PID = _UI / "macmon_pipe.pid"
+_MM_LAST_POLL = _UI / "macmon_last_poll"     # mtime = last gather()/ensure
+_MM_IDLE_STOP = 30.0
+_MM_INTERVAL_MS = 500
 
 
 def _run(cmd, timeout=6):
@@ -47,47 +50,153 @@ def _run(cmd, timeout=6):
         return ""
 
 
-def _read_json_cache(path, ttl):
+def _touch_last_poll():
     try:
-        c = json.loads(path.read_text())
-        if time.time() - float(c.get("t", 0)) <= ttl:
-            return c.get("data")
-    except (OSError, ValueError, TypeError):
-        pass
-    return None
-
-
-def _write_json_cache(path, data):
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"t": time.time(), "data": data}))
+        _UI.mkdir(parents=True, exist_ok=True)
+        _MM_LAST_POLL.write_text(str(time.time()))
     except OSError:
         pass
 
 
-def macmon(*, force=False):
-    """SMC sample via macmon. File-cached so 1s polls do not stack 1.5s samples."""
-    if not force:
-        try:
-            c = json.loads(_MM_CACHE.read_text())
-            if time.time() - float(c.get("t", 0)) <= _MM_TTL:
-                return c.get("data")
-        except (OSError, ValueError, TypeError):
-            pass
-    exe = next((str(p) for p in MACMON if p.exists()), shutil.which("macmon"))
-    if not exe:
-        _write_json_cache(_MM_CACHE, None)
-        return None
-    # -i 200: one sample; wall time is still ~1.5s (SMC warmup), hence the cache.
-    out = _run([exe, "pipe", "-s", "1", "-i", "200"], timeout=8).strip().splitlines()
+def _last_poll_age():
     try:
-        data = json.loads(out[-1]) if out else None
-    except ValueError:
-        data = None
-    _write_json_cache(_MM_CACHE, data)
-    return data
+        return time.time() - _MM_LAST_POLL.stat().st_mtime
+    except OSError:
+        return 1e9
 
 
+def _pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def _read_pid():
+    try:
+        return int(_MM_PID.read_text().strip())
+    except (OSError, ValueError):
+        return None
+
+
+def _stop_macmon_daemon():
+    pid = _read_pid()
+    if pid and _pid_alive(pid):
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+        for _ in range(20):
+            if not _pid_alive(pid):
+                break
+            time.sleep(0.05)
+        if _pid_alive(pid):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+    try:
+        _MM_PID.unlink()
+    except OSError:
+        pass
+
+
+def _macmon_exe():
+    return next((str(p) for p in MACMON if p.exists()), shutil.which("macmon"))
+
+
+def run_macmon_daemon():
+    """Long-lived: macmon pipe -i 500 → macmon_live.json; exit after idle stop."""
+    _UI.mkdir(parents=True, exist_ok=True)
+    _MM_PID.write_text(str(os.getpid()))
+    exe = _macmon_exe()
+    if not exe:
+        return
+    # Detach from the caller’s process group so web/SSH exit doesn’t kill us.
+    try:
+        os.setsid()
+    except OSError:
+        pass
+    proc = subprocess.Popen(
+        [exe, "pipe", "-i", str(_MM_INTERVAL_MS)],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        text=True, bufsize=1,
+    )
+    try:
+        while True:
+            line = proc.stdout.readline() if proc.stdout else ""
+            if not line:
+                if proc.poll() is not None:
+                    break
+                time.sleep(0.05)
+                continue
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+            except ValueError:
+                continue
+            try:
+                tmp = _MM_LIVE.with_suffix(".tmp")
+                tmp.write_text(json.dumps({"t": time.time(), "data": data}))
+                tmp.replace(_MM_LIVE)
+            except OSError:
+                pass
+            if _last_poll_age() > _MM_IDLE_STOP:
+                break
+    finally:
+        try:
+            proc.terminate()
+            proc.wait(timeout=2)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+        try:
+            if _read_pid() == os.getpid():
+                _MM_PID.unlink()
+        except OSError:
+            pass
+
+
+def ensure_macmon_daemon():
+    """Touch last-poll and start the pipe daemon if it is not already running."""
+    _touch_last_poll()
+    pid = _read_pid()
+    if pid and _pid_alive(pid):
+        return
+    if not _macmon_exe():
+        return
+    _UI.mkdir(parents=True, exist_ok=True)
+    # Re-exec this file as a daemon so lead (in-process) and packer (SSH CLI)
+    # share the same live file.
+    cmd = [sys.executable, str(Path(__file__).resolve()), "--macmon-daemon"]
+    subprocess.Popen(
+        cmd,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL, start_new_session=True,
+        close_fds=True,
+    )
+
+
+def macmon_live():
+    """Latest sample from the background pipe, or None if not ready yet."""
+    ensure_macmon_daemon()
+    try:
+        c = json.loads(_MM_LIVE.read_text())
+        data = c.get("data")
+        # Stale guard: if the daemon died mid-write, ignore very old samples.
+        age = time.time() - float(c.get("t", 0))
+        if age > 5.0:
+            return None, age
+        return data, age
+    except (OSError, ValueError, TypeError):
+        return None, None
 
 
 def gpu_util_ioreg():
@@ -133,7 +242,6 @@ def memory():
         total = int(_run(["sysctl", "-n", "hw.memsize"]).strip())
     except ValueError:
         total = 0
-    # Same idea as Activity Monitor's "used": app + wired + compressed.
     used = (v.get("Anonymous pages", 0) - v.get("Pages purgeable", 0)
             + v.get("Pages wired down", 0) + v.get("Pages occupied by compressor", 0))
     if used <= 0:
@@ -143,7 +251,6 @@ def memory():
 
 
 def disk():
-    # Data volume is where models live; "/" on APFS shares its space.
     p = HOME if HOME.exists() else Path("/")
     u = shutil.disk_usage(str(p))
     return {"total_gb": round(u.total / 1e9, 1), "free_gb": round(u.free / 1e9, 1),
@@ -162,6 +269,7 @@ def _dir_bytes(p: Path) -> int:
 
 
 def models_on_disk():
+    """Reusable for the future model-selection screen; not used by /api/nodes."""
     try:
         cache = json.loads(_SIZE_CACHE.read_text())
     except (OSError, ValueError):
@@ -194,17 +302,15 @@ def models_on_disk():
     return out
 
 
-def models_on_disk_cached():
-    cached = _read_json_cache(_MODELS_LIST_CACHE, _MODELS_TTL)
-    if cached is not None:
-        return cached
-    out = models_on_disk()
-    _write_json_cache(_MODELS_LIST_CACHE, out)
-    return out
-
-
 def gather():
-    mm = macmon()
+    mm, mm_age = macmon_live()
+    # Brief wait on first open so the daemon’s first sample can land.
+    if mm is None:
+        for _ in range(10):
+            time.sleep(0.1)
+            mm, mm_age = macmon_live()
+            if mm is not None:
+                break
     cpu = None
     temp = None
     gpu_power = None
@@ -213,7 +319,7 @@ def gather():
         if isinstance(c, (int, float)):
             cpu = round(c * 100, 1)   # macmon reports a 0-1 fraction
         t = (mm.get("temp") or {}).get("cpu_temp_avg")
-        if isinstance(t, (int, float)) and t > 5:   # 0-ish = no sensor reading
+        if isinstance(t, (int, float)) and t > 5:
             temp = round(t, 1)
         p = mm.get("gpu_power")
         if isinstance(p, (int, float)):
@@ -231,13 +337,19 @@ def gather():
         "load_1m": round(os.getloadavg()[0], 2),
         "temp_c": temp,
         "temp_source": "macmon" if temp is not None else None,
+        "macmon_age_s": round(mm_age, 3) if isinstance(mm_age, (int, float)) else None,
         "thermal_pressure": thermal_pressure(),
         "ram": memory(),
         "disk": disk(),
-        "models": models_on_disk_cached(),
     }
 
 
 if __name__ == "__main__":
+    if "--macmon-daemon" in sys.argv:
+        run_macmon_daemon()
+        sys.exit(0)
+    if "--stop-macmon" in sys.argv:
+        _stop_macmon_daemon()
+        sys.exit(0)
     json.dump(gather(), sys.stdout)
     sys.stdout.write("\n")

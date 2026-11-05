@@ -527,10 +527,6 @@
   .nstat .v { text-align: right; color: var(--text); }
   .nstat .kv { display: flex; justify-content: space-between; margin: 3px 0; }
   .nstat .kv b { color: var(--text); font-weight: 400; }
-  .nstat .models { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 6px; }
-  .nstat .models div { display: flex; justify-content: space-between; gap: 8px; }
-  .nstat .models div span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .nstat .models .on { color: var(--accent); }
   .nstat .err { color: var(--warn); }
 
 
@@ -614,7 +610,6 @@
       <div class="meta" id="leadMeta">waiting</div>
       <div class="nstat" id="leadStats">loading…</div>
     </div>
-    <div class="cable"><span>Thunderbolt · packer ↔ lead</span></div>
     <div class="node packer">
       <div class="role">Packer 1 · EXO2</div>
       <div class="name" id="packerName">—</div>
@@ -1396,7 +1391,7 @@
 })();
 
   // ROADMAP #14: live node stats from /api/nodes.
-  // Poll ~1s while drawer is open AND the tab is visible; skip ticks if a request is in flight.
+  // Poll ~500ms while drawer is open AND the tab is visible; skip ticks if a request is in flight.
   let nodesTimer = null;
   let nodesInflight = false;
   const esc = (t) => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1426,10 +1421,8 @@
     } else {
       h += `<div class="kv"><span>Temp</span><b>${esc(n.thermal_pressure || "no reading")}</b></div>`;
     }
+    if (n.model) h += `<div class="kv"><span>Model</span><b>${esc(n.model)}</b></div>`;
     if (n.layers) h += `<div class="kv"><span>Holds</span><b>${esc(n.layers.replace(/^[^:]*:\s*/, ""))}${n.weights_gb ? ` · ${n.weights_gb} GB` : ""}</b></div>`;
-    const ms = n.models || [];
-    h += `<div class="models"><div><span>Models on disk (${ms.length})</span><span></span></div>` +
-      ms.map(m => `<div title="${esc(m.where)}/${esc(m.name)}"><span>${esc(m.name.replace(/^[^-]+--/, ""))}</span><span>${m.size_gb} GB</span></div>`).join("") + `</div>`;
     return h;
   }
   async function pollNodes() {
@@ -1443,8 +1436,6 @@
       const [lead, pk] = j.nodes || [];
       document.getElementById("leadStats").innerHTML = renderNode(lead);
       document.getElementById("packerStats").innerHTML = renderNode(pk);
-      const cab = document.querySelector("#topoBody .cable span");
-      if (cab && j.link) cab.textContent = `Thunderbolt · ${j.link}`;
     } catch (e) {
       document.getElementById("leadStats").textContent = "node stats unavailable";
     } finally {
@@ -1454,7 +1445,7 @@
   function startNodesPoll() {
     pollNodes();
     clearInterval(nodesTimer);
-    nodesTimer = setInterval(pollNodes, 1000);
+    nodesTimer = setInterval(pollNodes, 500);
   }
   function stopNodesPoll() {
     clearInterval(nodesTimer); nodesTimer = null;
