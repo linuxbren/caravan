@@ -407,7 +407,7 @@
     background: var(--bg2); color: var(--amber2); border-radius: var(--radius);
     padding: 8px 14px; cursor: pointer;
   }
-  .btn-settings:hover { border-color: var(--amber); color: var(--amber); }
+  .btn-settings:hover { border-color: var(--accent); color: var(--accent); }
   .drawer-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,.45);
     opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40;
@@ -457,6 +457,43 @@
     color: var(--accent2);
   }
 
+
+  .chathead-actions {
+    display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+  }
+  .chathead-actions .btn-settings,
+  .chathead-actions .btn-topo,
+  .chathead-actions .btn-clear {
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .06em;
+    text-transform: uppercase; border: 1px solid var(--line);
+    background: var(--bg2); color: var(--amber2); border-radius: var(--radius);
+    padding: 8px 14px; cursor: pointer; text-align: center; width: 100%;
+  }
+  .chathead-actions .btn-settings:hover,
+  .chathead-actions .btn-topo:hover,
+  .chathead-actions .btn-clear:hover { border-color: var(--accent); color: var(--accent); }
+  .drawer-left {
+    position: fixed; top: 0; left: 0; height: 100%; width: min(380px, 33vw);
+    min-width: 280px; background: var(--bg2); border-right: 1px solid var(--line);
+    box-shadow: var(--shadow); transform: translateX(-100%);
+    transition: transform .22s ease; z-index: 50; overflow: auto;
+    padding: 16px 16px 40px;
+  }
+  .drawer-left.open { transform: translateX(0); }
+  .drawer-left .drawer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; position: sticky; top: 0; background: var(--bg2);
+    padding-bottom: 8px; z-index: 1;
+  }
+  .drawer-left .drawer-head h2 {
+    margin: 0; font-size: .85rem; color: var(--amber2); letter-spacing: .08em;
+    text-transform: uppercase; font-family: var(--mono);
+  }
+  .topo-body { display: flex; flex-direction: column; gap: 12px; }
+  .topo-body .node { margin: 0; }
+
+
+  .a-string { display: none !important; }
 </style>
 </head>
 <body>
@@ -483,9 +520,10 @@
   <main class="card chat tube a-chat">
     <div class="chathead">
       <h2>Chat</h2>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div class="chathead-actions">
         <button type="button" class="btn-settings" id="btnOpenSettings">Settings</button>
-        <button class="ghost" id="btnClear">Clear chat</button>
+        <button type="button" class="btn-topo" id="btnOpenTopo">Topology</button>
+        <button type="button" class="btn-clear" id="btnClear">Clear chat</button>
       </div>
     </div>
 
@@ -520,7 +558,29 @@
     </div>
   </main>
 
-  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  
+<div class="drawer-backdrop" id="topoBackdrop"></div>
+<aside class="drawer-left" id="topoDrawer" aria-hidden="true">
+  <div class="drawer-head">
+    <h2>Topology</h2>
+    <button type="button" class="ghost" id="btnCloseTopo">Close</button>
+  </div>
+  <div class="topo-body" id="topoBody">
+    <div class="node lead">
+      <div class="role">Lead · EXO1</div>
+      <div class="name" id="leadName">—</div>
+      <div class="meta" id="leadMeta">waiting</div>
+    </div>
+    <div class="cable"><span>Thunderbolt · packer ↔ lead</span></div>
+    <div class="node packer">
+      <div class="role">Packer 1 · EXO2</div>
+      <div class="name" id="packerName">—</div>
+      <div class="meta" id="packerMeta">waiting</div>
+    </div>
+  </div>
+</aside>
+
+<div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
   <aside class="drawer a-settings" id="settingsDrawer" aria-label="Settings">
     <div class="drawer-head">
       <h2>Settings</h2>
@@ -562,20 +622,6 @@
   <div class="demoted a-miles"><h2>Milestones</h2><div class="clock" id="mileInfo">send a message to see timestamps to 0.01 s</div></div>
   <section class="demoted journey a-journey"><h2>How far we’ve come</h2><div class="strip" id="hlStrip"></div><div class="spark" id="sparkRow"></div></section>
 
-  <div class="card a-string">
-      <h2>The string</h2>
-      <div class="node lead">
-        <div class="role">Lead · EXO1</div>
-        <div class="name" id="leadName">—</div>
-        <div class="meta" id="leadMeta">waiting</div>
-      </div>
-      <div class="cable"><span>Thunderbolt · packer ↔ lead</span></div>
-      <div class="node packer">
-        <div class="role">Packer 1 · EXO2</div>
-        <div class="name" id="packerName">—</div>
-        <div class="meta" id="packerMeta">waiting</div>
-      </div>
-    </div>
 </div>
 
 <script>
@@ -748,8 +794,7 @@
     const el = $("activeChips");
     const items = describeActive(a);
     el.innerHTML = items.length
-      ? `<span class="tag" style="border:none;padding-left:0">running with</span>` +
-        items.map(([t, on]) => `<span class="tag ${on ? "on" : "off"}">${t}</span>`).join("")
+      ? items.map(([t, on]) => `<span class="tag ${on ? "on" : "off"}">${t}</span>`).join("")
       : "";
     if (a) {
       for (const o of state.opts) {
@@ -1107,16 +1152,6 @@
         tdiv.textContent =
           `ttft ${fmt(st.ttft_s)}s · write ${fmt(st.write_tok_s,1)} tok/s · ` +
           `${st.completion_tokens ?? "?"} tok · total ${fmt(st.total_s)}s`;
-        // Day 15: exactly which settings this reply ran with, so on/off can be compared.
-        const ran = describeActive(st.active).map(([t]) => t).join(" · ");
-        const chose = meta.settings ? Object.entries(meta.settings)
-          .filter(([, v]) => v !== "auto").map(([k, v]) => `${k}=${v}`).join(", ") : "";
-        const sdiv = document.createElement("div");
-        sdiv.className = "set";
-        sdiv.textContent = "ran with: " + (ran || "not reported") +
-          " · chosen: " + (chose || "all auto");
-        tdiv.appendChild(document.createElement("br"));
-        tdiv.appendChild(sdiv);
         asst.appendChild(tdiv);
       } else if (!full) {
         bodyEl.textContent = "(no reply — try again, or reload the model)";
@@ -1220,6 +1255,21 @@
     state.poll = setInterval(refreshStatus, 2000);
   })();
 })();
+
+  function openTopo() {
+    document.getElementById("topoDrawer").classList.add("open");
+    document.getElementById("topoBackdrop").classList.add("open");
+    document.getElementById("topoDrawer").setAttribute("aria-hidden", "false");
+  }
+  function closeTopo() {
+    document.getElementById("topoDrawer").classList.remove("open");
+    document.getElementById("topoBackdrop").classList.remove("open");
+    document.getElementById("topoDrawer").setAttribute("aria-hidden", "true");
+  }
+  document.getElementById("btnOpenTopo").addEventListener("click", openTopo);
+  document.getElementById("btnCloseTopo").addEventListener("click", closeTopo);
+  document.getElementById("topoBackdrop").addEventListener("click", closeTopo);
+
 </script>
 </body>
 </html>
