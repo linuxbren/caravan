@@ -127,3 +127,12 @@ ignored (the two-chat path always used the helper). It's honored now.
 5. Put it back to **Auto** and Apply. Repeat for any other option.
    Tip: compare the *second* reply of each pair (the first pays a one-time warm-up),
    and keep Low Power Mode off on both Minis.
+
+## Page layout (Day 15)
+
+Most important first, top to bottom: **Chat → Last reply → Settings** (model
+picker, Load/Unload, "running with" chips, Optimizations) **→ Clock sync |
+Milestones → How far we've come → Load progress | The string** (the
+lead/packer diagram: which layers sit on EXO1 and EXO2). On wide screens the
+paired cards sit side by side in that order; under 820 px everything is one
+column in the same order. `tests/test_web_server.py::PageOrderTest` guards it.
