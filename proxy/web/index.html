@@ -1131,7 +1131,8 @@
       messages: [{ role: "user", content: text }],
       stream: true,
       temperature: 0.7,
-      max_tokens: 768,
+      // Thinking eats tokens before the answer starts, so give it more room.
+      max_tokens: (thinkKind() === "effort" ? thinkPrefs().effort !== "low" : thinkPrefs().on) ? 4096 : 768,
       stream_options: { include_usage: true },
     };
     // Thinking button. gpt-oss gets its reasoning level; every other model gets a

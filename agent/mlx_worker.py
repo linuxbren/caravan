@@ -2724,6 +2724,29 @@ class Engine:
 
 
 
+def _think_label(body):
+    """Thinking setting a request asked for, for the log: on / off / effort / default."""
+    t = body.get("thinking")
+    if isinstance(t, bool):
+        return "on" if t else "off"
+    kw = body.get("chat_template_kwargs") or {}
+    if kw.get("reasoning_effort"):
+        return f"effort {kw['reasoning_effort']}"
+    for k in ("enable_thinking", "thinking"):
+        if isinstance(kw.get(k), bool):
+            return "on" if kw[k] else "off"
+    return "default"
+
+
+def _ntok(tokenizer, text):
+    if not text:
+        return 0
+    try:
+        return len(tokenizer.encode(text, add_special_tokens=False))
+    except Exception:
+        return len(text) // 4
+
+
 def thinking_kwargs(tokenizer, on, kw):
     """Turn a plain thinking on/off into whatever this model's template understands.
 
@@ -2930,6 +2953,7 @@ def make_handler(engine: "Engine"):
                 obj = "text_completion"
             sm = engine.text_machine(prompt, body.get("stop") or []) if chat else None
             text, reasoning = [], []
+            seen = {"r": [], "c": []}   # for the per-reply thinking log line
 
             def pack(content, rs, finish=None, usage=None):
                 ch = {"index": 0, "finish_reason": finish}
@@ -2984,6 +3008,8 @@ def make_handler(engine: "Engine"):
                     segs = sm.feed(piece, final=last) if sm else [("normal", piece)]
                     c = strip_lead("".join(t for k, t in segs if k == "normal"))
                     r = "".join(t for k, t in segs if k == "reasoning")
+                    seen["c"].append(c)
+                    seen["r"].append(r)
                     if stream and (c or r):
                         send(pack(c, r))
                     else:
@@ -2993,6 +3019,8 @@ def make_handler(engine: "Engine"):
                     tail = sm.feed("", final=True)
                     c = strip_lead("".join(t for k, t in tail if k == "normal"))
                     r = "".join(t for k, t in tail if k == "reasoning")
+                    seen["c"].append(c)
+                    seen["r"].append(r)
                     if stream and (c or r):
                         send(pack(c, r))
                     else:
@@ -3007,6 +3035,14 @@ def make_handler(engine: "Engine"):
                 return self._json(500, {"error": str(e)})
             finally:
                 gen.close()   # client gone -> cancels the generation on the mlx thread
+            if chat and info is not None:
+                try:
+                    log(f"session {key}: thinking {_think_label(body)}, reasoning "
+                        f"{_ntok(engine.tokenizer, ''.join(seen['r']))} tok, answer "
+                        f"{_ntok(engine.tokenizer, ''.join(seen['c']))} tok "
+                        f"(of {info['completion_tokens']} generated, max {body.get('max_tokens')})")
+                except Exception:
+                    pass
             usage = {"prompt_tokens": info["prompt_tokens"], "completion_tokens": info["completion_tokens"],
                      "total_tokens": info["prompt_tokens"] + info["completion_tokens"],
                      "prompt_tokens_details": {"cached_tokens": info["cached_tokens"]},
