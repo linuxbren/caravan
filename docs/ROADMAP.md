@@ -591,15 +591,16 @@ flashy UI.
 
 ### Model picker: Ollama / Hugging Face with fit check
 
-Not started. Flash/UI (after performance). Let a user pick **any Ollama
-model** (local or Ollama cloud) or **any Hugging Face model** (and later
-other sources). Today Caravan does not download for chat: GGUF lands via
-the local Ollama store (`ollama pull`, including `hf.co/…` ids); MLX
-weights are placed on disk by hand or with `agent/mlx_split_fetch.py`
-(Hugging Face `snapshot_download` for each Mini's shards). The picker
-should still **size the choice** (disk + memory across the Minis, with
-**headroom for Caravan and a running model**) and give a clear
-recommendation: will work / tight / won't fit — before any download.
+**In progress (phases 1–2 shipping).** Left dock drawer (Models) like
+Topology: HF MLX catalog (mlx-community + convertible), GGUF via HF
+publishers bartowski/unsloth/lmstudio-community (Brenden's "Ollama"),
+Ollama Cloud framework (CLOUD label, `OLLAMA_API_KEY`, untested). Fit
+check color-codes green/yellow/red from `/api/nodes` available RAM +
+disk before display; EXO-style expandable quants; chips + search; on-disk
+list with delete-all-Minis. Split-aware shard download uses
+`agent/mlx_split_fetch.py` then `/api/models/load`. APIs under
+`/api/picker/*`. Still open: phase 3 conversion (`mlx_lm.convert`), phase
+4 GGUF via llama-server on one Mini, phase 5 live Ollama Cloud.
 
 ## Deferred / parked
 

@@ -33,6 +33,7 @@ import web_settings  # noqa: E402
 import web_timing as timing  # noqa: E402
 from web_workers import WorkerManager  # noqa: E402
 import web_optimize  # noqa: E402
+import web_picker  # noqa: E402
 
 DEFAULT_HOST = os.environ.get("CARAVAN_WEB_HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.environ.get("CARAVAN_WEB_PORT", "8190"))
@@ -222,6 +223,16 @@ def make_handler(app: App):
                 snap = app.mgr.snapshot()
                 info = app.mgr.lead_split_info() if snap.get("status") == "ready" else None
                 return self._json(200, {"worker": snap, "split": info})
+            if path == "/api/picker/search":
+                return self._api_picker_search()
+            if path == "/api/picker/disk":
+                return self._api_picker_disk()
+            if path == "/api/picker/jobs":
+                return self._json(200, {"jobs": web_picker.list_jobs()})
+            if path.startswith("/api/picker/jobs/"):
+                jid = path.rsplit("/", 1)[-1]
+                job = web_picker.get_job(jid)
+                return self._json(200 if job else 404, job or {"error": "not found"})
             if path.startswith("/api/"):
                 return self._json(404, {"error": "not found"})
             # fall through to static
@@ -269,6 +280,15 @@ def make_handler(app: App):
             if path == "/api/shutdown":
                 app.want_shutdown()
                 return self._json(200, {"ok": True})
+            if path == "/api/picker/download":
+                return self._api_picker_download(body=body)
+            if path == "/api/picker/download/cancel":
+                jid = (body or {}).get("job_id") or ""
+                return self._json(200, web_picker.cancel_job(jid))
+            if path == "/api/picker/delete":
+                return self._api_picker_delete(body=body)
+            if path == "/api/picker/fit":
+                return self._api_picker_fit(body=body)
             return self._json(404, {"error": "not found"})
 
         def _serve_file(self, rel):
@@ -342,6 +362,123 @@ def make_handler(app: App):
                                    "file": {"path": cfg["path"], "exists": cfg["exists"],
                                             "errors": cfg["errors"], "model": mid, "pins": fsets},
                                    "from_file_loaded": snap.get("from_file") or {}})
+
+
+        def _api_picker_search(self):
+            from urllib.parse import parse_qs, urlparse
+            qs = parse_qs(urlparse(self.path).query)
+            q = (qs.get("q") or qs.get("query") or [""])[0]
+            source = (qs.get("source") or ["all"])[0]
+            try:
+                limit = int((qs.get("limit") or ["30"])[0])
+            except ValueError:
+                limit = 30
+            cat = web_picker.search_catalog(q, source=source, limit=limit)
+            raw = app.nodes() or {}
+            nodes = raw.get("nodes") or []
+            cat["groups"] = web_picker.attach_fit(cat.get("groups") or [], nodes)
+            cat["nodes_used"] = len(nodes)
+            return self._json(200, cat)
+
+        def _api_picker_disk(self):
+            packer_sizes = {}
+            try:
+                cmd = (
+                    'python3 -c "import json; from pathlib import Path; '
+                    "roots=[Path.home()/'.caravan'/'mlx-models', Path.home()/'.exo'/'models']; out={}; "
+                    "[out.__setitem__(p.name.replace('--','/'), round(sum(f.stat().st_size for f in p.rglob('*') if f.is_file())/1e9, 2)) "
+                    'for root in roots if root.is_dir() for p in root.iterdir() if p.is_dir()]; '
+                    'print(json.dumps(out))"'
+                )
+                r = app.mgr._ssh(cmd, timeout=60)
+                if r.returncode == 0 and (r.stdout or "").strip():
+                    packer_sizes = json.loads(r.stdout.strip().splitlines()[-1])
+            except Exception as e:  # noqa: BLE001
+                packer_sizes = {"_error": str(e)}
+            return self._json(200, {
+                "models": web_picker.list_installed(packer_sizes={
+                    k: v for k, v in packer_sizes.items() if not str(k).startswith("_")
+                }),
+                "packer": packer_sizes,
+                "current": app.mgr.snapshot().get("model_id"),
+            })
+
+        def _api_picker_delete(self, body=None):
+            body = body or {}
+            rid = body.get("id") or body.get("repo_id") or ""
+            if not body.get("confirm"):
+                return self._json(400, {"error": "confirm=true required"})
+
+            def ssh_delete(folder):
+                r = app.mgr._ssh(
+                    "rm -rf ~/.caravan/mlx-models/%s ~/.exo/models/%s; echo REMOVED" % (folder, folder),
+                    timeout=120,
+                )
+                return {"removed": "REMOVED" in (r.stdout or ""), "rc": r.returncode}
+
+            out = web_picker.delete_model(
+                rid,
+                current_model_id=app.mgr.snapshot().get("model_id"),
+                ssh_delete=ssh_delete,
+            )
+            return self._json(200 if out.get("ok") else 400, out)
+
+        def _api_picker_fit(self, body=None):
+            body = body or {}
+            nodes = (app.nodes() or {}).get("nodes") or []
+            fit = web_picker.fit_check(
+                weights_gb=float(body.get("weights_gb") or 0),
+                nodes=nodes,
+                cfg=body.get("cfg"),
+                n_layers=body.get("n_layers"),
+                ctx_tokens=int(body.get("ctx_tokens") or web_picker.DEFAULT_CTX),
+                split_ok=bool(body.get("split_ok", True)),
+            )
+            return self._json(200, fit)
+
+        def _api_picker_download(self, body=None):
+            body = body or {}
+            repo = (body.get("repo_id") or body.get("id") or "").strip()
+            if not repo:
+                return self._json(400, {"error": "repo_id required"})
+            if body.get("source") == "cloud" or repo.startswith("ollama-cloud/"):
+                return self._json(400, {"error": "cloud models are framework-only for now"})
+            if body.get("source") == "gguf":
+                return self._json(400, {"error": "GGUF download via llama-server is phase 4"})
+            packer_layers = body.get("packer_layers")
+            try:
+                packer_layers = int(packer_layers) if packer_layers is not None else None
+            except (TypeError, ValueError):
+                packer_layers = None
+
+            def run_lead(repo_id, dest, pk, prog):
+                web_picker.local_download_mlx(repo_id, dest, pk, prog, role="lead")
+
+            def run_packer(repo_id, dest, pk, prog):
+                dest_q = dest.replace("'", "")
+                script = (
+                    "mkdir -p %s; "
+                    "~/.caravan/venvs/mlx/bin/python ~/cv3/agent/mlx_split_fetch.py "
+                    "%s %s --role packer "
+                    % (dest_q, repo_id, dest_q)
+                )
+                if pk:
+                    script += "--packer-layers %d " % int(pk)
+                script += "&& echo PACKER_DL_DONE"
+                prog(10, "ssh packer")
+                r = app.mgr._ssh(script, timeout=3600)
+                if r.returncode != 0 or "PACKER_DL_DONE" not in (r.stdout or ""):
+                    raise RuntimeError((r.stderr or r.stdout or "packer download failed")[-400:])
+                prog(100, "done")
+
+            job = web_picker.start_download(
+                repo,
+                packer_layers=packer_layers,
+                run_lead=run_lead,
+                run_packer=run_packer,
+            )
+            return self._json(200, {"job": job})
+
 
         def _api_load(self, body=None):
             body = body or {}

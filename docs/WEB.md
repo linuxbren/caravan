@@ -25,7 +25,9 @@ as the agent `/health` endpoint). There is no login.
 
 ## What it does
 
-1. **Model picker.** Lists models already on disk. Load starts Packer 1 on
+1. **Model picker.** The **Models** drawer (left dock) searches HF / GGUF / Cloud,
+   color-codes fit from live node RAM, downloads MLX shards per Mini, and lists
+   on-disk models with delete-all. Settings still lists models already on disk. Load starts Packer 1 on
    EXO2 over Thunderbolt SSH, then the lead worker on EXO1 (ports **5560** /
    **8194**). Progress lines stream into the left rail until status is
    `ready`.
@@ -159,3 +161,14 @@ column in the same order. `tests/test_web_server.py::PageOrderTest` guards it.
   prompt so "two chats" gets concurrent samples. Caps: Quick 60 prompts, Deep
   180, and it stops early if 30 prompts add no new coverage.
 - The web server now re-adopts a lead it started earlier after a web-only restart.
+
+
+### Model picker API (`/api/picker/*`)
+
+- `GET /api/picker/search?q=&source=all|hf-mlx|gguf|cloud` — catalog + fit
+- `GET /api/picker/disk` — installed sizes on lead + packer
+- `POST /api/picker/download` `{repo_id}` — split-aware MLX fetch
+- `GET /api/picker/jobs[/id]` — progress; `POST .../download/cancel`
+- `POST /api/picker/delete` `{id, confirm:true}` — all Minis; refuses if loaded
+- `POST /api/picker/fit` — ad-hoc fit check
+GGUF catalog source: Hugging Face (`bartowski`, `unsloth`, `lmstudio-community`).

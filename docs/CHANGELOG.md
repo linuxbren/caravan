@@ -3,6 +3,10 @@
 
 ## Unreleased
 
+- **Model picker (phases 1–2).** Models drawer: HF/GGUF/Cloud catalog, fit colors,
+  expandable quants, chips, on-disk delete-all, split-aware MLX download + load.
+  Conversion / GGUF-llama-server / live Cloud still open.
+
 - **Memory guard (lead).** Estimate KV vs reclaimable RAM before generate; trim oldest turns into `~/.caravan/memory` Markdown notes (EXO1 only) and BM25-recall snippets into a short system note. Topology shows reclaimable RAM; UI notes moved/recalled counts. Config: `memory_dir`, `memory_safety_gb`.
 
 What changed in each Caravan version, newest first. Numbers come from
