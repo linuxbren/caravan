@@ -360,3 +360,57 @@ Example: [`docs/config.example.toml`](config.example.toml).
 - Python 3.9 (the web server) has no `tomllib`, so Caravan reads a small
   TOML subset there: tables, `key = "string" | number | true/false`, `#`
   comments.
+
+
+## Web UI nodes (`~/.caravan/config.toml`)
+
+The Models picker and Topology read the string from optional
+`[web.nodes.<id>]` tables. **A missing `[web.nodes]` section keeps Brenden's
+default two-Mini setup** (EXO1 = local lead, EXO2 = SSH packer), so existing
+labels do not change.
+
+```toml
+# Optional — omit entirely for EXO1 + EXO2 defaults.
+
+[web.nodes.exo1]
+label = "EXO1"
+host = "local"          # local | localhost | 127.0.0.1 → gather on this Mac
+role = "lead"           # lead | packer (head/front aliases accepted)
+order = 0
+
+[web.nodes.exo2]
+label = "EXO2"
+host = "exo2"           # SSH target (or Tailscale name)
+ssh = "exo2"            # optional; defaults to host when not local
+repo = "~/cv3"          # remote checkout with proxy/node_stats.py
+peer = "169.254.x.y:5560"
+role = "packer"
+order = 1
+
+# Third Mini example (fit/chips see it; load still max 2 stages today):
+# [web.nodes.exo3]
+# label = "EXO3"
+# host = "exo3"
+# ssh = "exo3"
+# repo = "~/cv3"
+# role = "packer"
+# order = 2
+```
+
+| key | default | what |
+|---|---|---|
+| `label` | the table id | UI label (chips, progress, disk rows) |
+| `host` | (required) | `local` / localhost, or SSH hostname. **Empty host → node does not exist** (skipped). |
+| `ssh` | `host` when remote | SSH destination for gather / fetch / delete |
+| `repo` / `remote_repo` | `~/cv3` | Path to Caravan checkout on that Mac |
+| `peer` | — | Packer listen `HOST:PORT` (informational / link) |
+| `role` | first = lead, else packer | `lead` or `packer` |
+| `order` | declaration order | Packer ordering |
+
+**Offline vs missing:** a configured host that fails `node_stats` gather is
+marked offline and left out of fit; it still appears in Topology when the
+API returns it. Raise `CARAVAN_MAX_SPLIT_STAGES` (default `2`) only when the
+runtime can actually pipeline that many stages — see ROADMAP “N-stage split”.
+
+Also: `CARAVAN_CONFIG_TOML` overrides the path (default
+`~/.caravan/config.toml`).

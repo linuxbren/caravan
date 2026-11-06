@@ -3,6 +3,8 @@
 
 ## Unreleased
 
+- **Model picker N-node.** Nodes from `~/.caravan/config.toml` `[web.nodes.*]` (default still EXO1/EXO2). Fit/chips/download/Stop/Delete/disk iterate online/configured nodes; 1-node never suggests split; `MAX_SPLIT_STAGES=2` caps actual load with a “N-Mini split coming later” note. See MODEL_PICKER / CONFIGURATION.
+
 - **Model picker (phases 1–2).** Models drawer (see [MODEL_PICKER.md](MODEL_PICKER.md)):
   HF/GGUF/Cloud catalog; capacity-based fit (not current free RAM) with plain
   reasons; live search; real HF sizes; category + **New** chips; max download

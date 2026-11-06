@@ -5,9 +5,10 @@ fit, download, and delete models. It docks on the left like Topology so chat
 stays usable. Phases 1–2 are live on `caravan-v3-mlx-split`; later phases are
 listed at the end.
 
-Code: `proxy/web_picker.py`, `proxy/web_server.py` (`/api/picker/*`),
-`proxy/web/index.html` (drawer), `proxy/picker_disk_sizes.py` (on-disk sizes /
-cleanup), `agent/mlx_split_fetch.py` (split-aware shard download).
+Code: `proxy/web_picker.py`, `proxy/web_nodes.py` (config-driven node list),
+`proxy/web_server.py` (`/api/picker/*`), `proxy/web/index.html` (drawer),
+`proxy/picker_disk_sizes.py` (on-disk sizes / cleanup),
+`agent/mlx_split_fetch.py` (split-aware shard download).
 
 ## Design decisions
 
@@ -58,6 +59,33 @@ Live example (Nov 5 2026, Qwen3 30B loaded, capacity ~17 / ~16 GB):
 | `Qwen2.5-Coder-7B-Instruct-MLX` / `-bf16` | 15.23 GB | yellow — fits on 2 (~10 GB RAM each) |
 | `Qwen3-30B-A3B-4bit` | 17.17 GB | yellow — fits on 2 (~11 GB RAM each) |
 
+### N nodes (not hard-coded EXO1/EXO2)
+
+The picker used to assume exactly two Minis labeled EXO1/EXO2. That broke
+other users' setups (one Mini, or three+).
+
+**Now:**
+
+- Node list comes from `~/.caravan/config.toml` `[web.nodes.<id>]` (see
+  [CONFIGURATION.md](CONFIGURATION.md)). Missing section → Brenden's default
+  two-Mini string (EXO1 local lead, EXO2 SSH) so existing labels stay put.
+- A node with **no `host`** is omitted (does not exist). A configured node that
+  fails gather is shown **offline** and skipped by fit.
+- Fit loops over online nodes only. Capacities are measured per Mini (mixed
+  RAM sizes are fine). With 1 online node: only green/red — never “fits on 2”.
+- Download / progress / Stop / Delete / on-disk sizes iterate every configured
+  node. Shard planning is still per node from the `weight_map`.
+- **Runtime limit:** `mlx_split.py` is still 2-stage (lead + one packer).
+  Constant `web_nodes.MAX_SPLIT_STAGES` (env `CARAVAN_MAX_SPLIT_STAGES`,
+  default `2`). Fit may report fits-on-3 when three Minis are online, but
+  download/load use at most `MAX_SPLIT_STAGES` nodes and surface a clear note
+  like “3-Mini split coming later; runtime loads on 2 today”. Raise the
+  constant when N-stage lands.
+
+Findings (Nov 5 2026): unit tests cover 1 / 2 / 3 fake nodes (mixed RAM, one
+offline). Live 2-Mini path on EXO1 `:8190` kept EXO1/EXO2 labels with no
+config.toml. Mock picker views exercise 1-node and 3-node chip sets.
+
 ### Filters in the drawer
 
 - Category chips (chat, coding, reasoning, vision, image-to-image, voice,
@@ -67,7 +95,9 @@ Live example (Nov 5 2026, Qwen3 30B loaded, capacity ~17 / ~16 GB):
   with search and other chips (`newer=1`).
 - **Max download** — dropdown Any / 5 / 10 / 20 / 50 GB; hides oversized
   quants; unknown sizes stay visible (gray).
-- fits-on-1 / fits-on-2 — client-side after fit attach.
+- **fits-on-1 … fits-on-N** — chips generated from the count of **online**
+  nodes (N). Client-side after fit attach. With one Mini online, only
+  fits-on-1 appears and fit never suggests splitting.
 - Search updates as you type (≈300 ms debounce; stale requests aborted).
 
 ### Split download
@@ -130,8 +160,8 @@ On-disk section of the picker lists:
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/picker/search?q=&source=&filter=&newer=1&limit=` | Catalog + capacity fit |
-| GET | `/api/picker/disk` | Models + cleanup rows (lead + packer) |
-| POST | `/api/picker/download` | `{repo_id, packer_layers?}` parallel fetch |
+| GET | `/api/picker/disk` | Models + cleanup rows (all configured nodes) |
+| POST | `/api/picker/download` | `{repo_id, packer_layers?}` parallel fetch (≤ MAX_SPLIT_STAGES) |
 | GET | `/api/picker/jobs[/id]` | Byte progress |
 | POST | `/api/picker/download/cancel` | Stop + kill fetches |
 | POST | `/api/picker/delete` | `{id, confirm}` or `{kind: hf-cache\|drafts, confirm}` |
@@ -192,5 +222,7 @@ On-disk section of the picker lists:
 - HF-cache delete skips the loaded model’s hub folder but may leave shared
   blobs; drafts re-download when guess-ahead needs them.
 - “You pick” theme, GGUF split, re-enabling self-tune on gpt-oss — later.
+- N-stage split runtime (3+ Minis) still needs `mlx_split.py` changes; picker
+  fit/chips already generic (see ROADMAP).
 
 See also [WEB.md](WEB.md), [MLX-SPLIT.md](MLX-SPLIT.md), [ROADMAP.md](ROADMAP.md).

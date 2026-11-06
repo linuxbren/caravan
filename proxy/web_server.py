@@ -34,6 +34,7 @@ import web_timing as timing  # noqa: E402
 from web_workers import WorkerManager  # noqa: E402
 import web_optimize  # noqa: E402
 import web_picker  # noqa: E402
+import web_nodes  # noqa: E402
 
 DEFAULT_HOST = os.environ.get("CARAVAN_WEB_HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.environ.get("CARAVAN_WEB_PORT", "8190"))
@@ -82,46 +83,40 @@ class App:
             c = self._nodes_cache or {"t": time.time(), "nodes": [], "error": "gathering"}
         return c
 
+    def configured_nodes(self) -> list:
+        """Node list from ~/.caravan/config.toml [web.nodes.*] (defaults EXO1/EXO2)."""
+        return web_nodes.nodes_from_config()
+
+    def _ssh_fn(self):
+        return web_nodes.make_ssh_fn(self.mgr)
+
     def _nodes_refresh(self):
         try:
-            import node_stats
-            out = {"lead": None, "packer": None}
-
-            def local():
-                try:
-                    out["lead"] = node_stats.gather()
-                except Exception as e:  # noqa: BLE001
-                    out["lead"] = {"error": str(e)}
-
-            def remote():
-                try:
-                    r = self.mgr._ssh("/usr/bin/python3 ~/cv3/proxy/node_stats.py", timeout=25)
-                    out["packer"] = (json.loads(r.stdout.strip().splitlines()[-1]) if r.returncode == 0
-                                     else {"error": (r.stderr or r.stdout or "ssh failed")[-200:]})
-                except Exception as e:  # noqa: BLE001
-                    out["packer"] = {"error": str(e)}
-
-            ts = [threading.Thread(target=local), threading.Thread(target=remote)]
-            for t in ts:
-                t.start()
+            cfg_nodes = self.configured_nodes()
             snap = self.mgr.snapshot()
             split = self.mgr.lead_split_info() if snap.get("status") == "ready" else None
-            for t in ts:
-                t.join(30)
-            lead_l = (split or {}).get("lead") or {}
-            pk = ((split or {}).get("packers") or [{}])[0] if split and not split.get("error") else {}
             model = snap.get("model_name") if snap.get("status") == "ready" else None
-            nodes = [
-                dict(out["lead"] or {}, role="lead", label="EXO1", model=model,
-                     layers=lead_l.get("name"), weights_gb=lead_l.get("weights_gb"),
-                     active_gb=lead_l.get("active_gb")),
-                dict(out["packer"] or {}, role="packer", label="EXO2", model=model,
-                     layers=pk.get("name"), weights_gb=pk.get("weights_gb"),
-                     active_gb=pk.get("active_gb"), sessions=pk.get("sessions")),
-            ]
-            self._nodes_cache = {"t": time.time(), "status": snap.get("status"),
-                                 "link": (split or {}).get("peer") or self.mgr.packer_peer,
-                                 "nodes": nodes}
+            nodes = web_nodes.gather_all(
+                cfg_nodes,
+                ssh_fn=self._ssh_fn(),
+                model=model,
+                split=split,
+            )
+            # link: first packer's peer or mgr default
+            peer = None
+            for n in cfg_nodes:
+                if n.get("role") != "lead" and n.get("peer"):
+                    peer = n["peer"]
+                    break
+            self._nodes_cache = {
+                "t": time.time(),
+                "status": snap.get("status"),
+                "link": (split or {}).get("peer") or peer or self.mgr.packer_peer,
+                "nodes": nodes,
+                "max_split_stages": web_nodes.MAX_SPLIT_STAGES,
+                "configured": len(cfg_nodes),
+                "online": len(web_nodes.online_nodes(nodes)),
+            }
         finally:
             self._nodes_busy = False
 
@@ -138,8 +133,8 @@ class App:
         if self.httpd is not None:
             threading.Thread(target=self.httpd.shutdown, daemon=True).start()
 
-    def picker_kill_packer(self, repo_id: str, job=None) -> dict:
-        """SIGTERM/KILL mlx_split_fetch for repo on EXO2 (packer)."""
+    def picker_kill_node(self, node: dict, repo_id: str, job=None) -> dict:
+        """SIGTERM/KILL mlx_split_fetch for repo on one node (local or SSH)."""
         if not repo_id:
             return {"ok": False, "error": "no repo"}
         folder = repo_id.replace("/", "--")
@@ -154,18 +149,34 @@ class App:
             % (repo_id, pid_file, pid_file, repo_id, pid_file, pid_file, pid_file)
         )
         try:
-            r = self.mgr._ssh(script, timeout=30)
+            if web_nodes.is_local(node):
+                import subprocess
+                r = subprocess.run(["bash", "-lc", script], capture_output=True, text=True, timeout=30)
+            else:
+                r = self._ssh_fn()(node, script, timeout=30)
             return {
-                "ok": "KILLED" in (r.stdout or ""),
-                "rc": r.returncode,
-                "out": (r.stdout or "")[-200:],
+                "ok": "KILLED" in (getattr(r, "stdout", "") or ""),
+                "rc": getattr(r, "returncode", -1),
+                "out": (getattr(r, "stdout", "") or "")[-200:],
+                "node": node.get("id") or node.get("label"),
             }
         except Exception as e:  # noqa: BLE001
-            return {"ok": False, "error": str(e)}
+            return {"ok": False, "error": str(e), "node": node.get("id")}
 
-    def picker_measure_packer(self, dest: str) -> dict:
-        """Byte progress for a packer local_dir on EXO2 (finished + .incomplete)."""
-        # Keep the remote python trivial — no nested quote hell.
+    def picker_kill_all(self, repo_id: str, job=None) -> dict:
+        """Kill fetch on every configured node that participates in download."""
+        nodes = web_nodes.split_stage_nodes(self.configured_nodes())
+        results = []
+        for n in nodes:
+            results.append(self.picker_kill_node(n, repo_id, job))
+        return {"ok": any(r.get("ok") for r in results) or not results, "nodes": results}
+
+    # Back-compat alias used by older cancel paths
+    def picker_kill_packer(self, repo_id: str, job=None) -> dict:
+        return self.picker_kill_all(repo_id, job)
+
+    def picker_measure_node(self, node: dict, dest: str) -> dict:
+        """Byte progress for a node's local_dir (finished + .incomplete)."""
         remote = (
             "import json,sys\n"
             "from pathlib import Path\n"
@@ -184,29 +195,68 @@ class App:
             "        except OSError: pass\n"
             "print(json.dumps({'have_bytes':done+inc,'n_incomplete':n,'done_bytes':done}))\n"
         )
-        script = "python3 -c %s %s" % (repr(remote), repr(dest))
         try:
-            r = self.mgr._ssh(script, timeout=25)
-            line = (r.stdout or "").strip().splitlines()
+            if web_nodes.is_local(node):
+                import subprocess
+                dest_q = str(Path(dest).expanduser())
+                r = subprocess.run(
+                    [sys.executable, "-c", remote, dest_q],
+                    capture_output=True, text=True, timeout=25,
+                )
+            else:
+                script = "python3 -c %s %s" % (repr(remote), repr(dest))
+                r = self._ssh_fn()(node, script, timeout=25)
+            line = (getattr(r, "stdout", "") or "").strip().splitlines()
             if not line:
                 return {"have_bytes": 0, "n_incomplete": 0}
             return json.loads(line[-1])
         except Exception:
             return {"have_bytes": 0, "n_incomplete": 0}
 
-    def picker_role_totals(self, repo_id: str, packer_layers: int) -> dict:
+    def picker_measure_packer(self, dest: str) -> dict:
+        """Back-compat: measure default packer (first non-lead configured node)."""
+        nodes = self.configured_nodes()
+        pack = next((n for n in nodes if n.get("role") != "lead"), None)
+        if not pack:
+            return {"have_bytes": 0, "n_incomplete": 0}
+        return self.picker_measure_node(pack, dest)
+
+    def picker_role_totals(self, repo_id: str, packer_layers: int, n_stages: int = 2) -> dict:
         """Fast per-role byte estimate from HF blobs; refined by fetch JSON later."""
-        out = {"lead": None, "packer": None}
+        out = {"lead": None, "packer": None, "by_id": {}}
         try:
             info = web_picker._fetch_repo_blobs(repo_id)
             full = int(info.get("weight_bytes") or 0)
-            if full:
-                # Split downloads are roughly half each until the fetch plan reports my_gb.
-                out["lead"] = full // 2
-                out["packer"] = full - out["lead"]
+            if full and n_stages >= 1:
+                # Rough equal split across stages until fetch plan reports my_gb.
+                each = full // max(1, n_stages)
+                rem = full - each * (n_stages - 1) if n_stages > 1 else full
+                out["lead"] = rem if n_stages == 1 else each
+                out["packer"] = rem if n_stages > 1 else None
+                out["each"] = each
+                out["full"] = full
         except Exception:
             pass
         return out
+
+    def picker_disk_blob(self, node: dict) -> dict:
+        """Run picker_disk_sizes.py on one node."""
+        try:
+            if web_nodes.is_local(node):
+                import subprocess
+                py = str(Path(self.mgr.repo) / "proxy" / "picker_disk_sizes.py")
+                r = subprocess.run(
+                    [sys.executable, py], capture_output=True, text=True, timeout=90,
+                )
+            else:
+                repo = (node.get("repo") or "~/cv3").rstrip("/")
+                r = self._ssh_fn()(node, f"python3 {repo}/proxy/picker_disk_sizes.py", timeout=90)
+            if getattr(r, "returncode", 1) == 0 and (getattr(r, "stdout", "") or "").strip():
+                return json.loads(r.stdout.strip().splitlines()[-1])
+            return {"models": {}, "cleanup": {}, "_error": (getattr(r, "stderr", "") or "")[-200:]}
+        except Exception as e:  # noqa: BLE001
+            return {"models": {}, "cleanup": {}, "_error": str(e)}
+
 
 
 def make_handler(app: App):
@@ -448,74 +498,105 @@ def make_handler(app: App):
             cat = web_picker.search_catalog(q, source=source, limit=limit, filt=filt, newer=newer)
             raw = app.nodes() or {}
             nodes = raw.get("nodes") or []
-            cat["groups"] = web_picker.attach_fit(cat.get("groups") or [], nodes)
-            cat["nodes_used"] = len(nodes)
+            online = [n for n in nodes if isinstance(n, dict) and not n.get("offline") and not n.get("error")]
+            cat["groups"] = web_picker.attach_fit(cat.get("groups") or [], online)
+            cat["nodes_used"] = len(online)
+            cat["nodes_configured"] = len(nodes)
+            cat["max_split_stages"] = web_nodes.MAX_SPLIT_STAGES
+            cat["node_labels"] = [n.get("label") or n.get("id") for n in online]
             return self._json(200, cat)
 
         def _api_picker_disk(self):
-            import subprocess
             current = app.mgr.snapshot().get("model_id")
-            lead_blob = {"models": {}, "cleanup": {"hf-cache": 0, "drafts": 0}}
+            cfg_nodes = app.configured_nodes()
+            # Gather disk blobs for every configured node (local + SSH).
+            blobs = {}
+            for n in cfg_nodes:
+                nid = n.get("id") or n.get("label")
+                blobs[nid] = app.picker_disk_blob(n)
+
+            by_id = {}
+            models = []
+            for n in cfg_nodes:
+                nid = n.get("id") or n.get("label")
+                role = n.get("role") or "packer"
+                label = n.get("label") or nid
+                blob = blobs.get(nid) or {}
+                for rid, gb in (blob.get("models") or {}).items():
+                    e = by_id.get(rid)
+                    if e is None:
+                        e = {
+                            "id": rid, "name": rid.split("/")[-1], "source": "hf-mlx",
+                            "paths": {}, "size_gb": {}, "size_by_label": {},
+                        }
+                        models.append(e)
+                        by_id[rid] = e
+                    e.setdefault("size_gb", {})[role if role == "lead" else nid] = gb
+                    # keep legacy lead/packer keys for 2-Mini UI
+                    if role == "lead":
+                        e["size_gb"]["lead"] = gb
+                    else:
+                        # first packer also fills "packer"
+                        e["size_gb"].setdefault("packer", gb)
+                        e["size_gb"][nid] = gb
+                    e.setdefault("size_by_label", {})[label] = gb
+
+            # Also include any lead-local walk via list_installed for completeness
+            first_pack = next((blobs[n.get("id") or n.get("label")].get("models") or {}
+                               for n in cfg_nodes if n.get("role") != "lead"), {})
             try:
-                py = str(Path(app.mgr.repo) / "proxy" / "picker_disk_sizes.py")
-                r = subprocess.run(
-                    [sys.executable, py], capture_output=True, text=True, timeout=90,
-                )
-                if r.returncode == 0 and (r.stdout or "").strip():
-                    lead_blob = json.loads(r.stdout.strip().splitlines()[-1])
-            except Exception as e:  # noqa: BLE001
-                lead_blob = {"models": {}, "cleanup": {}, "_error": str(e)}
+                walked = web_picker.list_installed(packer_sizes=first_pack)
+                for m in walked:
+                    e = by_id.setdefault(m["id"], m)
+                    if e not in models:
+                        models.append(e)
+                    for k, v in (m.get("size_gb") or {}).items():
+                        e.setdefault("size_gb", {}).setdefault(k, v)
+            except Exception:
+                pass
 
-            packer_blob = {"models": {}, "cleanup": {}}
-            try:
-                r = app.mgr._ssh("python3 ~/cv3/proxy/picker_disk_sizes.py", timeout=90)
-                if r.returncode == 0 and (r.stdout or "").strip():
-                    packer_blob = json.loads(r.stdout.strip().splitlines()[-1])
-            except Exception as e:  # noqa: BLE001
-                packer_blob = {"models": {}, "cleanup": {}, "_error": str(e)}
-
-            packer_models = packer_blob.get("models") or {}
-            # Prefer live lead sizes from the helper; fall back to walk via list_installed.
-            models = web_picker.list_installed(packer_sizes=packer_models)
-            # Overlay lead sizes from helper when present
-            by_id = {m["id"]: m for m in models}
-            for rid, gb in (lead_blob.get("models") or {}).items():
-                e = by_id.get(rid)
-                if e is None:
-                    e = {
-                        "id": rid, "name": rid.split("/")[-1], "source": "hf-mlx",
-                        "paths": {}, "size_gb": {},
-                    }
-                    models.append(e)
-                    by_id[rid] = e
-                e.setdefault("size_gb", {})["lead"] = gb
-            for rid, gb in packer_models.items():
-                e = by_id.setdefault(rid, {
-                    "id": rid, "name": rid.split("/")[-1], "source": "hf-mlx",
-                    "paths": {}, "size_gb": {},
-                })
-                if e not in models:
-                    models.append(e)
-                e.setdefault("size_gb", {})["packer"] = gb
-
-            cleanup = web_picker.list_cleanup_targets(
-                packer=packer_blob.get("cleanup") or {},
-                current_model_id=current,
-            )
-            # Prefer helper's lead cleanup numbers
-            lead_c = lead_blob.get("cleanup") or {}
-            for row in cleanup:
-                if row["kind"] == "hf-cache" and lead_c.get("hf-cache") is not None:
-                    row["size_gb"]["lead"] = lead_c["hf-cache"]
-                if row["kind"] == "drafts" and lead_c.get("drafts") is not None:
-                    row["size_gb"]["lead"] = lead_c["drafts"]
+            # Cleanup: merge across nodes
+            cleanup_kinds = ("hf-cache", "drafts")
+            cleanup = []
+            for kind in cleanup_kinds:
+                sizes = {}
+                sizes_by_label = {}
+                for n in cfg_nodes:
+                    nid = n.get("id") or n.get("label")
+                    label = n.get("label") or nid
+                    role = n.get("role") or "packer"
+                    c = (blobs.get(nid) or {}).get("cleanup") or {}
+                    gb = c.get(kind)
+                    if gb is None:
+                        continue
+                    sizes[nid] = gb
+                    sizes_by_label[label] = gb
+                    if role == "lead":
+                        sizes["lead"] = gb
+                    else:
+                        sizes.setdefault("packer", gb)
+                if any(isinstance(v, (int, float)) and v > 0 for v in sizes.values()):
+                    cleanup.append({
+                        "id": f"cleanup:{kind}",
+                        "kind": kind,
+                        "name": "HF download cache" if kind == "hf-cache" else "Guess-ahead drafts",
+                        "note": "Shared Hugging Face cache" if kind == "hf-cache"
+                                else "Helper models used for guess-ahead",
+                        "size_gb": sizes,
+                        "size_by_label": sizes_by_label,
+                    })
 
             return self._json(200, {
                 "models": sorted(models, key=lambda x: x["name"].lower()),
                 "cleanup": cleanup,
-                "packer": packer_blob,
-                "lead": lead_blob,
+                "nodes": [
+                    {"id": n.get("id"), "label": n.get("label"), "role": n.get("role"),
+                     "blob": {k: blobs.get(n.get("id") or n.get("label"), {}).get(k)
+                              for k in ("models", "cleanup", "_error")}}
+                    for n in cfg_nodes
+                ],
                 "current": current,
+                "max_split_stages": web_nodes.MAX_SPLIT_STAGES,
             })
 
         def _api_picker_delete(self, body=None):
@@ -525,43 +606,65 @@ def make_handler(app: App):
             if not body.get("confirm"):
                 return self._json(400, {"error": "confirm=true required"})
             current = app.mgr.snapshot().get("model_id")
+            cfg_nodes = app.configured_nodes()
 
-            # Cleanup rows: HF cache / drafts
             if kind in ("hf-cache", "drafts") or str(rid).startswith("cleanup:"):
                 k = kind or str(rid).split(":", 1)[-1]
-
-                def ssh_cleanup(knd):
-                    k = "hf-cache" if knd in ("hf-cache", "hf_cache", "cache") else "drafts"
+                results = []
+                for n in cfg_nodes:
+                    kn = "hf-cache" if k in ("hf-cache", "hf_cache", "cache") else "drafts"
                     cur = (current or "").replace("'", "")
-                    script = (
-                        "python3 ~/cv3/proxy/picker_disk_sizes.py --delete %s --current %s"
-                        % (k, cur)
-                    )
-                    r = app.mgr._ssh(script, timeout=300)
                     try:
-                        blob = json.loads((r.stdout or "").strip().splitlines()[-1])
-                    except Exception:
-                        blob = {"ok": False, "raw": (r.stdout or "")[-200:]}
-                    blob["rc"] = r.returncode
-                    return blob
-
-                out = web_picker.delete_cleanup(
-                    k, current_model_id=current, ssh_cleanup=ssh_cleanup,
-                )
-                return self._json(200 if out.get("ok") else 400, out)
+                        if web_nodes.is_local(n):
+                            import subprocess
+                            py = str(Path(app.mgr.repo) / "proxy" / "picker_disk_sizes.py")
+                            r = subprocess.run(
+                                [sys.executable, py, "--delete", kn, "--current", cur],
+                                capture_output=True, text=True, timeout=300,
+                            )
+                        else:
+                            repo = (n.get("repo") or "~/cv3").rstrip("/")
+                            script = (
+                                "python3 %s/proxy/picker_disk_sizes.py --delete %s --current %s"
+                                % (repo, kn, cur)
+                            )
+                            r = app._ssh_fn()(n, script, timeout=300)
+                        try:
+                            blob = json.loads((r.stdout or "").strip().splitlines()[-1])
+                        except Exception:
+                            blob = {"ok": False, "raw": (getattr(r, "stdout", "") or "")[-200:]}
+                        blob["rc"] = getattr(r, "returncode", -1)
+                        blob["node"] = n.get("id") or n.get("label")
+                        results.append(blob)
+                    except Exception as e:  # noqa: BLE001
+                        results.append({"ok": False, "error": str(e), "node": n.get("id")})
+                ok = any(r.get("ok") for r in results)
+                return self._json(200 if ok else 400, {"ok": ok, "kind": k, "nodes": results})
 
             # Stop any running fetch for this model BEFORE deleting folders.
-            stopped = web_picker.stop_jobs_for_repo(rid, kill_procs=app.picker_kill_packer)
+            stopped = web_picker.stop_jobs_for_repo(rid, kill_procs=app.picker_kill_all)
 
             def ssh_delete(folder):
-                r = app.mgr._ssh(
-                    "pkill -f 'mlx_split_fetch.py %s' 2>/dev/null; sleep 0.5; "
-                    "pkill -9 -f 'mlx_split_fetch.py %s' 2>/dev/null; "
-                    "rm -rf ~/.caravan/mlx-models/%s ~/.exo/models/%s; echo REMOVED"
-                    % (rid, rid, folder, folder),
-                    timeout=120,
-                )
-                return {"removed": "REMOVED" in (r.stdout or ""), "rc": r.returncode}
+                # Delete on every non-local node
+                outs = []
+                for n in cfg_nodes:
+                    if web_nodes.is_local(n):
+                        continue
+                    repo = (n.get("repo") or "~/cv3").rstrip("/")
+                    r = app._ssh_fn()(n,
+                        "pkill -f 'mlx_split_fetch.py %s' 2>/dev/null; sleep 0.5; "
+                        "pkill -9 -f 'mlx_split_fetch.py %s' 2>/dev/null; "
+                        "rm -rf ~/.caravan/mlx-models/%s ~/.exo/models/%s; echo REMOVED"
+                        % (rid, rid, folder, folder),
+                        timeout=120,
+                    )
+                    outs.append({
+                        "node": n.get("id"),
+                        "removed": "REMOVED" in (getattr(r, "stdout", "") or ""),
+                        "rc": getattr(r, "returncode", -1),
+                    })
+                return {"removed": any(o.get("removed") for o in outs), "nodes": outs,
+                        "rc": 0 if any(o.get("removed") for o in outs) else 1}
 
             out = web_picker.delete_model(
                 rid, current_model_id=current, ssh_delete=ssh_delete,
@@ -572,13 +675,15 @@ def make_handler(app: App):
         def _api_picker_fit(self, body=None):
             body = body or {}
             nodes = (app.nodes() or {}).get("nodes") or []
+            online = [n for n in nodes if isinstance(n, dict) and not n.get("offline") and not n.get("error")]
             fit = web_picker.fit_check(
                 weights_gb=float(body.get("weights_gb") or 0),
-                nodes=nodes,
+                nodes=online,
                 cfg=body.get("cfg"),
                 n_layers=body.get("n_layers"),
                 ctx_tokens=int(body.get("ctx_tokens") or web_picker.DEFAULT_CTX),
                 split_ok=bool(body.get("split_ok", True)),
+                max_split_stages=web_nodes.MAX_SPLIT_STAGES,
             )
             return self._json(200, fit)
 
@@ -597,117 +702,164 @@ def make_handler(app: App):
             except (TypeError, ValueError):
                 packer_layers = 24
 
-            # Precompute per-role byte totals from HF (for live byte progress).
-            totals = app.picker_role_totals(repo, packer_layers)
-
-            def run_lead(repo_id, dest, pk, prog):
-                import subprocess
-                dest_q = str(Path(dest).expanduser())
-                Path(dest_q).mkdir(parents=True, exist_ok=True)
-                py = str(Path("~/.caravan/venvs/mlx/bin/python").expanduser())
-                fetch = str(Path(app.mgr.repo) / "agent" / "mlx_split_fetch.py")
-                cmd = [py, fetch, repo_id, dest_q, "--role", "lead"]
-                if pk:
-                    cmd += ["--packer-layers", str(int(pk))]
-                prog(1, "starting lead fetch")
-                proc = subprocess.Popen(
-                    cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            # Live nodes for fit/online; download only on runtime-supported stages.
+            live = (app.nodes() or {}).get("nodes") or []
+            stage_nodes = web_nodes.split_stage_nodes(live or app.configured_nodes())
+            if not stage_nodes:
+                stage_nodes = web_nodes.split_stage_nodes(app.configured_nodes())
+            n_stages = max(1, len(stage_nodes))
+            online_count = len(web_nodes.online_nodes(live)) if live else n_stages
+            note = ""
+            if online_count > web_nodes.MAX_SPLIT_STAGES:
+                note = (
+                    f"{online_count}-Mini split coming later; "
+                    f"downloading for {web_nodes.MAX_SPLIT_STAGES}-stage runtime"
                 )
-                # Stash so cancel can terminate immediately.
-                web_picker._job_set  # noqa: B018 — keep import side effects clear
-                # Find this job by repo+running and attach proc
-                for j in web_picker.list_jobs():
-                    if j.get("repo_id") == repo_id and j.get("status") == "running":
-                        web_picker._job_set(j["id"], lead_proc=proc)
-                        break
-                out_lines = []
-                assert proc.stdout is not None
-                for line in proc.stdout:
-                    out_lines.append(line)
-                    if len(out_lines) == 1:
-                        # first line is the plan JSON with my_gb
-                        try:
-                            rep = json.loads(line.strip())
-                            if isinstance(rep, dict) and rep.get("my_gb"):
-                                for j in web_picker.list_jobs():
-                                    if j.get("repo_id") == repo_id and j.get("status") == "running":
-                                        web_picker._job_set(
-                                            j["id"],
-                                            total_bytes_lead=int(float(rep["my_gb"]) * 1e9),
-                                        )
-                                        break
-                        except (ValueError, TypeError):
-                            pass
-                rc = proc.wait()
-                if rc != 0:
-                    blob = "".join(out_lines)[-500:]
-                    raise RuntimeError(blob or "lead download failed")
-                prog(100, "done")
 
-            def run_packer(repo_id, dest, pk, prog):
-                dest_q = dest.replace("'", "").replace(";", "")
-                # Run packer fetch in background on EXO2; poll until done or cancel.
-                # Write pid to a known file so Stop can kill it.
-                pid_file = f"/tmp/caravan-fetch-{repo_id.replace('/', '--')}.pid"
-                script = (
-                    "mkdir -p %s; "
-                    "rm -f %s; "
-                    "( ~/.caravan/venvs/mlx/bin/python ~/cv3/agent/mlx_split_fetch.py "
-                    "%s %s --role packer "
-                    % (dest_q, pid_file, repo_id, dest_q)
-                )
-                if pk:
-                    script += "--packer-layers %d " % int(pk)
-                script += (
-                    "> /tmp/caravan-fetch-packer.log 2>&1 & echo $! > %s; echo PACKER_STARTED )"
-                    % pid_file
-                )
-                prog(1, "starting packer fetch")
-                r = app.mgr._ssh(script, timeout=60)
-                if r.returncode != 0 or "PACKER_STARTED" not in (r.stdout or ""):
-                    raise RuntimeError((r.stderr or r.stdout or "packer start failed")[-400:])
-                # Poll until process exits (or cancel).
-                import time as _t
-                while True:
-                    for j in web_picker.list_jobs():
-                        if j.get("repo_id") == repo_id and j.get("cancel"):
-                            app.picker_kill_packer(repo_id, j)
-                            raise RuntimeError("cancelled")
-                    check = app.mgr._ssh(
-                        "if [ -f %s ]; then pid=$(cat %s); "
-                        "if kill -0 $pid 2>/dev/null; then echo RUNNING; "
-                        "else echo DONE; fi; else echo DONE; fi" % (pid_file, pid_file),
-                        timeout=30,
-                    )
-                    st = (check.stdout or "").strip().splitlines()
-                    last = st[-1] if st else "DONE"
-                    if last == "DONE":
-                        break
-                    _t.sleep(1.5)
-                # Confirm success from log
-                log = app.mgr._ssh("tail -5 /tmp/caravan-fetch-packer.log 2>/dev/null", timeout=20)
-                blob = log.stdout or ""
-                if "FETCHED" not in blob and "PACKER" not in blob:
-                    # still ok if files landed
-                    pass
-                prog(100, "done")
-
+            totals = app.picker_role_totals(repo, packer_layers, n_stages=n_stages)
             folder = repo.replace("/", "--")
-            dest_packer = "~/.caravan/mlx-models/%s" % folder
 
-            def measure_packer():
-                return app.picker_measure_packer(dest_packer)
+            def make_run_local(node):
+                def run_lead(repo_id, dest, pk, prog):
+                    import subprocess
+                    dest_q = str(Path(dest).expanduser())
+                    Path(dest_q).mkdir(parents=True, exist_ok=True)
+                    py = str(Path("~/.caravan/venvs/mlx/bin/python").expanduser())
+                    fetch = str(Path(app.mgr.repo) / "agent" / "mlx_split_fetch.py")
+                    role = "lead" if node.get("role") == "lead" else "packer"
+                    cmd = [py, fetch, repo_id, dest_q, "--role", role]
+                    if pk and role == "packer":
+                        cmd += ["--packer-layers", str(int(pk))]
+                    elif pk and role == "lead":
+                        cmd += ["--packer-layers", str(int(pk))]
+                    prog(1, f"starting {node.get('label') or node.get('id')} fetch")
+                    proc = subprocess.Popen(
+                        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                    )
+                    for j in web_picker.list_jobs():
+                        if j.get("repo_id") == repo_id and j.get("status") == "running":
+                            web_picker._job_set(j["id"], lead_proc=proc)
+                            break
+                    out_lines = []
+                    assert proc.stdout is not None
+                    for line in proc.stdout:
+                        out_lines.append(line)
+                        if len(out_lines) == 1:
+                            try:
+                                rep = json.loads(line.strip())
+                                if isinstance(rep, dict) and rep.get("my_gb"):
+                                    for j in web_picker.list_jobs():
+                                        if j.get("repo_id") == repo_id and j.get("status") == "running":
+                                            nid = node.get("id") or node.get("label")
+                                            totals_now = dict(j.get("totals") or {})
+                                            totals_now[nid] = int(float(rep["my_gb"]) * 1e9)
+                                            kw = {"totals": totals_now}
+                                            if role == "lead":
+                                                kw["total_bytes_lead"] = totals_now[nid]
+                                            else:
+                                                kw["total_bytes_packer"] = totals_now[nid]
+                                            web_picker._job_set(j["id"], **kw)
+                                            break
+                            except (ValueError, TypeError):
+                                pass
+                    rc = proc.wait()
+                    if rc != 0:
+                        blob = "".join(out_lines)[-500:]
+                        raise RuntimeError(blob or f"{role} download failed")
+                    prog(100, "done")
+                return run_lead
+
+            def make_run_remote(node):
+                def run_remote(repo_id, dest, pk, prog):
+                    dest_q = dest.replace("'", "").replace(";", "")
+                    pid_file = f"/tmp/caravan-fetch-{repo_id.replace('/', '--')}.pid"
+                    role = "lead" if node.get("role") == "lead" else "packer"
+                    repo_path = (node.get("repo") or "~/cv3").rstrip("/")
+                    script = (
+                        "mkdir -p %s; "
+                        "rm -f %s; "
+                        "( ~/.caravan/venvs/mlx/bin/python %s/agent/mlx_split_fetch.py "
+                        "%s %s --role %s "
+                        % (dest_q, pid_file, repo_path, repo_id, dest_q, role)
+                    )
+                    if pk:
+                        script += "--packer-layers %d " % int(pk)
+                    script += (
+                        "> /tmp/caravan-fetch-%s.log 2>&1 & echo $! > %s; echo FETCH_STARTED )"
+                        % (node.get("id") or "node", pid_file)
+                    )
+                    prog(1, f"starting {node.get('label') or node.get('id')} fetch")
+                    r = app._ssh_fn()(node, script, timeout=60)
+                    if r.returncode != 0 or "FETCH_STARTED" not in (r.stdout or ""):
+                        raise RuntimeError((r.stderr or r.stdout or "remote start failed")[-400:])
+                    import time as _t
+                    while True:
+                        for j in web_picker.list_jobs():
+                            if j.get("repo_id") == repo_id and j.get("cancel"):
+                                app.picker_kill_node(node, repo_id, j)
+                                raise RuntimeError("cancelled")
+                        check = app._ssh_fn()(node,
+                            "if [ -f %s ]; then pid=$(cat %s); "
+                            "if kill -0 $pid 2>/dev/null; then echo RUNNING; "
+                            "else echo DONE; fi; else echo DONE; fi" % (pid_file, pid_file),
+                            timeout=30,
+                        )
+                        st = (check.stdout or "").strip().splitlines()
+                        last = st[-1] if st else "DONE"
+                        if last == "DONE":
+                            break
+                        _t.sleep(1.5)
+                    prog(100, "done")
+                return run_remote
+
+            runners = []
+            for i, n in enumerate(stage_nodes):
+                nid = n.get("id") or n.get("label") or f"n{i}"
+                role = n.get("role") or ("lead" if i == 0 else "packer")
+                if web_nodes.is_local(n):
+                    # Prefer caravan mlx-models on lead; same folder name
+                    dest = str(Path("~/.caravan/mlx-models").expanduser() / folder)
+                    # Also keep MLX_MODEL_ROOTS[0] path via start_download default for lead
+                    if role == "lead":
+                        dest = str(web_picker.MLX_MODEL_ROOTS[0] / folder) if web_picker.MLX_MODEL_ROOTS else dest
+                    run = make_run_local(n)
+                    measure = None  # local progress_snapshot via dest
+                else:
+                    dest = "~/.caravan/mlx-models/%s" % folder
+                    run = make_run_remote(n)
+                    # bind measure
+                    def _mk_measure(nn, dd):
+                        return lambda: app.picker_measure_node(nn, dd)
+                    measure = _mk_measure(n, dest)
+                tb = totals.get("lead") if role == "lead" else totals.get("packer")
+                if tb is None:
+                    tb = totals.get("each")
+                runners.append({
+                    "id": nid,
+                    "label": n.get("label") or nid,
+                    "role": role,
+                    "dest": dest,
+                    "run": run,
+                    "measure": measure,
+                    "total_bytes": tb,
+                })
 
             job = web_picker.start_download(
                 repo,
                 packer_layers=packer_layers,
-                run_lead=run_lead,
-                run_packer=run_packer,
+                runners=runners,
+                note=note,
                 total_bytes_lead=totals.get("lead"),
                 total_bytes_packer=totals.get("packer"),
-                measure_packer=measure_packer,
             )
-            return self._json(200, {"job": job, "totals": totals})
+            return self._json(200, {
+                "job": job,
+                "totals": totals,
+                "stages": len(runners),
+                "max_split_stages": web_nodes.MAX_SPLIT_STAGES,
+                "note": note,
+                "nodes": [{"id": r["id"], "label": r["label"], "role": r["role"]} for r in runners],
+            })
 
 
         def _api_load(self, body=None):

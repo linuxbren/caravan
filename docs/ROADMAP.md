@@ -597,9 +597,11 @@ publishers bartowski/unsloth/lmstudio-community (Brenden's "Ollama"),
 Ollama Cloud framework (CLOUD label). Fit uses **unload capacity** (available
 + worker footprint), not current free RAM; disk checked separately; New chip +
 max download size; parallel split-aware download; Stop/Delete kill fetches;
-HF cache + drafts cleanup rows. Still open: phase 3 conversion
+HF cache + drafts cleanup rows. **N-node picker (Nov 5 2026):** config-driven
+`[web.nodes.*]`, dynamic fits-on-1..N, per-node download/disk; runtime still
+capped at `MAX_SPLIT_STAGES=2`. Still open: phase 3 conversion
 (`mlx_lm.convert`), phase 4 GGUF via llama-server on one Mini, phase 5 live
-Ollama Cloud.
+Ollama Cloud; **N-stage split runtime** (item below).
 
 ## Deferred / parked
 

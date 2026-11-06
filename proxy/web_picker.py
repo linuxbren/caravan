@@ -38,6 +38,10 @@ DEFAULT_CTX = 8192
 DEFAULT_SAFETY_GB = float(os.environ.get("CARAVAN_MEMORY_SAFETY_GB", "1.75"))
 # macOS + apps baseline when estimating unload capacity on a 24 GB Mini
 OS_BASELINE_GB = float(os.environ.get("CARAVAN_OS_BASELINE_GB", "4.0"))
+try:
+    from web_nodes import MAX_SPLIT_STAGES  # noqa: E402
+except ImportError:  # pragma: no cover
+    MAX_SPLIT_STAGES = int(os.environ.get("CARAVAN_MAX_SPLIT_STAGES", "2"))
 NEW_MODEL_DAYS = int(os.environ.get("CARAVAN_PICKER_NEW_DAYS", "30"))
 MLX_MODEL_ROOTS = [
     Path("~/.caravan/mlx-models").expanduser(),
@@ -259,152 +263,195 @@ def fit_check(
     safety_gb: float = DEFAULT_SAFETY_GB,
     kv_bits: int = 16,
     split_ok: bool = True,
+    max_split_stages: Optional[int] = None,
 ) -> dict:
     """Return color, nodes_needed, per-node fit, plain-English reasons.
 
-    RAM uses unload capacity (not current free). Disk is checked separately
-    and named in the reason when it is the limiter.
+    RAM uses unload capacity (not current free). Disk is checked separately.
+    Works for 1..N online nodes (offline/error nodes are ignored). With one
+    node, never suggests splitting. `max_split_stages` caps what the *runtime*
+    can load today (see web_nodes.MAX_SPLIT_STAGES); fit may still report
+    fits_on beyond that with a clear note.
     """
-    nodes = [n for n in (nodes or []) if isinstance(n, dict) and not n.get("error")]
+    max_stages = int(max_split_stages if max_split_stages is not None else MAX_SPLIT_STAGES)
+    nodes = [
+        n for n in (nodes or [])
+        if isinstance(n, dict) and not n.get("error") and not n.get("offline")
+    ]
     if not nodes:
         return {
             "color": "red", "nodes_needed": None, "fits_on": [],
             "need_gb_1": round(weights_gb + safety_gb, 2),
             "need_gb_split": None,
-            "reason": "no node stats",
+            "reason": "no online nodes",
             "limit": "unknown",
+            "runtime_stages": max_stages,
         }
 
     caps = [_node_capacity_gb(n) for n in nodes]
-    # pairs sorted by capacity desc, keep labels/disks aligned
     order = sorted(range(len(nodes)), key=lambda i: caps[i], reverse=True)
     caps_sorted = [caps[i] for i in order]
     disks = [float((nodes[i].get("disk") or {}).get("free_gb") or 0) for i in order]
     labels = [_node_label(nodes[i], i) for i in order]
     n_count = len(caps_sorted)
 
+    # Single-node setups cannot split.
+    can_split = bool(split_ok) and n_count >= 2
+
     kv_full = 0.0
-    kv_half = 0.0
     if MG and cfg and n_layers:
         kv_full = MG.estimate_kv_gb(cfg, ctx_tokens, int(n_layers), kv_bits=kv_bits)
-        kv_half = MG.estimate_kv_gb(cfg, ctx_tokens, max(1, int(n_layers) // 2), kv_bits=kv_bits)
     else:
         kv_full = max(0.3, weights_gb * 0.08 * (ctx_tokens / 8192))
-        kv_half = kv_full * 0.55
 
     need_1 = weights_gb + kv_full + safety_gb
-    need_split_each = (weights_gb / 2.0) + kv_half + safety_gb
 
-    def disk_ok_for(k: int) -> tuple:
-        """Return (ok, reason_or_None) for placing the model on top-k Minis by RAM."""
-        need_each = weights_gb if k == 1 else weights_gb / k
-        # For k=1 any Mini with enough disk works; for split each of top-k needs share.
+    def need_each(k: int) -> float:
+        return (weights_gb / k) + (kv_full / k) + safety_gb
+
+    def disk_ok_for(k: int):
+        share = weights_gb if k == 1 else weights_gb / k
         if k == 1:
             best = max(range(n_count), key=lambda i: disks[i])
-            if disks[best] >= need_each * 0.95:
+            if disks[best] >= share * 0.95:
                 return True, None
             return False, (
                 f"Not enough disk on {labels[best]} "
-                f"(need ~{need_each:.1f} GB, {disks[best]:.1f} GB free)"
+                f"(need ~{share:.1f} GB, {disks[best]:.1f} GB free)"
             )
-        top = list(range(k))
-        for i in top:
-            if disks[i] < need_each * 0.9:
+        for i in range(k):
+            if disks[i] < share * 0.9:
                 return False, (
                     f"Not enough disk on {labels[i]} "
-                    f"(need ~{need_each:.1f} GB each, {labels[i]} has {disks[i]:.1f} GB free)"
+                    f"(need ~{share:.1f} GB each, {labels[i]} has {disks[i]:.1f} GB free)"
                 )
         return True, None
 
     fits_on = []
     disk_block = None
-    # 1 node — RAM then disk
     if caps_sorted[0] >= need_1:
         ok, why = disk_ok_for(1)
         if ok:
             fits_on.append(1)
         else:
             disk_block = why
-    # 2..N split
-    if split_ok and n_count >= 2:
+
+    if can_split:
         for k in range(2, n_count + 1):
-            share_w = weights_gb / k
-            share_need = share_w + (kv_full / k) + safety_gb
+            share_need = need_each(k)
             if all(a >= share_need for a in caps_sorted[:k]):
                 ok, why = disk_ok_for(k)
                 if ok:
                     fits_on.append(k)
                 elif disk_block is None:
                     disk_block = why
+            elif (
+                k not in fits_on
+                and all(a >= share_need * 0.85 for a in caps_sorted[:k])
+                and caps_sorted[0] >= share_need * 0.9
+            ):
+                # Tight but plausible — record as fit with tight flag later
+                ok, why = disk_ok_for(k)
+                if ok:
+                    fits_on.append(k)
+                elif disk_block is None:
+                    disk_block = why
+
+    # Runtime note when fit wants more stages than mlx_split supports today.
+    def runtime_note(k: int) -> str:
+        if k <= max_stages:
+            return ""
+        return f" ({k}-Mini split coming later; runtime loads on {max_stages} today)"
 
     limit = "ram"
+    need_split_each = need_each(2) if n_count >= 2 else None
+
     if 1 in fits_on:
         margin = caps_sorted[0] - need_1
-        # Barely fits on 1 → yellow "tight" (Brenden: 15 GB on ~20 GB capacity)
-        if margin < max(2.5, safety_gb * 1.25):
+        if can_split and margin < max(2.5, safety_gb * 1.25):
             color, needed = "yellow", 1
+            k2 = 2 if 2 in fits_on else (min(fits_on) if fits_on else 2)
             reason = (
                 f"Tight on 1 Mini (~{need_1:.0f} GB RAM; capacity ~{caps_sorted[0]:.0f} GB). "
-                f"Fits on 2, about {need_split_each:.0f} GB each"
+                f"Fits on {k2}, about {need_each(k2):.0f} GB each"
+                + runtime_note(k2)
             )
         else:
             color, needed = "green", 1
             reason = f"Fits on 1 Mini (~{need_1:.0f} GB RAM; capacity ~{caps_sorted[0]:.0f} GB)"
     elif fits_on:
         color, needed = "yellow", min(fits_on)
+        ne = need_each(needed)
+        # capacity of the poorest of the top-needed
+        poor = caps_sorted[needed - 1]
         reason = (
-            f"Fits on {needed} Minis, about {need_split_each:.0f} GB RAM each "
-            f"(capacity ~{caps_sorted[needed-1]:.0f} GB)"
+            f"Fits on {needed} Minis, about {ne:.0f} GB RAM each "
+            f"(capacity ~{poor:.0f} GB)"
+            + runtime_note(needed)
         )
     elif disk_block and (
-        (caps_sorted[0] >= need_1) or
-        (split_ok and n_count >= 2 and all(
-            a >= (weights_gb / 2.0) + (kv_full / 2.0) + safety_gb for a in caps_sorted[:2]))
+        caps_sorted[0] >= need_1
+        or (can_split and all(a >= need_each(2) for a in caps_sorted[:2]))
     ):
-        # RAM would work but disk blocks
         color, needed = "red", None
         reason = disk_block
         limit = "disk"
-    elif split_ok and n_count >= 2 and caps_sorted[0] >= need_split_each * 0.9 and caps_sorted[1] >= need_split_each * 0.85:
-        color, needed = "yellow", 2
-        reason = (
-            f"Tight on 2 Minis (~{need_split_each:.0f} GB RAM each; "
-            f"capacity ~{caps_sorted[0]:.0f}/{caps_sorted[1]:.0f} GB)"
-        )
-        fits_on = [2]
-        # disk may still block
-        ok, why = disk_ok_for(2)
-        if not ok and why:
-            color, needed, fits_on = "red", None, []
-            reason = why
-            limit = "disk"
+    elif can_split:
+        # Find largest k that is "almost" — already handled; otherwise red.
+        color, needed = "red", None
+        # Suggest smallest k that would be needed by RAM alone
+        suggest = None
+        for k in range(1, n_count + 1):
+            if k == 1 and caps_sorted[0] >= need_1:
+                suggest = 1
+                break
+            if k >= 2 and all(a >= need_each(k) for a in caps_sorted[:k]):
+                suggest = k
+                break
+        if suggest is None:
+            # compare against full split across all online
+            k = n_count
+            reason = (
+                f"Won't fit: need ~{need_1:.0f} GB RAM on 1 Mini "
+                f"(capacity ~{caps_sorted[0]:.0f} GB)"
+            )
+            if can_split:
+                reason += f" or ~{need_each(min(2, n_count)):.0f} GB ×{min(2, n_count)}"
+                if n_count > 2:
+                    reason += f" (or ~{need_each(n_count):.0f} GB ×{n_count})"
+        else:
+            reason = f"Won't fit on available capacity (wanted {suggest} Minis)"
     else:
+        # Single node — never mention split
         color, needed = "red", None
         reason = (
-            f"Won't fit: need ~{need_1:.0f} GB RAM on 1 Mini "
-            f"(capacity ~{caps_sorted[0]:.0f} GB) or ~{need_split_each:.0f} GB ×2"
+            f"Won't fit on {labels[0]}: need ~{need_1:.0f} GB RAM "
+            f"(capacity ~{caps_sorted[0]:.0f} GB)"
         )
-        if disk_block and caps_sorted[0] < need_1:
-            # mention both if useful — keep RAM as primary
-            pass
+        if disk_block:
+            reason = disk_block
+            limit = "disk"
 
     return {
         "color": color,
         "nodes_needed": needed,
         "fits_on": fits_on,
         "need_gb_1": round(need_1, 2),
-        "need_gb_split": round(need_split_each, 2),
+        "need_gb_split": round(need_split_each, 2) if need_split_each is not None else None,
         "weights_gb": round(weights_gb, 2),
         "kv_gb_1": round(kv_full, 2),
         "reason": reason,
         "limit": limit,
         "capacity_gb": caps_sorted,
         "capacity_labels": labels,
+        "online_nodes": n_count,
+        "runtime_stages": max_stages,
         "disk_ok": disk_block is None and (
             max(disks) >= weights_gb * 0.9 if disks else False
         ),
         "disk_reason": disk_block,
     }
+
 
 
 def _hf_search(query: str, *, author: Optional[str] = None, filter_gguf: bool = False,
@@ -885,6 +932,7 @@ def attach_fit(groups: list, nodes: list) -> list:
                 qq["fit"] = fit_check(
                     weights_gb=w, nodes=nodes, split_ok=split_ok,
                     safety_gb=DEFAULT_SAFETY_GB,
+                    max_split_stages=MAX_SPLIT_STAGES,
                 )
             quants.append(qq)
         gg = dict(g)
@@ -1320,47 +1368,76 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                    run_packer: Optional[callable] = None,
                    total_bytes_lead: Optional[int] = None,
                    total_bytes_packer: Optional[int] = None,
-                   measure_packer: Optional[callable] = None) -> dict:
-    """Start async split-aware download. Lead + packer run in PARALLEL.
+                   measure_packer: Optional[callable] = None,
+                   runners: Optional[list] = None,
+                   note: Optional[str] = None) -> dict:
+    """Start async download across one or more nodes in PARALLEL.
 
-    measure_packer() -> {have_bytes, n_incomplete} for EXO2 (SSH); optional.
+    Prefer `runners`: list of dicts
+      {id, label, role, dest, run(repo, dest, packer_layers, prog), measure?, total_bytes?}
+    Legacy run_lead/run_packer still work for the 2-Mini default.
     """
     import uuid
     jid = uuid.uuid4().hex[:12]
     folder = repo_id.replace("/", "--")
-    dest_lead = dest_lead or str(MLX_MODEL_ROOTS[0] / folder)
-    dest_packer = dest_packer or f"~/.caravan/mlx-models/{folder}"
-    _job_set(jid, status="queued", repo_id=repo_id, progress={
-        "lead": {"pct": 0, "msg": "queued", "have_bytes": 0, "t": time.time()},
-        "packer": {"pct": 0, "msg": "queued", "have_bytes": 0, "t": time.time()},
-    }, dest_lead=dest_lead, dest_packer=dest_packer, packer_layers=packer_layers,
-        total_bytes_lead=total_bytes_lead, total_bytes_packer=total_bytes_packer)
 
-    def _watch(role: str, dest: str, total_b: Optional[int], stop_evt: threading.Event,
+    if not runners:
+        runners = []
+        dest_lead = dest_lead or str(MLX_MODEL_ROOTS[0] / folder)
+        if run_lead:
+            runners.append({
+                "id": "lead", "label": "EXO1", "role": "lead",
+                "dest": dest_lead, "run": run_lead,
+                "total_bytes": total_bytes_lead, "measure": None,
+            })
+        dest_packer = dest_packer or f"~/.caravan/mlx-models/{folder}"
+        if run_packer:
+            runners.append({
+                "id": "packer", "label": "EXO2", "role": "packer",
+                "dest": dest_packer, "run": run_packer,
+                "total_bytes": total_bytes_packer, "measure": measure_packer,
+            })
+
+    progress = {}
+    for r in runners:
+        rid = r.get("id") or r.get("label") or "node"
+        progress[rid] = {"pct": 0, "msg": "queued", "have_bytes": 0, "t": time.time(),
+                         "label": r.get("label") or rid, "role": r.get("role")}
+        # legacy aliases
+        if r.get("role") == "lead":
+            progress.setdefault("lead", progress[rid])
+        if r.get("role") == "packer" and "packer" not in progress:
+            progress.setdefault("packer", progress[rid])
+
+    _job_set(jid, status="queued", repo_id=repo_id, progress=progress,
+             runners=[{"id": r.get("id"), "label": r.get("label"), "role": r.get("role"),
+                       "dest": r.get("dest")} for r in runners],
+             packer_layers=packer_layers, note=note or "",
+             dest_lead=next((r["dest"] for r in runners if r.get("role") == "lead"), None),
+             dest_packer=next((r["dest"] for r in runners if r.get("role") != "lead"), None),
+             total_bytes_lead=total_bytes_lead, total_bytes_packer=total_bytes_packer)
+
+    def _watch(role_id: str, dest: str, total_b: Optional[int], stop_evt: threading.Event,
                measure: Optional[callable] = None):
         prev = None
         while not stop_evt.wait(0.8):
             if get_job(jid) and get_job(jid).get("cancel"):
                 break
-            # Refresh total if dry-run filled it in later.
             job_now = get_job(jid) or {}
-            if role == "lead":
-                total_b = job_now.get("total_bytes_lead") or total_b
-            else:
-                total_b = job_now.get("total_bytes_packer") or total_b
             if measure:
                 try:
                     m = measure() or {}
                     have = int(m.get("have_bytes") or 0)
                     n_inc = int(m.get("n_incomplete") or 0)
-                    fake_prev = prev
-                    # synthesize snapshot from remote counts
                     now = time.time()
                     speed = 0.0
-                    if fake_prev and fake_prev.get("t") and fake_prev.get("have_bytes") is not None:
-                        dt = max(0.001, now - float(fake_prev["t"]))
-                        speed = max(0.0, (have - int(fake_prev["have_bytes"])) / dt)
-                    total = int(total_b or 0)
+                    if prev and prev.get("t") and prev.get("have_bytes") is not None:
+                        dt = max(0.001, now - float(prev["t"]))
+                        speed = max(0.0, (have - int(prev["have_bytes"])) / dt)
+                    total = int(total_b or job_now.get("total_bytes_lead") or job_now.get("total_bytes_packer") or 0)
+                    # prefer runner-specific total if stashed
+                    totals = job_now.get("totals") or {}
+                    total = int(totals.get(role_id) or total_b or total or 0)
                     pct = max(0, min(99, int(have * 100 / total))) if total else 0
                     eta_s = ((total - have) / speed) if (speed > 0 and total > have) else None
                     mb_s = speed / 1e6
@@ -1380,67 +1457,79 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                 except Exception as e:  # noqa: BLE001
                     snap = {"pct": 0, "msg": f"measure error: {e}", "t": time.time()}
             else:
-                snap = progress_snapshot(dest, total_b, prev)
-            prev = snap
+                totals = (get_job(jid) or {}).get("totals") or {}
+                tb = int(totals.get(role_id) or total_b or 0)
+                snap = progress_snapshot(dest, tb, prev)
+            # keep label/role
             with _jobs_lock:
                 if jid in _jobs:
-                    _jobs[jid]["progress"][role] = snap
+                    prev_p = dict(_jobs[jid]["progress"].get(role_id) or {})
+                    snap["label"] = prev_p.get("label")
+                    snap["role"] = prev_p.get("role")
+                    _jobs[jid]["progress"][role_id] = snap
+                    # mirror legacy keys
+                    if snap.get("role") == "lead":
+                        _jobs[jid]["progress"]["lead"] = snap
+                    if snap.get("role") == "packer":
+                        _jobs[jid]["progress"]["packer"] = snap
                     _jobs[jid]["updated"] = time.time()
+            prev = snap
 
     def worker():
-        stop_lead = threading.Event()
-        stop_pack = threading.Event()
+        stops = { (r.get("id") or r.get("label")): threading.Event() for r in runners }
         errors = []
         try:
             _job_set(jid, status="running")
+            # stash totals
+            totals = { (r.get("id") or r.get("label")): r.get("total_bytes") for r in runners }
+            _job_set(jid, totals=totals)
+
             watchers = []
-            if run_lead:
+            for r in runners:
+                rid = r.get("id") or r.get("label")
                 watchers.append(threading.Thread(
-                    target=_watch, args=("lead", dest_lead, total_bytes_lead, stop_lead, None),
-                    daemon=True, name=f"pick-watch-lead-{jid}"))
-            if run_packer:
-                watchers.append(threading.Thread(
-                    target=_watch, args=("packer", dest_packer, total_bytes_packer, stop_pack, measure_packer),
-                    daemon=True, name=f"pick-watch-pack-{jid}"))
+                    target=_watch,
+                    args=(rid, r.get("dest") or "", r.get("total_bytes"), stops[rid], r.get("measure")),
+                    daemon=True, name=f"pick-watch-{rid}-{jid}"))
             for w in watchers:
                 w.start()
 
-            def run_one(label, fn, dest, pk, stop_evt):
+            def run_one(r):
+                rid = r.get("id") or r.get("label")
+                fn = r.get("run")
+                dest = r.get("dest")
+                stop_evt = stops[rid]
                 def prog(pct, msg):
                     if get_job(jid) and get_job(jid).get("cancel"):
                         raise RuntimeError("cancelled")
                     with _jobs_lock:
-                        cur = dict(_jobs[jid]["progress"].get(label) or {})
+                        cur = dict(_jobs[jid]["progress"].get(rid) or {})
                         cur.update({"pct": pct, "msg": msg})
-                        _jobs[jid]["progress"][label] = cur
+                        _jobs[jid]["progress"][rid] = cur
+                        if cur.get("role") == "lead":
+                            _jobs[jid]["progress"]["lead"] = cur
+                        if cur.get("role") == "packer":
+                            _jobs[jid]["progress"]["packer"] = cur
                 try:
-                    fn(repo_id, dest, pk, prog)
+                    if not fn:
+                        raise RuntimeError(f"no runner for {rid}")
+                    fn(repo_id, dest, packer_layers, prog)
                 except Exception as e:  # noqa: BLE001
-                    errors.append(f"{label}: {e}")
+                    errors.append(f"{rid}: {e}")
                 finally:
                     stop_evt.set()
 
-            threads = []
-            if run_lead:
-                threads.append(threading.Thread(
-                    target=run_one, args=("lead", run_lead, dest_lead, packer_layers, stop_lead),
-                    daemon=True, name=f"pick-lead-{jid}"))
-            else:
-                errors.append("no lead downloader wired")
-            if run_packer:
-                threads.append(threading.Thread(
-                    target=run_one, args=("packer", run_packer, dest_packer, packer_layers, stop_pack),
-                    daemon=True, name=f"pick-pack-{jid}"))
-            else:
-                with _jobs_lock:
-                    _jobs[jid]["progress"]["packer"] = {"pct": 100, "msg": "skipped"}
-                stop_pack.set()
-
+            threads = [threading.Thread(target=run_one, args=(r,), daemon=True,
+                                        name=f"pick-{r.get('id')}-{jid}") for r in runners]
+            if not threads:
+                _job_set(jid, status="error", error="no download runners")
+                return
             for t in threads:
                 t.start()
             for t in threads:
                 t.join()
-            stop_lead.set(); stop_pack.set()
+            for e in stops.values():
+                e.set()
 
             if get_job(jid) and get_job(jid).get("cancel"):
                 _job_set(jid, status="cancelled", error="stopped by user")
@@ -1448,21 +1537,22 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
             if errors:
                 _job_set(jid, status="error", error="; ".join(errors))
                 return
-            # final 100%
             with _jobs_lock:
-                for role in ("lead", "packer"):
-                    p = dict(_jobs[jid]["progress"].get(role) or {})
-                    if p.get("msg") != "skipped":
-                        p["pct"] = 100
-                        p["msg"] = (p.get("msg") or "done") + " · done"
-                        _jobs[jid]["progress"][role] = p
+                for rid, p in list(_jobs[jid]["progress"].items()):
+                    if isinstance(p, dict) and p.get("msg") != "skipped":
+                        pp = dict(p)
+                        pp["pct"] = 100
+                        pp["msg"] = (pp.get("msg") or "done") + " · done"
+                        _jobs[jid]["progress"][rid] = pp
             _job_set(jid, status="done", model_folder=folder)
         except Exception as e:  # noqa: BLE001
-            stop_lead.set(); stop_pack.set()
+            for e2 in stops.values():
+                e2.set()
             _job_set(jid, status="error", error=str(e))
 
     threading.Thread(target=worker, name=f"picker-dl-{jid}", daemon=True).start()
     return get_job(jid)
+
 
 
 def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],

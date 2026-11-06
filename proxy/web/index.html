@@ -1894,42 +1894,61 @@
   // ---- Model picker (ROADMAP) -----------------------------------------
   (function () {
     const CATEGORY = ["chat","coding","reasoning","vision","image-to-image","voice","cloud"];
-    const EXTRA = ["new","fits-on-1","fits-on-2"];
-    const FILTERS = CATEGORY.concat(EXTRA);
     const state = {
       source: "all", q: "", category: "chat", newer: false,
       fit: new Set(), maxGb: 20,
       groups: [], job: null, searchTimer: null, abort: null, searchSeq: 0,
+      onlineNodes: 2, maxSplitStages: 2, nodeLabels: ["EXO1", "EXO2"],
     };
     const $ = (id) => document.getElementById(id);
     const chipsEl = $("pickerChips");
-    FILTERS.forEach((f) => {
-      const b = document.createElement("button");
-      b.type = "button"; b.textContent = f; b.dataset.chip = f;
-      if (state.category === f) b.classList.add("on");
-      b.addEventListener("click", () => {
-        if (CATEGORY.includes(f)) {
-          state.category = (state.category === f) ? "" : f;
-          [...chipsEl.querySelectorAll("button")].forEach((x) => {
-            if (CATEGORY.includes(x.dataset.chip)) {
-              x.classList.toggle("on", x.dataset.chip === state.category);
-            }
-          });
-          search();
-          return;
+    function fitChipName(k) { return "fits-on-" + k; }
+    function rebuildChips() {
+      const n = Math.max(1, state.onlineNodes || 1);
+      const wanted = CATEGORY.concat(["new"]).concat(
+        Array.from({length: n}, (_, i) => fitChipName(i + 1))
+      );
+      // Drop obsolete fit chips; keep category/new.
+      [...chipsEl.querySelectorAll("button")].forEach((b) => {
+        const c = b.dataset.chip;
+        if (c && c.startsWith("fits-on-") && !wanted.includes(c)) {
+          state.fit.delete(c);
+          b.remove();
         }
-        if (f === "new") {
-          state.newer = !state.newer;
-          b.classList.toggle("on", state.newer);
-          search();
-          return;
-        }
-        if (state.fit.has(f)) { state.fit.delete(f); b.classList.remove("on"); }
-        else { state.fit.add(f); b.classList.add("on"); }
-        renderList();
       });
-      chipsEl.appendChild(b);
-    });
+      const have = new Set([...chipsEl.querySelectorAll("button")].map((b) => b.dataset.chip));
+      wanted.forEach((f) => {
+        if (have.has(f)) return;
+        const b = document.createElement("button");
+        b.type = "button"; b.textContent = f; b.dataset.chip = f;
+        if (state.category === f) b.classList.add("on");
+        if (state.fit.has(f)) b.classList.add("on");
+        if (f === "new" && state.newer) b.classList.add("on");
+        b.addEventListener("click", () => {
+          if (CATEGORY.includes(f)) {
+            state.category = (state.category === f) ? "" : f;
+            [...chipsEl.querySelectorAll("button")].forEach((x) => {
+              if (CATEGORY.includes(x.dataset.chip)) {
+                x.classList.toggle("on", x.dataset.chip === state.category);
+              }
+            });
+            search();
+            return;
+          }
+          if (f === "new") {
+            state.newer = !state.newer;
+            b.classList.toggle("on", state.newer);
+            search();
+            return;
+          }
+          if (state.fit.has(f)) { state.fit.delete(f); b.classList.remove("on"); }
+          else { state.fit.add(f); b.classList.add("on"); }
+          renderList();
+        });
+        chipsEl.appendChild(b);
+      });
+    }
+    rebuildChips();
     $("pickerMaxGb").addEventListener("change", () => {
       state.maxGb = parseFloat($("pickerMaxGb").value) || 0;
       renderList();
@@ -1994,10 +2013,18 @@
         const data = await api(u, state.abort ? { signal: state.abort.signal } : {});
         if (seq !== state.searchSeq) return;
         state.groups = data.groups || [];
-        $("pickerStatus").textContent = `${state.groups.length} models · fit on ${data.nodes_used || "?"} nodes`
-          + (data.filter ? ` · ${data.filter}` : "")
+        if (data.nodes_used != null) state.onlineNodes = data.nodes_used;
+        if (data.max_split_stages != null) state.maxSplitStages = data.max_split_stages;
+        if (data.node_labels) state.nodeLabels = data.node_labels;
+        rebuildChips();
+        let status = `${state.groups.length} models · fit on ${data.nodes_used || "?"} nodes`;
+        if (data.max_split_stages && data.nodes_used > data.max_split_stages) {
+          status += ` · ${data.nodes_used}-Mini split coming later`;
+        }
+        status += (data.filter ? ` · ${data.filter}` : "")
           + (data.newer ? " · new" : "")
           + (data.errors && data.errors.length ? ` · ${data.errors[0]}` : "");
+        $("pickerStatus").textContent = status;
         renderList();
       } catch (e) {
         if (e && e.name === "AbortError") return;
@@ -2023,10 +2050,13 @@
       const quants = (g.quants || []).filter(passMaxGb);
       if (!quants.length) return false;
       for (const c of state.fit) {
-        if (c === "fits-on-1") {
-          if (!quants.some((q) => ((q.fit && q.fit.fits_on) || []).includes(1))) return false;
-        } else if (c === "fits-on-2") {
-          if (!quants.some(function(q){ var f=q.fit||{}; return ((f.fits_on||[]).includes(2) || f.nodes_needed===2); })) return false;
+        const m = /^fits-on-(\d+)$/.exec(c);
+        if (m) {
+          const k = parseInt(m[1], 10);
+          if (!quants.some(function(q){
+            var f = q.fit || {};
+            return ((f.fits_on || []).includes(k) || f.nodes_needed === k);
+          })) return false;
         }
       }
       return true;
@@ -2140,14 +2170,34 @@
       if (!state.job) { el.hidden = true; return; }
       el.hidden = false;
       const j = state.job;
-      const lead = (j.progress && j.progress.lead) || {};
-      const pack = (j.progress && j.progress.packer) || {};
-      el.innerHTML = `<div>Job ${escapeHtml(j.id)} · ${escapeHtml(j.status)} · ${escapeHtml(j.repo_id || "")}</div>
-        <div>EXO1 ${lead.pct || 0}% — ${escapeHtml(lead.msg || "")}</div>
-        <div class="bar"><i style="width:${lead.pct||0}%"></i></div>
-        <div>EXO2 ${pack.pct || 0}% — ${escapeHtml(pack.msg || "")}</div>
-        <div class="bar"><i style="width:${pack.pct||0}%"></i></div>
-        <button type="button" class="ghost" id="btnCancelJob">Stop</button>`;
+      const prog = j.progress || {};
+      // Prefer runners list; else unique progress entries (skip legacy lead/packer dupes when id present)
+      let rows = [];
+      if (j.runners && j.runners.length) {
+        rows = j.runners.map((r) => {
+          const p = prog[r.id] || prog[r.role] || {};
+          return { label: r.label || r.id, pct: p.pct || 0, msg: p.msg || "" };
+        });
+      } else {
+        const seen = new Set();
+        for (const [k, p] of Object.entries(prog)) {
+          if (!p || typeof p !== "object") continue;
+          const label = p.label || k;
+          if (seen.has(label)) continue;
+          // skip bare lead/packer if labeled entry already shown
+          if ((k === "lead" || k === "packer") && p.label && p.label !== k) continue;
+          seen.add(label);
+          rows.push({ label, pct: p.pct || 0, msg: p.msg || "" });
+        }
+      }
+      let html = `<div>Job ${escapeHtml(j.id)} · ${escapeHtml(j.status)} · ${escapeHtml(j.repo_id || "")}</div>`;
+      if (j.note) html += `<div class="p-meta">${escapeHtml(j.note)}</div>`;
+      for (const r of rows) {
+        html += `<div>${escapeHtml(r.label)} ${r.pct || 0}% — ${escapeHtml(r.msg || "")}</div>
+          <div class="bar"><i style="width:${r.pct||0}%"></i></div>`;
+      }
+      html += `<button type="button" class="ghost" id="btnCancelJob">Stop</button>`;
+      el.innerHTML = html;
       const c = $("btnCancelJob");
       if (c) c.onclick = async () => {
         try {
@@ -2187,8 +2237,21 @@
       opts = opts || {};
       const row = document.createElement("div");
       row.className = "d-row";
+      const byLabel = opts.sizeByLabel || {};
+      let sizeTxt = "";
+      const labelKeys = Object.keys(byLabel);
+      if (labelKeys.length) {
+        sizeTxt = labelKeys.map((k) => `${k} ${byLabel[k] ?? "—"} GB`).join(" · ");
+      } else if (sizes && (sizes.lead != null || sizes.packer != null)) {
+        sizeTxt = `EXO1 ${sizes.lead ?? "—"} GB · EXO2 ${sizes.packer ?? "—"} GB`;
+      } else if (sizes) {
+        sizeTxt = Object.keys(sizes)
+          .filter((k) => k !== "lead" && k !== "packer")
+          .map((k) => `${k} ${sizes[k] ?? "—"} GB`).join(" · ")
+          || `EXO1 ${sizes.lead ?? "—"} GB · EXO2 ${sizes.packer ?? "—"} GB`;
+      }
       row.innerHTML = `<span style="flex:1"><b>${escapeHtml(label)}</b>${opts.note ? `<div class="p-meta">${escapeHtml(opts.note)}</div>` : ""}</span>
-        <span class="p-meta">EXO1 ${sizes.lead ?? "—"} GB · EXO2 ${sizes.packer ?? "—"} GB</span>`;
+        <span class="p-meta">${escapeHtml(sizeTxt)}</span>`;
       const del = document.createElement("button");
       del.type = "button"; del.textContent = "Delete";
       del.disabled = !!opts.disabled;
@@ -2210,6 +2273,7 @@
           const sizes = c.size_gb || {};
           el.appendChild(diskRow(c.name, sizes, {
             note: c.note || "",
+            sizeByLabel: c.size_by_label || {},
             onDelete: async () => {
               const msg = c.kind === "drafts"
                 ? "Delete guess-ahead helper models on ALL Minis? They re-download when needed."
@@ -2241,6 +2305,7 @@
           const blocked = !!(cur && (String(cur).includes(m.id) || String(m.id).includes(String(cur))));
           el.appendChild(diskRow(m.name, sizes, {
             disabled: blocked,
+            sizeByLabel: m.size_by_label || {},
             title: blocked ? "Refuse: currently loaded" : "Stop fetch if running, then delete from all Minis",
             onDelete: async () => {
               if (!confirm(`Stop any download and delete ${m.id} from ALL Minis?`)) return;
