@@ -3,6 +3,18 @@
 
 ## Unreleased
 
+- **Truthful download progress (hf_xet).** File-only progress froze at 0% while
+  `nettop` showed 3–6 MB/s (JevK5). Fallback: fetch JSONL hook → disk/xet →
+  `nettop` bytes_in. UI: MB/s, ETA, %, “starting…”, stall ~30s. Live fetches
+  reattach after a web-only restart.
+
+- **Download placement.** Quant click chooses 1 Mini / K-split (≤ MAX_SPLIT_STAGES)
+  / copy-to-all; unfit options disabled with reasons; default = smallest fit.
+  Saved as `caravan-placement.json`; Settings/load respect it; Delete still all Minis.
+
+- **HF token.** `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` env, `~/.cache/huggingface/token`,
+  or Settings field → `~/.caravan/hf_token` on each Mini (never echoed to the page).
+
 - **Settings model list from disk.** Dropdown uses N-node MLX inventory (complete shards / tokenizer / no `.incomplete`, capacity not red). Static catalog phantoms (gpt-oss, gemma) removed; partial trees show disabled with a reason. Picker refresh updates Settings after download.
 
 - **Model picker N-node.** Nodes from `~/.caravan/config.toml` `[web.nodes.*]` (default still EXO1/EXO2). Fit/chips/download/Stop/Delete/disk iterate online/configured nodes; 1-node never suggests split; `MAX_SPLIT_STAGES=2` caps actual load with a “N-Mini split coming later” note. See MODEL_PICKER / CONFIGURATION.

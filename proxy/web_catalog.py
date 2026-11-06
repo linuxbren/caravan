@@ -199,6 +199,13 @@ def build_entries_from_inventories(
 
         pk = _default_packer_layers(rid, n_layers)
 
+        # Placement saved at download time (one / split / all)
+        placement = None
+        for st in per.values():
+            if isinstance(st, dict) and st.get("placement"):
+                placement = st["placement"]
+                break
+
         # Usability across stages
         reasons = []
         usable = True
@@ -229,16 +236,60 @@ def build_entries_from_inventories(
             elif fit.get("nodes_needed") and fit["nodes_needed"] >= 2:
                 need_split = True
 
-        # Completeness requirements
-        if need_split or (fit and fit.get("nodes_needed", 1) and fit.get("nodes_needed") >= 2):
-            # Need lead_ok on lead node + packer_ok on first packer stage(s)
+        # Completeness requirements — honor saved placement when present.
+        place_mode = (placement or {}).get("mode")
+        place_ids = set((placement or {}).get("node_ids") or [])
+        place_labels = set((placement or {}).get("node_labels") or [])
+
+        def _st_for(stg):
+            label = stg.get("label") or stg.get("id")
+            st = per.get(label) or {}
+            if not st:
+                st = (by_node.get(stg.get("id") or "") or {}).get("models", {}).get(rid) or {}
+            return label, st
+
+        if place_mode == "one":
+            # Usable as a single-Mini model on the Mini that holds the full copy.
+            found = False
+            for ni in node_inventories or []:
+                label = ni.get("label") or ni.get("id")
+                nid = ni.get("id")
+                if place_ids and nid not in place_ids and label not in place_labels:
+                    continue
+                if place_labels and label not in place_labels and (nid not in place_ids if place_ids else True):
+                    if place_ids and nid not in place_ids:
+                        continue
+                st = (ni.get("models") or {}).get(rid) or {}
+                if st.get("full_ok") or st.get("lead_ok"):
+                    found = True
+                    # Prefer this node's path as lead
+                    if st.get("path"):
+                        lead_path = st["path"]
+                    need_split = False
+                    break
+            if not found:
+                usable = False
+                want = ", ".join(place_labels or place_ids) or "target Mini"
+                reasons.append(f"placement is 1 Mini ({want}) but full copy not ready")
+        elif place_mode == "all":
+            # Full copy on every Mini — usable on any one with full_ok.
+            any_full = False
+            for label, st in per.items():
+                if st and (st.get("full_ok") or st.get("lead_ok")):
+                    any_full = True
+                    if st.get("path") and not lead_path:
+                        lead_path = st["path"]
+            if not any_full:
+                usable = False
+                reasons.append("copy-to-all placement incomplete on every Mini")
+            need_split = False
+        elif place_mode == "split" or need_split or (fit and fit.get("nodes_needed", 1) and fit.get("nodes_needed") >= 2):
+            need_split = True
             for stg in stages:
-                label = stg.get("label") or stg.get("id")
+                label, st = _st_for(stg)
                 role = stg.get("role") or "packer"
-                st = per.get(label) or {}
-                # also try by matching inventory id
-                if not st:
-                    st = (by_node.get(stg.get("id") or "") or {}).get("models", {}).get(rid) or {}
+                if place_ids and (stg.get("id") not in place_ids) and (label not in place_labels):
+                    continue
                 if role == "lead":
                     if not st.get("lead_ok") and not st.get("full_ok"):
                         usable = False
@@ -253,7 +304,6 @@ def build_entries_from_inventories(
             label = (lead_stg or {}).get("label") or "lead"
             st = per.get(label) or {}
             if not st and lead_path:
-                # inspect local path directly
                 local_i = inv.inspect_tree(lead_path, packer_layers=pk)
                 st = {
                     "full_ok": local_i.get("full_ok"),
@@ -299,6 +349,12 @@ def build_entries_from_inventories(
                 for ni in (node_inventories or [])
             },
             "need_split": need_split,
+            "placement": placement,
+            "held_on": sorted({
+                (ni.get("label") or ni.get("id"))
+                for ni in (node_inventories or [])
+                if (ni.get("models") or {}).get(rid)
+            }),
         }
         rows.append(row)
 

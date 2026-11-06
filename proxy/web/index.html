@@ -673,6 +673,13 @@
   .picker-job { margin-top: 8px; padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 6px; }
   .picker-job .bar { height: 4px; background: var(--bg3); border-radius: 2px; margin: 4px 0; overflow: hidden; }
   .picker-job .bar > i { display: block; height: 100%; background: var(--accent); width: 0; }
+  .picker-job .stalled { color: var(--rose); }
+  .picker-job .starting { color: var(--muted); font-style: italic; }
+  .placement-box { margin: 8px 0; padding: 8px; border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 6px; }
+  .placement-box label { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0; cursor: pointer; }
+  .placement-box label.disabled { opacity: .45; cursor: not-allowed; }
+  .placement-box .why { color: var(--muted); font-size: .65rem; }
+  .hf-token-card input[type=password] { width: 100%; background: var(--bg3); color: var(--fg); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 4px; padding: 4px 8px; font: inherit; }
 
   /* Topology bar colors: Theme (accent phosphor) or Heat (green/yellow/red). */
   html[data-bar-colors="theme"] .nstat .fill.lvl-lo {
@@ -888,6 +895,16 @@
         <div class="help" id="optProgress"></div>
       </div>
     </div>
+    <div class="optcard hf-token-card" id="hfTokenCard">
+      <h2><span class="tip" title="Hugging Face rate-limits unauthenticated downloads. Stored only on each Mini at ~/.caravan/hf_token (chmod 600). Never shown back to the page.">Hugging Face token</span></h2>
+      <div class="help" id="hfTokenStatus">Checking…</div>
+      <input type="password" id="hfTokenInput" placeholder="hf_… (optional)" autocomplete="off" spellcheck="false" />
+      <div class="applyrow" style="margin-top:6px">
+        <button class="primary" id="btnHfTokenSave" type="button">Save on Minis</button>
+        <button class="ghost" id="btnHfTokenClear" type="button">Clear</button>
+      </div>
+      <small>Also used: <code>HF_TOKEN</code> env, or <code>~/.cache/huggingface/token</code> from <code>huggingface-cli login</code>.</small>
+    </div>
     <div class="optcard" id="topoBarsCard">
       <h2><span class="tip" title="How Topology fills the CPU / GPU / RAM / Disk / Temp bars.">Topology bars</span></h2>
       <div class="theme-switch" id="barColorSwitch" title="Bar colors">
@@ -936,6 +953,42 @@
     const b = $("drawerBackdrop"); b.classList.remove("open"); b.hidden = true;
   };
   $("btnOpenSettings").addEventListener("click", openDrawer);
+  async function refreshHfTokenStatus() {
+    try {
+      const j = await api("/api/hf-token");
+      const el = $("hfTokenStatus");
+      if (!el) return;
+      if (j.configured) {
+        el.textContent = "Configured on this Mini via " + (j.source || "token") + " (value never shown).";
+      } else {
+        el.textContent = "Not set — downloads use anonymous HF (rate-limited).";
+      }
+    } catch (e) {
+      const el = $("hfTokenStatus");
+      if (el) el.textContent = "Could not read token status.";
+    }
+  }
+  if ($("btnHfTokenSave")) {
+    $("btnHfTokenSave").addEventListener("click", async () => {
+      const tok = ($("hfTokenInput").value || "").trim();
+      if (!tok) { alert("Paste a token, or use Clear."); return; }
+      try {
+        const j = await api("/api/hf-token", { method: "POST", body: JSON.stringify({ token: tok }) });
+        $("hfTokenInput").value = "";
+        await refreshHfTokenStatus();
+        alert("Saved on Minis" + (j.nodes ? " (" + j.nodes.filter(n=>n.ok).length + " ok)" : ""));
+      } catch (e) { alert(e.error || e.message || e); }
+    });
+    $("btnHfTokenClear").addEventListener("click", async () => {
+      if (!confirm("Clear the Caravan HF token on all Minis?")) return;
+      try {
+        await api("/api/hf-token", { method: "POST", body: JSON.stringify({ clear: true }) });
+        $("hfTokenInput").value = "";
+        await refreshHfTokenStatus();
+      } catch (e) { alert(e.error || e.message || e); }
+    });
+    refreshHfTokenStatus();
+  }
   if (/[?&]settings=1\b/.test(location.search)) setTimeout(openDrawer, 300);
   $("btnCloseSettings").addEventListener("click", closeDrawer);
   $("drawerBackdrop").addEventListener("click", closeDrawer);
@@ -1983,6 +2036,20 @@
       d.classList.add("open"); d.setAttribute("aria-hidden", "false");
       $("btnOpenPicker").classList.add("on");
       search(); refreshDisk();
+      adoptLiveFetches();
+    }
+    async function adoptLiveFetches() {
+      try {
+        const data = await api("/api/picker/live-fetches");
+        const jobs = (data && data.jobs) || [];
+        if (!jobs.length) return;
+        // Prefer showing a live orphan if we aren't already tracking a job
+        if (!state.job || state.job.status === "done" || state.job.orphan) {
+          state.job = jobs[0];
+          showJob();
+          if (state.job && state.job.id) pollJob(state.job.id, { repo_id: state.job.repo_id });
+        }
+      } catch (_) {}
     }
     function closePicker() {
       const d = $("pickerDrawer");
@@ -2169,18 +2236,66 @@
       } else if (q.fit && q.fit.color === "yellow") {
         if (!confirm(`${q.fit.reason || "Tight fit"}\nDownload anyway?`)) return;
       }
+      // Placement choice: 1 Mini / K split / copy-all
+      let placeId = null;
+      try {
+        const place = await api("/api/picker/placement", {
+          method: "POST",
+          body: JSON.stringify({ weights_gb: q.weights_gb || 0, repo_id: q.repo_id }),
+        });
+        const chosen = await choosePlacement(place, q);
+        if (!chosen) { $("pickerStatus").textContent = "Download cancelled."; return; }
+        placeId = chosen;
+      } catch (e) {
+        if (!confirm("Could not load placement options (" + e.message + "). Download with default placement?")) return;
+      }
       $("pickerStatus").textContent = `Downloading ${q.repo_id}…`;
       try {
+        const body = { repo_id: q.repo_id, source: q.source, packer_layers: 24, weights_gb: q.weights_gb || 0 };
+        if (placeId) body.placement_id = placeId;
         const data = await api("/api/picker/download", {
           method: "POST",
-          body: JSON.stringify({ repo_id: q.repo_id, source: q.source, packer_layers: 24 }),
+          body: JSON.stringify(body),
         });
         state.job = data.job;
         showJob();
         pollJob(data.job.id, q);
       } catch (e) {
-        $("pickerStatus").textContent = "Download failed: " + e.message;
+        $("pickerStatus").textContent = "Download failed: " + (e.error || e.message || e);
       }
+    }
+
+    function choosePlacement(place, q) {
+      return new Promise((resolve) => {
+        const el = $("pickerJob");
+        el.hidden = false;
+        const opts = (place && place.options) || [];
+        const def = (place && place.default_id) || (opts.find(o => o.enabled) || {}).id;
+        let html = `<div class="placement-box"><div><b>Where should ${escapeHtml(q.repo_id)} go?</b></div>`;
+        if (!opts.length) {
+          html += `<div class="why">No placement options.</div></div>`;
+          el.innerHTML = html + `<button type="button" class="ghost" id="btnPlaceCancel">Cancel</button>`;
+          $("btnPlaceCancel").onclick = () => { el.hidden = true; resolve(null); };
+          return;
+        }
+        for (const o of opts) {
+          const dis = !o.enabled;
+          html += `<label class="${dis ? "disabled" : ""}">
+            <input type="radio" name="placement" value="${escapeHtml(o.id)}" ${o.id===def && !dis ? "checked" : ""} ${dis ? "disabled" : ""} />
+            <span><b>${escapeHtml(o.label)}</b>${dis && o.reason ? `<div class="why">${escapeHtml(o.reason)}</div>` : ""}</span>
+          </label>`;
+        }
+        html += `</div>
+          <button type="button" class="primary" id="btnPlaceGo">Download</button>
+          <button type="button" class="ghost" id="btnPlaceCancel">Cancel</button>`;
+        el.innerHTML = html;
+        $("btnPlaceCancel").onclick = () => { el.hidden = true; resolve(null); };
+        $("btnPlaceGo").onclick = () => {
+          const sel = el.querySelector('input[name=placement]:checked');
+          if (!sel) { alert("Pick a placement"); return; }
+          resolve(sel.value);
+        };
+      });
     }
     function showJob() {
       const el = $("pickerJob");
@@ -2193,7 +2308,7 @@
       if (j.runners && j.runners.length) {
         rows = j.runners.map((r) => {
           const p = prog[r.id] || prog[r.role] || {};
-          return { label: r.label || r.id, pct: p.pct || 0, msg: p.msg || "" };
+          return { label: r.label || r.id, pct: p.pct || 0, msg: p.msg || "", stalled: !!p.stalled, source: p.source || "" };
         });
       } else {
         const seen = new Set();
@@ -2204,13 +2319,15 @@
           // skip bare lead/packer if labeled entry already shown
           if ((k === "lead" || k === "packer") && p.label && p.label !== k) continue;
           seen.add(label);
-          rows.push({ label, pct: p.pct || 0, msg: p.msg || "" });
+          rows.push({ label, pct: p.pct || 0, msg: p.msg || "", stalled: !!p.stalled, source: p.source || "" });
         }
       }
       let html = `<div>Job ${escapeHtml(j.id)} · ${escapeHtml(j.status)} · ${escapeHtml(j.repo_id || "")}</div>`;
       if (j.note) html += `<div class="p-meta">${escapeHtml(j.note)}</div>`;
       for (const r of rows) {
-        html += `<div>${escapeHtml(r.label)} ${r.pct || 0}% — ${escapeHtml(r.msg || "")}</div>
+        const cls = r.stalled ? "stalled" : (r.source === "starting" || (r.msg || "").startsWith("starting") ? "starting" : "");
+        const pctShow = (r.source === "starting" || (r.msg || "").startsWith("starting")) ? "…" : ((r.pct || 0) + "%");
+        html += `<div class="${cls}">${escapeHtml(r.label)} ${pctShow} — ${escapeHtml(r.msg || "")}</div>
           <div class="bar"><i style="width:${r.pct||0}%"></i></div>`;
       }
       html += `<button type="button" class="ghost" id="btnCancelJob">Stop</button>`;
@@ -2322,8 +2439,14 @@
         for (const m of models) {
           const sizes = m.size_gb || {};
           const blocked = !!(cur && (String(cur).includes(m.id) || String(m.id).includes(String(cur))));
+          const held = (m.held_on || []).join(", ");
+          const place = m.placement ? (m.placement.mode === "one" ? ("1 Mini · " + ((m.placement.node_labels||[]).join(",") || held))
+            : m.placement.mode === "all" ? "copy on all"
+            : m.placement.mode === "split" ? ("split · " + ((m.placement.node_labels||[]).join("+") || held))
+            : "") : (held ? ("on " + held) : "");
           el.appendChild(diskRow(m.name, sizes, {
             disabled: blocked,
+            note: place || undefined,
             sizeByLabel: m.size_by_label || {},
             title: blocked ? "Refuse: currently loaded" : "Stop fetch if running, then delete from all Minis",
             onDelete: async () => {

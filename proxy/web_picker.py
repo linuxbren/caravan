@@ -31,8 +31,17 @@ except ImportError:  # pragma: no cover
     MG = None
 
 HF_API = "https://huggingface.co/api/models"
-HF_TOKEN = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
 OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY") or os.environ.get("CARAVAN_OLLAMA_API_KEY")
+
+def _hf_token():
+    try:
+        from hf_auth import resolve_hf_token
+        return resolve_hf_token()
+    except Exception:
+        return os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+
+# Back-compat alias (re-resolved on each use via _hf_headers / downloads)
+HF_TOKEN = None  # use _hf_token(); kept so older callers don't NameError if they assign
 CACHE_TTL_S = float(os.environ.get("CARAVAN_PICKER_CACHE_TTL", "300"))
 DEFAULT_CTX = 8192
 DEFAULT_SAFETY_GB = float(os.environ.get("CARAVAN_MEMORY_SAFETY_GB", "1.75"))
@@ -139,8 +148,9 @@ def _cache_set(key: str, data):
 
 def _hf_headers() -> dict:
     h = {"User-Agent": "caravan-picker/1.0"}
-    if HF_TOKEN:
-        h["Authorization"] = f"Bearer {HF_TOKEN}"
+    tok = _hf_token()
+    if tok:
+        h["Authorization"] = f"Bearer {tok}"
     return h
 
 
@@ -1187,98 +1197,47 @@ def list_jobs() -> list:
 
 
 def measure_download_bytes(dest: str) -> dict:
-    """Bytes on disk for a local_dir download: finished shards + .incomplete."""
-    dest_p = Path(dest).expanduser()
-    done = 0
-    incomplete = 0
-    n_incomplete = 0
-    if not dest_p.exists():
-        return {"done_bytes": 0, "incomplete_bytes": 0, "have_bytes": 0, "n_incomplete": 0}
+    """Bytes on disk for a local_dir download: finished shards + .incomplete (+ xet)."""
     try:
-        for p in dest_p.glob("*.safetensors"):
-            try:
-                done += p.stat().st_size
-            except OSError:
-                pass
-        for p in dest_p.glob("*.gguf"):
-            try:
-                done += p.stat().st_size
-            except OSError:
-                pass
-        cache_dl = dest_p / ".cache" / "huggingface" / "download"
-        if cache_dl.is_dir():
-            for p in cache_dl.rglob("*"):
-                if not p.is_file():
-                    continue
-                name = p.name
-                try:
-                    sz = p.stat().st_size
-                except OSError:
-                    continue
-                if name.endswith(".incomplete"):
-                    incomplete += sz
-                    n_incomplete += 1
-    except OSError:
-        pass
-    return {
-        "done_bytes": done,
-        "incomplete_bytes": incomplete,
-        "have_bytes": done + incomplete,
-        "n_incomplete": n_incomplete,
-    }
+        from download_progress import measure_disk
+        return measure_disk(dest)
+    except Exception:
+        dest_p = Path(dest).expanduser()
+        return {"done_bytes": 0, "incomplete_bytes": 0, "have_bytes": 0, "n_incomplete": 0,
+                "source": "disk"} if not dest_p.exists() else {"done_bytes": 0, "incomplete_bytes": 0,
+                "have_bytes": 0, "n_incomplete": 0, "source": "disk"}
 
 
 def _fmt_eta(seconds: Optional[float]) -> str:
-    if seconds is None or seconds < 0 or seconds != seconds:  # noqa: PLR0124
-        return "—"
-    seconds = int(seconds)
-    if seconds < 60:
-        return f"{seconds}s"
-    if seconds < 3600:
-        return f"{seconds // 60}m {seconds % 60}s"
-    return f"{seconds // 3600}h {(seconds % 3600) // 60}m"
+    try:
+        from download_progress import fmt_eta
+        return fmt_eta(seconds)
+    except Exception:
+        if seconds is None or seconds < 0 or seconds != seconds:  # noqa: PLR0124
+            return "—"
+        seconds = int(seconds)
+        if seconds < 60:
+            return f"{seconds}s"
+        if seconds < 3600:
+            return f"{seconds // 60}m {seconds % 60}s"
+        return f"{seconds // 3600}h {(seconds % 3600) // 60}m"
 
 
-def progress_snapshot(dest: str, total_bytes: Optional[int], prev: Optional[dict] = None) -> dict:
-    """Build a progress dict with pct, MB/s, ETA from byte counts."""
-    m = measure_download_bytes(dest)
-    have = m["have_bytes"]
-    total = int(total_bytes or 0)
-    now = time.time()
-    speed = 0.0
-    if prev and prev.get("t") and prev.get("have_bytes") is not None:
-        dt = max(0.001, now - float(prev["t"]))
-        speed = max(0.0, (have - int(prev["have_bytes"])) / dt)
-    pct = 0
-    if total > 0:
-        pct = max(0, min(99, int(have * 100 / total)))
-        if have >= total and m["n_incomplete"] == 0 and m["done_bytes"] > 0:
-            pct = 100
-    elif m["done_bytes"] > 0 and m["n_incomplete"] == 0:
-        pct = 100
-    eta_s = None
-    if speed > 0 and total > have:
-        eta_s = (total - have) / speed
-    mb_s = speed / 1e6
-    have_gb = have / 1e9
-    total_gb = total / 1e9 if total else None
-    if total_gb:
-        msg = f"{have_gb:.2f}/{total_gb:.2f} GB · {mb_s:.1f} MB/s · ETA {_fmt_eta(eta_s)}"
-    else:
-        msg = f"{have_gb:.2f} GB · {mb_s:.1f} MB/s"
-    if m["n_incomplete"]:
-        msg += f" · {m['n_incomplete']} active"
-    return {
-        "pct": pct,
-        "msg": msg,
-        "have_bytes": have,
-        "total_bytes": total or None,
-        "speed_bps": speed,
-        "mb_s": round(mb_s, 2),
-        "eta_s": None if eta_s is None else int(eta_s),
-        "t": now,
-        "n_incomplete": m["n_incomplete"],
-    }
+def progress_snapshot(dest: str, total_bytes: Optional[int], prev: Optional[dict] = None,
+                      *, repo_id: Optional[str] = None, pid: Optional[int] = None) -> dict:
+    """Truthful progress: hook → disk → nettop (hf_xet-safe)."""
+    try:
+        from download_progress import combine_progress
+        return combine_progress(
+            dest=dest or "",
+            repo_id=repo_id or Path(dest or ".").name.replace("--", "/"),
+            total_bytes=total_bytes,
+            pid=pid,
+            prev=prev,
+        )
+    except Exception as e:  # noqa: BLE001
+        return {"pct": 0, "msg": f"progress error: {e}", "have_bytes": 0, "t": time.time(),
+                "source": "starting", "stalled": False}
 
 
 def kill_local_fetch(repo_id: str) -> dict:
@@ -1370,7 +1329,8 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                    total_bytes_packer: Optional[int] = None,
                    measure_packer: Optional[callable] = None,
                    runners: Optional[list] = None,
-                   note: Optional[str] = None) -> dict:
+                   note: Optional[str] = None,
+                   placement: Optional[dict] = None) -> dict:
     """Start async download across one or more nodes in PARALLEL.
 
     Prefer `runners`: list of dicts
@@ -1401,8 +1361,9 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
     progress = {}
     for r in runners:
         rid = r.get("id") or r.get("label") or "node"
-        progress[rid] = {"pct": 0, "msg": "queued", "have_bytes": 0, "t": time.time(),
-                         "label": r.get("label") or rid, "role": r.get("role")}
+        progress[rid] = {"pct": 0, "msg": "starting…", "have_bytes": 0, "t": time.time(),
+                         "label": r.get("label") or rid, "role": r.get("role"),
+                         "source": "starting", "stalled": False}
         # legacy aliases
         if r.get("role") == "lead":
             progress.setdefault("lead", progress[rid])
@@ -1413,6 +1374,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
              runners=[{"id": r.get("id"), "label": r.get("label"), "role": r.get("role"),
                        "dest": r.get("dest")} for r in runners],
              packer_layers=packer_layers, note=note or "",
+             placement=placement or {},
              dest_lead=next((r["dest"] for r in runners if r.get("role") == "lead"), None),
              dest_packer=next((r["dest"] for r in runners if r.get("role") != "lead"), None),
              total_bytes_lead=total_bytes_lead, total_bytes_packer=total_bytes_packer)
@@ -1427,39 +1389,66 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
             if measure:
                 try:
                     m = measure() or {}
-                    have = int(m.get("have_bytes") or 0)
-                    n_inc = int(m.get("n_incomplete") or 0)
-                    now = time.time()
-                    speed = 0.0
-                    if prev and prev.get("t") and prev.get("have_bytes") is not None:
-                        dt = max(0.001, now - float(prev["t"]))
-                        speed = max(0.0, (have - int(prev["have_bytes"])) / dt)
-                    total = int(total_b or job_now.get("total_bytes_lead") or job_now.get("total_bytes_packer") or 0)
-                    # prefer runner-specific total if stashed
-                    totals = job_now.get("totals") or {}
-                    total = int(totals.get(role_id) or total_b or total or 0)
-                    pct = max(0, min(99, int(have * 100 / total))) if total else 0
-                    eta_s = ((total - have) / speed) if (speed > 0 and total > have) else None
-                    mb_s = speed / 1e6
-                    if total:
-                        msg = f"{have/1e9:.2f}/{total/1e9:.2f} GB · {mb_s:.1f} MB/s · ETA {_fmt_eta(eta_s)}"
+                    # Remote measure may already be a full progress snap (source/msg/stalled)
+                    if m.get("source") or m.get("msg"):
+                        snap = dict(m)
+                        snap.setdefault("t", time.time())
                     else:
-                        msg = f"{have/1e9:.2f} GB · {mb_s:.1f} MB/s"
-                    if n_inc:
-                        msg += f" · {n_inc} active"
-                    snap = {
-                        "pct": pct, "msg": msg, "have_bytes": have,
-                        "total_bytes": total or None, "speed_bps": speed,
-                        "mb_s": round(mb_s, 2),
-                        "eta_s": None if eta_s is None else int(eta_s),
-                        "t": now, "n_incomplete": n_inc,
-                    }
+                        # Raw have_bytes — fold through combine with prev for speed/stall
+                        have = int(m.get("have_bytes") or 0)
+                        n_inc = int(m.get("n_incomplete") or 0)
+                        now = time.time()
+                        speed = 0.0
+                        if prev and prev.get("t") and prev.get("have_bytes") is not None:
+                            dt = max(0.001, now - float(prev["t"]))
+                            speed = max(0.0, (have - int(prev["have_bytes"])) / dt)
+                        totals = job_now.get("totals") or {}
+                        total = int(totals.get(role_id) or total_b or 0)
+                        last_byte_t = float((prev or {}).get("last_byte_t") or now)
+                        if have > int((prev or {}).get("have_bytes") or 0):
+                            last_byte_t = now
+                        stalled = (have > 0 or (prev and prev.get("have_bytes"))) and (now - last_byte_t) >= 30
+                        pct = 0
+                        if total > 0 and have > 0:
+                            pct = max(0, min(99, int(have * 100 / total)))
+                        mb_s = speed / 1e6
+                        eta_s = ((total - have) / speed) if (speed > 0 and total > have) else None
+                        if have == 0:
+                            msg = "starting…"
+                            pct = 0
+                        elif total:
+                            msg = f"{have/1e9:.2f}/{total/1e9:.2f} GB · {mb_s:.1f} MB/s · ETA {_fmt_eta(eta_s)}"
+                        else:
+                            msg = f"{have/1e9:.2f} GB · {mb_s:.1f} MB/s"
+                        if m.get("source") == "nettop":
+                            msg += " · via network"
+                        if n_inc:
+                            msg += f" · {n_inc} active"
+                        if stalled:
+                            msg += " · stalled?"
+                        snap = {
+                            "pct": pct, "msg": msg, "have_bytes": have,
+                            "total_bytes": total or None, "speed_bps": speed,
+                            "mb_s": round(mb_s, 2),
+                            "eta_s": None if eta_s is None else int(eta_s),
+                            "t": now, "n_incomplete": n_inc,
+                            "last_byte_t": last_byte_t, "stalled": stalled,
+                            "source": m.get("source") or ("starting" if have == 0 else "disk"),
+                            "net_baseline": m.get("net_baseline") or (prev or {}).get("net_baseline"),
+                            "pid": m.get("pid") or (prev or {}).get("pid"),
+                        }
                 except Exception as e:  # noqa: BLE001
-                    snap = {"pct": 0, "msg": f"measure error: {e}", "t": time.time()}
+                    snap = {"pct": 0, "msg": f"measure error: {e}", "t": time.time(),
+                            "source": "starting", "stalled": False}
             else:
                 totals = (get_job(jid) or {}).get("totals") or {}
                 tb = int(totals.get(role_id) or total_b or 0)
-                snap = progress_snapshot(dest, tb, prev)
+                job_now2 = get_job(jid) or {}
+                snap = progress_snapshot(
+                    dest, tb, prev,
+                    repo_id=job_now2.get("repo_id"),
+                    pid=(prev or {}).get("pid") or job_now2.get("pids", {}).get(role_id),
+                )
             # keep label/role
             with _jobs_lock:
                 if jid in _jobs:
@@ -1544,6 +1533,17 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                         pp["pct"] = 100
                         pp["msg"] = (pp.get("msg") or "done") + " · done"
                         _jobs[jid]["progress"][rid] = pp
+            # Persist placement next to each dest so Settings/load respect it.
+            place = (get_job(jid) or {}).get("placement") or placement or {}
+            if place:
+                try:
+                    from placement import write_placement
+                    for r in runners:
+                        dest = r.get("dest")
+                        if dest:
+                            write_placement(dest, {**place, "repo_id": repo_id})
+                except Exception:
+                    pass
             _job_set(jid, status="done", model_folder=folder)
         except Exception as e:  # noqa: BLE001
             for e2 in stops.values():
@@ -1564,7 +1564,7 @@ def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],
     progress(5, "fetching index")
     for fname in ("config.json", "model.safetensors.index.json"):
         try:
-            hf_hub_download(repo_id, fname, local_dir=str(dest_p), token=HF_TOKEN)
+            hf_hub_download(repo_id, fname, local_dir=str(dest_p), token=_hf_token())
         except Exception:
             if fname == "config.json":
                 raise
@@ -1572,7 +1572,7 @@ def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],
     idx_path = dest_p / "model.safetensors.index.json"
     if not idx_path.is_file():
         progress(20, "single-file snapshot")
-        snapshot_download(repo_id, local_dir=str(dest_p), token=HF_TOKEN)
+        snapshot_download(repo_id, local_dir=str(dest_p), token=_hf_token())
         progress(100, "done")
         return
     index = json.loads(idx_path.read_text())
@@ -1586,6 +1586,6 @@ def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],
     progress(30, "downloading shards")
     snapshot_download(
         repo_id, local_dir=str(dest_p),
-        allow_patterns=patterns, token=HF_TOKEN,
+        allow_patterns=patterns, token=_hf_token(),
     )
     progress(100, f"done ({len(mine)} shards)")

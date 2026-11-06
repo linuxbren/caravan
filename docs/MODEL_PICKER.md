@@ -8,7 +8,10 @@ listed at the end.
 Code: `proxy/web_picker.py`, `proxy/web_nodes.py` (config-driven node list),
 `proxy/web_server.py` (`/api/picker/*`), `proxy/web/index.html` (drawer),
 `proxy/picker_disk_sizes.py` (on-disk sizes / cleanup),
-`agent/mlx_split_fetch.py` (split-aware shard download).
+`agent/mlx_split_fetch.py` (split-aware shard download),
+`proxy/download_progress.py` (hook → disk → nettop),
+`proxy/placement.py` (1 Mini / K-split / copy-all),
+`proxy/hf_auth.py` (HF token resolve / Settings store).
 
 ## Design decisions
 
@@ -107,12 +110,26 @@ config.toml. Mock picker views exercise 1-node and 3-node chip sets.
 - Border / shared shards stay on both Minis.
 - A split change should download or delete only the extra shards (best-effort
   today; full prune polish still open).
-- Lead and packer fetches run **in parallel**. Progress is byte-based
-  (finished shards + `.incomplete` under
-  `<model>/.cache/huggingface/download`), with MB/s and ETA per Mini.
-- **Stop** kills `mlx_split_fetch` on EXO1 and EXO2 (local pkill + packer pid
-  file). **Delete** stops any fetch for that model first, then removes trees
-  on all Minis. Never deletes the currently loaded model.
+- Lead and packer fetches run **in parallel**.
+- **Progress (truthful under hf_xet):** Hugging Face’s `hf_xet` path often
+  leaves `.incomplete` at 0 bytes and may not grow `~/.cache/huggingface/xet`
+  while `nettop` still shows 3–6 MB/s into the fetch pid. Caravan therefore
+  falls back **hook → disk → network**:
+  1. JSONL from `mlx_split_fetch` (`/tmp/caravan-progress-<folder>.jsonl`)
+  2. Finished shards + `.incomplete` (+ xet blob size if that’s all that grew)
+  3. Cumulative `nettop -P -L 1 -p <pid> -J bytes_in` (delta from first sample)
+  UI shows MB/s, ETA, % per node; **“starting…”** until bytes arrive (never a
+  frozen 0%); **stalled?** if no new bytes for ~30s. Live fetches survive a
+  web-only restart via `/api/picker/live-fetches`.
+- **Placement on download:** picking a quant opens 1 Mini (which one; default =
+  most capacity) / split across K Minis (only K that fit and `≤ MAX_SPLIT_STAGES`)
+  / **Copy to all**. Unfit options are disabled with a reason. Default = smallest
+  placement that fits. Saved as `caravan-placement.json` next to the model;
+  Settings usability and load respect it (a 1-Mini copy is usable as single-Mini).
+  **Delete** still removes from all Minis.
+- **Stop** kills `mlx_split_fetch` on every configured Mini. **Delete** stops any
+  fetch for that model first, then removes trees on all Minis. Never deletes the
+  currently loaded model.
 
 ### Conversion and cloud (decided, not all built)
 
@@ -127,6 +144,7 @@ config.toml. Mock picker views exercise 1-node and 3-node chip sets.
 |---|---|---|
 | 111.5 GB Flash-Next showed OK / green | Unknown size fell back to a **4 GB guess** in `attach_fit` | Real sizes from HF `blobs=true`, then `metadata.total_size` in the index; unknown → gray, never green |
 | Download bar stuck at ~10% while ~13 MB/s flowed | Progress only advanced when a whole file finished (`subprocess.run` + coarse pct) | Watch `.incomplete` + finished shard bytes; show MB/s and ETA |
+| Progress frozen at 0% / 0 MB/s while nettop shows 3–6 MB/s (JevK5 8bit) | `hf_xet` does not grow `.incomplete`; file-only measure looked idle | Fallback hook → disk → `nettop` bytes_in; “starting…” until bytes; stall ~30s |
 | Only EXO1 downloaded; EXO2 idle | Packer fetch started **after** lead finished | Parallel lead + packer threads |
 | Stop / Delete left `mlx_split_fetch` running | Cancel only set a flag; Popen/SSH child not killed | Stop/Delete pkill on both Minis; Delete stops fetch before `rm` |
 | Coding / reasoning / vision / voice / cloud chips empty | Client AND-filter over a chat-only catalog; wrong/missing HF tags | Each chip issues its own HF query; cloud uses a static list |
@@ -161,11 +179,15 @@ On-disk section of the picker lists:
 |---|---|---|
 | GET | `/api/picker/search?q=&source=&filter=&newer=1&limit=` | Catalog + capacity fit |
 | GET | `/api/picker/disk` | Models + cleanup rows (all configured nodes) |
-| POST | `/api/picker/download` | `{repo_id, packer_layers?}` parallel fetch (≤ MAX_SPLIT_STAGES) |
-| GET | `/api/picker/jobs[/id]` | Byte progress |
+| POST | `/api/picker/download` | `{repo_id, placement_id?, weights_gb?, packer_layers?}` |
+| POST | `/api/picker/placement` | Options for 1 / K-split / copy-all (enabled + reasons) |
+| GET | `/api/picker/jobs[/id]` | Byte progress (incl. orphan live fetches) |
+| GET | `/api/picker/live-fetches` | In-flight `mlx_split_fetch` not tracked as a UI job |
 | POST | `/api/picker/download/cancel` | Stop + kill fetches |
-| POST | `/api/picker/delete` | `{id, confirm}` or `{kind: hf-cache\|drafts, confirm}` |
+| POST | `/api/picker/delete` | `{id, confirm}` or `{kind: hf-cache|drafts, confirm}` |
 | POST | `/api/picker/fit` | Ad-hoc fit |
+| GET/POST | `/api/hf-token` | Status (never echoes secret) / save or clear on each Mini |
+| GET | `/api/settings` | Options + `hf_token` status blob |
 
 ## Related web UI (same session)
 

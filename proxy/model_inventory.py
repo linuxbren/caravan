@@ -115,6 +115,13 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
     base["has_index"] = idx_p.is_file()
     base["has_tokenizer"] = _has_tokenizer(d)
     base["incomplete"] = _incomplete_files(d)
+    base["placement"] = None
+    place_p = d / "caravan-placement.json"
+    if place_p.is_file():
+        try:
+            base["placement"] = json.loads(place_p.read_text())
+        except (OSError, ValueError):
+            base["placement"] = None
 
     if not base["has_config"]:
         base["reason"] = "missing config.json"
@@ -266,6 +273,7 @@ def inventory_payload(*, packer_layers: Optional[int] = None) -> dict:
                 "n_layers": m.get("n_layers"),
                 "incomplete_n": len(m.get("incomplete") or []),
                 "missing_n": len(m.get("missing") or []),
+                "placement": m.get("placement"),
             }
             for rid, m in models.items()
         }

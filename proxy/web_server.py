@@ -175,13 +175,28 @@ class App:
     def picker_kill_packer(self, repo_id: str, job=None) -> dict:
         return self.picker_kill_all(repo_id, job)
 
-    def picker_measure_node(self, node: dict, dest: str) -> dict:
-        """Byte progress for a node's local_dir (finished + .incomplete)."""
+    def picker_measure_node(self, node: dict, dest: str, *, repo_id: str = "",
+                              prev=None) -> dict:
+        """Truthful progress on a node: hook/disk/nettop (hf_xet-safe)."""
+        if web_nodes.is_local(node):
+            try:
+                from download_progress import combine_progress
+                return combine_progress(
+                    dest=str(Path(dest).expanduser()),
+                    repo_id=repo_id or Path(dest).name.replace("--", "/"),
+                    total_bytes=(prev or {}).get("total_bytes"),
+                    pid=(prev or {}).get("pid"),
+                    prev=prev,
+                )
+            except Exception:
+                pass
         remote = (
-            "import json,sys\n"
+            "import json,sys,re,subprocess\n"
             "from pathlib import Path\n"
-            "d=Path(sys.argv[1]).expanduser()\n"
-            "done=inc=n=0\n"
+            "dest=sys.argv[1]; repo=sys.argv[2] if len(sys.argv)>2 else ''\n"
+            "baseline=int(sys.argv[3]) if len(sys.argv)>3 and str(sys.argv[3]).isdigit() else None\n"
+            "d=Path(dest).expanduser()\n"
+            "done=inc=n=xet=0\n"
             "if d.exists():\n"
             "  for p in d.glob('*.safetensors'):\n"
             "    try: done+=p.stat().st_size\n"
@@ -193,25 +208,71 @@ class App:
             "        try:\n"
             "          inc+=p.stat().st_size; n+=1\n"
             "        except OSError: pass\n"
-            "print(json.dumps({'have_bytes':done+inc,'n_incomplete':n,'done_bytes':done}))\n"
+            "  x=d/'.cache'/'huggingface'/'xet'\n"
+            "  if x.is_dir():\n"
+            "    for p in x.rglob('*'):\n"
+            "      if p.is_file():\n"
+            "        try: xet+=p.stat().st_size\n"
+            "        except OSError: pass\n"
+            "have=done+inc\n"
+            "if have < 1000000 and xet > have: have=xet\n"
+            "hook_have=None\n"
+            "folder=(repo or d.name).replace('/','--')\n"
+            "hp=Path('/tmp')/('caravan-progress-%s.jsonl'%folder)\n"
+            "if hp.is_file():\n"
+            "  try:\n"
+            "    lines=hp.read_text().strip().splitlines()\n"
+            "    if lines:\n"
+            "      blob=json.loads(lines[-1]); hook_have=int(blob.get('have_bytes') or 0)\n"
+            "  except Exception: pass\n"
+            "net_raw=None; pid=None\n"
+            "try:\n"
+            "  pat=('mlx_split_fetch.py %s'%repo) if repo else 'mlx_split_fetch.py'\n"
+            "  r=subprocess.run(['pgrep','-f',pat],capture_output=True,text=True,timeout=3)\n"
+            "  pids=[int(x) for x in (r.stdout or '').split() if x.strip().isdigit()]\n"
+            "  for pid in pids:\n"
+            "    r2=subprocess.run(['nettop','-P','-L','1','-p',str(pid),'-J','bytes_in'],\n"
+            "                      capture_output=True,text=True,timeout=4)\n"
+            "    nums=re.findall(r'\\d+', (r2.stdout or '').replace(',',''))\n"
+            "    if nums:\n"
+            "      net_raw=max(int(x) for x in nums); break\n"
+            "except Exception:\n"
+            "  pass\n"
+            "net_have=None\n"
+            "if net_raw is not None:\n"
+            "  if baseline is None: baseline=net_raw\n"
+            "  net_have=max(0, net_raw-int(baseline))\n"
+            "source='starting'; out_have=0\n"
+            "if hook_have: out_have=hook_have; source='hook'\n"
+            "elif inc>0 or done>0: out_have=have; source='disk'\n"
+            "elif net_have and net_have>0: out_have=net_have; source='nettop'\n"
+            "elif have>0: out_have=have; source='disk'\n"
+            "print(json.dumps({'have_bytes':out_have,'n_incomplete':n,'done_bytes':done,"
+            "'source':source,'pid':pid,'net_raw':net_raw,'net_baseline':baseline,"
+            "'disk_have':have,'xet_bytes':xet}))\n"
         )
         try:
+            import subprocess
+            dest_q = dest if not web_nodes.is_local(node) else str(Path(dest).expanduser())
+            base = ""
+            if prev and prev.get("net_baseline") is not None:
+                base = str(int(prev["net_baseline"]))
             if web_nodes.is_local(node):
-                import subprocess
-                dest_q = str(Path(dest).expanduser())
                 r = subprocess.run(
-                    [sys.executable, "-c", remote, dest_q],
+                    [sys.executable, "-c", remote, dest_q, repo_id or "", base],
                     capture_output=True, text=True, timeout=25,
                 )
             else:
-                script = "python3 -c %s %s" % (repr(remote), repr(dest))
+                script = "python3 -c %s %s %s %s" % (
+                    repr(remote), repr(dest), repr(repo_id or ""), repr(base),
+                )
                 r = self._ssh_fn()(node, script, timeout=25)
             line = (getattr(r, "stdout", "") or "").strip().splitlines()
             if not line:
-                return {"have_bytes": 0, "n_incomplete": 0}
+                return {"have_bytes": 0, "n_incomplete": 0, "source": "starting"}
             return json.loads(line[-1])
         except Exception:
-            return {"have_bytes": 0, "n_incomplete": 0}
+            return {"have_bytes": 0, "n_incomplete": 0, "source": "starting"}
 
     def picker_measure_packer(self, dest: str) -> dict:
         """Back-compat: measure default packer (first non-lead configured node)."""
@@ -220,6 +281,91 @@ class App:
         if not pack:
             return {"have_bytes": 0, "n_incomplete": 0}
         return self.picker_measure_node(pack, dest)
+
+
+    def list_orphan_fetch_jobs(self) -> list:
+        """Progress for mlx_split_fetch processes not tracked in web_picker jobs.
+
+        Used so a web restart still shows truthful progress for an in-flight
+        download (e.g. JevK5) via hook/disk/nettop.
+        """
+        import re
+        import subprocess
+        known = {(j.get("repo_id") or "") for j in web_picker.list_jobs()
+                 if j.get("status") in ("queued", "running", "cancelling")}
+        found = {}  # repo -> {node_id: snap}
+        cfg = self.configured_nodes()
+
+        def scan_local():
+            try:
+                r = subprocess.run(
+                    ["pgrep", "-af", "mlx_split_fetch.py"],
+                    capture_output=True, text=True, timeout=5,
+                )
+            except Exception:
+                return
+            for line in (r.stdout or "").splitlines():
+                # pid ... python ... mlx_split_fetch.py REPO DEST --role ...
+                m = re.search(r"(\d+).*mlx_split_fetch\.py\s+(\S+)\s+(\S+)", line)
+                if not m:
+                    continue
+                pid, repo, dest = int(m.group(1)), m.group(2), m.group(3)
+                if repo in known:
+                    continue
+                local = next((n for n in cfg if web_nodes.is_local(n)), cfg[0] if cfg else {"id": "local", "label": "local", "role": "lead"})
+                nid = local.get("id") or "local"
+                snap = self.picker_measure_node(local, dest, repo_id=repo)
+                snap["label"] = local.get("label") or nid
+                snap["role"] = local.get("role") or "lead"
+                snap["pid"] = pid
+                found.setdefault(repo, {})[nid] = {"dest": dest, "snap": snap, "node": local}
+
+        def scan_remote(n):
+            try:
+                r = self._ssh_fn()(n, "pgrep -af mlx_split_fetch.py || true", timeout=10)
+            except Exception:
+                return
+            for line in (getattr(r, "stdout", "") or "").splitlines():
+                m = re.search(r"(\d+).*mlx_split_fetch\.py\s+(\S+)\s+(\S+)", line)
+                if not m:
+                    continue
+                pid, repo, dest = int(m.group(1)), m.group(2), m.group(3)
+                if repo in known:
+                    continue
+                nid = n.get("id") or n.get("label")
+                snap = self.picker_measure_node(n, dest, repo_id=repo)
+                snap["label"] = n.get("label") or nid
+                snap["role"] = n.get("role") or "packer"
+                snap["pid"] = pid
+                found.setdefault(repo, {})[nid] = {"dest": dest, "snap": snap, "node": n}
+
+        scan_local()
+        for n in cfg:
+            if not web_nodes.is_local(n):
+                scan_remote(n)
+
+        jobs = []
+        for repo, nodes in found.items():
+            progress = {}
+            runners = []
+            for nid, info in nodes.items():
+                progress[nid] = info["snap"]
+                runners.append({
+                    "id": nid,
+                    "label": info["snap"].get("label") or nid,
+                    "role": info["snap"].get("role"),
+                    "dest": info["dest"],
+                })
+            jobs.append({
+                "id": "live-" + repo.replace("/", "--")[:24],
+                "status": "running",
+                "repo_id": repo,
+                "progress": progress,
+                "runners": runners,
+                "orphan": True,
+                "note": "adopted live fetch (web restarted or started outside UI)",
+            })
+        return jobs
 
     def picker_role_totals(self, repo_id: str, packer_layers: int, n_stages: int = 2) -> dict:
         """Fast per-role byte estimate from HF blobs; refined by fetch JSON later."""
@@ -413,16 +559,27 @@ def make_handler(app: App):
                 snap = app.mgr.snapshot()
                 info = app.mgr.lead_split_info() if snap.get("status") == "ready" else None
                 return self._json(200, {"worker": snap, "split": info})
+            if path == "/api/settings":
+                return self._api_settings()
+            if path == "/api/hf-token":
+                return self._api_hf_token_get()
             if path == "/api/picker/search":
                 return self._api_picker_search()
             if path == "/api/picker/disk":
                 return self._api_picker_disk()
             if path == "/api/picker/jobs":
-                return self._json(200, {"jobs": web_picker.list_jobs()})
+                return self._json(200, {"jobs": web_picker.list_jobs() + app.list_orphan_fetch_jobs()})
             if path.startswith("/api/picker/jobs/"):
                 jid = path.rsplit("/", 1)[-1]
                 job = web_picker.get_job(jid)
+                if not job:
+                    for oj in app.list_orphan_fetch_jobs():
+                        if oj.get("id") == jid:
+                            job = oj
+                            break
                 return self._json(200 if job else 404, job or {"error": "not found"})
+            if path == "/api/picker/live-fetches":
+                return self._json(200, {"jobs": app.list_orphan_fetch_jobs()})
             if path.startswith("/api/"):
                 return self._json(404, {"error": "not found"})
             # fall through to static
@@ -474,11 +631,15 @@ def make_handler(app: App):
                 return self._api_picker_download(body=body)
             if path == "/api/picker/download/cancel":
                 jid = (body or {}).get("job_id") or ""
-                return self._json(200, web_picker.cancel_job(jid, kill_procs=app.picker_kill_packer))
+                return self._json(200, web_picker.cancel_job(jid, kill_procs=app.picker_kill_all))
             if path == "/api/picker/delete":
                 return self._api_picker_delete(body=body)
             if path == "/api/picker/fit":
                 return self._api_picker_fit(body=body)
+            if path == "/api/picker/placement":
+                return self._api_picker_placement(body=body)
+            if path == "/api/hf-token":
+                return self._api_hf_token_set(body=body)
             return self._json(404, {"error": "not found"})
 
         def _serve_file(self, rel):
@@ -547,11 +708,17 @@ def make_handler(app: App):
             entry = catalog.get_model(mid) if mid else None
             cfg = web_settings.load_config()
             fsets = web_settings.file_settings(mid, (entry or {}).get("lead_path"), cfg) if mid else {}
+            try:
+                from hf_auth import token_status
+                hf = token_status()
+            except Exception:
+                hf = {"configured": False, "source": None}
             return self._json(200, {"options": web_settings.OPTIONS,
                                    "current": snap.get("page_settings") or snap.get("settings"),
                                    "file": {"path": cfg["path"], "exists": cfg["exists"],
                                             "errors": cfg["errors"], "model": mid, "pins": fsets},
-                                   "from_file_loaded": snap.get("from_file") or {}})
+                                   "from_file_loaded": snap.get("from_file") or {},
+                                   "hf_token": hf})
 
 
         def _api_picker_search(self):
@@ -656,6 +823,25 @@ def make_handler(app: App):
                         "size_by_label": sizes_by_label,
                     })
 
+            # Attach placement + held_on from inventories when available
+            try:
+                invs = app.gather_model_inventories()
+                place_by = {}
+                held_by = {}
+                for ni in invs:
+                    label = ni.get("label") or ni.get("id")
+                    for rid, st in (ni.get("models") or {}).items():
+                        held_by.setdefault(rid, []).append(label)
+                        if st.get("placement") and rid not in place_by:
+                            place_by[rid] = st["placement"]
+                for e in models:
+                    rid = e.get("id")
+                    e["held_on"] = held_by.get(rid) or list((e.get("size_by_label") or {}).keys())
+                    if rid in place_by:
+                        e["placement"] = place_by[rid]
+            except Exception:
+                pass
+
             return self._json(200, {
                 "models": sorted(models, key=lambda x: x["name"].lower()),
                 "cleanup": cleanup,
@@ -742,6 +928,80 @@ def make_handler(app: App):
             out["stopped_jobs"] = stopped
             return self._json(200 if out.get("ok") else 400, out)
 
+        def _api_hf_token_get(self):
+            try:
+                from hf_auth import token_status
+                return self._json(200, token_status())
+            except Exception as e:
+                return self._json(500, {"error": str(e), "configured": False})
+
+        def _api_hf_token_set(self, body=None):
+            """Store or clear HF token on each Mini. Never echoes the secret."""
+            body = body or {}
+            try:
+                from hf_auth import save_caravan_token, clear_caravan_token
+            except Exception as e:
+                return self._json(500, {"error": str(e)})
+            clear = bool(body.get("clear") or body.get("token") == "")
+            tok = "" if clear else (body.get("token") or "").strip()
+            if not clear and not tok:
+                return self._json(400, {"error": "token required (or clear:true)"})
+            st = clear_caravan_token() if clear else save_caravan_token(tok)
+            nodes_out = [{"node": "local", "ok": True}]
+            for n in app.configured_nodes():
+                if web_nodes.is_local(n):
+                    continue
+                try:
+                    if clear:
+                        r = app._ssh_fn()(n, "rm -f ~/.caravan/hf_token; echo DONE", timeout=20)
+                    else:
+                        import base64
+                        b64 = base64.b64encode(tok.encode()).decode()
+                        py = (
+                            "import pathlib,base64; "
+                            "p=pathlib.Path.home()/'.caravan'/'hf_token'; "
+                            "p.parent.mkdir(parents=True, exist_ok=True); "
+                            "p.write_bytes(base64.b64decode('%s')); "
+                            "p.chmod(0o600)"
+                        ) % b64
+                        r = app._ssh_fn()(
+                            n,
+                            "mkdir -p ~/.caravan && umask 077 && python3 -c %s && echo DONE"
+                            % repr(py),
+                            timeout=20,
+                        )
+                    nodes_out.append({
+                        "node": n.get("id"),
+                        "ok": "DONE" in (getattr(r, "stdout", "") or ""),
+                    })
+                except Exception as e:
+                    nodes_out.append({"node": n.get("id"), "ok": False, "error": str(e)})
+            return self._json(200, {**st, "nodes": nodes_out})
+
+        def _api_picker_placement(self, body=None):
+            body = body or {}
+            nodes = (app.nodes() or {}).get("nodes") or []
+            online = [n for n in nodes if isinstance(n, dict) and not n.get("offline") and not n.get("error")]
+            if not online:
+                online = app.configured_nodes()
+            weights = float(body.get("weights_gb") or 0)
+            fit = web_picker.fit_check(
+                weights_gb=weights,
+                nodes=online,
+                cfg=body.get("cfg"),
+                n_layers=body.get("n_layers"),
+                ctx_tokens=int(body.get("ctx_tokens") or web_picker.DEFAULT_CTX),
+                split_ok=bool(body.get("split_ok", True)),
+                max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+            )
+            from placement import placement_options
+            opts = placement_options(
+                fit=fit, nodes=online,
+                max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+                weights_gb=weights,
+            )
+            return self._json(200, {"fit": fit, **opts})
+
         def _api_picker_fit(self, body=None):
             body = body or {}
             nodes = (app.nodes() or {}).get("nodes") or []
@@ -772,37 +1032,85 @@ def make_handler(app: App):
             except (TypeError, ValueError):
                 packer_layers = 24
 
-            # Live nodes for fit/online; download only on runtime-supported stages.
             live = (app.nodes() or {}).get("nodes") or []
-            stage_nodes = web_nodes.split_stage_nodes(live or app.configured_nodes())
-            if not stage_nodes:
-                stage_nodes = web_nodes.split_stage_nodes(app.configured_nodes())
-            n_stages = max(1, len(stage_nodes))
-            online_count = len(web_nodes.online_nodes(live)) if live else n_stages
-            note = ""
-            if online_count > web_nodes.MAX_SPLIT_STAGES:
+            online = [n for n in live if isinstance(n, dict) and not n.get("offline") and not n.get("error")]
+            if not online:
+                online = app.configured_nodes()
+            cfg_by_id = {(n.get("id") or n.get("label")): n for n in (live or app.configured_nodes())}
+            for n in app.configured_nodes():
+                cfg_by_id.setdefault(n.get("id") or n.get("label"), n)
+
+            weights = float(body.get("weights_gb") or 0)
+            if not weights:
+                try:
+                    info = web_picker._fetch_repo_blobs(repo)
+                    weights = float(info.get("weight_bytes") or 0) / 1e9
+                except Exception:
+                    weights = 0.0
+            fit = web_picker.fit_check(
+                weights_gb=weights, nodes=online, split_ok=True,
+                max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+            )
+            from placement import placement_options, resolve_option
+            opts = placement_options(
+                fit=fit, nodes=online,
+                max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+                weights_gb=weights,
+            )
+            place = resolve_option(opts, body=body)
+            if not place:
+                return self._json(400, {"error": "no placement option available", "options": opts})
+            if not place.get("enabled"):
+                return self._json(400, {
+                    "error": place.get("reason") or "placement disabled",
+                    "placement": place, "options": opts,
+                })
+
+            mode = place.get("mode") or "split"
+            full_copy = bool(place.get("full_copy"))
+            target_ids = list(place.get("node_ids") or [])
+            target_nodes = []
+            for tid in target_ids:
+                n = cfg_by_id.get(tid)
+                if n:
+                    target_nodes.append(n)
+            if not target_nodes:
+                return self._json(400, {"error": "placement nodes not found", "placement": place})
+
+            n_stages = len(target_nodes) if mode == "split" else 1
+            note = place.get("label") or ""
+            if mode == "split" and len(target_nodes) > web_nodes.MAX_SPLIT_STAGES:
                 note = (
-                    f"{online_count}-Mini split coming later; "
+                    f"{len(target_nodes)}-Mini split coming later; "
                     f"downloading for {web_nodes.MAX_SPLIT_STAGES}-stage runtime"
                 )
+                target_nodes = target_nodes[: web_nodes.MAX_SPLIT_STAGES]
+                n_stages = len(target_nodes)
 
-            totals = app.picker_role_totals(repo, packer_layers, n_stages=n_stages)
+            totals = app.picker_role_totals(repo, packer_layers, n_stages=max(1, n_stages))
+            if full_copy:
+                # Full model bytes for each target
+                full = totals.get("full") or totals.get("lead")
+                totals = {"lead": full, "packer": full, "each": full, "full": full}
             folder = repo.replace("/", "--")
 
+            def fetch_role_for(node):
+                if full_copy:
+                    return "all"
+                return "lead" if node.get("role") == "lead" else "packer"
+
             def make_run_local(node):
-                def run_lead(repo_id, dest, pk, prog):
+                role = fetch_role_for(node)
+                def run_local(repo_id, dest, pk, prog):
                     import subprocess
                     dest_q = str(Path(dest).expanduser())
                     Path(dest_q).mkdir(parents=True, exist_ok=True)
                     py = str(Path("~/.caravan/venvs/mlx/bin/python").expanduser())
                     fetch = str(Path(app.mgr.repo) / "agent" / "mlx_split_fetch.py")
-                    role = "lead" if node.get("role") == "lead" else "packer"
                     cmd = [py, fetch, repo_id, dest_q, "--role", role]
-                    if pk and role == "packer":
+                    if pk and role != "all":
                         cmd += ["--packer-layers", str(int(pk))]
-                    elif pk and role == "lead":
-                        cmd += ["--packer-layers", str(int(pk))]
-                    prog(1, f"starting {node.get('label') or node.get('id')} fetch")
+                    prog(1, f"starting {node.get('label') or node.get('id')} fetch ({role})")
                     proc = subprocess.Popen(
                         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                     )
@@ -823,12 +1131,8 @@ def make_handler(app: App):
                                             nid = node.get("id") or node.get("label")
                                             totals_now = dict(j.get("totals") or {})
                                             totals_now[nid] = int(float(rep["my_gb"]) * 1e9)
-                                            kw = {"totals": totals_now}
-                                            if role == "lead":
-                                                kw["total_bytes_lead"] = totals_now[nid]
-                                            else:
-                                                kw["total_bytes_packer"] = totals_now[nid]
-                                            web_picker._job_set(j["id"], **kw)
+                                            web_picker._job_set(j["id"], totals=totals_now,
+                                                               total_bytes_lead=totals_now[nid])
                                             break
                             except (ValueError, TypeError):
                                 pass
@@ -837,28 +1141,27 @@ def make_handler(app: App):
                         blob = "".join(out_lines)[-500:]
                         raise RuntimeError(blob or f"{role} download failed")
                     prog(100, "done")
-                return run_lead
+                return run_local
 
             def make_run_remote(node):
+                role = fetch_role_for(node)
                 def run_remote(repo_id, dest, pk, prog):
                     dest_q = dest.replace("'", "").replace(";", "")
                     pid_file = f"/tmp/caravan-fetch-{repo_id.replace('/', '--')}.pid"
-                    role = "lead" if node.get("role") == "lead" else "packer"
                     repo_path = (node.get("repo") or "~/cv3").rstrip("/")
                     script = (
-                        "mkdir -p %s; "
-                        "rm -f %s; "
+                        "mkdir -p %s; rm -f %s; "
                         "( ~/.caravan/venvs/mlx/bin/python %s/agent/mlx_split_fetch.py "
                         "%s %s --role %s "
                         % (dest_q, pid_file, repo_path, repo_id, dest_q, role)
                     )
-                    if pk:
+                    if pk and role != "all":
                         script += "--packer-layers %d " % int(pk)
                     script += (
                         "> /tmp/caravan-fetch-%s.log 2>&1 & echo $! > %s; echo FETCH_STARTED )"
                         % (node.get("id") or "node", pid_file)
                     )
-                    prog(1, f"starting {node.get('label') or node.get('id')} fetch")
+                    prog(1, f"starting {node.get('label') or node.get('id')} fetch ({role})")
                     r = app._ssh_fn()(node, script, timeout=60)
                     if r.returncode != 0 or "FETCH_STARTED" not in (r.stdout or ""):
                         raise RuntimeError((r.stderr or r.stdout or "remote start failed")[-400:])
@@ -883,27 +1186,39 @@ def make_handler(app: App):
                 return run_remote
 
             runners = []
-            for i, n in enumerate(stage_nodes):
+            prev_state = {}
+            for i, n in enumerate(target_nodes):
                 nid = n.get("id") or n.get("label") or f"n{i}"
                 role = n.get("role") or ("lead" if i == 0 else "packer")
                 if web_nodes.is_local(n):
-                    # Prefer caravan mlx-models on lead; same folder name
                     dest = str(Path("~/.caravan/mlx-models").expanduser() / folder)
-                    # Also keep MLX_MODEL_ROOTS[0] path via start_download default for lead
-                    if role == "lead":
-                        dest = str(web_picker.MLX_MODEL_ROOTS[0] / folder) if web_picker.MLX_MODEL_ROOTS else dest
+                    if role == "lead" and web_picker.MLX_MODEL_ROOTS:
+                        dest = str(web_picker.MLX_MODEL_ROOTS[0] / folder)
                     run = make_run_local(n)
-                    measure = None  # local progress_snapshot via dest
+                    def _mk_local_measure(nn, dd, rid=repo, key=nid):
+                        def _m():
+                            prev = prev_state.get(key)
+                            snap = app.picker_measure_node(nn, dd, repo_id=rid, prev=prev)
+                            prev_state[key] = snap
+                            return snap
+                        return _m
+                    measure = _mk_local_measure(n, dest)
                 else:
                     dest = "~/.caravan/mlx-models/%s" % folder
                     run = make_run_remote(n)
-                    # bind measure
-                    def _mk_measure(nn, dd):
-                        return lambda: app.picker_measure_node(nn, dd)
+                    def _mk_measure(nn, dd, rid=repo, key=nid):
+                        def _m():
+                            prev = prev_state.get(key)
+                            snap = app.picker_measure_node(nn, dd, repo_id=rid, prev=prev)
+                            prev_state[key] = snap
+                            return snap
+                        return _m
                     measure = _mk_measure(n, dest)
-                tb = totals.get("lead") if role == "lead" else totals.get("packer")
+                tb = totals.get("each") if full_copy else (
+                    totals.get("lead") if role == "lead" else totals.get("packer")
+                )
                 if tb is None:
-                    tb = totals.get("each")
+                    tb = totals.get("each") or totals.get("full")
                 runners.append({
                     "id": nid,
                     "label": n.get("label") or nid,
@@ -919,6 +1234,7 @@ def make_handler(app: App):
                 packer_layers=packer_layers,
                 runners=runners,
                 note=note,
+                placement=place,
                 total_bytes_lead=totals.get("lead"),
                 total_bytes_packer=totals.get("packer"),
             )
@@ -928,6 +1244,7 @@ def make_handler(app: App):
                 "stages": len(runners),
                 "max_split_stages": web_nodes.MAX_SPLIT_STAGES,
                 "note": note,
+                "placement": place,
                 "nodes": [{"id": r["id"], "label": r["label"], "role": r["role"]} for r in runners],
             })
 
@@ -1165,11 +1482,15 @@ def main(argv=None):
     except KeyboardInterrupt:
         pass
     finally:
-        print("[caravan-web] shutting down; stopping test workers", flush=True)
-        try:
-            mgr.stop(reason="web-server exit")
-        except Exception as e:
-            print(f"[caravan-web] stop warn: {e}", flush=True)
+        keep = os.environ.get("CARAVAN_WEB_KEEP_WORKERS", "").strip() in ("1", "true", "yes")
+        if keep:
+            print("[caravan-web] shutting down; keeping workers (CARAVAN_WEB_KEEP_WORKERS=1)", flush=True)
+        else:
+            print("[caravan-web] shutting down; stopping test workers", flush=True)
+            try:
+                mgr.stop(reason="web-server exit")
+            except Exception as e:
+                print(f"[caravan-web] stop warn: {e}", flush=True)
         httpd.server_close()
     return 0
 

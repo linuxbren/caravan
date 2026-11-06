@@ -414,3 +414,17 @@ runtime can actually pipeline that many stages — see ROADMAP “N-stage split�
 
 Also: `CARAVAN_CONFIG_TOML` overrides the path (default
 `~/.caravan/config.toml`).
+
+
+## Hugging Face token
+
+Unauthenticated Hugging Face downloads are rate-limited. Caravan resolves a
+token in this order (first hit wins):
+
+1. `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN` environment variable
+2. `~/.caravan/hf_token` (Settings → “Hugging Face token”; chmod 600; synced to each Mini)
+3. `~/.cache/huggingface/token` from `huggingface-cli login`
+
+The Settings field **never echoes** the secret back to the page — only
+`configured` / `source`. `GET/POST /api/hf-token` and the `hf_token` key on
+`GET /api/settings` expose status only.
