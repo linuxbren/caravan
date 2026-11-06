@@ -356,8 +356,13 @@ class App:
                     "role": info["snap"].get("role"),
                     "dest": info["dest"],
                 })
-            # Best-effort total for % / ETA (sizes file or sum of progress totals)
+            # Best-effort total for % / ETA (sizes file, else HF blob estimate)
             total_b = None
+            try:
+                est = self.picker_role_totals(repo, 24, n_stages=1)
+                total_b = est.get("full") or est.get("lead")
+            except Exception:
+                total_b = None
             for info in nodes.values():
                 sizes_p = Path(str(info.get("dest") or "")).expanduser() / "caravan-split-sizes.json"
                 if sizes_p.is_file():
