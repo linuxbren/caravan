@@ -105,29 +105,60 @@ def nettop_bytes_in(pid: int) -> Optional[int]:
     except (OSError, subprocess.TimeoutExpired):
         return None
     out = (r.stdout or "").strip().splitlines()
-    # Header then one data line; bytes_in is usually the last numeric field.
+    # Header then one data line. Prefer the last numeric field (bytes_in),
+    # not the pid embedded in "Python.<pid>,<bytes>".
     for line in reversed(out):
-        nums = re.findall(r"\d+", line.replace(",", ""))
+        if "bytes_in" in line and line.strip().startswith(",") or line.strip() == "bytes_in":
+            continue
+        # CSV-ish: Python.23692,736713004,
+        parts = [p for p in line.replace(" ", "").split(",") if p]
+        for part in reversed(parts):
+            # strip "Python.23692" style prefixes
+            m = re.search(r"(\d+)$", part)
+            if m:
+                val = int(m.group(1))
+                # skip tiny / obvious pids when a larger counter is present
+                if val > 10_000_000 or (val > 0 and len(parts) == 1):
+                    return val
+        nums = [int(n) for n in re.findall(r"\d+", line.replace(",", ""))]
+        # Prefer the largest value that is not equal to the pid we asked about
+        nums = [n for n in nums if n != int(pid)]
         if nums:
-            # Prefer the largest plausible counter on the line
-            vals = [int(n) for n in nums]
-            # Filter tiny header-ish numbers
-            big = [v for v in vals if v >= 0]
-            if big:
-                return max(big)
+            return max(nums)
     return None
 
 
 def find_fetch_pids(repo_id: str) -> list:
-    """Local pids running mlx_split_fetch for repo."""
+    """Local pids running mlx_split_fetch for repo.
+
+    macOS `pgrep -af` often prints only PIDs (no args), so we prefer `ps`.
+    """
+    needle = f"mlx_split_fetch.py {repo_id}" if repo_id else "mlx_split_fetch.py"
     try:
         r = subprocess.run(
-            ["pgrep", "-f", f"mlx_split_fetch.py {repo_id}"],
+            ["ps", "-ax", "-o", "pid=,command="],
             capture_output=True, text=True, timeout=5,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return []
-    return [int(p) for p in (r.stdout or "").split() if p.strip().isdigit()]
+        r = None
+    out = []
+    if r and r.stdout:
+        for line in r.stdout.splitlines():
+            if needle not in line:
+                continue
+            parts = line.strip().split(None, 1)
+            if parts and parts[0].isdigit():
+                out.append(int(parts[0]))
+        if out:
+            return out
+    try:
+        r2 = subprocess.run(
+            ["pgrep", "-f", needle],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return out
+    return [int(p) for p in (r2.stdout or "").split() if p.strip().isdigit()]
 
 
 def fmt_eta(seconds: Optional[float]) -> str:

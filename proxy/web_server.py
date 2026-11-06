@@ -299,7 +299,7 @@ class App:
         def scan_local():
             try:
                 r = subprocess.run(
-                    ["pgrep", "-af", "mlx_split_fetch.py"],
+                    ["ps", "-ax", "-o", "pid=,command="],
                     capture_output=True, text=True, timeout=5,
                 )
             except Exception:
@@ -322,7 +322,7 @@ class App:
 
         def scan_remote(n):
             try:
-                r = self._ssh_fn()(n, "pgrep -af mlx_split_fetch.py || true", timeout=10)
+                r = self._ssh_fn()(n, "ps -ax -o pid=,command= | grep mlx_split_fetch.py | grep -v grep || true", timeout=10)
             except Exception:
                 return
             for line in (getattr(r, "stdout", "") or "").splitlines():
