@@ -20,6 +20,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional
 
@@ -52,13 +53,65 @@ _QUANT_RE = re.compile(
 
 _FILTER_TAGS = {
     "chat": {"text-generation", "conversational", "chat"},
-    "coding": {"code", "coding", "text2code"},
+    "coding": {"code", "coding", "text2code", "code-generation"},
     "reasoning": {"reasoning", "thinking", "chain-of-thought"},
     "vision": {"image-text-to-text", "image-to-text", "visual-question-answering"},
     "image-to-image": {"image-to-image", "text-to-image"},
-    "voice": {"automatic-speech-recognition", "audio-to-text", "speech-to-text"},
+    "voice": {
+        "automatic-speech-recognition", "audio-to-text", "speech-to-text",
+        "text-to-speech", "text-to-audio",
+    },
     "cloud": {"cloud", "ollama-cloud"},
 }
+
+# Category chip → real HF queries (plus name keywords).
+_FILTER_SEARCH = {
+    "chat": {
+        "mlx_search": ["Instruct", "Chat"],
+        "hf_search": ["Instruct"],
+        "pipeline_tag": None,
+    },
+    "coding": {
+        "mlx_search": ["coder", "code"],
+        "hf_search": ["coder", "code instruct"],
+        "pipeline_tag": None,
+        "name_keys": ("coder", "code-", "-code", "codestral", "deepseek-coder"),
+    },
+    "reasoning": {
+        "mlx_search": ["QwQ", "thinking", "reasoning", "R1"],
+        "hf_search": ["QwQ", "DeepSeek-R1", "thinking"],
+        "pipeline_tag": None,
+        "name_keys": ("qwq", "thinking", "reasoning", "r1-", "-r1", "distill-r1"),
+    },
+    "vision": {
+        "mlx_search": ["VL", "vision"],
+        "hf_search": ["VL Instruct"],
+        "pipeline_tag": "image-text-to-text",
+        "name_keys": ("-vl-", "vl-", "vision", "llava", "pixtral"),
+    },
+    "image-to-image": {
+        "mlx_search": ["image-edit", "flux", "sdxl"],
+        "hf_search": [""],
+        "pipeline_tag": "image-to-image",
+        "name_keys": ("image-edit", "img2img", "flux", "sdxl", "stable-diffusion"),
+    },
+    "voice": {
+        "mlx_search": ["whisper", "tts", "speech"],
+        "hf_search": ["whisper"],
+        "pipeline_tags": ("automatic-speech-recognition", "text-to-speech"),
+        "name_keys": ("whisper", "tts", "asr", "speecht5", "kokoro"),
+    },
+}
+
+# Static Ollama Cloud catalog (labeled CLOUD; framework only until phase 5).
+_OLLAMA_CLOUD = [
+    {"id": "gpt-oss:120b-cloud", "name": "gpt-oss 120B Cloud", "note": "Ollama Cloud"},
+    {"id": "deepseek-v3.1:671b-cloud", "name": "DeepSeek V3.1 671B Cloud", "note": "Ollama Cloud"},
+    {"id": "qwen3-coder:480b-cloud", "name": "Qwen3 Coder 480B Cloud", "note": "Ollama Cloud · coding"},
+    {"id": "kimi-k2:1t-cloud", "name": "Kimi K2 1T Cloud", "note": "Ollama Cloud"},
+    {"id": "glm-4.6:cloud", "name": "GLM-4.6 Cloud", "note": "Ollama Cloud"},
+    {"id": "minimax-m2:cloud", "name": "MiniMax M2 Cloud", "note": "Ollama Cloud"},
+]
 
 _cache_lock = threading.Lock()
 _cache: dict = {}  # key -> {t, data}
@@ -126,7 +179,7 @@ def _base_name(repo_id: str) -> str:
     return name or repo_id
 
 
-def _filters_for(pipeline_tag: str, tags) -> list:
+def _filters_for(pipeline_tag: str, tags, repo_id: str = "") -> list:
     tags = set(t.lower() for t in (tags or []))
     if pipeline_tag:
         tags.add(pipeline_tag.lower())
@@ -134,6 +187,15 @@ def _filters_for(pipeline_tag: str, tags) -> list:
     for filt, keys in _FILTER_TAGS.items():
         if tags & keys:
             out.append(filt)
+    name = (repo_id or "").lower()
+    for filt, spec in _FILTER_SEARCH.items():
+        keys = spec.get("name_keys") or ()
+        if keys and any(k in name for k in keys):
+            if filt not in out:
+                out.append(filt)
+    if "cloud" in tags or name.startswith("ollama-cloud/"):
+        if "cloud" not in out:
+            out.append("cloud")
     if not out and (not pipeline_tag or pipeline_tag in ("text-generation",)):
         out.append("chat")
     return out
@@ -236,17 +298,22 @@ def fit_check(
 
 
 def _hf_search(query: str, *, author: Optional[str] = None, filter_gguf: bool = False,
-               limit: int = 40) -> list:
+               pipeline_tag: Optional[str] = None, limit: int = 40,
+               sort: str = "downloads") -> list:
     q = {
         "search": query or "",
         "limit": str(limit),
         "full": "true",
         "config": "true",
+        "sort": sort,
+        "direction": "-1",
     }
     if author:
         q["author"] = author
     if filter_gguf:
         q["filter"] = "gguf"
+    if pipeline_tag:
+        q["pipeline_tag"] = pipeline_tag
     url = HF_API + "?" + urllib.parse.urlencode(q)
     try:
         data = _http_json(url)
@@ -257,13 +324,139 @@ def _hf_search(query: str, *, author: Optional[str] = None, filter_gguf: bool = 
     return data
 
 
-def _sibling_safetensors_bytes(model: dict) -> int:
+def _sibling_weight_bytes(model: dict) -> int:
     total = 0
     for s in model.get("siblings") or []:
         name = (s.get("rfilename") or "")
-        if name.endswith(".safetensors") or name.endswith(".gguf"):
+        if name.endswith((".safetensors", ".gguf", ".npz", ".bin", ".pt")):
             total += int(s.get("size") or 0)
     return total
+
+
+def _index_total_size(repo_id: str) -> int:
+    """metadata.total_size from model.safetensors.index.json (reliable fallback)."""
+    key = f"idxsize:{repo_id}"
+    hit = _cache_get(key)
+    if hit is not None:
+        return int(hit)
+    url = f"https://huggingface.co/{repo_id}/resolve/main/model.safetensors.index.json"
+    total = 0
+    try:
+        data = _http_json(url, timeout=20)
+        if isinstance(data, dict):
+            total = int((data.get("metadata") or {}).get("total_size") or 0)
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError, TypeError):
+        total = 0
+    _cache_set(key, total)
+    return total
+
+
+def _fetch_repo_blobs(repo_id: str) -> dict:
+    """Return {usedStorage, siblings, weight_bytes, gguf_files, size_source}."""
+    key = f"blobs:{repo_id}"
+    hit = _cache_get(key)
+    if hit is not None:
+        return hit
+    url = f"https://huggingface.co/api/models/{repo_id}?blobs=true"
+    out = {"usedStorage": 0, "siblings": [], "weight_bytes": 0, "gguf_files": [], "size_source": None}
+    try:
+        data = _http_json(url, timeout=20)
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError):
+        data = None
+    if isinstance(data, dict):
+        sibs = data.get("siblings") or []
+        weight = 0
+        gguf = []
+        for s in sibs:
+            name = s.get("rfilename") or ""
+            size = int(s.get("size") or 0)
+            if name.endswith((".safetensors", ".npz", ".bin", ".pt")):
+                weight += size
+            if name.endswith(".gguf"):
+                gguf.append({"rfilename": name, "size": size})
+                weight += size
+        used = int(data.get("usedStorage") or 0)
+        src = "hf-blobs" if weight or used else None
+        if not weight and used:
+            weight = used
+        out = {
+            "usedStorage": used,
+            "siblings": sibs,
+            "weight_bytes": weight,
+            "gguf_files": gguf,
+            "size_source": src,
+        }
+    # Fallback: index metadata.total_size (e.g. Qwen3.8-Flash-Next = 111.5 GB)
+    if not out.get("weight_bytes"):
+        total = _index_total_size(repo_id)
+        if total > 0:
+            out["weight_bytes"] = total
+            out["usedStorage"] = out.get("usedStorage") or total
+            out["size_source"] = "index-total_size"
+    _cache_set(key, out)
+    return out
+
+
+def _enrich_sizes(rows: list) -> list:
+    """Fill weights_gb from HF blobs=true in parallel. Expand multi-GGUF repos."""
+    if not rows:
+        return rows
+    repos = sorted({r["repo_id"] for r in rows if r.get("repo_id") and not r.get("cloud")})
+    blobs: dict = {}
+    if repos:
+        with ThreadPoolExecutor(max_workers=min(12, max(1, len(repos)))) as pool:
+            futs = {pool.submit(_fetch_repo_blobs, rid): rid for rid in repos}
+            for fut in as_completed(futs):
+                rid = futs[fut]
+                try:
+                    blobs[rid] = fut.result()
+                except Exception:
+                    blobs[rid] = {"weight_bytes": 0, "gguf_files": [], "usedStorage": 0}
+
+    out = []
+    for r in rows:
+        if r.get("cloud"):
+            out.append(r)
+            continue
+        rid = r["repo_id"]
+        info = blobs.get(rid) or {}
+        gguf_files = info.get("gguf_files") or []
+        # Multi-file GGUF repo → one row per quant file with its real size.
+        if r.get("source") == "gguf" and len(gguf_files) >= 2:
+            for gf in gguf_files:
+                fname = gf["rfilename"]
+                size = int(gf.get("size") or 0)
+                quant = _parse_quant(fname) or _parse_quant(rid)
+                # skip tiny non-weight shards
+                if size and size < 50_000_000:
+                    continue
+                rr = dict(r)
+                rr["name"] = fname
+                rr["quant"] = quant
+                rr["gguf_file"] = fname
+                rr["weights_gb"] = round(size / 1e9, 2) if size else None
+                rr["size_source"] = "gguf-file" if size else None
+                rr["base"] = _base_name(rid.replace("-GGUF", "").replace("_GGUF", ""))
+                out.append(rr)
+            continue
+        wb = int(info.get("weight_bytes") or 0)
+        if not wb and len(gguf_files) == 1:
+            wb = int(gguf_files[0].get("size") or 0)
+            r = dict(r)
+            r["gguf_file"] = gguf_files[0]["rfilename"]
+        if not wb:
+            wb = int(info.get("usedStorage") or 0)
+        rr = dict(r)
+        if wb > 0:
+            rr["weights_gb"] = round(wb / 1e9, 2)
+            rr["size_source"] = info.get("size_source") or "hf-blobs"
+        elif rr.get("weights_gb"):
+            rr["size_source"] = "estimate"
+        else:
+            rr["weights_gb"] = None
+            rr["size_source"] = None
+        out.append(rr)
+    return out
 
 
 def _normalize_hf_hit(m: dict, *, source: str) -> Optional[dict]:
@@ -301,7 +494,7 @@ def _normalize_hf_hit(m: dict, *, source: str) -> Optional[dict]:
             if cfg.get(k):
                 params = float(cfg[k]) / 1e9
                 break
-    sb = _sibling_safetensors_bytes(m)
+    sb = _sibling_weight_bytes(m)
     # safetensors.index sometimes only in siblings without sizes — ok
     weights = _estimate_weights_gb(params, quant, sb or None)
     return {
@@ -312,7 +505,7 @@ def _normalize_hf_hit(m: dict, *, source: str) -> Optional[dict]:
         "quant": quant,
         "pipeline_tag": pipeline,
         "tags": tags[:40],
-        "filters": _filters_for(pipeline, tags),
+        "filters": _filters_for(pipeline, tags, repo),
         "likes": m.get("likes") or 0,
         "downloads": m.get("downloads") or 0,
         "weights_gb": round(weights, 2) if weights else None,
@@ -322,9 +515,15 @@ def _normalize_hf_hit(m: dict, *, source: str) -> Optional[dict]:
     }
 
 
-def search_catalog(query: str = "", *, source: str = "all", limit: int = 30) -> dict:
-    """Search HF. source: all|hf-mlx|gguf|cloud."""
-    key = f"search:{source}:{query}:{limit}"
+def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
+                  filt: str = "") -> dict:
+    """Search HF. source: all|hf-mlx|gguf|cloud. filt: chat|coding|… chip."""
+    filt = (filt or "").strip().lower()
+    if filt in ("fits-on-1", "fits-on-2", ""):
+        filt_key = ""
+    else:
+        filt_key = filt
+    key = f"search:{source}:{query}:{limit}:{filt_key}"
     hit = _cache_get(key)
     if hit is not None:
         return hit
@@ -333,77 +532,148 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30) -> 
     errors = []
     q = (query or "").strip()
 
-    if source in ("all", "hf-mlx"):
-        for author, lim in (("mlx-community", limit), (None, max(10, limit // 2))):
-            qq = q if author else (q or "instruct")
-            raw = _hf_search(qq, author=author, limit=lim)
-            if raw and isinstance(raw[0], dict) and raw[0].get("error"):
-                errors.append(raw[0]["error"])
-                continue
-            for m in raw:
-                n = _normalize_hf_hit(m, source="hf-mlx")
-                if n:
-                    rows.append(n)
-            if author == "mlx-community" and rows:
-                break  # enough mlx hits
-
-    if source in ("all", "gguf", "ollama"):
-        # Brenden's "Ollama" = GGUF/llama.cpp. Catalog from HF GGUF publishers.
-        for author in ("bartowski", "unsloth", "lmstudio-community"):
-            raw = _hf_search(q or "Instruct", author=author, filter_gguf=True, limit=max(8, limit // 3))
-            if raw and isinstance(raw[0], dict) and raw[0].get("error"):
-                errors.append(raw[0]["error"])
-                continue
-            for m in raw:
-                # tag as gguf source
+    def _ingest(raw, src, extra_filters=None):
+        if raw and isinstance(raw[0], dict) and raw[0].get("error"):
+            errors.append(raw[0]["error"])
+            return
+        for m in raw or []:
+            if src == "gguf":
                 m = dict(m)
                 tags = list(m.get("tags") or [])
                 if "gguf" not in tags:
                     tags.append("gguf")
                 m["tags"] = tags
-                n = _normalize_hf_hit(m, source="gguf")
-                if n:
-                    n["filters"] = list(set(n["filters"] + ["chat"]))
-                    rows.append(n)
+            n = _normalize_hf_hit(m, source=src)
+            if not n:
+                continue
+            if extra_filters:
+                n["filters"] = sorted(set(n["filters"] + list(extra_filters)))
+            rows.append(n)
 
-    if source in ("all", "cloud"):
-        # Framework only — placeholder cloud models (not fetched live yet).
-        rows.append({
-            "repo_id": "ollama-cloud/placeholder-cloud-model",
-            "name": "Ollama Cloud (framework)",
-            "base": "Ollama Cloud",
-            "source": "cloud",
-            "quant": None,
-            "pipeline_tag": "text-generation",
-            "tags": ["cloud", "ollama-cloud"],
-            "filters": ["cloud", "chat"],
-            "likes": 0,
-            "downloads": 0,
-            "weights_gb": None,
-            "needs_conversion": False,
-            "cloud": True,
-            "cloud_label": "CLOUD",
-            "api_key_configured": bool(OLLAMA_API_KEY),
-            "note": "Framework only — set OLLAMA_API_KEY; untested",
-        })
+    # Cloud chip / cloud source — static labeled list.
+    if source == "cloud" or filt_key == "cloud":
+        for c in _OLLAMA_CLOUD:
+            filters = ["cloud"]
+            note = (c.get("note") or "").lower()
+            if "coding" in note:
+                filters.append("coding")
+            else:
+                filters.append("chat")
+            rows.append({
+                "repo_id": f"ollama-cloud/{c['id']}",
+                "name": c["name"],
+                "base": c["name"],
+                "source": "cloud",
+                "quant": None,
+                "pipeline_tag": "text-generation",
+                "tags": ["cloud", "ollama-cloud"],
+                "filters": filters,
+                "likes": 0,
+                "downloads": 0,
+                "weights_gb": None,
+                "needs_conversion": False,
+                "cloud": True,
+                "cloud_label": "CLOUD",
+                "api_key_configured": bool(OLLAMA_API_KEY),
+                "note": c.get("note") or "Ollama Cloud · framework only",
+            })
+        # cloud-only short-circuit
+        source = "cloud"
 
-    # Dedupe by repo_id
+    elif filt_key in _FILTER_SEARCH and source in ("all", "hf-mlx", "gguf", "ollama"):
+        spec = _FILTER_SEARCH[filt_key]
+        want_mlx = source in ("all", "hf-mlx")
+        want_gguf = source in ("all", "gguf", "ollama")
+        if want_mlx:
+            for term in spec.get("mlx_search") or [q or ""]:
+                term = (q + " " + term).strip() if q else term
+                raw = _hf_search(term, author="mlx-community", limit=max(12, limit // 2))
+                _ingest(raw, "hf-mlx", extra_filters=[filt_key])
+            for ptag in ([spec["pipeline_tag"]] if spec.get("pipeline_tag") else []) + list(spec.get("pipeline_tags") or []):
+                raw = _hf_search(q or "", pipeline_tag=ptag, limit=max(8, limit // 3))
+                _ingest(raw, "hf-mlx", extra_filters=[filt_key])
+            if not rows:
+                for term in spec.get("hf_search") or []:
+                    raw = _hf_search((q + " " + term).strip() if q else term, limit=max(10, limit // 2))
+                    _ingest(raw, "hf-mlx", extra_filters=[filt_key])
+        if want_gguf and filt_key in ("chat", "coding", "reasoning", "vision"):
+            gq = q or (spec.get("mlx_search") or ["Instruct"])[0]
+            for author in ("bartowski", "unsloth", "lmstudio-community"):
+                raw = _hf_search(gq, author=author, filter_gguf=True, limit=max(6, limit // 4))
+                _ingest(raw, "gguf", extra_filters=[filt_key, "chat"])
+        if filt_key == "image-to-image":
+            raw = _hf_search(q or "", pipeline_tag="image-to-image", limit=limit)
+            _ingest(raw, "hf-mlx", extra_filters=["image-to-image"])
+        if filt_key == "voice":
+            for ptag in ("automatic-speech-recognition", "text-to-speech"):
+                raw = _hf_search(q or "whisper", pipeline_tag=ptag, limit=max(8, limit // 2))
+                _ingest(raw, "hf-mlx", extra_filters=["voice"])
+
+    else:
+        # Default / free-text search
+        if source in ("all", "hf-mlx"):
+            for author, lim in (("mlx-community", limit), (None, max(10, limit // 2))):
+                qq = q if author else (q or "instruct")
+                raw = _hf_search(qq, author=author, limit=lim)
+                _ingest(raw, "hf-mlx")
+                if author == "mlx-community" and rows:
+                    break
+        if source in ("all", "gguf", "ollama"):
+            for author in ("bartowski", "unsloth", "lmstudio-community"):
+                raw = _hf_search(q or "Instruct", author=author, filter_gguf=True,
+                                 limit=max(8, limit // 3))
+                _ingest(raw, "gguf", extra_filters=["chat"])
+        if source in ("all", "cloud") and not filt_key:
+            for c in _OLLAMA_CLOUD[:3]:
+                rows.append({
+                    "repo_id": f"ollama-cloud/{c['id']}",
+                    "name": c["name"],
+                    "base": c["name"],
+                    "source": "cloud",
+                    "quant": None,
+                    "pipeline_tag": "text-generation",
+                    "tags": ["cloud", "ollama-cloud"],
+                    "filters": ["cloud", "chat"],
+                    "likes": 0,
+                    "downloads": 0,
+                    "weights_gb": None,
+                    "needs_conversion": False,
+                    "cloud": True,
+                    "cloud_label": "CLOUD",
+                    "api_key_configured": bool(OLLAMA_API_KEY),
+                    "note": c.get("note") or "Ollama Cloud · framework only",
+                })
+
+    # Real sizes (blobs=true, index total_size fallback). No 4 GB guess.
+    rows = _enrich_sizes(rows)
+
+    # Dedupe — prefer rows with size / more specific quant file
     seen = set()
     uniq = []
     for r in rows:
-        if r["repo_id"] in seen:
+        key_id = r.get("gguf_file") or r["repo_id"]
+        if key_id in seen:
             continue
-        seen.add(r["repo_id"])
+        seen.add(key_id)
+        if filt_key and filt_key not in (r.get("filters") or []) and not r.get("cloud"):
+            # keep if name keys match
+            name = (r.get("repo_id") or "").lower() + " " + (r.get("name") or "").lower()
+            keys = (_FILTER_SEARCH.get(filt_key) or {}).get("name_keys") or ()
+            if keys and not any(k in name for k in keys):
+                if filt_key not in (r.get("pipeline_tag") or "",):
+                    # still keep pipeline-matched voice/i2i already tagged
+                    if filt_key not in (r.get("filters") or []):
+                        continue
         uniq.append(r)
 
-    # Group by base name for EXO-style expand
     groups: dict = {}
     for r in uniq:
         groups.setdefault(r["base"], []).append(r)
     grouped = []
     for base, quants in groups.items():
-        quants.sort(key=lambda x: (_bits_of_quant(x.get("quant")), x["repo_id"]))
+        quants.sort(key=lambda x: (_bits_of_quant(x.get("quant")), x.get("weights_gb") or 0, x["repo_id"]))
         filters = sorted({f for q in quants for f in q.get("filters") or []})
+        sizes = [q.get("weights_gb") for q in quants if q.get("weights_gb")]
         grouped.append({
             "base": base,
             "source": quants[0]["source"],
@@ -411,12 +681,22 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30) -> 
             "cloud": any(q.get("cloud") for q in quants),
             "quants": quants,
             "likes": max(q.get("likes") or 0 for q in quants),
+            "size_gb_min": min(sizes) if sizes else None,
+            "size_gb_max": max(sizes) if sizes else None,
         })
-    grouped.sort(key=lambda g: (-g["likes"], g["base"].lower()))
+    def _src_rank(g):
+        s = g.get("source") or ""
+        if s == "hf-mlx":
+            return 0
+        if s == "cloud":
+            return 2
+        return 1  # gguf
+    grouped.sort(key=lambda g: (_src_rank(g), -g["likes"], g["base"].lower()))
 
     out = {
         "query": q,
         "source": source,
+        "filter": filt_key,
         "groups": grouped[: max(limit, 1)],
         "errors": errors,
         "gguf_catalog": "huggingface (bartowski / unsloth / lmstudio-community)",
@@ -436,9 +716,16 @@ def attach_fit(groups: list, nodes: list) -> list:
                 qq["fit"] = {
                     "color": "green", "nodes_needed": 0, "fits_on": [],
                     "reason": "cloud — token usage, not node RAM",
+                    "weights_gb": None,
+                }
+            elif not qq.get("weights_gb"):
+                qq["fit"] = {
+                    "color": "gray", "nodes_needed": None, "fits_on": [],
+                    "reason": "size unknown — not marked OK",
+                    "weights_gb": None,
                 }
             else:
-                w = float(qq.get("weights_gb") or 0) or 4.0  # unknown → assume mid
+                w = float(qq["weights_gb"])
                 split_ok = qq.get("source") == "hf-mlx"  # GGUF split later
                 qq["fit"] = fit_check(
                     weights_gb=w, nodes=nodes, split_ok=split_ok,
@@ -447,10 +734,13 @@ def attach_fit(groups: list, nodes: list) -> list:
             quants.append(qq)
         gg = dict(g)
         gg["quants"] = quants
-        # group color = best (green > yellow > red)
-        order = {"green": 0, "yellow": 1, "red": 2}
+        # best color: green > yellow > gray > red
+        order = {"green": 0, "yellow": 1, "gray": 2, "red": 3}
         colors = [q["fit"]["color"] for q in quants if q.get("fit")]
-        gg["fit_color"] = min(colors, key=lambda c: order.get(c, 9)) if colors else "red"
+        gg["fit_color"] = min(colors, key=lambda c: order.get(c, 9)) if colors else "gray"
+        sizes = [q.get("weights_gb") for q in quants if q.get("weights_gb")]
+        gg["size_gb_min"] = min(sizes) if sizes else None
+        gg["size_gb_max"] = max(sizes) if sizes else None
         out.append(gg)
     return out
 
@@ -569,14 +859,178 @@ def list_jobs() -> list:
         return [dict(j) for j in _jobs.values()]
 
 
-def cancel_job(jid: str) -> dict:
+def measure_download_bytes(dest: str) -> dict:
+    """Bytes on disk for a local_dir download: finished shards + .incomplete."""
+    dest_p = Path(dest).expanduser()
+    done = 0
+    incomplete = 0
+    n_incomplete = 0
+    if not dest_p.exists():
+        return {"done_bytes": 0, "incomplete_bytes": 0, "have_bytes": 0, "n_incomplete": 0}
+    try:
+        for p in dest_p.glob("*.safetensors"):
+            try:
+                done += p.stat().st_size
+            except OSError:
+                pass
+        for p in dest_p.glob("*.gguf"):
+            try:
+                done += p.stat().st_size
+            except OSError:
+                pass
+        cache_dl = dest_p / ".cache" / "huggingface" / "download"
+        if cache_dl.is_dir():
+            for p in cache_dl.rglob("*"):
+                if not p.is_file():
+                    continue
+                name = p.name
+                try:
+                    sz = p.stat().st_size
+                except OSError:
+                    continue
+                if name.endswith(".incomplete"):
+                    incomplete += sz
+                    n_incomplete += 1
+    except OSError:
+        pass
+    return {
+        "done_bytes": done,
+        "incomplete_bytes": incomplete,
+        "have_bytes": done + incomplete,
+        "n_incomplete": n_incomplete,
+    }
+
+
+def _fmt_eta(seconds: Optional[float]) -> str:
+    if seconds is None or seconds < 0 or seconds != seconds:  # noqa: PLR0124
+        return "—"
+    seconds = int(seconds)
+    if seconds < 60:
+        return f"{seconds}s"
+    if seconds < 3600:
+        return f"{seconds // 60}m {seconds % 60}s"
+    return f"{seconds // 3600}h {(seconds % 3600) // 60}m"
+
+
+def progress_snapshot(dest: str, total_bytes: Optional[int], prev: Optional[dict] = None) -> dict:
+    """Build a progress dict with pct, MB/s, ETA from byte counts."""
+    m = measure_download_bytes(dest)
+    have = m["have_bytes"]
+    total = int(total_bytes or 0)
+    now = time.time()
+    speed = 0.0
+    if prev and prev.get("t") and prev.get("have_bytes") is not None:
+        dt = max(0.001, now - float(prev["t"]))
+        speed = max(0.0, (have - int(prev["have_bytes"])) / dt)
+    pct = 0
+    if total > 0:
+        pct = max(0, min(99, int(have * 100 / total)))
+        if have >= total and m["n_incomplete"] == 0 and m["done_bytes"] > 0:
+            pct = 100
+    elif m["done_bytes"] > 0 and m["n_incomplete"] == 0:
+        pct = 100
+    eta_s = None
+    if speed > 0 and total > have:
+        eta_s = (total - have) / speed
+    mb_s = speed / 1e6
+    have_gb = have / 1e9
+    total_gb = total / 1e9 if total else None
+    if total_gb:
+        msg = f"{have_gb:.2f}/{total_gb:.2f} GB · {mb_s:.1f} MB/s · ETA {_fmt_eta(eta_s)}"
+    else:
+        msg = f"{have_gb:.2f} GB · {mb_s:.1f} MB/s"
+    if m["n_incomplete"]:
+        msg += f" · {m['n_incomplete']} active"
+    return {
+        "pct": pct,
+        "msg": msg,
+        "have_bytes": have,
+        "total_bytes": total or None,
+        "speed_bps": speed,
+        "mb_s": round(mb_s, 2),
+        "eta_s": None if eta_s is None else int(eta_s),
+        "t": now,
+        "n_incomplete": m["n_incomplete"],
+    }
+
+
+def kill_local_fetch(repo_id: str) -> dict:
+    """SIGTERM/SIGKILL any local mlx_split_fetch for this repo."""
+    import subprocess
+    pattern = f"mlx_split_fetch.py {repo_id}"
+    killed = []
+    try:
+        r = subprocess.run(["pgrep", "-f", pattern], capture_output=True, text=True)
+        pids = [p.strip() for p in (r.stdout or "").splitlines() if p.strip()]
+        for pid in pids:
+            try:
+                subprocess.run(["kill", "-TERM", pid], check=False)
+                killed.append(pid)
+            except OSError:
+                pass
+        if pids:
+            time.sleep(0.6)
+            r2 = subprocess.run(["pgrep", "-f", pattern], capture_output=True, text=True)
+            left = [p.strip() for p in (r2.stdout or "").splitlines() if p.strip()]
+            for pid in left:
+                subprocess.run(["kill", "-KILL", pid], check=False)
+                if pid not in killed:
+                    killed.append(pid)
+    except OSError as e:
+        return {"ok": False, "error": str(e), "killed": killed}
+    return {"ok": True, "killed": killed, "pattern": pattern}
+
+
+def cancel_job(jid: str, *, kill_procs: Optional[callable] = None) -> dict:
+    """Mark cancelled and kill fetch processes (lead + packer)."""
     with _jobs_lock:
         j = _jobs.get(jid)
         if not j:
             return {"ok": False, "error": "unknown job"}
         j["cancel"] = True
         j["status"] = "cancelling"
-        return {"ok": True, "job": dict(j)}
+        repo = j.get("repo_id")
+        job = dict(j)
+    killed = {"lead": None, "packer": None}
+    # Kill any tracked local Popen
+    proc = job.get("lead_proc")
+    if proc is not None:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+    if repo:
+        killed["lead"] = kill_local_fetch(repo)
+    if kill_procs:
+        try:
+            killed["packer"] = kill_procs(repo, job)
+        except Exception as e:  # noqa: BLE001
+            killed["packer"] = {"ok": False, "error": str(e)}
+    _job_set(jid, status="cancelled", error="stopped by user", kill=killed)
+    return {"ok": True, "job": get_job(jid), "killed": killed}
+
+
+def stop_jobs_for_repo(repo_id: str, *, kill_procs: Optional[callable] = None) -> list:
+    """Cancel every active job for repo_id (used by Delete)."""
+    rid = (repo_id or "").strip()
+    out = []
+    for j in list_jobs():
+        if (j.get("repo_id") or "") != rid:
+            continue
+        if j.get("status") in ("queued", "running", "cancelling"):
+            out.append(cancel_job(j["id"], kill_procs=kill_procs))
+    # Even with no job record (e.g. web UI restarted), kill stray fetches.
+    if rid:
+        stray = kill_local_fetch(rid)
+        if kill_procs:
+            try:
+                stray_p = kill_procs(rid, {"repo_id": rid})
+            except Exception as e:  # noqa: BLE001
+                stray_p = {"ok": False, "error": str(e)}
+        else:
+            stray_p = None
+        out.append({"stray_lead": stray, "stray_packer": stray_p})
+    return out
 
 
 def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
@@ -584,43 +1038,148 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                    dest_lead: Optional[str] = None,
                    dest_packer: Optional[str] = None,
                    run_lead: Optional[callable] = None,
-                   run_packer: Optional[callable] = None) -> dict:
-    """Start async split-aware download. run_* callables do the actual work."""
+                   run_packer: Optional[callable] = None,
+                   total_bytes_lead: Optional[int] = None,
+                   total_bytes_packer: Optional[int] = None,
+                   measure_packer: Optional[callable] = None) -> dict:
+    """Start async split-aware download. Lead + packer run in PARALLEL.
+
+    measure_packer() -> {have_bytes, n_incomplete} for EXO2 (SSH); optional.
+    """
     import uuid
     jid = uuid.uuid4().hex[:12]
     folder = repo_id.replace("/", "--")
     dest_lead = dest_lead or str(MLX_MODEL_ROOTS[0] / folder)
     dest_packer = dest_packer or f"~/.caravan/mlx-models/{folder}"
     _job_set(jid, status="queued", repo_id=repo_id, progress={
-        "lead": {"pct": 0, "msg": "queued"},
-        "packer": {"pct": 0, "msg": "queued"},
-    }, dest_lead=dest_lead, dest_packer=dest_packer, packer_layers=packer_layers)
+        "lead": {"pct": 0, "msg": "queued", "have_bytes": 0, "t": time.time()},
+        "packer": {"pct": 0, "msg": "queued", "have_bytes": 0, "t": time.time()},
+    }, dest_lead=dest_lead, dest_packer=dest_packer, packer_layers=packer_layers,
+        total_bytes_lead=total_bytes_lead, total_bytes_packer=total_bytes_packer)
+
+    def _watch(role: str, dest: str, total_b: Optional[int], stop_evt: threading.Event,
+               measure: Optional[callable] = None):
+        prev = None
+        while not stop_evt.wait(0.8):
+            if get_job(jid) and get_job(jid).get("cancel"):
+                break
+            # Refresh total if dry-run filled it in later.
+            job_now = get_job(jid) or {}
+            if role == "lead":
+                total_b = job_now.get("total_bytes_lead") or total_b
+            else:
+                total_b = job_now.get("total_bytes_packer") or total_b
+            if measure:
+                try:
+                    m = measure() or {}
+                    have = int(m.get("have_bytes") or 0)
+                    n_inc = int(m.get("n_incomplete") or 0)
+                    fake_prev = prev
+                    # synthesize snapshot from remote counts
+                    now = time.time()
+                    speed = 0.0
+                    if fake_prev and fake_prev.get("t") and fake_prev.get("have_bytes") is not None:
+                        dt = max(0.001, now - float(fake_prev["t"]))
+                        speed = max(0.0, (have - int(fake_prev["have_bytes"])) / dt)
+                    total = int(total_b or 0)
+                    pct = max(0, min(99, int(have * 100 / total))) if total else 0
+                    eta_s = ((total - have) / speed) if (speed > 0 and total > have) else None
+                    mb_s = speed / 1e6
+                    if total:
+                        msg = f"{have/1e9:.2f}/{total/1e9:.2f} GB · {mb_s:.1f} MB/s · ETA {_fmt_eta(eta_s)}"
+                    else:
+                        msg = f"{have/1e9:.2f} GB · {mb_s:.1f} MB/s"
+                    if n_inc:
+                        msg += f" · {n_inc} active"
+                    snap = {
+                        "pct": pct, "msg": msg, "have_bytes": have,
+                        "total_bytes": total or None, "speed_bps": speed,
+                        "mb_s": round(mb_s, 2),
+                        "eta_s": None if eta_s is None else int(eta_s),
+                        "t": now, "n_incomplete": n_inc,
+                    }
+                except Exception as e:  # noqa: BLE001
+                    snap = {"pct": 0, "msg": f"measure error: {e}", "t": time.time()}
+            else:
+                snap = progress_snapshot(dest, total_b, prev)
+            prev = snap
+            with _jobs_lock:
+                if jid in _jobs:
+                    _jobs[jid]["progress"][role] = snap
+                    _jobs[jid]["updated"] = time.time()
 
     def worker():
+        stop_lead = threading.Event()
+        stop_pack = threading.Event()
+        errors = []
         try:
             _job_set(jid, status="running")
+            watchers = []
             if run_lead:
+                watchers.append(threading.Thread(
+                    target=_watch, args=("lead", dest_lead, total_bytes_lead, stop_lead, None),
+                    daemon=True, name=f"pick-watch-lead-{jid}"))
+            if run_packer:
+                watchers.append(threading.Thread(
+                    target=_watch, args=("packer", dest_packer, total_bytes_packer, stop_pack, measure_packer),
+                    daemon=True, name=f"pick-watch-pack-{jid}"))
+            for w in watchers:
+                w.start()
+
+            def run_one(label, fn, dest, pk, stop_evt):
                 def prog(pct, msg):
                     if get_job(jid) and get_job(jid).get("cancel"):
                         raise RuntimeError("cancelled")
                     with _jobs_lock:
-                        _jobs[jid]["progress"]["lead"] = {"pct": pct, "msg": msg}
-                run_lead(repo_id, dest_lead, packer_layers, prog)
+                        cur = dict(_jobs[jid]["progress"].get(label) or {})
+                        cur.update({"pct": pct, "msg": msg})
+                        _jobs[jid]["progress"][label] = cur
+                try:
+                    fn(repo_id, dest, pk, prog)
+                except Exception as e:  # noqa: BLE001
+                    errors.append(f"{label}: {e}")
+                finally:
+                    stop_evt.set()
+
+            threads = []
+            if run_lead:
+                threads.append(threading.Thread(
+                    target=run_one, args=("lead", run_lead, dest_lead, packer_layers, stop_lead),
+                    daemon=True, name=f"pick-lead-{jid}"))
             else:
-                _job_set(jid, status="error", error="no lead downloader wired")
-                return
+                errors.append("no lead downloader wired")
             if run_packer:
-                def prog2(pct, msg):
-                    if get_job(jid) and get_job(jid).get("cancel"):
-                        raise RuntimeError("cancelled")
-                    with _jobs_lock:
-                        _jobs[jid]["progress"]["packer"] = {"pct": pct, "msg": msg}
-                run_packer(repo_id, dest_packer, packer_layers, prog2)
+                threads.append(threading.Thread(
+                    target=run_one, args=("packer", run_packer, dest_packer, packer_layers, stop_pack),
+                    daemon=True, name=f"pick-pack-{jid}"))
             else:
                 with _jobs_lock:
                     _jobs[jid]["progress"]["packer"] = {"pct": 100, "msg": "skipped"}
+                stop_pack.set()
+
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            stop_lead.set(); stop_pack.set()
+
+            if get_job(jid) and get_job(jid).get("cancel"):
+                _job_set(jid, status="cancelled", error="stopped by user")
+                return
+            if errors:
+                _job_set(jid, status="error", error="; ".join(errors))
+                return
+            # final 100%
+            with _jobs_lock:
+                for role in ("lead", "packer"):
+                    p = dict(_jobs[jid]["progress"].get(role) or {})
+                    if p.get("msg") != "skipped":
+                        p["pct"] = 100
+                        p["msg"] = (p.get("msg") or "done") + " · done"
+                        _jobs[jid]["progress"][role] = p
             _job_set(jid, status="done", model_folder=folder)
         except Exception as e:  # noqa: BLE001
+            stop_lead.set(); stop_pack.set()
             _job_set(jid, status="error", error=str(e))
 
     threading.Thread(target=worker, name=f"picker-dl-{jid}", daemon=True).start()
@@ -634,7 +1193,6 @@ def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],
     dest_p = Path(dest).expanduser()
     dest_p.mkdir(parents=True, exist_ok=True)
     progress(5, "fetching index")
-    # small files first
     for fname in ("config.json", "model.safetensors.index.json"):
         try:
             hf_hub_download(repo_id, fname, local_dir=str(dest_p), token=HF_TOKEN)
@@ -644,7 +1202,6 @@ def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],
     cfg = json.loads((dest_p / "config.json").read_text())
     idx_path = dest_p / "model.safetensors.index.json"
     if not idx_path.is_file():
-        # single-file model
         progress(20, "single-file snapshot")
         snapshot_download(repo_id, local_dir=str(dest_p), token=HF_TOKEN)
         progress(100, "done")
@@ -657,7 +1214,6 @@ def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],
     progress(15, f"{len(mine)} shards for {role}")
     small = list(MSF.SMALL)
     patterns = small + mine
-    # snapshot_download doesn't give fine progress; approximate
     progress(30, "downloading shards")
     snapshot_download(
         repo_id, local_dir=str(dest_p),

@@ -646,6 +646,7 @@
   .p-dot.green { background: #3dffa0; box-shadow: 0 0 6px #3dffa088; }
   .p-dot.yellow { background: #ffd24a; box-shadow: 0 0 6px #ffd24a88; }
   .p-dot.red { background: #ff5a5a; box-shadow: 0 0 6px #ff5a5a88; }
+  .p-dot.gray { background: #8a8a8a; box-shadow: none; }
   .p-title { flex: 1; color: var(--amber2); font-weight: 600; }
   .p-meta { color: var(--muted); font-size: .62rem; }
   .p-cloud { color: #7ec8ff; border: 1px solid #7ec8ff55; padding: 0 5px; border-radius: 3px; font-size: .58rem; }
@@ -833,7 +834,6 @@
     </div>
     <div class="picker-search">
       <input id="pickerQuery" type="search" placeholder="Search models…" autocomplete="off" />
-      <button type="button" class="ghost" id="btnPickerSearch">Go</button>
     </div>
     <div class="picker-chips" id="pickerChips"></div>
     <div class="picker-status" id="pickerStatus">Open to search Hugging Face…</div>
@@ -1883,17 +1883,33 @@
 
   // ---- Model picker (ROADMAP) -----------------------------------------
   (function () {
-    const FILTERS = ["chat","coding","reasoning","vision","image-to-image","voice","cloud","fits-on-1","fits-on-2"];
-    const state = { source: "all", q: "", chips: new Set(["chat"]), groups: [], job: null };
+    const CATEGORY = ["chat","coding","reasoning","vision","image-to-image","voice","cloud"];
+    const FIT = ["fits-on-1","fits-on-2"];
+    const FILTERS = CATEGORY.concat(FIT);
+    const state = {
+      source: "all", q: "", category: "chat", fit: new Set(),
+      groups: [], job: null, searchTimer: null, abort: null, searchSeq: 0,
+    };
     const $ = (id) => document.getElementById(id);
     const chipsEl = $("pickerChips");
     FILTERS.forEach((f) => {
       const b = document.createElement("button");
       b.type = "button"; b.textContent = f; b.dataset.chip = f;
-      if (state.chips.has(f)) b.classList.add("on");
+      if (state.category === f) b.classList.add("on");
       b.addEventListener("click", () => {
-        if (state.chips.has(f)) { state.chips.delete(f); b.classList.remove("on"); }
-        else { state.chips.add(f); b.classList.add("on"); }
+        if (CATEGORY.includes(f)) {
+          state.category = (state.category === f) ? "" : f;
+          [...chipsEl.querySelectorAll("button")].forEach((x) => {
+            if (CATEGORY.includes(x.dataset.chip)) {
+              x.classList.toggle("on", x.dataset.chip === state.category);
+            }
+          });
+          search();
+          return;
+        }
+        // fit chips — client filter only
+        if (state.fit.has(f)) { state.fit.delete(f); b.classList.remove("on"); }
+        else { state.fit.add(f); b.classList.add("on"); }
         renderList();
       });
       chipsEl.appendChild(b);
@@ -1924,9 +1940,6 @@
     }
     $("btnOpenPicker").addEventListener("click", togglePicker);
     $("btnClosePicker").addEventListener("click", closePicker);
-    // When opening Topology, close picker
-    const _openTopo = window.openTopo;
-    const origToggle = $("btnOpenTopo").onclick;
     $("btnOpenTopo").addEventListener("click", () => {
       if ($("pickerDrawer").classList.contains("open")) closePicker();
     }, true);
@@ -1939,6 +1952,7 @@
       }
       const init = { method: opts.method || "GET", headers: headers };
       if (opts.body != null) init.body = opts.body;
+      if (opts.signal) init.signal = opts.signal;
       const r = await fetch(path, init);
       const j = await r.json().catch(function(){ return {}; });
       if (!r.ok) throw new Error(j.error || r.statusText);
@@ -1948,35 +1962,50 @@
     async function search() {
       state.q = ($("pickerQuery").value || "").trim();
       $("pickerStatus").textContent = "Searching…";
+      if (state.abort) { try { state.abort.abort(); } catch (_) {} }
+      state.abort = (typeof AbortController !== "undefined") ? new AbortController() : null;
+      const seq = ++state.searchSeq;
       try {
-        const u = `/api/picker/search?q=${encodeURIComponent(state.q)}&source=${encodeURIComponent(state.source)}&limit=40`;
-        const data = await api(u);
+        let u = `/api/picker/search?q=${encodeURIComponent(state.q)}&source=${encodeURIComponent(state.source)}&limit=40`;
+        if (state.category) u += `&filter=${encodeURIComponent(state.category)}`;
+        const data = await api(u, state.abort ? { signal: state.abort.signal } : {});
+        if (seq !== state.searchSeq) return; // stale
         state.groups = data.groups || [];
         $("pickerStatus").textContent = `${state.groups.length} models · fit on ${data.nodes_used || "?"} nodes`
+          + (data.filter ? ` · ${data.filter}` : "")
           + (data.errors && data.errors.length ? ` · ${data.errors[0]}` : "");
         renderList();
       } catch (e) {
+        if (e && e.name === "AbortError") return;
+        if (seq !== state.searchSeq) return;
         $("pickerStatus").textContent = "Search failed: " + e.message;
       }
     }
-    $("btnPickerSearch").addEventListener("click", search);
-    $("pickerQuery").addEventListener("keydown", (e) => { if (e.key === "Enter") search(); });
+    function scheduleSearch() {
+      if (state.searchTimer) clearTimeout(state.searchTimer);
+      state.searchTimer = setTimeout(search, 300);
+    }
+    $("pickerQuery").addEventListener("input", scheduleSearch);
+    $("pickerQuery").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { if (state.searchTimer) clearTimeout(state.searchTimer); search(); }
+    });
 
     function passChips(g) {
-      if (!state.chips.size) return true;
-      const filters = new Set(g.filters || []);
-      for (const c of state.chips) {
+      for (const c of state.fit) {
         if (c === "fits-on-1") {
           if (!(g.quants || []).some((q) => ((q.fit && q.fit.fits_on) || []).includes(1))) return false;
-          continue;
-        }
-        if (c === "fits-on-2") {
+        } else if (c === "fits-on-2") {
           if (!(g.quants || []).some(function(q){ var f=q.fit||{}; return ((f.fits_on||[]).includes(2) || f.nodes_needed===2); })) return false;
-          continue;
         }
-        if (!filters.has(c) && !(c === "cloud" && g.cloud)) return false;
       }
       return true;
+    }
+
+    function sizeLabel(g) {
+      const a = g.size_gb_min, b = g.size_gb_max;
+      if (a == null && b == null) return "size unknown";
+      if (a != null && b != null && Math.abs(a - b) > 0.05) return `${a}–${b} GB`;
+      return `${a != null ? a : b} GB`;
     }
 
     function renderList() {
@@ -1992,10 +2021,10 @@
         row.className = "p-row";
         const head = document.createElement("button");
         head.type = "button"; head.className = "p-head";
-        head.innerHTML = `<span class="p-dot ${g.fit_color || "red"}"></span>
+        head.innerHTML = `<span class="p-dot ${g.fit_color || "gray"}"></span>
           <span class="p-title">${escapeHtml(g.base)}</span>
           ${g.cloud ? '<span class="p-cloud">CLOUD</span>' : ""}
-          <span class="p-meta">${(g.quants || []).length} quant${(g.quants||[]).length===1?"":"s"} · ${escapeHtml(g.source || "")}</span>`;
+          <span class="p-meta">${escapeHtml(sizeLabel(g))} · ${(g.quants || []).length} quant${(g.quants||[]).length===1?"":"s"} · ${escapeHtml(g.source || "")}</span>`;
         head.addEventListener("click", () => row.classList.toggle("open"));
         const quants = document.createElement("div");
         quants.className = "p-quants";
@@ -2004,9 +2033,9 @@
           const btn = document.createElement("button");
           btn.type = "button"; btn.className = "p-quant";
           const nodes = fit.nodes_needed == null ? "—" : (fit.nodes_needed === 0 ? "cloud" : fit.nodes_needed + "n");
-          const size = q.weights_gb != null ? `${q.weights_gb} GB` : "? GB";
+          const size = q.weights_gb != null ? `${q.weights_gb} GB` : "size unknown";
           const conv = q.needs_conversion ? " · needs conversion" : "";
-          btn.innerHTML = `<span class="p-dot ${fit.color || "red"}"></span>
+          btn.innerHTML = `<span class="p-dot ${fit.color || "gray"}"></span>
             <span class="q-name">${escapeHtml(q.quant || q.name || q.repo_id)}${conv}</span>
             <span class="q-size">${size}</span>
             <span class="q-nodes">${nodes}</span>`;
@@ -2037,8 +2066,12 @@
         alert("Conversion lands in phase 3. Not started.");
         return;
       }
-      if (fitBlocked(q)) {
-        if (!confirm(`Fit is ${q.fit && q.fit.color}. Download anyway?`)) return;
+      if (!q.weights_gb) {
+        if (!confirm(`${q.repo_id} has unknown size (not marked OK). Download anyway?`)) return;
+      } else if (q.fit && q.fit.color === "red") {
+        if (!confirm(`Won't fit (~${q.weights_gb} GB). ${q.fit.reason || ""}\nDownload anyway?`)) return;
+      } else if (q.fit && q.fit.color === "yellow") {
+        if (!confirm(`Tight fit (${q.fit.reason || q.weights_gb + " GB"}). Download anyway?`)) return;
       }
       $("pickerStatus").textContent = `Downloading ${q.repo_id}…`;
       try {
@@ -2053,9 +2086,6 @@
         $("pickerStatus").textContent = "Download failed: " + e.message;
       }
     }
-    function fitBlocked(q) {
-      return q.fit && q.fit.color === "red";
-    }
     function showJob() {
       const el = $("pickerJob");
       if (!state.job) { el.hidden = true; return; }
@@ -2068,19 +2098,23 @@
         <div class="bar"><i style="width:${lead.pct||0}%"></i></div>
         <div>EXO2 ${pack.pct || 0}% — ${escapeHtml(pack.msg || "")}</div>
         <div class="bar"><i style="width:${pack.pct||0}%"></i></div>
-        <button type="button" class="ghost" id="btnCancelJob">Cancel</button>`;
+        <button type="button" class="ghost" id="btnCancelJob">Stop</button>`;
       const c = $("btnCancelJob");
-      if (c) c.onclick = () => api("/api/picker/download/cancel", { method: "POST", body: JSON.stringify({ job_id: j.id }) });
+      if (c) c.onclick = async () => {
+        try {
+          await api("/api/picker/download/cancel", { method: "POST", body: JSON.stringify({ job_id: j.id }) });
+          $("pickerStatus").textContent = "Stopping download…";
+        } catch (e) { alert(e.message); }
+      };
     }
     async function pollJob(id, q) {
       for (let i = 0; i < 900; i++) {
-        await new Promise((r) => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, 1000));
         try {
           const j = await api("/api/picker/jobs/" + id);
           state.job = j; showJob();
           if (j.status === "done") {
             $("pickerStatus").textContent = "Downloaded. Loading…";
-            // Map HF id to catalog id if present; else tell user to pick from Settings.
             try {
               await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: q.repo_id }) });
             } catch (e) {
@@ -2089,7 +2123,7 @@
             refreshDisk();
             return;
           }
-          if (j.status === "error" || j.status === "cancelling") {
+          if (j.status === "error" || j.status === "cancelled" || j.status === "cancelling") {
             $("pickerStatus").textContent = j.error || j.status;
             return;
           }
@@ -2117,9 +2151,9 @@
           const del = document.createElement("button");
           del.type = "button"; del.textContent = "Delete";
           del.disabled = !!(cur && (String(cur).includes(m.id) || String(m.id).includes(String(cur))));
-          del.title = del.disabled ? "Refuse: currently loaded" : "Delete from all Minis";
+          del.title = del.disabled ? "Refuse: currently loaded" : "Stop fetch if running, then delete from all Minis";
           del.addEventListener("click", async () => {
-            if (!confirm(`Delete ${m.id} from ALL Minis?`)) return;
+            if (!confirm(`Stop any download and delete ${m.id} from ALL Minis?`)) return;
             try {
               await api("/api/picker/delete", { method: "POST", body: JSON.stringify({ id: m.id, confirm: true }) });
               refreshDisk();
@@ -2133,7 +2167,6 @@
       }
     }
 
-    // expose close for topo mutual exclusion
     window.closePicker = closePicker;
   })();
 

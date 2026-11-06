@@ -138,6 +138,76 @@ class App:
         if self.httpd is not None:
             threading.Thread(target=self.httpd.shutdown, daemon=True).start()
 
+    def picker_kill_packer(self, repo_id: str, job=None) -> dict:
+        """SIGTERM/KILL mlx_split_fetch for repo on EXO2 (packer)."""
+        if not repo_id:
+            return {"ok": False, "error": "no repo"}
+        folder = repo_id.replace("/", "--")
+        pid_file = f"/tmp/caravan-fetch-{folder}.pid"
+        script = (
+            "pkill -TERM -f 'mlx_split_fetch.py %s' 2>/dev/null; "
+            "if [ -f %s ]; then kill -TERM $(cat %s) 2>/dev/null; fi; "
+            "sleep 0.5; "
+            "pkill -9 -f 'mlx_split_fetch.py %s' 2>/dev/null; "
+            "if [ -f %s ]; then kill -9 $(cat %s) 2>/dev/null; rm -f %s; fi; "
+            "echo KILLED"
+            % (repo_id, pid_file, pid_file, repo_id, pid_file, pid_file, pid_file)
+        )
+        try:
+            r = self.mgr._ssh(script, timeout=30)
+            return {
+                "ok": "KILLED" in (r.stdout or ""),
+                "rc": r.returncode,
+                "out": (r.stdout or "")[-200:],
+            }
+        except Exception as e:  # noqa: BLE001
+            return {"ok": False, "error": str(e)}
+
+    def picker_measure_packer(self, dest: str) -> dict:
+        """Byte progress for a packer local_dir on EXO2 (finished + .incomplete)."""
+        # Keep the remote python trivial — no nested quote hell.
+        remote = (
+            "import json,sys\n"
+            "from pathlib import Path\n"
+            "d=Path(sys.argv[1]).expanduser()\n"
+            "done=inc=n=0\n"
+            "if d.exists():\n"
+            "  for p in d.glob('*.safetensors'):\n"
+            "    try: done+=p.stat().st_size\n"
+            "    except OSError: pass\n"
+            "  c=d/'.cache'/'huggingface'/'download'\n"
+            "  if c.is_dir():\n"
+            "    for p in c.rglob('*'):\n"
+            "      if p.is_file() and p.name.endswith('.incomplete'):\n"
+            "        try:\n"
+            "          inc+=p.stat().st_size; n+=1\n"
+            "        except OSError: pass\n"
+            "print(json.dumps({'have_bytes':done+inc,'n_incomplete':n,'done_bytes':done}))\n"
+        )
+        script = "python3 -c %s %s" % (repr(remote), repr(dest))
+        try:
+            r = self.mgr._ssh(script, timeout=25)
+            line = (r.stdout or "").strip().splitlines()
+            if not line:
+                return {"have_bytes": 0, "n_incomplete": 0}
+            return json.loads(line[-1])
+        except Exception:
+            return {"have_bytes": 0, "n_incomplete": 0}
+
+    def picker_role_totals(self, repo_id: str, packer_layers: int) -> dict:
+        """Fast per-role byte estimate from HF blobs; refined by fetch JSON later."""
+        out = {"lead": None, "packer": None}
+        try:
+            info = web_picker._fetch_repo_blobs(repo_id)
+            full = int(info.get("weight_bytes") or 0)
+            if full:
+                # Split downloads are roughly half each until the fetch plan reports my_gb.
+                out["lead"] = full // 2
+                out["packer"] = full - out["lead"]
+        except Exception:
+            pass
+        return out
+
 
 def make_handler(app: App):
     class H(BaseHTTPRequestHandler):
@@ -284,7 +354,7 @@ def make_handler(app: App):
                 return self._api_picker_download(body=body)
             if path == "/api/picker/download/cancel":
                 jid = (body or {}).get("job_id") or ""
-                return self._json(200, web_picker.cancel_job(jid))
+                return self._json(200, web_picker.cancel_job(jid, kill_procs=app.picker_kill_packer))
             if path == "/api/picker/delete":
                 return self._api_picker_delete(body=body)
             if path == "/api/picker/fit":
@@ -369,11 +439,12 @@ def make_handler(app: App):
             qs = parse_qs(urlparse(self.path).query)
             q = (qs.get("q") or qs.get("query") or [""])[0]
             source = (qs.get("source") or ["all"])[0]
+            filt = (qs.get("filter") or qs.get("filt") or [""])[0]
             try:
                 limit = int((qs.get("limit") or ["30"])[0])
             except ValueError:
                 limit = 30
-            cat = web_picker.search_catalog(q, source=source, limit=limit)
+            cat = web_picker.search_catalog(q, source=source, limit=limit, filt=filt)
             raw = app.nodes() or {}
             nodes = raw.get("nodes") or []
             cat["groups"] = web_picker.attach_fit(cat.get("groups") or [], nodes)
@@ -409,9 +480,16 @@ def make_handler(app: App):
             if not body.get("confirm"):
                 return self._json(400, {"error": "confirm=true required"})
 
+            # Stop any running fetch for this model BEFORE deleting folders.
+            stopped = web_picker.stop_jobs_for_repo(rid, kill_procs=app.picker_kill_packer)
+
             def ssh_delete(folder):
+                # Also pkill packer-side fetch, then remove trees.
                 r = app.mgr._ssh(
-                    "rm -rf ~/.caravan/mlx-models/%s ~/.exo/models/%s; echo REMOVED" % (folder, folder),
+                    "pkill -f 'mlx_split_fetch.py %s' 2>/dev/null; sleep 0.5; "
+                    "pkill -9 -f 'mlx_split_fetch.py %s' 2>/dev/null; "
+                    "rm -rf ~/.caravan/mlx-models/%s ~/.exo/models/%s; echo REMOVED"
+                    % (rid, rid, folder, folder),
                     timeout=120,
                 )
                 return {"removed": "REMOVED" in (r.stdout or ""), "rc": r.returncode}
@@ -421,6 +499,7 @@ def make_handler(app: App):
                 current_model_id=app.mgr.snapshot().get("model_id"),
                 ssh_delete=ssh_delete,
             )
+            out["stopped_jobs"] = stopped
             return self._json(200 if out.get("ok") else 400, out)
 
         def _api_picker_fit(self, body=None):
@@ -447,13 +526,15 @@ def make_handler(app: App):
                 return self._json(400, {"error": "GGUF download via llama-server is phase 4"})
             packer_layers = body.get("packer_layers")
             try:
-                packer_layers = int(packer_layers) if packer_layers is not None else None
+                packer_layers = int(packer_layers) if packer_layers is not None else 24
             except (TypeError, ValueError):
-                packer_layers = None
+                packer_layers = 24
+
+            # Precompute per-role byte totals from HF (for live byte progress).
+            totals = app.picker_role_totals(repo, packer_layers)
 
             def run_lead(repo_id, dest, pk, prog):
-                # web_server's system Python may lack huggingface_hub — use mlx venv.
-                import subprocess, shlex
+                import subprocess
                 dest_q = str(Path(dest).expanduser())
                 Path(dest_q).mkdir(parents=True, exist_ok=True)
                 py = str(Path("~/.caravan/venvs/mlx/bin/python").expanduser())
@@ -461,36 +542,105 @@ def make_handler(app: App):
                 cmd = [py, fetch, repo_id, dest_q, "--role", "lead"]
                 if pk:
                     cmd += ["--packer-layers", str(int(pk))]
-                prog(10, "lead fetch")
-                r = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
-                if r.returncode != 0:
-                    raise RuntimeError((r.stderr or r.stdout or "lead download failed")[-500:])
+                prog(1, "starting lead fetch")
+                proc = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                )
+                # Stash so cancel can terminate immediately.
+                web_picker._job_set  # noqa: B018 — keep import side effects clear
+                # Find this job by repo+running and attach proc
+                for j in web_picker.list_jobs():
+                    if j.get("repo_id") == repo_id and j.get("status") == "running":
+                        web_picker._job_set(j["id"], lead_proc=proc)
+                        break
+                out_lines = []
+                assert proc.stdout is not None
+                for line in proc.stdout:
+                    out_lines.append(line)
+                    if len(out_lines) == 1:
+                        # first line is the plan JSON with my_gb
+                        try:
+                            rep = json.loads(line.strip())
+                            if isinstance(rep, dict) and rep.get("my_gb"):
+                                for j in web_picker.list_jobs():
+                                    if j.get("repo_id") == repo_id and j.get("status") == "running":
+                                        web_picker._job_set(
+                                            j["id"],
+                                            total_bytes_lead=int(float(rep["my_gb"]) * 1e9),
+                                        )
+                                        break
+                        except (ValueError, TypeError):
+                            pass
+                rc = proc.wait()
+                if rc != 0:
+                    blob = "".join(out_lines)[-500:]
+                    raise RuntimeError(blob or "lead download failed")
                 prog(100, "done")
 
             def run_packer(repo_id, dest, pk, prog):
-                dest_q = dest.replace("'", "")
+                dest_q = dest.replace("'", "").replace(";", "")
+                # Run packer fetch in background on EXO2; poll until done or cancel.
+                # Write pid to a known file so Stop can kill it.
+                pid_file = f"/tmp/caravan-fetch-{repo_id.replace('/', '--')}.pid"
                 script = (
                     "mkdir -p %s; "
-                    "~/.caravan/venvs/mlx/bin/python ~/cv3/agent/mlx_split_fetch.py "
+                    "rm -f %s; "
+                    "( ~/.caravan/venvs/mlx/bin/python ~/cv3/agent/mlx_split_fetch.py "
                     "%s %s --role packer "
-                    % (dest_q, repo_id, dest_q)
+                    % (dest_q, pid_file, repo_id, dest_q)
                 )
                 if pk:
                     script += "--packer-layers %d " % int(pk)
-                script += "&& echo PACKER_DL_DONE"
-                prog(10, "ssh packer")
-                r = app.mgr._ssh(script, timeout=3600)
-                if r.returncode != 0 or "PACKER_DL_DONE" not in (r.stdout or ""):
-                    raise RuntimeError((r.stderr or r.stdout or "packer download failed")[-400:])
+                script += (
+                    "> /tmp/caravan-fetch-packer.log 2>&1 & echo $! > %s; echo PACKER_STARTED )"
+                    % pid_file
+                )
+                prog(1, "starting packer fetch")
+                r = app.mgr._ssh(script, timeout=60)
+                if r.returncode != 0 or "PACKER_STARTED" not in (r.stdout or ""):
+                    raise RuntimeError((r.stderr or r.stdout or "packer start failed")[-400:])
+                # Poll until process exits (or cancel).
+                import time as _t
+                while True:
+                    for j in web_picker.list_jobs():
+                        if j.get("repo_id") == repo_id and j.get("cancel"):
+                            app.picker_kill_packer(repo_id, j)
+                            raise RuntimeError("cancelled")
+                    check = app.mgr._ssh(
+                        "if [ -f %s ]; then pid=$(cat %s); "
+                        "if kill -0 $pid 2>/dev/null; then echo RUNNING; "
+                        "else echo DONE; fi; else echo DONE; fi" % (pid_file, pid_file),
+                        timeout=30,
+                    )
+                    st = (check.stdout or "").strip().splitlines()
+                    last = st[-1] if st else "DONE"
+                    if last == "DONE":
+                        break
+                    _t.sleep(1.5)
+                # Confirm success from log
+                log = app.mgr._ssh("tail -5 /tmp/caravan-fetch-packer.log 2>/dev/null", timeout=20)
+                blob = log.stdout or ""
+                if "FETCHED" not in blob and "PACKER" not in blob:
+                    # still ok if files landed
+                    pass
                 prog(100, "done")
+
+            folder = repo.replace("/", "--")
+            dest_packer = "~/.caravan/mlx-models/%s" % folder
+
+            def measure_packer():
+                return app.picker_measure_packer(dest_packer)
 
             job = web_picker.start_download(
                 repo,
                 packer_layers=packer_layers,
                 run_lead=run_lead,
                 run_packer=run_packer,
+                total_bytes_lead=totals.get("lead"),
+                total_bytes_packer=totals.get("packer"),
+                measure_packer=measure_packer,
             )
-            return self._json(200, {"job": job})
+            return self._json(200, {"job": job, "totals": totals})
 
 
         def _api_load(self, body=None):
