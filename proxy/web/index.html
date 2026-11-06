@@ -1932,8 +1932,15 @@
     }, true);
 
     async function api(path, opts) {
-      const r = await fetch(path, Object headers: { "Content-Type": "application/json" }, ...opts });
-      const j = await r.json().catch(() => ({}));
+      opts = opts || {};
+      const headers = { "Content-Type": "application/json" };
+      if (opts.headers) {
+        for (const k of Object.keys(opts.headers)) headers[k] = opts.headers[k];
+      }
+      const init = { method: opts.method || "GET", headers: headers };
+      if (opts.body != null) init.body = opts.body;
+      const r = await fetch(path, init);
+      const j = await r.json().catch(function(){ return {}; });
       if (!r.ok) throw new Error(j.error || r.statusText);
       return j;
     }
@@ -1960,11 +1967,11 @@
       const filters = new Set(g.filters || []);
       for (const c of state.chips) {
         if (c === "fits-on-1") {
-          if (!(g.quants || []).some((q) => (q.fit && q.fit.fits_on || []).includes(1))) return false;
+          if (!(g.quants || []).some((q) => ((q.fit && q.fit.fits_on) || []).includes(1))) return false;
           continue;
         }
         if (c === "fits-on-2") {
-          if (!(g.quants || []).some((q) => (q.fit && (q.fit.fits_on || []).includes(2) || q.fit.nodes_needed === 2))) return false;
+          if (!(g.quants || []).some(function(q){ var f=q.fit||{}; return ((f.fits_on||[]).includes(2) || f.nodes_needed===2); })) return false;
           continue;
         }
         if (!filters.has(c) && !(c === "cloud" && g.cloud)) return false;
