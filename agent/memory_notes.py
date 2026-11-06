@@ -212,10 +212,49 @@ def bm25_recall(
     return out
 
 
-def format_recall_note(snippets: list) -> str:
-    if not snippets:
+def count_archived_turns(memory_dir: Path, session: str) -> int:
+    """Total ## turn N headings across this session's archive files."""
+    n = 0
+    for path in iter_session_notes(memory_dir, session, all_sessions=False):
+        try:
+            text = Path(path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        n += len(_TURN_RE.findall(text))
+    return n
+
+
+_GUARD_NOTE_PREFIXES = (
+    "Note: ",
+    "Earlier in this conversation",
+)
+
+
+def is_memory_guard_note(content: str) -> bool:
+    s = str(content or "").lstrip()
+    return any(s.startswith(p) for p in _GUARD_NOTE_PREFIXES)
+
+
+def format_recall_note(snippets: list, archived_turns: int = 0) -> str:
+    """One system note: archive-awareness (when N>0) plus optional BM25 snippets.
+
+    Always tell the model when turns were moved, even if recall finds nothing.
+    """
+    n = int(archived_turns or 0)
+    snippets = list(snippets or [])
+    if n <= 0 and not snippets:
         return ""
-    lines = ["Earlier in this conversation (from notes):"]
-    for s in snippets:
-        lines.append(f"- (turn {s['turn']}, {s['role']}) {s['text']}")
+    lines = []
+    if n > 0:
+        lines.append(
+            f"Note: {n} earlier turns of this conversation were moved to notes "
+            "to save memory. If the user refers to something you can't see here, "
+            "say you don't have it in view and ask them to restate it, rather "
+            "than guessing."
+        )
+    if snippets:
+        lines.append("Relevant bits from those notes:" if n > 0 else
+                     "Earlier in this conversation (from notes):")
+        for s in snippets:
+            lines.append(f"- (turn {s['turn']}, {s['role']}) {s['text']}")
     return "\n".join(lines)

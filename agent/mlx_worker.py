@@ -1584,8 +1584,16 @@ class Engine:
         model_name = getattr(self, "model_dir", None)
         model_name = model_name.name if model_name is not None else ""
 
-        # Recall BEFORE trim so archive search still sees older context; snippets
-        # are counted into the memory estimate via injection into messages.
+        # Drop any prior guard/recall system notes so they never accumulate.
+        msgs = [
+            m for m in msgs
+            if not (
+                str(m.get("role")) == "system"
+                and MN.is_memory_guard_note(str(m.get("content") or ""))
+            )
+        ]
+
+        # Recall BEFORE trim so archive search still sees older context.
         recall_all = bool(getattr(self.args, "memory_recall_all", False))
         user_q = ""
         for m in reversed(msgs):
@@ -1601,15 +1609,14 @@ class Engine:
             )
         except Exception as e:
             log(f"memory_notes: recall failed ({e!r})")
-        recall_note = MN.format_recall_note(snippets)
-        work_msgs = list(msgs)
-        if recall_note:
-            # Inject as a short system note just before the latest user turn.
-            insert_at = len(work_msgs) - 1 if work_msgs else 0
-            work_msgs.insert(insert_at, {"role": "system", "content": recall_note})
 
-        plan = MG.plan(
-            work_msgs,
+        n_archived = 0
+        try:
+            n_archived = int(MN.count_archived_turns(mem_dir, sid) or 0)
+        except Exception as e:
+            log(f"memory_notes: count failed ({e!r})")
+
+        plan_kwargs = dict(
             cfg=self.model_cfg or {},
             n_layers=max(1, n_layers),
             max_tokens=max_tokens,
@@ -1619,6 +1626,34 @@ class Engine:
             packer_available_gb=packer_avail,
             packer_layers=packer_layers,
         )
+
+        # Pass 1 (no note): learn how many turns this reply will archive so N
+        # on the trim reply includes them; note is injected for pass 2 so it
+        # counts in the KV estimate.
+        plan_pre = MG.plan(list(msgs), **plan_kwargs)
+        drops_pre = [
+            d for d in (plan_pre.get("dropped") or [])
+            if not (
+                str(d.get("role")) == "system"
+                and MN.is_memory_guard_note(str(d.get("content") or ""))
+            )
+        ]
+        # append_turns skips system/empty; count the same way for N.
+        n_pending = sum(
+            1 for d in drops_pre
+            if str(d.get("role") or "") != "system" and str(d.get("content") or "").strip()
+        )
+        n_total = n_archived + n_pending
+
+        recall_note = MN.format_recall_note(snippets, archived_turns=n_total)
+        work_msgs = list(msgs)
+        if recall_note:
+            insert_at = len(work_msgs) - 1 if work_msgs else 0
+            work_msgs.insert(insert_at, {"role": "system", "content": recall_note})
+            plan = MG.plan(work_msgs, **plan_kwargs)
+        else:
+            plan = plan_pre
+
         meta = {k: plan[k] for k in plan if k not in ("messages", "dropped")}
         if "headroom_gb" in meta:
             meta["headroom_gb"] = round(float(meta["headroom_gb"]), 3)
@@ -1626,13 +1661,16 @@ class Engine:
         meta["recalled"] = [
             {"turn": s["turn"], "role": s["role"], "score": s["score"]} for s in snippets
         ]
+        meta["archived_total"] = n_total
+        meta["archive_note"] = bool(recall_note)
 
-        dropped = list(plan.get("dropped") or [])
-        # Don't archive the injected recall system note if it got trimmed.
-        dropped = [d for d in dropped if not (
-            str(d.get("role")) == "system"
-            and str(d.get("content") or "").startswith("Earlier in this conversation")
-        )]
+        dropped = [
+            d for d in (plan.get("dropped") or [])
+            if not (
+                str(d.get("role")) == "system"
+                and MN.is_memory_guard_note(str(d.get("content") or ""))
+            )
+        ]
         archived_to = None
         if dropped:
             try:
@@ -1645,12 +1683,37 @@ class Engine:
                 log(f"memory_notes: archive failed ({e!r})")
                 meta["archive_error"] = str(e)
 
+        # Refresh N from disk (and rewrite the injected note) so the model sees
+        # the true total after this reply's archive; never leave a stale N.
+        try:
+            n_final = int(MN.count_archived_turns(mem_dir, sid) or 0)
+        except Exception:
+            n_final = n_total
+        meta["archived_total"] = n_final
+        if n_final != n_total or (n_final > 0 and recall_note):
+            final_note = MN.format_recall_note(snippets, archived_turns=n_final)
+            out_msgs = list(plan.get("messages") or [])
+            # Replace existing guard note or insert fresh; never stack.
+            out_msgs = [
+                m for m in out_msgs
+                if not (
+                    str(m.get("role")) == "system"
+                    and MN.is_memory_guard_note(str(m.get("content") or ""))
+                )
+            ]
+            if final_note:
+                insert_at = len(out_msgs) - 1 if out_msgs else 0
+                out_msgs.insert(insert_at, {"role": "system", "content": final_note})
+            plan = dict(plan)
+            plan["messages"] = out_msgs
+            recall_note = final_note
+            meta["archive_note"] = bool(final_note)
+
         if plan.get("trimmed_turns"):
             log(f"memory_guard: trimmed {plan['trimmed_turns']} turn(s); "
                 f"prompt~{plan.get('prompt_tokens')} tok, need~{plan.get('need_gb')} GB, "
-                f"headroom {meta.get('headroom_gb')} GB")
+                f"headroom {meta.get('headroom_gb')} GB; archive_note N={meta.get('archived_total')}")
             try:
-                # Free other sessions when tight (never blocks on the active key).
                 self.store.enforce_limits(keep=sid if sid in getattr(self.store, "sessions", {}) else None)
             except Exception as e:
                 log(f"memory_guard: enforce_limits skipped ({e!r})")
