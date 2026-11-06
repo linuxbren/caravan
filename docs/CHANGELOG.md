@@ -3,11 +3,21 @@
 
 ## Unreleased
 
-- **Model picker (phases 1–2).** Models drawer: HF/GGUF/Cloud catalog, fit colors,
-  expandable quants, chips, on-disk delete-all, split-aware MLX download + load.
-  Conversion / GGUF-llama-server / live Cloud still open.
+- **Model picker (phases 1–2).** Models drawer (see [MODEL_PICKER.md](MODEL_PICKER.md)):
+  HF/GGUF/Cloud catalog; capacity-based fit (not current free RAM) with plain
+  reasons; live search; real HF sizes; category + **New** chips; max download
+  size filter; parallel lead+packer shard download with byte progress; Stop/Delete
+  kill fetches on both Minis; on-disk HF cache + guess-ahead drafts cleanup.
+  Still open: conversion, GGUF-llama-server load, live Cloud.
 
-- **Memory guard (lead).** Estimate KV vs reclaimable RAM before generate; trim oldest turns into `~/.caravan/memory` Markdown notes (EXO1 only) and BM25-recall snippets into a short system note. Topology shows reclaimable RAM; UI notes moved/recalled counts. Config: `memory_dir`, `memory_safety_gb`.
+- **Memory guard (lead).** Estimate KV vs reclaimable RAM before generate; trim
+  oldest turns into `~/.caravan/memory` Markdown notes (EXO1 only) and BM25-recall
+  snippets into a short system note. Topology shows reclaimable RAM; UI notes
+  moved/recalled counts. Config: `memory_dir`, `memory_safety_gb`.
+
+- **Topology / chat.** 500 ms node poll while visible; sticky stats; 20–100 °C
+  temp bar; Heat/Theme colors; Mac mini variant A cards; ioreg GPU % (not
+  macmon keepalive 100%); full chat history sent (not only the latest message).
 
 What changed in each Caravan version, newest first. Numbers come from
 [BENCHMARKS.md](BENCHMARKS.md); the day-by-day story is in

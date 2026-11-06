@@ -226,6 +226,8 @@ tail -f ~/Library/Logs/caravan/*.log
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | every flag, env var and config key, with defaults |
 | [docs/MLX.md](docs/MLX.md) | how the MLX worker works, GPT-OSS reasoning, limits |
 | [docs/MLX-SPLIT.md](docs/MLX-SPLIT.md) | v3: one MLX model split across two Macs, lead / packer names, split download |
+| [docs/MODEL_PICKER.md](docs/MODEL_PICKER.md) | Models drawer: sources, capacity fit, split download, disk cleanup, bugs found |
+| [docs/WEB.md](docs/WEB.md) | Web UI on EXO1 :8190 — chat, Topology, optimizations, picker API |
 | [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | how we measure, and the results by version |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | what changed in each version (v0 → v3) |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | done by version, next in order, ideas, parked items, known limits |

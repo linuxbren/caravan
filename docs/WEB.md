@@ -25,12 +25,13 @@ as the agent `/health` endpoint). There is no login.
 
 ## What it does
 
-1. **Model picker.** The **Models** drawer (left dock) searches HF / GGUF / Cloud,
-   color-codes fit from live node RAM, downloads MLX shards per Mini, and lists
-   on-disk models with delete-all. Settings still lists models already on disk. Load starts Packer 1 on
-   EXO2 over Thunderbolt SSH, then the lead worker on EXO1 (ports **5560** /
-   **8194**). Progress lines stream into the left rail until status is
-   `ready`.
+1. **Model picker.** The **Models** drawer (left dock, like Topology) searches
+   HF / GGUF / Cloud, color-codes **capacity-based** fit (unload RAM + disk),
+   downloads MLX shards per Mini in parallel, and lists on-disk models plus HF
+   cache / guess-ahead drafts with delete-all. Full design, bugs found, and
+   gaps: [MODEL_PICKER.md](MODEL_PICKER.md). Settings still lists models
+   already on disk. Load starts Packer 1 on EXO2 over Thunderbolt SSH, then
+   the lead worker on EXO1 (ports **5560** / **8194**).
 2. **Chat.** OpenAI-shaped `/v1/chat/completions` under the hood, streamed
    word by word. Session key is sticky per browser tab so shared-start and
    the prompt cache can help.
@@ -68,6 +69,8 @@ Env knobs (optional):
 | `proxy/web_catalog.py` | Models already on the Minis |
 | `proxy/web_timing.py` | Clock-offset + gap + reply-stat math |
 | `proxy/web/index.html` | The page |
+| `proxy/web_picker.py` | Model picker catalog, fit, download jobs |
+| `proxy/picker_disk_sizes.py` | On-disk / cleanup sizes (lead + SSH packer) |
 | `proxy/web/journey.json` | Real v0→Day 13 numbers for the strip |
 | `tests/test_web_server.py` | Endpoint + timing unit tests |
 
@@ -83,6 +86,18 @@ Env knobs (optional):
 - UI clears in-flight chat on Load/Unload/Clear (`AbortController`), so Send re-enables whenever status is `ready`.
 - Chat shows a `thinking…` placeholder immediately, enforces a 45s first-token / 180s total timeout with a visible error, and strips end markers (`<|im_end|>`, `<turn|>`, …) in the proxy and the page.
 
+
+
+## Topology
+
+Left drawer (mutually exclusive with Models). Polls `/api/nodes` every
+**500 ms** while open and the tab is visible. Mac mini silhouette cards
+(variant A), sticky last stats, temperature bar 20–100 °C, Heat / Theme bar
+colors (Settings). GPU % comes from ioreg utilization — macmon can read 100%
+under keepalive. Chat history is sent in full (not only the latest message).
+Memory-guard trims show as “Moved N…” under replies; notes live on EXO1 only
+(`~/.caravan/memory`). Details that overlap the picker are in
+[MODEL_PICKER.md](MODEL_PICKER.md).
 
 ## Optimization toggles (Day 15)
 
@@ -165,10 +180,13 @@ column in the same order. `tests/test_web_server.py::PageOrderTest` guards it.
 
 ### Model picker API (`/api/picker/*`)
 
-- `GET /api/picker/search?q=&source=all|hf-mlx|gguf|cloud` — catalog + fit
-- `GET /api/picker/disk` — installed sizes on lead + packer
-- `POST /api/picker/download` `{repo_id}` — split-aware MLX fetch
-- `GET /api/picker/jobs[/id]` — progress; `POST .../download/cancel`
-- `POST /api/picker/delete` `{id, confirm:true}` — all Minis; refuses if loaded
+See [MODEL_PICKER.md](MODEL_PICKER.md) for behavior. Short map:
+
+- `GET /api/picker/search?q=&source=&filter=&newer=1&limit=` — catalog + capacity fit
+- `GET /api/picker/disk` — installed + cleanup rows (HF cache, drafts)
+- `POST /api/picker/download` `{repo_id, packer_layers?}` — parallel lead+packer fetch
+- `GET /api/picker/jobs[/id]` — byte progress; `POST .../download/cancel` kills fetches
+- `POST /api/picker/delete` `{id|kind, confirm:true}` — models or `hf-cache` / `drafts`
 - `POST /api/picker/fit` — ad-hoc fit check
-GGUF catalog source: Hugging Face (`bartowski`, `unsloth`, `lmstudio-community`).
+
+GGUF catalog: Hugging Face (`bartowski`, `unsloth`, `lmstudio-community`).

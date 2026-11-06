@@ -591,16 +591,15 @@ flashy UI.
 
 ### Model picker: Ollama / Hugging Face with fit check
 
-**In progress (phases 1–2 shipping).** Left dock drawer (Models) like
-Topology: HF MLX catalog (mlx-community + convertible), GGUF via HF
+**Phases 1–2 shipping** — full write-up in [MODEL_PICKER.md](MODEL_PICKER.md).
+Left dock drawer (Models) like Topology: HF MLX catalog, GGUF via HF
 publishers bartowski/unsloth/lmstudio-community (Brenden's "Ollama"),
-Ollama Cloud framework (CLOUD label, `OLLAMA_API_KEY`, untested). Fit
-check color-codes green/yellow/red from `/api/nodes` available RAM +
-disk before display; EXO-style expandable quants; chips + search; on-disk
-list with delete-all-Minis. Split-aware shard download uses
-`agent/mlx_split_fetch.py` then `/api/models/load`. APIs under
-`/api/picker/*`. Still open: phase 3 conversion (`mlx_lm.convert`), phase
-4 GGUF via llama-server on one Mini, phase 5 live Ollama Cloud.
+Ollama Cloud framework (CLOUD label). Fit uses **unload capacity** (available
++ worker footprint), not current free RAM; disk checked separately; New chip +
+max download size; parallel split-aware download; Stop/Delete kill fetches;
+HF cache + drafts cleanup rows. Still open: phase 3 conversion
+(`mlx_lm.convert`), phase 4 GGUF via llama-server on one Mini, phase 5 live
+Ollama Cloud.
 
 ## Deferred / parked
 
