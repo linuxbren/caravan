@@ -315,6 +315,18 @@ def build_entries_from_inventories(
                 why = st.get("reason") or (f"missing shards on {label}" if st else f"not on {label}")
                 reasons.append(why)
 
+        # Architecture support (e.g. qwen3_5_text remapped; truly unknown flagged)
+        try:
+            from mlx_arch import architecture_status
+            arch_path = lead_path or next(
+                (st.get("path") for st in per.values() if st and st.get("path")), None)
+            arch = architecture_status(arch_path) if arch_path else {"supported": True}
+        except Exception:
+            arch = {"supported": True}
+        if not arch.get("supported"):
+            usable = False
+            reasons.append(arch.get("reason") or "unsupported architecture")
+
         if is_current:
             usable = True  # always keep loaded model selectable
             reasons = []
@@ -348,8 +360,13 @@ def build_entries_from_inventories(
                 (ni.get("label") or ni.get("id")): (ni.get("models") or {}).get(rid)
                 for ni in (node_inventories or [])
             },
-            "need_split": need_split,
+            "need_split": need_split if (placement or {}).get("mode") != "one" else False,
+            "run_mode": (
+                "single" if (placement or {}).get("mode") in ("one", "all")
+                else ("split" if need_split or (placement or {}).get("mode") == "split" else "single")
+            ),
             "placement": placement,
+            "architecture": arch if isinstance(arch, dict) else None,
             "held_on": sorted({
                 (ni.get("label") or ni.get("id"))
                 for ni in (node_inventories or [])
@@ -424,6 +441,51 @@ def get_model(model_id: str) -> Optional[dict]:
         "notes": meta.get("notes") or "",
     }
     resolved = resolve_entry(entry)
+    # Placement + architecture from the on-disk tree (if any).
+    try:
+        from placement import read_placement
+        from mlx_arch import architecture_status
+    except ImportError:
+        read_placement = architecture_status = None  # type: ignore
+    place = None
+    if read_placement and resolved.get("lead_path"):
+        place = read_placement(resolved["lead_path"])
+    if place is None and hf in scanned:
+        place = (scanned[hf] or {}).get("placement")
+    resolved["placement"] = place
+    local = scanned.get(hf) or {}
+    # Run mode: placement wins; else infer from shards on this Mini.
+    mode = (place or {}).get("mode")
+    if mode == "one" or mode == "all":
+        resolved["need_split"] = False
+        resolved["run_mode"] = "single"
+    elif mode == "split":
+        resolved["need_split"] = True
+        resolved["run_mode"] = "split"
+    else:
+        # No placement file: split only when this tree is clearly a lead half
+        # (split-lead) and not a full copy.
+        kind = local.get("kind") or ""
+        if kind == "full" or local.get("full_ok"):
+            resolved["need_split"] = False
+            resolved["run_mode"] = "single"
+        elif kind == "split-lead" or (local.get("lead_ok") and not local.get("full_ok")):
+            resolved["need_split"] = True
+            resolved["run_mode"] = "split"
+        else:
+            # Default historical behavior for unknown trees: try split
+            # (web UI used to always start packer). Prefer single when the
+            # folder looks complete enough for one Mini.
+            resolved["need_split"] = False
+            resolved["run_mode"] = "single"
+    if architecture_status and resolved.get("lead_path"):
+        arch = architecture_status(resolved["lead_path"])
+        resolved["architecture"] = arch
+        if not arch.get("supported"):
+            resolved["available_lead"] = False
+            resolved["usable"] = False
+            resolved["disabled"] = True
+            resolved["disabled_reason"] = arch.get("reason") or "unsupported architecture"
     # Catalog-only metadata with nothing on disk: still return (available_lead
     # False) so switch() can raise FileNotFoundError with a clear id. Truly
     # unknown names (no meta, no disk) already returned None above.

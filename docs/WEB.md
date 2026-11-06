@@ -27,7 +27,7 @@ as the agent `/health` endpoint). There is no login.
 
 1. **Model picker.** The **Models** drawer (left dock, like Topology) searches
    HF / GGUF / Cloud, color-codes **capacity-based** fit (unload RAM + disk),
-   downloads MLX shards per Mini in parallel (placement: 1 / K-split / all; truthful progress under hf_xet via nettop fallback), and lists on-disk models plus HF
+   downloads MLX shards per Mini in parallel (placement: 1 / K-split / all; truthful progress under hf_xet via nettop fallback; loads respect placement — one-Mini skips the packer), and lists on-disk models plus HF
    cache / guess-ahead drafts with delete-all. Full design, bugs found, and
    gaps: [MODEL_PICKER.md](MODEL_PICKER.md). Settings still lists models
    already on disk. Load starts Packer 1 on EXO2 over Thunderbolt SSH, then

@@ -172,9 +172,16 @@ class WorkerManager:
         self._reload_trial = None
         if not self.check_lpm():
             raise RuntimeError("Low Power Mode is on — turn it off before loading a model")
+        run_mode = self._resolve_run_mode(entry)
+        entry = dict(entry)
+        entry["run_mode"] = run_mode
+        entry["need_split"] = run_mode == "split"
         self._set(status="stopping", error=None, model_id=entry["id"],
-                  model_name=entry["name"], progress=[])
-        self._note(f"switching to {entry['name']}")
+                  model_name=entry["name"], progress=[], split=(run_mode == "split"))
+        self._note(f"switching to {entry['name']} ({run_mode})")
+        problems = self.preflight_load(entry)
+        if problems:
+            raise FileNotFoundError("; ".join(problems))
         lead_x, packer_x = web_settings.to_args(settings)
         self._lead_path = entry.get("lead_path")
         for line in self.plan_reload_args(entry, settings, lead_x, packer_x):
@@ -186,21 +193,101 @@ class WorkerManager:
         self._kill_packer()
         time.sleep(1.5)
 
-        packer_path = self._resolve_packer_path(entry)
-        self._set(status="starting_packer")
-        self._note(f"starting packer on EXO2 ({packer_path})")
-        packer_pid = self._start_packer(entry, packer_path)
-        self._set(packer_pid=packer_pid)
-        self._wait_packer_ready(timeout=300)
-
-        self._set(status="starting_lead")
-        self._note(f"starting lead on EXO1 ({entry['lead_path']})")
-        lead_pid = self._start_lead(entry)
+        if run_mode == "split":
+            packer_path = self._resolve_packer_path(entry)
+            self._set(status="starting_packer", packer_pid=None)
+            self._note(f"starting packer on EXO2 ({packer_path})")
+            packer_pid = self._start_packer(entry, packer_path)
+            self._set(packer_pid=packer_pid)
+            self._wait_packer_ready(timeout=300)
+            self._set(status="starting_lead")
+            self._note(f"starting lead on EXO1 ({entry['lead_path']})")
+            lead_pid = self._start_lead(entry, split=True)
+        else:
+            self._set(status="starting_lead", packer_pid=None)
+            self._note(f"starting single-Mini worker on EXO1 ({entry['lead_path']})")
+            lead_pid = self._start_lead(entry, split=False)
         self._set(lead_pid=lead_pid)
         self._wait_lead_ready(timeout=600)
 
-        self._set(status="ready")
+        self._set(status="ready", split=(run_mode == "split"))
         self._note("ready")
+
+    def _resolve_run_mode(self, entry: dict) -> str:
+        """single | split — placement file wins; else entry flags; else infer."""
+        if entry.get("run_mode") in ("single", "split"):
+            return entry["run_mode"]
+        place = entry.get("placement")
+        if not place and entry.get("lead_path"):
+            try:
+                from placement import read_placement
+                place = read_placement(entry["lead_path"])
+            except Exception:
+                place = None
+        mode = (place or {}).get("mode")
+        if mode in ("one", "all"):
+            # Copy-to-all: run on the lead Mini (this host).
+            node_ids = [(place or {}).get("node_ids") or []]
+            # If placement is one Mini and that Mini isn't the lead/web host, refuse.
+            if mode == "one":
+                ids = [str(x).lower() for x in ((place or {}).get("node_ids") or [])]
+                labels = [str(x).lower() for x in ((place or {}).get("node_labels") or [])]
+                # Lead/web host is EXO1 / local — accept exo1/lead/local empty.
+                ok_local = (
+                    not ids and not labels
+                    or any(x in ("exo1", "lead", "local") for x in ids)
+                    or any(x in ("exo1", "lead", "local") for x in labels)
+                )
+                if not ok_local:
+                    want = ", ".join((place or {}).get("node_labels") or ids) or "another Mini"
+                    raise RuntimeError(
+                        f"This model is placed on {want} only. Loading on a non-lead Mini "
+                        f"isn't supported yet — re-download to EXO1, or use Copy to all."
+                    )
+            return "single"
+        if mode == "split" or entry.get("need_split"):
+            return "split"
+        return "single"
+
+    def preflight_load(self, entry: dict) -> list:
+        """Plain-English checks before killing the current worker."""
+        problems = []
+        run_mode = entry.get("run_mode") or self._resolve_run_mode(entry)
+        lead = entry.get("lead_path")
+        if not lead:
+            problems.append("model folder not found on this Mini (EXO1)")
+        else:
+            lp = Path(lead).expanduser()
+            if not lp.is_dir():
+                problems.append(f"model folder missing on EXO1: {lead}")
+            elif not (lp / "config.json").is_file():
+                problems.append(f"config.json missing in {lead}")
+            else:
+                try:
+                    from mlx_arch import architecture_status
+                    arch = architecture_status(lp)
+                    if not arch.get("supported"):
+                        problems.append(arch.get("reason") or "unsupported architecture")
+                    elif arch.get("remapped"):
+                        self._note("architecture: " + (arch.get("reason") or "remapped"))
+                except Exception:
+                    pass
+                # Need at least one weight file for single / lead
+                has_w = any(lp.glob("*.safetensors")) or (lp / "model.safetensors.index.json").is_file()
+                if not has_w:
+                    problems.append(f"no weight files in {lead}")
+        if run_mode == "split":
+            # Packer must have a tree — cheap existence check (same as resolve).
+            try:
+                self._resolve_packer_path(entry)
+            except FileNotFoundError as e:
+                problems.append(
+                    "model isn't on the packer Mini (EXO2). "
+                    "For a one-Mini download, load after placing on EXO1 only — "
+                    "or re-download as a split / copy-to-all. "
+                    f"({e})"
+                )
+        return problems
 
     # ----- Day 15: reload trials (kv_bits, fuse_kernels, keepalive) -------
 
@@ -393,8 +480,8 @@ class WorkerManager:
             time.sleep(1.5)
         raise TimeoutError("packer did not become ready in time")
 
-    def _start_lead(self, entry: dict) -> int:
-        k = int(entry["packer_layers"])
+    def _start_lead(self, entry: dict, *, split: bool = True) -> int:
+        k = int(entry.get("packer_layers") or 24)
         log_path = self._lead_log()
         log_path.parent.mkdir(parents=True, exist_ok=True)
         # Truncate log.
@@ -402,17 +489,35 @@ class WorkerManager:
         args = [
             self.python, str(self.worker),
             "--model", entry["lead_path"],
-            "--split-role", "lead",
-            "--split-peer", self.packer_peer,
             "--host", "127.0.0.1",
             "--port", str(self.lead_port),
-            "--split-packer-layers", str(k),
-            "--split-draft-skip-first-load",
-            # Keep draft auto-pair on (Day 12 win) unless env disables.
         ]
-        if os.environ.get("CARAVAN_WEB_NO_DRAFT", "").strip() in ("1", "true", "yes"):
-            args.append("--no-split-draft")
-        args += list(getattr(self, "_extra_lead", []))
+        if split:
+            args += [
+                "--split-role", "lead",
+                "--split-peer", self.packer_peer,
+                "--split-packer-layers", str(k),
+                "--split-draft-skip-first-load",
+            ]
+            if os.environ.get("CARAVAN_WEB_NO_DRAFT", "").strip() in ("1", "true", "yes"):
+                args.append("--no-split-draft")
+        else:
+            # Explicit non-split (default is none, but say it for logs/ps).
+            args += ["--split-role", "none"]
+        extra = list(getattr(self, "_extra_lead", []))
+        if not split:
+            # Drop split-only flags from self-tune extras.
+            filtered = []
+            skip_next = False
+            for a in extra:
+                if skip_next:
+                    skip_next = False
+                    continue
+                if a in ("--split-keepalive", "--no-split-keepalive"):
+                    continue
+                filtered.append(a)
+            extra = filtered
+        args += extra
         # Shared-prefix: leave to learn / saved tuned settings (Day 13).
         env = os.environ.copy()
         lf = open(log_path, "ab", buffering=0)

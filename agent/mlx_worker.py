@@ -660,6 +660,16 @@ class Engine:
         except Exception as e:
             self._fuse_mode = "off"
             log(f"fuse kernels: skipped ({type(e).__name__}: {e})")
+        # Caravan remaps (e.g. qwen3_5_text → qwen3_5) before any mlx_lm load.
+        try:
+            import os as _os, sys as _sys
+            _proxy = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "proxy")
+            if _proxy not in _sys.path:
+                _sys.path.insert(0, _proxy)
+            from mlx_arch import apply_mlx_lm_remaps
+            apply_mlx_lm_remaps(log=log)
+        except Exception as _e:
+            log(f"model_type remap skipped: {_e!r}")
         from mlx_lm import load
         from mlx_lm.sample_utils import make_sampler, make_logits_processors
         G = importlib.import_module("mlx_lm.generate")

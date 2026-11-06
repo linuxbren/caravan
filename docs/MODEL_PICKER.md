@@ -127,6 +127,27 @@ config.toml. Mock picker views exercise 1-node and 3-node chip sets.
   placement that fits. Saved as `caravan-placement.json` next to the model;
   Settings usability and load respect it (a 1-Mini copy is usable as single-Mini).
   **Delete** still removes from all Minis.
+
+### Loading respects placement
+
+Finding (Nov 5 2026): downloading JevK5 4-bit to **EXO1 only** still tried to
+start a lead+packer split (`FileNotFoundError: model not on packer Mini`).
+`caravan-placement.json` was ignored by `WorkerManager._load_once`.
+
+**Now:**
+
+- `mode: one` / `all` → single non-split worker on the lead Mini (`--split-role none`).
+  Packer is not started. Copy-to-all still *runs* on one Mini (EXO1).
+- `mode: split` → today’s lead+packer path.
+- No placement file → infer: full tree on EXO1 → single; lead-half only → split.
+- One-Mini placement on a non-lead Mini (e.g. EXO2 only) is refused with a clear
+  message (remote single-node worker not supported yet).
+- Preflight checks files on each needed node and surfaces plain-English errors
+  before the current worker is killed.
+- **Architecture:** `qwen3_5_text` (Qwen3_5ForCausalLM) is remapped to `qwen3_5`
+  for mlx_lm ≥ 0.32.2. Unsupported types show “unsupported architecture” in
+  Settings and fail preflight.
+
 - **Stop** kills `mlx_split_fetch` on every configured Mini. **Delete** stops any
   fetch for that model first, then removes trees on all Minis. Never deletes the
   currently loaded model.

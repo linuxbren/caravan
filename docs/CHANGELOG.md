@@ -3,6 +3,12 @@
 
 ## Unreleased
 
+- **Placement-aware load.** One-Mini / copy-to-all placements start a single
+  non-split worker (no packer). Split placements keep lead+packer. Preflight
+  checks files first. `qwen3_5_text` remapped to `qwen3_5` for mlx_lm 0.32.2
+  (JevK5). Finding: EXO1-only download still required the packer Mini.
+
+
 - **Truthful download progress (hf_xet).** File-only progress froze at 0% while
   `nettop` showed 3–6 MB/s (JevK5). Fallback: fetch JSONL hook → disk/xet →
   `nettop` bytes_in. UI: MB/s, ETA, %, “starting…”, stall ~30s. Live fetches
