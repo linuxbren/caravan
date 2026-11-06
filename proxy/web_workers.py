@@ -394,8 +394,14 @@ class WorkerManager:
             if lp and f"--model {lp}" in cmd:
                 self._lead_path = lp
                 cur = web_settings.from_args(cmd)
+                is_split = (
+                    "--split-role lead" in cmd
+                    or "--split-role=lead" in cmd
+                    or ("--split-peer" in cmd and "--split-role none" not in cmd
+                        and "--split-role=none" not in cmd)
+                )
                 self._set(status="ready", model_id=m["id"], model_name=m["name"],
-                          lead_pid=pid, settings=cur, page_settings=cur)
+                          lead_pid=pid, settings=cur, page_settings=cur, split=is_split)
                 self._note(f"adopted running lead (pid {pid}) after web restart")
                 return True
         return False
