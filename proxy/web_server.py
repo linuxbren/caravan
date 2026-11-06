@@ -440,11 +440,12 @@ def make_handler(app: App):
             q = (qs.get("q") or qs.get("query") or [""])[0]
             source = (qs.get("source") or ["all"])[0]
             filt = (qs.get("filter") or qs.get("filt") or [""])[0]
+            newer = (qs.get("newer") or qs.get("new") or ["0"])[0] in ("1", "true", "yes")
             try:
                 limit = int((qs.get("limit") or ["30"])[0])
             except ValueError:
                 limit = 30
-            cat = web_picker.search_catalog(q, source=source, limit=limit, filt=filt)
+            cat = web_picker.search_catalog(q, source=source, limit=limit, filt=filt, newer=newer)
             raw = app.nodes() or {}
             nodes = raw.get("nodes") or []
             cat["groups"] = web_picker.attach_fit(cat.get("groups") or [], nodes)
@@ -452,39 +453,107 @@ def make_handler(app: App):
             return self._json(200, cat)
 
         def _api_picker_disk(self):
-            packer_sizes = {}
+            import subprocess
+            current = app.mgr.snapshot().get("model_id")
+            lead_blob = {"models": {}, "cleanup": {"hf-cache": 0, "drafts": 0}}
             try:
-                cmd = (
-                    'python3 -c "import json; from pathlib import Path; '
-                    "roots=[Path.home()/'.caravan'/'mlx-models', Path.home()/'.exo'/'models']; out={}; "
-                    "[out.__setitem__(p.name.replace('--','/'), round(sum(f.stat().st_size for f in p.rglob('*') if f.is_file())/1e9, 2)) "
-                    'for root in roots if root.is_dir() for p in root.iterdir() if p.is_dir()]; '
-                    'print(json.dumps(out))"'
+                py = str(Path(app.mgr.repo) / "proxy" / "picker_disk_sizes.py")
+                r = subprocess.run(
+                    [sys.executable, py], capture_output=True, text=True, timeout=90,
                 )
-                r = app.mgr._ssh(cmd, timeout=60)
                 if r.returncode == 0 and (r.stdout or "").strip():
-                    packer_sizes = json.loads(r.stdout.strip().splitlines()[-1])
+                    lead_blob = json.loads(r.stdout.strip().splitlines()[-1])
             except Exception as e:  # noqa: BLE001
-                packer_sizes = {"_error": str(e)}
+                lead_blob = {"models": {}, "cleanup": {}, "_error": str(e)}
+
+            packer_blob = {"models": {}, "cleanup": {}}
+            try:
+                r = app.mgr._ssh("python3 ~/cv3/proxy/picker_disk_sizes.py", timeout=90)
+                if r.returncode == 0 and (r.stdout or "").strip():
+                    packer_blob = json.loads(r.stdout.strip().splitlines()[-1])
+            except Exception as e:  # noqa: BLE001
+                packer_blob = {"models": {}, "cleanup": {}, "_error": str(e)}
+
+            packer_models = packer_blob.get("models") or {}
+            # Prefer live lead sizes from the helper; fall back to walk via list_installed.
+            models = web_picker.list_installed(packer_sizes=packer_models)
+            # Overlay lead sizes from helper when present
+            by_id = {m["id"]: m for m in models}
+            for rid, gb in (lead_blob.get("models") or {}).items():
+                e = by_id.get(rid)
+                if e is None:
+                    e = {
+                        "id": rid, "name": rid.split("/")[-1], "source": "hf-mlx",
+                        "paths": {}, "size_gb": {},
+                    }
+                    models.append(e)
+                    by_id[rid] = e
+                e.setdefault("size_gb", {})["lead"] = gb
+            for rid, gb in packer_models.items():
+                e = by_id.setdefault(rid, {
+                    "id": rid, "name": rid.split("/")[-1], "source": "hf-mlx",
+                    "paths": {}, "size_gb": {},
+                })
+                if e not in models:
+                    models.append(e)
+                e.setdefault("size_gb", {})["packer"] = gb
+
+            cleanup = web_picker.list_cleanup_targets(
+                packer=packer_blob.get("cleanup") or {},
+                current_model_id=current,
+            )
+            # Prefer helper's lead cleanup numbers
+            lead_c = lead_blob.get("cleanup") or {}
+            for row in cleanup:
+                if row["kind"] == "hf-cache" and lead_c.get("hf-cache") is not None:
+                    row["size_gb"]["lead"] = lead_c["hf-cache"]
+                if row["kind"] == "drafts" and lead_c.get("drafts") is not None:
+                    row["size_gb"]["lead"] = lead_c["drafts"]
+
             return self._json(200, {
-                "models": web_picker.list_installed(packer_sizes={
-                    k: v for k, v in packer_sizes.items() if not str(k).startswith("_")
-                }),
-                "packer": packer_sizes,
-                "current": app.mgr.snapshot().get("model_id"),
+                "models": sorted(models, key=lambda x: x["name"].lower()),
+                "cleanup": cleanup,
+                "packer": packer_blob,
+                "lead": lead_blob,
+                "current": current,
             })
 
         def _api_picker_delete(self, body=None):
             body = body or {}
-            rid = body.get("id") or body.get("repo_id") or ""
+            rid = body.get("id") or body.get("repo_id") or body.get("kind") or ""
+            kind = (body.get("kind") or "").strip().lower()
             if not body.get("confirm"):
                 return self._json(400, {"error": "confirm=true required"})
+            current = app.mgr.snapshot().get("model_id")
+
+            # Cleanup rows: HF cache / drafts
+            if kind in ("hf-cache", "drafts") or str(rid).startswith("cleanup:"):
+                k = kind or str(rid).split(":", 1)[-1]
+
+                def ssh_cleanup(knd):
+                    k = "hf-cache" if knd in ("hf-cache", "hf_cache", "cache") else "drafts"
+                    cur = (current or "").replace("'", "")
+                    script = (
+                        "python3 ~/cv3/proxy/picker_disk_sizes.py --delete %s --current %s"
+                        % (k, cur)
+                    )
+                    r = app.mgr._ssh(script, timeout=300)
+                    try:
+                        blob = json.loads((r.stdout or "").strip().splitlines()[-1])
+                    except Exception:
+                        blob = {"ok": False, "raw": (r.stdout or "")[-200:]}
+                    blob["rc"] = r.returncode
+                    return blob
+
+                out = web_picker.delete_cleanup(
+                    k, current_model_id=current, ssh_cleanup=ssh_cleanup,
+                )
+                return self._json(200 if out.get("ok") else 400, out)
 
             # Stop any running fetch for this model BEFORE deleting folders.
             stopped = web_picker.stop_jobs_for_repo(rid, kill_procs=app.picker_kill_packer)
 
             def ssh_delete(folder):
-                # Also pkill packer-side fetch, then remove trees.
                 r = app.mgr._ssh(
                     "pkill -f 'mlx_split_fetch.py %s' 2>/dev/null; sleep 0.5; "
                     "pkill -9 -f 'mlx_split_fetch.py %s' 2>/dev/null; "
@@ -495,9 +564,7 @@ def make_handler(app: App):
                 return {"removed": "REMOVED" in (r.stdout or ""), "rc": r.returncode}
 
             out = web_picker.delete_model(
-                rid,
-                current_model_id=app.mgr.snapshot().get("model_id"),
-                ssh_delete=ssh_delete,
+                rid, current_model_id=current, ssh_delete=ssh_delete,
             )
             out["stopped_jobs"] = stopped
             return self._json(200 if out.get("ok") else 400, out)

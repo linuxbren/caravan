@@ -1,0 +1,127 @@
+"""Model / cleanup disk sizes, and optional cleanup deletes.
+
+  python3 proxy/picker_disk_sizes.py              # print JSON sizes
+  python3 proxy/picker_disk_sizes.py --delete hf-cache [--current REPO]
+  python3 proxy/picker_disk_sizes.py --delete drafts
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import sys
+from pathlib import Path
+
+
+def du_gb(path: Path) -> float:
+    path = Path(path).expanduser()
+    total = 0
+    if not path.exists():
+        return 0.0
+    if path.is_file():
+        try:
+            return round(path.stat().st_size / 1e9, 2)
+        except OSError:
+            return 0.0
+    for f in path.rglob("*"):
+        if f.is_file():
+            try:
+                total += f.stat().st_size
+            except OSError:
+                pass
+    return round(total / 1e9, 2)
+
+
+def sizes() -> dict:
+    home = Path.home()
+    models = {}
+    for root in (home / ".caravan" / "mlx-models", home / ".exo" / "models"):
+        if not root.is_dir():
+            continue
+        for p in root.iterdir():
+            if not p.is_dir() or p.name == "drafts":
+                continue
+            models[p.name.replace("--", "/")] = du_gb(p)
+
+    hub = du_gb(home / ".cache" / "huggingface" / "hub")
+    leftover = 0.0
+    root = home / ".caravan" / "mlx-models"
+    if root.is_dir():
+        for p in root.iterdir():
+            if p.is_dir() and p.name != "drafts":
+                c = p / ".cache" / "huggingface"
+                if c.is_dir():
+                    leftover += du_gb(c)
+    drafts = du_gb(home / ".caravan" / "mlx-models" / "drafts")
+    return {
+        "models": models,
+        "cleanup": {
+            "hf-cache": round(hub + leftover, 2),
+            "drafts": drafts,
+            "hf-hub_only": hub,
+            "mlx_leftover_cache": round(leftover, 2),
+        },
+    }
+
+
+def delete_kind(kind: str, current: str = "") -> dict:
+    kind = (kind or "").strip().lower().replace("cleanup:", "")
+    cur = (current or "").lower()
+    removed = []
+    home = Path.home()
+    if kind in ("hf-cache", "hf_cache", "cache"):
+        hub = home / ".cache" / "huggingface" / "hub"
+        if hub.is_dir():
+            for p in list(hub.iterdir()):
+                if cur and cur.replace("/", "--") in p.name.lower():
+                    continue
+                if p.is_dir():
+                    shutil.rmtree(p, ignore_errors=True)
+                    removed.append(str(p))
+                elif p.is_file() and p.name != "CACHEDIR.TAG":
+                    try:
+                        p.unlink(); removed.append(str(p))
+                    except OSError:
+                        pass
+        root = home / ".caravan" / "mlx-models"
+        if root.is_dir():
+            for p in root.iterdir():
+                if not p.is_dir() or p.name == "drafts":
+                    continue
+                if cur and (cur.replace("/", "--") in p.name.lower() or cur in p.name.replace("--", "/").lower()):
+                    continue
+                c = p / ".cache"
+                if c.is_dir():
+                    shutil.rmtree(c, ignore_errors=True)
+                    removed.append(str(c))
+    elif kind == "drafts":
+        drafts = home / ".caravan" / "mlx-models" / "drafts"
+        if drafts.is_dir():
+            for p in list(drafts.iterdir()):
+                if p.is_dir():
+                    shutil.rmtree(p, ignore_errors=True)
+                    removed.append(str(p))
+                elif p.is_file():
+                    try:
+                        p.unlink(); removed.append(str(p))
+                    except OSError:
+                        pass
+    else:
+        return {"ok": False, "error": f"unknown kind {kind}"}
+    return {"ok": True, "kind": kind, "removed": removed}
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--delete", choices=("hf-cache", "drafts"))
+    ap.add_argument("--current", default="")
+    a = ap.parse_args(argv)
+    if a.delete:
+        print(json.dumps(delete_kind(a.delete, a.current)))
+    else:
+        print(json.dumps(sizes()))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

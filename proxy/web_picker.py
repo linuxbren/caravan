@@ -6,8 +6,8 @@ Sources:
     lmstudio-community) — one Mini for now; split hook left for later
   * Ollama Cloud — framework only (OLLAMA_API_KEY); labeled CLOUD
 
-Fit uses real /api/nodes RAM (available_gb) + disk free, and memory_guard's
-KV estimator. Color: green / yellow / red. Capacity = max across nodes.
+Fit uses unload capacity (available + loaded worker footprint, or total minus
+an OS baseline) + disk free checked separately. Color: green / yellow / red / gray.
 """
 from __future__ import annotations
 
@@ -36,6 +36,9 @@ OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY") or os.environ.get("CARAVAN_OLL
 CACHE_TTL_S = float(os.environ.get("CARAVAN_PICKER_CACHE_TTL", "300"))
 DEFAULT_CTX = 8192
 DEFAULT_SAFETY_GB = float(os.environ.get("CARAVAN_MEMORY_SAFETY_GB", "1.75"))
+# macOS + apps baseline when estimating unload capacity on a 24 GB Mini
+OS_BASELINE_GB = float(os.environ.get("CARAVAN_OS_BASELINE_GB", "4.0"))
+NEW_MODEL_DAYS = int(os.environ.get("CARAVAN_PICKER_NEW_DAYS", "30"))
 MLX_MODEL_ROOTS = [
     Path("~/.caravan/mlx-models").expanduser(),
     Path("~/.exo/models").expanduser(),
@@ -210,6 +213,42 @@ def _estimate_weights_gb(params_b: Optional[float], quant: Optional[str],
     return 0.0
 
 
+def _node_capacity_gb(n: dict) -> float:
+    """RAM this Mini would have for a new model once the current worker unloads.
+
+    Prefer available_gb + active/weights footprint (what frees on unload).
+    Also consider total - OS_BASELINE_GB. Use the more conservative of the
+    two when both look sane, so a busy Mini doesn't look emptier than it is
+    after a switch, and an idle Mini doesn't claim the whole stick.
+    """
+    ram = n.get("ram") or {}
+    total = float(ram.get("total_gb") or 0)
+    avail = float(ram.get("available_gb") or ram.get("free_gb") or 0)
+    footprint = float(n.get("active_gb") or n.get("weights_gb") or 0)
+    # If a model is loaded, reclaim its footprint on unload.
+    if footprint > 0.25 or n.get("model"):
+        reclaim = avail + max(0.0, footprint)
+    else:
+        reclaim = avail
+    by_baseline = (total - OS_BASELINE_GB) if total > 0 else reclaim
+    candidates = [c for c in (reclaim, by_baseline) if c > 0]
+    if not candidates:
+        return max(0.0, avail)
+    # More conservative (= smaller) when both are within a sane band.
+    cap = min(candidates)
+    # If reclaim is clearly measuring "after unload" and baseline is close, fine.
+    # If baseline is much larger (idle machine, tiny footprint), prefer baseline.
+    if footprint <= 0.25 and by_baseline > reclaim + 1.0:
+        cap = by_baseline
+    if total > 0:
+        cap = min(cap, total - 0.5)
+    return round(max(0.0, cap), 2)
+
+
+def _node_label(n: dict, idx: int) -> str:
+    return n.get("label") or n.get("role") or f"Mini{idx+1}"
+
+
 def fit_check(
     *,
     weights_gb: float,
@@ -221,68 +260,133 @@ def fit_check(
     kv_bits: int = 16,
     split_ok: bool = True,
 ) -> dict:
-    """Return color, nodes_needed, per-node fit, reasons.
+    """Return color, nodes_needed, per-node fit, plain-English reasons.
 
-    Capacity rule: a model fits on K Minis if the largest K available_gb
-    sum (weights split + KV share + safety) works. For K=1, whole model
-    must fit on the roomiest Mini. For K=2, weights split ~half each.
+    RAM uses unload capacity (not current free). Disk is checked separately
+    and named in the reason when it is the limiter.
     """
     nodes = [n for n in (nodes or []) if isinstance(n, dict) and not n.get("error")]
     if not nodes:
         return {
             "color": "red", "nodes_needed": None, "fits_on": [],
             "need_gb_1": round(weights_gb + safety_gb, 2),
-            "need_gb_split": None, "reason": "no node stats",
+            "need_gb_split": None,
+            "reason": "no node stats",
+            "limit": "unknown",
         }
-    avails = sorted(
-        [float((n.get("ram") or {}).get("available_gb")
-               or (n.get("ram") or {}).get("free_gb") or 0) for n in nodes],
-        reverse=True,
-    )
-    disks = [float((n.get("disk") or {}).get("free_gb") or 0) for n in nodes]
-    n_count = len(avails)
 
-    # KV estimate (full model layers for 1-node; half for split share)
+    caps = [_node_capacity_gb(n) for n in nodes]
+    # pairs sorted by capacity desc, keep labels/disks aligned
+    order = sorted(range(len(nodes)), key=lambda i: caps[i], reverse=True)
+    caps_sorted = [caps[i] for i in order]
+    disks = [float((nodes[i].get("disk") or {}).get("free_gb") or 0) for i in order]
+    labels = [_node_label(nodes[i], i) for i in order]
+    n_count = len(caps_sorted)
+
     kv_full = 0.0
     kv_half = 0.0
     if MG and cfg and n_layers:
         kv_full = MG.estimate_kv_gb(cfg, ctx_tokens, int(n_layers), kv_bits=kv_bits)
         kv_half = MG.estimate_kv_gb(cfg, ctx_tokens, max(1, int(n_layers) // 2), kv_bits=kv_bits)
     else:
-        # Rough fallback: ~0.5 GB KV per 8k at 7B-ish; scale by weights
         kv_full = max(0.3, weights_gb * 0.08 * (ctx_tokens / 8192))
         kv_half = kv_full * 0.55
 
     need_1 = weights_gb + kv_full + safety_gb
     need_split_each = (weights_gb / 2.0) + kv_half + safety_gb
 
+    def disk_ok_for(k: int) -> tuple:
+        """Return (ok, reason_or_None) for placing the model on top-k Minis by RAM."""
+        need_each = weights_gb if k == 1 else weights_gb / k
+        # For k=1 any Mini with enough disk works; for split each of top-k needs share.
+        if k == 1:
+            best = max(range(n_count), key=lambda i: disks[i])
+            if disks[best] >= need_each * 0.95:
+                return True, None
+            return False, (
+                f"Not enough disk on {labels[best]} "
+                f"(need ~{need_each:.1f} GB, {disks[best]:.1f} GB free)"
+            )
+        top = list(range(k))
+        for i in top:
+            if disks[i] < need_each * 0.9:
+                return False, (
+                    f"Not enough disk on {labels[i]} "
+                    f"(need ~{need_each:.1f} GB each, {labels[i]} has {disks[i]:.1f} GB free)"
+                )
+        return True, None
+
     fits_on = []
-    # 1 node
-    if avails[0] >= need_1 and max(disks) >= weights_gb * 0.95:
-        fits_on.append(1)
-    # 2..N nodes (split)
+    disk_block = None
+    # 1 node — RAM then disk
+    if caps_sorted[0] >= need_1:
+        ok, why = disk_ok_for(1)
+        if ok:
+            fits_on.append(1)
+        else:
+            disk_block = why
+    # 2..N split
     if split_ok and n_count >= 2:
         for k in range(2, n_count + 1):
-            # each of top-k must hold its share; disk each needs ~weights/k
             share_w = weights_gb / k
             share_need = share_w + (kv_full / k) + safety_gb
-            if all(a >= share_need for a in avails[:k]) and all(
-                    d >= share_w * 0.9 for d in sorted(disks, reverse=True)[:k]):
-                fits_on.append(k)
+            if all(a >= share_need for a in caps_sorted[:k]):
+                ok, why = disk_ok_for(k)
+                if ok:
+                    fits_on.append(k)
+                elif disk_block is None:
+                    disk_block = why
 
+    limit = "ram"
     if 1 in fits_on:
-        color, needed = "green", 1
-        reason = f"fits on 1 Mini (~{need_1:.1f} GB)"
+        margin = caps_sorted[0] - need_1
+        # Barely fits on 1 → yellow "tight" (Brenden: 15 GB on ~20 GB capacity)
+        if margin < max(2.5, safety_gb * 1.25):
+            color, needed = "yellow", 1
+            reason = (
+                f"Tight on 1 Mini (~{need_1:.0f} GB RAM; capacity ~{caps_sorted[0]:.0f} GB). "
+                f"Fits on 2, about {need_split_each:.0f} GB each"
+            )
+        else:
+            color, needed = "green", 1
+            reason = f"Fits on 1 Mini (~{need_1:.0f} GB RAM; capacity ~{caps_sorted[0]:.0f} GB)"
     elif fits_on:
         color, needed = "yellow", min(fits_on)
-        reason = f"needs {needed} Minis (~{need_split_each:.1f} GB each)"
-    elif split_ok and n_count >= 2 and avails[0] >= need_split_each * 0.85:
+        reason = (
+            f"Fits on {needed} Minis, about {need_split_each:.0f} GB RAM each "
+            f"(capacity ~{caps_sorted[needed-1]:.0f} GB)"
+        )
+    elif disk_block and (
+        (caps_sorted[0] >= need_1) or
+        (split_ok and n_count >= 2 and all(
+            a >= (weights_gb / 2.0) + (kv_full / 2.0) + safety_gb for a in caps_sorted[:2]))
+    ):
+        # RAM would work but disk blocks
+        color, needed = "red", None
+        reason = disk_block
+        limit = "disk"
+    elif split_ok and n_count >= 2 and caps_sorted[0] >= need_split_each * 0.9 and caps_sorted[1] >= need_split_each * 0.85:
         color, needed = "yellow", 2
-        reason = "tight on 2 Minis"
+        reason = (
+            f"Tight on 2 Minis (~{need_split_each:.0f} GB RAM each; "
+            f"capacity ~{caps_sorted[0]:.0f}/{caps_sorted[1]:.0f} GB)"
+        )
         fits_on = [2]
+        # disk may still block
+        ok, why = disk_ok_for(2)
+        if not ok and why:
+            color, needed, fits_on = "red", None, []
+            reason = why
+            limit = "disk"
     else:
         color, needed = "red", None
-        reason = f"won't fit (need ~{need_1:.1f} GB on 1 or ~{need_split_each:.1f} GB ×2)"
+        reason = (
+            f"Won't fit: need ~{need_1:.0f} GB RAM on 1 Mini "
+            f"(capacity ~{caps_sorted[0]:.0f} GB) or ~{need_split_each:.0f} GB ×2"
+        )
+        if disk_block and caps_sorted[0] < need_1:
+            # mention both if useful — keep RAM as primary
+            pass
 
     return {
         "color": color,
@@ -293,7 +397,13 @@ def fit_check(
         "weights_gb": round(weights_gb, 2),
         "kv_gb_1": round(kv_full, 2),
         "reason": reason,
-        "disk_ok": max(disks) >= weights_gb * 0.9 if disks else False,
+        "limit": limit,
+        "capacity_gb": caps_sorted,
+        "capacity_labels": labels,
+        "disk_ok": disk_block is None and (
+            max(disks) >= weights_gb * 0.9 if disks else False
+        ),
+        "disk_reason": disk_block,
     }
 
 
@@ -508,6 +618,8 @@ def _normalize_hf_hit(m: dict, *, source: str) -> Optional[dict]:
         "filters": _filters_for(pipeline, tags, repo),
         "likes": m.get("likes") or 0,
         "downloads": m.get("downloads") or 0,
+        "created_at": m.get("createdAt") or m.get("created_at"),
+        "last_modified": m.get("lastModified") or m.get("last_modified"),
         "weights_gb": round(weights, 2) if weights else None,
         "needs_conversion": needs_conversion,
         "cloud": False,
@@ -515,15 +627,30 @@ def _normalize_hf_hit(m: dict, *, source: str) -> Optional[dict]:
     }
 
 
+def _parse_hf_time(s) -> float:
+    if not s:
+        return 0.0
+    try:
+        # 2025-10-01T12:00:00.000Z
+        from datetime import datetime, timezone
+        ss = str(s).replace("Z", "+00:00")
+        return datetime.fromisoformat(ss).timestamp()
+    except Exception:
+        return 0.0
+
+
 def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
-                  filt: str = "") -> dict:
-    """Search HF. source: all|hf-mlx|gguf|cloud. filt: chat|coding|… chip."""
+                  filt: str = "", newer: bool = False) -> dict:
+    """Search HF. source: all|hf-mlx|gguf|cloud. filt: chat|coding|new|… chip."""
     filt = (filt or "").strip().lower()
-    if filt in ("fits-on-1", "fits-on-2", ""):
+    if filt == "new":
+        newer = True
+        filt_key = ""
+    elif filt in ("fits-on-1", "fits-on-2", ""):
         filt_key = ""
     else:
         filt_key = filt
-    key = f"search:{source}:{query}:{limit}:{filt_key}"
+    key = f"search:{source}:{query}:{limit}:{filt_key}:new={int(bool(newer))}"
     hit = _cache_get(key)
     if hit is not None:
         return hit
@@ -531,6 +658,12 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
     rows = []
     errors = []
     q = (query or "").strip()
+    sort = "createdAt" if newer else "downloads"
+
+    def _search(term, **kw):
+        kw.setdefault("sort", sort)
+        return _hf_search(term, **kw)
+
 
     def _ingest(raw, src, extra_filters=None):
         if raw and isinstance(raw[0], dict) and raw[0].get("error"):
@@ -587,26 +720,26 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
         if want_mlx:
             for term in spec.get("mlx_search") or [q or ""]:
                 term = (q + " " + term).strip() if q else term
-                raw = _hf_search(term, author="mlx-community", limit=max(12, limit // 2))
+                raw = _search(term, author="mlx-community", limit=max(12, limit // 2))
                 _ingest(raw, "hf-mlx", extra_filters=[filt_key])
             for ptag in ([spec["pipeline_tag"]] if spec.get("pipeline_tag") else []) + list(spec.get("pipeline_tags") or []):
-                raw = _hf_search(q or "", pipeline_tag=ptag, limit=max(8, limit // 3))
+                raw = _search(q or "", pipeline_tag=ptag, limit=max(8, limit // 3))
                 _ingest(raw, "hf-mlx", extra_filters=[filt_key])
             if not rows:
                 for term in spec.get("hf_search") or []:
-                    raw = _hf_search((q + " " + term).strip() if q else term, limit=max(10, limit // 2))
+                    raw = _search((q + " " + term).strip() if q else term, limit=max(10, limit // 2))
                     _ingest(raw, "hf-mlx", extra_filters=[filt_key])
         if want_gguf and filt_key in ("chat", "coding", "reasoning", "vision"):
             gq = q or (spec.get("mlx_search") or ["Instruct"])[0]
             for author in ("bartowski", "unsloth", "lmstudio-community"):
-                raw = _hf_search(gq, author=author, filter_gguf=True, limit=max(6, limit // 4))
+                raw = _search(gq, author=author, filter_gguf=True, limit=max(6, limit // 4))
                 _ingest(raw, "gguf", extra_filters=[filt_key, "chat"])
         if filt_key == "image-to-image":
-            raw = _hf_search(q or "", pipeline_tag="image-to-image", limit=limit)
+            raw = _search(q or "", pipeline_tag="image-to-image", limit=limit)
             _ingest(raw, "hf-mlx", extra_filters=["image-to-image"])
         if filt_key == "voice":
             for ptag in ("automatic-speech-recognition", "text-to-speech"):
-                raw = _hf_search(q or "whisper", pipeline_tag=ptag, limit=max(8, limit // 2))
+                raw = _search(q or "whisper", pipeline_tag=ptag, limit=max(8, limit // 2))
                 _ingest(raw, "hf-mlx", extra_filters=["voice"])
 
     else:
@@ -614,13 +747,13 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
         if source in ("all", "hf-mlx"):
             for author, lim in (("mlx-community", limit), (None, max(10, limit // 2))):
                 qq = q if author else (q or "instruct")
-                raw = _hf_search(qq, author=author, limit=lim)
+                raw = _search(qq, author=author, limit=lim)
                 _ingest(raw, "hf-mlx")
                 if author == "mlx-community" and rows:
                     break
         if source in ("all", "gguf", "ollama"):
             for author in ("bartowski", "unsloth", "lmstudio-community"):
-                raw = _hf_search(q or "Instruct", author=author, filter_gguf=True,
+                raw = _search(q or "Instruct", author=author, filter_gguf=True,
                                  limit=max(8, limit // 3))
                 _ingest(raw, "gguf", extra_filters=["chat"])
         if source in ("all", "cloud") and not filt_key:
@@ -646,6 +779,19 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
 
     # Real sizes (blobs=true, index total_size fallback). No 4 GB guess.
     rows = _enrich_sizes(rows)
+
+    if newer:
+        import time as _time
+        cutoff = _time.time() - NEW_MODEL_DAYS * 86400
+        kept = []
+        for r in rows:
+            ts = _parse_hf_time(r.get("created_at")) or _parse_hf_time(r.get("last_modified"))
+            if ts >= cutoff or r.get("cloud"):
+                r = dict(r)
+                if "new" not in (r.get("filters") or []):
+                    r["filters"] = list(r.get("filters") or []) + ["new"]
+                kept.append(r)
+        rows = kept
 
     # Dedupe — prefer rows with size / more specific quant file
     seen = set()
@@ -691,12 +837,21 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
         if s == "cloud":
             return 2
         return 1  # gguf
-    grouped.sort(key=lambda g: (_src_rank(g), -g["likes"], g["base"].lower()))
+    def _newest(g):
+        times = []
+        for q in g.get("quants") or []:
+            times.append(_parse_hf_time(q.get("created_at")) or _parse_hf_time(q.get("last_modified")))
+        return max(times) if times else 0.0
+    if newer:
+        grouped.sort(key=lambda g: (-_newest(g), _src_rank(g), g["base"].lower()))
+    else:
+        grouped.sort(key=lambda g: (_src_rank(g), -g["likes"], g["base"].lower()))
 
     out = {
         "query": q,
         "source": source,
         "filter": filt_key,
+        "newer": bool(newer),
         "groups": grouped[: max(limit, 1)],
         "errors": errors,
         "gguf_catalog": "huggingface (bartowski / unsloth / lmstudio-community)",
@@ -769,6 +924,8 @@ def list_installed(*, packer_sizes: Optional[dict] = None) -> list:
         for p in root.iterdir():
             if not p.is_dir():
                 continue
+            if p.name == "drafts":
+                continue  # shown as cleanup row
             key = p.name
             repo = key.replace("--", "/")
             e = found.setdefault(repo, {
@@ -833,6 +990,128 @@ def delete_model(repo_or_path: str, *, current_model_id: Optional[str],
     if not removed and not (isinstance(remote, dict) and remote.get("removed")):
         return {"ok": False, "error": "not found on disk", "remote": remote}
     return {"ok": True, "removed": removed, "remote": remote}
+
+
+
+def _path_size_gb(path: Path) -> float:
+    if not path.exists():
+        return 0.0
+    if path.is_file():
+        try:
+            return path.stat().st_size / 1e9
+        except OSError:
+            return 0.0
+    return _dir_size_gb(path)
+
+
+def list_cleanup_targets(*, packer: Optional[dict] = None,
+                         current_model_id: Optional[str] = None) -> list:
+    """Special on-disk rows: HF download cache + guess-ahead drafts."""
+    packer = packer or {}
+    cur = (current_model_id or "").lower()
+    hub = Path("~/.cache/huggingface/hub").expanduser()
+    drafts = Path("~/.caravan/mlx-models/drafts").expanduser()
+    # Leftover per-model .cache/huggingface under mlx-models (exclude drafts + loaded)
+    leftover = 0.0
+    for root in MLX_MODEL_ROOTS:
+        if not root.is_dir():
+            continue
+        for p in root.iterdir():
+            if not p.is_dir() or p.name == "drafts":
+                continue
+            repo = p.name.replace("--", "/").lower()
+            if cur and (cur in repo or repo in cur or p.name.lower() in cur):
+                continue
+            c = p / ".cache" / "huggingface"
+            if c.is_dir():
+                leftover += _path_size_gb(c)
+    lead_hub = round(_path_size_gb(hub) + leftover, 2)
+    rows = [
+        {
+            "id": "cleanup:hf-cache",
+            "kind": "hf-cache",
+            "name": "Download cache (Hugging Face)",
+            "note": "Hub cache plus leftover .cache folders under mlx-models (skips the loaded model)",
+            "size_gb": {
+                "lead": lead_hub,
+                "packer": packer.get("hf-cache"),
+            },
+            "deletable": True,
+        },
+        {
+            "id": "cleanup:drafts",
+            "kind": "drafts",
+            "name": "Guess-ahead helper models",
+            "note": "Small drafts under mlx-models/drafts — guess-ahead re-downloads when needed",
+            "size_gb": {
+                "lead": round(_path_size_gb(drafts), 2),
+                "packer": packer.get("drafts"),
+            },
+            "deletable": True,
+        },
+    ]
+    return rows
+
+
+def delete_cleanup(kind: str, *, current_model_id: Optional[str] = None,
+                   ssh_cleanup: Optional[callable] = None) -> dict:
+    """Delete HF hub cache or drafts on all Minis. Never touches the loaded model."""
+    kind = (kind or "").strip().lower().replace("cleanup:", "")
+    cur = (current_model_id or "").lower()
+    removed = []
+    if kind in ("hf-cache", "hf_cache", "cache"):
+        hub = Path("~/.cache/huggingface/hub").expanduser()
+        if hub.is_dir():
+            # Remove model blobs except anything matching the loaded id.
+            for p in list(hub.iterdir()):
+                name = p.name.lower()
+                if cur and cur.replace("/", "--") in name:
+                    continue
+                if p.is_dir():
+                    shutil.rmtree(p, ignore_errors=True)
+                    removed.append(str(p))
+                elif p.is_file() and p.name != "CACHEDIR.TAG":
+                    try:
+                        p.unlink()
+                        removed.append(str(p))
+                    except OSError:
+                        pass
+        # leftover .cache under mlx-models (not the loaded model, not drafts)
+        for root in MLX_MODEL_ROOTS:
+            if not root.is_dir():
+                continue
+            for p in root.iterdir():
+                if not p.is_dir() or p.name == "drafts":
+                    continue
+                repo = p.name.replace("--", "/").lower()
+                if cur and (cur in repo or repo in cur or p.name.lower() in cur):
+                    continue
+                c = p / ".cache"
+                if c.is_dir():
+                    shutil.rmtree(c, ignore_errors=True)
+                    removed.append(str(c))
+    elif kind == "drafts":
+        drafts = Path("~/.caravan/mlx-models/drafts").expanduser()
+        if drafts.is_dir():
+            for p in list(drafts.iterdir()):
+                if p.is_dir():
+                    shutil.rmtree(p, ignore_errors=True)
+                    removed.append(str(p))
+                elif p.is_file():
+                    try:
+                        p.unlink(); removed.append(str(p))
+                    except OSError:
+                        pass
+    else:
+        return {"ok": False, "error": f"unknown cleanup kind: {kind}"}
+
+    remote = None
+    if ssh_cleanup:
+        try:
+            remote = ssh_cleanup(kind)
+        except Exception as e:  # noqa: BLE001
+            remote = {"error": str(e)}
+    return {"ok": True, "kind": kind, "removed": removed, "remote": remote}
 
 
 # ---- download jobs (phase 2) --------------------------------------------

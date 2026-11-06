@@ -836,6 +836,16 @@
       <input id="pickerQuery" type="search" placeholder="Search models…" autocomplete="off" />
     </div>
     <div class="picker-chips" id="pickerChips"></div>
+    <div class="picker-size-filter" id="pickerSizeFilter" style="display:flex;gap:8px;align-items:center;margin:0 0 8px;font-size:.7rem;color:var(--muted)">
+      <label for="pickerMaxGb">Max download</label>
+      <select id="pickerMaxGb" style="background:var(--bg3);color:var(--fg);border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);border-radius:4px;padding:2px 6px;font:inherit">
+        <option value="0">Any size</option>
+        <option value="5">≤ 5 GB</option>
+        <option value="10">≤ 10 GB</option>
+        <option value="20" selected>≤ 20 GB</option>
+        <option value="50">≤ 50 GB</option>
+      </select>
+    </div>
     <div class="picker-status" id="pickerStatus">Open to search Hugging Face…</div>
     <div id="pickerList"></div>
     <div class="picker-job" id="pickerJob" hidden></div>
@@ -1884,10 +1894,11 @@
   // ---- Model picker (ROADMAP) -----------------------------------------
   (function () {
     const CATEGORY = ["chat","coding","reasoning","vision","image-to-image","voice","cloud"];
-    const FIT = ["fits-on-1","fits-on-2"];
-    const FILTERS = CATEGORY.concat(FIT);
+    const EXTRA = ["new","fits-on-1","fits-on-2"];
+    const FILTERS = CATEGORY.concat(EXTRA);
     const state = {
-      source: "all", q: "", category: "chat", fit: new Set(),
+      source: "all", q: "", category: "chat", newer: false,
+      fit: new Set(), maxGb: 20,
       groups: [], job: null, searchTimer: null, abort: null, searchSeq: 0,
     };
     const $ = (id) => document.getElementById(id);
@@ -1907,13 +1918,24 @@
           search();
           return;
         }
-        // fit chips — client filter only
+        if (f === "new") {
+          state.newer = !state.newer;
+          b.classList.toggle("on", state.newer);
+          search();
+          return;
+        }
         if (state.fit.has(f)) { state.fit.delete(f); b.classList.remove("on"); }
         else { state.fit.add(f); b.classList.add("on"); }
         renderList();
       });
       chipsEl.appendChild(b);
     });
+    $("pickerMaxGb").addEventListener("change", () => {
+      state.maxGb = parseFloat($("pickerMaxGb").value) || 0;
+      renderList();
+    });
+    state.maxGb = parseFloat($("pickerMaxGb").value) || 0;
+
     $("pickerSrc").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-src]");
       if (!b) return;
@@ -1968,11 +1990,13 @@
       try {
         let u = `/api/picker/search?q=${encodeURIComponent(state.q)}&source=${encodeURIComponent(state.source)}&limit=40`;
         if (state.category) u += `&filter=${encodeURIComponent(state.category)}`;
+        if (state.newer) u += `&newer=1`;
         const data = await api(u, state.abort ? { signal: state.abort.signal } : {});
-        if (seq !== state.searchSeq) return; // stale
+        if (seq !== state.searchSeq) return;
         state.groups = data.groups || [];
         $("pickerStatus").textContent = `${state.groups.length} models · fit on ${data.nodes_used || "?"} nodes`
           + (data.filter ? ` · ${data.filter}` : "")
+          + (data.newer ? " · new" : "")
           + (data.errors && data.errors.length ? ` · ${data.errors[0]}` : "");
         renderList();
       } catch (e) {
@@ -1990,22 +2014,33 @@
       if (e.key === "Enter") { if (state.searchTimer) clearTimeout(state.searchTimer); search(); }
     });
 
+    function passMaxGb(q) {
+      if (!state.maxGb) return true;
+      if (q.weights_gb == null) return true; // unknown stays visible (gray)
+      return q.weights_gb <= state.maxGb + 1e-6;
+    }
     function passChips(g) {
+      const quants = (g.quants || []).filter(passMaxGb);
+      if (!quants.length) return false;
       for (const c of state.fit) {
         if (c === "fits-on-1") {
-          if (!(g.quants || []).some((q) => ((q.fit && q.fit.fits_on) || []).includes(1))) return false;
+          if (!quants.some((q) => ((q.fit && q.fit.fits_on) || []).includes(1))) return false;
         } else if (c === "fits-on-2") {
-          if (!(g.quants || []).some(function(q){ var f=q.fit||{}; return ((f.fits_on||[]).includes(2) || f.nodes_needed===2); })) return false;
+          if (!quants.some(function(q){ var f=q.fit||{}; return ((f.fits_on||[]).includes(2) || f.nodes_needed===2); })) return false;
         }
       }
       return true;
     }
+    function filteredQuants(g) {
+      return (g.quants || []).filter(passMaxGb);
+    }
 
-    function sizeLabel(g) {
-      const a = g.size_gb_min, b = g.size_gb_max;
-      if (a == null && b == null) return "size unknown";
-      if (a != null && b != null && Math.abs(a - b) > 0.05) return `${a}–${b} GB`;
-      return `${a != null ? a : b} GB`;
+    function sizeLabel(g, quants) {
+      const sizes = quants.map((q) => q.weights_gb).filter((x) => x != null);
+      if (!sizes.length) return "size unknown";
+      const a = Math.min(...sizes), b = Math.max(...sizes);
+      if (Math.abs(a - b) > 0.05) return `${a}–${b} GB`;
+      return `${a} GB`;
     }
 
     function renderList() {
@@ -2017,33 +2052,47 @@
         return;
       }
       for (const g of groups) {
+        const quants = filteredQuants(g);
+        const best = quants.slice().sort((a, b) => {
+          const order = { green: 0, yellow: 1, gray: 2, red: 3 };
+          return (order[(a.fit || {}).color] || 9) - (order[(b.fit || {}).color] || 9);
+        })[0] || {};
+        const fit = best.fit || {};
         const row = document.createElement("div");
         row.className = "p-row";
         const head = document.createElement("button");
         head.type = "button"; head.className = "p-head";
-        head.innerHTML = `<span class="p-dot ${g.fit_color || "gray"}"></span>
+        const reasonShort = fit.reason ? ` · ${fit.reason}` : "";
+        head.innerHTML = `<span class="p-dot ${fit.color || g.fit_color || "gray"}"></span>
           <span class="p-title">${escapeHtml(g.base)}</span>
           ${g.cloud ? '<span class="p-cloud">CLOUD</span>' : ""}
-          <span class="p-meta">${escapeHtml(sizeLabel(g))} · ${(g.quants || []).length} quant${(g.quants||[]).length===1?"":"s"} · ${escapeHtml(g.source || "")}</span>`;
+          <span class="p-meta">${escapeHtml(sizeLabel(g, quants))} · ${quants.length} quant${quants.length===1?"":"s"} · ${escapeHtml(g.source || "")}</span>`;
+        head.title = fit.reason || g.base;
+        const reasonEl = document.createElement("div");
+        reasonEl.className = "p-meta";
+        reasonEl.style.cssText = "padding:0 10px 4px 26px; font-size:.65rem; opacity:.85";
+        reasonEl.textContent = fit.reason || "";
         head.addEventListener("click", () => row.classList.toggle("open"));
-        const quants = document.createElement("div");
-        quants.className = "p-quants";
-        for (const q of (g.quants || [])) {
-          const fit = q.fit || {};
+        const quantsEl = document.createElement("div");
+        quantsEl.className = "p-quants";
+        for (const q of quants) {
+          const qfit = q.fit || {};
           const btn = document.createElement("button");
           btn.type = "button"; btn.className = "p-quant";
-          const nodes = fit.nodes_needed == null ? "—" : (fit.nodes_needed === 0 ? "cloud" : fit.nodes_needed + "n");
+          const nodes = qfit.nodes_needed == null ? "—" : (qfit.nodes_needed === 0 ? "cloud" : qfit.nodes_needed + "n");
           const size = q.weights_gb != null ? `${q.weights_gb} GB` : "size unknown";
           const conv = q.needs_conversion ? " · needs conversion" : "";
-          btn.innerHTML = `<span class="p-dot ${fit.color || "gray"}"></span>
+          btn.innerHTML = `<span class="p-dot ${qfit.color || "gray"}"></span>
             <span class="q-name">${escapeHtml(q.quant || q.name || q.repo_id)}${conv}</span>
             <span class="q-size">${size}</span>
             <span class="q-nodes">${nodes}</span>`;
-          btn.title = fit.reason || q.repo_id;
+          btn.title = qfit.reason || q.repo_id;
           btn.addEventListener("click", () => pickQuant(q));
-          quants.appendChild(btn);
+          quantsEl.appendChild(btn);
         }
-        row.appendChild(head); row.appendChild(quants);
+        row.appendChild(head);
+        if (fit.reason) row.appendChild(reasonEl);
+        row.appendChild(quantsEl);
         box.appendChild(row);
       }
     }
@@ -2071,7 +2120,7 @@
       } else if (q.fit && q.fit.color === "red") {
         if (!confirm(`Won't fit (~${q.weights_gb} GB). ${q.fit.reason || ""}\nDownload anyway?`)) return;
       } else if (q.fit && q.fit.color === "yellow") {
-        if (!confirm(`Tight fit (${q.fit.reason || q.weights_gb + " GB"}). Download anyway?`)) return;
+        if (!confirm(`${q.fit.reason || "Tight fit"}\nDownload anyway?`)) return;
       }
       $("pickerStatus").textContent = `Downloading ${q.repo_id}…`;
       try {
@@ -2134,33 +2183,73 @@
       }
     }
 
+    function diskRow(label, sizes, opts) {
+      opts = opts || {};
+      const row = document.createElement("div");
+      row.className = "d-row";
+      row.innerHTML = `<span style="flex:1"><b>${escapeHtml(label)}</b>${opts.note ? `<div class="p-meta">${escapeHtml(opts.note)}</div>` : ""}</span>
+        <span class="p-meta">EXO1 ${sizes.lead ?? "—"} GB · EXO2 ${sizes.packer ?? "—"} GB</span>`;
+      const del = document.createElement("button");
+      del.type = "button"; del.textContent = "Delete";
+      del.disabled = !!opts.disabled;
+      del.title = opts.title || "";
+      if (opts.onDelete) del.addEventListener("click", opts.onDelete);
+      row.appendChild(del);
+      return row;
+    }
+
     async function refreshDisk() {
       const el = $("pickerDisk");
       try {
         const data = await api("/api/picker/disk");
         const cur = data.current;
         const models = data.models || [];
-        if (!models.length) { el.textContent = "No local MLX/GGUF trees found."; return; }
+        const cleanup = data.cleanup || [];
         el.innerHTML = "";
+        for (const c of cleanup) {
+          const sizes = c.size_gb || {};
+          el.appendChild(diskRow(c.name, sizes, {
+            note: c.note || "",
+            onDelete: async () => {
+              const msg = c.kind === "drafts"
+                ? "Delete guess-ahead helper models on ALL Minis? They re-download when needed."
+                : "Delete Hugging Face download cache on ALL Minis? (skips the loaded model)";
+              if (!confirm(msg)) return;
+              try {
+                await api("/api/picker/delete", {
+                  method: "POST",
+                  body: JSON.stringify({ kind: c.kind, id: c.id, confirm: true }),
+                });
+                refreshDisk();
+              } catch (e) { alert(e.message); }
+            },
+          }));
+        }
+        if (!models.length && !cleanup.length) {
+          el.textContent = "No local MLX/GGUF trees found.";
+          return;
+        }
+        if (models.length) {
+          const hdr = document.createElement("div");
+          hdr.className = "picker-section";
+          hdr.style.marginTop = "8px";
+          hdr.textContent = "Installed models";
+          el.appendChild(hdr);
+        }
         for (const m of models) {
-          const row = document.createElement("div");
-          row.className = "d-row";
           const sizes = m.size_gb || {};
-          row.innerHTML = `<span style="flex:1">${escapeHtml(m.name)}</span>
-            <span class="p-meta">EXO1 ${sizes.lead ?? "—"} GB · EXO2 ${sizes.packer ?? "—"} GB</span>`;
-          const del = document.createElement("button");
-          del.type = "button"; del.textContent = "Delete";
-          del.disabled = !!(cur && (String(cur).includes(m.id) || String(m.id).includes(String(cur))));
-          del.title = del.disabled ? "Refuse: currently loaded" : "Stop fetch if running, then delete from all Minis";
-          del.addEventListener("click", async () => {
-            if (!confirm(`Stop any download and delete ${m.id} from ALL Minis?`)) return;
-            try {
-              await api("/api/picker/delete", { method: "POST", body: JSON.stringify({ id: m.id, confirm: true }) });
-              refreshDisk();
-            } catch (e) { alert(e.message); }
-          });
-          row.appendChild(del);
-          el.appendChild(row);
+          const blocked = !!(cur && (String(cur).includes(m.id) || String(m.id).includes(String(cur))));
+          el.appendChild(diskRow(m.name, sizes, {
+            disabled: blocked,
+            title: blocked ? "Refuse: currently loaded" : "Stop fetch if running, then delete from all Minis",
+            onDelete: async () => {
+              if (!confirm(`Stop any download and delete ${m.id} from ALL Minis?`)) return;
+              try {
+                await api("/api/picker/delete", { method: "POST", body: JSON.stringify({ id: m.id, confirm: true }) });
+                refreshDisk();
+              } catch (e) { alert(e.message); }
+            },
+          }));
         }
       } catch (e) {
         el.textContent = "Disk list failed: " + e.message;
