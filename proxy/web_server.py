@@ -356,6 +356,38 @@ class App:
                     "role": info["snap"].get("role"),
                     "dest": info["dest"],
                 })
+            # Best-effort total for % / ETA (sizes file or sum of progress totals)
+            total_b = None
+            for info in nodes.values():
+                sizes_p = Path(str(info.get("dest") or "")).expanduser() / "caravan-split-sizes.json"
+                if sizes_p.is_file():
+                    try:
+                        import json as _json
+                        blob = _json.loads(sizes_p.read_text())
+                        total_b = sum(int(v) for v in (blob.get("sizes") or {}).values())
+                        if total_b:
+                            break
+                    except Exception:
+                        pass
+            if total_b:
+                for nid, snap in progress.items():
+                    if isinstance(snap, dict) and not snap.get("total_bytes"):
+                        snap["total_bytes"] = total_b
+                        have = int(snap.get("have_bytes") or 0)
+                        if have > 0 and total_b > 0:
+                            snap["pct"] = max(0, min(99, int(have * 100 / total_b)))
+                            # refresh msg with total
+                            mb_s = float(snap.get("mb_s") or 0)
+                            have_gb = have / 1e9
+                            total_gb = total_b / 1e9
+                            msg = f"{have_gb:.2f}/{total_gb:.2f} GB · {mb_s:.1f} MB/s"
+                            if snap.get("n_incomplete"):
+                                msg += f" · {snap['n_incomplete']} active"
+                            if snap.get("source") == "nettop":
+                                msg += " · via network"
+                            if snap.get("stalled"):
+                                msg += " · stalled?"
+                            snap["msg"] = msg
             jobs.append({
                 "id": "live-" + repo.replace("/", "--")[:24],
                 "status": "running",
@@ -363,6 +395,7 @@ class App:
                 "progress": progress,
                 "runners": runners,
                 "orphan": True,
+                "totals": {nid: total_b for nid in progress} if total_b else {},
                 "note": "adopted live fetch (web restarted or started outside UI)",
             })
         return jobs
