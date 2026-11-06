@@ -827,7 +827,7 @@ class Engine:
                 log(f"mlx memory_limit {args.memory_limit_gb} GB")
             except Exception as e:
                 log(f"mlx memory_limit skipped: {e!r}")
-        self.memory_safety_gb = float(getattr(args, "memory_safety_gb", 1.75) or 1.75)
+        self.memory_safety_gb = float(getattr(args, "memory_safety_gb", 1.75) if getattr(args, "memory_safety_gb", None) is not None else 1.75)
         import memory_notes as _MN
         self.memory_dir = Path(getattr(args, "memory_dir", None) or _MN.default_memory_dir()).expanduser()
         self.model_cfg = cfg
