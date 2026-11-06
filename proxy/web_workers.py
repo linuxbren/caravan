@@ -746,11 +746,12 @@ class WorkerManager:
         log_path = self._lead_log()
         url = f"http://127.0.0.1:{self.lead_port}/health"
         last_size = 0
+        remote = bool(getattr(self, "_worker_node", None)) and not self._node_is_local(self._worker_node)
         while time.time() < deadline:
             if self._lead_proc and self._lead_proc.poll() is not None:
                 tail = log_path.read_text(errors="replace")[-2000:] if log_path.exists() else ""
                 raise RuntimeError(f"lead exited early (rc={self._lead_proc.returncode}): {tail}")
-            if log_path.exists():
+            if (not remote) and log_path.exists():
                 text = log_path.read_text(errors="replace")
                 if len(text) > last_size:
                     for line in text[last_size:].splitlines():
