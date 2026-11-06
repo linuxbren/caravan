@@ -128,7 +128,7 @@ Open tasks for this rule:
 
 ## Next, in order
 
-> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order after **Day 15 web UI** (EXO1 `:8190`, model switch + streamed chat + 0.01 s timestamps + real stats; see [WEB.md](WEB.md)) and Day 13 self-tune shared-prefix: re-bench adaptive PL (overlap_on=0.50); then #16 built-in guesser (blocked on MTP/NEXTN MLX weights — GPT-OSS still undrafted); then fewer hand-offs / multi-token verify for N≥2+draft; then #13c settings file; #14 node view (add disk/temp/CPU; partly covered by the web string panel); model picker (any Ollama local/cloud or HF, with fit/headroom recommendation) parked as flash; #15 Terminal Delight still open. Parked: #17 fused kernels; true batched decode = later/bigger. Day 14 was the v0→now improvements video break.
+> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order after **Day 15 web UI** (EXO1 `:8190`, model switch + streamed chat + 0.01 s timestamps + real stats; see [WEB.md](WEB.md)) and Day 13 self-tune shared-prefix: re-bench adaptive PL (overlap_on=0.50); then #16 built-in guesser (blocked on MTP/NEXTN MLX weights — GPT-OSS still undrafted); then fewer hand-offs / multi-token verify for N≥2+draft; then #13c settings file; #14 node view (**Day 16 Topology N-node**: disk/temp/CPU per configured Mini, offline cards; string panel remains); model picker (any Ollama local/cloud or HF, with fit/headroom recommendation) parked as flash; #15 Terminal Delight still open. Parked: #17 fused kernels; true batched decode = later/bigger. Day 14 was the v0→now improvements video break.
 
 1. ~~**Publish the rebased llama.cpp branch.**~~ **Done (2026-10-31).**
    The fork moved to `linuxbren/llama.cpp`. There, `caravan-patches` is
@@ -288,7 +288,7 @@ Open tasks for this rule:
       reload, so a trial is queued, applied on the next load (Load / Apply
       & restart / Deep optimize), scored over 3 replies, then kept or
       rolled back. On/Off pins still win. The web page shows "wants to try
-      X — Apply & restart" and a **Deep / Quick optimize** runner that
+      X — Apply & restart" and a **Deep / Quick optimize** runner (verified live Day 16; single-key `:single` fix) that
       feeds itself fixed prompts and reloads between trials when no chat
       is in flight (cancelable). Only the web launcher turns reload
       learning on (`--learn-reload-auto`); plain CLI runs behave as before.

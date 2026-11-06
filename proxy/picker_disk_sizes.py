@@ -13,6 +13,22 @@ import sys
 from pathlib import Path
 
 
+SKIP_MODEL_DIRS = {"drafts", "caches", ".cache", "cache"}
+
+
+def _looks_like_model(p: Path) -> bool:
+    """True if dir has MLX/GGUF weight signals (not HF hub caches litter)."""
+    if not p.is_dir() or p.name in SKIP_MODEL_DIRS or p.name.startswith("."):
+        return False
+    if (p / "config.json").is_file():
+        return True
+    if any(p.glob("*.safetensors")) or any(p.glob("*.gguf")):
+        return True
+    if (p / "model.safetensors.index.json").is_file():
+        return True
+    return False
+
+
 def du_gb(path: Path) -> float:
     path = Path(path).expanduser()
     total = 0
@@ -39,7 +55,7 @@ def sizes() -> dict:
         if not root.is_dir():
             continue
         for p in root.iterdir():
-            if not p.is_dir() or p.name == "drafts":
+            if not _looks_like_model(p):
                 continue
             models[p.name.replace("--", "/")] = du_gb(p)
 
@@ -48,7 +64,7 @@ def sizes() -> dict:
     root = home / ".caravan" / "mlx-models"
     if root.is_dir():
         for p in root.iterdir():
-            if p.is_dir() and p.name != "drafts":
+            if p.is_dir() and p.name not in SKIP_MODEL_DIRS and not p.name.startswith("."):
                 c = p / ".cache" / "huggingface"
                 if c.is_dir():
                     leftover += du_gb(c)
@@ -86,7 +102,7 @@ def delete_kind(kind: str, current: str = "") -> dict:
         root = home / ".caravan" / "mlx-models"
         if root.is_dir():
             for p in root.iterdir():
-                if not p.is_dir() or p.name == "drafts":
+                if not p.is_dir() or p.name in SKIP_MODEL_DIRS or p.name.startswith("."):
                     continue
                 if cur and (cur.replace("/", "--") in p.name.lower() or cur in p.name.replace("--", "/").lower()):
                     continue

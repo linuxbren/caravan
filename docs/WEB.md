@@ -195,3 +195,14 @@ GGUF catalog: Hugging Face (`bartowski`, `unsloth`, `lmstudio-community`).
 
 Built from real MLX trees on configured Minis (`model_inventory`), not the static
 catalog. See [MODEL_PICKER.md](MODEL_PICKER.md#settings-model-dropdown-load-list).
+
+
+## Topology (N Minis)
+
+The Topology left drawer reads `/api/nodes`, which gathers every Mini listed
+under `[web.nodes.*]` in config (default: EXO1 lead + EXO2 packer). Each node
+gets a card with CPU / GPU / RAM / Disk / Temp, layers held, and live/offline.
+Offline Minis keep a card with an error; last-good metrics are not blanked by
+a failed poll. Single-Mini loads on a non-lead Mini (placement `mode: one` on
+EXO2) run the worker there; the web host tunnels `lead_port` so chat and
+health keep using `127.0.0.1`.

@@ -573,6 +573,10 @@
   /* LED carries freshness; drop the text "stale" chip on nstat. */
   .topo-body .nstat.stale::after { content: none; }
   .topo-body .nstat.stale { opacity: 1; }
+  .topo-body .node.offline { opacity: 0.72; }
+  .topo-body .node.offline .led { opacity: 0.25; filter: grayscale(1); }
+  .topo-body .node.offline [data-meta] { color: var(--muted, #9aa); }
+
   .node .name[hidden] { display: none !important; }
 
   .node.lead .mini-shell {
@@ -792,38 +796,7 @@
     <button type="button" class="ghost" id="btnCloseTopo">Close</button>
   </div>
   <div class="topo-body" id="topoBody">
-    <div class="node lead" id="leadCard">
-      <div class="mini-shell" aria-label="Mac mini · EXO1">
-        <div class="mini-face">
-          <div class="role">Lead · EXO1</div>
-          <div class="name" id="leadName">—</div>
-          <div class="meta" id="leadMeta">waiting</div>
-          <div class="nstat" id="leadStats">loading…</div>
-        </div>
-        <div class="mini-front" title="Front: USB-C · USB-C · headphone · power">
-          <span class="port usbc" aria-hidden="true"></span>
-          <span class="port usbc" aria-hidden="true"></span>
-          <span class="port jack" aria-hidden="true"></span>
-          <span class="led" id="leadLed" title="Power / live"></span>
-        </div>
-      </div>
-    </div>
-    <div class="node packer" id="packerCard">
-      <div class="mini-shell" aria-label="Mac mini · EXO2">
-        <div class="mini-face">
-          <div class="role">Packer 1 · EXO2</div>
-          <div class="name" id="packerName">—</div>
-          <div class="meta" id="packerMeta">waiting</div>
-          <div class="nstat" id="packerStats">loading…</div>
-        </div>
-        <div class="mini-front" title="Front: USB-C · USB-C · headphone · power">
-          <span class="port usbc" aria-hidden="true"></span>
-          <span class="port usbc" aria-hidden="true"></span>
-          <span class="port jack" aria-hidden="true"></span>
-          <span class="led" id="packerLed" title="Power / live"></span>
-        </div>
-      </div>
-    </div>
+    <!-- Cards built from /api/nodes (N Minis from config). -->
   </div>
 </aside>
 
@@ -1801,12 +1774,12 @@
     });
   })();
 
-  // ROADMAP #14: live node stats from /api/nodes.
-  // Poll ~500ms while drawer is open AND the tab is visible; skip ticks if a request is in flight.
-  const nodeLast = { lead: null, packer: null };
-  const nodeFreshAt = { lead: 0, packer: 0 };
+  // ROADMAP #14: live node stats from /api/nodes — N Minis from config.
+  const nodeLast = {};      // id -> last good stats
+  const nodeFreshAt = {};   // id -> ms
   let nodesTimer = null;
   let nodesInflight = false;
+  let topoOrder = [];       // stable card order from last successful poll
   const esc = (t) => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   function barLevel(pct) {
     const p = Number(pct) || 0;
@@ -1818,12 +1791,10 @@
     const p = Math.max(0, Math.min(100, Number(pct) || 0));
     return `<div class="bar"><span>${label}</span><span class="track"><span class="fill ${barLevel(p)}" style="width:${p}%;display:block"></span></span><span class="v">${esc(txt)}</span></div>`;
   }
-  // Merge field-by-field so a partial/failed poll never blanks a card.
   function mergeNode(prev, next) {
     if (!next || typeof next !== "object") return prev;
     if (next.error && next.cpu_pct == null && next.gpu_pct == null && !next.ram && !next.disk) {
-      // Hard failure with no stats — keep prior card entirely.
-      return prev ? Object.assign({}, prev, { error: next.error }) : next;
+      return prev ? Object.assign({}, prev, { error: next.error, offline: !!next.offline }) : next;
     }
     const out = Object.assign({}, prev || {});
     for (const [k, v] of Object.entries(next)) {
@@ -1831,7 +1802,6 @@
       if (k === "ram" || k === "disk") {
         out[k] = Object.assign({}, (prev && prev[k]) || {}, v);
       } else if (k === "error" && next.cpu_pct == null && (prev && prev.cpu_pct != null)) {
-        // Keep showing last good metrics; remember the error softly.
         out._lastError = v;
       } else {
         out[k] = v;
@@ -1839,8 +1809,85 @@
     }
     return out;
   }
+  function roleTitle(n, idx) {
+    const label = n.label || n.id || ("n" + idx);
+    const role = (n.role || "").toLowerCase();
+    if (role === "lead") return "Lead · " + label;
+    if (role === "packer") {
+      // Packer N · LABEL (count packers before this one in topoOrder)
+      let k = 0;
+      for (const id of topoOrder) {
+        const prev = nodeLast[id];
+        if (prev && (prev.role || "").toLowerCase() === "packer") k++;
+        if (id === (n.id || label)) break;
+      }
+      return "Packer " + Math.max(1, k) + " · " + label;
+    }
+    return label;
+  }
+  function ensureCard(n, idx) {
+    const body = document.getElementById("topoBody");
+    if (!body) return null;
+    const id = n.id || n.label || ("n" + idx);
+    let card = document.getElementById("nodeCard-" + id);
+    if (card) return card;
+    card = document.createElement("div");
+    card.className = "node " + ((n.role === "lead") ? "lead" : "packer");
+    card.id = "nodeCard-" + id;
+    card.dataset.nodeId = id;
+    card.innerHTML = `
+      <div class="mini-shell" aria-label="Mac mini · ${esc(n.label || id)}">
+        <div class="mini-face">
+          <div class="role" data-role>${esc(roleTitle(n, idx))}</div>
+          <div class="name" data-name hidden></div>
+          <div class="meta" data-meta>waiting</div>
+          <div class="nstat" id="nodeStats-${esc(id)}">loading…</div>
+        </div>
+        <div class="mini-front" title="Front: USB-C · USB-C · headphone · power">
+          <span class="port usbc" aria-hidden="true"></span>
+          <span class="port usbc" aria-hidden="true"></span>
+          <span class="port jack" aria-hidden="true"></span>
+          <span class="led" data-led title="Power / live"></span>
+        </div>
+      </div>`;
+    body.appendChild(card);
+    return card;
+  }
+  function syncCards(nodes) {
+    const body = document.getElementById("topoBody");
+    if (!body) return;
+    const seen = new Set();
+    topoOrder = [];
+    (nodes || []).forEach((n, idx) => {
+      const id = n.id || n.label || ("n" + idx);
+      seen.add(id);
+      topoOrder.push(id);
+      ensureCard(n, idx);
+      const card = document.getElementById("nodeCard-" + id);
+      if (!card) return;
+      const roleEl = card.querySelector("[data-role]");
+      if (roleEl) roleEl.textContent = roleTitle(Object.assign({}, n, { id }), idx);
+      card.classList.toggle("offline", !!n.offline);
+      const led = card.querySelector("[data-led]");
+      if (led) led.classList.toggle("on", !n.offline && !n.error);
+      const meta = card.querySelector("[data-meta]");
+      if (meta) {
+        if (n.offline) meta.textContent = "offline";
+        else if (n.error && n.cpu_pct == null) meta.textContent = "unreachable";
+        else meta.textContent = "live";
+      }
+    });
+    // Remove cards for nodes no longer in config
+    [...body.querySelectorAll(".node")].forEach((card) => {
+      const id = card.dataset.nodeId;
+      if (id && !seen.has(id)) card.remove();
+    });
+  }
   function renderNode(n) {
     if (!n) return `<span class="err">waiting for first sample…</span>`;
+    if (n.offline && n.cpu_pct == null && !n.ram) {
+      return `<span class="err">offline${n.error ? ": " + esc(n.error) : ""}</span>`;
+    }
     const ram = n.ram || {}, dk = n.disk || {};
     const ramPct = ram.total_gb ? 100 * ram.used_gb / ram.total_gb : 0;
     const dPct = dk.total_gb ? 100 * dk.used_gb / dk.total_gb : 0;
@@ -1856,7 +1903,6 @@
       h += nbar("RAM", availPct, `${avail ?? "?"} GB available`);
     }
     if (dk.total_gb != null) h += nbar("Disk", dPct, `${dk.free_gb ?? "?"} GB free`);
-    // Temp bar: 20 °C (empty) → 100 °C (full). No degrees → thermal level text only.
     if (n.temp_c != null) {
       const tempPct = Math.max(0, Math.min(100, (n.temp_c - 20) / 80 * 100));
       h += nbar("Temp", tempPct, `${n.temp_c.toFixed(0)}°C`);
@@ -1872,27 +1918,28 @@
     }
     return h;
   }
-  function paintNode(key, elId, incoming) {
-    const merged = mergeNode(nodeLast[key], incoming);
-    if (merged) nodeLast[key] = merged;
-    const el = document.getElementById(elId);
+  function paintNode(n) {
+    const id = n.id || n.label;
+    if (!id) return;
+    const merged = mergeNode(nodeLast[id], n);
+    if (merged) nodeLast[id] = merged;
+    const el = document.getElementById("nodeStats-" + id);
     if (!el) return;
-    const n = nodeLast[key];
-    if (!n) { el.innerHTML = renderNode(null); return; }
-    // Fresh if this poll carried real metrics (not a hard-empty error).
-    const gotFresh = incoming && (incoming.cpu_pct != null || incoming.gpu_pct != null || incoming.ram || incoming.temp_c != null);
-    if (gotFresh) nodeFreshAt[key] = Date.now();
-    el.innerHTML = renderNode(n);
-    const age = Date.now() - (nodeFreshAt[key] || 0);
-    const stale = !!(nodeFreshAt[key] && age > 5000);
+    const cur = nodeLast[id];
+    el.innerHTML = renderNode(cur);
+    const gotFresh = n && (n.cpu_pct != null || n.gpu_pct != null || n.ram || n.temp_c != null);
+    if (gotFresh) nodeFreshAt[id] = Date.now();
+    const age = Date.now() - (nodeFreshAt[id] || 0);
+    const stale = !!(nodeFreshAt[id] && age > 5000);
     el.classList.toggle("stale", stale);
     const card = el.closest(".node");
     if (card) {
       card.classList.toggle("stale", stale);
-      card.classList.toggle("fresh", !stale && !!nodeFreshAt[key]);
-      const nameEl = card.querySelector(".name");
+      card.classList.toggle("fresh", !stale && !!nodeFreshAt[id]);
+      card.classList.toggle("offline", !!(cur && cur.offline));
+      const nameEl = card.querySelector("[data-name]");
       if (nameEl) {
-        const nm = (n && n.model) ? String(n.model).trim() : "";
+        const nm = (cur && cur.model) ? String(cur.model).trim() : "";
         if (nm) { nameEl.textContent = nm; nameEl.hidden = false; }
         else { nameEl.textContent = ""; nameEl.hidden = true; }
       }
@@ -1906,21 +1953,18 @@
     nodesInflight = true;
     try {
       const r = await fetch("/api/nodes"); const j = await r.json();
-      const [lead, pk] = j.nodes || [];
-      paintNode("lead", "leadStats", lead);
-      paintNode("packer", "packerStats", pk);
+      const nodes = j.nodes || [];
+      syncCards(nodes);
+      for (const n of nodes) paintNode(n);
     } catch (e) {
-      // Keep last good cards; just mark them stale.
-      for (const [key, id] of [["lead","leadStats"],["packer","packerStats"]]) {
-        const el = document.getElementById(id);
+      for (const id of topoOrder) {
+        const el = document.getElementById("nodeStats-" + id);
         if (!el) continue;
-        if (nodeLast[key]) {
-          el.innerHTML = renderNode(nodeLast[key]);
+        if (nodeLast[id]) {
+          el.innerHTML = renderNode(nodeLast[id]);
           el.classList.add("stale");
           const card = el.closest(".node");
           if (card) { card.classList.add("stale"); card.classList.remove("fresh"); }
-        } else if (!el.innerHTML || el.textContent === "loading…") {
-          el.innerHTML = `<span class="err">waiting for first sample…</span>`;
         }
       }
     } finally {
@@ -1956,7 +2000,7 @@
     if (document.getElementById("topoDrawer").classList.contains("open")) closeTopo();
     else openTopo();
   }
-  document.getElementById("btnOpenTopo").addEventListener("click", toggleTopo);
+    document.getElementById("btnOpenTopo").addEventListener("click", toggleTopo);
 
   // ---- Model picker (ROADMAP) -----------------------------------------
   (function () {

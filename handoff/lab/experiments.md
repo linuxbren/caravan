@@ -1,3 +1,19 @@
+## 2026-11-05 — Day 15 (cont.): picker, placement, load
+
+**Goal.** Finish the Models drawer and make one-Mini downloads loadable.
+
+**Build.** N-node picker (`web_nodes`, capacity fit, chips, cleanup), Settings
+from disk inventory, placement at download (`placement.py`), truthful hf_xet
+progress (`download_progress` + nettop), HF token (`hf_auth`), placement-aware
+load (`web_workers` + `mlx_arch` qwen3_5_text→qwen3_5). Commits through
+`d60c983`. Docs: MODEL_PICKER / WEB / CHANGELOG.
+
+**Verify.** JevK5-chat-mlx-4bit on EXO1 only (`mode: one`); load single
+(`split: false`); chat **"Hello!"** ~39 write tok/s. Packer not started.
+
+**Next.** Day 16 — Topology N-node, Deep/Quick optimize live, non-lead single
+Mini, filter `caches` ghost folder.
+
 ## 2026-11-04 — Day 15: Caravan web interface
 
 **Goal.** Browser UI on EXO1 so Brenden can use the string: switch preloaded

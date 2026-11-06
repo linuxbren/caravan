@@ -56,15 +56,24 @@ class RunModeTest(unittest.TestCase):
         entry = {"placement": {"mode": "split", "k": 2, "node_ids": ["exo1", "exo2"]}}
         self.assertEqual(mgr._resolve_run_mode(entry), "split")
 
-    def test_other_mini_only_refuses(self):
+    def test_other_mini_only_is_single_remote(self):
+        """EXO2-only placement is still single-Mini; worker runs on that Mini."""
         mgr = self._mgr()
         entry = {
             "placement": {"mode": "one", "node_ids": ["exo2"], "node_labels": ["EXO2"]},
             "lead_path": "/tmp/m",
         }
-        with self.assertRaises(RuntimeError) as cm:
-            mgr._resolve_run_mode(entry)
-        self.assertIn("isn't supported yet", str(cm.exception))
+        self.assertEqual(mgr._resolve_run_mode(entry), "single")
+        nodes = [
+            {"id": "exo1", "label": "EXO1", "role": "lead", "host": "local"},
+            {"id": "exo2", "label": "EXO2", "role": "packer",
+             "host": "brenden@169.254.103.191", "ssh": "brenden@169.254.103.191",
+             "repo": "~/cv3"},
+        ]
+        with mock.patch("web_nodes.nodes_from_config", return_value=nodes):
+            n = mgr._resolve_worker_node(entry, place=entry["placement"])
+        self.assertIsNotNone(n)
+        self.assertEqual(n["id"], "exo2")
 
     def test_preflight_missing_folder(self):
         mgr = self._mgr()
@@ -95,10 +104,11 @@ class RunModeTest(unittest.TestCase):
             with mock.patch.object(C.inv, "MODEL_ROOTS", [d.parent]):
                 # folder name must look like org--name
                 named = d.parent / "org--m"
-                if named.exists():
-                    pass
-                else:
-                    named.symlink_to(d) if hasattr(Path, 'symlink_to') else None
+                if not named.exists():
+                    try:
+                        named.symlink_to(d, target_is_directory=True)
+                    except OSError:
+                        pass
             # Directly exercise resolve via entry with lead path
             entry = C.resolve_entry({
                 "id": "m", "name": "m", "hf": "org/m",

@@ -69,6 +69,8 @@ class WorkerManager:
         tp = os.environ.get("CARAVAN_TUNED_SETTINGS")
         self.tuned_path: Optional[Path] = Path(tp).expanduser() if tp else None
         self._lead_path: Optional[str] = None
+        self._worker_node: Optional[dict] = None  # None = local lead; else remote node
+        self._tunnel_proc: Optional[subprocess.Popen] = None
 
     # ----- public ---------------------------------------------------------
 
@@ -205,8 +207,17 @@ class WorkerManager:
             lead_pid = self._start_lead(entry, split=True)
         else:
             self._set(status="starting_lead", packer_pid=None)
-            self._note(f"starting single-Mini worker on EXO1 ({entry['lead_path']})")
-            lead_pid = self._start_lead(entry, split=False)
+            node = self._resolve_worker_node(entry, place=entry.get("placement"))
+            self._worker_node = node
+            if node and not self._node_is_local(node):
+                self._note(
+                    f"starting single-Mini worker on {node.get('label') or node.get('id')} "
+                    f"({entry.get('lead_path')})"
+                )
+                lead_pid = self._start_remote_single(entry, node)
+            else:
+                self._note(f"starting single-Mini worker on EXO1 ({entry['lead_path']})")
+                lead_pid = self._start_lead(entry, split=False)
         self._set(lead_pid=lead_pid)
         self._wait_lead_ready(timeout=600)
 
@@ -226,24 +237,7 @@ class WorkerManager:
                 place = None
         mode = (place or {}).get("mode")
         if mode in ("one", "all"):
-            # Copy-to-all: run on the lead Mini (this host).
-            node_ids = [(place or {}).get("node_ids") or []]
-            # If placement is one Mini and that Mini isn't the lead/web host, refuse.
-            if mode == "one":
-                ids = [str(x).lower() for x in ((place or {}).get("node_ids") or [])]
-                labels = [str(x).lower() for x in ((place or {}).get("node_labels") or [])]
-                # Lead/web host is EXO1 / local — accept exo1/lead/local empty.
-                ok_local = (
-                    not ids and not labels
-                    or any(x in ("exo1", "lead", "local") for x in ids)
-                    or any(x in ("exo1", "lead", "local") for x in labels)
-                )
-                if not ok_local:
-                    want = ", ".join((place or {}).get("node_labels") or ids) or "another Mini"
-                    raise RuntimeError(
-                        f"This model is placed on {want} only. Loading on a non-lead Mini "
-                        f"isn't supported yet — re-download to EXO1, or use Copy to all."
-                    )
+            # one / all → single-Mini worker (possibly on a non-lead Mini).
             return "single"
         if mode == "split" or entry.get("need_split"):
             return "split"
@@ -254,7 +248,33 @@ class WorkerManager:
         problems = []
         run_mode = entry.get("run_mode") or self._resolve_run_mode(entry)
         lead = entry.get("lead_path")
-        if not lead:
+        place = entry.get("placement")
+        remote_node = None
+        if run_mode == "single":
+            remote_node = self._resolve_worker_node(entry, place=place)
+        if remote_node and not self._node_is_local(remote_node):
+            # Model lives on another Mini — check there via SSH.
+            label = remote_node.get("label") or remote_node.get("id") or "remote Mini"
+            if not lead:
+                problems.append(f"model folder not found on {label}")
+            else:
+                # Expanduser locally for the usual ~/.caravan path; same on sibling Minis.
+                d = str(Path(lead).expanduser())
+                check = (
+                    "d=%s; "
+                    "if [ -f \"$d/config.json\" ] && ls \"$d\"/*.safetensors >/dev/null 2>&1; "
+                    "then echo OK; "
+                    "elif [ -f \"$d/config.json\" ] && [ -f \"$d/model.safetensors.index.json\" ]; "
+                    "then echo OK; else echo MISSING; fi"
+                ) % repr(d)
+                try:
+                    r = self._ssh_node(remote_node, check, timeout=25)
+                    out = (r.stdout or "").strip().splitlines()
+                    if not out or out[-1] != "OK":
+                        problems.append(f"model missing on {label}: {lead}")
+                except Exception as e:
+                    problems.append(f"can't reach {label} to check model: {e}")
+        elif not lead:
             problems.append("model folder not found on this Mini (EXO1)")
         else:
             lp = Path(lead).expanduser()
@@ -291,12 +311,19 @@ class WorkerManager:
 
     # ----- Day 15: reload trials (kv_bits, fuse_kernels, keepalive) -------
 
-    def _tuned_entry(self, lead_path, *, create=False):
+    def _tuned_entry(self, lead_path, *, create=False, spanned=None):
+        """Look up the tuned-settings entry for this model.
+
+        spanned follows the running worker (split vs single-Mini). Using the
+        wrong key made Deep/Quick optimize show 0/3 forever on one-Mini loads.
+        """
         st = TS.load_store(self.tuned_path)
-        key = TS.entry_key(lead_path, spanned=True)
+        if spanned is None:
+            spanned = bool(self.state.get("split"))
+        key = TS.entry_key(lead_path, spanned=spanned)
         if create:
             return st, TS.ensure_entry(st, key, model=TS.model_stem(lead_path),
-                                       hardware=TS.hardware_label(spanned=True))
+                                       hardware=TS.hardware_label(spanned=spanned))
         return st, (st.get("models") or {}).get(key)
 
     def plan_reload_args(self, entry: dict, settings: dict, lead_x: list, packer_x: list) -> list:
@@ -380,6 +407,33 @@ class WorkerManager:
         return "~/.caravan/web-ui/packer.log"
 
     def _kill_lead(self) -> None:
+        # Stop SSH tunnel used for non-lead single-Mini loads first.
+        try:
+            self._stop_tunnel()
+        except Exception:
+            pass
+        # Remote single-Mini worker (EXO2 etc.)
+        meta_path = self.state_dir / "remote-worker.json"
+        if meta_path.is_file():
+            try:
+                meta = json.loads(meta_path.read_text())
+                target = (meta.get("ssh") or "").strip()
+                pid = meta.get("pid")
+                if target:
+                    cmd = "pkill -f 'mlx_worker.py.*--port %d' 2>/dev/null || true; " % int(self.lead_port)
+                    if pid:
+                        cmd += "kill %s 2>/dev/null || true; " % int(pid)
+                    cmd += "rm -f ~/.caravan/web-ui/remote-lead.pid; echo killed"
+                    subprocess.run(
+                        ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target, cmd],
+                        capture_output=True, text=True, timeout=20)
+            except Exception as e:
+                self._note(f"remote lead kill warn: {e}")
+            try:
+                meta_path.unlink()
+            except OSError:
+                pass
+        self._worker_node = None
         # Only our own worker on the test port / our log marker.
         if self._lead_proc and self._lead_proc.poll() is None:
             try:
@@ -431,6 +485,152 @@ class WorkerManager:
         raise FileNotFoundError(
             f"model not on packer Mini; tried {cands}; ssh_rc={r.returncode} "
             f"err={(r.stderr or '')[:200]}")
+
+
+    def _node_is_local(self, node: Optional[dict]) -> bool:
+        if not node:
+            return True
+        try:
+            from web_nodes import is_local
+            return is_local(node)
+        except Exception:
+            h = (node.get("host") or "").strip().lower()
+            return h in ("local", "localhost", "127.0.0.1", "")
+
+    def _resolve_worker_node(self, entry: dict, place: Optional[dict] = None) -> Optional[dict]:
+        """Which Mini should run a single-Mini load. None → local lead."""
+        place = place or entry.get("placement")
+        if not place and entry.get("lead_path"):
+            try:
+                from placement import read_placement
+                place = read_placement(entry["lead_path"])
+            except Exception:
+                place = None
+        mode = (place or {}).get("mode")
+        if mode == "all":
+            return None  # prefer local lead
+        if mode != "one":
+            # Infer: if lead_path missing locally but held_on names a packer, use that.
+            held = entry.get("held_on") or entry.get("worker_node_ids") or []
+            if held and entry.get("lead_path"):
+                # still local path present
+                return None
+            if held:
+                place = {"mode": "one", "node_labels": list(held), "node_ids": list(held)}
+            else:
+                return None
+        ids = [str(x).lower() for x in ((place or {}).get("node_ids") or [])]
+        labels = [str(x).lower() for x in ((place or {}).get("node_labels") or [])]
+        try:
+            from web_nodes import nodes_from_config
+            nodes = nodes_from_config()
+        except Exception:
+            nodes = []
+        if not nodes:
+            # Fallback: packer SSH target as exo2
+            if any(x in ("exo2", "packer") for x in ids + labels):
+                return {
+                    "id": "exo2", "label": "EXO2", "role": "packer",
+                    "host": self.packer_ssh, "ssh": self.packer_ssh,
+                    "repo": "~/cv3",
+                }
+            return None
+        for n in nodes:
+            nid = str(n.get("id") or "").lower()
+            lab = str(n.get("label") or "").lower()
+            if nid in ids or lab in ids or nid in labels or lab in labels:
+                if self._node_is_local(n) or (n.get("role") == "lead"):
+                    return None
+                return n
+        # Match exo2 / packer aliases against non-lead nodes
+        if any(x in ("exo2", "packer") for x in ids + labels):
+            for n in nodes:
+                if n.get("role") != "lead" and not self._node_is_local(n):
+                    return n
+        return None
+
+    def _ssh_node(self, node: dict, cmd: str, timeout: float = 60):
+        target = (node.get("ssh") or node.get("host") or self.packer_ssh or "").strip()
+        if not target:
+            raise RuntimeError("no ssh target for remote worker")
+        return subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", target, cmd],
+            capture_output=True, text=True, timeout=timeout)
+
+    def _stop_tunnel(self) -> None:
+        proc = getattr(self, "_tunnel_proc", None)
+        if proc and proc.poll() is None:
+            try:
+                proc.terminate()
+                proc.wait(timeout=3)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+        self._tunnel_proc = None
+
+    def _ensure_tunnel(self, node: dict) -> None:
+        """Forward local lead_port → remote 127.0.0.1:lead_port so chat/health stay local."""
+        self._stop_tunnel()
+        target = (node.get("ssh") or node.get("host") or self.packer_ssh or "").strip()
+        port = str(self.lead_port)
+        # -N -L local:remote; ExitOnForwardFailure so we notice bind races.
+        self._tunnel_proc = subprocess.Popen(
+            ["ssh", "-o", "BatchMode=yes", "-o", "ExitOnForwardFailure=yes",
+             "-o", "ServerAliveInterval=15", "-N",
+             "-L", f"{port}:127.0.0.1:{port}", target],
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, start_new_session=True)
+        time.sleep(0.4)
+        if self._tunnel_proc.poll() is not None:
+            err = (self._tunnel_proc.stderr.read() if self._tunnel_proc.stderr else b"") or b""
+            raise RuntimeError(f"ssh tunnel to {target} failed: {err.decode(errors='replace')[:300]}")
+
+    def _start_remote_single(self, entry: dict, node: dict) -> int:
+        """Run mlx_worker as a non-split HTTP server on a non-lead Mini; tunnel to it."""
+        model = entry.get("lead_path") or entry.get("packer_path")
+        if not model:
+            raise RuntimeError("no model path for remote single-Mini load")
+        remote_model = model
+        repo = (node.get("repo") or "~/cv3").rstrip("/")
+        filtered = []
+        for a in getattr(self, "_extra_lead", []):
+            if a in ("--split-keepalive", "--no-split-keepalive"):
+                continue
+            filtered.append(a)
+        extra = " ".join(shlex.quote(a) for a in filtered)
+        remote = (
+            "mkdir -p ~/.caravan/web-ui; "
+            "LPM=$(pmset -g 2>/dev/null | awk '/lowpowermode/{print $2}'); "
+            "[[ \"$LPM\" == \"0\" || -z \"$LPM\" ]] || { echo REFUSE_LPM; exit 2; }; "
+            "old=$(cat ~/.caravan/web-ui/remote-lead.pid 2>/dev/null); "
+            "if [ -n \"$old\" ]; then kill $old 2>/dev/null || true; fi; "
+            f"nohup ~/.caravan/venvs/mlx/bin/python {repo}/agent/mlx_worker.py "
+            f"--model {shlex.quote(remote_model)} "
+            f"--host 127.0.0.1 --port {int(self.lead_port)} --split-role none "
+            + (extra + " " if extra else "")
+            + f"> ~/.caravan/web-ui/remote-lead.log 2>&1 & echo $! > ~/.caravan/web-ui/remote-lead.pid; "
+            "cat ~/.caravan/web-ui/remote-lead.pid"
+        )
+        r = self._ssh_node(node, remote, timeout=45)
+        if r.returncode != 0:
+            raise RuntimeError(f"remote worker start failed: {(r.stderr or r.stdout or '')[:400]}")
+        pid = None
+        for line in (r.stdout or "").splitlines():
+            line = line.strip()
+            if line.isdigit():
+                pid = int(line)
+        if not pid:
+            raise RuntimeError(f"remote worker did not print a pid: {(r.stdout or '')[:200]}")
+        self._ensure_tunnel(node)
+        self._lead_proc = None
+        (self.state_dir / "lead.pid").write_text(str(pid))
+        (self.state_dir / "remote-worker.json").write_text(json.dumps({
+            "pid": pid, "node": node.get("id") or node.get("label"),
+            "ssh": node.get("ssh") or node.get("host"),
+            "model": remote_model,
+        }))
+        return pid
 
     def _start_packer(self, entry: dict, packer_path: str) -> Optional[int]:
         k = int(entry["packer_layers"])

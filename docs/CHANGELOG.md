@@ -3,6 +3,14 @@
 
 ## Unreleased
 
+### Day 16 — Topology N-node, non-lead single Mini, optimize fix
+- **Topology drawer** builds one card per configured Mini (`/api/nodes`); handles 1 / 2 / 3+ and offline nodes without blanking last-good stats.
+- **Single-Mini load on a non-lead Mini** (e.g. EXO2-only placement): start `mlx_worker` there, SSH-tunnel chat/health to the web host.
+- **Self-tune / Deep optimize**: `_tuned_entry` now uses `:single` vs `:spanned` from the running worker so coverage stops stuck at 0/3 on one-Mini loads.
+- **Disk list**: skip non-model folders (`caches`, `.cache`, …) — `~/.exo/models/caches` no longer looks installed.
+
+
+
 - **Placement-aware load.** One-Mini / copy-to-all placements start a single
   non-split worker (no packer). Split placements keep lead+packer. Preflight
   checks files first. `qwen3_5_text` remapped to `qwen3_5` for mlx_lm 0.32.2
