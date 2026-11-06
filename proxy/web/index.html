@@ -1980,6 +1980,9 @@
       else openPicker();
     }
     $("btnOpenPicker").addEventListener("click", togglePicker);
+    if (/[?&]picker=1\b/.test(location.search)) {
+      setTimeout(openPicker, 300);
+    }
     $("btnClosePicker").addEventListener("click", closePicker);
     $("btnOpenTopo").addEventListener("click", () => {
       if ($("pickerDrawer").classList.contains("open")) closePicker();
