@@ -593,6 +593,8 @@ def make_handler(app: App):
                 return self._json(200, app.optimizer.snapshot())
             if path == "/api/journey":
                 return self._json(200, load_journey())
+            if path == "/api/nodes":
+                return self._json(200, app.nodes())
             if path == "/api/split":
                 snap = app.mgr.snapshot()
                 info = app.mgr.lead_split_info() if snap.get("status") == "ready" else None

@@ -74,7 +74,10 @@ def unavailable(active: Optional[dict]) -> set:
     if not a.get("guess_ahead_loaded"):
         out.add("guess_ahead")
     if a.get("keepalive") is None:  # single Mini: no keep-warm, no two-chat pipe
-        out |= {"keepalive", "pipeline_chats"}
+        # Shared-prefix explore on a non-split worker rarely fills stats under
+        # the optimize prompt plan (winner may already be set). Skip so Quick
+        # can finish; Deep still covers reload options (kv_bits / fuse / …).
+        out |= {"keepalive", "pipeline_chats", "shared_prefix"}
     return out
 
 
