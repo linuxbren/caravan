@@ -173,6 +173,7 @@ def reply_stats(usage: dict, wall_s: Optional[float] = None) -> dict:
         "peak_gb": caravan.get("peak_gb"),
         # Day 15: what the worker actually ran this reply with (None if not reported).
         "active": caravan.get("active") if isinstance(caravan.get("active"), dict) else None,
+        "memory_guard": caravan.get("memory_guard") if isinstance(caravan.get("memory_guard"), dict) else None,
     }
 
 

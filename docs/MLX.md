@@ -110,6 +110,8 @@ never left half-written.
 
 **Memory.**
 
+**Memory guard.** Before each generate the lead estimates KV for prompt+max_tokens against reclaimable RAM minus `--memory-safety-gb` (and the packer's available RAM in a split). Oldest non-system turns are trimmed when needed and archived under `--memory-dir` (default `~/.caravan/memory/<YYYY-MM-DD>/<session>.md`) on EXO1 only; BM25 recall injects a short system note (~400–600 tok) from that archive. `caravan.meta.memory_guard` reports trimmed/recalled counts for the UI.
+
 - At most `--prompt-cache-size` (4) sessions stay in memory, and
   `--prompt-cache-bytes` (2 GiB) for all of them.
 - The least recently used session is evicted first, except the session

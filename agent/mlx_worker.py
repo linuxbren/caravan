@@ -818,8 +818,19 @@ class Engine:
             log(f"wired limit {self.wired[0]} -> {self.wired[1]} bytes (held for process lifetime)")
         else:
             log(f"wired limit mode {self.wired_mode}: not set at startup")
-        if args.cache_limit_gb is not None:
+        if args.cache_limit_gb is not None and args.cache_limit_gb > 0:
             mx.set_cache_limit(int(args.cache_limit_gb * (1 << 30)))
+            log(f"mlx cache_limit {args.cache_limit_gb} GB")
+        if getattr(args, "memory_limit_gb", None):
+            try:
+                mx.set_memory_limit(int(float(args.memory_limit_gb) * (1 << 30)))
+                log(f"mlx memory_limit {args.memory_limit_gb} GB")
+            except Exception as e:
+                log(f"mlx memory_limit skipped: {e!r}")
+        self.memory_safety_gb = float(getattr(args, "memory_safety_gb", 1.75) or 1.75)
+        import memory_notes as _MN
+        self.memory_dir = Path(getattr(args, "memory_dir", None) or _MN.default_memory_dir()).expanduser()
+        self.model_cfg = cfg
         self.prefill_step = int(args.prefill_step_size)
         self.default_max_tokens = int(args.max_tokens)
         ident = {"model": str(self.model_dir), "tokenizer": tokenizer_hash(self.model_dir),
@@ -1536,8 +1547,122 @@ class Engine:
         finally:
             cancel.set()
 
+    # -- memory guard (trim + archive + recall) -----------------------------
+    def apply_memory_guard(self, body: dict, *, session_key: Optional[str] = None) -> tuple:
+        """Return (body, meta). Archives trimmed turns; recalls snippets from notes."""
+        import memory_guard as MG
+        import memory_notes as MN
+        msgs = list(body.get("messages") or [])
+        if not msgs:
+            return body, {"trimmed_turns": 0, "ok": True}
+        max_tokens = int(body.get("max_tokens") or self.default_max_tokens or 512)
+        kv_bits = int(getattr(self.args, "kv_bits", None) or 16)
+        if self.client is not None and getattr(self, "stage", None) is not None:
+            n_layers = int(self.stage.range[1] - self.stage.range[0])
+            packer_layers = int(self.stage.range[0])
+        else:
+            n_layers = int((self.model_cfg or {}).get("num_hidden_layers") or 0)
+            packer_layers = None
+        packer_avail = None
+        if self.client is not None:
+            try:
+                st = self.client.call("stats")[0]
+                packer_avail = st.get("mem_available_gb")
+            except Exception:
+                packer_avail = None
+
+        def count_tokens(ms):
+            b = dict(body)
+            b["messages"] = ms
+            try:
+                return len(self.chat_prompt(b))
+            except Exception:
+                return sum(max(1, len(str(m.get("content") or "")) // 4) for m in ms)
+
+        mem_dir = Path(getattr(self, "memory_dir", None) or MN.default_memory_dir()).expanduser()
+        sid = session_key or body.get("session") or "anon"
+        model_name = getattr(self, "model_dir", None)
+        model_name = model_name.name if model_name is not None else ""
+
+        # Recall BEFORE trim so archive search still sees older context; snippets
+        # are counted into the memory estimate via injection into messages.
+        recall_all = bool(getattr(self.args, "memory_recall_all", False))
+        user_q = ""
+        for m in reversed(msgs):
+            if str(m.get("role")) == "user":
+                user_q = str(m.get("content") or "")
+                break
+        snippets = []
+        try:
+            snippets = MN.bm25_recall(
+                mem_dir, sid, user_q, top_k=3,
+                token_cap=int(getattr(self.args, "memory_recall_tokens", 500) or 500),
+                all_sessions=recall_all,
+            )
+        except Exception as e:
+            log(f"memory_notes: recall failed ({e!r})")
+        recall_note = MN.format_recall_note(snippets)
+        work_msgs = list(msgs)
+        if recall_note:
+            # Inject as a short system note just before the latest user turn.
+            insert_at = len(work_msgs) - 1 if work_msgs else 0
+            work_msgs.insert(insert_at, {"role": "system", "content": recall_note})
+
+        plan = MG.plan(
+            work_msgs,
+            cfg=self.model_cfg or {},
+            n_layers=max(1, n_layers),
+            max_tokens=max_tokens,
+            count_tokens=count_tokens,
+            kv_bits=kv_bits,
+            safety_gb=getattr(self, "memory_safety_gb", MG.DEFAULT_SAFETY_GB),
+            packer_available_gb=packer_avail,
+            packer_layers=packer_layers,
+        )
+        meta = {k: plan[k] for k in plan if k not in ("messages", "dropped")}
+        if "headroom_gb" in meta:
+            meta["headroom_gb"] = round(float(meta["headroom_gb"]), 3)
+        meta["recalled_snippets"] = len(snippets)
+        meta["recalled"] = [
+            {"turn": s["turn"], "role": s["role"], "score": s["score"]} for s in snippets
+        ]
+
+        dropped = list(plan.get("dropped") or [])
+        # Don't archive the injected recall system note if it got trimmed.
+        dropped = [d for d in dropped if not (
+            str(d.get("role")) == "system"
+            and str(d.get("content") or "").startswith("Earlier in this conversation")
+        )]
+        archived_to = None
+        if dropped:
+            try:
+                info = MN.append_turns(mem_dir, sid, dropped, model=model_name)
+                archived_to = info.get("path")
+                meta["archived_to"] = archived_to
+                meta["archived_turns"] = info.get("turns")
+                log(f"memory_notes: archived {info.get('turns')} turn(s) -> {archived_to}")
+            except Exception as e:
+                log(f"memory_notes: archive failed ({e!r})")
+                meta["archive_error"] = str(e)
+
+        if plan.get("trimmed_turns"):
+            log(f"memory_guard: trimmed {plan['trimmed_turns']} turn(s); "
+                f"prompt~{plan.get('prompt_tokens')} tok, need~{plan.get('need_gb')} GB, "
+                f"headroom {meta.get('headroom_gb')} GB")
+            try:
+                # Free other sessions when tight (never blocks on the active key).
+                self.store.enforce_limits(keep=sid if sid in getattr(self.store, "sessions", {}) else None)
+            except Exception as e:
+                log(f"memory_guard: enforce_limits skipped ({e!r})")
+
+        body = dict(body)
+        body["messages"] = plan["messages"]
+        meta["trimmed_turns"] = int(plan.get("trimmed_turns") or 0)
+        return body, meta
+
     # -- prompt (tokenizer only; safe on any thread) ------------------------
     def chat_prompt(self, body):
+
         msgs = []
         for m in body.get("messages") or []:
             m = dict(m)
@@ -2938,6 +3063,15 @@ def make_handler(engine: "Engine"):
 
         def _complete(self, body, chat):
             key = self.headers.get("X-Caravan-Session")
+            guard_meta = None
+            if chat:
+                try:
+                    body, guard_meta = engine.apply_memory_guard(body, session_key=key)
+                except Exception as e:
+                    log(f"memory_guard failed open: {e!r}")
+                    guard_meta = {"ok": True, "trimmed_turns": 0, "error": None, "note": f"guard skipped: {e}"}
+                if guard_meta and guard_meta.get("error") and not guard_meta.get("ok", True):
+                    return self._json(507, {"error": guard_meta["error"], "memory_guard": guard_meta})
             try:
                 prompt = engine.chat_prompt(body) if chat else engine.text_prompt(body)
             except Exception as e:
@@ -3043,10 +3177,12 @@ def make_handler(engine: "Engine"):
                         f"(of {info['completion_tokens']} generated, max {body.get('max_tokens')})")
                 except Exception:
                     pass
+            if info is not None and guard_meta:
+                info["memory_guard"] = guard_meta
             usage = {"prompt_tokens": info["prompt_tokens"], "completion_tokens": info["completion_tokens"],
                      "total_tokens": info["prompt_tokens"] + info["completion_tokens"],
                      "prompt_tokens_details": {"cached_tokens": info["cached_tokens"]},
-                     "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb", "split", "speculate", "learn", "active")
+                     "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb", "split", "speculate", "learn", "active", "memory_guard")
                                  if k in info}}
             try:
                 if stream:
@@ -3111,7 +3247,21 @@ def build_parser():
     ap.add_argument("--wired-limit", choices=("startup", "per-request", "off"), default="startup",
                     help="startup: set Metal wired limit once at load and hold it (like mlx_lm.server); "
                          "per-request: v2 behaviour (raise/drop around each request); off: never touch it")
-    ap.add_argument("--cache-limit-gb", type=float, default=None, help="mx.set_cache_limit (freed-buffer pool)")
+    ap.add_argument("--cache-limit-gb", type=float, default=float(__import__("os").environ.get("CARAVAN_CACHE_LIMIT_GB", "1.5")),
+                    help="mx.set_cache_limit GB (freed-buffer pool); env CARAVAN_CACHE_LIMIT_GB")
+    ap.add_argument("--memory-limit-gb", type=float,
+                    default=(float(__import__("os").environ["CARAVAN_MEMORY_LIMIT_GB"])
+                             if __import__("os").environ.get("CARAVAN_MEMORY_LIMIT_GB") else None),
+                    help="mx.set_memory_limit GB soft cap; env CARAVAN_MEMORY_LIMIT_GB")
+    ap.add_argument("--memory-safety-gb", type=float,
+                    default=float(__import__("os").environ.get("CARAVAN_MEMORY_SAFETY_GB", "1.75")),
+                    help="RAM to keep free when sizing chat KV (memory guard)")
+    ap.add_argument("--memory-dir", default=__import__("os").environ.get("CARAVAN_MEMORY_DIR") or "~/.caravan/memory",
+                    help="Obsidian-style Markdown archive root (env CARAVAN_MEMORY_DIR)")
+    ap.add_argument("--memory-recall-tokens", type=int, default=500,
+                    help="Max tokens of recalled note snippets to inject")
+    ap.add_argument("--memory-recall-all", action="store_true",
+                    help="Search all session archives, not only this session")
     # v3: one model split across two Minis (agent/mlx_split.py)
     ap.add_argument("--split-role", choices=("none", "lead", "packer", "head", "front"), default="none",
                     help="lead: HTTP + last layers + lm_head, asks --split-peer (Packer 1) for the first layers; "
@@ -3223,8 +3373,15 @@ def front_main(args):
         log(f"auto split: packer_layers={k} ({reason})")
     stage = S.Stage(model_dir, "front", args.split_front_layers)
     wired = apply_startup_wiring(getattr(args, "wired_limit", "startup"), mx, maybe_set_recommended_wired_limit)
-    if args.cache_limit_gb is not None:
+    if args.cache_limit_gb is not None and args.cache_limit_gb > 0:
         mx.set_cache_limit(int(args.cache_limit_gb * (1 << 30)))
+        log(f"mlx cache_limit {args.cache_limit_gb} GB")
+    if getattr(args, "memory_limit_gb", None):
+        try:
+            mx.set_memory_limit(int(float(args.memory_limit_gb) * (1 << 30)))
+            log(f"mlx memory_limit {args.memory_limit_gb} GB")
+        except Exception as e:
+            log(f"mlx memory_limit skipped: {e!r}")
     label = S.stage_label("front", stage.range, stage.n_layers)
     ident = {"model": str(model_dir), "tokenizer": tokenizer_hash(model_dir), "mlx_lm": _version("mlx_lm"),
              "model_type": stage.model_type, "kv_bits": args.kv_bits or 0, "stage": label}
@@ -3251,10 +3408,15 @@ def front_main(args):
         log("packer GPU keepalive on (warms Metal while waiting for the lead)")
 
     def stats():
+        try:
+            _tot, _avail = S.host_memory_gb()
+        except Exception:
+            _tot, _avail = info.get("mem_total_gb"), info.get("mem_available_gb")
         return {"stage": label, "weights_gb": round(stage.nbytes() / 1e9, 2),
                 "active_gb": round(mx.get_active_memory() / 1e9, 2),
                 "peak_gb": round(mx.get_peak_memory() / 1e9, 2),
-                "sessions": len(store.sessions), "session_gb": round(store.total_bytes() / 1e9, 3)}
+                "sessions": len(store.sessions), "session_gb": round(store.total_bytes() / 1e9, 3),
+                "mem_total_gb": _tot, "mem_available_gb": _avail}
     stop = threading.Event()
 
     def _term(*_):

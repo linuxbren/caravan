@@ -1,5 +1,10 @@
 # Changelog
 
+
+## Unreleased
+
+- **Memory guard (lead).** Estimate KV vs reclaimable RAM before generate; trim oldest turns into `~/.caravan/memory` Markdown notes (EXO1 only) and BM25-recall snippets into a short system note. Topology shows reclaimable RAM; UI notes moved/recalled counts. Config: `memory_dir`, `memory_safety_gb`.
+
 What changed in each Caravan version, newest first. Numbers come from
 [BENCHMARKS.md](BENCHMARKS.md); the day-by-day story is in
 [LOG.md](LOG.md); what's next is in [ROADMAP.md](ROADMAP.md).

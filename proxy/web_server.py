@@ -520,6 +520,7 @@ def make_handler(app: App):
                     "done_mini": round(t_done, 6),
                 },
                 "stats": stats,
+                "memory_guard": (stats or {}).get("memory_guard"),
                 "settings": app.mgr.snapshot().get("settings"),
                 "session": session,
             }

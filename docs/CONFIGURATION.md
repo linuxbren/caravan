@@ -213,6 +213,10 @@ by hand: `~/.caravan/venvs/mlx/bin/python agent/mlx_worker.py --model <dir>`.
 | `--host` / `--port` | `127.0.0.1` / `8092` | Listen address. |
 | `--prompt-cache-size` | `4` | Sessions kept in memory. |
 | `--prompt-cache-bytes` | `2G` | Memory budget for all sessions' caches; accepts `512M`, `2G`. The session in use is never evicted. |
+
+| `--memory-dir` | `~/.caravan/memory` | Lead-only Obsidian-style archive of trimmed turns (YYYY-MM-DD/session.md). Env `CARAVAN_MEMORY_DIR`. |
+| `--memory-safety-gb` | `1.75` | RAM to keep free when sizing chat KV before generate. |
+| `--memory-recall-tokens` | `500` | Cap on BM25-recalled note snippets injected as a system note. |
 | `--prefill-step-size` | `2048` | Prompt tokens read per step. |
 | `--max-tokens` | `512` | Default reply limit when a request sets none. |
 | `--cache-dir` | `$CARAVAN_MLX_CACHE_DIR` or `~/.caravan/mlx/prompt-cache` | Saved sessions. |

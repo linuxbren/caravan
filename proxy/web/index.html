@@ -1476,6 +1476,17 @@
           `ttft ${fmt(st.ttft_s)}s · write ${fmt(st.write_tok_s,1)} tok/s · ` +
           `${st.completion_tokens ?? "?"} tok · total ${fmt(st.total_s)}s`;
         asst.appendChild(tdiv);
+        const mg = meta.memory_guard || (st && st.memory_guard) || null;
+        if (mg && ((mg.trimmed_turns|0) > 0 || (mg.recalled_snippets|0) > 0)) {
+          const nd = document.createElement("div");
+          nd.className = "memory-note";
+          nd.style.cssText = "margin-top:6px;font-size:.72rem;color:var(--muted);font-family:var(--mono);";
+          const bits = [];
+          if ((mg.trimmed_turns|0) > 0) bits.push(`Moved ${mg.trimmed_turns} oldest turn${mg.trimmed_turns===1?"":"s"} to notes`);
+          if ((mg.recalled_snippets|0) > 0) bits.push(`recalled ${mg.recalled_snippets} snippet${mg.recalled_snippets===1?"":"s"}`);
+          nd.textContent = bits.join("; ");
+          asst.appendChild(nd);
+        }
       } else if (!full) {
         bodyEl.textContent = "(no reply — try again, or reload the model)";
       }
@@ -1664,7 +1675,11 @@
       const gp = n.gpu_power_w != null ? `${n.gpu_pct}% · ${n.gpu_power_w} W` : `${n.gpu_pct}%`;
       h += nbar("GPU", n.gpu_pct, gp);
     }
-    if (ram.total_gb != null) h += nbar("RAM", ramPct, `${ram.free_gb ?? "?"} GB free`);
+    if (ram.total_gb != null) {
+      const avail = ram.available_gb != null ? ram.available_gb : ram.free_gb;
+      const availPct = ram.total_gb ? 100 * (1 - (avail ?? 0) / ram.total_gb) : ramPct;
+      h += nbar("RAM", availPct, `${avail ?? "?"} GB available`);
+    }
     if (dk.total_gb != null) h += nbar("Disk", dPct, `${dk.free_gb ?? "?"} GB free`);
     // Temp bar: 20 °C (empty) → 100 °C (full). No degrees → thermal level text only.
     if (n.temp_c != null) {

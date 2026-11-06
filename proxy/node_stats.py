@@ -235,7 +235,7 @@ def memory():
     page = int(ps.group(1)) if ps else 16384
     v = {}
     for line in out.splitlines()[1:]:
-        m = re.match(r"^(.+?):\s+(\d+)\.$", line)
+        m = re.match(r"^(.+?):\s+(\d+)\.?$", line)
         if m:
             v[m.group(1).strip()] = int(m.group(2)) * page
     try:
@@ -246,8 +246,12 @@ def memory():
             + v.get("Pages wired down", 0) + v.get("Pages occupied by compressor", 0))
     if used <= 0:
         used = v.get("Pages active", 0) + v.get("Pages wired down", 0)
+    # Reclaimable-aware (matches memory_guard / macOS pressure better than raw free).
+    available = (v.get("Pages free", 0) + v.get("Pages speculative", 0)
+                 + v.get("Pages purgeable", 0) + v.get("Pages inactive", 0))
     return {"total_gb": round(total / 1e9, 1), "used_gb": round(used / 1e9, 1),
-            "free_gb": round(max(0, total - used) / 1e9, 1)}
+            "free_gb": round(max(0, total - used) / 1e9, 1),
+            "available_gb": round(available / 1e9, 1)}
 
 
 def disk():

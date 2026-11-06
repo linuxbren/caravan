@@ -17,3 +17,9 @@ thinking = "medium"   # gpt-oss: low / medium / high
 
 [models."qwen3-30b-a3b-4bit"]
 thinking = "off"      # on / off: default for the Thinking button
+
+# Memory guard (lead Mini only). Trimmed chat turns are archived as Obsidian-style
+# Markdown under memory_dir and recalled with BM25 before the next reply.
+# memory_dir = "~/.caravan/memory"
+# memory_safety_gb = 1.75
+# memory_recall_tokens = 500
