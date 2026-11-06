@@ -452,7 +452,20 @@ def make_handler(app: App):
                 packer_layers = None
 
             def run_lead(repo_id, dest, pk, prog):
-                web_picker.local_download_mlx(repo_id, dest, pk, prog, role="lead")
+                # web_server's system Python may lack huggingface_hub — use mlx venv.
+                import subprocess, shlex
+                dest_q = str(Path(dest).expanduser())
+                Path(dest_q).mkdir(parents=True, exist_ok=True)
+                py = str(Path("~/.caravan/venvs/mlx/bin/python").expanduser())
+                fetch = str(Path(app.mgr.repo) / "agent" / "mlx_split_fetch.py")
+                cmd = [py, fetch, repo_id, dest_q, "--role", "lead"]
+                if pk:
+                    cmd += ["--packer-layers", str(int(pk))]
+                prog(10, "lead fetch")
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+                if r.returncode != 0:
+                    raise RuntimeError((r.stderr or r.stdout or "lead download failed")[-500:])
+                prog(100, "done")
 
             def run_packer(repo_id, dest, pk, prog):
                 dest_q = dest.replace("'", "")
