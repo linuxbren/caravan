@@ -259,6 +259,74 @@ class App:
 
 
 
+    def gather_model_inventories(self) -> list:
+        """Per configured node: MLX tree completeness (local + SSH)."""
+        import concurrent.futures
+        cfg_nodes = self.configured_nodes()
+
+        def one(n):
+            nid = n.get("id") or n.get("label")
+            label = n.get("label") or nid
+            role = n.get("role") or "packer"
+            models, err = {}, None
+            try:
+                if web_nodes.is_local(n):
+                    import model_inventory as inv
+                    models = (inv.inventory_payload().get("models") or {})
+                else:
+                    repo = (n.get("repo") or "~/cv3").rstrip("/")
+                    r = self._ssh_fn()(
+                        n,
+                        f"python3 {repo}/proxy/picker_disk_sizes.py --inventory",
+                        timeout=25,
+                    )
+                    if getattr(r, "returncode", 1) == 0 and (getattr(r, "stdout", "") or "").strip():
+                        blob = json.loads(r.stdout.strip().splitlines()[-1])
+                        models = blob.get("models") or {}
+                    else:
+                        err = (getattr(r, "stderr", "") or getattr(r, "stdout", "") or "ssh inventory failed")[-200:]
+            except Exception as e:  # noqa: BLE001
+                err = str(e)
+            if isinstance(models, dict) and "_error" in models:
+                err = models.pop("_error", err)
+            return {
+                "id": nid, "label": label, "role": role,
+                "models": {k: v for k, v in (models or {}).items() if k != "_error"},
+                "error": err,
+            }
+
+        out = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(cfg_nodes))) as pool:
+            futs = [pool.submit(one, n) for n in cfg_nodes]
+            for f in concurrent.futures.as_completed(futs, timeout=40):
+                try:
+                    out.append(f.result())
+                except Exception as e:  # noqa: BLE001
+                    out.append({"id": "?", "label": "?", "role": "packer", "models": {}, "error": str(e)})
+        # stable order: lead first
+        out.sort(key=lambda r: (0 if r.get("role") == "lead" else 1, r.get("id") or ""))
+        return out
+
+    def list_loadable_models(self) -> list:
+        """Settings dropdown: disk-backed usable MLX models (N-node aware)."""
+        snap = self.mgr.snapshot()
+        current = snap.get("model_id")
+        # Prefer HF id if present on snap
+        current_hf = snap.get("model_hf") or None
+        live = (self.nodes() or {}).get("nodes") or []
+        invs = self.gather_model_inventories()
+        return catalog.build_entries_from_inventories(
+            node_inventories=invs,
+            nodes=live or self.configured_nodes(),
+            current_id=current,
+            current_hf=current_hf,
+            fit_nodes=[n for n in live if isinstance(n, dict) and not n.get("offline") and not n.get("error")],
+            max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+            include_unusable=True,
+        )
+
+
+
 def make_handler(app: App):
     class H(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
@@ -329,12 +397,14 @@ def make_handler(app: App):
             if path == "/api/status":
                 return self._api_status()
             if path == "/api/models":
-                return self._json(200, {"models": catalog.list_models(),
-                                       "current": app.mgr.snapshot().get("model_id")})
-            if path == "/api/settings":
-                return self._api_settings()
-            if path == "/api/nodes":
-                return self._json(200, app.nodes())
+                models = app.list_loadable_models()
+                snap = app.mgr.snapshot()
+                return self._json(200, {
+                    "models": models,
+                    "current": snap.get("model_id"),
+                    "source": "disk",
+                    "max_split_stages": web_nodes.MAX_SPLIT_STAGES,
+                })
             if path == "/api/optimize":
                 return self._json(200, app.optimizer.snapshot())
             if path == "/api/journey":

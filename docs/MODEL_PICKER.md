@@ -226,3 +226,25 @@ On-disk section of the picker lists:
   fit/chips already generic (see ROADMAP).
 
 See also [WEB.md](WEB.md), [MLX-SPLIT.md](MLX-SPLIT.md), [ROADMAP.md](ROADMAP.md).
+
+## Settings model dropdown (load list)
+
+**Finding (Nov 5 2026):** The Settings `<select>` was fed by `web_catalog.list_models()`,
+which returned the **static** `CATALOG` (Qwen3 4-bit, Gemma 4 4-bit, GPT-OSS MXFP4)
+whether or not those folders existed. Missing models showed as disabled `○` rows —
+Brenden’s phantom **gpt-oss** and **gemma**. On disk that day: EXO1 had
+`mlx-community--Qwen3-30B-A3B-4bit` under `~/.exo/models` (loaded) and an 8-bit tree
+under `~/.caravan/mlx-models`; EXO2 had Qwen3 4/8-bit. Gemma/gpt-oss were **not**
+complete lead trees on EXO1 (only leftover fetch logs / packer-side copies), yet the
+static catalog still listed them.
+
+**Fix:** `/api/models` builds the list from N-node on-disk inventory
+(`model_inventory.py` + `picker_disk_sizes.py --inventory`). A row appears only if
+some configured Mini has a real MLX tree. It is **selectable** only when every stage
+the load needs has complete shards (config + tokenizer, no `.incomplete`, weight_map
+files present), capacity fit is not red, and the format can run (MLX today).
+Partially present models stay in the list **disabled** with a short reason
+(e.g. `missing shards on EXO1`) — clearer than hiding EXO2-only downloads.
+The currently loaded model is always kept selectable. Picker downloads call
+`refreshModels()` when the job finishes so Settings updates without a restart.
+`CATALOG` remains metadata only (pretty name / default `packer_layers`).

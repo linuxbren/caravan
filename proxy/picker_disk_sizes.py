@@ -115,7 +115,15 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--delete", choices=("hf-cache", "drafts"))
     ap.add_argument("--current", default="")
+    ap.add_argument("--inventory", action="store_true",
+                    help="MLX tree completeness for Settings dropdown")
     a = ap.parse_args(argv)
+    if a.inventory:
+        # Local import so remote Minis with older trees still run --delete/sizes.
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import model_inventory as inv
+        print(json.dumps(inv.inventory_payload()))
+        return
     if a.delete:
         print(json.dumps(delete_kind(a.delete, a.current)))
     else:

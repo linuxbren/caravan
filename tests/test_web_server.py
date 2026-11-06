@@ -162,9 +162,16 @@ class WebServerHTTPTest(unittest.TestCase):
         self.assertGreaterEqual(j["server_send"], j["server_recv"])
 
     def test_models_endpoint(self):
+        # Avoid live SSH to the lab packer from the unit-test host.
+        self.app.list_loadable_models = lambda: [
+            {"id": "qwen3-30b-a3b-4bit", "name": "Qwen3", "usable": True,
+             "available_lead": True, "hf": "mlx-community/Qwen3-30B-A3B-4bit"},
+        ]
         code, j = self._get("/api/models")
         self.assertEqual(code, 200)
-        self.assertGreaterEqual(len(j["models"]), 3)
+        self.assertEqual(j.get("source"), "disk")
+        self.assertEqual(len(j["models"]), 1)
+        self.assertEqual(j["models"][0]["id"], "qwen3-30b-a3b-4bit")
 
     def test_journey_endpoint(self):
         code, j = self._get("/api/journey")

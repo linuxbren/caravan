@@ -50,7 +50,7 @@ as the agent `/health` endpoint). There is no login.
 |---|---|
 | Start UI | `python3 proxy/web_server.py --host 0.0.0.0 --port 8190` |
 | Stop UI (keeps workers) | Ctrl-C in that terminal, or `curl -X POST http://127.0.0.1:8190/api/shutdown` |
-| Unload model from UI | Unload button, or `curl -X POST http://127.0.0.1:8190/api/models/stop` |
+| Unload model from UI | Unload button, or `curl -X POST http://127.0.0.1:8190/api/models (disk inventory; no static phantoms)/stop` |
 | Panic stop test workers | On each Mini: `pkill -f 'mlx_worker.py'` (only our test workers; leave launchd / exo / Hermes alone) |
 
 Env knobs (optional):
@@ -190,3 +190,8 @@ See [MODEL_PICKER.md](MODEL_PICKER.md) for behavior. Short map:
 - `POST /api/picker/fit` — ad-hoc fit check
 
 GGUF catalog: Hugging Face (`bartowski`, `unsloth`, `lmstudio-community`).
+
+## Settings model list
+
+Built from real MLX trees on configured Minis (`model_inventory`), not the static
+catalog. See [MODEL_PICKER.md](MODEL_PICKER.md#settings-model-dropdown-load-list).

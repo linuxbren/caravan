@@ -1,32 +1,30 @@
-"""Models the Caravan web UI can load. Only lists copies that already exist
-on the Minis — never downloads. Paths match Day 12/13 lab scripts.
+"""Models the Caravan web UI can load.
+
+Settings dropdown is built from *on-disk* MLX trees across configured Minis
+(see model_inventory.py + web_server._api_models). The static CATALOG below is
+optional metadata only (pretty name, default packer_layers) — it must never
+make a phantom appear in the list.
 """
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Optional
+
+import model_inventory as inv
 
 # Thunderbolt address of EXO2 as seen from EXO1 (Packer 1 listen target).
 DEFAULT_PACKER_PEER = os.environ.get("CARAVAN_WEB_PACKER_PEER", "169.254.103.191:5560")
 DEFAULT_PACKER_SSH = os.environ.get("CARAVAN_WEB_PACKER_SSH", "brenden@169.254.103.191")
 
-# id → display + per-role local paths + default packer layer count.
-# lead_paths / packer_paths are tried in order; first existing wins.
+# Optional metadata for known lab models (NOT a source of list entries).
 CATALOG = [
     {
         "id": "qwen3-30b-a3b-4bit",
         "name": "Qwen3 30B-A3B 4-bit",
         "hf": "mlx-community/Qwen3-30B-A3B-4bit",
         "packer_layers": 24,
-        "lead_paths": [
-            "~/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
-            "~/.caravan/mlx-models/mlx-community--Qwen3-30B-A3B-4bit",
-        ],
-        "packer_paths": [
-            "~/.caravan/mlx-models/mlx-community--Qwen3-30B-A3B-4bit",
-            "~/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
-        ],
         "notes": "Day 12 scoreboard workhorse",
     },
     {
@@ -34,14 +32,6 @@ CATALOG = [
         "name": "Gemma 4 26B-A4B 4-bit",
         "hf": "mlx-community/gemma-4-26b-a4b-it-4bit",
         "packer_layers": 15,
-        "lead_paths": [
-            "~/.exo/models/mlx-community--gemma-4-26b-a4b-it-4bit",
-            "~/.caravan/mlx-models/mlx-community--gemma-4-26b-a4b-it-4bit",
-        ],
-        "packer_paths": [
-            "~/.caravan/mlx-models/mlx-community--gemma-4-26b-a4b-it-4bit",
-            "~/.exo/models/mlx-community--gemma-4-26b-a4b-it-4bit",
-        ],
         "notes": "Day 13 shared-start fix",
     },
     {
@@ -49,17 +39,12 @@ CATALOG = [
         "name": "GPT-OSS 20B MXFP4",
         "hf": "mlx-community/gpt-oss-20b-MXFP4-Q8",
         "packer_layers": 12,
-        "lead_paths": [
-            "~/.exo/models/mlx-community--gpt-oss-20b-MXFP4-Q8",
-            "~/.caravan/mlx-models/mlx-community--gpt-oss-20b-MXFP4-Q8",
-        ],
-        "packer_paths": [
-            "~/.caravan/mlx-models/mlx-community--gpt-oss-20b-MXFP4-Q8",
-            "~/.exo/models/mlx-community--gpt-oss-20b-MXFP4-Q8",
-        ],
         "notes": "No draft pair yet",
     },
 ]
+
+_CATALOG_BY_HF = {e["hf"]: e for e in CATALOG}
+_CATALOG_BY_ID = {e["id"]: e for e in CATALOG}
 
 
 def _expand(p: str) -> Path:
@@ -74,27 +59,316 @@ def first_existing(paths) -> Optional[str]:
     return None
 
 
+def meta_for(repo_or_id: str) -> dict:
+    """Optional pretty name / packer_layers from CATALOG; empty if unknown."""
+    if repo_or_id in _CATALOG_BY_ID:
+        return dict(_CATALOG_BY_ID[repo_or_id])
+    if repo_or_id in _CATALOG_BY_HF:
+        return dict(_CATALOG_BY_HF[repo_or_id])
+    # folder form
+    hf = repo_or_id.replace("--", "/")
+    if hf in _CATALOG_BY_HF:
+        return dict(_CATALOG_BY_HF[hf])
+    return {}
+
+
+def slug_id(repo_id: str) -> str:
+    """Stable short id for UI / WorkerManager (catalog id when known)."""
+    m = meta_for(repo_id)
+    if m.get("id"):
+        return m["id"]
+    leaf = repo_id.split("/")[-1].lower()
+    leaf = re.sub(r"[^a-z0-9]+", "-", leaf).strip("-")
+    return leaf or repo_id.replace("/", "-")
+
+
 def resolve_entry(entry: dict, *, lead_home: Optional[Path] = None) -> dict:
-    """Return a copy with lead_path filled for *this* machine. packer_path is
-    the preferred remote path string (not verified here — verified via SSH).
-    """
+    """Back-compat for callers that still pass a catalog-shaped dict."""
     out = dict(entry)
-    lead = first_existing(entry.get("lead_paths") or [])
+    paths = entry.get("lead_paths") or []
+    if not paths and entry.get("hf"):
+        folder = inv.repo_to_folder(entry["hf"])
+        paths = [
+            f"~/.exo/models/{folder}",
+            f"~/.caravan/mlx-models/{folder}",
+        ]
+    lead = first_existing(paths)
     out["lead_path"] = lead
     out["available_lead"] = lead is not None
-    # Preferred packer path (what we ask EXO2 to use).
-    prefs = entry.get("packer_paths") or []
+    prefs = entry.get("packer_paths") or (
+        [f"~/.caravan/mlx-models/{inv.repo_to_folder(entry['hf'])}",
+         f"~/.exo/models/{inv.repo_to_folder(entry['hf'])}"]
+        if entry.get("hf") else []
+    )
     out["packer_path"] = str(_expand(prefs[0])) if prefs else None
     out["packer_path_candidates"] = [str(_expand(p)) for p in prefs]
     return out
 
 
+def _default_packer_layers(repo_id: str, n_layers: Optional[int]) -> int:
+    m = meta_for(repo_id)
+    if m.get("packer_layers"):
+        return int(m["packer_layers"])
+    if n_layers and n_layers > 1:
+        return max(1, n_layers // 2)
+    return 24
+
+
+def build_entries_from_inventories(
+    *,
+    node_inventories: list,
+    nodes: Optional[list] = None,
+    current_id: Optional[str] = None,
+    current_hf: Optional[str] = None,
+    fit_nodes: Optional[list] = None,
+    max_split_stages: int = 2,
+    include_unusable: bool = True,
+) -> list:
+    """Merge per-node inventories into Settings model rows.
+
+    node_inventories: [{id, label, role, models: {repo_id: status_dict}}, ...]
+    Status dict from model_inventory.inventory_payload()['models'][repo].
+
+    Policy: omit models that appear on *no* node as a real tree. Models that
+    are on disk but not loadable are included disabled with `disabled_reason`
+    (clearer than a silent omission when shards are mid-download). Currently
+    loaded model is always kept and selectable.
+    """
+    import web_picker
+    import web_nodes
+
+    nodes = nodes or []
+    fit_nodes = fit_nodes if fit_nodes is not None else [
+        n for n in nodes
+        if isinstance(n, dict) and not n.get("offline") and not n.get("error")
+    ]
+    stages = web_nodes.split_stage_nodes(
+        [n for n in nodes if isinstance(n, dict)] or fit_nodes,
+        max_stages=max_split_stages,
+    )
+    if not stages:
+        stages = fit_nodes[:max_split_stages] or nodes[:max_split_stages]
+
+    # Union of repo ids seen on any node
+    repos = set()
+    by_node = {}
+    for ni in node_inventories or []:
+        nid = ni.get("id") or ni.get("label") or "node"
+        by_node[nid] = ni
+        for rid in (ni.get("models") or {}):
+            repos.add(rid)
+
+    # Also accept current even if inventory race-missed it
+    if current_hf:
+        repos.add(current_hf)
+
+    rows = []
+    for rid in sorted(repos):
+        meta = meta_for(rid)
+        mid = meta.get("id") or slug_id(rid)
+        name = meta.get("name") or inv.pretty_name(rid)
+        # Collect per-node status
+        per = {}
+        n_layers = None
+        weights = None
+        lead_path = None
+        packer_path = None
+        for ni in node_inventories or []:
+            st = (ni.get("models") or {}).get(rid) or {}
+            if not st:
+                continue
+            label = ni.get("label") or ni.get("id")
+            role = ni.get("role") or "packer"
+            per[label] = st
+            if st.get("n_layers"):
+                n_layers = st["n_layers"]
+            if st.get("weights_gb") is not None:
+                weights = max(weights or 0, float(st["weights_gb"]))
+            if role == "lead" and st.get("path"):
+                lead_path = st["path"]
+            elif role != "lead" and st.get("path") and packer_path is None:
+                packer_path = st["path"]
+
+        # If lead_path missing but local scan has it
+        if lead_path is None:
+            local = inv.scan_local().get(rid)
+            if local and local.get("path"):
+                lead_path = local["path"]
+                weights = weights or local.get("weights_gb")
+                n_layers = n_layers or local.get("n_layers")
+
+        pk = _default_packer_layers(rid, n_layers)
+
+        # Usability across stages
+        reasons = []
+        usable = True
+        is_current = bool(
+            current_id and (mid == current_id or rid == current_id or rid == current_hf)
+            or (current_hf and rid == current_hf)
+        )
+
+        if not per and not lead_path and not is_current:
+            continue  # true phantom — never on disk
+
+        # Format: MLX only today
+        source = "hf-mlx"
+
+        # Per-stage shard presence
+        need_split = False
+        fit = None
+        if weights and fit_nodes:
+            fit = web_picker.fit_check(
+                weights_gb=float(weights),
+                nodes=fit_nodes,
+                split_ok=True,
+                max_split_stages=max_split_stages,
+            )
+            if fit.get("color") == "red":
+                usable = False
+                reasons.append(fit.get("reason") or "too big")
+            elif fit.get("nodes_needed") and fit["nodes_needed"] >= 2:
+                need_split = True
+
+        # Completeness requirements
+        if need_split or (fit and fit.get("nodes_needed", 1) and fit.get("nodes_needed") >= 2):
+            # Need lead_ok on lead node + packer_ok on first packer stage(s)
+            for stg in stages:
+                label = stg.get("label") or stg.get("id")
+                role = stg.get("role") or "packer"
+                st = per.get(label) or {}
+                # also try by matching inventory id
+                if not st:
+                    st = (by_node.get(stg.get("id") or "") or {}).get("models", {}).get(rid) or {}
+                if role == "lead":
+                    if not st.get("lead_ok") and not st.get("full_ok"):
+                        usable = False
+                        reasons.append(f"missing shards on {label}" if st else f"not on {label}")
+                else:
+                    if not st.get("packer_ok") and not st.get("full_ok"):
+                        usable = False
+                        reasons.append(f"missing shards on {label}" if st else f"not on {label}")
+        else:
+            # Single-node load: lead must be complete (full or lead_ok covering all)
+            lead_stg = next((s for s in stages if s.get("role") == "lead"), stages[0] if stages else None)
+            label = (lead_stg or {}).get("label") or "lead"
+            st = per.get(label) or {}
+            if not st and lead_path:
+                # inspect local path directly
+                local_i = inv.inspect_tree(lead_path, packer_layers=pk)
+                st = {
+                    "full_ok": local_i.get("full_ok"),
+                    "lead_ok": local_i.get("lead_ok"),
+                    "reason": local_i.get("reason"),
+                }
+            if not (st.get("full_ok") or st.get("lead_ok")):
+                usable = False
+                why = st.get("reason") or (f"missing shards on {label}" if st else f"not on {label}")
+                reasons.append(why)
+
+        if is_current:
+            usable = True  # always keep loaded model selectable
+            reasons = []
+
+        if not usable and not include_unusable and not is_current:
+            continue
+
+        # Deduplicate reasons
+        uniq = []
+        for r in reasons:
+            if r and r not in uniq:
+                uniq.append(r)
+        disabled_reason = "; ".join(uniq)
+
+        row = {
+            "id": mid,
+            "name": name,
+            "hf": rid,
+            "packer_layers": pk,
+            "notes": meta.get("notes") or "",
+            "source": source,
+            "lead_path": lead_path,
+            "packer_path": packer_path,
+            "available_lead": bool(lead_path) and usable,
+            "usable": usable,
+            "disabled": not usable,
+            "disabled_reason": disabled_reason,
+            "weights_gb": weights,
+            "fit": fit,
+            "nodes": {
+                (ni.get("label") or ni.get("id")): (ni.get("models") or {}).get(rid)
+                for ni in (node_inventories or [])
+            },
+            "need_split": need_split,
+        }
+        rows.append(row)
+
+    # Sort: usable first, then name; current pinned conceptually by UI select
+    rows.sort(key=lambda r: (0 if r.get("usable") else 1, (r.get("name") or "").lower()))
+    return rows
+
+
 def list_models() -> list:
-    return [resolve_entry(e) for e in CATALOG]
+    """Local-only fallback (no SSH). Prefer App.list_loadable_models()."""
+    inv_local = inv.inventory_payload()
+    node = {
+        "id": "local", "label": "local", "role": "lead",
+        "models": inv_local.get("models") or {},
+    }
+    return build_entries_from_inventories(
+        node_inventories=[node],
+        nodes=[{"id": "local", "label": "local", "role": "lead",
+                "ram": {"available_gb": 64, "total_gb": 64},
+                "disk": {"free_gb": 500}}],
+        include_unusable=True,
+    )
 
 
 def get_model(model_id: str) -> Optional[dict]:
-    for e in CATALOG:
-        if e["id"] == model_id or e.get("hf") == model_id:
-            return resolve_entry(e)
-    return None
+    """Resolve a model for WorkerManager.switch — disk path required."""
+    if not model_id:
+        return None
+    meta = meta_for(model_id)
+    scanned = inv.scan_local()
+    hf = meta.get("hf")
+    if not hf and "/" in model_id:
+        hf = model_id
+    if not hf:
+        for rid, info in scanned.items():
+            if slug_id(rid) == model_id or rid == model_id:
+                hf = rid
+                break
+    if not hf and model_id in scanned:
+        hf = model_id
+    if not hf:
+        # Unknown id with no on-disk match
+        if not meta:
+            return None
+        hf = meta.get("hf") or model_id
+
+    folder = inv.repo_to_folder(hf)
+    lead_paths = [
+        f"~/.exo/models/{folder}",
+        f"~/.caravan/mlx-models/{folder}",
+    ]
+    # Prefer live scanned path first
+    if hf in scanned and scanned[hf].get("path"):
+        lead_paths.insert(0, scanned[hf]["path"])
+    packer_paths = [
+        f"~/.caravan/mlx-models/{folder}",
+        f"~/.exo/models/{folder}",
+    ]
+    entry = {
+        "id": meta.get("id") or slug_id(hf),
+        "name": meta.get("name") or inv.pretty_name(hf),
+        "hf": hf,
+        "packer_layers": meta.get("packer_layers") or _default_packer_layers(
+            hf, (scanned.get(hf) or {}).get("n_layers")),
+        "lead_paths": lead_paths,
+        "packer_paths": packer_paths,
+        "notes": meta.get("notes") or "",
+    }
+    resolved = resolve_entry(entry)
+    # Catalog-only metadata with nothing on disk: still return (available_lead
+    # False) so switch() can raise FileNotFoundError with a clear id. Truly
+    # unknown names (no meta, no disk) already returned None above.
+    return resolved

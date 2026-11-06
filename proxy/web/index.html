@@ -1187,12 +1187,25 @@
     const sel = $("modelSelect");
     const cur = j.current;
     sel.innerHTML = "";
-    for (const m of j.models) {
+    const models = j.models || [];
+    if (!models.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No usable models on disk";
+      opt.disabled = true;
+      sel.appendChild(opt);
+      return;
+    }
+    for (const m of models) {
       const opt = document.createElement("option");
       opt.value = m.id;
-      opt.textContent = (m.available_lead ? "● " : "○ ") + m.name;
-      opt.disabled = !m.available_lead;
-      if (m.id === cur) opt.selected = true;
+      const usable = m.usable !== false && (m.available_lead || m.usable);
+      let label = (usable ? "● " : "○ ") + m.name;
+      if (!usable && m.disabled_reason) label += " — " + m.disabled_reason;
+      opt.textContent = label;
+      opt.disabled = !usable;
+      opt.title = m.disabled_reason || m.hf || m.name;
+      if (m.id === cur || m.hf === cur) opt.selected = true;
       sel.appendChild(opt);
     }
   }
@@ -2217,12 +2230,14 @@
           state.job = j; showJob();
           if (j.status === "done") {
             $("pickerStatus").textContent = "Downloaded. Loading…";
+            try { if (typeof refreshModels === "function") await refreshModels(); } catch (_) {}
             try {
               await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: q.repo_id }) });
             } catch (e) {
-              $("pickerStatus").textContent = "Downloaded. Add to catalog or load from Settings: " + e.message;
+              $("pickerStatus").textContent = "Downloaded. Load from Settings: " + e.message;
             }
             refreshDisk();
+            try { if (typeof refreshModels === "function") await refreshModels(); } catch (_) {}
             return;
           }
           if (j.status === "error" || j.status === "cancelled" || j.status === "cancelling") {

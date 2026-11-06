@@ -3,6 +3,8 @@
 
 ## Unreleased
 
+- **Settings model list from disk.** Dropdown uses N-node MLX inventory (complete shards / tokenizer / no `.incomplete`, capacity not red). Static catalog phantoms (gpt-oss, gemma) removed; partial trees show disabled with a reason. Picker refresh updates Settings after download.
+
 - **Model picker N-node.** Nodes from `~/.caravan/config.toml` `[web.nodes.*]` (default still EXO1/EXO2). Fit/chips/download/Stop/Delete/disk iterate online/configured nodes; 1-node never suggests split; `MAX_SPLIT_STAGES=2` caps actual load with a “N-Mini split coming later” note. See MODEL_PICKER / CONFIGURATION.
 
 - **Model picker (phases 1–2).** Models drawer (see [MODEL_PICKER.md](MODEL_PICKER.md)):
