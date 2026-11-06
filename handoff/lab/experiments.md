@@ -1,3 +1,22 @@
+## 2026-11-06 — Day 16: Topology N-node, self-tune, non-lead load
+
+**Goal.** Make the web Topology drawer work for any configured Mini count;
+verify Deep/Quick optimize; load a model placed only on a non-lead Mini;
+filter `caches` ghost folders.
+
+**Build.** Dynamic Topology cards from `/api/nodes` (route was missing → 404);
+remote single-Mini worker + SSH tunnel; `_tuned_entry` uses `:single` when not
+split; load resolves N-node inventory; disk sizes skip non-models. Commits
+`898ce42`…`28a895f`.
+
+**Verify.** Deep: kv_bits samples 46/12/3, 1 reload ~4.8 s, Cancel OK.
+EXO2-only Qwen3-0.6B: remote load + chat ttft 0.111 s; reverted to JevK5.
+Topology live: 2 nodes. Unit: `tests/test_topo_n_nodes.py` (1-node + 3-node
+offline middle).
+
+**Next.** Polish Topology model label freshness; cancel-during-reload guard;
+shared_prefix sample path on single Mini.
+
 ## 2026-11-05 — Day 15 (cont.): picker, placement, load
 
 **Goal.** Finish the Models drawer and make one-Mini downloads loadable.
