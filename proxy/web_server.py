@@ -1294,8 +1294,21 @@ def make_handler(app: App):
             mid = body.get("model_id") or body.get("id")
             if not mid:
                 return self._json(400, {"error": "model_id required"})
+            # Prefer N-node disk inventory (EXO2-only placements etc.) over the
+            # local-only catalog.get_model fallback.
+            entry = None
+            mid_l = str(mid).lower()
+            for m in app.list_loadable_models() or []:
+                if not isinstance(m, dict):
+                    continue
+                if (m.get("id") == mid or m.get("hf") == mid
+                        or str(m.get("id") or "").lower() == mid_l
+                        or str(m.get("hf") or "").lower() == mid_l):
+                    entry = m
+                    break
             try:
-                snap = app.mgr.switch(mid, wait=False, settings=body.get("settings"))
+                snap = app.mgr.switch(mid, wait=False, settings=body.get("settings"),
+                                     entry=entry)
             except (ValueError, FileNotFoundError, RuntimeError) as e:
                 return self._json(400, {"error": str(e)})
             return self._json(200, snap)

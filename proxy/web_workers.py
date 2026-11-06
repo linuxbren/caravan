@@ -112,12 +112,19 @@ class WorkerManager:
                   lead_pid=None, packer_pid=None)
         self._note("idle")
 
-    def switch(self, model_id: str, *, wait: bool = False, settings=None) -> dict:
+    def switch(self, model_id: str, *, wait: bool = False, settings=None,
+               entry: Optional[dict] = None) -> dict:
         settings = web_settings.normalize(settings)
-        entry = catalog.get_model(model_id)
+        if entry is None:
+            entry = catalog.get_model(model_id)
         if not entry:
             raise ValueError(f"unknown model: {model_id}")
-        if not entry.get("available_lead"):
+        # available_lead is local-path oriented; remote one-Mini placements set
+        # usable/lead_path from the holding Mini instead.
+        if not entry.get("available_lead") and not (
+            entry.get("usable") and entry.get("lead_path")
+            and (entry.get("placement") or {}).get("mode") in ("one", "all")
+        ):
             raise FileNotFoundError(f"model not on this Mini: {model_id}")
         if self._switch_thread and self._switch_thread.is_alive():
             raise RuntimeError("a model switch is already in progress")
