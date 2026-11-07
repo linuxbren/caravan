@@ -41,6 +41,7 @@
   (e.g. EXO2-only) are usable and route to that node.
 - On disk moved to the Topology drawer as one combined list with location notes.
 - Chat: `Read N tok/s · Write M tok/s` under each reply (prompt/prefill, fallback TTFT).
+- Chat: stats line now reads `Read 58 tok at 279 tok/s · Write 235 tok at 38.6 tok/s · first token 0.25s · total 6.34s`; unknown pieces are dropped.
 - Numbers: see WEB.md "Test record".
 
 ### Day 17 — earlier 9:28 PM CT verification

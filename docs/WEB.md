@@ -326,13 +326,13 @@ the file size before the files land; the bar then jumps to Done. It never stalls
 backwards. Updates arrive every ~2.5 s (one `nettop` sample per measure).
 
 Read/Write live check (21:41 CST, Qwen3 30B-A3B on EXO1, chat only):
-`Read 71 tok/s · Write 50.9 tok/s · 25→50 tok · first token 0.41s · total 1.39s`.
+`Read 25 tok at 71 tok/s · Write 50 tok at 50.9 tok/s · first token 0.41s · total 1.39s`.
 
 EXO2-only check (read-only, `/api/models`, 21:40): Astrea-R8-Chat-9B-OptiQ-4bit, Orvena-4B-MLX-4bit
 and the test Qwen2.5 on EXO2 all `usable: true, run_mode: single`, placement `EXO2`. Not loaded.
 
 ## Chat: Read / Write tok/s
-Under each reply: `Read N tok/s · Write M tok/s · in→out tok · first token Xs · total Ys`.
+Under each reply: `Read <in> tok at N tok/s · Write <out> tok at M tok/s · first token Xs · total Ys`. Unknown counts/rates/times are dropped from the line.
 Read = prompt tokens / prefill seconds, falling back to time-to-first-token when the worker
 doesn't report prefill (`web_timing.reply_stats`).
 

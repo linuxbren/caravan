@@ -1895,9 +1895,20 @@
         const st = meta.stats || {};
         // Read = prompt tokens / prefill time (falls back to time-to-first-token).
         const readTs = st.read_tok_s ?? ((st.prompt_tokens && st.ttft_s) ? st.prompt_tokens / st.ttft_s : null);
-        tdiv.textContent =
-          `Read ${readTs != null ? fmt(readTs, 0) : "—"} tok/s · Write ${fmt(st.write_tok_s,1)} tok/s · ` +
-          `${st.prompt_tokens ?? "?"}→${st.completion_tokens ?? "?"} tok · first token ${fmt(st.ttft_s)}s · total ${fmt(st.total_s)}s`;
+        const _ok = (v) => v != null && Number.isFinite(Number(v));
+        const _seg = (label, n, r, d) => {
+          if (!_ok(n) && !_ok(r)) return null;
+          let t = label;
+          if (_ok(n)) t += ` ${n} tok`;
+          if (_ok(r)) t += `${_ok(n) ? " at" : ""} ${fmt(r, d)} tok/s`;
+          return t;
+        };
+        tdiv.textContent = [
+          _seg("Read", st.prompt_tokens, readTs, 0),
+          _seg("Write", st.completion_tokens, st.write_tok_s, 1),
+          _ok(st.ttft_s) ? `first token ${fmt(st.ttft_s)}s` : null,
+          _ok(st.total_s) ? `total ${fmt(st.total_s)}s` : null,
+        ].filter(Boolean).join(" · ");
         asst.appendChild(tdiv);
         const mg = meta.memory_guard || (st && st.memory_guard) || null;
         if (mg && ((mg.trimmed_turns|0) > 0 || (mg.recalled_snippets|0) > 0)) {
