@@ -13,3 +13,13 @@
 - Tests: 6 new helper tests; full suite 371 passed (32.576s). Initial concurrent-work run: 365 tests / 1 GGUF fixture error, retained in WEB.md.
 
 - Settings: validate HF tokens server-side, hide accepted-token input behind “Use a different token”, retain Cancel and saved-file removal, distinguish rejected credentials from unavailable checks.
+
+### Optimize now scheduler (PR #9 replacement, 2026-11-07)
+
+- Replace the hidden Deep/Quick coverage runner with paired, one-option A/B
+  trials; keep everyday Auto learning separate.
+- Add worker pause/hold/commit/release controls, web Pause/Resume, hardware-scoped
+  losses and raw results, and cancel/error winner restoration.
+- Preserve placement, config pins, PID ownership and web worker-keeping/adoption.
+- See [OPTIMIZE-NOW.md](docs/OPTIMIZE-NOW.md) for the PR comparison and all test
+  attempts, including failed runs and deployment status.

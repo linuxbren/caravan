@@ -115,3 +115,11 @@ Revision (Nov 7 ~12:30 AM CT): Settings scene uses a full-width crop (was letter
   hadn't finished loading: 95 vs 135 elements), **24/24** on the rerun.
 - Screenshots: `day17-final-helper-ask-{amber,green,meadow,nebula}.png`,
   `day17-final-chip-{amber,green,meadow,nebula}.png`, `day17-final-chip-single-on.png`.
+
+## Follow-up: replace PR #9 without merging its stale branch
+
+Reviewed its complete diff and rebuilt the missing scheduler on `fe230ca` by
+direct edits. The existing Optimize now label now drives real paired trials,
+worker pause/hold/commit/release and per-hardware loss records. Retained newer
+worker lifetime/reload/placement safeguards. Full accounting and all test
+attempts, including failed ones: [OPTIMIZE-NOW.md](OPTIMIZE-NOW.md).

@@ -306,6 +306,16 @@ def models_on_disk():
     return out
 
 
+def hardware_chip():
+    import platform
+    if sys.platform == "darwin":
+        try:
+            return subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"], text=True, timeout=3).strip()
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return platform.processor() or platform.machine()
+
+
 def gather():
     mm, mm_age = macmon_live()
     # Brief wait on first open so the daemon’s first sample can land.
@@ -338,6 +348,7 @@ def gather():
         "gpu_pct": gpu,
         "gpu_power_w": gpu_power,
         "cpus": os.cpu_count(),
+        "chip": hardware_chip(),
         "load_1m": round(os.getloadavg()[0], 2),
         "temp_c": temp,
         "temp_source": "macmon" if temp is not None else None,

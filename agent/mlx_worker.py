@@ -657,6 +657,8 @@ class Engine:
         self._learn_guess_override = None  # None = follow draft_model; True/False force
         self._learn_n_layers = None
         self._learn_lock = threading.Lock()
+        self._sweep_pause = bool(getattr(args, "sweep_paused", False))
+        self._sweep_restore = None
         self._learn_trial = None
         self._learn_conc_window = []
         self.model_dir = Path(args.model).expanduser().resolve()
@@ -950,7 +952,7 @@ class Engine:
         # for this process so resolve_startup only handles live settings here.
         # Only pin packer_layers when the user passed the flag — Day 9 auto
         # also writes args.split_front_layers, and that must stay learnable.
-        if getattr(self, "_learn_packer_was_explicit", False):
+        if getattr(self, "_learn_packer_was_explicit", False) and not getattr(self.args, "sweep_paused", False):
             explicit["packer_layers"] = int(self.args.split_front_layers)
         if bool(getattr(self.args, "no_split_draft", False)):
             explicit["guess_ahead"] = False
@@ -1048,6 +1050,9 @@ class Engine:
             "keepalive": bool(getattr(a, "split_keepalive", False)) if self.client is not None else None,
             "pinned": sorted(k for k in (self._learn_explicit or {})
                              if k in ("guess_ahead", "shared_prefix", "pipeline_chats")),
+            "sweep_paused": bool(getattr(self, "_sweep_pause", False)),
+            "packer_layers": getattr(a, "split_front_layers", None),
+            "n_layers": getattr(self, "_learn_n_layers", None),
             "reload_auto": list(self._learn_reload_auto or []),
             "reload_trial": dict((self._learn_entry or {}).get("reload_trial") or {}) or None,
         }
@@ -1068,6 +1073,8 @@ class Engine:
         with aggregate tok/s; near-back-to-back serial completions (N=1) do too.
         Explore trials are temporary: after trial_replies we restore the winner.
         """
+        if getattr(self, "_sweep_pause", False):
+            return
         if not self._learn_enabled or self._learn_entry is None or not info:
             return
         try:
@@ -1082,6 +1089,8 @@ class Engine:
             "shared_prefix": self._shared_prefix_on() if self.client is not None else None,
         }
         with self._learn_lock:
+            if getattr(self, "_sweep_pause", False):
+                return
             out = TS.observe_reply(
                 self._learn_entry,
                 settings_used=settings_used,
@@ -3221,6 +3230,14 @@ def make_handler(engine: "Engine"):
             body = self._body()
             if not isinstance(body, dict):
                 return self._json(400, {"error": "bad json"})
+            if self.path.split("?")[0] == "/caravan/sweep":
+                from sweep_control import apply
+                try:
+                    return self._json(200, engine.call(lambda: apply(engine, body)))
+                except ValueError as e:
+                    return self._json(400, {"error": str(e)})
+                except Exception as e:
+                    return self._json(500, {"error": f"{type(e).__name__}: {e}"})
             if self.path.startswith("/caravan/cache/"):
                 op = self.path.split("?")[0].rsplit("/", 1)[-1]
                 if op == "drop":
@@ -3435,6 +3452,7 @@ def build_parser():
     ap.add_argument("--memory-safety-gb", type=float,
                     default=float(__import__("os").environ.get("CARAVAN_MEMORY_SAFETY_GB", "1.75")),
                     help="RAM to keep free when sizing chat KV (memory guard)")
+    ap.add_argument("--sweep-paused", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--memory-dir", default=__import__("os").environ.get("CARAVAN_MEMORY_DIR") or "~/.caravan/memory",
                     help="Obsidian-style Markdown archive root (env CARAVAN_MEMORY_DIR)")
     ap.add_argument("--memory-recall-tokens", type=int, default=500,

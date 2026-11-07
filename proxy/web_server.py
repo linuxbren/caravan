@@ -729,6 +729,8 @@ def make_handler(app: App):
             if path == "/api/models/load":
                 return self._api_load(body=body)
             if path == "/api/models/stop":
+                if app.optimizer.snapshot().get("running"):
+                    return self._json(409, {"error": "Cancel Optimize now and wait before unloading"})
                 try:
                     app.mgr.stop(reason="ui")
                 except Exception as e:  # noqa: BLE001 — answer, don't drop the socket
@@ -744,9 +746,11 @@ def make_handler(app: App):
                 if app.mgr._switch_thread and app.mgr._switch_thread.is_alive():
                     return self._json(409, {"error": "a model load is in progress"})
                 try:
-                    return self._json(200, app.optimizer.start((body or {}).get("mode") or "deep"))
+                    return self._json(200, app.optimizer.start())
                 except RuntimeError as e:
                     return self._json(409, {"error": str(e)})
+            if path == "/api/optimize/pause":
+                return self._json(200, app.optimizer.pause((body or {}).get("paused", True)))
             if path == "/api/optimize/cancel":
                 return self._json(200, app.optimizer.cancel())
             if path in ("/api/chat", "/v1/chat/completions"):
@@ -1498,6 +1502,8 @@ def make_handler(app: App):
 
 
         def _api_load(self, body=None):
+            if app.optimizer.snapshot().get("running"):
+                return self._json(409, {"error": "Cancel Optimize now and wait before loading"})
             body = body or {}
             mid = body.get("model_id") or body.get("id")
             if not mid:

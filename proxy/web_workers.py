@@ -136,7 +136,7 @@ class WorkerManager:
         self._note("idle")
 
     def switch(self, model_id: str, *, wait: bool = False, settings=None,
-               entry: Optional[dict] = None) -> dict:
+               entry: Optional[dict] = None, sweep=None) -> dict:
         settings = web_settings.normalize(settings)
         if entry is None:
             entry = catalog.get_model(model_id)
@@ -160,6 +160,7 @@ class WorkerManager:
 
         def run():
             try:
+                self._sweep_load = sweep
                 self._do_switch(entry, settings)
             except GgufLoadError as e:
                 # Cleaned up already; leave a sane idle state with a plain message.
@@ -169,6 +170,8 @@ class WorkerManager:
             except Exception as e:  # noqa: BLE001 — surface to UI
                 self._set(status="error", error=f"{type(e).__name__}: {e}")
                 self._note(f"error: {e}")
+            finally:
+                self._sweep_load = None
 
         self._switch_thread = threading.Thread(target=run, daemon=True)
         self._switch_thread.start()
@@ -230,6 +233,12 @@ class WorkerManager:
         if settings.get("guess_ahead") == "mtp" and (run_mode != "single" or not entry.get("native_mtp_available")):
             raise ValueError("native MTP needs a single-Mini matching target with an installed head")
         lead_x, packer_x = web_settings.to_args(settings)
+        sweep = getattr(self, "_sweep_load", None)
+        if sweep:
+            lead_x += ["--sweep-paused"]
+            if sweep.get("packer_layers") is not None:
+                lead_x += ["--split-front-layers", str(sweep["packer_layers"])]
+                packer_x += ["--split-front-layers", str(sweep["packer_layers"])]
         self._lead_path = entry.get("lead_path")
         for line in self.plan_reload_args(entry, settings, lead_x, packer_x):
             self._note("self-tuning: " + line)
@@ -267,6 +276,7 @@ class WorkerManager:
         self._set(lead_pid=lead_pid)
         self._wait_lead_ready(timeout=600)
 
+        self._loaded_entry = dict(entry)
         self._set(status="ready", split=(run_mode == "split"))
         self._note("ready")
 
@@ -661,7 +671,12 @@ class WorkerManager:
             if not TS.kv_quant_supported(entry["lead_path"]):
                 for b in (8, 4):   # attention sinks (gpt-oss): quantized KV crashes the load
                     TS.block_value(e, "kv_bits", b, "model can't use quantized KV (attention sinks)")
-            plan = TS.plan_reload(e, auto)
+            sweep = getattr(self, "_sweep_load", None)
+            plan = TS.plan_reload(e, auto, apply_pending=not bool(sweep))
+            if sweep:
+                for name, value in (sweep.get("force") or {}).items():
+                    if name in auto:
+                        plan["values"][name] = value
             self._reload_trial = plan.get("trial")
             TS.save_store(st, self.tuned_path)
         except (OSError, ValueError) as ex:
@@ -720,8 +735,13 @@ class WorkerManager:
                     or ("--split-peer" in cmd and "--split-role none" not in cmd
                         and "--split-role=none" not in cmd)
                 )
+                self._loaded_entry = dict(m, run_mode="split" if is_split else "single")
                 self._set(status="ready", model_id=m["id"], model_name=m["name"],
                           lead_pid=pid, settings=cur, page_settings=cur, split=is_split)
+                active = self.lead_active_settings() or {}
+                if active.get("sweep_paused"):
+                    self.sweep({"release": True})
+                    self._note("released abandoned Optimize now live holds after web restart")
                 self._note(f"adopted running lead (pid {pid}) after web restart")
                 return True
         return False
@@ -1086,6 +1106,34 @@ class WorkerManager:
                 return r.status == 200
         except Exception:
             return False
+
+    def sweep(self, body):
+        """Control the selected worker through its existing local tunnel."""
+        from urllib.request import Request, urlopen
+        req = Request(f"http://127.0.0.1:{self.lead_port}/caravan/sweep",
+                      data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+        with urlopen(req, timeout=600) as response:
+            return json.loads(response.read())
+
+    def optimize_hardware(self):
+        """Probe all participating nodes; no fixed two-Mini fingerprint."""
+        import web_nodes
+        cfg = web_nodes.nodes_from_config()
+        snap = self.snapshot()
+        entry = getattr(self, "_loaded_entry", None) or {}
+        place = entry.get("placement") or {}
+        chosen = set(place.get("node_ids") or place.get("nodes") or [])
+        if not snap.get("split"):
+            worker = self._worker_node
+            cfg = [worker] if worker else [n for n in cfg if web_nodes.is_local(n)]
+        elif chosen:
+            cfg = [n for n in cfg if n.get("id") in chosen]
+        else:
+            # MLX currently supports lead + one packer; do not silently include
+            # unrelated configured Minis. N-stage will supply placement ids.
+            cfg = [n for n in cfg if web_nodes.is_local(n) or
+                   (n.get("ssh") or n.get("host")) == self.packer_ssh]
+        return [web_nodes.gather_node_stats(n, ssh_fn=web_nodes.make_ssh_fn(self)) for n in cfg]
 
     def lead_active_settings(self):
         """Day 15: settings the running lead reports (learned winners applied)."""

@@ -1,29 +1,20 @@
-"""Day 15: Quick / Deep optimize — Caravan feeds itself prompts until tuned.
-
-Quick: live options only (guess-ahead, shared start, two chats). No reloads
-except one at the start if those options are pinned.
-Deep: Quick plus reload options (memory compression, fused kernels, GPU
-keep-warm). Between trials it reloads the model itself, but only when no chat
-is in flight. Cancel any time; a reload already started finishes first.
-
-Everything is scored by the worker's normal self-tuning (tuned_settings.py);
-this runner only supplies prompts, reloads when a trial is queued, and reports
-progress. Winners stay saved as the learned settings for that model.
-"""
+"""Walk-away tuning: paired arms, one knob at a time; ordinary Auto is separate."""
 from __future__ import annotations
 
+import copy
 import json
 import threading
 import time
 import uuid
-from typing import Callable, Optional
+from concurrent.futures import ThreadPoolExecutor
 from urllib.request import Request, urlopen
 
+import optimize_schedule as AB
 import tuned_settings as TS
 import web_settings
 
-# Fixed prompt set: short, long, predictable (guess-ahead friendly), and a long
-# shared opening (> 512 tokens) so shared start has something to reuse.
+AB_ARM = 3
+
 _PREAMBLE = " ".join(
     f"Section {i}: Caravan runs one language model across two Mac minis. The lead "
     f"holds the last layers and the packer holds the first layers. Each reply "
@@ -50,233 +41,272 @@ SHARED_Q = [
     "In one sentence: what does self-tuning keep?",
     "In one sentence: what does each reply cross?",
 ]
-MAX_PROMPTS = {"quick": 60, "deep": 180}
-STALL_AFTER = 30  # prompts with no new coverage => stop and say so
 
-
-def prompt_plan(i: int) -> list:
-    """Messages for prompt i (deterministic cycle)."""
-    kind = i % 4
-    if kind == 0:
+def prompt_plan(i):
+    if i % 3 == 0:
         return [{"role": "system", "content": _PREAMBLE},
-                {"role": "user", "content": SHARED_Q[(i // 4) % len(SHARED_Q)]}]
-    if kind == 1:
-        return [{"role": "user", "content": PREDICTABLE[(i // 4) % len(PREDICTABLE)]}]
-    if kind == 2:
-        return [{"role": "user", "content": SHORT[(i // 4) % len(SHORT)]}]
-    return [{"role": "user", "content": LONG[(i // 4) % len(LONG)]}]
+                {"role": "user", "content": SHARED_Q[0]}]
+    return [{"role": "user", "content": (PREDICTABLE if i % 3 == 1 else LONG)[0]}]
 
 
-def unavailable(active: Optional[dict]) -> set:
-    """Options this model/setup can't vary (skip in coverage)."""
-    a = active or {}
-    out = set()
-    if not a.get("guess_ahead_loaded"):
-        out.add("guess_ahead")
-    if a.get("keepalive") is None:  # single Mini: no keep-warm, no two-chat pipe
-        # Shared-prefix explore on a non-split worker rarely fills stats under
-        # the optimize prompt plan (winner may already be set). Skip so Quick
-        # can finish; Deep still covers reload options (kv_bits / fuse / …).
-        out |= {"keepalive", "pipeline_chats", "shared_prefix"}
-    return out
-
-
-def eta_s(cov: dict, *, mode: str, reply_s: Optional[float], reload_s: Optional[float]) -> Optional[float]:
-    """Rough time left from measured reply and reload times. None until measured."""
-    if reply_s is None:
-        return None
-    per = {}
-    for it in cov.get("items") or []:
-        per.setdefault(it["name"], 0)
-        per[it["name"]] += max(0, it["need"] - it["have"])
-    replies_left = max(per.values() or [0])
-    t = replies_left * reply_s
-    if mode == "deep":
-        reloads_left = sum(1 for n in TS.RELOAD_TRIO for it in cov["items"]
-                           if it["name"] == n and it["have"] < it["need"])
-        if reloads_left:
-            t += (reloads_left + 1) * (reload_s if reload_s is not None else 0)
-            if reload_s is None:
-                return None
-    return t
+class Canceled(Exception):
+    pass
 
 
 class Optimizer:
-    def __init__(self, mgr, *, inflight: Callable[[], int],
-                 send: Optional[Callable] = None, sleep=time.sleep):
-        self.mgr = mgr
-        self.inflight = inflight      # user chats in flight right now
+    def __init__(self, mgr, *, inflight=lambda: 0, send=None, sleep=time.sleep):
+        self.mgr, self.inflight, self._sleep = mgr, inflight, sleep
         self._send = send or self._http_send
-        self._sleep = sleep
-        self._cancel = threading.Event()
-        self._thread: Optional[threading.Thread] = None
-        self._lock = threading.Lock()
-        self.state = {"running": False, "mode": None, "phase": "idle", "prompts": 0,
-                      "reloads": 0, "started": None, "eta_s": None, "reply_s": None,
-                      "reload_s": None, "coverage": None, "log": [], "summary": None,
-                      "error": None}
+        self._cancel, self._pause = threading.Event(), threading.Event()
+        self._lock = threading.RLock()
+        self._thread = None
+        self.state = dict(running=False, mode=None, phase="idle", prompts=0, reloads=0,
+                          started=None, eta_s=None, reply_s=None, reload_s=None,
+                          schedule=[], results=[], log=[], summary=None, error=None, paused=False)
 
-    # ---- public ----
-    def snapshot(self) -> dict:
+    def snapshot(self):
         with self._lock:
-            s = dict(self.state)
-            s["log"] = list(self.state["log"][-30:])
-        return s
+            out = copy.deepcopy(self.state)
+            todo = [i for i in out["schedule"] if i["state"] in ("pending", "running")]
+            reloads = sum(2 for i in todo if i["reload"])
+            if out["running"] and out["reply_s"] is not None and (not reloads or out["reload_s"] is not None):
+                out["eta_s"] = round(len(todo) * AB_ARM * 2 * out["reply_s"] + reloads * (out["reload_s"] or 0))
+            return out
 
-    def start(self, mode: str = "deep") -> dict:
-        mode = "quick" if mode == "quick" else "deep"
-        if self._thread and self._thread.is_alive():
-            raise RuntimeError("optimize already running")
-        snap = self.mgr.snapshot()
-        if snap.get("status") != "ready" or not snap.get("model_id"):
-            raise RuntimeError("load a model first")
-        self._cancel.clear()
-        self._set(running=True, mode=mode, phase="starting", prompts=0, reloads=0,
-                  started=time.time(), eta_s=None, reply_s=None, reload_s=None,
-                  summary=None, error=None, log=[])
-        self._thread = threading.Thread(target=self._run_safe, args=(mode,), daemon=True)
-        self._thread.start()
-        return self.snapshot()
+    def _set(self, **values):
+        with self._lock:
+            self.state.update(values)
 
-    def cancel(self) -> dict:
+    def _log(self, msg):
+        with self._lock:
+            self.state["log"] = (self.state["log"] + [{"t": time.time(), "msg": msg}])[-60:]
+
+    def start(self, mode="now"):
+        # Accept legacy clients, but never resurrect Deep/Quick coverage.
+        with self._lock:
+            if self.state["running"]:
+                raise RuntimeError("optimize already running")
+            snap = self.mgr.snapshot()
+            if snap.get("status") != "ready" or not snap.get("model_id"):
+                raise RuntimeError("load a model first")
+            active = self.mgr.lead_active_settings()
+            if not active or not active.get("self_tune", True):
+                raise RuntimeError("Optimize now needs an MLX model with Auto learning on")
+            settings = web_settings.normalize(snap.get("settings") or {})
+            if (settings.get("guess_ahead") == "mtp" or
+                    settings.get("prompt_lookup") == "adaptive"):
+                raise RuntimeError("turn off native MTP / adaptive lookup before Optimize now")
+            self.model_id = snap["model_id"]
+            self.settings = settings
+            self.entry = copy.deepcopy(getattr(self.mgr, "_loaded_entry", None))
+            self._cancel.clear()
+            self._pause.clear()
+            self._set(running=True, mode="now", phase="starting", prompts=0, reloads=0,
+                      started=time.time(), eta_s=None, reply_s=None, reload_s=None,
+                      schedule=[], results=[], log=[], summary=None, error=None, paused=False)
+            self._thread = threading.Thread(target=self._run_safe, daemon=True)
+            self._thread.start()
+            return self.snapshot()
+
+    def cancel(self):
         self._cancel.set()
-        self._log("cancel requested")
+        self._pause.clear()
+        self._log("cancel requested; any current reply/reload finishes, then restore winners")
         return self.snapshot()
 
-    # ---- internals ----
-    def _set(self, **kw):
-        with self._lock:
-            self.state.update(kw)
+    def pause(self, paused=True):
+        if paused:
+            self._pause.set()
+        else:
+            self._pause.clear()
+        self._set(paused=bool(paused))
+        return self.snapshot()
 
-    def _log(self, msg: str):
-        with self._lock:
-            self.state["log"].append({"t": round(time.time(), 1), "msg": msg})
-            self.state["log"] = self.state["log"][-60:]
-
-    def _settings_for(self, mode: str) -> dict:
-        cur = web_settings.normalize(self.mgr.snapshot().get("settings") or {})
-        want = dict(cur)
-        want["self_tune"] = "auto"
-        for k in ("guess_ahead", "shared_start", "pipeline_chats"):
-            want[k] = "auto"
-        if mode == "deep":
-            for k in ("fuse_kernels", "kv_bits", "keepalive"):
-                want[k] = "auto"
-        return want
-
-    def _reload(self, settings: dict, why: str):
-        model_id = self.mgr.snapshot().get("model_id")
-        while self.inflight() > 0 and not self._cancel.is_set():
-            self._set(phase="waiting for your chat to finish before reloading")
-            self._sleep(2)
-        self._set(phase=f"reloading to {why}")
-        self._log(f"reloading to {why}")
-        t0 = time.time()
-        self.mgr.switch(model_id, wait=True, settings=settings)
-        dt = time.time() - t0
+    def _boundary(self):
+        while self._pause.is_set() or self.inflight() > 0:
+            if self._cancel.is_set():
+                raise Canceled()
+            self._set(phase="paused" if self._pause.is_set() else "waiting for your chat")
+            self._sleep(0.1)
+        if self._cancel.is_set():
+            raise Canceled()
         snap = self.mgr.snapshot()
-        if snap.get("status") != "ready":
-            raise RuntimeError(f"reload failed: {snap.get('error')}")
-        st = self.state
-        n = st["reloads"]
-        avg = dt if st["reload_s"] is None else (st["reload_s"] * n + dt) / (n + 1)
-        self._set(reloads=n + 1, reload_s=round(avg, 1))
-        self._log(f"reloaded in {dt:.0f}s")
+        if snap.get("model_id") != self.model_id or snap.get("status") != "ready":
+            raise RuntimeError("model changed during Optimize now")
 
-    def _entry_and_active(self):
-        active = self.mgr.lead_active_settings()
-        try:
-            _, e = self.mgr._tuned_entry(self.mgr._lead_path)
-        except (OSError, ValueError, TypeError):
-            e = None
-        return e, active
+    def _hold(self, values):
+        self.mgr.sweep({"pause": True, "hold": {n: v for n, v in values.items()
+                                             if n in AB.LIVE and n not in self.pinned}})
 
-    def _http_send(self, messages: list, max_tokens: int = 160) -> float:
-        body = json.dumps({"messages": messages, "max_tokens": max_tokens,
-                           "stream": False}).encode()
+    def _reload(self, values, *, restoring=False):
+        if not restoring:
+            self._boundary()
+        else:
+            # Restoration is mandatory after cancellation/failure. It must not
+            # kill a user chat that arrived during the preceding reload.
+            while self.inflight() > 0:
+                self._sleep(0.1)
+        self._set(phase="restoring winners" if restoring else "reloading one option")
+        force = {n: values[n] for n in TS.RELOAD_TRIO if n in values}
+        sweep = {"force": force, "packer_layers": values.get("packer_layers")}
+        t0 = time.monotonic()
+        self.mgr.switch(self.model_id, wait=True, settings=self.settings,
+                        entry=self.entry, sweep=sweep)
+        elapsed = time.monotonic() - t0
+        n = self.state["reloads"]
+        self._set(reloads=n + 1, reload_s=round(elapsed, 3))
+        if self.mgr.snapshot().get("status") != "ready":
+            raise RuntimeError("reload failed: " + str(self.mgr.snapshot().get("error")))
+        # Mark only after a successful load, so a failed challenger forces a
+        # recovery reload rather than falsely believing baseline is still up.
+        self.current = dict(values)
+        self._hold(values)
+
+    def _apply(self, name, value):
+        self._boundary()
+        values = dict(self.best, **{name: value})
+        if name in AB.LIVE:
+            self._hold(values)
+            self.current = values
+        elif any(self.current.get(n) != v for n, v in values.items() if n not in AB.LIVE):
+            self.dirty_reload = True
+            self._reload(values)
+
+    def _http_send(self, messages):
+        data = json.dumps(dict(messages=messages, max_tokens=96, temperature=0,
+                               stream=False, thinking=False)).encode()
         req = Request(f"http://127.0.0.1:{self.mgr.lead_port}/v1/chat/completions",
-                      data=body, method="POST",
-                      headers={"Content-Type": "application/json",
-                               "X-Caravan-Session": "opt-" + uuid.uuid4().hex[:12]})
-        t0 = time.time()
-        with urlopen(req, timeout=600) as r:
-            r.read()
-        return time.time() - t0
+                      data=data, headers={"Content-Type": "application/json",
+                      "X-Caravan-Session": "opt-" + uuid.uuid4().hex[:12]})
+        t0 = time.monotonic()
+        with urlopen(req, timeout=600) as response:
+            usage = json.loads(response.read()).get("usage") or {}
+        elapsed = time.monotonic() - t0
+        detail = usage.get("caravan") or {}
+        return dict(elapsed=elapsed, ttft=detail.get("ttft_s"),
+                    completion_tokens=usage.get("completion_tokens"),
+                    total_s=detail.get("total_s", elapsed), prefill_s=detail.get("prefill_s", 0))
 
-    def _run_safe(self, mode):
-        try:
-            self._run(mode)
-        except Exception as e:  # noqa: BLE001 — surface to UI
-            self._set(error=f"{type(e).__name__}: {e}", phase="stopped (error)")
-            self._log(f"error: {e}")
-        finally:
-            self._set(running=False)
+    def _one(self, messages):
+        result = self._send(messages)
+        if not isinstance(result, dict):
+            result = {"elapsed": float(result)}
+        n = self.state["prompts"]
+        elapsed = float(result["elapsed"])
+        avg = (float(self.state["reply_s"] or 0) * n + elapsed) / (n + 1)
+        self._set(prompts=n + 1, reply_s=round(avg, 3))
+        return result
 
-    def _run(self, mode: str):
-        settings = self._settings_for(mode)
-        cur = web_settings.normalize(self.mgr.snapshot().get("settings") or {})
-        if settings != cur:
-            pinned = [k for k in settings if settings[k] != cur[k]]
-            self._reload(settings, "set " + ", ".join(pinned) + " to Auto")
-        best_missing, since_gain, i = None, 0, 0
-        while not self._cancel.is_set():
-            e, active = self._entry_and_active()
-            cov = TS.coverage(e, mode=mode, pinned=unavailable(active))
-            self._set(coverage=cov, eta_s=eta_s(cov, mode=mode, reply_s=self.state["reply_s"],
-                                                 reload_s=self.state["reload_s"]))
-            if cov["done"]:
-                break
-            if best_missing is None or cov["missing"] < best_missing:
-                best_missing, since_gain = cov["missing"], 0
-            elif since_gain >= STALL_AFTER:
-                self._log(f"no new coverage in {STALL_AFTER} prompts; stopping")
-                break
-            if i >= MAX_PROMPTS[mode]:
-                self._log(f"hit the {MAX_PROMPTS[mode]}-prompt cap; stopping")
-                break
-            if mode == "deep":
-                rs = TS.reload_status(e, active, (active or {}).get("reload_auto") or [])
-                tries = [c for c in rs["reload_wanted"] if c["why"] == "try"]
-                if tries or (rs["reload_wanted"] and not rs["trial"]):
-                    c = (tries or rs["reload_wanted"])[0]
-                    verb = "try" if c["why"] == "try" else "go back to"
-                    self._reload(settings, f"{verb} {c['label']} {c['to']}")
-                    continue
-            while self.inflight() > 0 and not self._cancel.is_set():
-                self._set(phase="paused while your chat runs")
-                self._sleep(1)
-            msgs = prompt_plan(i)
-            self._set(phase=f"prompt {i + 1}")
-            if i % 5 == 4:
-                # Two chats at once so "two chats" gets concurrent samples.
-                res = []
-                th = [threading.Thread(target=lambda m=m: res.append(self._send(m)))
-                      for m in (msgs, prompt_plan(i + 2))]
-                for t in th:
-                    t.start()
-                for t in th:
-                    t.join()
-                dt = max(res) if res else 0.0
+    def _measure(self, name, arm):
+        scores = []
+        if name == "shared_prefix":
+            self._boundary()
+            self._one(prompt_plan(0))  # seed shared prefix; cold store is not a hit
+        for i in range(AB_ARM):
+            self._boundary()
+            self._set(phase=f"A/B {name}: {arm} {i + 1}/{AB_ARM}")
+            if name == "pipeline_chats":
+                t0 = time.monotonic()
+                # Only this knob needs simultaneous requests, not simultaneous
+                # option trials. Same pair is sent to both arm widths.
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    futures = [pool.submit(self._send, prompt_plan(j + 1)) for j in range(2)]
+                    results = [f.result() for f in futures]
+                elapsed = time.monotonic() - t0
+                for result in results:
+                    # Account outside threads (avoid lost counter updates).
+                    n = self.state["prompts"]
+                    self._set(prompts=n + 1)
+                ct = sum(r.get("completion_tokens") or 0 for r in results)
+                if ct <= 0:
+                    raise ValueError("pipeline reply missing token counts")
+                score = ct / max(elapsed, 0.001)
             else:
-                dt = self._send(msgs)
-            n = self.state["prompts"]
-            avg = dt if self.state["reply_s"] is None else (self.state["reply_s"] * n + dt) / (n + 1)
-            self._set(prompts=n + 1, reply_s=round(avg, 2))
-            i += 1
-            since_gain += 1
-        # Finish on the winners (one last reload if the model is on a trial value).
-        e, active = self._entry_and_active()
-        if mode == "deep" and not self._cancel.is_set():
-            rs = TS.reload_status(e, active, (active or {}).get("reload_auto") or [])
-            back = [c for c in rs["reload_wanted"] if c["why"] == "back to winner"]
-            if back:
-                self._reload(settings, "finish on the winners")
-                e, active = self._entry_and_active()
-        cov = TS.coverage(e, mode=mode, pinned=unavailable(active))
-        self._set(coverage=cov, eta_s=0 if cov["done"] else None,
-                  phase="canceled" if self._cancel.is_set() else ("done" if cov["done"] else "stopped"),
-                  summary={"winner": dict((e or {}).get("winner") or {}),
-                           "prompts": self.state["prompts"], "reloads": self.state["reloads"],
-                           "minutes": round((time.time() - self.state["started"]) / 60, 1),
-                           "complete": cov["done"]})
-        self._log("done" if cov["done"] else "stopped before full coverage")
+                result = self._one(prompt_plan(0 if name == "shared_prefix" else i))
+                if name == "shared_prefix":
+                    if not result.get("ttft") or result["ttft"] <= 0:
+                        raise ValueError("reply missing TTFT")
+                    score = 1.0 / result["ttft"]
+                else:
+                    if not result.get("completion_tokens"):
+                        raise ValueError("reply missing token counts")
+                    score = TS.normalized_tps(completion_tokens=result["completion_tokens"],
+                        total_s=result.get("total_s", result["elapsed"]),
+                        prefill_s=result.get("prefill_s") or 0)
+            scores.append(score)
+        return scores
+
+    def _run_safe(self):
+        self.best, self.current, self.pinned = {}, {}, set()
+        self.dirty_reload, self.owns_pause = False, False
+        complete = False
+        failure = None
+        try:
+            self._boundary()
+            active = self.mgr.lead_active_settings() or {}
+            active["kv_quant_supported"] = TS.kv_quant_supported(self.mgr._lead_path)
+            self.fp = AB.fingerprint(self.mgr.optimize_hardware(), split=self.mgr.snapshot().get("split"))
+            self.pinned = set(active.get("pinned") or [])
+            self.mgr.sweep({"pause": True})
+            self.owns_pause = True
+            _, entry = self.mgr._tuned_entry(self.mgr._lead_path, create=True)
+            self.best = AB.baseline(entry, active, self.settings)
+            self.current = AB.baseline({}, active)
+            items = AB.schedule(entry, self.settings, active, self.fp, n_layers=active.get("n_layers"))
+            self._set(schedule=items)
+            self._hold(self.best)
+            if any(self.current.get(n) != v for n, v in self.best.items() if n not in AB.LIVE):
+                self.dirty_reload = True
+                self._reload(self.best)
+                self.dirty_reload = False
+            for item in items:
+                if item["skip"]:
+                    self._log("skip " + item["name"] + ": " + item["skip"])
+                    continue
+                self._boundary()
+                item["state"] = "running"
+                self._set(schedule=copy.deepcopy(items))
+                name, inc, ch = item["name"], item["incumbent"], item["challenger"]
+                self._log(f"A/B {name}: {inc} vs {ch}; all other values held")
+                self._apply(name, inc)
+                a = self._measure(name, "incumbent")
+                self._apply(name, ch)
+                b = self._measure(name, "challenger")
+                self._boundary()  # Cancel during the last reply must not commit.
+                winner, lost = (ch, inc) if AB.pick(a, b) else (inc, ch)
+                result = dict(name=name, incumbent=inc, challenger=ch,
+                              incumbent_scores=a, challenger_scores=b, winner=winner, lost=lost)
+                self.mgr.sweep({"commit": dict(name=name, winner=winner, lost=lost,
+                    fingerprint=self.fp, measurements=result)})
+                self.best[name] = winner
+                if self.current.get(name) != winner:
+                    self._apply(name, winner)
+                self.dirty_reload = False
+                item["state"] = "kept"
+                item["winner"] = winner
+                self._set(schedule=copy.deepcopy(items), results=self.state["results"] + [result])
+                self._log(f"kept {name}={winner}; lost {lost}")
+            complete = True
+        except Canceled:
+            pass
+        except Exception as error:
+            failure = f"{type(error).__name__}: {error}"
+            self._log(failure)
+        finally:
+            if self.owns_pause:
+                try:
+                    reload_drift = any(self.current.get(n) != v for n, v in self.best.items() if n not in AB.LIVE)
+                    if self.dirty_reload or reload_drift:
+                        self._reload(self.best, restoring=True)
+                    self._hold(self.best)
+                    self.mgr.sweep({"release": True})
+                except Exception as error:
+                    failure = (failure + "; " if failure else "") + "restore failed: " + str(error)
+                    self._log(failure)
+            canceled = self._cancel.is_set()
+            self._set(running=False, paused=False, error=failure,
+                      phase="stopped (error)" if failure else "canceled" if canceled else "done",
+                      eta_s=0 if complete else None,
+                      summary=dict(winner=self.best, complete=complete and not failure and not canceled,
+                                   prompts=self.state["prompts"], reloads=self.state["reloads"],
+                                   minutes=round((time.time() - self.state["started"]) / 60, 2)))

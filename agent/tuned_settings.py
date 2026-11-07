@@ -790,7 +790,7 @@ def _norm_reload(name: str, value: Any) -> Any:
     return value
 
 
-def plan_reload(entry: dict, auto_names) -> dict:
+def plan_reload(entry: dict, auto_names, *, apply_pending=True) -> dict:
     """At load time: pick values for auto reload options. Mutates entry.
 
     Uses the saved winner (or default), then one queued pending trial.
@@ -813,7 +813,7 @@ def plan_reload(entry: dict, auto_names) -> dict:
             reasons.append(f"skip {RELOAD_LABEL[n]} {reload_value_label(n, pending.pop(n))} "
                            f"(this model can't use it)")
     for n in auto:
-        if pending.get(n) is not None:
+        if apply_pending and pending.get(n) is not None:
             v = _norm_reload(n, pending.pop(n))
             if v != values[n]:
                 trial = {"name": n, "value": v, "incumbent": values[n],

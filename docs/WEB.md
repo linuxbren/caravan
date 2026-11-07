@@ -698,3 +698,28 @@ file removed (did not exist before), placement back to `one · EXO1`, Qwen3 30B 
 
 Noticed, not fixed: the helper dialog is an unstyled white box in Amber (not themed); the chip
 row showed "GUESS-AHEAD OFF" while the split ran without a helper.
+
+## Optimize now: one-option A/B scheduler
+
+Start in Settings → Optimizations → Optimize now. One option at a time is compared
+with the saved best, using matched 3-reply arms; already-lost values are skipped
+for that model/hardware. Pinned/unavailable options are listed as skipped.
+Pause/Resume waits at the next safe reply/reload boundary. Cancel finishes the
+current operation and restores saved winners (possibly one recovery reload).
+Wait for it to stop before loading/unloading another model. Everyday Auto probes
+are suspended only while the sweep owns the worker.
+
+`POST /api/optimize/start`, `GET /api/optimize`,
+`POST /api/optimize/pause` with `{"paused":true}` (false to resume), and
+`POST /api/optimize/cancel` control the run. The status reports the schedule and
+raw per-arm results, not Deep/Quick coverage. Worker-side
+`POST /caravan/sweep` accepts `{"pause":true}`, `{"hold":{"guess_ahead":false}}`,
+`{"commit":{"fingerprint":"...","name":"kv_bits","winner":16,"lost":8}}`,
+and `{"release":true}`. Controls are internal to the selected MLX worker/tunnel;
+reload-only values are switched by the manager, not hot-swapped by hold.
+
+Losses are grouped by actual participating Mini identities/chips/total RAM,
+not free RAM or load. Missing hardware telemetry stops a run safely. This is
+MLX-only, respects config pins, and does not extend the existing two-stage MLX
+backend or interfere with arbitrary-Mini GGUF loads. Details, migration notes
+and verification ledger: [OPTIMIZE-NOW.md](OPTIMIZE-NOW.md).

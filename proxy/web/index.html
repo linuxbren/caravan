@@ -1172,11 +1172,8 @@
       <div class="optbox" id="optBox">
         <div class="row">
           <b class="tip" title="Walk-away pass: try each option once against the current best, reload only when a reload option needs a trial, then save the winner.">Optimize now</b>
-          <select id="optMode" aria-label="Optimize mode" style="display:none">
-            <option value="deep" selected>deep</option>
-            <option value="quick">quick</option>
-          </select>
           <button class="primary drawer-control" id="btnOptStart">Start</button>
+          <button class="ghost drawer-control" id="btnOptPause">Pause</button>
           <button class="ghost drawer-control" id="btnOptCancel">Cancel</button>
         </div>
         <div class="help" id="optTip">Optimize as used stays on when options are Auto — Caravan learns from real chats.</div>
@@ -1487,12 +1484,15 @@
     try { j = await api("/api/optimize"); } catch (e) { return; }
     $("btnOptStart").disabled = !!j.running || $("btnLoad").disabled;
     $("btnOptCancel").disabled = !j.running;
+    $("btnOptPause").disabled = !j.running;
+    $("btnOptPause").textContent = j.paused ? "Resume" : "Pause";
     const el = $("optProgress");
     if (!j.mode) { el.textContent = ""; return; }
-    const cov = j.coverage;
-    const done = cov ? cov.items.filter(i => i.have >= i.need).length : 0;
-    let txt = `${j.mode === "quick" ? "Optimize now (live)" : "Optimize now"}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
-    if (cov) txt += ` · ${done}/${cov.items.length} option values tested`;
+    const schedule = j.schedule || [];
+    const done = schedule.filter(i => ["kept", "skipped"].includes(i.state)).length;
+    let txt = `Optimize now: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
+    if (schedule.length) txt += ` · ${done}/${schedule.length} options settled`;
+    for (const item of schedule) txt += `\n${item.name}: ${item.state}${item.skip ? " — " + item.skip : item.state === "kept" ? " — " + item.winner : ""}`;
     if (j.running) txt += ` · about ${fmtMin(j.eta_s)} left`;
     if (j.reply_s != null) txt += ` · ${j.reply_s}s per reply`;
     if (j.reload_s != null) txt += ` · ${j.reload_s}s per reload`;
@@ -2130,8 +2130,13 @@
   $("btnApply").onclick = () => $("btnLoad").onclick();
   $("btnOptStart").onclick = async () => {
     try {
-      await api("/api/optimize/start", { method: "POST", body: JSON.stringify({ mode: $("optMode").value }) });
+      await api("/api/optimize/start", { method: "POST", body: "{}" });
     } catch (e) { $("optProgress").textContent = String(e.error || e.message || e); }
+    refreshOptimize();
+  };
+  $("btnOptPause").onclick = async () => {
+    const j = await api("/api/optimize");
+    await api("/api/optimize/pause", {method: "POST", body: JSON.stringify({paused: !j.paused})});
     refreshOptimize();
   };
   $("btnOptCancel").onclick = async () => { await api("/api/optimize/cancel", { method: "POST", body: "{}" }); refreshOptimize(); };
