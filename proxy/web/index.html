@@ -1896,7 +1896,7 @@
         // Read = prompt tokens / prefill time (falls back to time-to-first-token).
         const readTs = st.read_tok_s ?? ((st.prompt_tokens && st.ttft_s) ? st.prompt_tokens / st.ttft_s : null);
         tdiv.textContent =
-          `Read ${readTs != null ? fmt(readTs, 0) : "—"} tok/s · Reply ${fmt(st.write_tok_s,1)} tok/s · ` +
+          `Read ${readTs != null ? fmt(readTs, 0) : "—"} tok/s · Write ${fmt(st.write_tok_s,1)} tok/s · ` +
           `${st.prompt_tokens ?? "?"}→${st.completion_tokens ?? "?"} tok · first token ${fmt(st.ttft_s)}s · total ${fmt(st.total_s)}s`;
         asst.appendChild(tdiv);
         const mg = meta.memory_guard || (st && st.memory_guard) || null;
