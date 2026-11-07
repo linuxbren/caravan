@@ -1,0 +1,36 @@
+{
+ "tagline": "Your Mac minis. One model. Built in the open.",
+ "logo": [
+  "/assets/brand/favicon.svg",
+  "/assets/brand/favicon-32.png",
+  "/assets/brand/favicon-16.png",
+  "/assets/brand/favicon-180.png",
+  "svg",
+  "svg"
+ ],
+ "status": "READY · QWEN3 30B-A3B 4-BIT",
+ "statsLine": "Read 22 tok at 66 tok/s · Write 35 tok at 50.9 tok/s · first token 0.39s · total 1.07s",
+ "stats": {
+  "read": "",
+  "write": "",
+  "ttft": "",
+  "total": ""
+ },
+ "errDetailVisible": false,
+ "hf": "Hugging Face token accepted — saved in Settings",
+ "hfEditVisible": true,
+ "hfInputHidden": true,
+ "settingsText": "SETTINGS\nClose\n● Astrea R8 Chat 9B OptiQ 4bit\n● Orvena 4B MLX 4bit\n● Qwen3 30B-A3B 4-bit\n○ Llama 3.2 8X4B MOE V2 Dark Champion Instruct uncensored abliterated 21B MLX — missing 4 shard(s)\n● Qwen3-30B-A3B-Q4_K_S (GGUF)\n● gemma-4-26B_q4_0-it (GGUF)\nLoad model\nUnload\nOPTIMIZATIONS\nSelf-tuning\nAuto (on)\nOff\nCaravan learns from your chats and remembers the faster settings for each MLX model.\nnow: on\nGuess-ahead\nAuto (off)\nOn\nOff\nA smaller model guesses upcoming words for the main MLX model to check. Needs a matching helper; up to ~33% faster writing one reply on a split model in our tests, but slower with two chats.\nnow: off\nHelper download…\nPrompt lookup (experimental)\nAuto\nOff\nAdaptive · test\nReuse words from your prompt to help the MLX model write repeated text. Up to ~44% faster in our tests on repeated text, but slower on mixed chats; one chat at a time.\nnow: —\nShared start (trim / rebuild)\nAuto (off)\nOn\nOff\nReuse the beginning of repeated system prompts so the model has less to read. MLX models only.\nnow: off\nTwo chats\nAuto (1)\n1\n2\nLet two chats use different Minis at the same time when an MLX model is split. Up to ~70% more combined output in our tests without a helper; no gain on one Mini, and slower with a helper.\nnow: 1\nFused kernels\nAuto (off)\nOn\nCombine small GPU steps when running an MLX model. Experimental — no meaningful speed gain in our tests; some models are incompatible.\nnow: off\nMemory compression\nAuto (16-bit)\n16\n8\n4\nStore MLX chat memory more compactly to save RAM; 16 leaves it uncompressed. May lower quality and slow reading; not supported by every model or Native MTP.\nnow: 16-bit\nGPU keep-warm\nAuto\nOff\nKeep the main GPU warm while it waits for another Mini. Split MLX models only; up to ~50% faster writing replies in our tests.\nnow: —\nApply & restart\nAuto = Caravan decides (learned per model)\nOptimize now\nStart\nCancel\nHUGGING FACE TOKEN\nHugging Face token accepted — saved in Settings\nUse a different token\nRemove saved token\nAlso used: HF_TOKEN env, or ~/.cache/huggingface/token from huggingface-cli login.\nTOPOLOGY BARS\nTHEME\nHEAT\nTheme = dim / accent / bright of the current color. Heat = green / yellow / red by level.",
+ "hfEditorShownAfterClick": true,
+ "maxGb": "Any size",
+ "firstRows": [
+  "Llama-2-7b-chat | 13.48 GB · 1 quant · hf-mlx",
+  "Qwen3-Coder-30B-A3B-Instruct | 17.18 GB · 1 quant · hf-mlx",
+  "Llama-3.2-3B-Instruct | 1.81 GB · 1 quant · hf-mlx",
+  "Qwen2.5-Coder-7B-Instruct | 4.28 GB · 1 quant · hf-mlx",
+  "chatterbox-turbo | 0.42–2.99 GB · 3 quants · hf-mlx",
+  "Llama-3.2-1B-Instruct | 0.7 GB · 1 quant · hf-mlx"
+ ],
+ "step2": "Step 2 · Choose where it lives\nmlx-community/Llama-2-7b-chat-mlx · 13.48 GB\n1 Mini · EXO2recommended\n1 Mini · EXO1\nSplit across 2 Minis (EXO2, EXO1)\nCopy to all (EXO2, EXO1)\nDownload 13.48 GB to EXO2\nCancel",
+ "topoText": "TOPOLOGY\nClose\nEXO1 · LEAD\nQwen3 30B-A3B 4-bit\nlive\nCPU\n1.5%\nGPU\n0% · 0 W\nRAM\n3.9 GB available\nDisk\n211.9 GB free\nTemp\n33°C\nThermal pressure\nnominal\nModel\nQwen3 30B-A3B 4-bit\nEXO2\nlive\nCPU\n2.2%\nGPU\n0% · 0.1 W\nRAM\n15.5 GB available\nDisk\n222.1 GB free\nTemp\n37°C\nThermal pressure\nnominal\nModel\nidle · no model\nON DISK · ALL MINIS\ngemma-4-E2B-it-4bit\nManually installed helper; no catalog pairing recorded\nEXO1 3.58 GB\nDelete\ngemma-3-270m-it-4bit\nPairs with gemma-3-12B, gemma-3-12b, gemma-3-1b, gemma-3-27B, gemma-3-27b, gemma-3-4b, gemma-4-26B, gemma-4-26b, gemma-4-26b-a4b, gemma-4-26b-a4b-it, gemma-4-E2B, gemma-4-e2b\nEXO1 0.19 GB\nDelete\nLlama-3.2-1B-Instruct-4bit\nPairs with Llama-3.1-70B, Llama-3.1-8B, Llama-3.2-11B, Llama-3.2-3B, Llama-3.2-90B, Llama-3.3-70B, Meta-Llama-3.1, Meta-Llama-3.3\nEXO1 0.71 GB\nDelete\nQwen2.5-0.5B-Instruct-4bit\nPairs with DeepSeek-R1-Distill-Qwen-1.5B, DeepSeek-R1-Distill-Qwen-14B, DeepSeek-R1-Distill-Qwen-32B, DeepSeek-R1-Distill-Qwen-7B, Qwen2.5-1.5B, Qwen2.5-14B, Qwen2.5-32B, Qwen2.5-3B, Qwen2.5-72B, Qwen2.5-7B, R1-Distill-Qwen, qwen2.5-72b, qwen2.5-7b\nEXO1 0.29 GB · EXO2 0.29 GB\nDelete\nQwen3-0.6B-4bit\nPairs with Qwen3-14B, Qwen3-30B-A3B, Qwen3-30B-A3B-4bit, Qwen3-30B-A3B-8bit, Qwen3-32B, Qwen3-4B, Qwen3-8B, qwen3-30b-a3b\nEXO1 0.35 GB\nDelete\nOrvena--Orvena-4B-MLX-4bit · native MTP head\nPairs with Orvena/Orvena-4B-MLX-4bit\nEXO2 0.24 GB\nDelete\nINSTALLED MODELS\nAstrea-R8-Chat-9B-OptiQ-4bit\nEXO2\nEXO2 8.03 GB\nDelete\nLlama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX\nall · partial on EXO1, EXO2\nEXO1 5.2 GB · EXO2 15.58 GB\nDelete\nOrvena-4B-MLX-4bit\nEXO2\nEXO2 3.3 GB\nDelete\nQwen3-30B-A3B-4bit\nall\nEXO1 17.19 GB · EXO2 17.19 GB\nDelete"
+}
