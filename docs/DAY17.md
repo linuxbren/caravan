@@ -132,3 +132,14 @@ repeat skips everything with 0 prompts/reloads. One failed post-adoption run
 and all earlier failures are retained in the ledger. Qwen3 30B-A3B 4-bit MLX is
 single, healthy and ready on EXO1, ordinary learning unpaused. PR #9 closure
 awaits explicit approval; it was not merged.
+
+## First daily source release — Nov 7, 2026, 5:39 PM CST
+
+Brenden asked for a commit, release download and install guide each dev day.
+Main was 0 ahead / 179 behind; fast-forwarded it without rewriting history.
+Added INSTALL.md, README link and docs/RELEASES.md. Tag: `day17-2026-11-07`.
+Source ZIP/tar.gz use git archive and omit 74 MB of lab video media via
+.gitattributes; models and runtimes are not bundled. No app/service changes.
+Pre-release source suite: **407 tests passed in 32.662s**, no skips or failures.
+Clean-Mac installation is not claimed. Published-asset verification follows
+in a later log entry so the release tag stays fixed.

@@ -1,3 +1,8 @@
+### Releases — 2026-11-07
+- First daily source release: `day17-2026-11-07`; main fast-forwarded to current work.
+- Root INSTALL.md covers the web UI, dependencies, private-network setup and more Minis.
+- Daily process: [RELEASES.md](docs/RELEASES.md). ZIP/tar.gz exclude lab video media.
+
 
 
 ### GGUF split hardening and picker downloads — 2026-11-06/07

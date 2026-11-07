@@ -117,6 +117,9 @@ noted.
 
 ## Quick start
 
+For the current web UI and release downloads, start with [INSTALL.md](INSTALL.md).
+The commands below also cover the older manual agent/proxy workflows.
+
 Requirements:
 
 - Apple Silicon Macs. Tested on M4 with 24 GB. Two are needed only for
