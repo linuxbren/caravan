@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/brand/favicon-180.png">
 <style>
-  :root, [data-theme="amber"] {
+  :root, html[data-theme="amber"] {
     --bg: #050504;
     --bg2: #0c0c08;
     --bg3: #14140c;
@@ -33,7 +33,7 @@
     --bloom: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent);
     --scan: rgba(255, 220, 80, 0.035);
   }
-  [data-theme="green"] {
+  html[data-theme="green"] {
     --bg: #030704;
     --bg2: #08110a;
     --bg3: #0e1810;
@@ -58,7 +58,7 @@
     --scan: rgba(120, 255, 150, 0.035);
   }
   /* Omarchy desktop — Cross Country palette (viewer system theme) */
-  [data-theme="omarchy"] {
+  html[data-theme="omarchy"] {
     --bg: #0c1018;
     --bg2: #151b26;
     --bg3: #202a38;
@@ -151,7 +151,7 @@
   html[data-theme="omarchy"] .stat .v { text-shadow: none; }
   html[data-theme="omarchy"] button.primary { box-shadow: none; color: #10151f; }
   /* ---- Nebula: blurred painted deep space, dark frosted glass, no CRT ---- */
-  [data-theme="nebula"] {
+  html[data-theme="nebula"] {
     --bg: rgba(10,12,26,.58);
     --bg2: rgba(12,14,30,.68);
     --bg3: rgba(26,26,48,.82);
@@ -173,7 +173,7 @@
     --radius: 14px;
     --statmono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
     --sans: "Nunito", "Avenir Next", "SF Pro Rounded", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-    --mono: var(--sans);
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace; /* layout font is shared by every theme */
     --bloom: none;
     --scan: transparent;
   }
@@ -200,7 +200,9 @@
   html[data-theme="nebula"] body::before,
   html[data-theme="nebula"] body::after,
   html[data-theme="nebula"] .crt-wash { display: none; }
-  html[data-theme="nebula"] body { font-family: var(--sans); letter-spacing: normal; background: #070816; }
+  html[data-theme="nebula"] body { background: #070816; }
+  /* Themes change colour only: chat text may use the theme face, controls keep shared metrics. */
+  html[data-theme="nebula"] .msg { font-family: var(--sans); }
   html[data-theme="nebula"] *, html[data-theme="nebula"] *::before { text-shadow: none !important; }
   html[data-theme="nebula"] .card,
   html[data-theme="nebula"] .chat.tube,
@@ -232,7 +234,7 @@
   html[data-theme="nebula"] .tag { color: #c6c8d8; }
   html[data-theme="nebula"] .tag.off { opacity: 1; color: #a9abc0; }
   html[data-theme="nebula"] .tag.on { color: #9fd3ff; background: rgba(124,196,255,.14); }
-  html[data-theme="nebula"] .brand h1 { text-transform: none; letter-spacing: .02em; color: #fff4e6; }
+  html[data-theme="nebula"] .brand h1 { color: #fff4e6; }
   html[data-theme="nebula"] .msg { background: rgba(14,16,34,.76); border-color: rgba(230,200,160,.16); }
   html[data-theme="nebula"] .msg.user { background: rgba(22,46,84,.82); }
   html[data-theme="nebula"] button.primary { background: #e0893a; color: #1a0d03; box-shadow: none; border-color: #e0893a; }
@@ -252,7 +254,7 @@
   html[data-theme="nebula"] .dot.ok,
   html[data-theme="nebula"] [class*="p-dot"] { box-shadow: none; }
   /* ---- Meadow: blurred painted nature, frosted glass, no CRT ---- */
-  [data-theme="meadow"] {
+  html[data-theme="meadow"] {
     --bg: rgba(255,255,255,.55);
     --bg2: rgba(248,252,246,.70);
     --bg3: rgba(255,255,255,.84);
@@ -274,7 +276,7 @@
     --radius: 14px;
     --statmono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
     --sans: "Nunito", "Avenir Next", "SF Pro Rounded", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-    --mono: var(--sans);
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace; /* layout font is shared by every theme */
     --bloom: none;
     --scan: transparent;
   }
@@ -290,7 +292,9 @@
   html[data-theme="meadow"] body::before,
   html[data-theme="meadow"] body::after,
   html[data-theme="meadow"] .crt-wash { display: none; }
-  html[data-theme="meadow"] body { font-family: var(--sans); letter-spacing: normal; background: #cfe3ee; }
+  html[data-theme="meadow"] body { background: #cfe3ee; }
+  /* Themes change colour only: chat text may use the theme face, controls keep shared metrics. */
+  html[data-theme="meadow"] .msg { font-family: var(--sans); }
   html[data-theme="meadow"] *, html[data-theme="meadow"] *::before { text-shadow: none !important; }
   html[data-theme="meadow"] .card,
   html[data-theme="meadow"] .chat.tube,
@@ -324,7 +328,7 @@
   html[data-theme="meadow"] .theme-switch button.on { background: rgba(46,125,50,.16); color: #1d5f8f; }
   html[data-theme="meadow"] textarea { box-shadow: inset 0 1px 3px rgba(20,50,30,.12) !important; border-color: rgba(28,72,40,.22); }
   html[data-theme="meadow"] .drawer-backdrop { background: rgba(30,60,40,.18); }
-  html[data-theme="meadow"] .brand h1 { text-transform: none; letter-spacing: .02em; color: #123d22; }
+  html[data-theme="meadow"] .brand h1 { color: #123d22; }
   html[data-theme="meadow"] .msg { background: rgba(255,255,255,.62); border-color: rgba(28,72,40,.16); }
   html[data-theme="meadow"] .msg.user { background: rgba(214,234,248,.78); }
   html[data-theme="meadow"] button.primary { background: var(--accent); color: #fff; box-shadow: none; border-color: var(--accent); }

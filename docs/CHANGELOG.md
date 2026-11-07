@@ -3,6 +3,11 @@
 
 ## Unreleased
 
+- Theme parity: Amber, Green, Meadow and Nebula now share one layout. Theme
+  variables are scoped to `html[data-theme]` (they were leaking onto the
+  theme-switch buttons), and Meadow/Nebula keep the shared monospace for controls
+  (their own face only in chat messages). Checked with `tools/theme_parity.js`.
+
 - Replace Settings benchmark-heavy help with plain explanations, measured and
   scoped percentage hints, and clear mixed/negative results. Keep raw measurements
   in docs; [WEB.md](WEB.md) maps each hint to its source row. Copy-only live-page

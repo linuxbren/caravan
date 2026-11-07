@@ -375,7 +375,7 @@ ready/singleEXO1/allAuto/KV4 trial; both chip and help verified over HTTP:
 [`split-final-ui-proof.json`](../bench/results/day17/split-final-ui-proof.json).
 
 ## Tests
-Full suite (no Minis needed): `PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests` (340 OK, 2026-11-06 CT).
+Full suite (no Minis needed): `PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests` (350 OK, 2026-11-06 11:30 PM CT; 340 OK earlier).
 HTTP tests stub SSH and node probes. If stopping the packer fails, `/api/models/stop` now answers 502 with `{"error", "worker"}` instead of dropping the connection.
 
 ### Settings drawer visual alignment (Nov 6, 2026, 10:46 PM CT)
@@ -475,3 +475,34 @@ one error, `test_resume_retry.Retry.test_retries_network_then_succeeds`,
 `KeyError: 'retry'`, while picker retry code was being edited; after the picker
 commit and restored hint edits, the final full run is green. No benchmark rerun
 was performed or needed for this copy-only change.
+
+### Theme parity (Nov 6, 2026, ~11:30 PM CT)
+
+Report: the theme labels were different sizes, and Meadow/Nebula moved buttons.
+
+Causes:
+1. Theme variable blocks used bare `[data-theme="meadow"] { ... }`. The theme-switch
+   buttons carry `data-theme` too, so each button took its own theme's font and
+   radius: MEADOW/NEBULA labels rendered in Nunito (73/65px wide, 27px high) while
+   AMBER/GREEN were SF Mono (61px, 24px high).
+2. Meadow and Nebula set `--mono: var(--sans)` and `body { font-family: var(--sans);
+   letter-spacing: normal }`, and the title dropped uppercase/letter-spacing. Every
+   control got a proportional font, so widths changed and rows reflowed (phone
+   theme switch moved 11px up; title 320px vs 275px).
+
+Fix: all theme blocks are `html[data-theme="x"]`; Meadow/Nebula keep the shared
+monospace for layout and use their own face only inside chat messages (`.msg`).
+Themes now change colour, background, blur and shadow only.
+
+Check: `node tools/theme_parity.js` (puppeteer-core, Chrome) opens Chat, Settings,
+Models and Topology in each theme at 1280px and 390px and compares every visible
+button/select/input/textarea/heading/pill/tag/label rect and font size with Amber.
+
+| Run | Result |
+|---|---|
+| Before fix | 8/24 combos match (Green OK everywhere; Meadow and Nebula FAIL, 50 of 57 elements off in each) |
+| After fix | 24/24 combos match within 1px (57 elements each) |
+
+Static guard: `tests/test_theme_parity.py` (no bare theme blocks, no `--mono: var(--sans)`,
+no letter-spacing/text-transform/padding/font-size in theme rules except theme-only
+backgrounds and credits). Suite: 350 OK.
