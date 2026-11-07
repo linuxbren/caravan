@@ -45,6 +45,8 @@ Pure parts (no mlx): plan_split, framing, digests, combine_restore,
 FrontClient, FrontState, SplitSessions -- unit-tested in
 tests/test_mlx_split.py with the fake cache layers of test_mlx_worker.py.
 """
+from __future__ import annotations
+
 import hashlib
 import json
 import socket
