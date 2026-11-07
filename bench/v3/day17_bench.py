@@ -30,33 +30,44 @@ def main():
     ap.add_argument("--include-repeat",action="store_true")
     ap.add_argument("--expect-pid",type=int)
     ap.add_argument("--concurrency",type=int,default=1)
+    ap.add_argument("--guard-url", help="UI status root; abort if its ready model/PID changes")
+    ap.add_argument("--worker-commit", help="Loaded worker code when runner is a later commit")
     args=ap.parse_args()
     if args.include_repeat:
         passage="The little green robot walks beside the quiet blue river. " * 12
         PROMPTS.append({"id":"repeat","text":"Repeat the following passage exactly, without commentary:\n"+passage})
     commit=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()
     path=Path(args.output);path.parent.mkdir(parents=True,exist_ok=True)
+    def state():
+        with urllib.request.urlopen(args.guard_url+"/api/status",timeout=10) as r:
+            status=json.load(r)
+        worker=status["worker"]
+        return (worker.get("status"),worker.get("model_id"),worker.get("lead_pid"))
+    guard=state() if args.guard_url else None
+    if guard and guard[0]!="ready":raise RuntimeError("Guard UI is not ready")
     def request(prompt,mode,wave,member=0):
         row={"timestamp_ct":datetime.datetime.now(ZoneInfo("America/Chicago")).isoformat(),
              "timezone":"America/Chicago (CT)","commit":commit,"model":args.model,
              "placement":args.placement,"mode":mode,"wave":wave,"member":member,
+             "worker_commit":args.worker_commit or commit,"guard_state":guard,
              "concurrency":args.concurrency,"prompt_id":prompt["id"],"prompt":prompt["text"]}
         body={"messages":[{"role":"user","content":prompt["text"]}],"max_tokens":args.max_tokens,
               "temperature":0,"seed":17,"stream":False,"chat_template_kwargs":{"enable_thinking":False}}
         if mode in ("on","off"):body["native_mtp"]=mode=="on"
         if mode in ("pl-off","pl-adaptive"):body["prompt_lookup"]="adaptive" if mode=="pl-adaptive" else "off"
-        if args.expect_pid:
-            import os
-            try:os.kill(args.expect_pid,0)
-            except ProcessLookupError:
-                raise RuntimeError("Expected worker changed; abort rather than fight UI state")
         row["settings"]=body
         req=urllib.request.Request(args.url+"/v1/chat/completions",data=json.dumps(body).encode(),
             headers={"Content-Type":"application/json","X-Caravan-Session":"d17-"+uuid.uuid4().hex})
         t=time.perf_counter()
         try:
+            if args.guard_url and state()!=guard:raise RuntimeError("UI state changed; abort")
+            if args.expect_pid:
+                import os
+                try:os.kill(args.expect_pid,0)
+                except ProcessLookupError:raise RuntimeError("Expected worker changed; abort")
             with urllib.request.urlopen(req,timeout=180) as r:response=json.load(r)
             row["response"]=response
+            if args.guard_url and state()!=guard:raise RuntimeError("UI state changed during request; abort")
             usage=response.get("usage") or {};info=usage.get("caravan") or {}
             row["ttft_s"]=info.get("ttft_s")
             row["completion_tokens"]=usage.get("completion_tokens")
@@ -68,14 +79,17 @@ def main():
             if prompt["id"] == "code":
                 code=re.sub(r"^```(?:python)?\s*|\s*```$", "", row["text"].strip())
                 try:
-                    ast.parse(code)
+                    tree=ast.parse(code)
+                    row["quality_assert_count"]=sum(isinstance(n,ast.Assert) for n in ast.walk(tree))
                     row["quality_python_syntax"]=True
                 except SyntaxError:
                     row["quality_python_syntax"]=False
             if prompt["id"] == "count":
                 nums=[int(x) for x in re.findall(r"\d+", row["text"])]
                 row["quality_count_prefix"]=bool(nums) and nums==list(range(1,len(nums)+1))
+                row["quality_count_complete"]=nums==list(range(1,81))
             row["quality_exact"]=(row["text"].strip()=="2 + 2 = 4\nFrance: Paris\nWater: H2O") if prompt["id"]=="quality" else None
+            if prompt["id"]=="repeat":row["quality_repeat_exact"]=row["text"].strip()==passage.strip()
         except Exception as e:
             row["error"]=repr(e)
         row["wall_s"]=time.perf_counter()-t
@@ -91,4 +105,5 @@ def main():
                 row["wave_aggregate_tps"]=sum(r.get("completion_tokens") or 0 for r in rows)/wall if any("response" in r for r in rows) else None
                 with path.open("a") as f:f.write(json.dumps(row)+"\n")
                 print(json.dumps({k:v for k,v in row.items() if k not in ("response","settings","prompt","text")}),flush=True)
+            if any("abort" in r.get("error","") for r in rows):raise RuntimeError("State guard stopped benchmark; rows retained")
 if __name__=="__main__":main()
