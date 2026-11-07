@@ -114,9 +114,7 @@ def ask_download(pairing: dict, *, auto: bool, interactive: Optional[bool] = Non
     if interactive is None:
         interactive = sys.stdin.isatty() and sys.stdout.isatty()
     if not interactive:
-        # Non-interactive default: do not download; remember decline so we don't spam logs.
-        answers[key] = False
-        save_state(st, table)
+        # No user answered: leave consent pending for the web UI.
         return False
     try:
         sys.stdout.write(msg)

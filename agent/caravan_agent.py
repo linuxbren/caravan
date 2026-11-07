@@ -340,7 +340,11 @@ def main() -> int:
                 supervisor.supervise(cmd, log_path)
         else:
             role = "tail"
-            cmd = supervisor.build_tail_command()
+            try:
+                cmd = supervisor.build_tail_command()
+            except RuntimeError as e:
+                print(f"[caravan-agent] ERROR: {e}", file=sys.stderr)
+                return 1
             print("[caravan-agent] role: PACKER (formerly 'tail'; no local model -- ready to serve compute)")
             print(f"[caravan-agent] would run: {' '.join(cmd)}")
 

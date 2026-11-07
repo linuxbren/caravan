@@ -48,6 +48,11 @@ def du_gb(path: Path) -> float:
     return round(total / 1e9, 2)
 
 
+def helper_sizes():
+    import web_helpers
+    return {k: {**v, "size_gb": du_gb(Path(v["path"]))} for k, v in web_helpers.inventory().items()}
+
+
 def sizes() -> dict:
     home = Path.home()
     models = {}
@@ -71,6 +76,7 @@ def sizes() -> dict:
     drafts = du_gb(home / ".caravan" / "mlx-models" / "drafts")
     return {
         "models": models,
+        "helpers": helper_sizes(),
         "cleanup": {
             "hf-cache": round(hub + leftover, 2),
             "drafts": drafts,
@@ -110,7 +116,12 @@ def delete_kind(kind: str, current: str = "") -> dict:
                 if c.is_dir():
                     shutil.rmtree(c, ignore_errors=True)
                     removed.append(str(c))
+    elif kind.startswith(("draft:", "mtp:")):
+        import web_helpers
+        return web_helpers.delete_helper(kind, current)
     elif kind == "drafts":
+        if current:
+            return {"ok": False, "error": "Stop the loaded model before deleting helpers."}
         drafts = home / ".caravan" / "mlx-models" / "drafts"
         if drafts.is_dir():
             for p in list(drafts.iterdir()):
@@ -129,7 +140,7 @@ def delete_kind(kind: str, current: str = "") -> dict:
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("--delete", choices=("hf-cache", "drafts"))
+    ap.add_argument("--delete")
     ap.add_argument("--current", default="")
     ap.add_argument("--inventory", action="store_true",
                     help="MLX tree completeness for Settings dropdown")

@@ -9,6 +9,8 @@ caravan_agent.py is explicitly told to (--apply). Scaffold stage --
 proven correct in caravan_agent.py's dry-run output before this actually
 drives the live setup.
 """
+from __future__ import annotations
+
 import signal
 import subprocess
 import sys
@@ -90,15 +92,71 @@ def resolve_kv_types(settings: "config.LlamaSettings", model_path: str, n_device
     return settings._replace(cache_type_k=ctk, cache_type_v=ctv)
 
 
-def build_tail_command() -> list[str]:
+def link_address(ifconfig_text: str = None) -> str | None:
+    """This Mini's Thunderbolt Mini-to-Mini address (first 169.254.x.x)."""
+    import re
+    if ifconfig_text is None:
+        try:
+            ifconfig_text = subprocess.run(["ifconfig"], capture_output=True, text=True,
+                                           timeout=5).stdout
+        except (OSError, subprocess.SubprocessError):
+            return None
+    for m in re.finditer(r"inet (169\.254\.\d+\.\d+)", ifconfig_text or ""):
+        return m.group(1)
+    return None
+
+
+def rpc_bind_and_allow(bind: str | None = None, allow=None, log=None) -> tuple[str, list[str]]:
+    """Where rpc-server's gate listens and who may connect. Fails closed.
+
+    bind: CARAVAN_RPC_BIND / config.RPC_BIND_HOST override (warned), else the
+    Thunderbolt link address. Never 0.0.0.0. allow: CARAVAN_RPC_ALLOW /
+    config.RPC_ALLOW (comma list of peer IPs), plus any passed in.
+    """
+    import os
+    say = log or (lambda m: print(m, file=sys.stderr))
+    override = bind or os.environ.get("CARAVAN_RPC_BIND") or getattr(config, "RPC_BIND_HOST", None)
+    if override:
+        if override in ("0.0.0.0", "::"):
+            raise RuntimeError("refusing to bind rpc-server to all interfaces (0.0.0.0); "
+                               "set CARAVAN_RPC_BIND to this Mini's Thunderbolt address")
+        say(f"[caravan-agent] WARNING: rpc-server bind overridden to {override}")
+        host = override
+    else:
+        host = link_address()
+        if not host:
+            raise RuntimeError("no Thunderbolt link address (169.254.x.x) found; refusing to start "
+                               "rpc-server. Connect the Minis or set CARAVAN_RPC_BIND.")
+    al = list(allow or [])
+    extra = os.environ.get("CARAVAN_RPC_ALLOW") or getattr(config, "RPC_ALLOW", "") or ""
+    al += [x.strip() for x in str(extra).split(",") if x.strip()]
+    al = [a for i, a in enumerate(al) if a and a not in al[:i]]
+    if not al:
+        raise RuntimeError("rpc-server allowlist is empty; set CARAVAN_RPC_ALLOW to the lead "
+                           "Mini's Thunderbolt address (comma list for more Minis)")
+    return host, al
+
+
+def build_tail_command(bind: str | None = None, allow=None) -> list[str]:
     """--cache (GitHub issue #3, "solved natively") turns a restart from
     a 7-11 minute full re-transfer into a ~50-60s warm-cache load -- see
     docs/LOG.md. Only reason to ever pass RPC_SERVER_USE_CACHE=False is
-    disk space on a node too small to hold a cached copy of its shard."""
+    disk space on a node too small to hold a cached copy of its shard.
+
+    Security (Day 17): ggml-rpc-server has no auth. It binds 127.0.0.1 on
+    RPC_PORT+1 and agent/rpc_gate.py listens on the Thunderbolt address on
+    RPC_PORT, accepting only allowlisted Caravan peers. See docs/SECURITY.md.
+    """
+    from pathlib import Path
+    host, al = rpc_bind_and_allow(bind, allow)
+    gate = Path(__file__).resolve().parent / "rpc_gate.py"
     cmd = [
+        sys.executable, str(gate),
+        "--listen", f"{host}:{config.RPC_PORT}",
+        "--allow", ",".join(al),
+        "--",
         str(config.RPC_SERVER_BIN),
-        "-H", "0.0.0.0",
-        "-p", str(config.RPC_PORT),
+        "-p", str(config.RPC_PORT + 1),
     ]
     if config.RPC_SERVER_USE_CACHE:
         cmd += ["--cache"]

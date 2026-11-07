@@ -1136,6 +1136,7 @@
     </div>
     <div class="toolbar">
       <select class="drawer-control" id="modelSelect" aria-label="Model"></select>
+      <select class="drawer-control" id="placeSelect" aria-label="Where it runs" title="Where this GGUF runs. Split shares the model across Minis with llama.cpp RPC; only EXO1 needs the file." hidden></select>
       <button class="primary drawer-control" id="btnLoad">Load model</button>
       <button class="ghost drawer-control" id="btnStop" title="Unload">Unload</button>
     </div>
@@ -1544,6 +1545,29 @@
       if (m.id === cur || m.hf === cur) opt.selected = true;
       sel.appendChild(opt);
     }
+    state.modelRows = Object.fromEntries(models.map(m => [m.id, m]));
+    sel.onchange = renderPlace;
+    renderPlace();
+  }
+
+  // GGUF: choose one Mini or a split across K Minis (llama.cpp RPC).
+  function renderPlace() {
+    const ps = $("placeSelect");
+    const m = (state.modelRows || {})[$("modelSelect").value];
+    const opts = (m && m.placement_options) || [];
+    ps.hidden = !opts.length;
+    if (!opts.length) { ps.innerHTML = ""; return; }
+    const keep = ps.dataset.model === m.id ? ps.value : null;
+    ps.dataset.model = m.id;
+    ps.innerHTML = "";
+    for (const o of opts) {
+      const opt = document.createElement("option");
+      opt.value = o.id;
+      opt.disabled = !o.enabled;
+      opt.textContent = o.label + (o.id === m.default_placement ? " · recommended" : "") + (o.enabled ? "" : " — " + (o.reason || "won't fit"));
+      ps.appendChild(opt);
+    }
+    ps.value = keep || m.default_placement || (opts.find(o => o.enabled) || {}).id || "";
   }
 
   function paintIntro(snap) {
@@ -2040,7 +2064,9 @@
     $("btnLoad").disabled = true;
     $("btnSend").disabled = true;
     try {
-      await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: id, settings: state.choice }) });
+      const body = { model_id: id, settings: state.choice };
+      if (!$("placeSelect").hidden && $("placeSelect").value) body.placement_id = $("placeSelect").value;
+      await api("/api/models/load", { method: "POST", body: JSON.stringify(body) });
       state.session = null; // new model → new sessions
       resetHistory();
       saveChat();
@@ -2615,7 +2641,7 @@
         return;
       }
       if (q.source === "gguf") {
-        alert("GGUF / llama-server load is phase 4 — catalog + fit only for now.");
+        alert("GGUF downloads from the picker aren't wired yet. GGUF files already on EXO1 (~/.caravan/models) show up in Settings → Model, where you can run them on one Mini or split across Minis.");
         return;
       }
       if (q.needs_conversion) {
@@ -2889,8 +2915,8 @@
             note: c.note || "",
             sizeByLabel: c.size_by_label || {},
             onDelete: async () => {
-              const msg = c.kind === "drafts"
-                ? "Delete guess-ahead helper models on ALL Minis? They re-download when needed."
+              const msg = c.kind !== "hf-cache"
+                ? "Delete this helper on all Minis? Stop the loaded model first."
                 : "Delete Hugging Face download cache on ALL Minis? (skips the loaded model)";
               if (!confirm(msg)) return;
               try {
@@ -2953,5 +2979,6 @@
 
 </script>
 <div class="nebula-credit">Image: NASA, ESA, CSA, STScI</div>
+<script src="/helpers.js"></script>
 </body>
 </html>

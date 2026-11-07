@@ -115,7 +115,11 @@ class App:
             split = self.mgr.lead_split_info() if snap.get("status") == "ready" else None
             model = snap.get("model_name") if snap.get("status") == "ready" else None
             running_on = None
-            if model and not snap.get("split"):
+            gg = snap.get("gguf") or {}
+            if model and gg.get("nodes"):
+                running_on = list(gg["nodes"])
+                split = None  # llama.cpp split: no MLX layer ranges
+            elif model and not snap.get("split"):
                 wn = getattr(self.mgr, "_worker_node", None)
                 if wn and wn.get("id"):
                     running_on = [wn["id"]]
@@ -548,7 +552,7 @@ class App:
         current_hf = snap.get("model_hf") or None
         live = (self.nodes() or {}).get("nodes") or []
         invs = self.gather_model_inventories()
-        return catalog.build_entries_from_inventories(
+        rows = catalog.build_entries_from_inventories(
             node_inventories=invs,
             nodes=live or self.configured_nodes(),
             current_id=current,
@@ -557,6 +561,26 @@ class App:
             max_split_stages=web_nodes.MAX_SPLIT_STAGES,
             include_unusable=True,
         )
+        return rows + self.gguf_entries(live or self.configured_nodes(), current)
+
+    def gguf_entries(self, nodes: list, current=None) -> list:
+        """GGUF files on the lead Mini. llama.cpp RPC ships each peer its share
+        at load, so only the lead needs the file; any online Mini can join."""
+        import gguf_split
+        out = []
+        for g in gguf_split.scan_local():
+            place = gguf_split.placement_options(g["size_gb"], nodes)
+            out.append({
+                "id": g["id"], "name": g["name"] + " (GGUF)", "hf": g["id"],
+                "source": "gguf", "backend": "llama", "lead_path": g["path"],
+                "size_gb": g["size_gb"], "usable": bool(place["default_id"]),
+                "available_lead": True,
+                "disabled_reason": "" if place["default_id"] else "won't fit on the online Minis",
+                "placement_options": place["options"],
+                "default_placement": place["default_id"],
+                "current": g["id"] == current,
+            })
+        return out
 
 
 
@@ -658,6 +682,9 @@ def make_handler(app: App):
                 return self._api_settings()
             if path == "/api/hf-token":
                 return self._api_hf_token_get()
+            if path == "/api/helpers":
+                import web_helpers
+                return self._json(200, {"offer": web_helpers.offer(app.mgr.snapshot())})
             if path == "/api/picker/search":
                 return self._api_picker_search()
             if path == "/api/picker/disk":
@@ -731,6 +758,15 @@ def make_handler(app: App):
             if path == "/api/shutdown":
                 app.want_shutdown()
                 return self._json(200, {"ok": True})
+            if path == "/api/helpers/answer":
+                import web_helpers
+                p = web_helpers.pairing(body.get("helper_id"))
+                if not p or body.get("action") not in ("download", "decline"):
+                    return self._json(400, {"error": "Unknown helper or action"})
+                web_helpers.answer(p["id"], body["action"] == "download")
+                if body["action"] == "decline":
+                    return self._json(200, {"ok": True})
+                return self._api_picker_download({"repo_id": p["draft"]["hf_repo"], "helper_id": p["id"]})
             if path == "/api/picker/download":
                 return self._api_picker_download(body=body)
             if path == "/api/picker/download/resume":
@@ -908,7 +944,7 @@ def make_handler(app: App):
                 pass
 
             # Cleanup: merge across nodes
-            cleanup_kinds = ("hf-cache", "drafts")
+            cleanup_kinds = ("hf-cache",)
             cleanup = []
             for kind in cleanup_kinds:
                 sizes = {}
@@ -937,6 +973,17 @@ def make_handler(app: App):
                         "size_gb": sizes,
                         "size_by_label": sizes_by_label,
                     })
+
+            helpers = {}
+            for n in cfg_nodes:
+                nid = n.get("id") or n.get("label")
+                for key, h in ((blobs.get(nid) or {}).get("helpers") or {}).items():
+                    e = helpers.setdefault(key, {"id": "cleanup:" + key, "kind": key,
+                        "name": h["name"], "note": "Pairs with " + ", ".join(h.get("pairs") or []),
+                        "size_gb": {}, "size_by_label": {}})
+                    e["size_gb"][nid] = h["size_gb"]
+                    e["size_by_label"][n.get("label") or nid] = h["size_gb"]
+            cleanup.extend(helpers.values())
 
             # Attach placement + held_on from inventories when available
             try:
@@ -989,14 +1036,18 @@ def make_handler(app: App):
                 k = kind or str(rid).split(":", 1)[-1]
                 results = []
                 for n in cfg_nodes:
-                    kn = "hf-cache" if k in ("hf-cache", "hf_cache", "cache") else "drafts"
+                    kn = "hf-cache" if k in ("hf-cache", "hf_cache", "cache") else k
+                    if kn != "hf-cache" and current:
+                        return self._json(409, {"error": "Stop the loaded model before deleting helpers."})
                     cur = (current or "").replace("'", "")
+                    import shlex
+                    kn = shlex.quote(kn)
                     try:
                         if web_nodes.is_local(n):
                             import subprocess
                             py = str(Path(app.mgr.repo) / "proxy" / "picker_disk_sizes.py")
                             r = subprocess.run(
-                                [sys.executable, py, "--delete", kn, "--current", cur],
+                                [sys.executable, py, "--delete", k, "--current", cur],
                                 capture_output=True, text=True, timeout=300,
                             )
                         else:
@@ -1147,6 +1198,10 @@ def make_handler(app: App):
                 return self._json(400, {"error": "cloud models are framework-only for now"})
             if body.get("source") == "gguf":
                 return self._json(400, {"error": "GGUF download via llama-server is phase 4"})
+            import web_helpers
+            helper = web_helpers.pairing(body.get("helper_id")) if body.get("helper_id") else None
+            if body.get("helper_id") and (not helper or repo != helper["draft"]["hf_repo"]):
+                return self._json(400, {"error": "Invalid helper"})
             packer_layers = body.get("packer_layers")
             try:
                 packer_layers = int(packer_layers) if packer_layers is not None else 24
@@ -1187,6 +1242,11 @@ def make_handler(app: App):
                     "placement": place, "options": opts,
                 })
 
+            if helper:
+                lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
+                if not lead:
+                    return self._json(400, {"error": "No lead configured"})
+                place = {"mode": "one", "full_copy": True, "node_ids": [lead.get("id") or lead.get("label")], "label": "Guess-ahead helper · applies on next load"}
             mode = place.get("mode") or "split"
             full_copy = bool(place.get("full_copy"))
             target_ids = list(place.get("node_ids") or [])
@@ -1353,6 +1413,12 @@ def make_handler(app: App):
                 )
                 if tb is None:
                     tb = totals.get("each") or totals.get("full")
+                if helper:
+                    dest = "~/.caravan/mlx-models/drafts/" + helper["draft"]["name"]
+                    if web_nodes.is_local(n):
+                        dest = str(Path(dest).expanduser())
+                    measure = _mk_local_measure(n, dest) if web_nodes.is_local(n) else _mk_measure(n, dest)
+                    save_placement = None
                 runners.append({
                     "id": nid,
                     "label": n.get("label") or nid,
@@ -1449,6 +1515,15 @@ def make_handler(app: App):
             try:
                 upstream = urlopen(req, timeout=1800)
             except HTTPError as e:
+            if entry and entry.get("source") == "gguf":
+                entry = dict(entry)
+                pid_ = body.get("placement_id") or entry.get("default_placement")
+                opt = next((o for o in entry.get("placement_options") or [] if o.get("id") == pid_), None)
+                if not opt:
+                    return self._json(400, {"error": f"unknown placement {pid_!r} for {mid}"})
+                if not opt.get("enabled"):
+                    return self._json(400, {"error": opt.get("reason") or "placement doesn't fit"})
+                entry["placement"] = {"mode": opt["mode"], "node_ids": opt["node_ids"]}
                 err = e.read().decode(errors="replace")[:500]
                 return self._json(e.code, {"error": err})
             except URLError as e:
@@ -1503,6 +1578,9 @@ def make_handler(app: App):
                     try:
                         obj = json.loads(payload)
                     except ValueError:
+                if data.get("timings"):
+                    import gguf_split
+                    usage = gguf_split.usage_from_timings(usage, data["timings"])
                         out_lines.append(line)
                         continue
                     chs = obj.get("choices") or []
@@ -1563,6 +1641,7 @@ def make_handler(app: App):
             if t_first is None:
                 # No content tokens (e.g. empty) — treat first == done.
                 t_first = t_done
+            timings_ = None
             stats = timing.reply_stats(usage or {}, wall_s=t_done - t_received)
             # Prefer worker's own ttft when present for first_word estimate.
             if stats.get("ttft_s") is not None:
@@ -1591,6 +1670,8 @@ def make_handler(app: App):
                 self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError):
                 pass
+                            if obj.get("timings"):
+                                timings_ = obj["timings"]
 
     return H
 
@@ -1605,6 +1686,9 @@ def main(argv=None):
     ap.add_argument("--repo", default=str(HERE.parent))
     args = ap.parse_args(argv)
 
+            if timings_:
+                import gguf_split
+                usage = gguf_split.usage_from_timings(usage, timings_)
     mgr = WorkerManager(
         lead_port=args.lead_port,
         packer_peer=args.packer_peer,

@@ -506,3 +506,14 @@ button/select/input/textarea/heading/pill/tag/label rect and font size with Ambe
 Static guard: `tests/test_theme_parity.py` (no bare theme blocks, no `--mono: var(--sans)`,
 no letter-spacing/text-transform/padding/font-size in theme rules except theme-only
 backgrounds and credits). Suite: 350 OK.
+
+
+### Guess-ahead helpers: consent and disk inventory (2026-11-06)
+
+The web UI now offers a missing known helper after a split MLX load with guess-ahead enabled. The prompt uses `agent/guessers.json` sizes (pairing-table estimates, explicitly labelled), e.g. “A 335 MB helper can make qwen3-30b-a3b-4bit write faster. Download it?” Download / Not now are explicit; Escape/Close only dismiss this visit. Settings → Guess-ahead → Helper download… lets you reconsider Not now. Old silent non-interactive declines do not hide web offers. A non-interactive worker no longer records a decline without an answer.
+
+Helpers download with the regular picker jobs (HF authentication, measured bytes, Stop, Resume and network retry), as full copies into the lead Mini's `~/.caravan/mlx-models/drafts/<name>`. They apply on the next model load; no running worker is reloaded. Off, single-Mini, native-MTP mode and unpaired models do not prompt. The existing pairing-table vocabulary compatibility gates still apply.
+
+Topology → On disk lists individual draft names and native MTP heads (`caravan-mtp` inside model directories), sizes per Mini and paired main models. HF cache remains separate. Individual deletions are conservatively refused whenever a model is loaded, including helpers retained after automatic shutoff; unload first. Helper identities resolve through inventory, not user-provided filesystem paths.
+
+Validation: six new consent/inventory/deletion tests pass. Initial full suite: 365 tests, 1 error in concurrent GGUF work (`test_single_skips_packer`, missing `state_dir`); subsequent full suite: 371 tests, all pass in 32.576 seconds. JavaScript syntax and Python compilation pass. Live preflight: EXO1 Qwen3 30B ready on one Mini; did not reload, stop, download or delete anything. Live UI screenshots and end-to-end helper download remain to be captured.

@@ -106,6 +106,7 @@ class WorkerManager:
     def stop(self, *, reason: str = "stop") -> None:
         self._set(status="stopping", error=None)
         self._note(f"stopping workers ({reason})")
+        self._kill_gguf()
         self._kill_lead()
         self._kill_packer()
         self._set(status="idle", model_id=None, model_name=None,
@@ -119,6 +120,12 @@ class WorkerManager:
             entry = catalog.get_model(model_id)
         if not entry:
             raise ValueError(f"unknown model: {model_id}")
+        if entry.get("source") == "gguf":
+            if not entry.get("lead_path"):
+                raise FileNotFoundError(f"GGUF file not on the lead Mini: {model_id}")
+            entry = dict(entry)
+            entry["usable"] = True
+            entry["available_lead"] = True
         # available_lead is local-path oriented; remote one-Mini placements set
         # usable/lead_path from the holding Mini instead.
         if not entry.get("available_lead") and not (
@@ -181,6 +188,8 @@ class WorkerManager:
         self._reload_trial = None
         if not self.check_lpm():
             raise RuntimeError("Low Power Mode is on — turn it off before loading a model")
+        if entry.get("source") == "gguf":
+            return self._load_gguf(entry, settings)
         run_mode = self._resolve_run_mode(entry)
         entry = dict(entry)
         entry["run_mode"] = run_mode
@@ -200,6 +209,7 @@ class WorkerManager:
         self._extra_lead, self._extra_packer = lead_x, packer_x
         self._note("settings: " + ", ".join(f"{k}={v}" for k, v in settings.items())
                    + (f" -> {' '.join(lead_x)}" if lead_x else " (all auto)"))
+        self._kill_gguf()
         self._kill_lead()
         self._kill_packer()
         time.sleep(1.5)
@@ -232,6 +242,136 @@ class WorkerManager:
 
         self._set(status="ready", split=(run_mode == "split"))
         self._note("ready")
+
+    # ----- GGUF via llama.cpp (one Mini or rpc split across K Minis) -----
+
+    def _gguf_meta_path(self) -> Path:
+        return self.state_dir / "gguf.json"
+
+    def _gguf_nodes(self, place: Optional[dict]) -> list:
+        """Configured nodes named by the placement, lead first. Default: lead only."""
+        from web_nodes import nodes_from_config
+        nodes = nodes_from_config()
+        live = {}
+        try:
+            live = {n.get("id"): n for n in (getattr(self, "live_nodes", None) or [])}
+        except Exception:
+            live = {}
+        want = [str(x).lower() for x in ((place or {}).get("node_ids") or [])]
+        lead = [n for n in nodes if n.get("role") == "lead"][:1]
+        if not want:
+            return lead
+        picked = [n for n in nodes if str(n.get("id")).lower() in want
+                  or str(n.get("label") or "").lower() in want]
+        picked.sort(key=lambda n: 0 if n.get("role") == "lead" else 1)
+        if not picked or picked[0].get("role") != "lead":
+            picked = lead + [n for n in picked if n not in lead]
+        return [dict(n, **{k: v for k, v in (live.get(n.get("id")) or {}).items() if k == "ram"})
+                for n in picked]
+
+    def _load_gguf(self, entry: dict, settings: dict) -> None:
+        import gguf_split as G
+        place = entry.get("placement") or {}
+        nodes = self._gguf_nodes(place)
+        peers = [n for n in nodes if not self._node_is_local(n)]
+        mode = "split" if peers else "single"
+        label = " + ".join(n.get("label") or n.get("id") for n in nodes)
+        self._set(status="stopping", error=None, model_id=entry["id"], model_name=entry["name"],
+                  progress=[], split=bool(peers), backend="llama",
+                  gguf={"nodes": [n.get("id") for n in nodes], "labels": [n.get("label") for n in nodes],
+                        "mode": mode})
+        self._note(f"switching to {entry['name']} (GGUF, llama.cpp, {'split across ' if peers else 'on '}{label})")
+        path = Path(entry["lead_path"]).expanduser()
+        if not path.is_file():
+            raise FileNotFoundError(f"GGUF file missing on the lead Mini: {path}")
+        binp = Path(G.LLAMA_BIN).expanduser() / "llama-server"
+        if not binp.is_file():
+            raise FileNotFoundError(f"llama-server not found at {binp} (set CARAVAN_LLAMA_BIN)")
+        self._kill_gguf()
+        self._kill_lead()
+        self._kill_packer()
+        time.sleep(1.0)
+        meta = {"lead_pid": None, "peers": [], "model": str(path), "nodes": [n.get("id") for n in nodes]}
+        rpc = []
+        all_hosts = [G.rpc_host(n) for n in peers]
+        for n in peers:
+            name = n.get("label") or n.get("id")
+            host = G.rpc_host(n)
+            if not host:
+                raise RuntimeError(f"no Mini-to-Mini link address for {name}; set peer in [web.nodes.{n.get('id')}]")
+            self._set(status="starting_packer")
+            # Lead's address on the link, as this peer sees it.
+            r = self._ssh_node(n, 'echo "LEADIP:${SSH_CLIENT%% *}"', timeout=20)
+            lead_ip = next((l[7:].strip() for l in (r.stdout or "").splitlines() if l.startswith("LEADIP:")), "")
+            allow = [lead_ip] + [h for h in all_hosts if h != host]
+            self._note(f"starting rpc-server on {name} ({host}:{G.RPC_PORT}, allow {', '.join(a for a in allow if a)})")
+            cmd = G.rpc_start_command(host, allow, repo=n.get("repo") or "~/cv3")
+            r = self._ssh_node(n, cmd, timeout=40)
+            pid = G.parse_pid(r.stdout)
+            if not pid:
+                raise RuntimeError(f"rpc-server on {name} did not start: {(r.stdout or '')[-300:]} {(r.stderr or '')[-200:]}")
+            meta["peers"].append({"id": n.get("id"), "ssh": n.get("ssh") or n.get("host"), "pid": pid})
+            self._gguf_meta_path().write_text(json.dumps(meta))
+            rpc.append(f"{host}:{G.RPC_PORT}")
+            self._note(f"rpc-server on {name} up (pid {pid})")
+        shares = G.tensor_split(nodes)
+        args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares)
+        self._set(status="starting_lead", packer_pid=None)
+        self._note(("starting llama-server on EXO1, split " + ":".join(str(s) for s in shares)
+                    + " (peers get their share over the link; first load copies it, later loads use the peer cache)")
+                   if rpc else "starting llama-server on EXO1 (one Mini)")
+        log_path = self._lead_log()
+        log_path.write_text("")
+        lf = open(log_path, "ab", buffering=0)
+        self._worker_node = None
+        self._lead_proc = subprocess.Popen(args, stdout=lf, stderr=subprocess.STDOUT,
+                                           start_new_session=True)
+        meta["lead_pid"] = self._lead_proc.pid
+        self._gguf_meta_path().write_text(json.dumps(meta))
+        self._set(lead_pid=self._lead_proc.pid)
+        t0 = time.time()
+        self._wait_lead_ready(timeout=1200)
+        self._note(f"loaded in {time.time() - t0:.1f}s")
+        self._set(status="ready", split=bool(peers))
+        self._note("ready")
+
+    def _kill_gguf(self) -> None:
+        """Stop only the llama-server / rpc gates this manager recorded."""
+        if getattr(self, "state_dir", None) is None:
+            return
+        mp = self._gguf_meta_path()
+        if not mp.is_file():
+            return
+        import gguf_split as G
+        try:
+            meta = json.loads(mp.read_text())
+        except ValueError:
+            meta = {}
+        pid = meta.get("lead_pid")
+        if pid:
+            try:
+                cmdline = subprocess.run(["ps", "-p", str(int(pid)), "-o", "command="],
+                                         capture_output=True, text=True).stdout
+                if "llama-server" in cmdline:
+                    os.kill(int(pid), signal.SIGTERM)
+                    for _ in range(30):
+                        time.sleep(0.3)
+                        os.kill(int(pid), 0)
+                    os.kill(int(pid), signal.SIGKILL)
+            except (ProcessLookupError, OSError, ValueError):
+                pass
+        for p in meta.get("peers") or []:
+            target = p.get("ssh")
+            if not target:
+                continue
+            r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target,
+                                G.rpc_stop_command()], capture_output=True, text=True, timeout=30)
+            if r.returncode:
+                self._note(f"could not stop rpc-server on {p.get('id')}: {(r.stderr or '')[:200]}")
+        mp.unlink()
+        if self._lead_proc is not None and pid and self._lead_proc.pid == pid:
+            self._lead_proc = None
+        self._set(gguf=None, backend=None)
 
     def _resolve_run_mode(self, entry: dict) -> str:
         """single | split — placement file wins; else entry flags; else infer."""

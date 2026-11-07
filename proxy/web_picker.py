@@ -680,7 +680,7 @@ def _normalize_hf_hit(m: dict, *, source: str) -> Optional[dict]:
         "weights_gb": round(weights, 2) if weights else None,
         "needs_conversion": needs_conversion,
         "cloud": False,
-        "gguf_split_hook": source == "gguf",  # future split
+        "gguf_split_hook": source == "gguf",  # llama.cpp RPC split (Day 17)
     }
 
 
@@ -938,11 +938,13 @@ def attach_fit(groups: list, nodes: list) -> list:
                 }
             else:
                 w = float(qq["weights_gb"])
-                split_ok = qq.get("source") == "hf-mlx"  # GGUF split later
+                gguf = qq.get("source") == "gguf"
+                split_ok = qq.get("source") == "hf-mlx" or gguf
                 qq["fit"] = fit_check(
                     weights_gb=w, nodes=nodes, split_ok=split_ok,
                     safety_gb=DEFAULT_SAFETY_GB,
-                    max_split_stages=MAX_SPLIT_STAGES,
+                    # llama.cpp RPC splits across any number of Minis.
+                    max_split_stages=(max(len(nodes), 1) if gguf else MAX_SPLIT_STAGES),
                 )
             quants.append(qq)
         gg = dict(g)
