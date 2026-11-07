@@ -188,6 +188,10 @@
     display: block; position: fixed; right: 10px; bottom: 6px; z-index: 2; pointer-events: none;
     font: 10px/1.2 var(--sans); color: rgba(235,230,220,.62); letter-spacing: .02em;
   }
+  @media (max-width: 820px) {
+    /* Phone: sit under the chat card instead of over the Specifications bar. */
+    html[data-theme="nebula"] .nebula-credit { position: relative; right: auto; bottom: auto; z-index: 1; text-align: right; padding: 4px 12px 12px; }
+  }
   @media (prefers-reduced-motion: reduce) { html[data-theme="nebula"] .nebula-bg { animation: none; } }
   html[data-theme="nebula"] body::before,
   html[data-theme="nebula"] body::after,
@@ -921,7 +925,6 @@
 <body>
 <div class="crt-wash" aria-hidden="true"></div>
 <div class="nebula-bg" aria-hidden="true"></div>
-<div class="nebula-credit">Image: NASA, ESA, CSA, STScI</div>
 <div class="meadow-bg" aria-hidden="true"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="mdSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fc4ec"/><stop offset=".45" stop-color="#cfe6f3"/><stop offset=".62" stop-color="#eef3df"/></linearGradient>
@@ -2750,5 +2753,6 @@
   });
 
 </script>
+<div class="nebula-credit">Image: NASA, ESA, CSA, STScI</div>
 </body>
 </html>
