@@ -3,6 +3,11 @@
 
 ## Unreleased
 
+### Day 17 verification (Nov 7, 12:20 AM CT)
+- `agent/mlx_split.py` imports on Python 3.9 again (EXO1's 2 failing test modules).
+- Meadow/Nebula drawers keep only the inner-edge border: live theme parity 20/24 → 24/24.
+- Overview and verification numbers: [DAY17.md](DAY17.md).
+
 ### Picker Resume + stall diagnosis (Nov 6, late)
 - "Stalled" downloads were hf_xet buffering shards while the network kept moving; progress now
   adds network deltas to the bytes already on disk.

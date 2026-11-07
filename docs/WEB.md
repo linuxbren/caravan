@@ -50,7 +50,7 @@ as the agent `/health` endpoint). There is no login.
 |---|---|
 | Start UI | `python3 proxy/web_server.py --host 0.0.0.0 --port 8190` |
 | Stop UI (keeps workers) | Ctrl-C in that terminal, or `curl -X POST http://127.0.0.1:8190/api/shutdown` |
-| Unload model from UI | Unload button, or `curl -X POST http://127.0.0.1:8190/api/models (disk inventory; no static phantoms)/stop` |
+| Unload model from UI | Unload button, or `curl -X POST http://127.0.0.1:8190/api/models/stop` |
 | Panic stop test workers | On each Mini: Use `python3 proxy/worker_ownership.py --worker /absolute/repo/agent/mlx_worker.py --pid-file ~/.caravan/web-ui/lead.pid --port 8194` on that Mini; never sweep by process name |
 
 Env knobs (optional):
