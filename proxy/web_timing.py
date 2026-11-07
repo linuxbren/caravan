@@ -163,7 +163,8 @@ def reply_stats(usage: dict, wall_s: Optional[float] = None) -> dict:
         "total_s": total_s,
         "ttft_s": ttft_s,
         "prefill_s": prefill_s,
-        "read_tok_s": rate(pt, prefill_s),
+        # Read speed: prompt tokens / prefill; time-to-first-token when prefill isn't reported.
+        "read_tok_s": rate(pt, prefill_s if prefill_s is not None else ttft_s),
         "write_tok_s": rate(ct, write_s),
         "how": how,
         "shared_start": shared_hit,
