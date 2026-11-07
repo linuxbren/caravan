@@ -123,3 +123,9 @@ the coordinating parent, with awareness of any user-initiated model changes.
   a model-inventory symlink `~/.caravan/mlx-models/Orvena--Orvena-4B-MLX-4bit`.
   No user model deleted. Experiment worker had already been terminated by the
   concurrent lifecycle, so nothing else was killed/restarted by this worker.
+
+### Final focused regression — 9:04 PM CT
+`uv run --with pytest python -m pytest tests/test_day17_mtp_verify.py tests/test_adaptive_pl.py tests/test_model_inventory.py tests/test_mlx_worker.py tests/test_mlx_split.py tests/test_mlx_backend.py tests/test_placement_load.py tests/test_tuned_settings.py -q`
+completed **127 passed + 4 subtests** in **12.31 s** on code `f09f6d0`.
+This excludes the previously documented stale HTTP/optimizer fixture failures;
+it does not erase those negative results or substitute for live split tests.
