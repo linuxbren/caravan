@@ -1,0 +1,8 @@
+HF_TOKEN_SET False
+START mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit
+Fetching 9 files:   0%|          | 0/9 [00:00<?, ?it/s]Fetching 9 files:  44%|████▍     | 4/9 [30:18<37:52, 454.57s/it]Fetching 9 files: 100%|██████████| 9/9 [30:18<00:00, 202.03s/it]
+DONE mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit size 8.321 GB
+START mlx-community/Qwen2.5-0.5B-Instruct-4bit
+Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]Fetching 11 files: 100%|██████████| 11/11 [00:00<00:00, 706.76it/s]
+DONE mlx-community/Qwen2.5-0.5B-Instruct-4bit size 0.29 GB
+ALL_DONE

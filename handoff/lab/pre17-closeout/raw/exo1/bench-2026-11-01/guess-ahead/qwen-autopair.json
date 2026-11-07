@@ -1,0 +1,402 @@
+{
+  "tag": "autopair",
+  "model": "mlx-community/Qwen3-30B-A3B-4bit",
+  "url": "http://127.0.0.1:8194",
+  "mode": "standard",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.485,
+    "session": "0210baa4ba7e485c",
+    "prompt_n": 18,
+    "gen_n": 8,
+    "how": "cold",
+    "prefill_s": 0.258,
+    "ttft_s": 0.339,
+    "total_s": 0.471,
+    "peak_gb": 9.18,
+    "split": {
+      "calls": 9,
+      "mb_out": 0.0,
+      "mb_in": 0.12,
+      "wait_s": 0.26,
+      "front_s": 0.144,
+      "net_s": 0.115
+    },
+    "speculate": {
+      "k": 3,
+      "from_draft": 6,
+      "accepted_frac": 0.75,
+      "verify_rounds": 2,
+      "prompt_lookup_n": null,
+      "draft_model": true,
+      "draft_s": 0.0555,
+      "verify_s": 0.155,
+      "pl_hits": 0,
+      "pl_misses": 0,
+      "sources": {
+        "draft_model": 3,
+        "prompt_lookup": 0,
+        "none": 0
+      },
+      "shutoff": {
+        "disabled": false,
+        "reason": null,
+        "from_draft": 6,
+        "n_gen": 8,
+        "accepted_frac": 0.75,
+        "break_even_frac": 0.435
+      }
+    },
+    "content": "Hello there!<|im_end|>",
+    "write_tps": 53.0
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "autopair_count_0",
+        "ok": true,
+        "wall_s": 2.388,
+        "session": "4a5069f2c4cc4f0f",
+        "prompt_n": 25,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.176,
+        "ttft_s": 0.256,
+        "total_s": 2.383,
+        "peak_gb": 9.18,
+        "split": {
+          "calls": 40,
+          "mb_out": 0.0,
+          "mb_in": 0.65,
+          "wait_s": 0.945,
+          "front_s": 0.921,
+          "net_s": 0.024
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 95,
+          "accepted_frac": 0.742,
+          "verify_rounds": 33,
+          "prompt_lookup_n": null,
+          "draft_model": true,
+          "draft_s": 0.4622,
+          "verify_s": 1.7415,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 34,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 95,
+            "n_gen": 128,
+            "accepted_frac": 0.742,
+            "break_even_frac": 0.435
+          }
+        },
+        "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+        "write_tps": 59.7
+      },
+      {
+        "name": "autopair_count_1",
+        "ok": true,
+        "wall_s": 2.386,
+        "session": "2eedbffc531141de",
+        "prompt_n": 25,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.175,
+        "ttft_s": 0.254,
+        "total_s": 2.382,
+        "peak_gb": 9.18,
+        "split": {
+          "calls": 40,
+          "mb_out": 0.0,
+          "mb_in": 0.65,
+          "wait_s": 0.942,
+          "front_s": 0.919,
+          "net_s": 0.023
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 95,
+          "accepted_frac": 0.742,
+          "verify_rounds": 33,
+          "prompt_lookup_n": null,
+          "draft_model": true,
+          "draft_s": 0.4638,
+          "verify_s": 1.7401,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 34,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 95,
+            "n_gen": 128,
+            "accepted_frac": 0.742,
+            "break_even_frac": 0.435
+          }
+        },
+        "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+        "write_tps": 59.7
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 0.392,
+      "session": "bd7e59a73d024fd9",
+      "prompt_n": 25,
+      "gen_n": 6,
+      "how": "cold",
+      "prefill_s": 0.177,
+      "ttft_s": 0.256,
+      "total_s": 0.388,
+      "peak_gb": 9.18,
+      "split": {
+        "calls": 9,
+        "mb_out": 0.0,
+        "mb_in": 0.15,
+        "wait_s": 0.169,
+        "front_s": 0.164,
+        "net_s": 0.005
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 4,
+        "accepted_frac": 0.667,
+        "verify_rounds": 2,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.0539,
+        "verify_s": 0.1562,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 3,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 4,
+          "n_gen": 6,
+          "accepted_frac": 0.667,
+          "break_even_frac": 0.435
+        }
+      },
+      "content": "4<|im_end|>",
+      "write_tps": 37.9
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 0.369,
+      "session": "c1535831a0cc425a",
+      "prompt_n": 21,
+      "gen_n": 6,
+      "how": "cold",
+      "prefill_s": 0.154,
+      "ttft_s": 0.233,
+      "total_s": 0.366,
+      "peak_gb": 9.18,
+      "split": {
+        "calls": 9,
+        "mb_out": 0.0,
+        "mb_in": 0.13,
+        "wait_s": 0.158,
+        "front_s": 0.153,
+        "net_s": 0.006
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 4,
+        "accepted_frac": 0.667,
+        "verify_rounds": 2,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.0541,
+        "verify_s": 0.1562,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 3,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 4,
+          "n_gen": 6,
+          "accepted_frac": 0.667,
+          "break_even_frac": 0.435
+        }
+      },
+      "content": "Paris<|im_end|>",
+      "write_tps": 37.6
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 0.447,
+      "session": "85114e72740e4249",
+      "prompt_n": 23,
+      "gen_n": 7,
+      "how": "cold",
+      "prefill_s": 0.165,
+      "ttft_s": 0.245,
+      "total_s": 0.443,
+      "peak_gb": 9.18,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.16,
+        "wait_s": 0.191,
+        "front_s": 0.184,
+        "net_s": 0.007
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 4,
+        "accepted_frac": 0.571,
+        "verify_rounds": 3,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.0666,
+        "verify_s": 0.2094,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 4,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 4,
+          "n_gen": 7,
+          "accepted_frac": 0.571,
+          "break_even_frac": 0.435
+        }
+      },
+      "content": "Cold.<|im_end|>",
+      "write_tps": 30.3
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 59.7
+  },
+  "tg128": [
+    {
+      "name": "autopair_count_0",
+      "ok": true,
+      "wall_s": 2.388,
+      "session": "4a5069f2c4cc4f0f",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.176,
+      "ttft_s": 0.256,
+      "total_s": 2.383,
+      "peak_gb": 9.18,
+      "split": {
+        "calls": 40,
+        "mb_out": 0.0,
+        "mb_in": 0.65,
+        "wait_s": 0.945,
+        "front_s": 0.921,
+        "net_s": 0.024
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 95,
+        "accepted_frac": 0.742,
+        "verify_rounds": 33,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.4622,
+        "verify_s": 1.7415,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 34,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 95,
+          "n_gen": 128,
+          "accepted_frac": 0.742,
+          "break_even_frac": 0.435
+        }
+      },
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 59.7
+    },
+    {
+      "name": "autopair_count_1",
+      "ok": true,
+      "wall_s": 2.386,
+      "session": "2eedbffc531141de",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.175,
+      "ttft_s": 0.254,
+      "total_s": 2.382,
+      "peak_gb": 9.18,
+      "split": {
+        "calls": 40,
+        "mb_out": 0.0,
+        "mb_in": 0.65,
+        "wait_s": 0.942,
+        "front_s": 0.919,
+        "net_s": 0.023
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 95,
+        "accepted_frac": 0.742,
+        "verify_rounds": 33,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.4638,
+        "verify_s": 1.7401,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 34,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 95,
+          "n_gen": 128,
+          "accepted_frac": 0.742,
+          "break_even_frac": 0.435
+        }
+      },
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 59.7
+    }
+  ]
+}

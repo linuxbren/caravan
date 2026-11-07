@@ -1,0 +1,14 @@
+18:10:32 [mlx-worker] packer stage packer 1: layers 0-23 of 48 of mlx-community--Qwen3-30B-A3B-4bit loaded in 2.7s, 8.4 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/bench-2026-10-31/v3.1-rerun/cache-packer-qwen4
+18:10:32 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch 2decfc4a3bad)
+18:10:38 [mlx-worker] lead connected from 169.254.4.161
+18:11:02 [mlx-worker] saved 74d0fa950557430f: 21 tokens, 1 MB in 0.01s
+18:11:04 [mlx-worker] saved 40c12bb151464003: 40 tokens, 2 MB in 0.01s
+18:11:14 [mlx-worker] saved a5250db723644123: 38 tokens, 2 MB in 0.00s
+18:11:24 [mlx-worker] saved a639b0e34f2d4a7b: 4709 tokens, 231 MB in 0.08s
+18:11:45 [mlx-worker] saved 3d5de8b9209b424a: 478 tokens, 24 MB in 0.02s
+18:11:45 [mlx-worker] saved f086c879bea34986: 476 tokens, 23 MB in 0.02s
+18:11:45 [mlx-worker] saved 94e6a99d47944737: 4044 tokens, 199 MB in 0.07s
+18:11:45 [mlx-worker] saved 3e79013a962546d3: 4041 tokens, 199 MB in 0.05s
+18:11:45 [mlx-worker] saved 47094bb3087a47ef: 6917 tokens, 340 MB in 0.07s
+18:11:46 [mlx-worker] lead disconnected (peer closed the connection)
+18:11:49 [mlx-worker] packer 1 shutting down; saved 0 session(s) with unsaved turns

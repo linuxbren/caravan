@@ -1,0 +1,13 @@
+23:22:31 [mlx-worker] fuse kernels: off
+23:22:32 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+23:22:32 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.103.191:5560
+23:22:32 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+23:22:32 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+23:22:33 [mlx-worker] warm-up 0.16s
+23:22:33 [mlx-worker] loaded mlx-community--Meta-Llama-3.1-8B-Instruct-4bit (llama) in 0.6s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+23:22:33 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)
+23:22:33 [mlx-worker] listening on http://127.0.0.1:8194
+23:23:09 [mlx-worker] session 19d4c80c47b74909: cold, reused 0/7672 tokens, read 7672 in 35.56s, 1 generated, total 35.73s, peak 3.3 GB
+23:23:45 [mlx-worker] session 5e4ee1e4da794e0b: cold, reused 0/7673 tokens, read 7673 in 35.54s, 2 generated, total 35.76s, peak 3.8 GB
+23:24:21 [mlx-worker] session 5cb94176211447e7: cold, reused 0/7673 tokens, read 7673 in 35.55s, 2 generated, total 35.77s, peak 4.31 GB
+23:24:24 [mlx-worker] session 6c60f9634ef14841: cold, reused 0/843 tokens, read 843 in 3.56s, 1 generated, total 3.70s, peak 4.43 GB

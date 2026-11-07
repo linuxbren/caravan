@@ -1,0 +1,3 @@
+17:15:12 [mlx-worker] split speculate: auto-pair deepseek-r1-distill-qwen -> Qwen2.5-0.5B-Instruct-4bit
+17:15:13 [mlx-worker] split speculate: running first-load quality + speed gate...
+17:15:45 [mlx-worker] split speculate: first-load keep baseline=11.17 spec=13.98 break_even=0.255

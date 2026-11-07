@@ -1,0 +1,14 @@
+18:19:25 [mlx-worker] packer stage packer 1: layers 0-11 of 24 of lmstudio-community--gpt-oss-20b-MLX-8bit loaded in 3.7s, 10.5 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/bench-2026-10-31/v3.1-rerun/cache-packer-gptoss8
+18:19:25 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch 4d23e08217e8)
+18:19:32 [mlx-worker] lead connected from 169.254.4.161
+18:20:00 [mlx-worker] saved b3e32af7ad61492c: 76 tokens, 2 MB in 0.01s
+18:20:02 [mlx-worker] saved 1d6b3a581562464d: 93 tokens, 2 MB in 0.01s
+18:20:12 [mlx-worker] saved 29dd9aa020c44f31: 87 tokens, 2 MB in 0.00s
+18:20:22 [mlx-worker] saved 878fae2d6d784be0: 3930 tokens, 50 MB in 0.02s
+18:20:44 [mlx-worker] saved d233ee09be344dfc: 542 tokens, 8 MB in 0.01s
+18:20:44 [mlx-worker] saved 5340855723354480: 540 tokens, 8 MB in 0.01s
+18:20:44 [mlx-worker] saved 7faecbcacb294ed5: 4046 tokens, 51 MB in 0.03s
+18:20:44 [mlx-worker] saved abae8e30aa6149e8: 4045 tokens, 51 MB in 0.02s
+18:20:44 [mlx-worker] saved 1b66ccf0bb054529: 5712 tokens, 72 MB in 0.02s
+18:20:45 [mlx-worker] lead disconnected (peer closed the connection)
+18:20:48 [mlx-worker] packer 1 shutting down; saved 0 session(s) with unsaved turns

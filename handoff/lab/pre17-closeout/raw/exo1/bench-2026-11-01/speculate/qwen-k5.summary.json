@@ -1,0 +1,32 @@
+{
+  "tag": "k5",
+  "tg128": [
+    {
+      "ok": true,
+      "write_tps": 34.2,
+      "speculate": {
+        "k": 5,
+        "from_draft": 104,
+        "accepted_frac": 0.812,
+        "verify_rounds": 24
+      },
+      "peak_gb": 16.62,
+      "ttft_s": 0.402,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 34.5,
+      "speculate": {
+        "k": 5,
+        "from_draft": 104,
+        "accepted_frac": 0.812,
+        "verify_rounds": 24
+      },
+      "peak_gb": 16.64,
+      "ttft_s": 0.401,
+      "error": null
+    }
+  ],
+  "quality_ok": "3/3"
+}

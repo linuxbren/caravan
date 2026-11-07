@@ -1,0 +1,22 @@
+20:33:04 [mlx-worker] fuse kernels: off
+20:33:17 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+20:33:17 [mlx-worker] warm-up 0.13s
+20:33:17 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 12.0s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+20:33:17 [mlx-worker] listening on http://127.0.0.1:8194
+20:33:18 [mlx-worker] session 9d11a2ed232c4749: cold, reused 0/22 tokens, read 22 in 0.17s, 8 generated, total 0.36s, peak 17.26 GB
+20:33:21 [mlx-worker] session bc878a9581264b43: cold, reused 0/42 tokens, read 42 in 0.28s, 128 generated, total 2.80s, peak 17.3 GB
+20:33:24 [mlx-worker] session 1cb9c31b335f45cb: cold, reused 0/39 tokens, read 39 in 0.26s, 128 generated, total 2.79s, peak 17.32 GB
+20:33:35 [mlx-worker] session 35134bcbe4f747b4: cold, reused 0/4712 tokens, read 4712 in 11.46s, 1 generated, total 11.52s, peak 18.32 GB
+20:33:36 [mlx-worker] saved 9d11a2ed232c4749: 21 tokens, 2 MB in 0.00s
+20:33:36 [mlx-worker] evicted 1 session(s) from memory: 9d11a2ed232c4749
+20:33:36 [mlx-worker] session 4e85c9d8639e47bb: cold, reused 0/480 tokens, read 480 in 1.03s, 1 generated, total 1.07s, peak 18.32 GB
+20:33:37 [mlx-worker] saved bc878a9581264b43: 41 tokens, 4 MB in 0.00s
+20:33:37 [mlx-worker] evicted 1 session(s) from memory: bc878a9581264b43
+20:33:37 [mlx-worker] session 3a3d3cdbe4b345d4: cold, reused 0/479 tokens, read 479 in 1.03s, 1 generated, total 1.07s, peak 18.32 GB
+20:33:47 [mlx-worker] saved 1cb9c31b335f45cb: 38 tokens, 4 MB in 0.00s
+20:33:47 [mlx-worker] evicted 1 session(s) from memory: 1cb9c31b335f45cb
+20:33:47 [mlx-worker] session b729d419b3c64765: cold, reused 0/4045 tokens, read 4045 in 9.54s, 1 generated, total 9.60s, peak 18.83 GB
+20:33:52 [mlx-worker] session db30003f14d84b1b: generation stopped (RuntimeError('[METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).')); rewound
+20:33:52 [mlx-worker] generation failed: RuntimeError('[METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).')
+20:33:57 [mlx-worker] session 14dff76d784b4d37: generation stopped (RuntimeError('[METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).')); rewound
+20:33:57 [mlx-worker] generation failed: RuntimeError('[METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).')

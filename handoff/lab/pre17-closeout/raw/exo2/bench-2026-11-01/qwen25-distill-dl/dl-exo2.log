@@ -1,0 +1,103 @@
+START mlx-community/Qwen2.5-14B-Instruct-4bit -> /Users/brenden/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit
+/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `snapshot_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 12 files:   8%|▊         | 1/12 [00:00<00:03,  3.33it/s]Fetching 12 files:  33%|███▎      | 4/12 [00:00<00:00,  8.61it/s]Fetching 12 files:  58%|█████▊    | 7/12 [00:00<00:00, 13.66it/s]Fetching 12 files:  75%|███████▌  | 9/12 [00:02<00:00,  3.07it/s]Fetching 12 files:  83%|████████▎ | 10/12 [00:20<00:00,  3.07it/s]Could not set the permissions on the file '/Users/brenden/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit/.cache/huggingface/download/Dr_lZJDwE1cnGAQMwA77jJEQIk8=.299da577197ca4019b5db6cb01d308e8c757cc22ca8599a483e322063ccca8d5.f4757760.incomplete'. Error: [Errno 2] No such file or directory: '/Users/brenden/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit/.cache/huggingface/download/Dr_lZJDwE1cnGAQMwA77jJEQIk8=.299da577197ca4019b5db6cb01d308e8c757cc22ca8599a483e322063ccca8d5.f4757760.incomplete'.
+Continuing without setting permissions.
+Fetching 12 files:  83%|████████▎ | 10/12 [47:15<09:27, 283.54s/it]
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/shutil.py", line 922, in move
+    os.rename(src, real_dst)
+    ~~~~~~~~~^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/brenden/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit/.cache/huggingface/download/Dr_lZJDwE1cnGAQMwA77jJEQIk8=.299da577197ca4019b5db6cb01d308e8c757cc22ca8599a483e322063ccca8d5.f4757760.incomplete' -> '/Users/brenden/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit/model-00002-of-00002.safetensors'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/file_download.py", line 2146, in _copy_no_matter_what
+    shutil.copy2(src, dst)
+    ~~~~~~~~~~~~^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/shutil.py", line 529, in copy2
+    copyfile(src, dst, follow_symlinks=follow_symlinks)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/shutil.py", line 313, in copyfile
+    with open(src, 'rb') as fsrc:
+         ~~~~^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/brenden/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit/.cache/huggingface/download/Dr_lZJDwE1cnGAQMwA77jJEQIk8=.299da577197ca4019b5db6cb01d308e8c757cc22ca8599a483e322063ccca8d5.f4757760.incomplete'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<stdin>", line 13, in <module>
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/utils/_http.py", line 276, in _inner
+    return fn(*args, **kwargs)
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/_snapshot_download.py", line 541, in snapshot_download
+    hf_thread_map(
+    ~~~~~~~~~~~~~^
+        _inner_hf_hub_download,
+        ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        tqdm_class=tqdm_class,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/utils/tqdm.py", line 441, in hf_thread_map
+    results[future_to_index[future]] = future.result()
+                                       ~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/concurrent/futures/_base.py", line 447, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/concurrent/futures/_base.py", line 396, in __get_result
+    raise self._exception
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/concurrent/futures/thread.py", line 86, in run
+    result = ctx.run(self.task)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/concurrent/futures/thread.py", line 73, in run
+    return fn(*args, **kwargs)
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/_snapshot_download.py", line 521, in _inner_hf_hub_download
+    hf_hub_download(  # type: ignore
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+        repo_id,
+        ^^^^^^^^
+    ...<14 lines>...
+        dry_run=dry_run,
+        ^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/utils/_http.py", line 276, in _inner
+    return fn(*args, **kwargs)
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/file_download.py", line 1026, in hf_hub_download
+    return _hf_hub_download_to_local_dir(
+        # Destination
+    ...<16 lines>...
+        dry_run=dry_run,
+    )
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/file_download.py", line 1505, in _hf_hub_download_to_local_dir
+    _download_to_tmp_and_move(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        incomplete_path=paths.incomplete_path(etag),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<8 lines>...
+        tqdm_class=tqdm_class,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/file_download.py", line 2042, in _download_to_tmp_and_move
+    _chmod_and_move(tmp_path, destination_path)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/file_download.py", line 2095, in _chmod_and_move
+    shutil.move(str(src), str(dst), copy_function=_copy_no_matter_what)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/shutil.py", line 942, in move
+    copy_function(src, real_dst)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/file_download.py", line 2149, in _copy_no_matter_what
+    shutil.copyfile(src, dst)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/shutil.py", line 313, in copyfile
+    with open(src, 'rb') as fsrc:
+         ~~~~^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/brenden/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit/.cache/huggingface/download/Dr_lZJDwE1cnGAQMwA77jJEQIk8=.299da577197ca4019b5db6cb01d308e8c757cc22ca8599a483e322063ccca8d5.f4757760.incomplete'

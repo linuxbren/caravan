@@ -1,0 +1,15 @@
+{
+  "host": "prf-hays-exo01-2.local",
+  "cold_lead_only": {
+    "rpc": 11.385,
+    "packer_s": 10.625,
+    "lead": 20.087,
+    "total": 31.583
+  },
+  "warm_lead": {
+    "rpc": 11.31,
+    "packer_s": 10.709,
+    "lead": 14.813,
+    "total": 26.139
+  }
+}

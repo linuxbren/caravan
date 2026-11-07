@@ -1,0 +1,154 @@
+{
+  "tag": "baseline",
+  "model": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+  "url": "http://127.0.0.1:8194",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.366,
+    "session": "55805f0b28784f93",
+    "prompt_n": 18,
+    "gen_n": 7,
+    "how": "cold",
+    "prefill_s": 0.148,
+    "ttft_s": 0.191,
+    "total_s": 0.347,
+    "peak_gb": 8.65,
+    "split": {
+      "calls": 13,
+      "mb_out": 0.0,
+      "mb_in": 0.11,
+      "wait_s": 0.167,
+      "front_s": 0.159,
+      "net_s": 0.008
+    },
+    "speculate": null,
+    "content": "Hello there!",
+    "write_tps": 38.5
+  },
+  "tg128": [
+    {
+      "name": "baseline_tg128_0",
+      "ok": true,
+      "wall_s": 2.98,
+      "session": "7662e48c2a5f41f5",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.175,
+      "ttft_s": 0.215,
+      "total_s": 2.979,
+      "peak_gb": 8.68,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.64,
+        "wait_s": 1.43,
+        "front_s": 1.357,
+        "net_s": 0.073
+      },
+      "speculate": null,
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 45.9
+    },
+    {
+      "name": "baseline_tg128_1",
+      "ok": true,
+      "wall_s": 2.982,
+      "session": "0bf7cf55143b4618",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.175,
+      "ttft_s": 0.215,
+      "total_s": 2.981,
+      "peak_gb": 8.69,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.64,
+        "wait_s": 1.428,
+        "front_s": 1.357,
+        "net_s": 0.071
+      },
+      "speculate": null,
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 45.9
+    }
+  ],
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 0.328,
+      "session": "461b0050c8654962",
+      "prompt_n": 25,
+      "gen_n": 5,
+      "how": "cold",
+      "prefill_s": 0.176,
+      "ttft_s": 0.215,
+      "total_s": 0.327,
+      "peak_gb": 8.7,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.13,
+        "wait_s": 0.162,
+        "front_s": 0.157,
+        "net_s": 0.005
+      },
+      "speculate": null,
+      "content": "4",
+      "write_tps": 35.7
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 0.313,
+      "session": "52a94091712a44a7",
+      "prompt_n": 21,
+      "gen_n": 5,
+      "how": "cold",
+      "prefill_s": 0.154,
+      "ttft_s": 0.194,
+      "total_s": 0.306,
+      "peak_gb": 8.7,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.11,
+        "wait_s": 0.153,
+        "front_s": 0.147,
+        "net_s": 0.006
+      },
+      "speculate": null,
+      "content": "Paris",
+      "write_tps": 35.7
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 0.343,
+      "session": "5ad787cb0e9d4cb7",
+      "prompt_n": 23,
+      "gen_n": 6,
+      "how": "cold",
+      "prefill_s": 0.164,
+      "ttft_s": 0.204,
+      "total_s": 0.338,
+      "peak_gb": 8.71,
+      "split": {
+        "calls": 12,
+        "mb_out": 0.0,
+        "mb_in": 0.12,
+        "wait_s": 0.167,
+        "front_s": 0.161,
+        "net_s": 0.006
+      },
+      "speculate": null,
+      "content": "Cold.",
+      "write_tps": 37.3
+    }
+  ],
+  "quality_ok": "3/3"
+}

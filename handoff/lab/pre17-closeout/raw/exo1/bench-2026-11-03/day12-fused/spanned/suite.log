@@ -1,0 +1,29 @@
+===== SPANNED llama fuse=off pipe=1 Tue Nov  3 20:50:39 CST 2026 =====
+DONE_SPANNED llama off n1
+===== SPANNED llama fuse=off pipe=1 Tue Nov  3 20:57:05 CST 2026 =====
+DONE_SPANNED llama off n1
+===== SPANNED llama fuse=off pipe=2 Tue Nov  3 21:03:01 CST 2026 =====
+DONE_SPANNED llama off n2
+===== SPANNED llama fuse=all pipe=1 Tue Nov  3 21:09:08 CST 2026 =====
+DONE_SPANNED llama all n1
+===== SPANNED llama fuse=all pipe=2 Tue Nov  3 21:20:30 CST 2026 =====
+DONE_SPANNED llama all n2
+===== SPANNED gemma fuse=off pipe=1 Tue Nov  3 21:24:41 CST 2026 =====
+===== SPANNED gemma fuse=off pipe=1 Tue Nov  3 21:39:16 CST 2026 =====
+DONE_SPANNED gemma off n1
+===== SPANNED gemma fuse=off pipe=2 Tue Nov  3 21:41:28 CST 2026 =====
+DONE_SPANNED gemma off n2
+===== SPANNED gemma fuse=all pipe=1 Tue Nov  3 21:43:20 CST 2026 =====
+===== SPANNED gemma fuse=all pipe=2 Tue Nov  3 21:49:25 CST 2026 =====
+===== SPANNED gemma fuse=metal-swiglu pipe=1 Tue Nov  3 21:57:15 CST 2026 =====
+DONE_SPANNED gemma metal-swiglu n1
+===== SPANNED gemma fuse=metal-swiglu pipe=2 Tue Nov  3 21:59:16 CST 2026 =====
+DONE_SPANNED gemma metal-swiglu n2
+===== SPANNED qwen3 fuse=off pipe=1 Tue Nov  3 22:01:05 CST 2026 =====
+DONE_SPANNED qwen3 off n1
+===== SPANNED qwen3 fuse=off pipe=2 Tue Nov  3 22:02:46 CST 2026 =====
+DONE_SPANNED qwen3 off n2
+===== SPANNED qwen3 fuse=all pipe=1 Tue Nov  3 22:04:10 CST 2026 =====
+DONE_SPANNED qwen3 all n1
+===== SPANNED qwen3 fuse=all pipe=2 Tue Nov  3 22:05:48 CST 2026 =====
+DONE_SPANNED qwen3 all n2

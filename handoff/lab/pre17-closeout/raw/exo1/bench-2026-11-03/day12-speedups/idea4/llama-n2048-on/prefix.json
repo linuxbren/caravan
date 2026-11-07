@@ -1,0 +1,63 @@
+{
+  "model": "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit",
+  "url": "http://127.0.0.1:8194",
+  "target_preamble_chars": 17710,
+  "runs": [
+    {
+      "name": "cold_store",
+      "ok": true,
+      "wall_s": 17.651,
+      "session": "0e04e258624a4a64",
+      "prompt_n": 4000,
+      "gen_n": 1,
+      "how": "cold",
+      "prefill_s": 17.482,
+      "ttft_s": 17.566,
+      "total_s": 17.632,
+      "peak_gb": 3.1,
+      "content": "OK"
+    },
+    {
+      "name": "new_session_0",
+      "ok": true,
+      "wall_s": 9.016,
+      "session": "12f61431d5aa4f3b",
+      "prompt_n": 4001,
+      "gen_n": 2,
+      "how": "shared-prefix-hit-memory",
+      "prefill_s": 8.811,
+      "ttft_s": 8.896,
+      "total_s": 9.012,
+      "peak_gb": 3.61,
+      "content": "OK0"
+    },
+    {
+      "name": "new_session_1",
+      "ok": true,
+      "wall_s": 9.017,
+      "session": "2887b9dcc1aa4aba",
+      "prompt_n": 4001,
+      "gen_n": 2,
+      "how": "shared-prefix-hit-memory",
+      "prefill_s": 8.812,
+      "ttft_s": 8.896,
+      "total_s": 9.013,
+      "peak_gb": 3.88,
+      "content": "OK1"
+    },
+    {
+      "name": "miss_control",
+      "ok": true,
+      "wall_s": 3.877,
+      "session": "723cf07dac7b4dd9",
+      "prompt_n": 843,
+      "gen_n": 1,
+      "how": "cold",
+      "prefill_s": 3.577,
+      "ttft_s": 3.65,
+      "total_s": 3.713,
+      "peak_gb": 3.99,
+      "content": "OK"
+    }
+  ]
+}

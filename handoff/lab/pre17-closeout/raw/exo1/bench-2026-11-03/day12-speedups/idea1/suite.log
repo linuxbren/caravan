@@ -1,0 +1,26 @@
+===== IDEA1 llama pipe=1 draft=off Tue Nov  3 22:41:29 CST 2026 =====
+DONE_IDEA1 llama n1 draftoff
+===== IDEA1 llama pipe=1 draft=on Tue Nov  3 22:42:16 CST 2026 =====
+DONE_IDEA1 llama n1 drafton
+===== IDEA1 llama pipe=2 draft=off Tue Nov  3 22:43:02 CST 2026 =====
+DONE_IDEA1 llama n2 draftoff
+===== IDEA1 llama pipe=2 draft=on Tue Nov  3 22:43:51 CST 2026 =====
+===== IDEA1 llama pipe=2 draft=on Tue Nov  3 22:46:09 CST 2026 =====
+===== IDEA1 llama pipe=2 draft=on Tue Nov  3 22:50:14 CST 2026 =====
+DONE_IDEA1 llama n2 drafton
+===== IDEA1 gemma pipe=1 draft=off Tue Nov  3 22:51:27 CST 2026 =====
+DONE_IDEA1 gemma n1 draftoff
+===== IDEA1 gemma pipe=1 draft=on Tue Nov  3 22:52:25 CST 2026 =====
+DONE_IDEA1 gemma n1 drafton
+===== IDEA1 gemma pipe=2 draft=off Tue Nov  3 22:53:28 CST 2026 =====
+DONE_IDEA1 gemma n2 draftoff
+===== IDEA1 gemma pipe=2 draft=on Tue Nov  3 22:54:28 CST 2026 =====
+DONE_IDEA1 gemma n2 drafton
+===== IDEA1 qwen3 pipe=1 draft=off Tue Nov  3 22:56:27 CST 2026 =====
+DONE_IDEA1 qwen3 n1 draftoff
+===== IDEA1 qwen3 pipe=1 draft=on Tue Nov  3 22:57:04 CST 2026 =====
+DONE_IDEA1 qwen3 n1 drafton
+===== IDEA1 qwen3 pipe=2 draft=off Tue Nov  3 22:57:41 CST 2026 =====
+DONE_IDEA1 qwen3 n2 draftoff
+===== IDEA1 qwen3 pipe=2 draft=on Tue Nov  3 22:58:18 CST 2026 =====
+DONE_IDEA1 qwen3 n2 drafton

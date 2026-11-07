@@ -1,0 +1,45 @@
+18:12:36 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+18:12:36 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers (llama))
+18:12:37 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.104.38:5560
+18:12:37 [mlx-worker] auto pipeline: chats=2 (headroom 7.9 GB after ~2.0 GB weights on 26 GB; Mini benches peak at 2 chats)
+18:12:37 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+18:12:37 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+18:12:37 [mlx-worker] warm-up 0.16s
+18:12:37 [mlx-worker] loaded mlx-community--Meta-Llama-3.1-8B-Instruct-4bit (llama) in 1.2s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+18:12:37 [mlx-worker] split pipeline chats=2 (idea 1; overlap packer/lead across sessions)
+18:12:37 [mlx-worker] listening on http://127.0.0.1:8194
+18:12:39 [mlx-worker] session 5cb3d97b2c7e49e6: pipeline, reused 0/45, 8 generated, total 0.64s, peak 2.44 GB
+18:12:45 [mlx-worker] session 86976758f9d9481b: pipeline, reused 0/59, 128 generated, total 5.96s, peak 2.5 GB
+18:12:51 [mlx-worker] session 1f4bef20046d463b: pipeline, reused 0/56, 128 generated, total 5.96s, peak 2.51 GB
+18:13:08 [mlx-worker] session a4c5c760599f4a1c: pipeline, reused 0/3909, 1 generated, total 17.15s, peak 3.12 GB
+18:13:10 [mlx-worker] saved 5cb3d97b2c7e49e6: 44 tokens, 3 MB in 0.00s
+18:13:10 [mlx-worker] evicted 1 session(s) from memory: 5cb3d97b2c7e49e6
+18:13:10 [mlx-worker] session d03d683e5a4e4bab: pipeline, reused 0/512, 1 generated, total 2.16s, peak 3.12 GB
+18:13:13 [mlx-worker] saved 86976758f9d9481b: 58 tokens, 4 MB in 0.00s
+18:13:13 [mlx-worker] evicted 1 session(s) from memory: 86976758f9d9481b
+18:13:13 [mlx-worker] session 915e8550ae3e4bb1: pipeline, reused 0/509, 1 generated, total 2.15s, peak 3.12 GB
+18:13:30 [mlx-worker] saved 1f4bef20046d463b: 55 tokens, 4 MB in 0.00s
+18:13:30 [mlx-worker] evicted 1 session(s) from memory: 1f4bef20046d463b
+18:13:30 [mlx-worker] session cd7ffb99eb2d4217: pipeline, reused 0/4065, 1 generated, total 17.75s, peak 3.47 GB
+18:13:48 [mlx-worker] saved a4c5c760599f4a1c: 3908 tokens, 256 MB in 0.10s
+18:13:48 [mlx-worker] evicted 1 session(s) from memory: a4c5c760599f4a1c
+18:13:48 [mlx-worker] session 2075411825234bcc: pipeline, reused 0/4066, 1 generated, total 18.05s, peak 3.72 GB
+18:14:15 [mlx-worker] saved d03d683e5a4e4bab: 511 tokens, 33 MB in 0.01s
+18:14:15 [mlx-worker] evicted 1 session(s) from memory: d03d683e5a4e4bab
+18:14:15 [mlx-worker] session ddc14b9e897441ea: pipeline, reused 0/5694, 19 generated, total 26.52s, peak 3.79 GB
+18:14:16 [mlx-worker] saved 915e8550ae3e4bb1: 508 tokens, 33 MB in 0.01s
+18:14:16 [mlx-worker] evicted 1 session(s) from memory: 915e8550ae3e4bb1
+18:14:16 [mlx-worker] session bcd9d8e8fba94e25: pipeline, reused 0/39, 8 generated, total 0.65s, peak 3.79 GB
+18:14:22 [mlx-worker] saved cd7ffb99eb2d4217: 4064 tokens, 266 MB in 0.07s
+18:14:23 [mlx-worker] saved 2075411825234bcc: 4065 tokens, 266 MB in 0.35s
+18:14:23 [mlx-worker] evicted 2 session(s) from memory: cd7ffb99eb2d4217, 2075411825234bcc
+18:14:23 [mlx-worker] session 92d4235e650d40ef: pipeline, reused 0/59, 128 generated, total 7.19s, peak 3.79 GB
+18:14:23 [mlx-worker] session 3f101a2d6ede4342: pipeline, reused 0/60, 128 generated, total 6.92s, peak 3.79 GB
+18:14:30 [mlx-worker] saved ddc14b9e897441ea: 5693 tokens, 373 MB in 0.16s
+18:14:30 [mlx-worker] saved bcd9d8e8fba94e25: 38 tokens, 2 MB in 0.00s
+18:14:30 [mlx-worker] evicted 2 session(s) from memory: ddc14b9e897441ea, bcd9d8e8fba94e25
+18:14:30 [mlx-worker] session 69b1e1c6c0f84ddb: pipeline, reused 0/62, 128 generated, total 6.93s, peak 3.79 GB
+18:14:30 [mlx-worker] session 07407ef81f9f4301: pipeline, reused 0/59, 128 generated, total 6.66s, peak 3.79 GB
+18:14:56 [mlx-worker] saved 92d4235e650d40ef: 58 tokens, 4 MB in 0.00s
+18:14:56 [mlx-worker] evicted 1 session(s) from memory: 92d4235e650d40ef
+18:14:56 [mlx-worker] session b42cc0e156ac4b93: pipeline, reused 0/5694, 19 generated, total 26.51s, peak 3.79 GB

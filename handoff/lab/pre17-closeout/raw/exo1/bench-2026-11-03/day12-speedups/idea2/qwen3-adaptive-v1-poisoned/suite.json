@@ -1,0 +1,699 @@
+{
+  "tag": "adaptive",
+  "model": "mlx-community/Qwen3-30B-A3B-4bit",
+  "url": "http://127.0.0.1:8194",
+  "mode": "suite",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.431,
+    "session": "4687815a5e734202",
+    "prompt_n": 18,
+    "gen_n": 8,
+    "how": "cold",
+    "prefill_s": 0.147,
+    "ttft_s": 0.217,
+    "total_s": 0.415,
+    "peak_gb": 9.08,
+    "split": {
+      "calls": 11,
+      "mb_out": 0.0,
+      "mb_in": 0.14,
+      "wait_s": 0.178,
+      "front_s": 0.17,
+      "net_s": 0.008
+    },
+    "speculate": {
+      "k": 3,
+      "from_draft": 5,
+      "accepted_frac": 0.625,
+      "verify_rounds": 3,
+      "prompt_lookup_n": 3,
+      "draft_model": true,
+      "draft_s": 0.0549,
+      "verify_s": 0.21,
+      "pl_hits": 1,
+      "pl_misses": 0,
+      "sources": {
+        "draft_model": 3,
+        "prompt_lookup": 1,
+        "none": 0
+      },
+      "shutoff": {
+        "disabled": false,
+        "reason": null,
+        "from_draft": 5,
+        "n_gen": 8,
+        "accepted_frac": 0.625,
+        "break_even_frac": 0.35
+      }
+    },
+    "content": "Hello there!<|im_end|>",
+    "write_tps": 35.4
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "adaptive_count_0",
+        "ok": true,
+        "wall_s": 2.409,
+        "session": "ab9b2fabd4934405",
+        "prompt_n": 25,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.177,
+        "ttft_s": 0.256,
+        "total_s": 2.408,
+        "peak_gb": 9.13,
+        "split": {
+          "calls": 40,
+          "mb_out": 0.0,
+          "mb_in": 0.65,
+          "wait_s": 0.954,
+          "front_s": 0.931,
+          "net_s": 0.024
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 95,
+          "accepted_frac": 0.742,
+          "verify_rounds": 33,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.466,
+          "verify_s": 1.7612,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 34,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 95,
+            "n_gen": 128,
+            "accepted_frac": 0.742,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+        "write_tps": 59.0
+      },
+      {
+        "name": "adaptive_count_1",
+        "ok": true,
+        "wall_s": 2.404,
+        "session": "099c8ec7067841c9",
+        "prompt_n": 25,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.177,
+        "ttft_s": 0.256,
+        "total_s": 2.403,
+        "peak_gb": 9.15,
+        "split": {
+          "calls": 40,
+          "mb_out": 0.0,
+          "mb_in": 0.65,
+          "wait_s": 0.95,
+          "front_s": 0.925,
+          "net_s": 0.024
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 95,
+          "accepted_frac": 0.742,
+          "verify_rounds": 33,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.4669,
+          "verify_s": 1.7557,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 34,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 95,
+            "n_gen": 128,
+            "accepted_frac": 0.742,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+        "write_tps": 59.2
+      }
+    ],
+    "repeat": [
+      {
+        "name": "adaptive_repeat_0",
+        "ok": true,
+        "wall_s": 1.126,
+        "session": "d9329dee48be4bd1",
+        "prompt_n": 48,
+        "gen_n": 46,
+        "how": "cold",
+        "prefill_s": 0.313,
+        "ttft_s": 0.403,
+        "total_s": 1.125,
+        "peak_gb": 9.2,
+        "split": {
+          "calls": 17,
+          "mb_out": 0.0,
+          "mb_in": 0.39,
+          "wait_s": 0.466,
+          "front_s": 0.456,
+          "net_s": 0.01
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 35,
+          "accepted_frac": 0.761,
+          "verify_rounds": 11,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.1878,
+          "verify_s": 0.6224,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 12,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 35,
+            "n_gen": 46,
+            "accepted_frac": 0.761,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.  \nThe quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.<|im_end|>",
+        "write_tps": 62.3
+      },
+      {
+        "name": "adaptive_repeat_1",
+        "ok": true,
+        "wall_s": 1.13,
+        "session": "a61278f8c0ba4691",
+        "prompt_n": 48,
+        "gen_n": 46,
+        "how": "cold",
+        "prefill_s": 0.313,
+        "ttft_s": 0.401,
+        "total_s": 1.123,
+        "peak_gb": 9.21,
+        "split": {
+          "calls": 17,
+          "mb_out": 0.0,
+          "mb_in": 0.39,
+          "wait_s": 0.467,
+          "front_s": 0.456,
+          "net_s": 0.011
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 35,
+          "accepted_frac": 0.761,
+          "verify_rounds": 11,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.1862,
+          "verify_s": 0.6225,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 12,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 35,
+            "n_gen": 46,
+            "accepted_frac": 0.761,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.  \nThe quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.<|im_end|>",
+        "write_tps": 62.3
+      }
+    ],
+    "code_edit": [
+      {
+        "name": "adaptive_code_edit_0",
+        "ok": true,
+        "wall_s": 0.711,
+        "session": "9b8f2bae62cb417f",
+        "prompt_n": 55,
+        "gen_n": 20,
+        "how": "cold",
+        "prefill_s": 0.35,
+        "ttft_s": 0.44,
+        "total_s": 0.704,
+        "peak_gb": 9.24,
+        "split": {
+          "calls": 9,
+          "mb_out": 0.0,
+          "mb_in": 0.3,
+          "wait_s": 0.308,
+          "front_s": 0.303,
+          "net_s": 0.006
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 15,
+          "accepted_frac": 0.75,
+          "verify_rounds": 5,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.0913,
+          "verify_s": 0.2621,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 5,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 15,
+            "n_gen": 20,
+            "accepted_frac": 0.75,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "def add(a, b, c):\n    return a + b + c<|im_end|>",
+        "write_tps": 72.0
+      },
+      {
+        "name": "adaptive_code_edit_1",
+        "ok": true,
+        "wall_s": 0.714,
+        "session": "a6f77d23bccb471f",
+        "prompt_n": 55,
+        "gen_n": 20,
+        "how": "cold",
+        "prefill_s": 0.35,
+        "ttft_s": 0.441,
+        "total_s": 0.707,
+        "peak_gb": 9.24,
+        "split": {
+          "calls": 9,
+          "mb_out": 0.0,
+          "mb_in": 0.3,
+          "wait_s": 0.312,
+          "front_s": 0.307,
+          "net_s": 0.005
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 15,
+          "accepted_frac": 0.75,
+          "verify_rounds": 5,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.0923,
+          "verify_s": 0.2641,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 5,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 15,
+            "n_gen": 20,
+            "accepted_frac": 0.75,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "def add(a, b, c):\n    return a + b + c<|im_end|>",
+        "write_tps": 71.4
+      }
+    ],
+    "code_cont": [
+      {
+        "name": "adaptive_code_cont_0",
+        "ok": true,
+        "wall_s": 1.363,
+        "session": "5f9f1a3e460d447e",
+        "prompt_n": 41,
+        "gen_n": 58,
+        "how": "cold",
+        "prefill_s": 0.277,
+        "ttft_s": 0.366,
+        "total_s": 1.355,
+        "peak_gb": 9.24,
+        "split": {
+          "calls": 23,
+          "mb_out": 0.0,
+          "mb_in": 0.43,
+          "wait_s": 0.553,
+          "front_s": 0.54,
+          "net_s": 0.014
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 43,
+          "accepted_frac": 0.741,
+          "verify_rounds": 15,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.2375,
+          "verify_s": 0.8371,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 16,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 43,
+            "n_gen": 58,
+            "accepted_frac": 0.741,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "def fib(n):\n    if n < 2:\n        return n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b<|im_end|>",
+        "write_tps": 57.6
+      },
+      {
+        "name": "adaptive_code_cont_1",
+        "ok": true,
+        "wall_s": 1.371,
+        "session": "78544177f1e746f4",
+        "prompt_n": 41,
+        "gen_n": 58,
+        "how": "cold",
+        "prefill_s": 0.277,
+        "ttft_s": 0.366,
+        "total_s": 1.362,
+        "peak_gb": 9.24,
+        "split": {
+          "calls": 23,
+          "mb_out": 0.0,
+          "mb_in": 0.43,
+          "wait_s": 0.559,
+          "front_s": 0.545,
+          "net_s": 0.014
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 43,
+          "accepted_frac": 0.741,
+          "verify_rounds": 15,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.2409,
+          "verify_s": 0.8409,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 16,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 43,
+            "n_gen": 58,
+            "accepted_frac": 0.741,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "def fib(n):\n    if n < 2:\n        return n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b<|im_end|>",
+        "write_tps": 57.2
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 0.397,
+      "session": "8c78f1a3ca554dd5",
+      "prompt_n": 25,
+      "gen_n": 6,
+      "how": "cold",
+      "prefill_s": 0.177,
+      "ttft_s": 0.257,
+      "total_s": 0.39,
+      "peak_gb": 9.24,
+      "split": {
+        "calls": 9,
+        "mb_out": 0.0,
+        "mb_in": 0.15,
+        "wait_s": 0.17,
+        "front_s": 0.165,
+        "net_s": 0.005
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 4,
+        "accepted_frac": 0.667,
+        "verify_rounds": 2,
+        "prompt_lookup_n": 3,
+        "draft_model": true,
+        "draft_s": 0.0544,
+        "verify_s": 0.1568,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 3,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 4,
+          "n_gen": 6,
+          "accepted_frac": 0.667,
+          "break_even_frac": 0.35
+        }
+      },
+      "content": "4<|im_end|>",
+      "write_tps": 37.6
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 0.375,
+      "session": "bb0572fdf74044b6",
+      "prompt_n": 21,
+      "gen_n": 6,
+      "how": "cold",
+      "prefill_s": 0.155,
+      "ttft_s": 0.235,
+      "total_s": 0.367,
+      "peak_gb": 9.24,
+      "split": {
+        "calls": 9,
+        "mb_out": 0.0,
+        "mb_in": 0.13,
+        "wait_s": 0.159,
+        "front_s": 0.153,
+        "net_s": 0.005
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 4,
+        "accepted_frac": 0.667,
+        "verify_rounds": 2,
+        "prompt_lookup_n": 3,
+        "draft_model": true,
+        "draft_s": 0.0542,
+        "verify_s": 0.1567,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 3,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 4,
+          "n_gen": 6,
+          "accepted_frac": 0.667,
+          "break_even_frac": 0.35
+        }
+      },
+      "content": "Paris<|im_end|>",
+      "write_tps": 37.9
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 0.452,
+      "session": "a645e0f182fb42e4",
+      "prompt_n": 23,
+      "gen_n": 7,
+      "how": "cold",
+      "prefill_s": 0.165,
+      "ttft_s": 0.245,
+      "total_s": 0.444,
+      "peak_gb": 9.24,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.16,
+        "wait_s": 0.19,
+        "front_s": 0.183,
+        "net_s": 0.006
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 4,
+        "accepted_frac": 0.571,
+        "verify_rounds": 3,
+        "prompt_lookup_n": 3,
+        "draft_model": true,
+        "draft_s": 0.0669,
+        "verify_s": 0.2102,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 4,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 4,
+          "n_gen": 7,
+          "accepted_frac": 0.571,
+          "break_even_frac": 0.35
+        }
+      },
+      "content": "Cold.<|im_end|>",
+      "write_tps": 30.2
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 59.0,
+    "repeat": 62.3,
+    "code_edit": 71.4,
+    "code_cont": 57.2
+  },
+  "tg128": [
+    {
+      "name": "adaptive_count_0",
+      "ok": true,
+      "wall_s": 2.409,
+      "session": "ab9b2fabd4934405",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.177,
+      "ttft_s": 0.256,
+      "total_s": 2.408,
+      "peak_gb": 9.13,
+      "split": {
+        "calls": 40,
+        "mb_out": 0.0,
+        "mb_in": 0.65,
+        "wait_s": 0.954,
+        "front_s": 0.931,
+        "net_s": 0.024
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 95,
+        "accepted_frac": 0.742,
+        "verify_rounds": 33,
+        "prompt_lookup_n": 3,
+        "draft_model": true,
+        "draft_s": 0.466,
+        "verify_s": 1.7612,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 34,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 95,
+          "n_gen": 128,
+          "accepted_frac": 0.742,
+          "break_even_frac": 0.35
+        }
+      },
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 59.0
+    },
+    {
+      "name": "adaptive_count_1",
+      "ok": true,
+      "wall_s": 2.404,
+      "session": "099c8ec7067841c9",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.177,
+      "ttft_s": 0.256,
+      "total_s": 2.403,
+      "peak_gb": 9.15,
+      "split": {
+        "calls": 40,
+        "mb_out": 0.0,
+        "mb_in": 0.65,
+        "wait_s": 0.95,
+        "front_s": 0.925,
+        "net_s": 0.024
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 95,
+        "accepted_frac": 0.742,
+        "verify_rounds": 33,
+        "prompt_lookup_n": 3,
+        "draft_model": true,
+        "draft_s": 0.4669,
+        "verify_s": 1.7557,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 34,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 95,
+          "n_gen": 128,
+          "accepted_frac": 0.742,
+          "break_even_frac": 0.35
+        }
+      },
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 59.2
+    }
+  ]
+}

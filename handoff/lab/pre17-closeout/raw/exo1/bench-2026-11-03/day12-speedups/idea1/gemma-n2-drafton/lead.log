@@ -1,0 +1,55 @@
+22:54:32 [mlx-worker] fuse kernels: off
+22:54:32 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+22:54:34 [mlx-worker] split lead: lead: layers 15-29 of 30 here, packer 1: layers 0-14 of 30 at 169.254.103.191:5560
+22:54:36 [mlx-worker] split speculate: draft gemma-3-270m-it-4bit, k=2, vocab=compatible_specials_remap remap=6187 (idea 3 guess-ahead)
+22:54:36 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+22:54:36 [mlx-worker] warm-up 0.12s
+22:54:36 [mlx-worker] loaded mlx-community--gemma-4-26b-a4b-it-4bit (gemma4) in 3.6s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+22:54:36 [mlx-worker] split pipeline chats=2 (idea 1; overlap packer/lead across sessions)
+22:54:36 [mlx-worker] listening on http://127.0.0.1:8194
+22:54:37 [mlx-worker] session 85edca9cb2bb4149: pipeline, reused 0/21, 8 generated, total 0.43s, peak 7.51 GB
+22:54:40 [mlx-worker] split speculate: accepted_frac 0.229 < break_even 0.350 over 48 tokens; guess-ahead off for this chat
+22:54:42 [mlx-worker] session bf4b08b80ed140ad: pipeline, reused 0/44, 128 generated, total 4.65s, peak 7.57 GB
+22:54:44 [mlx-worker] split speculate: accepted_frac 0.312 < break_even 0.350 over 48 tokens; guess-ahead off for this chat
+22:54:46 [mlx-worker] session c2b69ba4c3f4494b: pipeline, reused 0/46, 128 generated, total 8.15s, peak 7.57 GB
+22:54:48 [mlx-worker] split speculate: accepted_frac 0.229 < break_even 0.350 over 48 tokens; guess-ahead off for this chat
+22:54:50 [mlx-worker] saved 85edca9cb2bb4149: 20 tokens, 2 MB in 0.00s
+22:54:50 [mlx-worker] evicted 1 session(s) from memory: 85edca9cb2bb4149
+22:54:50 [mlx-worker] session f214ada83c7042be: pipeline, reused 0/44, 128 generated, total 4.64s, peak 7.59 GB
+22:54:52 [mlx-worker] split speculate: accepted_frac 0.188 < break_even 0.350 over 48 tokens; guess-ahead off for this chat
+22:54:55 [mlx-worker] session 380c529cb06b4884: pipeline, reused 0/46, 128 generated, total 8.45s, peak 7.59 GB
+22:55:14 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:14 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:14 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:14 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:14 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] split speculate: accepted_frac 0.333 < break_even 0.350 over 48 tokens; guess-ahead off for this chat
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:56:16 [mlx-worker] saved bf4b08b80ed140ad: 43 tokens, 5 MB in 0.00s
+22:56:16 [mlx-worker] evicted 1 session(s) from memory: bf4b08b80ed140ad
+22:56:16 [mlx-worker] session 7ab2b822583d4f3d: pipeline, reused 0/7129, 1536 generated, total 81.25s, peak 8.87 GB

@@ -1,0 +1,6 @@
+01:32:22 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+01:32:22 [mlx-worker] packer stage packer 1: layers 0-12 of 24 of mlx-community--gpt-oss-20b-MXFP4-Q8 loaded in 2.2s, 5.9 GB of layers; wired (0, 19069665280); persist=off
+01:32:22 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch f9c09143e0e0)
+01:32:27 [mlx-worker] lead connected from 169.254.4.161
+01:33:59 [mlx-worker] lead disconnected (peer closed the connection)
+01:34:02 [mlx-worker] packer 1 shutting down; saved 0 session(s) with unsaved turns

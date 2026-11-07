@@ -1,0 +1,154 @@
+{
+  "tag": "baseline_fresh",
+  "model": "/Users/brenden/.caravan/mlx-models/mlx-community--Qwen3-30B-A3B-8bit",
+  "url": "http://127.0.0.1:8194",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.989,
+    "session": "b38304c65c8e43db",
+    "prompt_n": 18,
+    "gen_n": 13,
+    "how": "cold",
+    "prefill_s": 0.389,
+    "ttft_s": 0.464,
+    "total_s": 0.948,
+    "peak_gb": 16.26,
+    "split": {
+      "calls": 19,
+      "mb_out": 0.0,
+      "mb_in": 0.13,
+      "wait_s": 0.548,
+      "front_s": 0.356,
+      "net_s": 0.192
+    },
+    "speculate": null,
+    "content": "Hello, friend, nice to meet you.",
+    "write_tps": 24.8
+  },
+  "tg128": [
+    {
+      "name": "baseline_fresh_tg128_0",
+      "ok": true,
+      "wall_s": 5.003,
+      "session": "a7f999315ded4b0a",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.25,
+      "ttft_s": 0.319,
+      "total_s": 5.001,
+      "peak_gb": 16.29,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.64,
+        "wait_s": 2.348,
+        "front_s": 2.276,
+        "net_s": 0.073
+      },
+      "speculate": null,
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 27.1
+    },
+    {
+      "name": "baseline_fresh_tg128_1",
+      "ok": true,
+      "wall_s": 5.005,
+      "session": "acdaf464a780433e",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.249,
+      "ttft_s": 0.318,
+      "total_s": 5.003,
+      "peak_gb": 16.3,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.64,
+        "wait_s": 2.349,
+        "front_s": 2.275,
+        "net_s": 0.074
+      },
+      "speculate": null,
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 27.1
+    }
+  ],
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 0.512,
+      "session": "cd986ffa4f604222",
+      "prompt_n": 25,
+      "gen_n": 5,
+      "how": "cold",
+      "prefill_s": 0.252,
+      "ttft_s": 0.321,
+      "total_s": 0.51,
+      "peak_gb": 16.31,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.13,
+        "wait_s": 0.251,
+        "front_s": 0.244,
+        "net_s": 0.007
+      },
+      "speculate": null,
+      "content": "4",
+      "write_tps": 21.2
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 0.489,
+      "session": "fe1bc2a9bf764f69",
+      "prompt_n": 21,
+      "gen_n": 5,
+      "how": "cold",
+      "prefill_s": 0.221,
+      "ttft_s": 0.29,
+      "total_s": 0.48,
+      "peak_gb": 16.32,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.11,
+        "wait_s": 0.237,
+        "front_s": 0.23,
+        "net_s": 0.006
+      },
+      "speculate": null,
+      "content": "Paris",
+      "write_tps": 21.1
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 0.5,
+      "session": "d49dcbcbe512493b",
+      "prompt_n": 23,
+      "gen_n": 5,
+      "how": "cold",
+      "prefill_s": 0.235,
+      "ttft_s": 0.305,
+      "total_s": 0.493,
+      "peak_gb": 16.32,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.12,
+        "wait_s": 0.242,
+        "front_s": 0.236,
+        "net_s": 0.006
+      },
+      "speculate": null,
+      "content": "Cold",
+      "write_tps": 21.3
+    }
+  ],
+  "quality_ok": "3/3"
+}

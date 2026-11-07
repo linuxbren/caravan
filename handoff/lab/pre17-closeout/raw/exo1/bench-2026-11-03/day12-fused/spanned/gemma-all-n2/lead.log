@@ -1,0 +1,28 @@
+21:49:27 [mlx-worker] fuse kernels: force_fused on mlx_lm.models.base, mlx_lm.models.llama, mlx_lm.models.qwen2, mlx_lm.models.qwen3, mlx_lm.models.qwen3_moe, mlx_lm.models.gemma, mlx_lm.models.gpt_oss; metal_swiglu
+21:49:27 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+21:49:29 [mlx-worker] split lead: lead: layers 15-29 of 30 here, packer 1: layers 0-14 of 30 at 169.254.103.191:5560
+21:49:29 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+21:49:29 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+Traceback (most recent call last):
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 2612, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 2594, in main
+    engine = Engine(args)
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 630, in __init__
+    raise err
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 1087, in _main
+    self._setup()
+    ~~~~~~~~~~~^^
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 821, in _setup
+    self.model(mx.array([[int(self.tokenizer.encode("Hi")[-1])] * 16]), cache=c)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 977, in __call__
+    rh, rp = self.client.call("fwd", **self._fwd_kw(toks))
+             ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 403, in call
+    return self._roundtrip(kw, payload)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 397, in _roundtrip
+    raise FrontError(f"packer 1: {rh['error']}")
+mlx_split.FrontError: packer 1: ValueError: [scaled_dot_product_attention] force_fused=True but no fused kernel is available: the full attention kernel supports head dims {64, 72, 80, 96, 128, 192, 256} with matching query/value dims, or (query, value) head dims (96, 64), plus head dim 512 on NAX GPUs (float32 also requires TF32); got query head dim 512 and value head dim 512.

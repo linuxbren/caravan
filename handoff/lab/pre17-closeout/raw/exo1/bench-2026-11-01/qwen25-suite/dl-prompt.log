@@ -1,0 +1,17 @@
+17:23:29 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+17:23:29 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.104.38:5560
+A 278 MB helper can make mlx-community--Qwen2.5-14B-Instruct-4bit faster. Download Qwen2.5-0.5B-Instruct-4bit? [y/N] y
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+17:23:56 [mlx-worker] split speculate: downloaded helper Qwen2.5-0.5B-Instruct-4bit
+
+
+17:23:56 [mlx-worker] split speculate: draft Qwen2.5-0.5B-Instruct-4bit, k=3, vocab=exact remap=0 (idea 3 guess-ahead)
+17:23:56 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+17:23:56 [mlx-worker] warm-up 0.28s
+17:23:56 [mlx-worker] loaded mlx-community--Qwen2.5-14B-Instruct-4bit (qwen2) in 28.9s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+17:23:56 [mlx-worker] listening on http://127.0.0.1:8194
+
+ANSWERED True
+HAS_PROMPT True
+DOWNLOADED True

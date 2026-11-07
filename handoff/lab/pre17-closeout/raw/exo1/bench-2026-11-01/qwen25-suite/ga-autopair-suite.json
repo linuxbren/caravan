@@ -1,0 +1,698 @@
+{
+  "tag": "autopair",
+  "model": "mlx-community/Qwen2.5-14B-Instruct-4bit",
+  "url": "http://127.0.0.1:8194",
+  "mode": "suite",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.655,
+    "session": "05c07ff86edc451b",
+    "prompt_n": 35,
+    "gen_n": 4,
+    "how": "cold",
+    "prefill_s": 0.513,
+    "ttft_s": 0.639,
+    "total_s": 0.639,
+    "peak_gb": 4.66,
+    "split": {
+      "calls": 5,
+      "mb_out": 0.0,
+      "mb_in": 0.39,
+      "wait_s": 0.31,
+      "front_s": 0.306,
+      "net_s": 0.004
+    },
+    "speculate": {
+      "k": 3,
+      "from_draft": 3,
+      "accepted_frac": 0.75,
+      "verify_rounds": 1,
+      "prompt_lookup_n": null,
+      "draft_model": true,
+      "draft_s": 0.0293,
+      "verify_s": 0.0962,
+      "pl_hits": 0,
+      "pl_misses": 0,
+      "sources": {
+        "draft_model": 1,
+        "prompt_lookup": 0,
+        "none": 0
+      },
+      "shutoff": {
+        "disabled": false,
+        "reason": null,
+        "from_draft": 3,
+        "n_gen": 4,
+        "accepted_frac": 0.75,
+        "break_even_frac": 0.44999999999999996
+      }
+    },
+    "content": "Hi there!<|im_end|>"
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "autopair_count_0",
+        "ok": true,
+        "wall_s": 4.402,
+        "session": "e5ade9224a6d407d",
+        "prompt_n": 42,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.514,
+        "ttft_s": 0.64,
+        "total_s": 4.394,
+        "peak_gb": 4.66,
+        "split": {
+          "calls": 45,
+          "mb_out": 0.0,
+          "mb_in": 1.89,
+          "wait_s": 1.917,
+          "front_s": 1.89,
+          "net_s": 0.027
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 93,
+          "accepted_frac": 0.727,
+          "verify_rounds": 35,
+          "prompt_lookup_n": null,
+          "draft_model": true,
+          "draft_s": 0.4294,
+          "verify_s": 3.4439,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 36,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 93,
+            "n_gen": 128,
+            "accepted_frac": 0.727,
+            "break_even_frac": 0.44999999999999996
+          }
+        },
+        "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, ",
+        "write_tps": 33.8
+      },
+      {
+        "name": "autopair_count_1",
+        "ok": true,
+        "wall_s": 4.4,
+        "session": "5463bf63bd7c4c65",
+        "prompt_n": 42,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.514,
+        "ttft_s": 0.64,
+        "total_s": 4.393,
+        "peak_gb": 4.66,
+        "split": {
+          "calls": 45,
+          "mb_out": 0.0,
+          "mb_in": 1.89,
+          "wait_s": 1.917,
+          "front_s": 1.889,
+          "net_s": 0.028
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 93,
+          "accepted_frac": 0.727,
+          "verify_rounds": 35,
+          "prompt_lookup_n": null,
+          "draft_model": true,
+          "draft_s": 0.4288,
+          "verify_s": 3.4442,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 36,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 93,
+            "n_gen": 128,
+            "accepted_frac": 0.727,
+            "break_even_frac": 0.44999999999999996
+          }
+        },
+        "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, ",
+        "write_tps": 33.8
+      }
+    ],
+    "repeat": [
+      {
+        "name": "autopair_repeat_0",
+        "ok": true,
+        "wall_s": 1.781,
+        "session": "7a12f792562b4996",
+        "prompt_n": 65,
+        "gen_n": 41,
+        "how": "cold",
+        "prefill_s": 0.519,
+        "ttft_s": 0.695,
+        "total_s": 1.773,
+        "peak_gb": 4.7,
+        "split": {
+          "calls": 16,
+          "mb_out": 0.0,
+          "mb_in": 1.11,
+          "wait_s": 0.774,
+          "front_s": 0.763,
+          "net_s": 0.01
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 31,
+          "accepted_frac": 0.756,
+          "verify_rounds": 10,
+          "prompt_lookup_n": null,
+          "draft_model": true,
+          "draft_s": 0.1956,
+          "verify_s": 1.0567,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 11,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 31,
+            "n_gen": 41,
+            "accepted_frac": 0.756,
+            "break_even_frac": 0.44999999999999996
+          }
+        },
+        "content": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.\nThe quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.<|im_end|>",
+        "write_tps": 37.1
+      },
+      {
+        "name": "autopair_repeat_1",
+        "ok": true,
+        "wall_s": 1.733,
+        "session": "3e6fb7e7354946bc",
+        "prompt_n": 65,
+        "gen_n": 41,
+        "how": "cold",
+        "prefill_s": 0.519,
+        "ttft_s": 0.646,
+        "total_s": 1.723,
+        "peak_gb": 4.7,
+        "split": {
+          "calls": 16,
+          "mb_out": 0.0,
+          "mb_in": 1.11,
+          "wait_s": 0.774,
+          "front_s": 0.763,
+          "net_s": 0.011
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 31,
+          "accepted_frac": 0.756,
+          "verify_rounds": 10,
+          "prompt_lookup_n": null,
+          "draft_model": true,
+          "draft_s": 0.1458,
+          "verify_s": 1.0561,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 11,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 31,
+            "n_gen": 41,
+            "accepted_frac": 0.756,
+            "break_even_frac": 0.44999999999999996
+          }
+        },
+        "content": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.\nThe quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.<|im_end|>",
+        "write_tps": 37.1
+      }
+    ],
+    "code_edit": [
+      {
+        "name": "autopair_code_edit_0",
+        "ok": true,
+        "wall_s": 1.228,
+        "session": "9093acf71eb846f6",
+        "prompt_n": 72,
+        "gen_n": 16,
+        "how": "cold",
+        "prefill_s": 0.764,
+        "ttft_s": 0.897,
+        "total_s": 1.22,
+        "peak_gb": 4.7,
+        "split": {
+          "calls": 8,
+          "mb_out": 0.0,
+          "mb_in": 0.89,
+          "wait_s": 0.576,
+          "front_s": 0.57,
+          "net_s": 0.005
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 12,
+          "accepted_frac": 0.75,
+          "verify_rounds": 4,
+          "prompt_lookup_n": null,
+          "draft_model": true,
+          "draft_s": 0.0712,
+          "verify_s": 0.384,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 4,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 12,
+            "n_gen": 16,
+            "accepted_frac": 0.75,
+            "break_even_frac": 0.44999999999999996
+          }
+        },
+        "content": "def add(a, b, c):\n    return a + b + c<|im_end|>",
+        "write_tps": 46.4
+      },
+      {
+        "name": "autopair_code_edit_1",
+        "ok": true,
+        "wall_s": 1.229,
+        "session": "4fb5fb9bbcad40bd",
+        "prompt_n": 72,
+        "gen_n": 16,
+        "how": "cold",
+        "prefill_s": 0.764,
+        "ttft_s": 0.897,
+        "total_s": 1.22,
+        "peak_gb": 4.7,
+        "split": {
+          "calls": 8,
+          "mb_out": 0.0,
+          "mb_in": 0.89,
+          "wait_s": 0.576,
+          "front_s": 0.571,
+          "net_s": 0.006
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 12,
+          "accepted_frac": 0.75,
+          "verify_rounds": 4,
+          "prompt_lookup_n": null,
+          "draft_model": true,
+          "draft_s": 0.0713,
+          "verify_s": 0.3841,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 4,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 12,
+            "n_gen": 16,
+            "accepted_frac": 0.75,
+            "break_even_frac": 0.44999999999999996
+          }
+        },
+        "content": "def add(a, b, c):\n    return a + b + c<|im_end|>",
+        "write_tps": 46.4
+      }
+    ],
+    "code_cont": [
+      {
+        "name": "autopair_code_cont_0",
+        "ok": true,
+        "wall_s": 2.271,
+        "session": "f6c8ffe50d9f4cf2",
+        "prompt_n": 58,
+        "gen_n": 59,
+        "how": "cold",
+        "prefill_s": 0.521,
+        "ttft_s": 0.647,
+        "total_s": 2.261,
+        "peak_gb": 4.7,
+        "split": {
+          "calls": 22,
+          "mb_out": 0.0,
+          "mb_in": 1.24,
+          "wait_s": 1.004,
+          "front_s": 0.991,
+          "net_s": 0.013
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 43,
+          "accepted_frac": 0.729,
+          "verify_rounds": 16,
+          "prompt_lookup_n": null,
+          "draft_model": true,
+          "draft_s": 0.2025,
+          "verify_s": 1.5343,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 16,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 43,
+            "n_gen": 59,
+            "accepted_frac": 0.729,
+            "break_even_frac": 0.44999999999999996
+          }
+        },
+        "content": "```python\ndef fib(n):\n    if n < 2:\n        return n\n    else:\n        a, b = 0, 1\n        for i in range(1, n):\n            a, b = b, a + b\n        return b\n```<|im_end|>",
+        "write_tps": 35.9
+      },
+      {
+        "name": "autopair_code_cont_1",
+        "ok": true,
+        "wall_s": 2.272,
+        "session": "09e3c8faecd64b19",
+        "prompt_n": 58,
+        "gen_n": 59,
+        "how": "cold",
+        "prefill_s": 0.521,
+        "ttft_s": 0.647,
+        "total_s": 2.263,
+        "peak_gb": 4.7,
+        "split": {
+          "calls": 22,
+          "mb_out": 0.0,
+          "mb_in": 1.24,
+          "wait_s": 1.004,
+          "front_s": 0.991,
+          "net_s": 0.014
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 43,
+          "accepted_frac": 0.729,
+          "verify_rounds": 16,
+          "prompt_lookup_n": null,
+          "draft_model": true,
+          "draft_s": 0.203,
+          "verify_s": 1.5357,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 16,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 43,
+            "n_gen": 59,
+            "accepted_frac": 0.729,
+            "break_even_frac": 0.44999999999999996
+          }
+        },
+        "content": "```python\ndef fib(n):\n    if n < 2:\n        return n\n    else:\n        a, b = 0, 1\n        for i in range(1, n):\n            a, b = b, a + b\n        return b\n```<|im_end|>",
+        "write_tps": 35.9
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 0.649,
+      "session": "de6be0eb5e734026",
+      "prompt_n": 42,
+      "gen_n": 2,
+      "how": "cold",
+      "prefill_s": 0.514,
+      "ttft_s": 0.639,
+      "total_s": 0.64,
+      "peak_gb": 4.7,
+      "split": {
+        "calls": 6,
+        "mb_out": 0.0,
+        "mb_in": 0.46,
+        "wait_s": 0.31,
+        "front_s": 0.307,
+        "net_s": 0.004
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 2,
+        "accepted_frac": 1.0,
+        "verify_rounds": 0,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.0291,
+        "verify_s": 0.096,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 1,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 2,
+          "n_gen": 2,
+          "accepted_frac": 1.0,
+          "break_even_frac": 0.44999999999999996
+        }
+      },
+      "content": "4<|im_end|>",
+      "write_tps": 1000.0
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 0.647,
+      "session": "f7d33a2c800d499c",
+      "prompt_n": 38,
+      "gen_n": 2,
+      "how": "cold",
+      "prefill_s": 0.512,
+      "ttft_s": 0.638,
+      "total_s": 0.639,
+      "peak_gb": 4.7,
+      "split": {
+        "calls": 6,
+        "mb_out": 0.0,
+        "mb_in": 0.42,
+        "wait_s": 0.31,
+        "front_s": 0.306,
+        "net_s": 0.004
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 2,
+        "accepted_frac": 1.0,
+        "verify_rounds": 0,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.0294,
+        "verify_s": 0.0962,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 1,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 2,
+          "n_gen": 2,
+          "accepted_frac": 1.0,
+          "break_even_frac": 0.44999999999999996
+        }
+      },
+      "content": "Paris<|im_end|>",
+      "write_tps": 1000.0
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 0.647,
+      "session": "361ca11bd2374604",
+      "prompt_n": 40,
+      "gen_n": 3,
+      "how": "cold",
+      "prefill_s": 0.513,
+      "ttft_s": 0.638,
+      "total_s": 0.639,
+      "peak_gb": 4.7,
+      "split": {
+        "calls": 6,
+        "mb_out": 0.0,
+        "mb_in": 0.44,
+        "wait_s": 0.31,
+        "front_s": 0.306,
+        "net_s": 0.004
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 2,
+        "accepted_frac": 0.667,
+        "verify_rounds": 1,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.0296,
+        "verify_s": 0.0958,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 1,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 2,
+          "n_gen": 3,
+          "accepted_frac": 0.667,
+          "break_even_frac": 0.44999999999999996
+        }
+      },
+      "content": "Cold.<|im_end|>",
+      "write_tps": 2000.0
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 33.8,
+    "repeat": 37.1,
+    "code_edit": 46.4,
+    "code_cont": 35.9
+  },
+  "tg128": [
+    {
+      "name": "autopair_count_0",
+      "ok": true,
+      "wall_s": 4.402,
+      "session": "e5ade9224a6d407d",
+      "prompt_n": 42,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.514,
+      "ttft_s": 0.64,
+      "total_s": 4.394,
+      "peak_gb": 4.66,
+      "split": {
+        "calls": 45,
+        "mb_out": 0.0,
+        "mb_in": 1.89,
+        "wait_s": 1.917,
+        "front_s": 1.89,
+        "net_s": 0.027
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 93,
+        "accepted_frac": 0.727,
+        "verify_rounds": 35,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.4294,
+        "verify_s": 3.4439,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 36,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 93,
+          "n_gen": 128,
+          "accepted_frac": 0.727,
+          "break_even_frac": 0.44999999999999996
+        }
+      },
+      "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, ",
+      "write_tps": 33.8
+    },
+    {
+      "name": "autopair_count_1",
+      "ok": true,
+      "wall_s": 4.4,
+      "session": "5463bf63bd7c4c65",
+      "prompt_n": 42,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.514,
+      "ttft_s": 0.64,
+      "total_s": 4.393,
+      "peak_gb": 4.66,
+      "split": {
+        "calls": 45,
+        "mb_out": 0.0,
+        "mb_in": 1.89,
+        "wait_s": 1.917,
+        "front_s": 1.889,
+        "net_s": 0.028
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 93,
+        "accepted_frac": 0.727,
+        "verify_rounds": 35,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.4288,
+        "verify_s": 3.4442,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 36,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 93,
+          "n_gen": 128,
+          "accepted_frac": 0.727,
+          "break_even_frac": 0.44999999999999996
+        }
+      },
+      "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, ",
+      "write_tps": 33.8
+    }
+  ]
+}

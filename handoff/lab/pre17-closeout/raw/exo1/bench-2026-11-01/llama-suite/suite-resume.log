@@ -1,0 +1,131 @@
+=== RESUME Sun Nov  1 14:14:55 CST 2026 ===
+=== keepalive ON / baseline ===
+no mlx_worker on lead
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/llama-suite/lead-ka-on.log
+{"name": "warm", "ok": true, "wall_s": 0.695, "prompt_n": 45, "gen_n": 8, "cached": 0, "how": "cold", "prefill_s": 0.283, "ttft_s": 0.355, "total_s": 0.679, "peak_gb": 2.44, "split": {"calls": 13, "mb_out": 0.0, "mb_in": 0.44, "wait_s": 0.332, "front_s": 0.323, "net_s": 0.009}, "content": "How are you doing today? Is there", "read_tps": 159.0, "write_tps": 21.6}
+{"name": "tg128_0", "ok": true, "wall_s": 5.931, "prompt_n": 59, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.277, "ttft_s": 0.348, "total_s": 5.93, "peak_gb": 2.5, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.54, "wait_s": 2.842, "front_s": 2.765, "net_s": 0.077}, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, Eighteen, Nineteen, Twenty, Twenty-One, Twenty-Two, Twenty-Three, Twenty-Four, Twenty-Five, Twenty-Six, Twenty-Seven, Twenty-Eight, Twenty-Nine, Thirty, Thirty-One, Thirty-Two, Thirty-Three, Thirty-Fou", "read_tps": 213.0, "write_tps": 22.8}
+{"name": "tg128_1", "ok": true, "wall_s": 5.934, "prompt_n": 58, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.276, "ttft_s": 0.347, "total_s": 5.933, "peak_gb": 2.52, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.53, "wait_s": 2.842, "front_s": 2.767, "net_s": 0.075}, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, Eighteen, Nineteen, Twenty, Twenty-One, Twenty-Two, Twenty-Three, Twenty-Four, Twenty-Five, Twenty-Six, Twenty-Seven, Twenty-Eight, Twenty-Nine, Thirty, Thirty-One, Thirty-Two, Thirty-Three, Thirty-Fou", "read_tps": 210.1, "write_tps": 22.7}
+{"name": "calib", "ok": true, "wall_s": 17.206, "prompt_n": 3908, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 17.101, "ttft_s": 17.185, "total_s": 17.202, "peak_gb": 3.12, "split": {"calls": 7, "mb_out": 0.04, "mb_in": 32.02, "wait_s": 8.895, "front_s": 8.875, "net_s": 0.02}, "content": "To", "read_tps": 228.5}
+{"name": "pp512_0", "ok": true, "wall_s": 2.205, "prompt_n": 513, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 2.098, "ttft_s": 2.174, "total_s": 2.192, "peak_gb": 3.12, "split": {"calls": 6, "mb_out": 0.01, "mb_in": 4.21, "wait_s": 1.131, "front_s": 1.125, "net_s": 0.006}, "content": "Based", "read_tps": 244.5}
+{"name": "pp512_1", "ok": true, "wall_s": 2.207, "prompt_n": 512, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 2.104, "ttft_s": 2.179, "total_s": 2.198, "peak_gb": 3.12, "split": {"calls": 6, "mb_out": 0.01, "mb_in": 4.2, "wait_s": 1.134, "front_s": 1.129, "net_s": 0.006}, "content": "Based", "read_tps": 243.3}
+{"name": "pp4096_0", "ok": true, "wall_s": 17.816, "prompt_n": 4063, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 17.703, "ttft_s": 17.788, "total_s": 17.804, "peak_gb": 3.5, "split": {"calls": 7, "mb_out": 0.04, "mb_in": 33.29, "wait_s": 9.206, "front_s": 9.188, "net_s": 0.018}, "content": "It", "read_tps": 229.5}
+{"name": "pp4096_1", "ok": true, "wall_s": 17.919, "prompt_n": 4064, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 17.711, "ttft_s": 17.795, "total_s": 17.812, "peak_gb": 3.75, "split": {"calls": 7, "mb_out": 0.04, "mb_in": 33.3, "wait_s": 9.21, "front_s": 9.191, "net_s": 0.019}, "content": "To", "read_tps": 229.5}
+{"name": "quality", "ok": true, "wall_s": 26.572, "prompt_n": 5694, "gen_n": 18, "cached": 0, "how": "cold", "prefill_s": 25.524, "ttft_s": 25.611, "total_s": 26.547, "peak_gb": 3.83, "split": {"calls": 26, "mb_out": 0.06, "mb_in": 46.8, "wait_s": 13.697, "front_s": 13.654, "net_s": 0.042}, "content": "1. ORCHID-7419.\n2. 391.\n3. Canberra.", "read_tps": 223.1, "write_tps": 18.2}
+{"name": "quality_score", "score": 3, "detail": {"code": true, "mult": true, "capital": true}, "score_incl_reasoning": 3, "finish": 18}
+/tmp/llama_suite_resume.sh: line 13: 16047 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+no mlx_worker on lead
+=== pipeline ===
+no mlx_worker on lead
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/llama-suite/lead-pipe.log
+--- pipeline N=1 ---
+{"name": "warm", "ok": true, "wall_s": 0.653, "session": "ca3dfabb403f4161", "prompt_n": 39, "gen_n": 8, "how": "cold", "prefill_s": 0.278, "ttft_s": 0.324, "total_s": 0.635, "peak_gb": 2.42, "split": {"calls": 17, "mb_out": 0.0, "mb_in": 0.51, "wait_s": 0.458, "front_s": 0.381, "net_s": 0.077}, "pipeline": null, "content": "It's nice to meet you. Is", "write_tps": 22.5}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 5.967, "session": "637e03d3ea6244fa", "prompt_n": 59, "gen_n": 128, "how": "cold", "prefill_s": 0.276, "ttft_s": 0.32, "total_s": 5.965, "peak_gb": 2.5, "split": {"calls": 150, "mb_out": 0.01, "mb_in": 2.04, "wait_s": 3.291, "front_s": 3.139, "net_s": 0.151}, "pipeline": null, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, E", "write_tps": 22.5}
+{"name": "tg128_w0_aggregate", "n": 1, "ok_n": 1, "wall_s": 5.967, "gen_tokens_sum": 128, "per_chat_write_tps": [22.5], "per_chat_ttft_s": [0.32], "per_chat_peak_gb": [2.5], "aggregate_write_tps_wall": 22.3, "aggregate_write_tps_sum": 22.5}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 5.973, "session": "a10f7b1204bd4606", "prompt_n": 59, "gen_n": 128, "how": "cold", "prefill_s": 0.274, "ttft_s": 0.319, "total_s": 5.971, "peak_gb": 2.52, "split": {"calls": 283, "mb_out": 0.02, "mb_in": 3.58, "wait_s": 6.134, "front_s": 5.908, "net_s": 0.227}, "pipeline": null, "content": "Here's the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, e", "write_tps": 22.5}
+{"name": "tg128_w1_aggregate", "n": 1, "ok_n": 1, "wall_s": 5.973, "gen_tokens_sum": 128, "per_chat_write_tps": [22.5], "per_chat_ttft_s": [0.319], "per_chat_peak_gb": [2.52], "aggregate_write_tps_wall": 22.3, "aggregate_write_tps_sum": 22.5}
+{"name": "quality", "ok": true, "wall_s": 26.508, "session": "aa349161befa4837", "prompt_n": 5694, "gen_n": 19, "how": "cold", "prefill_s": 25.518, "ttft_s": 25.573, "total_s": 26.502, "peak_gb": 3.24, "split": {"calls": 309, "mb_out": 0.08, "mb_in": 50.37, "wait_s": 19.807, "front_s": 19.546, "net_s": 0.261}, "pipeline": null, "content": "1. ORCHID-7419.\n2.1. ORCHID-7419.\n2. 391.\n3. Canberra.<|eot_id|>", "write_tps": 19.4}
+--- pipeline N=2 ---
+{"name": "warm", "ok": true, "wall_s": 0.643, "session": "c0fcec64de5a4450", "prompt_n": 39, "gen_n": 8, "how": "cold", "prefill_s": 0.269, "ttft_s": 0.314, "total_s": 0.633, "peak_gb": 3.24, "split": {"calls": 323, "mb_out": 0.08, "mb_in": 50.75, "wait_s": 20.123, "front_s": 19.853, "net_s": 0.27}, "pipeline": null, "content": "It's nice to meet you. Is", "write_tps": 21.9}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 6.692, "session": "c7e7467f111042b5", "prompt_n": 59, "gen_n": 128, "how": "cold", "prefill_s": 0.275, "ttft_s": 0.598, "total_s": 6.689, "peak_gb": 3.24, "split": {"calls": 589, "mb_out": 0.1, "mb_in": 53.82, "wait_s": 26.539, "front_s": 25.383, "net_s": 1.156}, "pipeline": null, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, E", "write_tps": 20.9}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 6.716, "session": "a1aef69d3c5743ac", "prompt_n": 60, "gen_n": 128, "how": "cold", "prefill_s": 0.275, "ttft_s": 0.323, "total_s": 6.415, "peak_gb": 3.24, "split": {"calls": 590, "mb_out": 0.1, "mb_in": 53.82, "wait_s": 26.539, "front_s": 25.383, "net_s": 1.156}, "pipeline": null, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, E", "write_tps": 20.8}
+{"name": "tg128_w0_aggregate", "n": 2, "ok_n": 2, "wall_s": 6.716, "gen_tokens_sum": 256, "per_chat_write_tps": [20.9, 20.8], "per_chat_ttft_s": [0.598, 0.323], "per_chat_peak_gb": [3.24, 3.24], "aggregate_write_tps_wall": 39.4, "aggregate_write_tps_sum": 41.7}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 6.852, "session": "01a35efd5d294039", "prompt_n": 58, "gen_n": 128, "how": "cold", "prefill_s": 0.275, "ttft_s": 0.322, "total_s": 6.552, "peak_gb": 3.24, "split": {"calls": 857, "mb_out": 0.13, "mb_in": 56.88, "wait_s": 33.021, "front_s": 30.983, "net_s": 2.038}, "pipeline": null, "content": "One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 20.4}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 6.828, "session": "b0dc8877b2044ce9", "prompt_n": 59, "gen_n": 128, "how": "cold", "prefill_s": 0.275, "ttft_s": 0.596, "total_s": 6.826, "peak_gb": 3.24, "split": {"calls": 856, "mb_out": 0.13, "mb_in": 56.88, "wait_s": 33.02, "front_s": 30.983, "net_s": 2.037}, "pipeline": null, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, E", "write_tps": 20.4}
+{"name": "tg128_w1_aggregate", "n": 2, "ok_n": 2, "wall_s": 6.852, "gen_tokens_sum": 256, "per_chat_write_tps": [20.4, 20.4], "per_chat_ttft_s": [0.322, 0.596], "per_chat_peak_gb": [3.24, 3.24], "aggregate_write_tps_wall": 38.6, "aggregate_write_tps_sum": 40.8}
+{"name": "quality", "ok": true, "wall_s": 26.518, "session": "895f6235033c4690", "prompt_n": 5694, "gen_n": 19, "how": "cold", "prefill_s": 25.523, "ttft_s": 25.575, "total_s": 26.512, "peak_gb": 3.26, "split": {"calls": 884, "mb_out": 0.18, "mb_in": 103.67, "wait_s": 46.697, "front_s": 44.624, "net_s": 2.073}, "pipeline": null, "content": "1. ORCHID-7419.\n2.1. ORCHID-7419.\n2. 391.\n3. Canberra.<|eot_id|>", "write_tps": 19.2}
+--- pipeline N=3 ---
+{"name": "warm", "ok": true, "wall_s": 0.64, "session": "90e24e2ec4054211", "prompt_n": 39, "gen_n": 8, "how": "cold", "prefill_s": 0.27, "ttft_s": 0.314, "total_s": 0.629, "peak_gb": 3.26, "split": {"calls": 898, "mb_out": 0.18, "mb_in": 104.05, "wait_s": 47.009, "front_s": 44.928, "net_s": 2.082}, "pipeline": null, "content": "It's nice to meet you. Is", "write_tps": 22.2}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 10.153, "session": "769fea0e56404678", "prompt_n": 57, "gen_n": 128, "how": "cold", "prefill_s": 0.274, "ttft_s": 0.596, "total_s": 10.15, "peak_gb": 3.26, "split": {"calls": 1295, "mb_out": 0.22, "mb_in": 108.63, "wait_s": 56.68, "front_s": 53.278, "net_s": 3.402}, "pipeline": null, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, E", "write_tps": 13.3}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 10.178, "session": "ad3e8f1d139549c8", "prompt_n": 61, "gen_n": 128, "how": "cold", "prefill_s": 0.276, "ttft_s": 0.6, "total_s": 9.879, "peak_gb": 3.26, "split": {"calls": 1297, "mb_out": 0.22, "mb_in": 108.64, "wait_s": 56.705, "front_s": 53.3, "net_s": 3.405}, "pipeline": null, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, E", "write_tps": 13.7}
+{"name": "tg128_w0_chat2", "ok": true, "wall_s": 10.202, "session": "014074dea94c4fbf", "prompt_n": 58, "gen_n": 128, "how": "cold", "prefill_s": 0.275, "ttft_s": 0.323, "total_s": 9.602, "peak_gb": 3.26, "split": {"calls": 1298, "mb_out": 0.22, "mb_in": 108.64, "wait_s": 56.706, "front_s": 53.3, "net_s": 3.406}, "pipeline": null, "content": "One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 13.7}
+{"name": "tg128_w0_aggregate", "n": 3, "ok_n": 3, "wall_s": 10.202, "gen_tokens_sum": 384, "per_chat_write_tps": [13.3, 13.7, 13.7], "per_chat_ttft_s": [0.596, 0.6, 0.323], "per_chat_peak_gb": [3.26, 3.26, 3.26], "aggregate_write_tps_wall": 38.4, "aggregate_write_tps_sum": 40.7}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 10.013, "session": "1e6c5c523ba344db", "prompt_n": 60, "gen_n": 128, "how": "cold", "prefill_s": 0.277, "ttft_s": 0.598, "total_s": 10.01, "peak_gb": 3.26, "split": {"calls": 1695, "mb_out": 0.25, "mb_in": 113.24, "wait_s": 66.304, "front_s": 61.583, "net_s": 4.721}, "pipeline": null, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, E", "write_tps": 13.5}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 10.061, "session": "f7118e8435b34f5a", "prompt_n": 60, "gen_n": 128, "how": "cold", "prefill_s": 0.275, "ttft_s": 0.323, "total_s": 9.459, "peak_gb": 3.26, "split": {"calls": 1698, "mb_out": 0.25, "mb_in": 113.25, "wait_s": 66.329, "front_s": 61.604, "net_s": 4.725}, "pipeline": null, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, E", "write_tps": 13.9}
+{"name": "tg128_w1_chat2", "ok": true, "wall_s": 10.037, "session": "57cc6468dd1341fb", "prompt_n": 58, "gen_n": 128, "how": "cold", "prefill_s": 0.275, "ttft_s": 0.599, "total_s": 9.735, "peak_gb": 3.26, "split": {"calls": 1697, "mb_out": 0.25, "mb_in": 113.25, "wait_s": 66.329, "front_s": 61.604, "net_s": 4.724}, "pipeline": null, "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, E", "write_tps": 13.9}
+{"name": "tg128_w1_aggregate", "n": 3, "ok_n": 3, "wall_s": 10.062, "gen_tokens_sum": 384, "per_chat_write_tps": [13.5, 13.9, 13.9], "per_chat_ttft_s": [0.598, 0.323, 0.599], "per_chat_peak_gb": [3.26, 3.26, 3.26], "aggregate_write_tps_wall": 38.9, "aggregate_write_tps_sum": 41.3}
+{"name": "quality", "ok": true, "wall_s": 26.52, "session": "ded324191fad4846", "prompt_n": 5694, "gen_n": 19, "how": "cold", "prefill_s": 25.52, "ttft_s": 25.572, "total_s": 26.513, "peak_gb": 3.26, "split": {"calls": 1725, "mb_out": 0.31, "mb_in": 160.05, "wait_s": 80.008, "front_s": 75.248, "net_s": 4.76}, "pipeline": null, "content": "1. ORCHID-7419.\n2.1. ORCHID-7419.\n2. 391.\n3. Canberra.<|eot_id|>", "write_tps": 19.1}
+/tmp/llama_suite_resume.sh: line 13: 16097 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+no mlx_worker on lead
+=== guess-ahead nodraft suite ===
+no mlx_worker on lead
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/llama-suite/lead-nodraft.log
+{
+  "tag": "nodraft",
+  "mode": "suite",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 22.7,
+    "repeat": 22.0,
+    "code_edit": 20.7,
+    "code_cont": 22.2
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 22.7,
+      "speculate": null,
+      "peak_gb": 2.47,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 22.7,
+      "speculate": null,
+      "peak_gb": 2.49,
+      "error": null
+    }
+  ],
+  "repeat": [
+    {
+      "write_tps": 22.0,
+      "speculate": null
+    },
+    {
+      "write_tps": 22.0,
+      "speculate": null
+    }
+  ],
+  "code_edit": [
+    {
+      "write_tps": 20.7,
+      "speculate": null
+    },
+    {
+      "write_tps": 20.7,
+      "speculate": null
+    }
+  ],
+  "code_cont": [
+    {
+      "write_tps": 22.2,
+      "speculate": null
+    },
+    {
+      "write_tps": 22.2,
+      "speculate": null
+    }
+  ]
+}
+/tmp/llama_suite_resume.sh: line 13: 16158 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+no mlx_worker on lead
+=== guess-ahead autopair suite ===
+cleared llama first_load
+no mlx_worker on lead
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/llama-suite/lead-autopair.log
+14:19:34 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+14:19:34 [mlx-worker] split speculate: auto-pair llama3 -> Llama-3.2-1B-Instruct-4bit
+14:19:35 [mlx-worker] split speculate: draft Llama-3.2-1B-Instruct-4bit, k=3, vocab=exact remap=0 (idea 3 guess-ahead)
+14:19:35 [mlx-worker] split speculate: running first-load quality + speed gate...
+14:19:40 [mlx-worker] split speculate: first-load keep baseline=19.29 spec=35.87 break_even=0.450
+Traceback (most recent call last):
+  File "/Users/brenden/dev/caravan-v3/bench/v3/speculate_bench.py", line 97, in <module>
+    q = quality()
+  File "/Users/brenden/dev/caravan-v3/bench/v3/speculate_bench.py", line 59, in quality
+    q.append(post([{"role": "user", "content": prompt + NT}], 32,
+             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                  uuid.uuid4().hex[:16], f"quality_{i}"))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/brenden/dev/caravan-v3/bench/v3/speculate_bench.py", line 48, in post
+    rec["write_tps"] = round((u["completion_tokens"] - 1) / (cv["total_s"] - cv["ttft_s"]), 1)
+                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ZeroDivisionError: division by zero

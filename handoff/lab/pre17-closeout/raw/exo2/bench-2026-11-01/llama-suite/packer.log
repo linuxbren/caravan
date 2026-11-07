@@ -1,0 +1,85 @@
+14:14:50 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+14:14:50 [mlx-worker] packer stage packer 1: layers 0-15 of 32 of mlx-community--Meta-Llama-3.1-8B-Instruct-4bit loaded in 0.1s, 2.0 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/mlx/prompt-cache
+14:14:50 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch 0dfbf8a00cc8)
+14:14:59 [mlx-worker] lead connected from 169.254.4.161
+14:15:32 [mlx-worker] saved e196abcd43684f79: 44 tokens, 3 MB in 0.00s
+14:15:34 [mlx-worker] saved 1172deaf0a1a4b6c: 58 tokens, 4 MB in 0.00s
+14:15:52 [mlx-worker] saved 003cc389e9a44b2e: 57 tokens, 4 MB in 0.00s
+14:16:10 [mlx-worker] saved 022e3702af524546: 3907 tokens, 256 MB in 0.05s
+14:16:36 [mlx-worker] saved 5d97246896334e81: 512 tokens, 34 MB in 0.01s
+14:16:36 [mlx-worker] lead disconnected (peer closed the connection)
+14:16:44 [mlx-worker] lead connected from 169.254.4.161
+14:17:24 [mlx-worker] saved ca3dfabb403f4161: 38 tokens, 2 MB in 0.00s
+14:17:31 [mlx-worker] saved 637e03d3ea6244fa: 58 tokens, 4 MB in 0.00s
+14:17:31 [mlx-worker] saved a10f7b1204bd4606: 58 tokens, 4 MB in 0.00s
+14:17:38 [mlx-worker] saved aa349161befa4837: 5693 tokens, 373 MB in 0.07s
+14:17:38 [mlx-worker] saved c0fcec64de5a4450: 38 tokens, 2 MB in 0.00s
+14:18:05 [mlx-worker] saved a1aef69d3c5743ac: 59 tokens, 4 MB in 0.00s
+14:18:15 [mlx-worker] saved 01a35efd5d294039: 57 tokens, 4 MB in 0.00s
+14:18:15 [mlx-worker] saved 895f6235033c4690: 5693 tokens, 373 MB in 0.07s
+14:18:25 [mlx-worker] saved 90e24e2ec4054211: 38 tokens, 2 MB in 0.00s
+14:18:25 [mlx-worker] saved ad3e8f1d139549c8: 60 tokens, 4 MB in 0.00s
+14:18:52 [mlx-worker] saved 014074dea94c4fbf: 57 tokens, 4 MB in 0.00s
+14:18:52 [mlx-worker] lead disconnected (peer closed the connection)
+14:18:59 [mlx-worker] lead connected from 169.254.4.161
+14:19:17 [mlx-worker] saved 433df6fe07bb4454: 40 tokens, 3 MB in 0.00s
+14:19:18 [mlx-worker] saved 10871eff5adb412a: 47 tokens, 3 MB in 0.00s
+14:19:20 [mlx-worker] saved bef1de33f6604e70: 47 tokens, 3 MB in 0.00s
+14:19:22 [mlx-worker] saved b4ae365d43494c6d: 70 tokens, 5 MB in 0.00s
+14:19:25 [mlx-worker] saved 21cd795a511640d1: 70 tokens, 5 MB in 0.00s
+14:19:26 [mlx-worker] saved 732e30cd3de54f54: 77 tokens, 5 MB in 0.00s
+14:19:26 [mlx-worker] saved 6eb232dcd1884c6f: 77 tokens, 5 MB in 0.00s
+14:19:27 [mlx-worker] saved 9f88d1a076ec4b10: 62 tokens, 4 MB in 0.00s
+14:19:27 [mlx-worker] lead disconnected (peer closed the connection)
+14:19:34 [mlx-worker] lead connected from 169.254.4.161
+14:19:39 [mlx-worker] saved __guess_gate_1793564375528_True: 47 tokens, 3 MB in 0.00s
+14:19:41 [mlx-worker] saved __guess_gate_1793564376135_True: 43 tokens, 3 MB in 0.00s
+14:19:44 [mlx-worker] saved __guess_gate_1793564376526_True: 45 tokens, 3 MB in 0.00s
+14:19:46 [mlx-worker] saved __guess_gate_1793564376917_False: 48 tokens, 3 MB in 0.00s
+14:19:48 [mlx-worker] saved __guess_gate_1793564378991_True: 48 tokens, 3 MB in 0.00s
+14:19:49 [mlx-worker] saved 4d091af82666459d: 40 tokens, 3 MB in 0.00s
+14:19:50 [mlx-worker] saved e2347f56eac240d3: 47 tokens, 3 MB in 0.00s
+14:19:51 [mlx-worker] saved a68a67278dcc497b: 47 tokens, 3 MB in 0.00s
+14:19:52 [mlx-worker] saved b4bbac3873bc438e: 70 tokens, 5 MB in 0.00s
+14:19:54 [mlx-worker] saved 6ff480cf62db461f: 70 tokens, 5 MB in 0.00s
+14:19:54 [mlx-worker] saved ea594c8d26cd4520: 77 tokens, 5 MB in 0.00s
+14:28:09 [mlx-worker] lead disconnected (peer closed the connection)
+14:28:13 [mlx-worker] lead connected from 169.254.4.161
+14:28:23 [mlx-worker] saved 29e006fc13a448c0: 40 tokens, 3 MB in 0.00s
+14:28:24 [mlx-worker] saved d278a3e0b744471d: 47 tokens, 3 MB in 0.00s
+14:28:25 [mlx-worker] saved f2dbcc6a78a34981: 47 tokens, 3 MB in 0.00s
+14:28:26 [mlx-worker] saved eb3b5b0b7dd74e11: 70 tokens, 5 MB in 0.00s
+14:28:28 [mlx-worker] saved 2f69d96672154e17: 70 tokens, 5 MB in 0.00s
+14:28:28 [mlx-worker] saved 009953106e994c3c: 77 tokens, 5 MB in 0.00s
+14:28:29 [mlx-worker] saved cf9527f36d724ddf: 77 tokens, 5 MB in 0.00s
+14:28:29 [mlx-worker] saved 77edc6f1ce4b47be: 62 tokens, 4 MB in 0.00s
+14:28:29 [mlx-worker] lead disconnected (peer closed the connection)
+14:28:36 [mlx-worker] lead connected from 169.254.4.161
+14:28:40 [mlx-worker] lead disconnected (peer closed the connection)
+14:30:46 [mlx-worker] lead connected from 169.254.4.161
+14:31:13 [mlx-worker] lead disconnected (peer closed the connection)
+14:31:16 [mlx-worker] lead connected from 169.254.4.161
+14:32:16 [mlx-worker] saved e0177f13cceb4950: 511 tokens, 33 MB in 0.01s
+14:32:16 [mlx-worker] saved b6909ebf69284445: 4062 tokens, 266 MB in 0.05s
+14:32:16 [mlx-worker] saved dcaaeea737504e94: 4063 tokens, 266 MB in 0.05s
+14:32:16 [mlx-worker] saved c3c7e5f4041c4baa: 5693 tokens, 373 MB in 0.10s
+14:32:16 [mlx-worker] saved 57cc6468dd1341fb: 57 tokens, 4 MB in 0.00s
+14:32:16 [mlx-worker] saved f7118e8435b34f5a: 59 tokens, 4 MB in 0.00s
+14:32:16 [mlx-worker] saved ded324191fad4846: 5693 tokens, 373 MB in 0.11s
+14:32:16 [mlx-worker] saved bf1169532c074e91: 62 tokens, 4 MB in 0.00s
+14:32:16 [mlx-worker] saved 07af07c8658e4d52: 47 tokens, 3 MB in 0.00s
+14:32:16 [mlx-worker] saved b3498335ad014b06: 43 tokens, 3 MB in 0.00s
+14:32:16 [mlx-worker] saved ff48652eb2dd4afc: 45 tokens, 3 MB in 0.00s
+14:32:16 [mlx-worker] saved 06139fb028984492: 77 tokens, 5 MB in 0.00s
+14:32:16 [mlx-worker] saved 4d55c78fb36f439e: 62 tokens, 4 MB in 0.00s
+14:32:16 [mlx-worker] saved 7be6ef8e36724773: 62 tokens, 4 MB in 0.00s
+14:32:16 [mlx-worker] saved 41adfb3aad274bfe: 47 tokens, 3 MB in 0.00s
+14:32:16 [mlx-worker] saved 3de9112d239a49ab: 62 tokens, 4 MB in 0.00s
+14:32:16 [mlx-worker] saved 998f9129a5e64d6c: 47 tokens, 3 MB in 0.00s
+14:32:16 [mlx-worker] saved 59b4421416f74d1c: 43 tokens, 3 MB in 0.00s
+14:32:16 [mlx-worker] saved b3411034fe864660: 45 tokens, 3 MB in 0.00s
+14:32:16 [mlx-worker] saved e36d7a3f2f994261: 103 tokens, 7 MB in 0.00s
+14:32:16 [mlx-worker] saved 6052fb3ce8804b80: 104 tokens, 7 MB in 0.00s
+14:32:16 [mlx-worker] saved 74d94845053847aa: 104 tokens, 7 MB in 0.00s
+14:32:16 [mlx-worker] saved 51c71a030a5840fe: 104 tokens, 7 MB in 0.00s
+14:32:16 [mlx-worker] lead disconnected (peer closed the connection)

@@ -1,0 +1,13 @@
+23:26:01 [mlx-worker] fuse kernels: off
+23:26:01 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+23:26:05 [mlx-worker] split lead: lead: layers 15-29 of 30 here, packer 1: layers 0-14 of 30 at 169.254.103.191:5560
+23:26:05 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+23:26:05 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+23:26:05 [mlx-worker] warm-up 0.13s
+23:26:05 [mlx-worker] loaded mlx-community--gemma-4-26b-a4b-it-4bit (gemma4) in 3.8s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+23:26:05 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)
+23:26:05 [mlx-worker] listening on http://127.0.0.1:8194
+23:26:18 [mlx-worker] session 6805c5c107d9428a: cold, reused 0/4641 tokens, read 4641 in 11.68s, 8 generated, total 12.01s, peak 8.64 GB
+23:26:30 [mlx-worker] session 63c9cc80cf204dea: cold, reused 0/4642 tokens, read 4642 in 11.70s, 8 generated, total 12.02s, peak 8.8 GB
+23:26:42 [mlx-worker] session c9f23e5f9983425d: cold, reused 0/4642 tokens, read 4642 in 11.70s, 8 generated, total 12.02s, peak 8.96 GB
+23:26:44 [mlx-worker] session 04ecd6bd0b80411c: cold, reused 0/824 tokens, read 824 in 1.89s, 8 generated, total 2.16s, peak 8.96 GB

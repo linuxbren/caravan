@@ -1,0 +1,32 @@
+{
+  "tag": "k4",
+  "tg128": [
+    {
+      "ok": true,
+      "write_tps": 56.3,
+      "speculate": {
+        "k": 4,
+        "from_draft": 100,
+        "accepted_frac": 0.781,
+        "verify_rounds": 28
+      },
+      "peak_gb": 9.01,
+      "ttft_s": 0.255,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 56.3,
+      "speculate": {
+        "k": 4,
+        "from_draft": 100,
+        "accepted_frac": 0.781,
+        "verify_rounds": 28
+      },
+      "peak_gb": 9.02,
+      "ttft_s": 0.253,
+      "error": null
+    }
+  ],
+  "quality_ok": "3/3"
+}

@@ -1,0 +1,17 @@
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+cleared /Users/brenden/.caravan/bench-2026-11-02/day10-learn/tuned-settings.json
+lead pid 40557
+[quality 0] pass=True final='4' raw='4' reason='The user asks: "What isThe user asks: "What is 2+2? Reply wi' ct=39 learn={'norm_tps': 33.65, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 1] pass=False final='c‑a‑t' raw='C‑A‑T' reason='The user asks: "Spell the word cat." They want the spelling.' ct=46 learn={'norm_tps': 33.774, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 2] pass=True final='yes.' raw='Yes.' reason='The user asks: "Is the sky usually blue? Yes or no." They wa' ct=40 learn={'norm_tps': 33.727, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': {'name': 'packer_layers', 'value': 11}, 'pipeline_probe': None, 'trial': None}
+[quality 3] pass=True final='4' raw='4' reason='The user asks: "What isThe user asks: "What is 2+2? Reply wi' ct=39 learn={'norm_tps': 33.679, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 4] pass=False final='c‑a‑t' raw='C‑A‑T' reason='The user asks: "Spell the word cat." They want the spelling.' ct=46 learn={'norm_tps': 33.601, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 5] pass=True final='yes.' raw='Yes.' reason='The user asks: "Is the sky usually blue? Yes or no." They wa' ct=40 learn={'norm_tps': 33.585, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 6] pass=True final='4' raw='4' reason='The user asks: "What isThe user asks: "What is 2+2? Reply wi' ct=39 learn={'norm_tps': 33.563, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 7] pass=False final='c‑a‑t' raw='C‑A‑T' reason='The user asks: "Spell the word cat." They want the spelling.' ct=46 learn={'norm_tps': 33.528, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 8] pass=True final='yes.' raw='Yes.' reason='The user asks: "Is the sky usually blue? Yes or no." They wa' ct=40 learn={'norm_tps': 33.557, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 9] pass=True final='4' raw='4' reason='The user asks: "What isThe user asks: "What is 2+2? Reply wi' ct=39 learn={'norm_tps': 33.563, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 10] pass=False final='c‑a‑t' raw='C‑A‑T' reason='The user asks: "Spell the word cat." They want the spelling.' ct=46 learn={'norm_tps': 33.577, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 11] pass=True final='yes.' raw='Yes.' reason='The user asks: "Is the sky usually blue? Yes or no." They wa' ct=40 learn={'norm_tps': 33.501, 'winner': {'packer_layers': 13, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+wrote /Users/brenden/.caravan/bench-2026-11-02/day10-learn/gptoss-quality/result.json

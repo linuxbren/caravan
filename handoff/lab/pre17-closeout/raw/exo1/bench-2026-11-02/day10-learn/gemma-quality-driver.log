@@ -1,0 +1,17 @@
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+cleared /Users/brenden/.caravan/bench-2026-11-02/day10-learn/tuned-settings.json
+lead pid 40516
+[quality 0] pass=True final='4' raw='4<turn|>' reason='\n*   Question: "What is 2+2?"\n    *   Constraint: "Reply wit' ct=81 learn={'norm_tps': 37.745, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 1] pass=False final='c-a-t' raw='C-A-T<turn|>' reason='\nThe user wants me to spell the word "cat".\nThe word is "cat' ct=35 learn={'norm_tps': 37.838, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 2] pass=True final='yes.' raw='Yes.<turn|>' reason='\n*   Question: "Is the sky usually blue? Yes or no."\n    *  ' ct=107 learn={'norm_tps': 37.716, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'packer_layers', 'value': 14}, 'pipeline_probe': None, 'trial': None}
+[quality 3] pass=True final='4' raw='4<turn|>' reason='\n*   Question: "What is 2+2?"\n    *   Constraint: "Reply wit' ct=81 learn={'norm_tps': 37.815, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 4] pass=False final='c-a-t' raw='C-A-T<turn|>' reason='\nThe user wants me to spell the word "cat".\nThe word is "cat' ct=35 learn={'norm_tps': 37.554, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 5] pass=True final='yes.' raw='Yes.<turn|>' reason='\n*   Question: "Is the sky usually blue? Yes or no."\n    *  ' ct=107 learn={'norm_tps': 37.623, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 6] pass=True final='4' raw='4<turn|>' reason='\n*   Question: "What is 2+2?"\n    *   Constraint: "Reply wit' ct=81 learn={'norm_tps': 37.552, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 7] pass=False final='c-a-t' raw='C-A-T<turn|>' reason='\nThe user wants me to spell the word "cat".\nThe word is "cat' ct=35 learn={'norm_tps': 37.554, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 8] pass=True final='yes.' raw='Yes.<turn|>' reason='\n*   Question: "Is the sky usually blue? Yes or no."\n    *  ' ct=107 learn={'norm_tps': 37.583, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 9] pass=True final='4' raw='4<turn|>' reason='\n*   Question: "What is 2+2?"\n    *   Constraint: "Reply wit' ct=81 learn={'norm_tps': 37.639, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 10] pass=False final='c-a-t' raw='C-A-T<turn|>' reason='\nThe user wants me to spell the word "cat".\nThe word is "cat' ct=35 learn={'norm_tps': 37.594, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 11] pass=True final='yes.' raw='Yes.<turn|>' reason='\n*   Question: "Is the sky usually blue? Yes or no."\n    *  ' ct=107 learn={'norm_tps': 37.61, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+wrote /Users/brenden/.caravan/bench-2026-11-02/day10-learn/gemma-quality/result.json

@@ -1,0 +1,22 @@
+12:35:19 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+12:35:20 [mlx-worker] split lead: lead: layers 15-29 of 30 here, packer 1: layers 0-14 of 30 at 169.254.104.38:5560
+12:35:20 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+12:35:20 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+12:35:20 [mlx-worker] warm-up 0.14s
+12:35:20 [mlx-worker] loaded mlx-community--gemma-4-26b-a4b-it-4bit (gemma4) in 1.7s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+12:35:20 [mlx-worker] listening on http://127.0.0.1:8194
+12:35:23 [mlx-worker] session ee7b4e0d01dd4621: cold, reused 0/22 tokens, read 22 in 0.17s, 16 generated, total 0.61s, peak 7.36 GB
+12:35:27 [mlx-worker] session 50d737bdfe114c1b: cold, reused 0/29 tokens, read 29 in 0.19s, 128 generated, total 3.54s, peak 7.39 GB
+12:35:30 [mlx-worker] session 9ff73566cd734cf8: cold, reused 0/29 tokens, read 29 in 0.19s, 128 generated, total 3.54s, peak 7.39 GB
+12:35:31 [mlx-worker] session cdfcea9130c44d8b: cold, reused 0/29 tokens, read 29 in 0.19s, 32 generated, total 1.04s, peak 7.4 GB
+12:35:32 [mlx-worker] saved ee7b4e0d01dd4621: 21 tokens, 2 MB in 0.00s
+12:35:32 [mlx-worker] evicted 1 session(s) from memory: ee7b4e0d01dd4621
+12:35:32 [mlx-worker] session 30d4aa77278a46c8: cold, reused 0/25 tokens, read 25 in 0.17s, 32 generated, total 1.02s, peak 7.4 GB
+12:35:33 [mlx-worker] saved 50d737bdfe114c1b: 28 tokens, 3 MB in 0.00s
+12:35:33 [mlx-worker] evicted 1 session(s) from memory: 50d737bdfe114c1b
+12:35:33 [mlx-worker] session b32d0abe662e4273: cold, reused 0/27 tokens, read 27 in 0.18s, 32 generated, total 1.04s, peak 7.4 GB
+12:35:45 [mlx-worker] saved 9ff73566cd734cf8: 28 tokens, 3 MB in 0.09s
+12:35:45 [mlx-worker] saved cdfcea9130c44d8b: 28 tokens, 3 MB in 0.00s
+12:35:45 [mlx-worker] saved 30d4aa77278a46c8: 24 tokens, 3 MB in 0.00s
+12:35:45 [mlx-worker] saved b32d0abe662e4273: 26 tokens, 3 MB in 0.00s
+12:35:45 [mlx-worker] shutting down; saved 4 session(s) with unsaved turns

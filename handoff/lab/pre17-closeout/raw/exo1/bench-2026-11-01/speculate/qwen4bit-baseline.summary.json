@@ -1,0 +1,22 @@
+{
+  "tag": "baseline",
+  "tg128": [
+    {
+      "ok": true,
+      "write_tps": 45.9,
+      "speculate": null,
+      "peak_gb": 8.68,
+      "ttft_s": 0.215,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 45.9,
+      "speculate": null,
+      "peak_gb": 8.69,
+      "ttft_s": 0.215,
+      "error": null
+    }
+  ],
+  "quality_ok": "3/3"
+}

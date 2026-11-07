@@ -1,0 +1,51 @@
+21:37:16 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+21:37:17 [mlx-worker] auto split: packer_layers=24 (equal RAM ~26/26 GB; balanced cut K=24 for 48 layers (qwen3_moe))
+21:37:19 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.104.38:5560
+21:37:19 [mlx-worker] auto pipeline: chats=2 (headroom 2.6 GB after ~8.4 GB weights on 26 GB; Mini benches peak at 2 chats)
+21:37:19 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+21:37:20 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+21:37:20 [mlx-worker] warm-up 0.13s
+21:37:20 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 3.3s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+21:37:20 [mlx-worker] flag guess-ahead: off
+21:37:20 [mlx-worker] split pipeline chats=2 (idea 1; overlap packer/lead across sessions)
+21:37:20 [mlx-worker] listening on http://127.0.0.1:8194
+21:37:20 [mlx-worker] ignoring q-0.safetensors: model differs -- starting cold
+21:37:24 [mlx-worker] session q-0: pipeline, reused 0/21, 155 generated, total 3.63s, peak 8.65 GB
+21:37:24 [mlx-worker] ignoring q-1.safetensors: model differs -- starting cold
+21:37:28 [mlx-worker] session q-1: pipeline, reused 0/13, 189 generated, total 4.32s, peak 8.65 GB
+21:37:28 [mlx-worker] ignoring q-2.safetensors: model differs -- starting cold
+21:37:34 [mlx-worker] session q-2: pipeline, reused 0/18, 260 generated, total 5.95s, peak 8.67 GB
+21:37:34 [mlx-worker] learn: queue split packer_layers=22 for next load (near current 24)
+21:37:34 [mlx-worker] ignoring q-3.safetensors: model differs -- starting cold
+21:37:37 [mlx-worker] session q-3: pipeline, reused 0/21, 155 generated, total 3.61s, peak 8.7 GB
+21:37:37 [mlx-worker] learn: keep packer_layers=24: best so far at 44.80 tok/s over 4 replies
+21:37:37 [mlx-worker] ignoring q-4.safetensors: model differs -- starting cold
+21:37:42 [mlx-worker] saved q-0: 20 tokens, 1 MB in 0.00s
+21:37:42 [mlx-worker] evicted 1 session(s) from memory: q-0
+21:37:42 [mlx-worker] session q-4: pipeline, reused 0/13, 189 generated, total 4.33s, peak 8.7 GB
+21:37:42 [mlx-worker] ignoring q-5.safetensors: model differs -- starting cold
+21:37:48 [mlx-worker] saved q-1: 12 tokens, 1 MB in 0.00s
+21:37:48 [mlx-worker] evicted 1 session(s) from memory: q-1
+21:37:48 [mlx-worker] session q-5: pipeline, reused 0/18, 260 generated, total 5.97s, peak 8.71 GB
+21:37:48 [mlx-worker] ignoring q-6.safetensors: model differs -- starting cold
+21:37:51 [mlx-worker] saved q-2: 17 tokens, 1 MB in 0.00s
+21:37:51 [mlx-worker] evicted 1 session(s) from memory: q-2
+21:37:51 [mlx-worker] session q-6: pipeline, reused 0/21, 155 generated, total 3.62s, peak 8.73 GB
+21:37:51 [mlx-worker] ignoring q-7.safetensors: model differs -- starting cold
+21:37:56 [mlx-worker] saved q-3: 20 tokens, 1 MB in 0.00s
+21:37:56 [mlx-worker] evicted 1 session(s) from memory: q-3
+21:37:56 [mlx-worker] session q-7: pipeline, reused 0/13, 189 generated, total 4.34s, peak 8.73 GB
+21:37:56 [mlx-worker] learn: keep packer_layers=24: best so far at 44.74 tok/s over 8 replies
+21:38:02 [mlx-worker] saved q-4: 12 tokens, 1 MB in 0.00s
+21:38:02 [mlx-worker] evicted 1 session(s) from memory: q-4
+21:38:02 [mlx-worker] session q-8: pipeline, reused 0/18, 260 generated, total 5.98s, peak 8.73 GB
+21:38:05 [mlx-worker] saved q-5: 17 tokens, 1 MB in 0.00s
+21:38:05 [mlx-worker] evicted 1 session(s) from memory: q-5
+21:38:05 [mlx-worker] session q-9: pipeline, reused 0/21, 155 generated, total 3.62s, peak 8.73 GB
+21:38:10 [mlx-worker] saved q-6: 20 tokens, 1 MB in 0.00s
+21:38:10 [mlx-worker] evicted 1 session(s) from memory: q-6
+21:38:10 [mlx-worker] session q-10: pipeline, reused 0/13, 189 generated, total 4.33s, peak 8.73 GB
+21:38:16 [mlx-worker] saved q-7: 12 tokens, 1 MB in 0.00s
+21:38:16 [mlx-worker] evicted 1 session(s) from memory: q-7
+21:38:16 [mlx-worker] session q-11: pipeline, reused 0/18, 260 generated, total 5.97s, peak 8.73 GB
+21:38:16 [mlx-worker] learn: keep packer_layers=24: best so far at 44.71 tok/s over 12 replies

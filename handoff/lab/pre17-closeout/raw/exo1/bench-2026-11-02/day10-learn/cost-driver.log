@@ -1,0 +1,16 @@
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+cleared /Users/brenden/.caravan/bench-2026-11-02/day10-learn/tuned-settings.json
+lead pid 37860
+[cost 0] tps=21.127 learn={'norm_tps': 16.729, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[cost 1] tps=20.0 learn={'norm_tps': 15.5, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[cost pair@2] agg=11.162 learn={'norm_tps': 16.497, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'packer_layers', 'value': 14}, 'pipeline_probe': None, 'trial': None}
+[cost pair@4] agg=22.601 learn={'norm_tps': 13.635, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[cost pair@6] agg=13.79 learn={'norm_tps': 15.943, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[cost pair@8] agg=16.647 learn={'norm_tps': 17.774, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': {'aggregate_tps': 16.785, 'n': 2}, 'trial': None}
+[cost pair@10] agg=11.636 learn={'norm_tps': 10.462, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 5}}
+[cost pair@12] agg=6.253 learn={'norm_tps': 15.979, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 3}}
+[cost pair@14] agg=9.807 learn={'norm_tps': 17.214, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'pipeline_chats', 'value': 1}, 'pipeline_probe': {'aggregate_tps': 4.974, 'n': 1}, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 2}}
+[cost pair@16] agg=18.51 learn={'norm_tps': 20.24, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': {'aggregate_tps': 12.505, 'n': 1}, 'trial': None}
+[cost pair@18] agg=13.445 learn={'norm_tps': 5.629, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'pipeline_chats', 'value': 1}, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 6}}
+wrote /Users/brenden/.caravan/bench-2026-11-02/day10-learn/llama-cost/result.json

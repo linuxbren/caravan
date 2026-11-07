@@ -1,0 +1,13 @@
+Caravan finally has a face: meet the web interface.
+
+Day 16 of building Caravan in the open, my homebrew app for running AI models across my Mac minis.
+
+Until now it ran from the terminal. Now there's a page for it:
+- Chat with a model running across my Mac minis
+- Topology: a live card for each Mini, showing CPU, GPU, RAM and temp
+- Models: search Hugging Face, see each model's size and whether it fits, then pick where it lives: one Mini, split across two, or a copy on each
+- Self-tuning that learns the fastest settings for each model
+
+It's built for however many Macs you have. Splitting one model still tops out at 2 Minis, and so far I've only tested 1- and 3-Mac layouts with simulated setups.
+
+What would you want to see on it next?

@@ -1,0 +1,30 @@
+12:32:58 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+12:32:58 [mlx-worker] packer stage packer 1: layers 0-14 of 30 of mlx-community--gemma-4-26b-a4b-it-4bit loaded in 0.9s, 6.9 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/mlx/prompt-cache
+12:32:58 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch acd60450f2b3)
+12:33:21 [mlx-worker] lead connected from 169.254.4.161
+12:34:34 [mlx-worker] saved __guess_gate_1793558003450_True: 28 tokens, 3 MB in 0.00s
+12:34:34 [mlx-worker] saved __guess_gate_1793558005820_True: 24 tokens, 3 MB in 0.00s
+12:34:34 [mlx-worker] saved __guess_gate_1793558007811_True: 26 tokens, 3 MB in 0.00s
+12:34:34 [mlx-worker] lead disconnected (peer closed the connection)
+12:34:36 [mlx-worker] lead connected from 169.254.4.161
+12:34:47 [mlx-worker] saved __guess_gate_1793558078851_True: 28 tokens, 3 MB in 0.00s
+12:34:58 [mlx-worker] saved __guess_gate_1793558081218_True: 24 tokens, 3 MB in 0.00s
+12:35:01 [mlx-worker] saved __guess_gate_1793558083212_True: 26 tokens, 3 MB in 0.00s
+12:35:04 [mlx-worker] saved __guess_gate_1793558085466_False: 31 tokens, 4 MB in 0.00s
+12:35:06 [mlx-worker] saved __guess_gate_1793558086731_True: 31 tokens, 4 MB in 0.00s
+12:35:07 [mlx-worker] saved 9796f0099f574c1e: 21 tokens, 2 MB in 0.00s
+12:35:08 [mlx-worker] saved c60ef75c4f2e479f: 28 tokens, 3 MB in 0.00s
+12:35:16 [mlx-worker] saved 69dca1d471944f36: 28 tokens, 3 MB in 0.00s
+12:35:16 [mlx-worker] saved 55477b61c0e74af4: 28 tokens, 3 MB in 0.00s
+12:35:16 [mlx-worker] saved 91101fe36c7844bd: 24 tokens, 3 MB in 0.00s
+12:35:16 [mlx-worker] saved e67ec7d9c4f5425a: 26 tokens, 3 MB in 0.00s
+12:35:17 [mlx-worker] lead disconnected (peer closed the connection)
+12:35:20 [mlx-worker] lead connected from 169.254.4.161
+12:35:32 [mlx-worker] saved ee7b4e0d01dd4621: 21 tokens, 2 MB in 0.00s
+12:35:33 [mlx-worker] saved 50d737bdfe114c1b: 28 tokens, 3 MB in 0.00s
+12:35:45 [mlx-worker] saved 9ff73566cd734cf8: 28 tokens, 3 MB in 0.00s
+12:35:45 [mlx-worker] saved cdfcea9130c44d8b: 28 tokens, 3 MB in 0.00s
+12:35:45 [mlx-worker] saved 30d4aa77278a46c8: 24 tokens, 3 MB in 0.00s
+12:35:45 [mlx-worker] saved b32d0abe662e4273: 26 tokens, 3 MB in 0.00s
+12:35:45 [mlx-worker] lead disconnected (peer closed the connection)
+12:35:48 [mlx-worker] packer 1 shutting down; saved 0 session(s) with unsaved turns

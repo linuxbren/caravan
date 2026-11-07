@@ -1,0 +1,62 @@
+=== RESUME_FROM_NODRAFT distill-suite Sun Nov  1 17:08:44 CST 2026 ===
+=== nodraft suite ===
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/distill-suite/lead-nodraft.log
+{
+  "tag": "nodraft",
+  "mode": "suite",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 12.3,
+    "repeat": 12.4,
+    "code_edit": 12.4,
+    "code_cont": 12.4
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 12.3,
+      "speculate": null,
+      "peak_gb": 4.28,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 12.4,
+      "speculate": null,
+      "peak_gb": 4.31,
+      "error": null
+    }
+  ],
+  "repeat": [
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    },
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    }
+  ],
+  "code_edit": [
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    },
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    }
+  ],
+  "code_cont": [
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    },
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    }
+  ]
+}
+=== autopair + first-load gate ===
+cleared first_load for deepseek-r1-distill-qwen answers {'llama3': True, 'qwen25': True, 'deepseek-r1-distill-qwen': True}

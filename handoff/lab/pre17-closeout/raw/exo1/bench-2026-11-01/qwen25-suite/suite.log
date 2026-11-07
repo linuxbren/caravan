@@ -1,0 +1,479 @@
+=== SUITE qwen25-suite model=mlx-community/Qwen2.5-14B-Instruct-4bit pairing=qwen25 K=24 Sun Nov  1 16:16:16 CST 2026 ===
+ lowpowermode         0
+=== keepalive OFF ===
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/qwen25-suite/lead-ka-off.log
+{"name": "warm", "ok": true, "wall_s": 1.333, "prompt_n": 39, "gen_n": 8, "cached": 0, "how": "cold", "prefill_s": 0.524, "ttft_s": 0.704, "total_s": 1.32, "peak_gb": 4.26, "split": {"calls": 13, "mb_out": 0.0, "mb_in": 0.48, "wait_s": 0.621, "front_s": 0.612, "net_s": 0.01}, "content": "Hello! I'm glad to see you", "read_tps": 74.4, "write_tps": 11.4}
+{"name": "tg128_0", "ok": true, "wall_s": 11.556, "prompt_n": 57, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.533, "ttft_s": 0.681, "total_s": 11.552, "peak_gb": 4.33, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.9, "wait_s": 5.277, "front_s": 5.178, "net_s": 0.099}, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-fo", "read_tps": 106.9, "write_tps": 11.7}
+{"name": "tg128_1", "ok": true, "wall_s": 11.545, "prompt_n": 59, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.537, "ttft_s": 0.696, "total_s": 11.541, "peak_gb": 4.36, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.92, "wait_s": 5.282, "front_s": 5.185, "net_s": 0.097}, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-fo", "read_tps": 109.9, "write_tps": 11.7}
+{"name": "calib", "ok": true, "wall_s": 40.667, "prompt_n": 4733, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 40.451, "ttft_s": 40.628, "total_s": 40.648, "peak_gb": 5.19, "split": {"calls": 8, "mb_out": 0.04, "mb_in": 48.48, "wait_s": 20.703, "front_s": 20.652, "net_s": 0.052}, "content": "It", "read_tps": 117.0}
+{"name": "pp512_0", "ok": true, "wall_s": 4.343, "prompt_n": 500, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 4.138, "ttft_s": 4.291, "total_s": 4.309, "peak_gb": 5.19, "split": {"calls": 6, "mb_out": 0.0, "mb_in": 5.13, "wait_s": 2.158, "front_s": 2.15, "net_s": 0.008}, "content": "The", "read_tps": 120.8}
+{"name": "pp512_1", "ok": true, "wall_s": 4.336, "prompt_n": 500, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 4.139, "ttft_s": 4.291, "total_s": 4.308, "peak_gb": 5.19, "split": {"calls": 6, "mb_out": 0.0, "mb_in": 5.13, "wait_s": 2.156, "front_s": 2.148, "net_s": 0.008}, "content": "It", "read_tps": 120.8}
+{"name": "pp4096_0", "ok": true, "wall_s": 34.508, "prompt_n": 4040, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 34.284, "ttft_s": 34.453, "total_s": 34.473, "peak_gb": 5.7, "split": {"calls": 7, "mb_out": 0.03, "mb_in": 41.38, "wait_s": 17.574, "front_s": 17.527, "net_s": 0.047}, "content": "It", "read_tps": 117.8}
+{"name": "pp4096_1", "ok": true, "wall_s": 34.765, "prompt_n": 4043, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 34.292, "ttft_s": 34.461, "total_s": 34.48, "peak_gb": 6.07, "split": {"calls": 7, "mb_out": 0.03, "mb_in": 41.41, "wait_s": 17.562, "front_s": 17.524, "net_s": 0.038}, "content": "The", "read_tps": 117.9}
+{"name": "quality", "ok": true, "wall_s": 63.944, "prompt_n": 6935, "gen_n": 21, "cached": 0, "how": "cold", "prefill_s": 61.568, "ttft_s": 61.748, "total_s": 63.875, "peak_gb": 6.23, "split": {"calls": 30, "mb_out": 0.06, "mb_in": 71.24, "wait_s": 32.406, "front_s": 32.31, "net_s": 0.096}, "content": "1) ORCHID-7419\n2) 391\n3) Canberra", "read_tps": 112.6, "write_tps": 9.4}
+{"name": "quality_score", "score": 3, "detail": {"code": true, "mult": true, "capital": true}, "score_incl_reasoning": 3, "finish": 21}
+=== keepalive ON ===
+LEAD_FAIL /Users/brenden/.caravan/bench-2026-11-01/qwen25-suite/lead-ka-on.log
+16:19:56 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+=== RESUME qwen25-suite Sun Nov  1 16:27:04 CST 2026 ===
+ lowpowermode         0
+=== keepalive ON (resume) ===
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/qwen25-suite/lead-ka-on.log
+{"name": "warm", "ok": true, "wall_s": 1.255, "prompt_n": 39, "gen_n": 8, "cached": 0, "how": "cold", "prefill_s": 0.515, "ttft_s": 0.66, "total_s": 1.242, "peak_gb": 4.26, "split": {"calls": 13, "mb_out": 0.0, "mb_in": 0.48, "wait_s": 0.615, "front_s": 0.606, "net_s": 0.009}, "content": "Hello! I'm glad to see you", "read_tps": 75.7, "write_tps": 12.0}
+{"name": "tg128_0", "ok": true, "wall_s": 10.982, "prompt_n": 58, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.522, "ttft_s": 0.666, "total_s": 10.981, "peak_gb": 4.33, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.91, "wait_s": 5.314, "front_s": 5.232, "net_s": 0.082}, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-fo", "read_tps": 111.1, "write_tps": 12.3}
+{"name": "tg128_1", "ok": true, "wall_s": 11.007, "prompt_n": 60, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.524, "ttft_s": 0.668, "total_s": 11.006, "peak_gb": 4.36, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.93, "wait_s": 5.319, "front_s": 5.238, "net_s": 0.08}, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-fo", "read_tps": 114.5, "write_tps": 12.3}
+{"name": "calib", "ok": true, "wall_s": 40.422, "prompt_n": 4732, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 40.236, "ttft_s": 40.398, "total_s": 40.418, "peak_gb": 5.19, "split": {"calls": 8, "mb_out": 0.04, "mb_in": 48.47, "wait_s": 20.687, "front_s": 20.66, "net_s": 0.027}, "content": "It", "read_tps": 117.6}
+{"name": "pp512_0", "ok": true, "wall_s": 4.229, "prompt_n": 498, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 4.05, "ttft_s": 4.195, "total_s": 4.214, "peak_gb": 5.19, "split": {"calls": 6, "mb_out": 0.0, "mb_in": 5.11, "wait_s": 2.152, "front_s": 2.146, "net_s": 0.006}, "content": "It", "read_tps": 123.0}
+{"name": "pp512_1", "ok": true, "wall_s": 4.221, "prompt_n": 497, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 4.048, "ttft_s": 4.194, "total_s": 4.212, "peak_gb": 5.19, "split": {"calls": 6, "mb_out": 0.0, "mb_in": 5.1, "wait_s": 2.152, "front_s": 2.145, "net_s": 0.007}, "content": "It", "read_tps": 122.8}
+{"name": "pp4096_0", "ok": true, "wall_s": 34.305, "prompt_n": 4040, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 34.113, "ttft_s": 34.273, "total_s": 34.293, "peak_gb": 5.7, "split": {"calls": 7, "mb_out": 0.03, "mb_in": 41.38, "wait_s": 17.551, "front_s": 17.523, "net_s": 0.028}, "content": "The", "read_tps": 118.4}
+{"name": "pp4096_1", "ok": true, "wall_s": 34.51, "prompt_n": 4039, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 34.112, "ttft_s": 34.275, "total_s": 34.295, "peak_gb": 6.07, "split": {"calls": 7, "mb_out": 0.03, "mb_in": 41.37, "wait_s": 17.549, "front_s": 17.528, "net_s": 0.021}, "content": "The", "read_tps": 118.4}
+{"name": "quality", "ok": true, "wall_s": 63.379, "prompt_n": 6935, "gen_n": 21, "cached": 0, "how": "cold", "prefill_s": 61.174, "ttft_s": 61.346, "total_s": 63.342, "peak_gb": 6.23, "split": {"calls": 30, "mb_out": 0.06, "mb_in": 71.24, "wait_s": 32.357, "front_s": 32.302, "net_s": 0.055}, "content": "1) ORCHID-7419\n2) 391\n3) Canberra", "read_tps": 113.4, "write_tps": 10.0}
+{"name": "quality_score", "score": 3, "detail": {"code": true, "mult": true, "capital": true}, "score_incl_reasoning": 3, "finish": 21}
+/Users/brenden/.caravan/bench-2026-11-01/mini_suite_resume.sh: line 22: 19258 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+=== pipeline N=1/2/3 ===
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/qwen25-suite/lead-pipe.log
+--- pipeline N=1 ---
+{"name": "warm", "ok": true, "wall_s": 0.941, "session": "ca014039c0294aa6", "prompt_n": 33, "gen_n": 8, "how": "cold", "prefill_s": 0.278, "ttft_s": 0.36, "total_s": 0.926, "peak_gb": 4.32, "split": {"calls": 17, "mb_out": 0.0, "mb_in": 0.57, "wait_s": 0.721, "front_s": 0.581, "net_s": 0.14}, "pipeline": null, "content": "Hello! It seems like there might be", "write_tps": 12.4}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 10.893, "session": "7fe0632dba7d46d5", "prompt_n": 57, "gen_n": 128, "how": "cold", "prefill_s": 0.519, "ttft_s": 0.6, "total_s": 10.89, "peak_gb": 4.33, "split": {"calls": 150, "mb_out": 0.01, "mb_in": 2.47, "wait_s": 5.946, "front_s": 5.732, "net_s": 0.214}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 12.3}
+{"name": "tg128_w0_aggregate", "n": 1, "ok_n": 1, "wall_s": 10.893, "gen_tokens_sum": 128, "per_chat_write_tps": [12.3], "per_chat_ttft_s": [0.6], "per_chat_peak_gb": [4.33], "aggregate_write_tps_wall": 12.2, "aggregate_write_tps_sum": 12.3}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 10.873, "session": "edaf13e13b634d5f", "prompt_n": 58, "gen_n": 128, "how": "cold", "prefill_s": 0.52, "ttft_s": 0.601, "total_s": 10.87, "peak_gb": 4.36, "split": {"calls": 283, "mb_out": 0.02, "mb_in": 4.37, "wait_s": 11.159, "front_s": 10.871, "net_s": 0.289}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 12.4}
+{"name": "tg128_w1_aggregate", "n": 1, "ok_n": 1, "wall_s": 10.873, "gen_tokens_sum": 128, "per_chat_write_tps": [12.4], "per_chat_ttft_s": [0.601], "per_chat_peak_gb": [4.36], "aggregate_write_tps_wall": 12.3, "aggregate_write_tps_sum": 12.4}
+{"name": "quality", "ok": true, "wall_s": 63.262, "session": "4c6f2aa3a792494e", "prompt_n": 6935, "gen_n": 22, "how": "cold", "prefill_s": 61.17, "ttft_s": 61.265, "total_s": 63.254, "peak_gb": 5.4, "split": {"calls": 313, "mb_out": 0.08, "mb_in": 75.6, "wait_s": 43.47, "front_s": 43.125, "net_s": 0.345}, "pipeline": null, "content": "1) ORCHID-7419\n2)1) ORCHID-7419\n2) 391\n3) Canberra<|im_end|>", "write_tps": 10.6}
+--- pipeline N=2 ---
+{"name": "warm", "ok": true, "wall_s": 0.94, "session": "04dce40937b34c0a", "prompt_n": 33, "gen_n": 8, "how": "cold", "prefill_s": 0.267, "ttft_s": 0.348, "total_s": 0.928, "peak_gb": 5.4, "split": {"calls": 327, "mb_out": 0.09, "mb_in": 76.01, "wait_s": 43.93, "front_s": 43.576, "net_s": 0.354}, "pipeline": null, "content": "Hello! It seems like there might be", "write_tps": 12.1}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 12.013, "session": "3d5406aaf9fb45bf", "prompt_n": 57, "gen_n": 128, "how": "cold", "prefill_s": 0.519, "ttft_s": 1.119, "total_s": 12.009, "peak_gb": 5.4, "split": {"calls": 593, "mb_out": 0.11, "mb_in": 79.8, "wait_s": 55.426, "front_s": 53.878, "net_s": 1.548}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 11.7}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 12.055, "session": "540abc62ba9048e0", "prompt_n": 57, "gen_n": 128, "how": "cold", "prefill_s": 0.517, "ttft_s": 0.603, "total_s": 11.493, "peak_gb": 5.4, "split": {"calls": 594, "mb_out": 0.11, "mb_in": 79.8, "wait_s": 55.427, "front_s": 53.878, "net_s": 1.549}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 11.7}
+{"name": "tg128_w0_aggregate", "n": 2, "ok_n": 2, "wall_s": 12.056, "gen_tokens_sum": 256, "per_chat_write_tps": [11.7, 11.7], "per_chat_ttft_s": [1.119, 0.603], "per_chat_peak_gb": [5.4, 5.4], "aggregate_write_tps_wall": 22.0, "aggregate_write_tps_sum": 23.4}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 12.415, "session": "f026facbc7734f01", "prompt_n": 56, "gen_n": 128, "how": "cold", "prefill_s": 0.518, "ttft_s": 0.603, "total_s": 11.853, "peak_gb": 5.67, "split": {"calls": 861, "mb_out": 0.13, "mb_in": 83.58, "wait_s": 67.055, "front_s": 64.318, "net_s": 2.737}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 11.3}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 12.371, "session": "20533dea82a447ec", "prompt_n": 57, "gen_n": 128, "how": "cold", "prefill_s": 0.519, "ttft_s": 1.12, "total_s": 12.369, "peak_gb": 5.67, "split": {"calls": 860, "mb_out": 0.13, "mb_in": 83.58, "wait_s": 67.055, "front_s": 64.318, "net_s": 2.737}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 11.3}
+{"name": "tg128_w1_aggregate", "n": 2, "ok_n": 2, "wall_s": 12.415, "gen_tokens_sum": 256, "per_chat_write_tps": [11.3, 11.3], "per_chat_ttft_s": [0.603, 1.12], "per_chat_peak_gb": [5.67, 5.67], "aggregate_write_tps_wall": 21.4, "aggregate_write_tps_sum": 22.6}
+{"name": "quality", "ok": true, "wall_s": 63.57, "session": "819b4e1f64f044be", "prompt_n": 6935, "gen_n": 22, "how": "cold", "prefill_s": 61.466, "ttft_s": 61.562, "total_s": 63.562, "peak_gb": 5.67, "split": {"calls": 892, "mb_out": 0.19, "mb_in": 154.81, "wait_s": 99.662, "front_s": 96.878, "net_s": 2.784}, "pipeline": null, "content": "1) ORCHID-7419\n2)1) ORCHID-7419\n2) 391\n3) Canberra<|im_end|>", "write_tps": 10.5}
+--- pipeline N=3 ---
+{"name": "warm", "ok": true, "wall_s": 0.937, "session": "40c4fc1aa9904f9c", "prompt_n": 33, "gen_n": 8, "how": "cold", "prefill_s": 0.268, "ttft_s": 0.349, "total_s": 0.926, "peak_gb": 5.67, "split": {"calls": 906, "mb_out": 0.19, "mb_in": 155.22, "wait_s": 100.118, "front_s": 97.325, "net_s": 2.792}, "pipeline": null, "content": "Hello! It seems like there might be", "write_tps": 12.1}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 18.375, "session": "757304a2b8314767", "prompt_n": 60, "gen_n": 128, "how": "cold", "prefill_s": 0.521, "ttft_s": 1.122, "total_s": 18.373, "peak_gb": 5.67, "split": {"calls": 1303, "mb_out": 0.22, "mb_in": 160.93, "wait_s": 117.467, "front_s": 112.881, "net_s": 4.586}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 7.4}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 18.42, "session": "83de7a086fca4ddc", "prompt_n": 57, "gen_n": 128, "how": "cold", "prefill_s": 0.518, "ttft_s": 1.126, "total_s": 17.856, "peak_gb": 5.67, "split": {"calls": 1305, "mb_out": 0.22, "mb_in": 160.94, "wait_s": 117.512, "front_s": 112.92, "net_s": 4.591}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 7.6}
+{"name": "tg128_w0_chat2", "ok": true, "wall_s": 18.464, "session": "2d4b706aa73940df", "prompt_n": 58, "gen_n": 128, "how": "cold", "prefill_s": 0.52, "ttft_s": 0.606, "total_s": 17.336, "peak_gb": 5.67, "split": {"calls": 1306, "mb_out": 0.22, "mb_in": 160.94, "wait_s": 117.512, "front_s": 112.92, "net_s": 4.592}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 7.6}
+{"name": "tg128_w0_aggregate", "n": 3, "ok_n": 3, "wall_s": 18.464, "gen_tokens_sum": 384, "per_chat_write_tps": [7.4, 7.6, 7.6], "per_chat_ttft_s": [1.122, 1.126, 0.606], "per_chat_peak_gb": [5.67, 5.67, 5.67], "aggregate_write_tps_wall": 21.2, "aggregate_write_tps_sum": 22.6}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 17.976, "session": "f7c67235e2524773", "prompt_n": 59, "gen_n": 128, "how": "cold", "prefill_s": 0.524, "ttft_s": 1.128, "total_s": 17.973, "peak_gb": 5.67, "split": {"calls": 1703, "mb_out": 0.26, "mb_in": 166.66, "wait_s": 134.708, "front_s": 128.324, "net_s": 6.383}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 7.5}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 18.063, "session": "d016a806b2ba4310", "prompt_n": 58, "gen_n": 128, "how": "cold", "prefill_s": 0.52, "ttft_s": 0.606, "total_s": 16.931, "peak_gb": 5.67, "split": {"calls": 1706, "mb_out": 0.26, "mb_in": 166.67, "wait_s": 134.752, "front_s": 128.363, "net_s": 6.389}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 7.8}
+{"name": "tg128_w1_chat2", "ok": true, "wall_s": 18.02, "session": "ba4d6470d7854470", "prompt_n": 59, "gen_n": 128, "how": "cold", "prefill_s": 0.52, "ttft_s": 1.128, "total_s": 17.453, "peak_gb": 5.67, "split": {"calls": 1705, "mb_out": 0.26, "mb_in": 166.67, "wait_s": 134.752, "front_s": 128.363, "net_s": 6.389}, "pipeline": null, "content": "Here is the count from one to three hundred in words, separated by commas:\n\none, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, ", "write_tps": 7.8}
+{"name": "tg128_w1_aggregate", "n": 3, "ok_n": 3, "wall_s": 18.063, "gen_tokens_sum": 384, "per_chat_write_tps": [7.5, 7.8, 7.8], "per_chat_ttft_s": [1.128, 0.606, 1.128], "per_chat_peak_gb": [5.67, 5.67, 5.67], "aggregate_write_tps_wall": 21.7, "aggregate_write_tps_sum": 23.1}
+{"name": "quality", "ok": true, "wall_s": 64.04, "session": "3909c660f2fc40e3", "prompt_n": 6935, "gen_n": 22, "how": "cold", "prefill_s": 61.937, "ttft_s": 62.032, "total_s": 64.032, "peak_gb": 5.67, "split": {"calls": 1737, "mb_out": 0.32, "mb_in": 237.91, "wait_s": 167.781, "front_s": 161.346, "net_s": 6.435}, "pipeline": null, "content": "1) ORCHID-7419\n2)1) ORCHID-7419\n2) 391\n3) Canberra<|im_end|>", "write_tps": 10.5}
+/Users/brenden/.caravan/bench-2026-11-01/mini_suite_resume.sh: line 22: 19346 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+=== nodraft suite ===
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/qwen25-suite/lead-nodraft.log
+{
+  "tag": "nodraft",
+  "mode": "suite",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 12.4,
+    "repeat": 12.0,
+    "code_edit": 11.4,
+    "code_cont": 12.2
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 12.4,
+      "speculate": null,
+      "peak_gb": 4.3,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 12.4,
+      "speculate": null,
+      "peak_gb": 4.32,
+      "error": null
+    }
+  ],
+  "repeat": [
+    {
+      "write_tps": 12.0,
+      "speculate": null
+    },
+    {
+      "write_tps": 12.0,
+      "speculate": null
+    }
+  ],
+  "code_edit": [
+    {
+      "write_tps": 11.4,
+      "speculate": null
+    },
+    {
+      "write_tps": 11.4,
+      "speculate": null
+    }
+  ],
+  "code_cont": [
+    {
+      "write_tps": 12.2,
+      "speculate": null
+    },
+    {
+      "write_tps": 12.2,
+      "speculate": null
+    }
+  ]
+}
+/Users/brenden/.caravan/bench-2026-11-01/mini_suite_resume.sh: line 22: 19409 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+=== autopair + first-load gate ===
+cleared first_load for qwen25 answers {'llama3': True, 'qwen25': True}
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/qwen25-suite/lead-autopair.log
+16:36:36 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+16:36:37 [mlx-worker] split speculate: auto-pair qwen25 -> Qwen2.5-0.5B-Instruct-4bit
+16:36:37 [mlx-worker] split speculate: draft Qwen2.5-0.5B-Instruct-4bit, k=3, vocab=exact remap=0 (idea 3 guess-ahead)
+16:36:38 [mlx-worker] split speculate: running first-load quality + speed gate...
+16:36:45 [mlx-worker] split speculate: first-load keep baseline=10.49 spec=24.73 break_even=0.450
+{
+  "tag": "autopair",
+  "mode": "suite",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 33.8,
+    "repeat": 37.1,
+    "code_edit": 46.4,
+    "code_cont": 35.9
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 33.8,
+      "speculate": {
+        "k": 3,
+        "from_draft": 93,
+        "accepted_frac": 0.727,
+        "verify_rounds": 35,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.4294,
+        "verify_s": 3.4439,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 36,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 93,
+          "n_gen": 128,
+          "accepted_frac": 0.727,
+          "break_even_frac": 0.44999999999999996
+        }
+      },
+      "peak_gb": 4.66,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 33.8,
+      "speculate": {
+        "k": 3,
+        "from_draft": 93,
+        "accepted_frac": 0.727,
+        "verify_rounds": 35,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.4288,
+        "verify_s": 3.4442,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 36,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 93,
+          "n_gen": 128,
+          "accepted_frac": 0.727,
+          "break_even_frac": 0.44999999999999996
+        }
+      },
+      "peak_gb": 4.66,
+      "error": null
+    }
+  ],
+  "repeat": [
+    {
+      "write_tps": 37.1,
+      "speculate": {
+        "k": 3,
+        "from_draft": 31,
+        "accepted_frac": 0.756,
+        "verify_rounds": 10,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.1956,
+        "verify_s": 1.0567,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 11,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 31,
+          "n_gen": 41,
+          "accepted_frac": 0.756,
+          "break_even_frac": 0.44999999999999996
+        }
+      }
+    },
+    {
+      "write_tps": 37.1,
+      "speculate": {
+        "k": 3,
+        "from_draft": 31,
+        "accepted_frac": 0.756,
+        "verify_rounds": 10,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.1458,
+        "verify_s": 1.0561,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 11,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 31,
+          "n_gen": 41,
+          "accepted_frac": 0.756,
+          "break_even_frac": 0.44999999999999996
+        }
+      }
+    }
+  ],
+  "code_edit": [
+    {
+      "write_tps": 46.4,
+      "speculate": {
+        "k": 3,
+        "from_draft": 12,
+        "accepted_frac": 0.75,
+        "verify_rounds": 4,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.0712,
+        "verify_s": 0.384,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 4,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 12,
+          "n_gen": 16,
+          "accepted_frac": 0.75,
+          "break_even_frac": 0.44999999999999996
+        }
+      }
+    },
+    {
+      "write_tps": 46.4,
+      "speculate": {
+        "k": 3,
+        "from_draft": 12,
+        "accepted_frac": 0.75,
+        "verify_rounds": 4,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.0713,
+        "verify_s": 0.3841,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 4,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 12,
+          "n_gen": 16,
+          "accepted_frac": 0.75,
+          "break_even_frac": 0.44999999999999996
+        }
+      }
+    }
+  ],
+  "code_cont": [
+    {
+      "write_tps": 35.9,
+      "speculate": {
+        "k": 3,
+        "from_draft": 43,
+        "accepted_frac": 0.729,
+        "verify_rounds": 16,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.2025,
+        "verify_s": 1.5343,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 16,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 43,
+          "n_gen": 59,
+          "accepted_frac": 0.729,
+          "break_even_frac": 0.44999999999999996
+        }
+      }
+    },
+    {
+      "write_tps": 35.9,
+      "speculate": {
+        "k": 3,
+        "from_draft": 43,
+        "accepted_frac": 0.729,
+        "verify_rounds": 16,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.203,
+        "verify_s": 1.5357,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 16,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 43,
+          "n_gen": 59,
+          "accepted_frac": 0.729,
+          "break_even_frac": 0.44999999999999996
+        }
+      }
+    }
+  ]
+}
+16:36:37 [mlx-worker] split speculate: auto-pair qwen25 -> Qwen2.5-0.5B-Instruct-4bit
+16:36:38 [mlx-worker] split speculate: running first-load quality + speed gate...
+16:36:45 [mlx-worker] split speculate: first-load keep baseline=10.49 spec=24.73 break_even=0.450
+/Users/brenden/.caravan/bench-2026-11-01/mini_suite_resume.sh: line 22: 19445 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+=== shut-off (be=0.80, no skip-first-load) ===
+raised be Qwen2.5-14B-Instruct-4bit::Qwen2.5-0.5B-Instruct-4bit
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/qwen25-suite/lead-shutoff.log
+{
+  "tag": "A",
+  "speculate": {
+    "k": 3,
+    "from_draft": 35,
+    "accepted_frac": 0.547,
+    "verify_rounds": 29,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.1869,
+    "verify_s": 2.5417,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 29,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.729 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 35,
+      "n_gen": 48,
+      "accepted_frac": 0.729,
+      "break_even_frac": 0.8
+    }
+  }
+}
+{
+  "tag": "B",
+  "speculate": {
+    "k": 3,
+    "from_draft": 35,
+    "accepted_frac": 0.547,
+    "verify_rounds": 29,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.1846,
+    "verify_s": 2.5386,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 29,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.729 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 35,
+      "n_gen": 48,
+      "accepted_frac": 0.729,
+      "break_even_frac": 0.8
+    }
+  }
+}
+{
+  "tag": "C",
+  "speculate": {
+    "k": 3,
+    "from_draft": 35,
+    "accepted_frac": 0.547,
+    "verify_rounds": 29,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.1844,
+    "verify_s": 2.5392,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 29,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.729 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 35,
+      "n_gen": 48,
+      "accepted_frac": 0.729,
+      "break_even_frac": 0.8
+    }
+  }
+}
+16:37:20 [mlx-worker] split speculate: first-load cache hit keep=1 break_even=0.800
+16:37:23 [mlx-worker] split speculate: accepted_frac 0.729 < break_even 0.800 over 48 tokens; guess-ahead off for this chat
+16:37:27 [mlx-worker] split speculate: accepted_frac 0.729 < break_even 0.800 over 48 tokens; guess-ahead off for this chat
+16:37:30 [mlx-worker] split speculate: accepted_frac 0.729 < break_even 0.800 over 48 tokens; guess-ahead off for this chat
+/Users/brenden/.caravan/bench-2026-11-01/mini_suite_resume.sh: line 22: 19508 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+restored be Qwen2.5-14B-Instruct-4bit::Qwen2.5-0.5B-Instruct-4bit 0.45
+=== SUITE_RESUME_DONE Sun Nov  1 16:37:38 CST 2026 ===
+=== download prompt only qwen25-suite Sun Nov  1 17:23:22 CST 2026 ===
+=== DOWNLOAD_PROMPT_DONE Sun Nov  1 17:24:03 CST 2026 ===

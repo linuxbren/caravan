@@ -1,0 +1,809 @@
+{
+  "tag": "adaptive",
+  "model": "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit",
+  "url": "http://127.0.0.1:8194",
+  "mode": "suite",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.654,
+    "session": "842c68f06979406e",
+    "prompt_n": 41,
+    "gen_n": 7,
+    "how": "cold",
+    "prefill_s": 0.282,
+    "ttft_s": 0.402,
+    "total_s": 0.637,
+    "peak_gb": 3.12,
+    "split": {
+      "calls": 11,
+      "mb_out": 0.0,
+      "mb_in": 0.46,
+      "wait_s": 0.251,
+      "front_s": 0.242,
+      "net_s": 0.009
+    },
+    "speculate": {
+      "k": 3,
+      "from_draft": 3,
+      "accepted_frac": 0.429,
+      "verify_rounds": 4,
+      "prompt_lookup_n": 3,
+      "draft_model": true,
+      "draft_s": 0.1326,
+      "verify_s": 0.2195,
+      "pl_hits": 0,
+      "pl_misses": 0,
+      "sources": {
+        "draft_model": 4,
+        "prompt_lookup": 0,
+        "none": 0
+      },
+      "adaptive_pl": {
+        "ngram_n": 3,
+        "overlap": 0.0,
+        "force_on": false,
+        "recent_accept_rate": null,
+        "recent_n": 0,
+        "probes": 0
+      },
+      "shutoff": {
+        "disabled": false,
+        "reason": null,
+        "from_draft": 3,
+        "n_gen": 7,
+        "accepted_frac": 0.429,
+        "break_even_frac": 0.35
+      }
+    },
+    "content": "Hello, how are you?<|eot_id|>",
+    "write_tps": 25.5
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "adaptive_count_0",
+        "ok": true,
+        "wall_s": 2.865,
+        "session": "ad73894a57ed4154",
+        "prompt_n": 48,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.275,
+        "ttft_s": 0.391,
+        "total_s": 2.863,
+        "peak_gb": 3.17,
+        "split": {
+          "calls": 38,
+          "mb_out": 0.0,
+          "mb_in": 1.46,
+          "wait_s": 0.996,
+          "front_s": 0.969,
+          "net_s": 0.027
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 96,
+          "accepted_frac": 0.75,
+          "verify_rounds": 32,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.7852,
+          "verify_s": 1.7995,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 33,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "adaptive_pl": {
+            "ngram_n": 3,
+            "overlap": 0.0,
+            "force_on": false,
+            "recent_accept_rate": null,
+            "recent_n": 0,
+            "probes": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 96,
+            "n_gen": 128,
+            "accepted_frac": 0.75,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, t",
+        "write_tps": 51.4
+      },
+      {
+        "name": "adaptive_count_1",
+        "ok": true,
+        "wall_s": 2.863,
+        "session": "3d31d43273e64677",
+        "prompt_n": 48,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.274,
+        "ttft_s": 0.391,
+        "total_s": 2.861,
+        "peak_gb": 3.18,
+        "split": {
+          "calls": 38,
+          "mb_out": 0.0,
+          "mb_in": 1.46,
+          "wait_s": 0.996,
+          "front_s": 0.97,
+          "net_s": 0.026
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 96,
+          "accepted_frac": 0.75,
+          "verify_rounds": 32,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.7867,
+          "verify_s": 1.7965,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 33,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "adaptive_pl": {
+            "ngram_n": 3,
+            "overlap": 0.0,
+            "force_on": false,
+            "recent_accept_rate": null,
+            "recent_n": 0,
+            "probes": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 96,
+            "n_gen": 128,
+            "accepted_frac": 0.75,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, t",
+        "write_tps": 51.4
+      }
+    ],
+    "repeat": [
+      {
+        "name": "adaptive_repeat_0",
+        "ok": true,
+        "wall_s": 1.293,
+        "session": "8377bc440e5345e4",
+        "prompt_n": 71,
+        "gen_n": 41,
+        "how": "cold",
+        "prefill_s": 0.404,
+        "ttft_s": 0.539,
+        "total_s": 1.292,
+        "peak_gb": 3.18,
+        "split": {
+          "calls": 16,
+          "mb_out": 0.0,
+          "mb_in": 0.93,
+          "wait_s": 0.496,
+          "front_s": 0.484,
+          "net_s": 0.012
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 31,
+          "accepted_frac": 0.756,
+          "verify_rounds": 10,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.284,
+          "verify_s": 0.6017,
+          "pl_hits": 1,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 10,
+            "prompt_lookup": 1,
+            "none": 0
+          },
+          "adaptive_pl": {
+            "ngram_n": 3,
+            "overlap": 0.302,
+            "force_on": true,
+            "recent_accept_rate": null,
+            "recent_n": 0,
+            "probes": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 31,
+            "n_gen": 41,
+            "accepted_frac": 0.756,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.\nThe quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.<|eot_id|>",
+        "write_tps": 53.1
+      },
+      {
+        "name": "adaptive_repeat_1",
+        "ok": true,
+        "wall_s": 1.303,
+        "session": "d694a42ae19c42d6",
+        "prompt_n": 71,
+        "gen_n": 41,
+        "how": "cold",
+        "prefill_s": 0.405,
+        "ttft_s": 0.539,
+        "total_s": 1.293,
+        "peak_gb": 3.2,
+        "split": {
+          "calls": 16,
+          "mb_out": 0.0,
+          "mb_in": 0.93,
+          "wait_s": 0.495,
+          "front_s": 0.483,
+          "net_s": 0.012
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 31,
+          "accepted_frac": 0.756,
+          "verify_rounds": 10,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.2855,
+          "verify_s": 0.6007,
+          "pl_hits": 1,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 10,
+            "prompt_lookup": 1,
+            "none": 0
+          },
+          "adaptive_pl": {
+            "ngram_n": 3,
+            "overlap": 0.302,
+            "force_on": true,
+            "recent_accept_rate": null,
+            "recent_n": 0,
+            "probes": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 31,
+            "n_gen": 41,
+            "accepted_frac": 0.756,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.\nThe quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.<|eot_id|>",
+        "write_tps": 53.1
+      }
+    ],
+    "code_edit": [
+      {
+        "name": "adaptive_code_edit_0",
+        "ok": true,
+        "wall_s": 0.778,
+        "session": "aac9b5a7a50a426e",
+        "prompt_n": 78,
+        "gen_n": 16,
+        "how": "cold",
+        "prefill_s": 0.404,
+        "ttft_s": 0.539,
+        "total_s": 0.77,
+        "peak_gb": 3.22,
+        "split": {
+          "calls": 8,
+          "mb_out": 0.0,
+          "mb_in": 0.76,
+          "wait_s": 0.314,
+          "front_s": 0.309,
+          "net_s": 0.005
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 12,
+          "accepted_frac": 0.75,
+          "verify_rounds": 4,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.148,
+          "verify_s": 0.2181,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 4,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "adaptive_pl": {
+            "ngram_n": 3,
+            "overlap": 0.116,
+            "force_on": false,
+            "recent_accept_rate": null,
+            "recent_n": 0,
+            "probes": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 12,
+            "n_gen": 16,
+            "accepted_frac": 0.75,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "def add(a, b, c):\n    return a + b + c<|eot_id|>",
+        "write_tps": 64.9
+      },
+      {
+        "name": "adaptive_code_edit_1",
+        "ok": true,
+        "wall_s": 0.779,
+        "session": "8fa5f1442b2f4453",
+        "prompt_n": 78,
+        "gen_n": 16,
+        "how": "cold",
+        "prefill_s": 0.403,
+        "ttft_s": 0.539,
+        "total_s": 0.771,
+        "peak_gb": 3.22,
+        "split": {
+          "calls": 8,
+          "mb_out": 0.0,
+          "mb_in": 0.76,
+          "wait_s": 0.314,
+          "front_s": 0.308,
+          "net_s": 0.005
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 12,
+          "accepted_frac": 0.75,
+          "verify_rounds": 4,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.1484,
+          "verify_s": 0.2189,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 4,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "adaptive_pl": {
+            "ngram_n": 3,
+            "overlap": 0.116,
+            "force_on": false,
+            "recent_accept_rate": null,
+            "recent_n": 0,
+            "probes": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 12,
+            "n_gen": 16,
+            "accepted_frac": 0.75,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "def add(a, b, c):\n    return a + b + c<|eot_id|>",
+        "write_tps": 64.7
+      }
+    ],
+    "code_cont": [
+      {
+        "name": "adaptive_code_cont_0",
+        "ok": true,
+        "wall_s": 1.649,
+        "session": "46aae3ebe8c54378",
+        "prompt_n": 63,
+        "gen_n": 59,
+        "how": "cold",
+        "prefill_s": 0.277,
+        "ttft_s": 0.395,
+        "total_s": 1.64,
+        "peak_gb": 3.27,
+        "split": {
+          "calls": 24,
+          "mb_out": 0.0,
+          "mb_in": 1.07,
+          "wait_s": 0.587,
+          "front_s": 0.571,
+          "net_s": 0.016
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 42,
+          "accepted_frac": 0.712,
+          "verify_rounds": 17,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.4294,
+          "verify_s": 0.9291,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 17,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "adaptive_pl": {
+            "ngram_n": 3,
+            "overlap": 0.211,
+            "force_on": false,
+            "recent_accept_rate": null,
+            "recent_n": 0,
+            "probes": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 42,
+            "n_gen": 59,
+            "accepted_frac": 0.712,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "```python\ndef fib(n):\n    if n < 2:\n        return n\n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n\n    return b\n```<|eot_id|>",
+        "write_tps": 46.6
+      },
+      {
+        "name": "adaptive_code_cont_1",
+        "ok": true,
+        "wall_s": 1.647,
+        "session": "c4f449e42d414045",
+        "prompt_n": 63,
+        "gen_n": 59,
+        "how": "cold",
+        "prefill_s": 0.277,
+        "ttft_s": 0.396,
+        "total_s": 1.639,
+        "peak_gb": 3.27,
+        "split": {
+          "calls": 24,
+          "mb_out": 0.0,
+          "mb_in": 1.07,
+          "wait_s": 0.587,
+          "front_s": 0.571,
+          "net_s": 0.016
+        },
+        "speculate": {
+          "k": 3,
+          "from_draft": 42,
+          "accepted_frac": 0.712,
+          "verify_rounds": 17,
+          "prompt_lookup_n": 3,
+          "draft_model": true,
+          "draft_s": 0.4283,
+          "verify_s": 0.9297,
+          "pl_hits": 0,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 17,
+            "prompt_lookup": 0,
+            "none": 0
+          },
+          "adaptive_pl": {
+            "ngram_n": 3,
+            "overlap": 0.211,
+            "force_on": false,
+            "recent_accept_rate": null,
+            "recent_n": 0,
+            "probes": 0
+          },
+          "shutoff": {
+            "disabled": false,
+            "reason": null,
+            "from_draft": 42,
+            "n_gen": 59,
+            "accepted_frac": 0.712,
+            "break_even_frac": 0.35
+          }
+        },
+        "content": "```python\ndef fib(n):\n    if n < 2:\n        return n\n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n\n    return b\n```<|eot_id|>",
+        "write_tps": 46.7
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 0.398,
+      "session": "68612d6c4a524556",
+      "prompt_n": 48,
+      "gen_n": 2,
+      "how": "cold",
+      "prefill_s": 0.273,
+      "ttft_s": 0.389,
+      "total_s": 0.39,
+      "peak_gb": 3.27,
+      "split": {
+        "calls": 6,
+        "mb_out": 0.0,
+        "mb_in": 0.42,
+        "wait_s": 0.169,
+        "front_s": 0.164,
+        "net_s": 0.004
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 2,
+        "accepted_frac": 1.0,
+        "verify_rounds": 0,
+        "prompt_lookup_n": 3,
+        "draft_model": true,
+        "draft_s": 0.0618,
+        "verify_s": 0.0548,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 1,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "adaptive_pl": {
+          "ngram_n": 3,
+          "overlap": 0.0,
+          "force_on": false,
+          "recent_accept_rate": null,
+          "recent_n": 0,
+          "probes": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 2,
+          "n_gen": 2,
+          "accepted_frac": 1.0,
+          "break_even_frac": 0.35
+        }
+      },
+      "content": "4<|eot_id|>",
+      "write_tps": 1000.0
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 0.398,
+      "session": "0b406be917f54125",
+      "prompt_n": 44,
+      "gen_n": 3,
+      "how": "cold",
+      "prefill_s": 0.272,
+      "ttft_s": 0.389,
+      "total_s": 0.389,
+      "peak_gb": 3.27,
+      "split": {
+        "calls": 5,
+        "mb_out": 0.0,
+        "mb_in": 0.39,
+        "wait_s": 0.167,
+        "front_s": 0.164,
+        "net_s": 0.003
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 3,
+        "accepted_frac": 1.0,
+        "verify_rounds": 0,
+        "prompt_lookup_n": 3,
+        "draft_model": true,
+        "draft_s": 0.0618,
+        "verify_s": 0.0549,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 1,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "adaptive_pl": {
+          "ngram_n": 3,
+          "overlap": 0.0,
+          "force_on": false,
+          "recent_accept_rate": null,
+          "recent_n": 0,
+          "probes": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 3,
+          "n_gen": 3,
+          "accepted_frac": 1.0,
+          "break_even_frac": 0.35
+        }
+      },
+      "content": "Paris.<|eot_id|>"
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 0.397,
+      "session": "bf1a4eaf74fa48ae",
+      "prompt_n": 46,
+      "gen_n": 3,
+      "how": "cold",
+      "prefill_s": 0.272,
+      "ttft_s": 0.389,
+      "total_s": 0.389,
+      "peak_gb": 3.27,
+      "split": {
+        "calls": 5,
+        "mb_out": 0.0,
+        "mb_in": 0.4,
+        "wait_s": 0.168,
+        "front_s": 0.165,
+        "net_s": 0.003
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 3,
+        "accepted_frac": 1.0,
+        "verify_rounds": 0,
+        "prompt_lookup_n": 3,
+        "draft_model": true,
+        "draft_s": 0.0616,
+        "verify_s": 0.0547,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 1,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "adaptive_pl": {
+          "ngram_n": 3,
+          "overlap": 0.0,
+          "force_on": false,
+          "recent_accept_rate": null,
+          "recent_n": 0,
+          "probes": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 3,
+          "n_gen": 3,
+          "accepted_frac": 1.0,
+          "break_even_frac": 0.35
+        }
+      },
+      "content": "Cold.<|eot_id|>"
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 51.4,
+    "repeat": 53.1,
+    "code_edit": 64.7,
+    "code_cont": 46.6
+  },
+  "tg128": [
+    {
+      "name": "adaptive_count_0",
+      "ok": true,
+      "wall_s": 2.865,
+      "session": "ad73894a57ed4154",
+      "prompt_n": 48,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.275,
+      "ttft_s": 0.391,
+      "total_s": 2.863,
+      "peak_gb": 3.17,
+      "split": {
+        "calls": 38,
+        "mb_out": 0.0,
+        "mb_in": 1.46,
+        "wait_s": 0.996,
+        "front_s": 0.969,
+        "net_s": 0.027
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 96,
+        "accepted_frac": 0.75,
+        "verify_rounds": 32,
+        "prompt_lookup_n": 3,
+        "draft_model": true,
+        "draft_s": 0.7852,
+        "verify_s": 1.7995,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 33,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "adaptive_pl": {
+          "ngram_n": 3,
+          "overlap": 0.0,
+          "force_on": false,
+          "recent_accept_rate": null,
+          "recent_n": 0,
+          "probes": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 96,
+          "n_gen": 128,
+          "accepted_frac": 0.75,
+          "break_even_frac": 0.35
+        }
+      },
+      "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, t",
+      "write_tps": 51.4
+    },
+    {
+      "name": "adaptive_count_1",
+      "ok": true,
+      "wall_s": 2.863,
+      "session": "3d31d43273e64677",
+      "prompt_n": 48,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.274,
+      "ttft_s": 0.391,
+      "total_s": 2.861,
+      "peak_gb": 3.18,
+      "split": {
+        "calls": 38,
+        "mb_out": 0.0,
+        "mb_in": 1.46,
+        "wait_s": 0.996,
+        "front_s": 0.97,
+        "net_s": 0.026
+      },
+      "speculate": {
+        "k": 3,
+        "from_draft": 96,
+        "accepted_frac": 0.75,
+        "verify_rounds": 32,
+        "prompt_lookup_n": 3,
+        "draft_model": true,
+        "draft_s": 0.7867,
+        "verify_s": 1.7965,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 33,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "adaptive_pl": {
+          "ngram_n": 3,
+          "overlap": 0.0,
+          "force_on": false,
+          "recent_accept_rate": null,
+          "recent_n": 0,
+          "probes": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 96,
+          "n_gen": 128,
+          "accepted_frac": 0.75,
+          "break_even_frac": 0.35
+        }
+      },
+      "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, t",
+      "write_tps": 51.4
+    }
+  ]
+}

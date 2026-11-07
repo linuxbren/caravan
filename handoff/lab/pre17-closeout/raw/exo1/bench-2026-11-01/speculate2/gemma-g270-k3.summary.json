@@ -1,0 +1,56 @@
+{
+  "tag": "g270-k3",
+  "mode": "standard",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 41.5
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 41.5,
+      "speculate": {
+        "k": 3,
+        "from_draft": 77,
+        "accepted_frac": 0.602,
+        "verify_rounds": 51,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.398,
+        "verify_s": 2.7066,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 51,
+          "prompt_lookup": 0,
+          "none": 0
+        }
+      },
+      "peak_gb": 7.54,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 41.6,
+      "speculate": {
+        "k": 3,
+        "from_draft": 77,
+        "accepted_frac": 0.602,
+        "verify_rounds": 51,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.3976,
+        "verify_s": 2.7044,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 51,
+          "prompt_lookup": 0,
+          "none": 0
+        }
+      },
+      "peak_gb": 7.55,
+      "error": null
+    }
+  ]
+}

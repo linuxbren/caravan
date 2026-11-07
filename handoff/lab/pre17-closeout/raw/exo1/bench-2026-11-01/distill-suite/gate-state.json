@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "download_answers": {
+    "llama3": true,
+    "qwen25": true,
+    "deepseek-r1-distill-qwen": true
+  },
+  "first_load": {
+    "Qwen3-30B-A3B-4bit::Qwen3-0.6B-4bit": {
+      "keep": true,
+      "quality": [
+        {
+          "q": "What is 2+2? Reply with just the number.",
+          "out": "<think>\n\n</think>\n\n4<|im_end|>",
+          "ok": true
+        },
+        {
+          "q": "Name the capital of France. One word.",
+          "out": "<think>\n\n</think>\n\nParis<|im_end|>",
+          "ok": true
+        },
+        {
+          "q": "Is ice cream typically hot or cold? One word.",
+          "out": "<think>\n\n</think>\n\nCold.<|im_end|>",
+          "ok": true
+        }
+      ],
+      "baseline_tps": 37.15,
+      "spec_tps": 40.94,
+      "accepted_frac": 0.725,
+      "break_even_frac": 0.435,
+      "k": 3,
+      "pairing": "qwen3-30b-a3b",
+      "ts": 1793556716.569619
+    },
+    "gemma-4-26b-a4b-it-4bit::gemma-3-270m-it-4bit": {
+      "keep": true,
+      "quality": [
+        {
+          "q": "What is 2+2? Reply with just the number.",
+          "out": "<|channel>thought\nThe user is asking for the result of the mathematical expression \"2+2\".\nThe user also specified a constraint: \"Reply with just the number.\"\n\nCalculation: 2 + 2 = 4.\nConstraint check: The answer should be just the number.\n\nFinal answer: 4.<channel|>4<turn|>",
+          "ok": true
+        },
+        {
+          "q": "Name the capital of France. One word.",
+          "out": "<|channel>thought\n*   Question: \"Name the capital of France.\"\n    *   Constraint: \"One word.\"\n\n    *   The capital of France is Paris.\n\n    *   The answer is \"Paris\".\n    *   It is one word.\n\n    *   Paris.<channel|>Paris<turn|>",
+          "ok": true
+        },
+        {
+          "q": "Is ice cream typically hot or cold? One word.",
+          "out": "<|channel>thought\n*   Question: \"Is ice cream typically hot or cold?\"\n    *   Constraint: \"One word.\"\n\n    *   Ice cream is a frozen dessert.\n    *   Temperature: Cold.\n\n    *   The answer is \"Cold\".\n\n    *   One word? Yes.\n    *   Accurate? Yes.<channel|>Cold<turn|>",
+          "ok": true
+        }
+      ],
+      "baseline_tps": 31.63,
+      "spec_tps": 34.79,
+      "accepted_frac": 0.525,
+      "break_even_frac": 0.315,
+      "k": 2,
+      "pairing": "gemma-4-26b",
+      "ts": 1793558087.881052
+    },
+    "Meta-Llama-3.1-8B-Instruct-4bit::Llama-3.2-1B-Instruct-4bit": {
+      "keep": true,
+      "quality": [
+        {
+          "q": "What is 2+2? Reply with just the number.",
+          "out": "4<|eot_id|>",
+          "ok": true
+        },
+        {
+          "q": "Name the capital of France. One word.",
+          "out": "Paris.<|eot_id|>",
+          "ok": true
+        },
+        {
+          "q": "Is ice cream typically hot or cold? One word.",
+          "out": "Cold.<|eot_id|>",
+          "ok": true
+        }
+      ],
+      "baseline_tps": 19.29,
+      "spec_tps": 35.87,
+      "accepted_frac": 0.75,
+      "break_even_frac": 0.45,
+      "k": 3,
+      "pairing": "llama3",
+      "ts": 1793564380.106668
+    },
+    "DeepSeek-R1-Distill-Qwen-14B-4bit::Qwen2.5-0.5B-Instruct-4bit": {
+      "keep": true,
+      "quality": [
+        {
+          "q": "What is 2+2? Reply with just the number.",
+          "out": "I need to calculate the sum of 2 and 2.\n\nAdding the two numbers together gives me 4.\n\nTherefore, the result is 4.\n</think>\n\n2 + 2 = \\boxed{4}<\uff5cend\u2581of\u2581sentence\uff5c>",
+          "ok": true
+        },
+        {
+          "q": "Name the capital of France. One word.",
+          "out": "Okay, so I need to figure out the capital of France. Hmm, I think it's Paris. But wait, is that right? Let me think. I remember learning in school that Paris is the capital. It's a big city known for landmarks like the Eiffel Tower and the Louvre Museum. But maybe I'm confusing it with another country. Let me see, France is in Europe, right? And their government is based in Paris. Yeah, I'm pretty",
+          "ok": true
+        },
+        {
+          "q": "Is ice cream typically hot or cold? One word.",
+          "out": "Okay, so I need to figure out whether ice cream is typically hot or cold. Hmm, that seems straightforward, but let me think it through. I know ice cream is a dessert that's usually served cold, right? But maybe I should break it down more.\n\nFirst, what is ice cream? It's a frozen treat made from dairy products, right? So, it's made by churning milk or cream with sugar and sometimes other flavors. ",
+          "ok": true
+        }
+      ],
+      "baseline_tps": 11.17,
+      "spec_tps": 13.98,
+      "accepted_frac": 0.425,
+      "break_even_frac": 0.255,
+      "k": 3,
+      "pairing": "deepseek-r1-distill-qwen",
+      "ts": 1793574945.294195
+    }
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "tag": "nodraft",
+  "model": "mlx-community/Qwen3-30B-A3B-4bit",
+  "url": "http://127.0.0.1:8194",
+  "mode": "standard",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.386,
+    "session": "304dfeb106d44921",
+    "prompt_n": 18,
+    "gen_n": 7,
+    "how": "cold",
+    "prefill_s": 0.149,
+    "ttft_s": 0.191,
+    "total_s": 0.348,
+    "peak_gb": 8.65,
+    "split": {
+      "calls": 13,
+      "mb_out": 0.0,
+      "mb_in": 0.11,
+      "wait_s": 0.169,
+      "front_s": 0.158,
+      "net_s": 0.011
+    },
+    "speculate": null,
+    "content": "Hello there!",
+    "write_tps": 38.2
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "nodraft_count_0",
+        "ok": true,
+        "wall_s": 2.981,
+        "session": "f531eded2f6143cc",
+        "prompt_n": 25,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.176,
+        "ttft_s": 0.215,
+        "total_s": 2.979,
+        "peak_gb": 8.68,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 0.64,
+          "wait_s": 1.431,
+          "front_s": 1.358,
+          "net_s": 0.074
+        },
+        "speculate": null,
+        "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+        "write_tps": 45.9
+      },
+      {
+        "name": "nodraft_count_1",
+        "ok": true,
+        "wall_s": 2.978,
+        "session": "77292d2503544d6f",
+        "prompt_n": 25,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.175,
+        "ttft_s": 0.214,
+        "total_s": 2.976,
+        "peak_gb": 8.69,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 0.64,
+          "wait_s": 1.426,
+          "front_s": 1.355,
+          "net_s": 0.072
+        },
+        "speculate": null,
+        "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+        "write_tps": 46.0
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 0.33,
+      "session": "c1c0b6686d56472d",
+      "prompt_n": 25,
+      "gen_n": 5,
+      "how": "cold",
+      "prefill_s": 0.176,
+      "ttft_s": 0.216,
+      "total_s": 0.328,
+      "peak_gb": 8.7,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.13,
+        "wait_s": 0.163,
+        "front_s": 0.157,
+        "net_s": 0.006
+      },
+      "speculate": null,
+      "content": "4",
+      "write_tps": 35.7
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 0.31,
+      "session": "88b8abc9ac1b4709",
+      "prompt_n": 21,
+      "gen_n": 5,
+      "how": "cold",
+      "prefill_s": 0.154,
+      "ttft_s": 0.194,
+      "total_s": 0.307,
+      "peak_gb": 8.7,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.11,
+        "wait_s": 0.153,
+        "front_s": 0.146,
+        "net_s": 0.006
+      },
+      "speculate": null,
+      "content": "Paris",
+      "write_tps": 35.4
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 0.341,
+      "session": "d24a0863baa44349",
+      "prompt_n": 23,
+      "gen_n": 6,
+      "how": "cold",
+      "prefill_s": 0.165,
+      "ttft_s": 0.204,
+      "total_s": 0.338,
+      "peak_gb": 8.71,
+      "split": {
+        "calls": 12,
+        "mb_out": 0.0,
+        "mb_in": 0.12,
+        "wait_s": 0.168,
+        "front_s": 0.161,
+        "net_s": 0.007
+      },
+      "speculate": null,
+      "content": "Cold.",
+      "write_tps": 37.3
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 45.9
+  },
+  "tg128": [
+    {
+      "name": "nodraft_count_0",
+      "ok": true,
+      "wall_s": 2.981,
+      "session": "f531eded2f6143cc",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.176,
+      "ttft_s": 0.215,
+      "total_s": 2.979,
+      "peak_gb": 8.68,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.64,
+        "wait_s": 1.431,
+        "front_s": 1.358,
+        "net_s": 0.074
+      },
+      "speculate": null,
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 45.9
+    },
+    {
+      "name": "nodraft_count_1",
+      "ok": true,
+      "wall_s": 2.978,
+      "session": "77292d2503544d6f",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.175,
+      "ttft_s": 0.214,
+      "total_s": 2.976,
+      "peak_gb": 8.69,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.64,
+        "wait_s": 1.426,
+        "front_s": 1.355,
+        "net_s": 0.072
+      },
+      "speculate": null,
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 46.0
+    }
+  ]
+}

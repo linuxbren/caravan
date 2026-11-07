@@ -1,0 +1,121 @@
+{
+  "model": "mlx-community--gemma-4-26b-a4b-it-4bit",
+  "host": "prf-hays-exo02.local",
+  "n": 30,
+  "packer": {
+    "after_eval_ser_ms": {
+      "median": 0.027,
+      "min": 0.025,
+      "max": 0.035
+    },
+    "eval_ms": {
+      "median": 10.31,
+      "min": 10.237,
+      "max": 10.874
+    },
+    "graph_build_ms": {
+      "median": 0.384,
+      "min": 0.374,
+      "max": 0.414
+    },
+    "payload_bytes": {
+      "median": 5632.0,
+      "min": 5632,
+      "max": 5632
+    },
+    "ser_asarray_ms": {
+      "median": 0.022,
+      "min": 0.02,
+      "max": 0.026
+    },
+    "ser_ms": {
+      "median": 0.024,
+      "min": 0.022,
+      "max": 0.032
+    },
+    "ser_tobytes_ms": {
+      "median": 0.001,
+      "min": 0.0,
+      "max": 0.005
+    },
+    "ser_view_ms": {
+      "median": 0.001,
+      "min": 0.001,
+      "max": 0.002
+    },
+    "tok_to_mx_ms": {
+      "median": 0.026,
+      "min": 0.023,
+      "max": 0.03
+    },
+    "total_ms": {
+      "median": 10.755,
+      "min": 10.676,
+      "max": 11.322
+    }
+  },
+  "lead_from_bytes": {
+    "deser_block_ms": {
+      "median": 0.026,
+      "min": 0.018,
+      "max": 0.034
+    },
+    "deser_eval_ms": {
+      "median": 0.021,
+      "min": 0.012,
+      "max": 0.027
+    },
+    "deser_frombuffer_ms": {
+      "median": 0.001,
+      "min": 0.001,
+      "max": 0.001
+    },
+    "deser_ms": {
+      "median": 0.024,
+      "min": 0.015,
+      "max": 0.031
+    },
+    "deser_mx_array_ms": {
+      "median": 0.002,
+      "min": 0.002,
+      "max": 0.003
+    },
+    "deser_view_ms": {
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "lead_eval_ms": {
+      "median": 14.57,
+      "min": 14.245,
+      "max": 15.205
+    },
+    "lead_graph_ms": {
+      "median": 0.386,
+      "min": 0.379,
+      "max": 0.42
+    },
+    "lead_total_ms": {
+      "median": 15.286,
+      "min": 14.977,
+      "max": 15.935
+    },
+    "payload_bytes": {
+      "median": 5632.0,
+      "min": 5632,
+      "max": 5632
+    },
+    "sample_ms": {
+      "median": 0.306,
+      "min": 0.286,
+      "max": 0.422
+    }
+  },
+  "lead_zeros": {
+    "zeros_lead_ms": {
+      "median": 14.947,
+      "min": 14.588,
+      "max": 15.396
+    }
+  }
+}

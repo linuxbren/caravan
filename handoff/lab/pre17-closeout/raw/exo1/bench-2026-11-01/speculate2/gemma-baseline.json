@@ -1,0 +1,210 @@
+{
+  "tag": "baseline",
+  "model": "/Users/brenden/.exo/models/mlx-community--gemma-4-26b-a4b-it-4bit",
+  "url": "http://127.0.0.1:8194",
+  "mode": "standard",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.642,
+    "session": "905aafa5b9f14bf1",
+    "prompt_n": 22,
+    "gen_n": 16,
+    "how": "cold",
+    "prefill_s": 0.164,
+    "ttft_s": 0.214,
+    "total_s": 0.607,
+    "peak_gb": 7.36,
+    "split": {
+      "calls": 21,
+      "mb_out": 0.0,
+      "mb_in": 0.22,
+      "wait_s": 0.276,
+      "front_s": 0.263,
+      "net_s": 0.013
+    },
+    "speculate": null,
+    "content": "",
+    "write_tps": 38.2
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "baseline_count_0",
+        "ok": true,
+        "wall_s": 3.539,
+        "session": "c96744292ab94f29",
+        "prompt_n": 29,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.189,
+        "ttft_s": 0.236,
+        "total_s": 3.538,
+        "peak_gb": 7.39,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 0.89,
+          "wait_s": 1.563,
+          "front_s": 1.485,
+          "net_s": 0.078
+        },
+        "speculate": null,
+        "content": "",
+        "write_tps": 38.5
+      },
+      {
+        "name": "baseline_count_1",
+        "ok": true,
+        "wall_s": 3.542,
+        "session": "1ddc61767b5048c6",
+        "prompt_n": 29,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.189,
+        "ttft_s": 0.236,
+        "total_s": 3.541,
+        "peak_gb": 7.39,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 0.89,
+          "wait_s": 1.564,
+          "front_s": 1.488,
+          "net_s": 0.076
+        },
+        "speculate": null,
+        "content": "",
+        "write_tps": 38.4
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 1.047,
+      "session": "b3331823bc734a81",
+      "prompt_n": 29,
+      "gen_n": 32,
+      "how": "cold",
+      "prefill_s": 0.188,
+      "ttft_s": 0.236,
+      "total_s": 1.045,
+      "peak_gb": 7.4,
+      "split": {
+        "calls": 37,
+        "mb_out": 0.0,
+        "mb_in": 0.35,
+        "wait_s": 0.472,
+        "front_s": 0.452,
+        "net_s": 0.02
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 38.3
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 1.03,
+      "session": "9511f698235d4ff1",
+      "prompt_n": 25,
+      "gen_n": 32,
+      "how": "cold",
+      "prefill_s": 0.169,
+      "ttft_s": 0.216,
+      "total_s": 1.023,
+      "peak_gb": 7.4,
+      "split": {
+        "calls": 37,
+        "mb_out": 0.0,
+        "mb_in": 0.32,
+        "wait_s": 0.462,
+        "front_s": 0.442,
+        "net_s": 0.02
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 38.4
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 1.052,
+      "session": "5c8ad22ea3e64ca0",
+      "prompt_n": 27,
+      "gen_n": 32,
+      "how": "cold",
+      "prefill_s": 0.18,
+      "ttft_s": 0.229,
+      "total_s": 1.044,
+      "peak_gb": 7.4,
+      "split": {
+        "calls": 37,
+        "mb_out": 0.0,
+        "mb_in": 0.33,
+        "wait_s": 0.476,
+        "front_s": 0.456,
+        "net_s": 0.02
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 38.0
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 38.4
+  },
+  "tg128": [
+    {
+      "name": "baseline_count_0",
+      "ok": true,
+      "wall_s": 3.539,
+      "session": "c96744292ab94f29",
+      "prompt_n": 29,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.189,
+      "ttft_s": 0.236,
+      "total_s": 3.538,
+      "peak_gb": 7.39,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.89,
+        "wait_s": 1.563,
+        "front_s": 1.485,
+        "net_s": 0.078
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 38.5
+    },
+    {
+      "name": "baseline_count_1",
+      "ok": true,
+      "wall_s": 3.542,
+      "session": "1ddc61767b5048c6",
+      "prompt_n": 29,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.189,
+      "ttft_s": 0.236,
+      "total_s": 3.541,
+      "peak_gb": 7.39,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.89,
+        "wait_s": 1.564,
+        "front_s": 1.488,
+        "net_s": 0.076
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 38.4
+    }
+  ]
+}

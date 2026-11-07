@@ -1,0 +1,6 @@
+22:56:35 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.103.191:5560
+22:56:35 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+22:56:36 [mlx-worker] session 98cf2129e68e40f6: cold, reused 0/16 tokens, read 16 in 0.13s, 8 generated, total 0.33s, peak 8.64 GB
+22:56:39 [mlx-worker] session baa53602273f42b6: cold, reused 0/42 tokens, read 42 in 0.28s, 128 generated, total 3.12s, peak 8.69 GB
+22:56:42 [mlx-worker] session 08b25db8b9354e5f: cold, reused 0/42 tokens, read 42 in 0.28s, 128 generated, total 3.12s, peak 8.7 GB
+22:57:01 [mlx-worker] session 46aeb3e2353b468b: cold, reused 0/6918 tokens, read 6918 in 18.51s, 25 generated, total 19.31s, peak 9.6 GB

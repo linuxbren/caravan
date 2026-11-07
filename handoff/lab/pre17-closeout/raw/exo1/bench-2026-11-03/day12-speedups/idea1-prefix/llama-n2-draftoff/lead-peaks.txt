@@ -1,0 +1,8 @@
+22:37:19 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.103.191:5560
+22:37:19 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+22:37:21 [mlx-worker] session cd4b7954569a4950: pipeline, reused 0/39, 8 generated, total 0.64s, peak 2.42 GB
+22:37:27 [mlx-worker] session c49b341f8c474ebe: pipeline, reused 0/58, 128 generated, total 6.72s, peak 2.53 GB
+22:37:27 [mlx-worker] session 0c148b3e9af44a8a: pipeline, reused 0/62, 128 generated, total 6.45s, peak 2.53 GB
+22:37:34 [mlx-worker] session 7ee097cdeae947df: pipeline, reused 0/58, 128 generated, total 6.71s, peak 2.57 GB
+22:37:34 [mlx-worker] session 6d2101c3f98c4f5a: pipeline, reused 0/63, 128 generated, total 6.44s, peak 2.57 GB
+22:38:01 [mlx-worker] session 500660bdf7cf46d0: pipeline, reused 0/5694, 19 generated, total 26.52s, peak 3.26 GB

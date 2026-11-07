@@ -1,0 +1,22 @@
+21:40:04 [mlx-worker] auto split: packer_layers=24 (equal RAM ~26/26 GB; balanced cut K=24 for 48 layers (qwen2))
+21:40:05 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+21:40:05 [mlx-worker] packer stage packer 1: layers 0-23 of 48 of mlx-community--DeepSeek-R1-Distill-Qwen-14B-4bit loaded in 1.3s, 3.7 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/mlx/prompt-cache
+21:40:05 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch 5ed1745c15b6)
+21:40:13 [mlx-worker] lead connected from 169.254.4.161
+21:40:16 [mlx-worker] ignoring q-0.safetensors: model differs -- starting cold
+21:40:24 [mlx-worker] ignoring q-1.safetensors: model differs -- starting cold
+21:41:00 [mlx-worker] ignoring q-2.safetensors: model differs -- starting cold
+21:41:19 [mlx-worker] ignoring q-3.safetensors: model differs -- starting cold
+21:41:28 [mlx-worker] ignoring q-4.safetensors: model differs -- starting cold
+21:42:04 [mlx-worker] saved q-0: 17 tokens, 2 MB in 0.00s
+21:42:04 [mlx-worker] ignoring q-5.safetensors: model differs -- starting cold
+21:42:23 [mlx-worker] saved q-1: 9 tokens, 1 MB in 0.00s
+21:42:23 [mlx-worker] ignoring q-6.safetensors: model differs -- starting cold
+21:42:31 [mlx-worker] saved q-2: 14 tokens, 1 MB in 0.00s
+21:42:31 [mlx-worker] ignoring q-7.safetensors: model differs -- starting cold
+21:43:07 [mlx-worker] saved q-3: 17 tokens, 2 MB in 0.00s
+21:43:26 [mlx-worker] saved q-4: 9 tokens, 1 MB in 0.00s
+21:43:34 [mlx-worker] saved q-5: 14 tokens, 1 MB in 0.00s
+21:44:10 [mlx-worker] saved q-6: 17 tokens, 2 MB in 0.00s
+21:44:29 [mlx-worker] saved q-7: 9 tokens, 1 MB in 0.00s
+21:50:01 [mlx-worker] lead disconnected (peer closed the connection)

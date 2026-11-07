@@ -1,0 +1,316 @@
+{
+ "_day": "Day 13",
+ "_stills": [
+  1.5,
+  12,
+  30,
+  50,
+  70,
+  90,
+  110,
+  125
+ ],
+ "VERSIONS": [
+  [
+   "v0",
+   "Oct 30",
+   "llama.cpp (GGUF), one Mini",
+   "main 45ed2c2 + old llama.cpp build, q8_0 cache"
+  ],
+  [
+   "v1",
+   "Oct 30",
+   "rebased llama.cpp + early MLX, one Mini",
+   "improvements-1-3: saved chats reload, auto cache, MLX via mlx_lm.server"
+  ],
+  [
+   "v2",
+   "Oct 31",
+   "MLX chats kept + saved, one Mini",
+   "caravan-v2-mlx-cache: per-chat MLX memory, restart resume"
+  ],
+  [
+   "v2.1",
+   "Oct 31",
+   "MLX, memory locked at start, one Mini",
+   "tag v2.1: steadier v2"
+  ],
+  [
+   "v3 Day 13",
+   "Nov 4",
+   "one model split across two Minis",
+   "caravan-v3-mlx-split 494f9be + guess-ahead, two chats, self-tuned shared start"
+  ]
+ ],
+ "QWEN_WRITE": [
+  [
+   "v0",
+   41.4,
+   "llama.cpp"
+  ],
+  [
+   "v1",
+   47.0,
+   "MLX"
+  ],
+  [
+   "v2",
+   49.1,
+   "MLX"
+  ],
+  [
+   "v2.1",
+   51.0,
+   "MLX"
+  ],
+  [
+   "v3 split",
+   45.4,
+   "1 chat"
+  ],
+  [
+   "v3 + guess",
+   59.0,
+   "1 chat"
+  ],
+  [
+   "v3 2 chats",
+   72.5,
+   "total"
+  ]
+ ],
+ "GEMMA_WRITE": [
+  [
+   "v0",
+   34.4,
+   "llama.cpp"
+  ],
+  [
+   "v1",
+   39.8,
+   "MLX"
+  ],
+  [
+   "v2",
+   42.2,
+   "MLX"
+  ],
+  [
+   "v2.1",
+   41.3,
+   "MLX"
+  ],
+  [
+   "v3 split",
+   37.9,
+   "1 chat"
+  ],
+  [
+   "v3 2 chats",
+   58.4,
+   "total"
+  ]
+ ],
+ "LLAMA_WRITE": [
+  [
+   "v0",
+   21.2,
+   "llama.cpp"
+  ],
+  [
+   "v1",
+   23.1,
+   "MLX"
+  ],
+  [
+   "v2",
+   23.6,
+   "MLX"
+  ],
+  [
+   "v2.1",
+   23.3,
+   "MLX"
+  ],
+  [
+   "v3 split",
+   22.6,
+   "1 chat"
+  ],
+  [
+   "v3 + guess",
+   49.7,
+   "1 chat"
+  ],
+  [
+   "v3 2 chats",
+   39.4,
+   "total"
+  ]
+ ],
+ "GPTOSS_WRITE": [
+  [
+   "v0",
+   35.9,
+   "llama.cpp"
+  ],
+  [
+   "v1",
+   35.3,
+   "MLX"
+  ],
+  [
+   "v2",
+   37.4,
+   "MLX"
+  ],
+  [
+   "v2.1",
+   36.5,
+   "MLX"
+  ],
+  [
+   "v3 split",
+   31.9,
+   "1 chat"
+  ]
+ ],
+ "READ": [
+  [
+   "v0",
+   361.1,
+   333.9
+  ],
+  [
+   "v1",
+   439.4,
+   427.2
+  ],
+  [
+   "v2",
+   438,
+   397
+  ],
+  [
+   "v2.1",
+   465,
+   431
+  ],
+  [
+   "v3 split (Nov 4)",
+   462.4,
+   425.9
+  ]
+ ],
+ "RACE": [
+  [
+   "v2.1 one Mini",
+   "10.1 s",
+   "18.8 s",
+   "—",
+   "Nov 4 re-measure · re-reads all"
+  ],
+  [
+   "v3 split, plain",
+   "9.3 s",
+   "17.5 s",
+   "11.8 s",
+   "Day 13 re-measure · re-reads all"
+  ],
+  [
+   "Day 12 shared start",
+   "5.0 s",
+   "8.9 s",
+   "no gain",
+   "Gemma's sliding-window layers forced a full re-read"
+  ],
+  [
+   "Day 13 shared start",
+   "5.0 s",
+   "8.9 s",
+   "1.55 s",
+   "Gemma fixed: re-builds the shared part on both Minis"
+  ],
+  [
+   "bare v0 / v1 servers",
+   "0.4 s",
+   "0.3–0.4 s",
+   "—",
+   "one shared cache · no chat separation"
+  ]
+ ],
+ "LEARN": [
+  [
+   "Gemma 4 26B",
+   "12.9 s",
+   "2.7 s"
+  ],
+  [
+   "Qwen3 30B",
+   "10.4 s",
+   "0.9 s"
+  ],
+  [
+   "Llama 3.1 8B",
+   "19.3 s",
+   "1.5 s"
+  ]
+ ],
+ "MILES": [
+  [
+   "Day 1",
+   "Oct 30",
+   "Caravan v0: llama.cpp on one Mini, measured vs Ollama, exo, LocalAI"
+  ],
+  [
+   "Day 1 eve",
+   "Oct 30",
+   "v1: saved chats reload after restart (GPT-OSS 18k chat: 46.3 → 0.65 s), MLX arrives"
+  ],
+  [
+   "Day 3",
+   "Oct 31",
+   "v2: MLX keeps each chat between messages (Gemma turn 2 at 4k: 10.76 → 0.49 s)"
+  ],
+  [
+   "Day 4",
+   "Oct 31",
+   "v3: one model split across two Minis over Thunderbolt"
+  ],
+  [
+   "Day 5",
+   "Oct 31",
+   "GPU keepalive: split writing +28–50% (e.g. 30.4 → 45.6 tok/s)"
+  ],
+  [
+   "Day 6",
+   "Nov 1",
+   "Two chats at once: ~1.6× total (Qwen3 44 → 73 tok/s)"
+  ],
+  [
+   "Day 7–8",
+   "Nov 1",
+   "Guess-ahead with a small helper model (Llama 22.7 → 51.5 tok/s)"
+  ],
+  [
+   "Day 9",
+   "Nov 1",
+   "Auto-settings: picks the split itself, matches hand-tuned"
+  ],
+  [
+   "Day 10–11",
+   "Nov 2",
+   "Learns from real chats which settings win; quality 12/12"
+  ],
+  [
+   "Day 12",
+   "Nov 3",
+   "Shared start of chats: first word ~2× sooner (Qwen3, Llama)"
+  ],
+  [
+   "Day 13",
+   "Nov 4",
+   "Gemma shared start 11.8 → 1.55 s; self-tunes it per model"
+  ]
+ ]
+}

@@ -1,0 +1,12 @@
+START mlx-community/Qwen2.5-14B-Instruct-4bit -> /Users/brenden/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit
+/Users/brenden/.caravan/venvs/mlx/lib/python3.14/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `snapshot_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 12 files:   8%|▊         | 1/12 [00:00<00:03,  2.90it/s]Fetching 12 files:  25%|██▌       | 3/12 [00:00<00:01,  5.82it/s]Fetching 12 files:  67%|██████▋   | 8/12 [00:00<00:00, 13.92it/s]Fetching 12 files:  83%|████████▎ | 10/12 [00:02<00:00,  3.89it/s]Fetching 12 files:  83%|████████▎ | 10/12 [00:20<00:00,  3.89it/s]Fetching 12 files:  92%|█████████▏| 11/12 [20:50<03:36, 216.39s/it]Fetching 12 files: 100%|██████████| 12/12 [33:11<00:00, 320.44s/it]Fetching 12 files: 100%|██████████| 12/12 [33:11<00:00, 165.99s/it]
+DONE mlx-community/Qwen2.5-14B-Instruct-4bit
+START mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit -> /Users/brenden/.caravan/mlx-models/mlx-community--DeepSeek-R1-Distill-Qwen-14B-4bit
+Fetching 9 files:   0%|          | 0/9 [00:00<?, ?it/s]Fetching 9 files:  11%|█         | 1/9 [00:00<00:02,  3.04it/s]Fetching 9 files:  44%|████▍     | 4/9 [00:00<00:00, 10.26it/s]Fetching 9 files:  78%|███████▊  | 7/9 [00:02<00:00,  2.16it/s]Fetching 9 files:  89%|████████▉ | 8/9 [19:30<03:57, 237.96s/it]Fetching 9 files: 100%|██████████| 9/9 [30:20<00:00, 330.97s/it]Fetching 9 files: 100%|██████████| 9/9 [30:20<00:00, 202.33s/it]
+DONE mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit
+START mlx-community/Qwen2.5-0.5B-Instruct-4bit -> /Users/brenden/.caravan/mlx-models/drafts/Qwen2.5-0.5B-Instruct-4bit
+SKIP exists /Users/brenden/.caravan/mlx-models/drafts/Qwen2.5-0.5B-Instruct-4bit
+ALL_DONE

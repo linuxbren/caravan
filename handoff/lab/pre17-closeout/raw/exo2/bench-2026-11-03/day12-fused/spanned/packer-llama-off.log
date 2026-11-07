@@ -1,0 +1,8 @@
+20:58:57 [mlx-worker] fuse kernels: off
+20:58:57 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers (llama))
+20:58:57 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+20:58:57 [mlx-worker] packer stage packer 1: layers 0-15 of 32 of mlx-community--Meta-Llama-3.1-8B-Instruct-4bit loaded in 0.1s, 2.0 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/mlx/prompt-cache
+20:58:57 [mlx-worker] packer stage listening on 169.254.103.191:5560 (epoch c9a46116714b)
+21:03:04 [mlx-worker] lead connected from 169.254.199.11
+21:03:19 [mlx-worker] saved 2b0b7db846d1436b: 38 tokens, 2 MB in 0.00s
+21:04:12 [mlx-worker] lead disconnected (peer closed the connection)

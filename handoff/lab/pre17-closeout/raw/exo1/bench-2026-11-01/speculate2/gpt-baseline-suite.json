@@ -1,0 +1,363 @@
+{
+  "tag": "baseline",
+  "model": "/Users/brenden/.exo/models/mlx-community--gpt-oss-20b-MXFP4-Q8",
+  "url": "http://127.0.0.1:8194",
+  "mode": "suite",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.791,
+    "session": "4b3b8cc6e5d34d3e",
+    "prompt_n": 73,
+    "gen_n": 16,
+    "how": "cold",
+    "prefill_s": 0.265,
+    "ttft_s": 0.317,
+    "total_s": 0.766,
+    "peak_gb": 6.12,
+    "split": {
+      "calls": 21,
+      "mb_out": 0.0,
+      "mb_in": 0.51,
+      "wait_s": 0.345,
+      "front_s": 0.33,
+      "net_s": 0.015
+    },
+    "speculate": null,
+    "content": "",
+    "write_tps": 33.4
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "baseline_count_0",
+        "ok": true,
+        "wall_s": 4.047,
+        "session": "56fbd0e2294e42e4",
+        "prompt_n": 80,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.271,
+        "ttft_s": 0.321,
+        "total_s": 4.045,
+        "peak_gb": 6.13,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 1.21,
+          "wait_s": 1.693,
+          "front_s": 1.614,
+          "net_s": 0.079
+        },
+        "speculate": null,
+        "content": "",
+        "write_tps": 34.1
+      },
+      {
+        "name": "baseline_count_1",
+        "ok": true,
+        "wall_s": 4.058,
+        "session": "47aca07ab21c4408",
+        "prompt_n": 80,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.27,
+        "ttft_s": 0.319,
+        "total_s": 4.057,
+        "peak_gb": 6.14,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 1.21,
+          "wait_s": 1.699,
+          "front_s": 1.619,
+          "net_s": 0.079
+        },
+        "speculate": null,
+        "content": "",
+        "write_tps": 34.0
+      }
+    ],
+    "repeat": [
+      {
+        "name": "baseline_repeat_0",
+        "ok": true,
+        "wall_s": 4.105,
+        "session": "1932df7449a44ea2",
+        "prompt_n": 103,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.312,
+        "ttft_s": 0.361,
+        "total_s": 4.103,
+        "peak_gb": 6.16,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 1.34,
+          "wait_s": 1.726,
+          "front_s": 1.648,
+          "net_s": 0.078
+        },
+        "speculate": null,
+        "content": "The quick",
+        "write_tps": 33.9
+      },
+      {
+        "name": "baseline_repeat_1",
+        "ok": true,
+        "wall_s": 4.109,
+        "session": "3c1b754abd2d4215",
+        "prompt_n": 103,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.312,
+        "ttft_s": 0.361,
+        "total_s": 4.099,
+        "peak_gb": 6.16,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 1.34,
+          "wait_s": 1.718,
+          "front_s": 1.639,
+          "net_s": 0.079
+        },
+        "speculate": null,
+        "content": "The quick",
+        "write_tps": 34.0
+      }
+    ],
+    "code_edit": [
+      {
+        "name": "baseline_code_edit_0",
+        "ok": true,
+        "wall_s": 2.643,
+        "session": "8cc36b9078d246cf",
+        "prompt_n": 109,
+        "gen_n": 76,
+        "how": "cold",
+        "prefill_s": 0.331,
+        "ttft_s": 0.38,
+        "total_s": 2.636,
+        "peak_gb": 6.17,
+        "split": {
+          "calls": 82,
+          "mb_out": 0.01,
+          "mb_in": 1.08,
+          "wait_s": 1.119,
+          "front_s": 1.068,
+          "net_s": 0.051
+        },
+        "speculate": null,
+        "content": "def add(a, b, c):\n    return a + b + c",
+        "write_tps": 33.2
+      },
+      {
+        "name": "baseline_code_edit_1",
+        "ok": true,
+        "wall_s": 2.631,
+        "session": "89e1c2c948684ddf",
+        "prompt_n": 109,
+        "gen_n": 76,
+        "how": "cold",
+        "prefill_s": 0.331,
+        "ttft_s": 0.38,
+        "total_s": 2.623,
+        "peak_gb": 6.17,
+        "split": {
+          "calls": 82,
+          "mb_out": 0.01,
+          "mb_in": 1.08,
+          "wait_s": 1.113,
+          "front_s": 1.064,
+          "net_s": 0.049
+        },
+        "speculate": null,
+        "content": "def add(a, b, c):\n    return a + b + c",
+        "write_tps": 33.4
+      }
+    ],
+    "code_cont": [
+      {
+        "name": "baseline_code_cont_0",
+        "ok": true,
+        "wall_s": 4.09,
+        "session": "2820549bccd24468",
+        "prompt_n": 96,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.3,
+        "ttft_s": 0.349,
+        "total_s": 4.083,
+        "peak_gb": 6.17,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 1.3,
+          "wait_s": 1.707,
+          "front_s": 1.63,
+          "net_s": 0.076
+        },
+        "speculate": null,
+        "content": "",
+        "write_tps": 34.0
+      },
+      {
+        "name": "baseline_code_cont_1",
+        "ok": true,
+        "wall_s": 4.092,
+        "session": "fcbfe594ae2b4599",
+        "prompt_n": 96,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.3,
+        "ttft_s": 0.349,
+        "total_s": 4.084,
+        "peak_gb": 6.17,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 1.3,
+          "wait_s": 1.712,
+          "front_s": 1.636,
+          "net_s": 0.076
+        },
+        "speculate": null,
+        "content": "",
+        "write_tps": 34.0
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 1.245,
+      "session": "3dbf40ce172b4524",
+      "prompt_n": 80,
+      "gen_n": 32,
+      "how": "cold",
+      "prefill_s": 0.269,
+      "ttft_s": 0.319,
+      "total_s": 1.237,
+      "peak_gb": 6.17,
+      "split": {
+        "calls": 37,
+        "mb_out": 0.0,
+        "mb_in": 0.65,
+        "wait_s": 0.54,
+        "front_s": 0.519,
+        "net_s": 0.021
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 33.8
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 1.204,
+      "session": "d2c7005f85e14d28",
+      "prompt_n": 76,
+      "gen_n": 30,
+      "how": "cold",
+      "prefill_s": 0.26,
+      "ttft_s": 0.31,
+      "total_s": 1.196,
+      "peak_gb": 6.17,
+      "split": {
+        "calls": 36,
+        "mb_out": 0.0,
+        "mb_in": 0.62,
+        "wait_s": 0.521,
+        "front_s": 0.501,
+        "net_s": 0.02
+      },
+      "speculate": null,
+      "content": "Paris",
+      "write_tps": 32.7
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 1.237,
+      "session": "130f21faf0f0423e",
+      "prompt_n": 78,
+      "gen_n": 32,
+      "how": "cold",
+      "prefill_s": 0.264,
+      "ttft_s": 0.314,
+      "total_s": 1.23,
+      "peak_gb": 6.17,
+      "split": {
+        "calls": 37,
+        "mb_out": 0.0,
+        "mb_in": 0.64,
+        "wait_s": 0.536,
+        "front_s": 0.515,
+        "net_s": 0.021
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 33.8
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 34.0,
+    "repeat": 33.9,
+    "code_edit": 33.2,
+    "code_cont": 34.0
+  },
+  "tg128": [
+    {
+      "name": "baseline_count_0",
+      "ok": true,
+      "wall_s": 4.047,
+      "session": "56fbd0e2294e42e4",
+      "prompt_n": 80,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.271,
+      "ttft_s": 0.321,
+      "total_s": 4.045,
+      "peak_gb": 6.13,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 1.21,
+        "wait_s": 1.693,
+        "front_s": 1.614,
+        "net_s": 0.079
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 34.1
+    },
+    {
+      "name": "baseline_count_1",
+      "ok": true,
+      "wall_s": 4.058,
+      "session": "47aca07ab21c4408",
+      "prompt_n": 80,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.27,
+      "ttft_s": 0.319,
+      "total_s": 4.057,
+      "peak_gb": 6.14,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 1.21,
+        "wait_s": 1.699,
+        "front_s": 1.619,
+        "net_s": 0.079
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 34.0
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+16:37:20 [mlx-worker] split speculate: first-load cache hit keep=1 break_even=0.800
+16:37:23 [mlx-worker] split speculate: accepted_frac 0.729 < break_even 0.800 over 48 tokens; guess-ahead off for this chat
+16:37:27 [mlx-worker] split speculate: accepted_frac 0.729 < break_even 0.800 over 48 tokens; guess-ahead off for this chat
+16:37:30 [mlx-worker] split speculate: accepted_frac 0.729 < break_even 0.800 over 48 tokens; guess-ahead off for this chat

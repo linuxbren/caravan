@@ -1,0 +1,362 @@
+{
+  "tag": "nodraft",
+  "model": "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit",
+  "url": "http://127.0.0.1:8194",
+  "mode": "suite",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.65,
+    "session": "433df6fe07bb4454",
+    "prompt_n": 41,
+    "gen_n": 6,
+    "how": "cold",
+    "prefill_s": 0.281,
+    "ttft_s": 0.352,
+    "total_s": 0.634,
+    "peak_gb": 2.43,
+    "split": {
+      "calls": 12,
+      "mb_out": 0.0,
+      "mb_in": 0.39,
+      "wait_s": 0.31,
+      "front_s": 0.302,
+      "net_s": 0.009
+    },
+    "speculate": null,
+    "content": "Hello, how are you?",
+    "write_tps": 17.7
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "nodraft_count_0",
+        "ok": true,
+        "wall_s": 5.936,
+        "session": "10871eff5adb412a",
+        "prompt_n": 48,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.273,
+        "ttft_s": 0.344,
+        "total_s": 5.934,
+        "peak_gb": 2.47,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 1.45,
+          "wait_s": 2.848,
+          "front_s": 2.771,
+          "net_s": 0.077
+        },
+        "speculate": null,
+        "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, t",
+        "write_tps": 22.7
+      },
+      {
+        "name": "nodraft_count_1",
+        "ok": true,
+        "wall_s": 5.937,
+        "session": "bef1de33f6604e70",
+        "prompt_n": 48,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.272,
+        "ttft_s": 0.343,
+        "total_s": 5.935,
+        "peak_gb": 2.49,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 1.45,
+          "wait_s": 2.845,
+          "front_s": 2.767,
+          "net_s": 0.078
+        },
+        "speculate": null,
+        "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, t",
+        "write_tps": 22.7
+      }
+    ],
+    "repeat": [
+      {
+        "name": "nodraft_repeat_0",
+        "ok": true,
+        "wall_s": 2.246,
+        "session": "b4ae365d43494c6d",
+        "prompt_n": 71,
+        "gen_n": 40,
+        "how": "cold",
+        "prefill_s": 0.402,
+        "ttft_s": 0.474,
+        "total_s": 2.245,
+        "peak_gb": 2.49,
+        "split": {
+          "calls": 46,
+          "mb_out": 0.0,
+          "mb_in": 0.92,
+          "wait_s": 1.088,
+          "front_s": 1.062,
+          "net_s": 0.026
+        },
+        "speculate": null,
+        "content": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.\nThe quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.",
+        "write_tps": 22.0
+      },
+      {
+        "name": "nodraft_repeat_1",
+        "ok": true,
+        "wall_s": 2.253,
+        "session": "21cd795a511640d1",
+        "prompt_n": 71,
+        "gen_n": 40,
+        "how": "cold",
+        "prefill_s": 0.402,
+        "ttft_s": 0.473,
+        "total_s": 2.243,
+        "peak_gb": 2.49,
+        "split": {
+          "calls": 46,
+          "mb_out": 0.0,
+          "mb_in": 0.92,
+          "wait_s": 1.088,
+          "front_s": 1.06,
+          "net_s": 0.027
+        },
+        "speculate": null,
+        "content": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.\nThe quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.",
+        "write_tps": 22.0
+      }
+    ],
+    "code_edit": [
+      {
+        "name": "nodraft_code_edit_0",
+        "ok": true,
+        "wall_s": 1.157,
+        "session": "732e30cd3de54f54",
+        "prompt_n": 78,
+        "gen_n": 15,
+        "how": "cold",
+        "prefill_s": 0.403,
+        "ttft_s": 0.474,
+        "total_s": 1.15,
+        "peak_gb": 2.5,
+        "split": {
+          "calls": 21,
+          "mb_out": 0.0,
+          "mb_in": 0.77,
+          "wait_s": 0.567,
+          "front_s": 0.554,
+          "net_s": 0.012
+        },
+        "speculate": null,
+        "content": "def add(a, b, c):\n    return a + b + c",
+        "write_tps": 20.7
+      },
+      {
+        "name": "nodraft_code_edit_1",
+        "ok": true,
+        "wall_s": 1.157,
+        "session": "6eb232dcd1884c6f",
+        "prompt_n": 78,
+        "gen_n": 15,
+        "how": "cold",
+        "prefill_s": 0.403,
+        "ttft_s": 0.473,
+        "total_s": 1.148,
+        "peak_gb": 2.5,
+        "split": {
+          "calls": 21,
+          "mb_out": 0.0,
+          "mb_in": 0.77,
+          "wait_s": 0.565,
+          "front_s": 0.553,
+          "net_s": 0.012
+        },
+        "speculate": null,
+        "content": "def add(a, b, c):\n    return a + b + c",
+        "write_tps": 20.7
+      }
+    ],
+    "code_cont": [
+      {
+        "name": "nodraft_code_cont_0",
+        "ok": true,
+        "wall_s": 2.923,
+        "session": "9f88d1a076ec4b10",
+        "prompt_n": 63,
+        "gen_n": 58,
+        "how": "cold",
+        "prefill_s": 0.277,
+        "ttft_s": 0.347,
+        "total_s": 2.913,
+        "peak_gb": 2.57,
+        "split": {
+          "calls": 64,
+          "mb_out": 0.01,
+          "mb_in": 1.0,
+          "wait_s": 1.404,
+          "front_s": 1.367,
+          "net_s": 0.037
+        },
+        "speculate": null,
+        "content": "```python\ndef fib(n):\n    if n < 2:\n        return n\n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n\n    return b\n```",
+        "write_tps": 22.2
+      },
+      {
+        "name": "nodraft_code_cont_1",
+        "ok": true,
+        "wall_s": 2.924,
+        "session": "bf1169532c074e91",
+        "prompt_n": 63,
+        "gen_n": 58,
+        "how": "cold",
+        "prefill_s": 0.277,
+        "ttft_s": 0.349,
+        "total_s": 2.917,
+        "peak_gb": 2.57,
+        "split": {
+          "calls": 64,
+          "mb_out": 0.01,
+          "mb_in": 1.0,
+          "wait_s": 1.404,
+          "front_s": 1.366,
+          "net_s": 0.038
+        },
+        "speculate": null,
+        "content": "```python\ndef fib(n):\n    if n < 2:\n        return n\n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n\n    return b\n```",
+        "write_tps": 22.2
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 0.413,
+      "session": "07af07c8658e4d52",
+      "prompt_n": 48,
+      "gen_n": 1,
+      "how": "cold",
+      "prefill_s": 0.273,
+      "ttft_s": 0.344,
+      "total_s": 0.405,
+      "peak_gb": 2.57,
+      "split": {
+        "calls": 7,
+        "mb_out": 0.0,
+        "mb_in": 0.41,
+        "wait_s": 0.205,
+        "front_s": 0.201,
+        "net_s": 0.004
+      },
+      "speculate": null,
+      "content": "4"
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 0.456,
+      "session": "b3498335ad014b06",
+      "prompt_n": 44,
+      "gen_n": 2,
+      "how": "cold",
+      "prefill_s": 0.272,
+      "ttft_s": 0.342,
+      "total_s": 0.448,
+      "peak_gb": 2.57,
+      "split": {
+        "calls": 8,
+        "mb_out": 0.0,
+        "mb_in": 0.39,
+        "wait_s": 0.225,
+        "front_s": 0.22,
+        "net_s": 0.005
+      },
+      "speculate": null,
+      "content": "Paris.",
+      "write_tps": 9.4
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 0.456,
+      "session": "ff48652eb2dd4afc",
+      "prompt_n": 46,
+      "gen_n": 2,
+      "how": "cold",
+      "prefill_s": 0.272,
+      "ttft_s": 0.343,
+      "total_s": 0.448,
+      "peak_gb": 2.57,
+      "split": {
+        "calls": 8,
+        "mb_out": 0.0,
+        "mb_in": 0.4,
+        "wait_s": 0.226,
+        "front_s": 0.221,
+        "net_s": 0.005
+      },
+      "speculate": null,
+      "content": "Cold.",
+      "write_tps": 9.5
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 22.7,
+    "repeat": 22.0,
+    "code_edit": 20.7,
+    "code_cont": 22.2
+  },
+  "tg128": [
+    {
+      "name": "nodraft_count_0",
+      "ok": true,
+      "wall_s": 5.936,
+      "session": "10871eff5adb412a",
+      "prompt_n": 48,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.273,
+      "ttft_s": 0.344,
+      "total_s": 5.934,
+      "peak_gb": 2.47,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 1.45,
+        "wait_s": 2.848,
+        "front_s": 2.771,
+        "net_s": 0.077
+      },
+      "speculate": null,
+      "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, t",
+      "write_tps": 22.7
+    },
+    {
+      "name": "nodraft_count_1",
+      "ok": true,
+      "wall_s": 5.937,
+      "session": "bef1de33f6604e70",
+      "prompt_n": 48,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.272,
+      "ttft_s": 0.343,
+      "total_s": 5.935,
+      "peak_gb": 2.49,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 1.45,
+        "wait_s": 2.845,
+        "front_s": 2.767,
+        "net_s": 0.078
+      },
+      "speculate": null,
+      "content": "Here's the count from one to three hundred in words, separated by commas:\n\nOne, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, t",
+      "write_tps": 22.7
+    }
+  ]
+}

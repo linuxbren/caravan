@@ -1,0 +1,17 @@
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+cleared /Users/brenden/.caravan/bench-2026-11-02/day10-learn/tuned-settings.json
+lead pid 40469
+[quality 0] pass=True final='4' raw='4<|im_end|>' reason='\nOkay, the user is asking "What is<think>\nOkay, the user is ' ct=155 learn={'norm_tps': 44.759, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 1] pass=False final='c-a-t.' raw='C-A-T.<|im_end|>' reason='\nOkay, the user asked to spell the word "cat." Let me make s' ct=189 learn={'norm_tps': 44.882, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 2] pass=True final='yes.' raw='Yes.<|im_end|>' reason='\nOkay, the user is asking if the sky is usually blue. I need' ct=260 learn={'norm_tps': 44.72, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': {'name': 'packer_layers', 'value': 22}, 'pipeline_probe': None, 'trial': None}
+[quality 3] pass=True final='4' raw='4<|im_end|>' reason='\nOkay, the user is asking "What is<think>\nOkay, the user is ' ct=155 learn={'norm_tps': 44.85, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 4] pass=False final='c-a-t.' raw='C-A-T.<|im_end|>' reason='\nOkay, the user asked to spell the word "cat." Let me make s' ct=189 learn={'norm_tps': 44.797, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 5] pass=True final='yes.' raw='Yes.<|im_end|>' reason='\nOkay, the user is asking if the sky is usually blue. I need' ct=260 learn={'norm_tps': 44.559, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 6] pass=True final='4' raw='4<|im_end|>' reason='\nOkay, the user is asking "What is<think>\nOkay, the user is ' ct=155 learn={'norm_tps': 44.707, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 7] pass=False final='c-a-t.' raw='C-A-T.<|im_end|>' reason='\nOkay, the user asked to spell the word "cat." Let me make s' ct=189 learn={'norm_tps': 44.66, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 8] pass=True final='yes.' raw='Yes.<|im_end|>' reason='\nOkay, the user is asking if the sky is usually blue. I need' ct=260 learn={'norm_tps': 44.528, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 9] pass=True final='4' raw='4<|im_end|>' reason='\nOkay, the user is asking "What is<think>\nOkay, the user is ' ct=155 learn={'norm_tps': 44.746, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 10] pass=False final='c-a-t.' raw='C-A-T.<|im_end|>' reason='\nOkay, the user asked to spell the word "cat." Let me make s' ct=189 learn={'norm_tps': 44.776, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 11] pass=True final='yes.' raw='Yes.<|im_end|>' reason='\nOkay, the user is asking if the sky is usually blue. I need' ct=260 learn={'norm_tps': 44.566, 'winner': {'packer_layers': 24, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+wrote /Users/brenden/.caravan/bench-2026-11-02/day10-learn/qwen3-quality/result.json

@@ -1,0 +1,20 @@
+23:31:06 [mlx-worker] split shared-prefix cache: on (Day 12 prototype)
+23:31:06 [mlx-worker] fuse kernels: off
+23:31:07 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+23:31:08 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.103.191:5560
+23:31:08 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+23:31:08 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+23:31:08 [mlx-worker] warm-up 0.13s
+23:31:08 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 1.2s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+23:31:08 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)
+23:31:08 [mlx-worker] listening on http://127.0.0.1:8194
+23:31:18 [mlx-worker] shared-prefix stored n=2048 reserved=spc_p2048_998209e8eb74eb07 bytes=201326592
+23:31:18 [mlx-worker] session a0fda048bcc34b16: cold, reused 0/3983 tokens, read 3983 in 9.29s, 5 generated, total 9.49s, peak 9.42 GB
+23:31:18 [mlx-worker] shared-prefix hit n=2048 key=spc_p2048_998209e8eb74eb07 -> 08fc4393b1a042df
+23:31:24 [mlx-worker] session 08fc4393b1a042df: shared-prefix-hit-memory, reused 2048/3984 tokens, read 1936 in 4.98s, 6 generated, total 5.21s, peak 9.81 GB
+23:31:24 [mlx-worker] shared-prefix hit n=2048 key=spc_p2048_998209e8eb74eb07 -> 5c03c9506e2d4e38
+23:31:29 [mlx-worker] session 5c03c9506e2d4e38: shared-prefix-hit-memory, reused 2048/3984 tokens, read 1936 in 4.98s, 6 generated, total 5.21s, peak 10.01 GB
+23:31:30 [mlx-worker] shared-prefix stored n=512 reserved=spc_p512_e0dd5ee99321dd01 bytes=50331648
+23:31:31 [mlx-worker] saved a0fda048bcc34b16: 3982 tokens, 196 MB in 0.08s
+23:31:31 [mlx-worker] evicted 2 session(s) from memory: spc_p2048_998209e8eb74eb07, a0fda048bcc34b16
+23:31:31 [mlx-worker] session 73cfcf1dd25f4c63: cold, reused 0/826 tokens, read 826 in 1.70s, 5 generated, total 1.87s, peak 10.01 GB

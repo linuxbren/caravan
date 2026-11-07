@@ -1,0 +1,11 @@
+22:58:24 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.103.191:5560
+22:58:25 [mlx-worker] split speculate: draft Qwen3-0.6B-4bit, k=3, vocab=exact remap=0 (idea 3 guess-ahead)
+22:58:26 [mlx-worker] session 16faee9cecf54b26: pipeline, reused 0/16, 8 generated, total 0.33s, peak 9.07 GB
+22:58:30 [mlx-worker] split speculate: accepted_frac 0.349 < break_even 0.350 over 86 tokens; guess-ahead off for this chat
+22:58:31 [mlx-worker] session 1aed67d3dae8403f: pipeline, reused 0/39, 128 generated, total 5.38s, peak 9.18 GB
+22:58:36 [mlx-worker] session be018bbac8534ee9: pipeline, reused 0/39, 128 generated, total 10.47s, peak 9.18 GB
+22:58:42 [mlx-worker] split speculate: accepted_frac 0.348 < break_even 0.350 over 115 tokens; guess-ahead off for this chat
+22:58:43 [mlx-worker] session 06b80606bcb44655: pipeline, reused 0/42, 128 generated, total 6.09s, peak 9.21 GB
+22:58:45 [mlx-worker] split speculate: accepted_frac 0.312 < break_even 0.350 over 48 tokens; guess-ahead off for this chat
+22:58:47 [mlx-worker] session f5b2a607bb864858: pipeline, reused 0/41, 128 generated, total 9.82s, peak 9.21 GB
+22:59:10 [mlx-worker] session f9540fa5e2bd45ce: pipeline, reused 0/6918, 26 generated, total 23.49s, peak 10.73 GB

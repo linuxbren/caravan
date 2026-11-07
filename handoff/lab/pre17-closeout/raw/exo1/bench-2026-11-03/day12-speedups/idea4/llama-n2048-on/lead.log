@@ -1,0 +1,20 @@
+23:21:46 [mlx-worker] split shared-prefix cache: on (Day 12 prototype)
+23:21:46 [mlx-worker] fuse kernels: off
+23:21:46 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+23:21:46 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.103.191:5560
+23:21:46 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+23:21:46 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+23:21:47 [mlx-worker] warm-up 0.16s
+23:21:47 [mlx-worker] loaded mlx-community--Meta-Llama-3.1-8B-Instruct-4bit (llama) in 0.6s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+23:21:47 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)
+23:21:47 [mlx-worker] listening on http://127.0.0.1:8194
+23:22:05 [mlx-worker] shared-prefix stored n=2048 reserved=spc_p2048_8d6dbb1c8d47544e bytes=268435456
+23:22:05 [mlx-worker] session 0e04e258624a4a64: cold, reused 0/4000 tokens, read 4000 in 17.48s, 1 generated, total 17.63s, peak 3.1 GB
+23:22:05 [mlx-worker] shared-prefix hit n=2048 key=spc_p2048_8d6dbb1c8d47544e -> 12f61431d5aa4f3b
+23:22:14 [mlx-worker] session 12f61431d5aa4f3b: shared-prefix-hit-memory, reused 2048/4001 tokens, read 1953 in 8.81s, 2 generated, total 9.01s, peak 3.61 GB
+23:22:14 [mlx-worker] shared-prefix hit n=2048 key=spc_p2048_8d6dbb1c8d47544e -> 2887b9dcc1aa4aba
+23:22:23 [mlx-worker] session 2887b9dcc1aa4aba: shared-prefix-hit-memory, reused 2048/4001 tokens, read 1953 in 8.81s, 2 generated, total 9.01s, peak 3.88 GB
+23:22:27 [mlx-worker] shared-prefix stored n=512 reserved=spc_p512_5bdc6a4f5e8e9aac bytes=67108864
+23:22:27 [mlx-worker] saved 0e04e258624a4a64: 3999 tokens, 262 MB in 0.10s
+23:22:27 [mlx-worker] evicted 2 session(s) from memory: spc_p2048_8d6dbb1c8d47544e, 0e04e258624a4a64
+23:22:27 [mlx-worker] session 723cf07dac7b4dd9: cold, reused 0/843 tokens, read 843 in 3.58s, 1 generated, total 3.71s, peak 3.99 GB

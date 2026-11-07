@@ -1,0 +1,363 @@
+{
+  "tag": "baseline",
+  "model": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+  "url": "http://127.0.0.1:8194",
+  "mode": "suite",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.364,
+    "session": "8fa0292c99634797",
+    "prompt_n": 18,
+    "gen_n": 7,
+    "how": "cold",
+    "prefill_s": 0.148,
+    "ttft_s": 0.19,
+    "total_s": 0.347,
+    "peak_gb": 8.65,
+    "split": {
+      "calls": 13,
+      "mb_out": 0.0,
+      "mb_in": 0.11,
+      "wait_s": 0.168,
+      "front_s": 0.159,
+      "net_s": 0.009
+    },
+    "speculate": null,
+    "content": "Hello there!",
+    "write_tps": 38.2
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "baseline_count_0",
+        "ok": true,
+        "wall_s": 3.006,
+        "session": "ac937718175f436a",
+        "prompt_n": 25,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.175,
+        "ttft_s": 0.216,
+        "total_s": 3.005,
+        "peak_gb": 8.68,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 0.64,
+          "wait_s": 1.445,
+          "front_s": 1.37,
+          "net_s": 0.075
+        },
+        "speculate": null,
+        "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+        "write_tps": 45.5
+      },
+      {
+        "name": "baseline_count_1",
+        "ok": true,
+        "wall_s": 3.006,
+        "session": "52a3088272aa4a40",
+        "prompt_n": 25,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.175,
+        "ttft_s": 0.216,
+        "total_s": 3.005,
+        "peak_gb": 8.69,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 0.64,
+          "wait_s": 1.44,
+          "front_s": 1.367,
+          "net_s": 0.073
+        },
+        "speculate": null,
+        "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+        "write_tps": 45.5
+      }
+    ],
+    "repeat": [
+      {
+        "name": "baseline_repeat_0",
+        "ok": true,
+        "wall_s": 1.342,
+        "session": "b5d41926e50845eb",
+        "prompt_n": 48,
+        "gen_n": 45,
+        "how": "cold",
+        "prefill_s": 0.312,
+        "ttft_s": 0.352,
+        "total_s": 1.34,
+        "peak_gb": 8.73,
+        "split": {
+          "calls": 51,
+          "mb_out": 0.0,
+          "mb_in": 0.39,
+          "wait_s": 0.651,
+          "front_s": 0.623,
+          "net_s": 0.028
+        },
+        "speculate": null,
+        "content": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.  \nThe quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.",
+        "write_tps": 44.5
+      },
+      {
+        "name": "baseline_repeat_1",
+        "ok": true,
+        "wall_s": 1.347,
+        "session": "80b927d8ce314ed4",
+        "prompt_n": 48,
+        "gen_n": 45,
+        "how": "cold",
+        "prefill_s": 0.311,
+        "ttft_s": 0.351,
+        "total_s": 1.34,
+        "peak_gb": 8.74,
+        "split": {
+          "calls": 51,
+          "mb_out": 0.0,
+          "mb_in": 0.39,
+          "wait_s": 0.652,
+          "front_s": 0.624,
+          "net_s": 0.028
+        },
+        "speculate": null,
+        "content": "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.  \nThe quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.",
+        "write_tps": 44.5
+      }
+    ],
+    "code_edit": [
+      {
+        "name": "baseline_code_edit_0",
+        "ok": true,
+        "wall_s": 0.816,
+        "session": "ac48fd72f9fb417d",
+        "prompt_n": 55,
+        "gen_n": 19,
+        "how": "cold",
+        "prefill_s": 0.349,
+        "ttft_s": 0.389,
+        "total_s": 0.809,
+        "peak_gb": 8.75,
+        "split": {
+          "calls": 25,
+          "mb_out": 0.0,
+          "mb_in": 0.31,
+          "wait_s": 0.399,
+          "front_s": 0.386,
+          "net_s": 0.013
+        },
+        "speculate": null,
+        "content": "def add(a, b, c):\n    return a + b + c",
+        "write_tps": 42.9
+      },
+      {
+        "name": "baseline_code_edit_1",
+        "ok": true,
+        "wall_s": 0.818,
+        "session": "8ee76a7c333f4c5e",
+        "prompt_n": 55,
+        "gen_n": 19,
+        "how": "cold",
+        "prefill_s": 0.349,
+        "ttft_s": 0.39,
+        "total_s": 0.811,
+        "peak_gb": 8.75,
+        "split": {
+          "calls": 25,
+          "mb_out": 0.0,
+          "mb_in": 0.31,
+          "wait_s": 0.401,
+          "front_s": 0.386,
+          "net_s": 0.014
+        },
+        "speculate": null,
+        "content": "def add(a, b, c):\n    return a + b + c",
+        "write_tps": 42.8
+      }
+    ],
+    "code_cont": [
+      {
+        "name": "baseline_code_cont_0",
+        "ok": true,
+        "wall_s": 1.576,
+        "session": "e63fa9c78fe04220",
+        "prompt_n": 41,
+        "gen_n": 57,
+        "how": "cold",
+        "prefill_s": 0.276,
+        "ttft_s": 0.316,
+        "total_s": 1.57,
+        "peak_gb": 8.75,
+        "split": {
+          "calls": 63,
+          "mb_out": 0.01,
+          "mb_in": 0.41,
+          "wait_s": 0.76,
+          "front_s": 0.725,
+          "net_s": 0.035
+        },
+        "speculate": null,
+        "content": "def fib(n):\n    if n < 2:\n        return n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b",
+        "write_tps": 44.7
+      },
+      {
+        "name": "baseline_code_cont_1",
+        "ok": true,
+        "wall_s": 1.577,
+        "session": "f4e8d581faea42e5",
+        "prompt_n": 41,
+        "gen_n": 57,
+        "how": "cold",
+        "prefill_s": 0.277,
+        "ttft_s": 0.317,
+        "total_s": 1.57,
+        "peak_gb": 8.75,
+        "split": {
+          "calls": 63,
+          "mb_out": 0.01,
+          "mb_in": 0.41,
+          "wait_s": 0.761,
+          "front_s": 0.725,
+          "net_s": 0.036
+        },
+        "speculate": null,
+        "content": "def fib(n):\n    if n < 2:\n        return n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b",
+        "write_tps": 44.7
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 0.337,
+      "session": "a6e5bccfa5f34e47",
+      "prompt_n": 25,
+      "gen_n": 5,
+      "how": "cold",
+      "prefill_s": 0.177,
+      "ttft_s": 0.217,
+      "total_s": 0.33,
+      "peak_gb": 8.75,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.13,
+        "wait_s": 0.164,
+        "front_s": 0.159,
+        "net_s": 0.006
+      },
+      "speculate": null,
+      "content": "4",
+      "write_tps": 35.4
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 0.315,
+      "session": "35c5fa5e13c44f0d",
+      "prompt_n": 21,
+      "gen_n": 5,
+      "how": "cold",
+      "prefill_s": 0.154,
+      "ttft_s": 0.194,
+      "total_s": 0.308,
+      "peak_gb": 8.75,
+      "split": {
+        "calls": 11,
+        "mb_out": 0.0,
+        "mb_in": 0.11,
+        "wait_s": 0.154,
+        "front_s": 0.148,
+        "net_s": 0.006
+      },
+      "speculate": null,
+      "content": "Paris",
+      "write_tps": 35.1
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 0.349,
+      "session": "59e8434722594510",
+      "prompt_n": 23,
+      "gen_n": 6,
+      "how": "cold",
+      "prefill_s": 0.166,
+      "ttft_s": 0.206,
+      "total_s": 0.341,
+      "peak_gb": 8.75,
+      "split": {
+        "calls": 12,
+        "mb_out": 0.0,
+        "mb_in": 0.12,
+        "wait_s": 0.169,
+        "front_s": 0.163,
+        "net_s": 0.006
+      },
+      "speculate": null,
+      "content": "Cold.",
+      "write_tps": 37.0
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 45.5,
+    "repeat": 44.5,
+    "code_edit": 42.8,
+    "code_cont": 44.7
+  },
+  "tg128": [
+    {
+      "name": "baseline_count_0",
+      "ok": true,
+      "wall_s": 3.006,
+      "session": "ac937718175f436a",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.175,
+      "ttft_s": 0.216,
+      "total_s": 3.005,
+      "peak_gb": 8.68,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.64,
+        "wait_s": 1.445,
+        "front_s": 1.37,
+        "net_s": 0.075
+      },
+      "speculate": null,
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 45.5
+    },
+    {
+      "name": "baseline_count_1",
+      "ok": true,
+      "wall_s": 3.006,
+      "session": "52a3088272aa4a40",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.175,
+      "ttft_s": 0.216,
+      "total_s": 3.005,
+      "peak_gb": 8.69,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.64,
+        "wait_s": 1.44,
+        "front_s": 1.367,
+        "net_s": 0.073
+      },
+      "speculate": null,
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 45.5
+    }
+  ]
+}

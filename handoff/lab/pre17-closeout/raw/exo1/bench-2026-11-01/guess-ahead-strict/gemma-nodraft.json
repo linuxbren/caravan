@@ -1,0 +1,210 @@
+{
+  "tag": "nodraft",
+  "model": "mlx-community/gemma-4-26b-a4b-it-4bit",
+  "url": "http://127.0.0.1:8194",
+  "mode": "standard",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.648,
+    "session": "ee7b4e0d01dd4621",
+    "prompt_n": 22,
+    "gen_n": 16,
+    "how": "cold",
+    "prefill_s": 0.166,
+    "ttft_s": 0.216,
+    "total_s": 0.614,
+    "peak_gb": 7.36,
+    "split": {
+      "calls": 21,
+      "mb_out": 0.0,
+      "mb_in": 0.22,
+      "wait_s": 0.279,
+      "front_s": 0.265,
+      "net_s": 0.014
+    },
+    "speculate": null,
+    "content": "",
+    "write_tps": 37.7
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "nodraft_count_0",
+        "ok": true,
+        "wall_s": 3.546,
+        "session": "50d737bdfe114c1b",
+        "prompt_n": 29,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.188,
+        "ttft_s": 0.236,
+        "total_s": 3.544,
+        "peak_gb": 7.39,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 0.89,
+          "wait_s": 1.562,
+          "front_s": 1.485,
+          "net_s": 0.077
+        },
+        "speculate": null,
+        "content": "",
+        "write_tps": 38.4
+      },
+      {
+        "name": "nodraft_count_1",
+        "ok": true,
+        "wall_s": 3.536,
+        "session": "9ff73566cd734cf8",
+        "prompt_n": 29,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.188,
+        "ttft_s": 0.235,
+        "total_s": 3.535,
+        "peak_gb": 7.39,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 0.89,
+          "wait_s": 1.559,
+          "front_s": 1.484,
+          "net_s": 0.075
+        },
+        "speculate": null,
+        "content": "",
+        "write_tps": 38.5
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 1.045,
+      "session": "cdfcea9130c44d8b",
+      "prompt_n": 29,
+      "gen_n": 32,
+      "how": "cold",
+      "prefill_s": 0.188,
+      "ttft_s": 0.236,
+      "total_s": 1.044,
+      "peak_gb": 7.4,
+      "split": {
+        "calls": 37,
+        "mb_out": 0.0,
+        "mb_in": 0.35,
+        "wait_s": 0.471,
+        "front_s": 0.45,
+        "net_s": 0.021
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 38.4
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 1.028,
+      "session": "30d4aa77278a46c8",
+      "prompt_n": 25,
+      "gen_n": 32,
+      "how": "cold",
+      "prefill_s": 0.169,
+      "ttft_s": 0.216,
+      "total_s": 1.021,
+      "peak_gb": 7.4,
+      "split": {
+        "calls": 37,
+        "mb_out": 0.0,
+        "mb_in": 0.32,
+        "wait_s": 0.459,
+        "front_s": 0.44,
+        "net_s": 0.019
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 38.5
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 1.053,
+      "session": "b32d0abe662e4273",
+      "prompt_n": 27,
+      "gen_n": 32,
+      "how": "cold",
+      "prefill_s": 0.179,
+      "ttft_s": 0.229,
+      "total_s": 1.045,
+      "peak_gb": 7.4,
+      "split": {
+        "calls": 37,
+        "mb_out": 0.0,
+        "mb_in": 0.33,
+        "wait_s": 0.478,
+        "front_s": 0.458,
+        "net_s": 0.02
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 38.0
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 38.4
+  },
+  "tg128": [
+    {
+      "name": "nodraft_count_0",
+      "ok": true,
+      "wall_s": 3.546,
+      "session": "50d737bdfe114c1b",
+      "prompt_n": 29,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.188,
+      "ttft_s": 0.236,
+      "total_s": 3.544,
+      "peak_gb": 7.39,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.89,
+        "wait_s": 1.562,
+        "front_s": 1.485,
+        "net_s": 0.077
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 38.4
+    },
+    {
+      "name": "nodraft_count_1",
+      "ok": true,
+      "wall_s": 3.536,
+      "session": "9ff73566cd734cf8",
+      "prompt_n": 29,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.188,
+      "ttft_s": 0.235,
+      "total_s": 3.535,
+      "peak_gb": 7.39,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 0.89,
+        "wait_s": 1.559,
+        "front_s": 1.484,
+        "net_s": 0.075
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 38.5
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+21:25:47 [mlx-worker] split lead: lead: layers 12-23 of 24 here, packer 1: layers 0-11 of 24 at 169.254.104.38:5560
+21:25:47 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+21:25:48 [mlx-worker] warm-up 0.19s
+21:25:48 [mlx-worker] loaded mlx-community--gpt-oss-20b-MXFP4-Q8 (gpt_oss) in 2.7s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=off
+21:25:48 [mlx-worker] listening on http://127.0.0.1:8194
+21:30:05 [mlx-worker] session d22b8ab225b24735: cold, reused 0/77 tokens, read 77 in 0.33s, 8 generated, total 0.59s, peak 6.12 GB
+21:30:09 [mlx-worker] session fd13da612f294090: cold, reused 0/90 tokens, read 90 in 0.28s, 128 generated, total 4.01s, peak 6.14 GB
+21:30:13 [mlx-worker] session 6a7e880e5b9c449d: cold, reused 0/92 tokens, read 92 in 0.29s, 128 generated, total 4.04s, peak 6.15 GB
+21:30:22 [mlx-worker] session ad9f0c20373e4b7b: cold, reused 0/3932 tokens, read 3932 in 8.83s, 1 generated, total 8.90s, peak 6.78 GB
+21:30:23 [mlx-worker] evicted 1 session(s) from memory: d22b8ab225b24735
+21:30:23 [mlx-worker] session 375fb10454414f24: cold, reused 0/543 tokens, read 543 in 1.20s, 1 generated, total 1.26s, peak 6.78 GB
+21:30:24 [mlx-worker] evicted 1 session(s) from memory: fd13da612f294090
+21:30:24 [mlx-worker] session 41dfb864a66b4447: cold, reused 0/541 tokens, read 541 in 1.20s, 1 generated, total 1.26s, peak 6.78 GB
+21:30:33 [mlx-worker] evicted 1 session(s) from memory: 6a7e880e5b9c449d
+21:30:33 [mlx-worker] session de969c6bb58342d2: cold, reused 0/4046 tokens, read 4046 in 9.13s, 1 generated, total 9.19s, peak 6.87 GB
+21:30:43 [mlx-worker] evicted 1 session(s) from memory: ad9f0c20373e4b7b
+21:30:43 [mlx-worker] session b08a2af79aec400b: cold, reused 0/4047 tokens, read 4047 in 9.12s, 1 generated, total 9.18s, peak 6.92 GB
+21:31:00 [mlx-worker] evicted 1 session(s) from memory: 375fb10454414f24
+21:31:00 [mlx-worker] session f9602592c71e41ed: cold, reused 0/5713 tokens, read 5713 in 13.12s, 141 generated, total 17.57s, peak 6.94 GB
+21:31:08 [mlx-worker] shutting down; saved 0 session(s) with unsaved turns

@@ -1,0 +1,24 @@
+{
+  "tag": "baseline",
+  "mode": "standard",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 38.4
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 38.5,
+      "speculate": null,
+      "peak_gb": 7.39,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 38.4,
+      "speculate": null,
+      "peak_gb": 7.39,
+      "error": null
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+cleared /Users/brenden/.caravan/bench-2026-11-02/day10-learn/tuned-settings.json
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+lead pid 37892
+[race 0] tps=22.222 learn={'norm_tps': 17.597, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[race 1] tps=21.978 learn={'norm_tps': 17.033, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[race pair@2] agg=10.972 learn={'norm_tps': 5.766, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'packer_layers', 'value': 14}, 'pipeline_probe': None, 'trial': None}
+[race pair@4] agg=22.562 learn={'norm_tps': 13.622, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[race pair@6] agg=13.687 learn={'norm_tps': 15.732, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[race pair@8] agg=16.609 learn={'norm_tps': 17.734, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': {'aggregate_tps': 16.784, 'n': 2}, 'trial': None}
+[race pair@10] agg=11.43 learn={'norm_tps': 18.133, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 5}}
+[race pair@12] agg=6.27 learn={'norm_tps': 16.489, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': {'aggregate_tps': 8.062, 'n': 1}, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 4}}
+[race pair@14] agg=9.926 learn={'norm_tps': 17.09, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 1}}
+[race pair@16] agg=18.474 learn={'norm_tps': 20.24, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[race pair@18] agg=13.465 learn={'norm_tps': 5.643, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'pipeline_chats', 'value': 1}, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 6}}
+[race pair@20] agg=12.779 learn={'norm_tps': 19.091, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 3}}
+[race pair@22] agg=9.228 learn={'norm_tps': 18.24, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 1}}
+wrote /Users/brenden/.caravan/bench-2026-11-02/day10-learn/llama-race/result.json

@@ -1,0 +1,56 @@
+{
+  "tag": "e2b-k1",
+  "mode": "standard",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 37.4
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 37.4,
+      "speculate": {
+        "k": 1,
+        "from_draft": 62,
+        "accepted_frac": 0.484,
+        "verify_rounds": 66,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 1.0981,
+        "verify_s": 2.3571,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 67,
+          "prompt_lookup": 0,
+          "none": 0
+        }
+      },
+      "peak_gb": 10.05,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 37.4,
+      "speculate": {
+        "k": 1,
+        "from_draft": 62,
+        "accepted_frac": 0.484,
+        "verify_rounds": 66,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 1.0965,
+        "verify_s": 2.3572,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 67,
+          "prompt_lookup": 0,
+          "none": 0
+        }
+      },
+      "peak_gb": 10.06,
+      "error": null
+    }
+  ]
+}

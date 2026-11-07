@@ -1,0 +1,14 @@
+18:17:14 [mlx-worker] packer stage packer 1: layers 0-14 of 30 of mlx-community--gemma-4-26b-a4b-it-8bit loaded in 5.2s, 13.0 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/bench-2026-10-31/v3.1-rerun/cache-packer-gemma8
+18:17:14 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch 1fb8928a34d4)
+18:17:21 [mlx-worker] lead connected from 169.254.4.161
+18:17:55 [mlx-worker] saved c6a6a775f6c14491: 26 tokens, 3 MB in 0.01s
+18:17:57 [mlx-worker] saved d301164f48744532: 43 tokens, 5 MB in 0.01s
+18:18:08 [mlx-worker] saved 30a0a31b5fac4baf: 46 tokens, 5 MB in 0.00s
+18:18:19 [mlx-worker] saved eec6e45887ab42ac: 4859 tokens, 149 MB in 0.06s
+18:19:12 [mlx-worker] saved 88078fadf1fc4a8b: 474 tokens, 54 MB in 0.04s
+18:19:12 [mlx-worker] saved c01ccc3745934b98: 472 tokens, 54 MB in 0.03s
+18:19:12 [mlx-worker] saved cbad3c4773e24c45: 4052 tokens, 142 MB in 0.04s
+18:19:12 [mlx-worker] saved 8177d95c9a6c41f9: 4049 tokens, 142 MB in 0.04s
+18:19:12 [mlx-worker] saved 009999a319884b58: 7128 tokens, 168 MB in 0.04s
+18:19:13 [mlx-worker] lead disconnected (peer closed the connection)
+18:19:16 [mlx-worker] packer 1 shutting down; saved 0 session(s) with unsaved turns

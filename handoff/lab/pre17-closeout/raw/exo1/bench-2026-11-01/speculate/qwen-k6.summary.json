@@ -1,0 +1,32 @@
+{
+  "tag": "k6",
+  "tg128": [
+    {
+      "ok": true,
+      "write_tps": 33.5,
+      "speculate": {
+        "k": 6,
+        "from_draft": 107,
+        "accepted_frac": 0.836,
+        "verify_rounds": 21
+      },
+      "peak_gb": 16.62,
+      "ttft_s": 0.427,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 33.9,
+      "speculate": {
+        "k": 6,
+        "from_draft": 107,
+        "accepted_frac": 0.836,
+        "verify_rounds": 21
+      },
+      "peak_gb": 16.64,
+      "ttft_s": 0.428,
+      "error": null
+    }
+  ],
+  "quality_ok": "3/3"
+}

@@ -1,0 +1,8 @@
+21:25:35 [mlx-worker] packer GPU keepalive enabled (warms Metal while waiting for the lead)
+21:25:35 [mlx-worker] packer stage packer 1: layers 0-11 of 24 of mlx-community--gpt-oss-20b-MXFP4-Q8 loaded in 2.0s, 5.4 GB of layers; wired (0, 19069665280); persist=off
+21:25:35 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch 42f481129c61)
+21:25:47 [mlx-worker] lead connected from 169.254.4.161
+21:31:08 [mlx-worker] lead disconnected (peer closed the connection)
+21:31:08 [mlx-worker] lead connected from 169.254.4.161
+21:31:08 [mlx-worker] lead disconnected ([Errno 32] Broken pipe)
+21:31:12 [mlx-worker] packer 1 shutting down; saved 0 session(s) with unsaved turns

@@ -1,0 +1,463 @@
+=== SUITE distill-suite model=mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit pairing=deepseek-r1-distill-qwen K=24 Sun Nov  1 16:42:31 CST 2026 ===
+ lowpowermode         0
+=== keepalive OFF ===
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/distill-suite/lead-ka-off.log
+{"name": "warm", "ok": true, "wall_s": 1.059, "prompt_n": 15, "gen_n": 8, "cached": 0, "how": "cold", "prefill_s": 0.272, "ttft_s": 0.432, "total_s": 1.043, "peak_gb": 4.25, "split": {"calls": 13, "mb_out": 0.0, "mb_in": 0.24, "wait_s": 0.485, "front_s": 0.475, "net_s": 0.009}, "content": "", "read_tps": 55.1, "write_tps": 11.5}
+{"name": "tg128_0", "ok": true, "wall_s": 11.524, "prompt_n": 35, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.525, "ttft_s": 0.677, "total_s": 11.52, "peak_gb": 4.28, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.68, "wait_s": 5.287, "front_s": 5.181, "net_s": 0.106}, "content": "", "read_tps": 66.7, "write_tps": 11.7}
+{"name": "tg128_1", "ok": true, "wall_s": 11.559, "prompt_n": 35, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.527, "ttft_s": 0.683, "total_s": 11.555, "peak_gb": 4.31, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.68, "wait_s": 5.302, "front_s": 5.197, "net_s": 0.105}, "content": "", "read_tps": 66.4, "write_tps": 11.7}
+{"name": "calib", "ok": true, "wall_s": 40.674, "prompt_n": 4709, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 40.464, "ttft_s": 40.635, "total_s": 40.654, "peak_gb": 5.18, "split": {"calls": 8, "mb_out": 0.04, "mb_in": 48.23, "wait_s": 20.691, "front_s": 20.642, "net_s": 0.049}, "content": "", "read_tps": 116.4}
+{"name": "pp512_0", "ok": true, "wall_s": 4.072, "prompt_n": 476, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 3.876, "ttft_s": 4.027, "total_s": 4.045, "peak_gb": 5.18, "split": {"calls": 6, "mb_out": 0.0, "mb_in": 4.88, "wait_s": 2.027, "front_s": 2.019, "net_s": 0.009}, "content": "", "read_tps": 122.8}
+{"name": "pp512_1", "ok": true, "wall_s": 4.078, "prompt_n": 476, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 3.887, "ttft_s": 4.037, "total_s": 4.055, "peak_gb": 5.18, "split": {"calls": 6, "mb_out": 0.0, "mb_in": 4.88, "wait_s": 2.026, "front_s": 2.018, "net_s": 0.008}, "content": "", "read_tps": 122.5}
+{"name": "pp4096_0", "ok": true, "wall_s": 34.486, "prompt_n": 4040, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 34.266, "ttft_s": 34.434, "total_s": 34.454, "peak_gb": 5.7, "split": {"calls": 7, "mb_out": 0.03, "mb_in": 41.38, "wait_s": 17.562, "front_s": 17.521, "net_s": 0.041}, "content": "", "read_tps": 117.9}
+{"name": "pp4096_1", "ok": true, "wall_s": 34.788, "prompt_n": 4043, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 34.287, "ttft_s": 34.455, "total_s": 34.474, "peak_gb": 6.07, "split": {"calls": 7, "mb_out": 0.03, "mb_in": 41.41, "wait_s": 17.558, "front_s": 17.521, "net_s": 0.037}, "content": "", "read_tps": 117.9}
+{"name": "quality", "ok": true, "wall_s": 93.148, "prompt_n": 6911, "gen_n": 315, "cached": 0, "how": "cold", "prefill_s": 61.254, "ttft_s": 61.432, "total_s": 93.074, "peak_gb": 6.23, "split": {"calls": 324, "mb_out": 0.08, "mb_in": 74.03, "wait_s": 45.854, "front_s": 45.527, "net_s": 0.327}, "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "read_tps": 112.8, "write_tps": 9.9}
+{"name": "quality_score", "score": 3, "detail": {"code": true, "mult": true, "capital": true}, "score_incl_reasoning": 3, "finish": 315}
+=== keepalive ON ===
+/Users/brenden/.caravan/bench-2026-11-01/mini_full_suite.sh: line 39: 19604 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/distill-suite/lead-ka-on.log
+{"name": "warm", "ok": true, "wall_s": 1.101, "prompt_n": 15, "gen_n": 8, "cached": 0, "how": "cold", "prefill_s": 0.322, "ttft_s": 0.504, "total_s": 1.086, "peak_gb": 4.25, "split": {"calls": 13, "mb_out": 0.0, "mb_in": 0.24, "wait_s": 0.484, "front_s": 0.475, "net_s": 0.01}, "content": "", "read_tps": 46.6, "write_tps": 12.0}
+{"name": "tg128_0", "ok": true, "wall_s": 10.636, "prompt_n": 32, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.272, "ttft_s": 0.416, "total_s": 10.635, "peak_gb": 4.35, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.65, "wait_s": 5.113, "front_s": 5.037, "net_s": 0.076}, "content": "", "read_tps": 117.6, "write_tps": 12.4}
+{"name": "tg128_1", "ok": true, "wall_s": 10.882, "prompt_n": 35, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.511, "ttft_s": 0.655, "total_s": 10.88, "peak_gb": 4.35, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.68, "wait_s": 5.235, "front_s": 5.159, "net_s": 0.076}, "content": "", "read_tps": 68.5, "write_tps": 12.4}
+{"name": "calib", "ok": true, "wall_s": 40.426, "prompt_n": 4708, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 40.223, "ttft_s": 40.401, "total_s": 40.421, "peak_gb": 5.18, "split": {"calls": 8, "mb_out": 0.04, "mb_in": 48.22, "wait_s": 20.671, "front_s": 20.645, "net_s": 0.026}, "content": "", "read_tps": 117.0}
+{"name": "pp512_0", "ok": true, "wall_s": 3.983, "prompt_n": 474, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 3.799, "ttft_s": 3.945, "total_s": 3.963, "peak_gb": 5.18, "split": {"calls": 6, "mb_out": 0.0, "mb_in": 4.86, "wait_s": 2.024, "front_s": 2.018, "net_s": 0.006}, "content": "", "read_tps": 124.8}
+{"name": "pp512_1", "ok": true, "wall_s": 3.974, "prompt_n": 476, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 3.8, "ttft_s": 3.946, "total_s": 3.964, "peak_gb": 5.18, "split": {"calls": 6, "mb_out": 0.0, "mb_in": 4.88, "wait_s": 2.025, "front_s": 2.019, "net_s": 0.006}, "content": "", "read_tps": 125.3}
+{"name": "pp4096_0", "ok": true, "wall_s": 34.372, "prompt_n": 4040, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 34.18, "ttft_s": 34.341, "total_s": 34.361, "peak_gb": 5.7, "split": {"calls": 7, "mb_out": 0.03, "mb_in": 41.38, "wait_s": 17.615, "front_s": 17.594, "net_s": 0.021}, "content": "", "read_tps": 118.2}
+{"name": "pp4096_1", "ok": true, "wall_s": 34.738, "prompt_n": 4043, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 34.339, "ttft_s": 34.499, "total_s": 34.519, "peak_gb": 6.07, "split": {"calls": 7, "mb_out": 0.03, "mb_in": 41.41, "wait_s": 17.771, "front_s": 17.749, "net_s": 0.022}, "content": "", "read_tps": 117.7}
+{"name": "quality", "ok": true, "wall_s": 91.605, "prompt_n": 6911, "gen_n": 315, "cached": 0, "how": "cold", "prefill_s": 61.495, "ttft_s": 61.667, "total_s": 91.557, "peak_gb": 6.23, "split": {"calls": 324, "mb_out": 0.08, "mb_in": 74.03, "wait_s": 46.309, "front_s": 46.09, "net_s": 0.219}, "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "read_tps": 112.4, "write_tps": 10.5}
+{"name": "quality_score", "score": 3, "detail": {"code": true, "mult": true, "capital": true}, "score_incl_reasoning": 3, "finish": 315}
+=== pipeline N=1/2/3 ===
+LEAD_FAIL /Users/brenden/.caravan/bench-2026-11-01/distill-suite/lead-pipe.log
+16:51:11 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+[transformers] `tokenizer_class` is `LlamaTokenizer` but `tokenizer.json` is ByteLevel; loading `TokenizersBackend`. Set `tokenizer_class` to `TokenizersBackend` in `tokenizer_config.json`.
+=== RESUME_FROM_PIPE distill-suite Sun Nov  1 16:56:00 CST 2026 ===
+=== pipeline N=1/2/3 ===
+=== RESUME_FROM_PIPE distill-suite Sun Nov  1 16:58:35 CST 2026 ===
+=== pipeline N=1/2/3 ===
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/distill-suite/lead-pipe.log
+--- pipeline N=1 ---
+{"name": "warm", "ok": true, "wall_s": 1.08, "session": "eb0fe150876a46be", "prompt_n": 9, "gen_n": 8, "how": "cold", "prefill_s": 0.412, "ttft_s": 0.495, "total_s": 1.061, "peak_gb": 4.25, "split": {"calls": 17, "mb_out": 0.0, "mb_in": 0.33, "wait_s": 0.756, "front_s": 0.654, "net_s": 0.103}, "pipeline": null, "content": "", "write_tps": 12.4}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 10.646, "session": "5dde7da646204ac6", "prompt_n": 32, "gen_n": 128, "how": "cold", "prefill_s": 0.271, "ttft_s": 0.352, "total_s": 10.644, "peak_gb": 4.35, "split": {"calls": 150, "mb_out": 0.01, "mb_in": 1.97, "wait_s": 5.856, "front_s": 5.676, "net_s": 0.18}, "pipeline": null, "content": "", "write_tps": 12.3}
+{"name": "tg128_w0_aggregate", "n": 1, "ok_n": 1, "wall_s": 10.646, "gen_tokens_sum": 128, "per_chat_write_tps": [12.3], "per_chat_ttft_s": [0.352], "per_chat_peak_gb": [4.35], "aggregate_write_tps_wall": 12.2, "aggregate_write_tps_sum": 12.3}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 10.683, "session": "d69aae04ba3c4812", "prompt_n": 33, "gen_n": 128, "how": "cold", "prefill_s": 0.268, "ttft_s": 0.349, "total_s": 10.68, "peak_gb": 4.37, "split": {"calls": 283, "mb_out": 0.02, "mb_in": 3.61, "wait_s": 10.965, "front_s": 10.708, "net_s": 0.257}, "pipeline": null, "content": "", "write_tps": 12.3}
+{"name": "tg128_w1_aggregate", "n": 1, "ok_n": 1, "wall_s": 10.683, "gen_tokens_sum": 128, "per_chat_write_tps": [12.3], "per_chat_ttft_s": [0.349], "per_chat_peak_gb": [4.37], "aggregate_write_tps_wall": 12.2, "aggregate_write_tps_sum": 12.3}
+{"name": "quality", "ok": true, "wall_s": 90.882, "session": "a268b32d25474b33", "prompt_n": 6911, "gen_n": 316, "how": "cold", "prefill_s": 60.85, "ttft_s": 60.946, "total_s": 90.875, "peak_gb": 5.4, "split": {"calls": 607, "mb_out": 0.11, "mb_in": 77.63, "wait_s": 56.549, "front_s": 56.081, "net_s": 0.468}, "pipeline": null, "content": "1) ORCHID-7419  \n2)Okay, so I need to figure out the answers to three questions based on the information provided. Let's take them one by one.\n\n1) The first question is asking for the vault access cod", "write_tps": 10.5}
+--- pipeline N=2 ---
+{"name": "warm", "ok": true, "wall_s": 0.842, "session": "29c585e429d845cd", "prompt_n": 9, "gen_n": 8, "how": "cold", "prefill_s": 0.173, "ttft_s": 0.253, "total_s": 0.831, "peak_gb": 5.4, "split": {"calls": 621, "mb_out": 0.11, "mb_in": 77.8, "wait_s": 56.958, "front_s": 56.48, "net_s": 0.477}, "pipeline": null, "content": "", "write_tps": 12.1}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 11.748, "session": "c5eaebe07cd645fa", "prompt_n": 31, "gen_n": 128, "how": "cold", "prefill_s": 0.27, "ttft_s": 0.863, "total_s": 11.746, "peak_gb": 5.4, "split": {"calls": 887, "mb_out": 0.13, "mb_in": 81.09, "wait_s": 68.316, "front_s": 66.621, "net_s": 1.695}, "pipeline": null, "content": "", "write_tps": 11.7}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 11.791, "session": "915a98328bb24c2e", "prompt_n": 35, "gen_n": 128, "how": "cold", "prefill_s": 0.51, "ttft_s": 0.596, "total_s": 11.479, "peak_gb": 5.4, "split": {"calls": 888, "mb_out": 0.13, "mb_in": 81.09, "wait_s": 68.316, "front_s": 66.621, "net_s": 1.696}, "pipeline": null, "content": "", "write_tps": 11.7}
+{"name": "tg128_w0_aggregate", "n": 2, "ok_n": 2, "wall_s": 11.792, "gen_tokens_sum": 256, "per_chat_write_tps": [11.7, 11.7], "per_chat_ttft_s": [0.863, 0.596], "per_chat_peak_gb": [5.4, 5.4], "aggregate_write_tps_wall": 22.0, "aggregate_write_tps_sum": 23.4}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 12.634, "session": "88305510147f4937", "prompt_n": 36, "gen_n": 128, "how": "cold", "prefill_s": 0.511, "ttft_s": 1.104, "total_s": 12.631, "peak_gb": 5.69, "split": {"calls": 1154, "mb_out": 0.15, "mb_in": 84.44, "wait_s": 79.932, "front_s": 77.027, "net_s": 2.905}, "pipeline": null, "content": "", "write_tps": 11.0}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 12.678, "session": "b3d87b88256b4690", "prompt_n": 35, "gen_n": 128, "how": "cold", "prefill_s": 0.51, "ttft_s": 0.595, "total_s": 12.125, "peak_gb": 5.69, "split": {"calls": 1155, "mb_out": 0.15, "mb_in": 84.44, "wait_s": 79.933, "front_s": 77.027, "net_s": 2.906}, "pipeline": null, "content": "", "write_tps": 11.0}
+{"name": "tg128_w1_aggregate", "n": 2, "ok_n": 2, "wall_s": 12.678, "gen_tokens_sum": 256, "per_chat_write_tps": [11.0, 11.0], "per_chat_ttft_s": [1.104, 0.595], "per_chat_peak_gb": [5.69, 5.69], "aggregate_write_tps_wall": 20.9, "aggregate_write_tps_sum": 22.0}
+{"name": "quality", "ok": true, "wall_s": 90.919, "session": "5a34b70333d04fab", "prompt_n": 6911, "gen_n": 316, "how": "cold", "prefill_s": 60.85, "ttft_s": 60.946, "total_s": 90.911, "peak_gb": 5.69, "split": {"calls": 1480, "mb_out": 0.23, "mb_in": 158.46, "wait_s": 125.541, "front_s": 122.417, "net_s": 3.124}, "pipeline": null, "content": "1) ORCHID-7419  \n2)Okay, so I need to figure out the answers to three questions based on the information provided. Let's take them one by one.\n\n1) The first question is asking for the vault access cod", "write_tps": 10.5}
+--- pipeline N=3 ---
+{"name": "warm", "ok": true, "wall_s": 0.831, "session": "372432f1c3c94983", "prompt_n": 9, "gen_n": 8, "how": "cold", "prefill_s": 0.17, "ttft_s": 0.251, "total_s": 0.821, "peak_gb": 5.69, "split": {"calls": 1494, "mb_out": 0.24, "mb_in": 158.62, "wait_s": 125.94, "front_s": 122.808, "net_s": 3.132}, "pipeline": null, "content": "", "write_tps": 12.3}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 18.187, "session": "d5300cfba66941f7", "prompt_n": 33, "gen_n": 128, "how": "cold", "prefill_s": 0.268, "ttft_s": 0.865, "total_s": 17.633, "peak_gb": 5.69, "split": {"calls": 1893, "mb_out": 0.27, "mb_in": 163.6, "wait_s": 143.196, "front_s": 138.224, "net_s": 4.972}, "pipeline": null, "content": "", "write_tps": 7.6}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 18.142, "session": "e2080946640049a8", "prompt_n": 35, "gen_n": 128, "how": "cold", "prefill_s": 0.51, "ttft_s": 0.861, "total_s": 18.139, "peak_gb": 5.69, "split": {"calls": 1891, "mb_out": 0.27, "mb_in": 163.59, "wait_s": 143.151, "front_s": 138.184, "net_s": 4.967}, "pipeline": null, "content": "", "write_tps": 7.4}
+{"name": "tg128_w0_chat2", "ok": true, "wall_s": 18.231, "session": "3ce3a12a676647c2", "prompt_n": 35, "gen_n": 128, "how": "cold", "prefill_s": 0.51, "ttft_s": 0.596, "total_s": 17.366, "peak_gb": 5.69, "split": {"calls": 1894, "mb_out": 0.27, "mb_in": 163.6, "wait_s": 143.197, "front_s": 138.224, "net_s": 4.972}, "pipeline": null, "content": "", "write_tps": 7.6}
+{"name": "tg128_w0_aggregate", "n": 3, "ok_n": 3, "wall_s": 18.231, "gen_tokens_sum": 384, "per_chat_write_tps": [7.6, 7.4, 7.6], "per_chat_ttft_s": [0.865, 0.861, 0.596], "per_chat_peak_gb": [5.69, 5.69, 5.69], "aggregate_write_tps_wall": 21.2, "aggregate_write_tps_sum": 22.6}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 17.485, "session": "f3f5a59d0b0c4173", "prompt_n": 35, "gen_n": 128, "how": "cold", "prefill_s": 0.513, "ttft_s": 0.867, "total_s": 17.481, "peak_gb": 5.69, "split": {"calls": 2291, "mb_out": 0.3, "mb_in": 168.55, "wait_s": 160.155, "front_s": 153.358, "net_s": 6.798}, "pipeline": null, "content": "", "write_tps": 7.6}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 17.571, "session": "e1ecc9642271458e", "prompt_n": 33, "gen_n": 128, "how": "cold", "prefill_s": 0.268, "ttft_s": 0.354, "total_s": 16.699, "peak_gb": 5.69, "split": {"calls": 2294, "mb_out": 0.3, "mb_in": 168.56, "wait_s": 160.2, "front_s": 153.396, "net_s": 6.803}, "pipeline": null, "content": "", "write_tps": 7.8}
+{"name": "tg128_w1_chat2", "ok": true, "wall_s": 17.528, "session": "e8e7aafc9d8a40bf", "prompt_n": 32, "gen_n": 128, "how": "cold", "prefill_s": 0.271, "ttft_s": 0.627, "total_s": 16.972, "peak_gb": 5.69, "split": {"calls": 2293, "mb_out": 0.3, "mb_in": 168.56, "wait_s": 160.199, "front_s": 153.396, "net_s": 6.802}, "pipeline": null, "content": "", "write_tps": 7.8}
+{"name": "tg128_w1_aggregate", "n": 3, "ok_n": 3, "wall_s": 17.571, "gen_tokens_sum": 384, "per_chat_write_tps": [7.6, 7.8, 7.8], "per_chat_ttft_s": [0.867, 0.354, 0.627], "per_chat_peak_gb": [5.69, 5.69, 5.69], "aggregate_write_tps_wall": 22.0, "aggregate_write_tps_sum": 23.2}
+{"name": "quality", "ok": true, "wall_s": 91.229, "session": "746c1781abe64a66", "prompt_n": 6911, "gen_n": 316, "how": "cold", "prefill_s": 61.148, "ttft_s": 61.243, "total_s": 91.221, "peak_gb": 5.69, "split": {"calls": 2619, "mb_out": 0.38, "mb_in": 242.58, "wait_s": 206.101, "front_s": 199.086, "net_s": 7.014}, "pipeline": null, "content": "1) ORCHID-7419  \n2)Okay, so I need to figure out the answers to three questions based on the information provided. Let's take them one by one.\n\n1) The first question is asking for the vault access cod", "write_tps": 10.5}
+=== nodraft suite ===
+=== RESUME_FROM_NODRAFT distill-suite Sun Nov  1 17:08:44 CST 2026 ===
+=== nodraft suite ===
+{
+  "tag": "nodraft",
+  "mode": "suite",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 12.3,
+    "repeat": 12.4,
+    "code_edit": 12.4,
+    "code_cont": 12.4
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 12.3,
+      "speculate": null,
+      "peak_gb": 4.28,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 12.4,
+      "speculate": null,
+      "peak_gb": 4.31,
+      "error": null
+    }
+  ],
+  "repeat": [
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    },
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    }
+  ],
+  "code_edit": [
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    },
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    }
+  ],
+  "code_cont": [
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    },
+    {
+      "write_tps": 12.4,
+      "speculate": null
+    }
+  ]
+}
+=== autopair + first-load gate ===
+=== RESUME_FROM_AUTOPAIR distill-suite Sun Nov  1 17:15:06 CST 2026 ===
+=== autopair + first-load gate ===
+{
+  "tag": "autopair",
+  "mode": "suite",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 16.9,
+    "repeat": 17.4,
+    "code_edit": 17.9,
+    "code_cont": 21.2
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 16.9,
+      "speculate": {
+        "k": 3,
+        "from_draft": 58,
+        "accepted_frac": 0.453,
+        "verify_rounds": 70,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.8053,
+        "verify_s": 6.778,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 71,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 58,
+          "n_gen": 128,
+          "accepted_frac": 0.453,
+          "break_even_frac": 0.255
+        }
+      },
+      "peak_gb": 4.67,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 16.9,
+      "speculate": {
+        "k": 3,
+        "from_draft": 58,
+        "accepted_frac": 0.453,
+        "verify_rounds": 70,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.8078,
+        "verify_s": 6.7758,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 71,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 58,
+          "n_gen": 128,
+          "accepted_frac": 0.453,
+          "break_even_frac": 0.255
+        }
+      },
+      "peak_gb": 4.67,
+      "error": null
+    }
+  ],
+  "repeat": [
+    {
+      "write_tps": 17.4,
+      "speculate": {
+        "k": 3,
+        "from_draft": 59,
+        "accepted_frac": 0.461,
+        "verify_rounds": 69,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.7924,
+        "verify_s": 6.5959,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 69,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 59,
+          "n_gen": 128,
+          "accepted_frac": 0.461,
+          "break_even_frac": 0.255
+        }
+      }
+    },
+    {
+      "write_tps": 17.4,
+      "speculate": {
+        "k": 3,
+        "from_draft": 59,
+        "accepted_frac": 0.461,
+        "verify_rounds": 69,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.7929,
+        "verify_s": 6.5963,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 69,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 59,
+          "n_gen": 128,
+          "accepted_frac": 0.461,
+          "break_even_frac": 0.255
+        }
+      }
+    }
+  ],
+  "code_edit": [
+    {
+      "write_tps": 17.9,
+      "speculate": {
+        "k": 3,
+        "from_draft": 61,
+        "accepted_frac": 0.477,
+        "verify_rounds": 67,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.7765,
+        "verify_s": 6.4094,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 67,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 61,
+          "n_gen": 128,
+          "accepted_frac": 0.477,
+          "break_even_frac": 0.255
+        }
+      }
+    },
+    {
+      "write_tps": 17.9,
+      "speculate": {
+        "k": 3,
+        "from_draft": 61,
+        "accepted_frac": 0.477,
+        "verify_rounds": 67,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.7744,
+        "verify_s": 6.412,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 67,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 61,
+          "n_gen": 128,
+          "accepted_frac": 0.477,
+          "break_even_frac": 0.255
+        }
+      }
+    }
+  ],
+  "code_cont": [
+    {
+      "write_tps": 21.2,
+      "speculate": {
+        "k": 3,
+        "from_draft": 72,
+        "accepted_frac": 0.562,
+        "verify_rounds": 56,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.6562,
+        "verify_s": 5.4345,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 57,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 72,
+          "n_gen": 128,
+          "accepted_frac": 0.562,
+          "break_even_frac": 0.255
+        }
+      }
+    },
+    {
+      "write_tps": 21.2,
+      "speculate": {
+        "k": 3,
+        "from_draft": 72,
+        "accepted_frac": 0.562,
+        "verify_rounds": 56,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.6548,
+        "verify_s": 5.4362,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 57,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 72,
+          "n_gen": 128,
+          "accepted_frac": 0.562,
+          "break_even_frac": 0.255
+        }
+      }
+    }
+  ]
+}
+=== shut-off (be=0.80) ===
+{
+  "tag": "A",
+  "speculate": {
+    "k": 3,
+    "from_draft": 26,
+    "accepted_frac": 0.406,
+    "verify_rounds": 38,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.2925,
+    "verify_s": 3.4074,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 38,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 26,
+      "n_gen": 48,
+      "accepted_frac": 0.542,
+      "break_even_frac": 0.8
+    }
+  }
+}
+{
+  "tag": "B",
+  "speculate": {
+    "k": 3,
+    "from_draft": 26,
+    "accepted_frac": 0.406,
+    "verify_rounds": 38,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.2888,
+    "verify_s": 3.4069,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 38,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 26,
+      "n_gen": 48,
+      "accepted_frac": 0.542,
+      "break_even_frac": 0.8
+    }
+  }
+}
+{
+  "tag": "C",
+  "speculate": {
+    "k": 3,
+    "from_draft": 26,
+    "accepted_frac": 0.406,
+    "verify_rounds": 38,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.291,
+    "verify_s": 3.4095,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 38,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 26,
+      "n_gen": 48,
+      "accepted_frac": 0.542,
+      "break_even_frac": 0.8
+    }
+  }
+}
+=== SUITE_RESUME_DONE Sun Nov  1 17:17:25 CST 2026 ===
+=== download prompt only distill-suite Sun Nov  1 17:21:18 CST 2026 ===
+=== DOWNLOAD_PROMPT_DONE Sun Nov  1 17:22:01 CST 2026 ===

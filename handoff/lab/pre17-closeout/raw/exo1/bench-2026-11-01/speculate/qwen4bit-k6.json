@@ -1,0 +1,184 @@
+{
+  "tag": "k6",
+  "model": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+  "url": "http://127.0.0.1:8194",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.723,
+    "session": "45b4e69f5fa5450d",
+    "prompt_n": 18,
+    "gen_n": 8,
+    "how": "cold",
+    "prefill_s": 0.155,
+    "ttft_s": 0.267,
+    "total_s": 0.706,
+    "peak_gb": 8.98,
+    "split": {
+      "calls": 14,
+      "mb_out": 0.0,
+      "mb_in": 0.21,
+      "wait_s": 0.28,
+      "front_s": 0.271,
+      "net_s": 0.009
+    },
+    "speculate": {
+      "k": 6,
+      "from_draft": 3,
+      "accepted_frac": 0.375,
+      "verify_rounds": 5
+    },
+    "content": "Hello there!<|im_end|>",
+    "write_tps": 15.9
+  },
+  "tg128": [
+    {
+      "name": "k6_tg128_0",
+      "ok": true,
+      "wall_s": 2.641,
+      "session": "a6447cefaea44333",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.176,
+      "ttft_s": 0.285,
+      "total_s": 2.639,
+      "peak_gb": 9.01,
+      "split": {
+        "calls": 31,
+        "mb_out": 0.0,
+        "mb_in": 0.73,
+        "wait_s": 1.015,
+        "front_s": 0.996,
+        "net_s": 0.019
+      },
+      "speculate": {
+        "k": 6,
+        "from_draft": 107,
+        "accepted_frac": 0.836,
+        "verify_rounds": 21
+      },
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 54.0
+    },
+    {
+      "name": "k6_tg128_1",
+      "ok": true,
+      "wall_s": 2.64,
+      "session": "624c480aa10647ed",
+      "prompt_n": 25,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.176,
+      "ttft_s": 0.285,
+      "total_s": 2.638,
+      "peak_gb": 9.02,
+      "split": {
+        "calls": 31,
+        "mb_out": 0.0,
+        "mb_in": 0.73,
+        "wait_s": 1.016,
+        "front_s": 0.997,
+        "net_s": 0.019
+      },
+      "speculate": {
+        "k": 6,
+        "from_draft": 107,
+        "accepted_frac": 0.836,
+        "verify_rounds": 21
+      },
+      "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven",
+      "write_tps": 54.0
+    }
+  ],
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 0.618,
+      "session": "78bc6d52e74d49db",
+      "prompt_n": 25,
+      "gen_n": 6,
+      "how": "cold",
+      "prefill_s": 0.177,
+      "ttft_s": 0.286,
+      "total_s": 0.617,
+      "peak_gb": 9.04,
+      "split": {
+        "calls": 12,
+        "mb_out": 0.0,
+        "mb_in": 0.21,
+        "wait_s": 0.257,
+        "front_s": 0.25,
+        "net_s": 0.007
+      },
+      "speculate": {
+        "k": 6,
+        "from_draft": 2,
+        "accepted_frac": 0.333,
+        "verify_rounds": 4
+      },
+      "content": "4<|im_end|>",
+      "write_tps": 15.1
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 0.604,
+      "session": "21b71fd4e4724ca4",
+      "prompt_n": 21,
+      "gen_n": 6,
+      "how": "cold",
+      "prefill_s": 0.154,
+      "ttft_s": 0.264,
+      "total_s": 0.597,
+      "peak_gb": 9.04,
+      "split": {
+        "calls": 12,
+        "mb_out": 0.0,
+        "mb_in": 0.2,
+        "wait_s": 0.247,
+        "front_s": 0.24,
+        "net_s": 0.007
+      },
+      "speculate": {
+        "k": 6,
+        "from_draft": 2,
+        "accepted_frac": 0.333,
+        "verify_rounds": 4
+      },
+      "content": "Paris<|im_end|>",
+      "write_tps": 15.0
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 0.724,
+      "session": "111e3b948f4844ec",
+      "prompt_n": 23,
+      "gen_n": 7,
+      "how": "cold",
+      "prefill_s": 0.164,
+      "ttft_s": 0.274,
+      "total_s": 0.718,
+      "peak_gb": 9.04,
+      "split": {
+        "calls": 14,
+        "mb_out": 0.0,
+        "mb_in": 0.23,
+        "wait_s": 0.294,
+        "front_s": 0.286,
+        "net_s": 0.007
+      },
+      "speculate": {
+        "k": 6,
+        "from_draft": 3,
+        "accepted_frac": 0.429,
+        "verify_rounds": 4
+      },
+      "content": "Cold.<|im_end|>",
+      "write_tps": 13.5
+    }
+  ],
+  "quality_ok": "3/3"
+}

@@ -1,0 +1,21 @@
+20:41:40 [mlx-worker] fuse kernels: force_fused on mlx_lm.models.base, mlx_lm.models.llama, mlx_lm.models.qwen2, mlx_lm.models.qwen3, mlx_lm.models.qwen3_moe, mlx_lm.models.gemma, mlx_lm.models.gpt_oss; metal_swiglu
+20:41:50 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+20:41:50 [mlx-worker] warm-up 0.32s
+20:41:50 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 9.5s; sessions<= 1, bytes<= 536870912, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+20:41:50 [mlx-worker] listening on http://127.0.0.1:8194
+20:41:51 [mlx-worker] session 04cd4e3702864095: cold, reused 0/15 tokens, read 15 in 0.13s, 8 generated, total 0.31s, peak 17.24 GB
+20:41:54 [mlx-worker] saved 04cd4e3702864095: 14 tokens, 1 MB in 0.00s
+20:41:54 [mlx-worker] evicted 1 session(s) from memory: 04cd4e3702864095
+20:41:54 [mlx-worker] session 7dd55bd31d354f8b: cold, reused 0/35 tokens, read 35 in 0.24s, 128 generated, total 2.80s, peak 17.29 GB
+20:41:57 [mlx-worker] saved 7dd55bd31d354f8b: 34 tokens, 3 MB in 0.00s
+20:41:57 [mlx-worker] evicted 1 session(s) from memory: 7dd55bd31d354f8b
+20:41:57 [mlx-worker] session ac6c7115369d4608: cold, reused 0/34 tokens, read 34 in 0.24s, 128 generated, total 2.77s, peak 17.29 GB
+20:42:00 [mlx-worker] saved ac6c7115369d4608: 33 tokens, 3 MB in 0.01s
+20:42:00 [mlx-worker] evicted 1 session(s) from memory: ac6c7115369d4608
+20:42:00 [mlx-worker] session 0a4dfd9ae3db42b5: cold, reused 0/35 tokens, read 35 in 0.24s, 128 generated, total 2.78s, peak 17.29 GB
+20:42:00 [mlx-worker] saved 0a4dfd9ae3db42b5: 34 tokens, 3 MB in 0.00s
+20:42:00 [mlx-worker] evicted 1 session(s) from memory: 0a4dfd9ae3db42b5
+20:42:00 [mlx-worker] session f7c6dcf8f62b42ba: cold, reused 0/73 tokens, read 73 in 0.29s, 25 generated, total 0.83s, peak 17.33 GB
+20:42:03 [mlx-worker] saved f7c6dcf8f62b42ba: 72 tokens, 7 MB in 0.00s
+20:42:03 [mlx-worker] evicted 1 session(s) from memory: f7c6dcf8f62b42ba
+20:42:03 [mlx-worker] session 84ec44b8e76e4d14: cold, reused 0/1044 tokens, read 1044 in 2.14s, 1 generated, total 2.18s, peak 17.91 GB

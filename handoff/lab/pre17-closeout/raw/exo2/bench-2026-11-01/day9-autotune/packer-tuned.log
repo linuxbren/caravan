@@ -1,0 +1,15 @@
+18:23:31 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+18:23:31 [mlx-worker] packer stage packer 1: layers 0-23 of 48 of mlx-community--Qwen2.5-14B-Instruct-4bit loaded in 0.2s, 3.7 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/mlx/prompt-cache
+18:23:31 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch 271a878ec932)
+18:23:36 [mlx-worker] lead connected from 169.254.4.161
+18:24:45 [mlx-worker] saved 9bba6ab35ee14252: 38 tokens, 4 MB in 0.00s
+18:24:49 [mlx-worker] saved 9cc3cea83e1f4fae: 58 tokens, 6 MB in 0.00s
+18:25:23 [mlx-worker] saved be66484fda964c7d: 56 tokens, 6 MB in 0.00s
+18:25:58 [mlx-worker] saved 189c432f5b4a40cd: 4733 tokens, 465 MB in 0.09s
+18:27:03 [mlx-worker] saved c819d1df26cb433e: 496 tokens, 49 MB in 0.01s
+18:27:04 [mlx-worker] saved 10c464205a6346cb: 500 tokens, 49 MB in 0.01s
+18:27:18 [mlx-worker] saved f495e344718c4955: 4040 tokens, 397 MB in 0.08s
+18:27:19 [mlx-worker] saved ea8dd04ed4c04009: 4040 tokens, 397 MB in 0.09s
+18:27:32 [mlx-worker] saved 3fe3c954b9bb46d2: 6934 tokens, 682 MB in 0.14s
+18:27:32 [mlx-worker] saved 3f89aa6e00c64d8c: 32 tokens, 3 MB in 0.00s
+18:28:41 [mlx-worker] lead disconnected (peer closed the connection)

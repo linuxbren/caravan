@@ -1,0 +1,17 @@
+13:24:21 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+13:24:21 [mlx-worker] packer stage packer 1: layers 0-23 of 48 of mlx-community--Qwen3-30B-A3B-4bit loaded in 2.7s, 8.4 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/mlx/prompt-cache
+13:24:21 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch 15b3741ed888)
+13:24:39 [mlx-worker] lead connected from 169.254.4.161
+13:25:14 [mlx-worker] saved __guess_gate_1793561111032_True: 24 tokens, 1 MB in 0.00s
+13:25:15 [mlx-worker] lead disconnected (peer closed the connection)
+13:25:38 [mlx-worker] lead connected from 169.254.4.161
+13:25:50 [mlx-worker] saved __guess_gate_1793561111431_True: 20 tokens, 1 MB in 0.00s
+13:25:50 [mlx-worker] saved __guess_gate_1793561111799_True: 22 tokens, 1 MB in 0.00s
+13:25:50 [mlx-worker] saved __guess_gate_1793561112248_False: 26 tokens, 1 MB in 0.00s
+13:25:50 [mlx-worker] saved __guess_gate_1793561113330_True: 26 tokens, 1 MB in 0.00s
+13:25:51 [mlx-worker] lead disconnected (peer closed the connection)
+13:26:05 [mlx-worker] lead connected from 169.254.4.161
+13:26:07 [mlx-worker] lead disconnected (peer closed the connection)
+13:26:18 [mlx-worker] lead connected from 169.254.4.161
+13:26:19 [mlx-worker] lead disconnected (peer closed the connection)
+13:26:22 [mlx-worker] packer 1 shutting down; saved 0 session(s) with unsaved turns

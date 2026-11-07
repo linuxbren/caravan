@@ -1,0 +1,30 @@
+{
+  "wall": 2.63,
+  "speculate": {
+    "k": 3,
+    "from_draft": 71,
+    "accepted_frac": 0.74,
+    "verify_rounds": 25,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.6554,
+    "verify_s": 1.4237,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 26,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": false,
+      "reason": null,
+      "from_draft": 71,
+      "n_gen": 96,
+      "accepted_frac": 0.74,
+      "break_even_frac": 0.35
+    }
+  },
+  "write_tps": 49.3,
+  "content": "a7f3c91e0b4d2e8f1a6c5b9d0e3f7a2c4b8d1e5f9a3c7b0d4e8f2a6c5b9d0e3f7a2c4b8d1e5f9a3c7b0d4e8f2a6c1a7f3"
+}

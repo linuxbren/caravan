@@ -1,0 +1,210 @@
+{
+  "tag": "autoskip",
+  "model": "mlx-community/gpt-oss-20b-MXFP4-Q8",
+  "url": "http://127.0.0.1:8194",
+  "mode": "standard",
+  "warm": {
+    "name": "warm",
+    "ok": true,
+    "wall_s": 0.823,
+    "session": "bf177671204a4827",
+    "prompt_n": 73,
+    "gen_n": 16,
+    "how": "cold",
+    "prefill_s": 0.268,
+    "ttft_s": 0.318,
+    "total_s": 0.765,
+    "peak_gb": 6.12,
+    "split": {
+      "calls": 21,
+      "mb_out": 0.0,
+      "mb_in": 0.51,
+      "wait_s": 0.343,
+      "front_s": 0.327,
+      "net_s": 0.016
+    },
+    "speculate": null,
+    "content": "",
+    "write_tps": 33.6
+  },
+  "prompts": {
+    "count": [
+      {
+        "name": "autoskip_count_0",
+        "ok": true,
+        "wall_s": 4.019,
+        "session": "c410cc125c604770",
+        "prompt_n": 80,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.271,
+        "ttft_s": 0.32,
+        "total_s": 4.018,
+        "peak_gb": 6.13,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 1.21,
+          "wait_s": 1.681,
+          "front_s": 1.601,
+          "net_s": 0.081
+        },
+        "speculate": null,
+        "content": "",
+        "write_tps": 34.3
+      },
+      {
+        "name": "autoskip_count_1",
+        "ok": true,
+        "wall_s": 4.016,
+        "session": "13d67237fa1e421c",
+        "prompt_n": 80,
+        "gen_n": 128,
+        "how": "cold",
+        "prefill_s": 0.27,
+        "ttft_s": 0.318,
+        "total_s": 4.014,
+        "peak_gb": 6.14,
+        "split": {
+          "calls": 133,
+          "mb_out": 0.01,
+          "mb_in": 1.21,
+          "wait_s": 1.678,
+          "front_s": 1.602,
+          "net_s": 0.076
+        },
+        "speculate": null,
+        "content": "",
+        "write_tps": 34.4
+      }
+    ]
+  },
+  "quality": [
+    {
+      "name": "quality_0",
+      "ok": true,
+      "wall_s": 1.233,
+      "session": "a1198e826f044e97",
+      "prompt_n": 80,
+      "gen_n": 32,
+      "how": "cold",
+      "prefill_s": 0.269,
+      "ttft_s": 0.319,
+      "total_s": 1.231,
+      "peak_gb": 6.14,
+      "split": {
+        "calls": 37,
+        "mb_out": 0.0,
+        "mb_in": 0.65,
+        "wait_s": 0.536,
+        "front_s": 0.514,
+        "net_s": 0.022
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 34.0
+    },
+    {
+      "name": "quality_1",
+      "ok": true,
+      "wall_s": 1.194,
+      "session": "af2aeaace9544697",
+      "prompt_n": 76,
+      "gen_n": 30,
+      "how": "cold",
+      "prefill_s": 0.26,
+      "ttft_s": 0.309,
+      "total_s": 1.19,
+      "peak_gb": 6.14,
+      "split": {
+        "calls": 36,
+        "mb_out": 0.0,
+        "mb_in": 0.62,
+        "wait_s": 0.519,
+        "front_s": 0.497,
+        "net_s": 0.022
+      },
+      "speculate": null,
+      "content": "Paris",
+      "write_tps": 32.9
+    },
+    {
+      "name": "quality_2",
+      "ok": true,
+      "wall_s": 1.226,
+      "session": "1a90a6b8c2824fef",
+      "prompt_n": 78,
+      "gen_n": 32,
+      "how": "cold",
+      "prefill_s": 0.264,
+      "ttft_s": 0.313,
+      "total_s": 1.224,
+      "peak_gb": 6.14,
+      "split": {
+        "calls": 37,
+        "mb_out": 0.0,
+        "mb_in": 0.64,
+        "wait_s": 0.533,
+        "front_s": 0.512,
+        "net_s": 0.021
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 34.0
+    }
+  ],
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 34.3
+  },
+  "tg128": [
+    {
+      "name": "autoskip_count_0",
+      "ok": true,
+      "wall_s": 4.019,
+      "session": "c410cc125c604770",
+      "prompt_n": 80,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.271,
+      "ttft_s": 0.32,
+      "total_s": 4.018,
+      "peak_gb": 6.13,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 1.21,
+        "wait_s": 1.681,
+        "front_s": 1.601,
+        "net_s": 0.081
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 34.3
+    },
+    {
+      "name": "autoskip_count_1",
+      "ok": true,
+      "wall_s": 4.016,
+      "session": "13d67237fa1e421c",
+      "prompt_n": 80,
+      "gen_n": 128,
+      "how": "cold",
+      "prefill_s": 0.27,
+      "ttft_s": 0.318,
+      "total_s": 4.014,
+      "peak_gb": 6.14,
+      "split": {
+        "calls": 133,
+        "mb_out": 0.01,
+        "mb_in": 1.21,
+        "wait_s": 1.678,
+        "front_s": 1.602,
+        "net_s": 0.076
+      },
+      "speculate": null,
+      "content": "",
+      "write_tps": 34.4
+    }
+  ]
+}

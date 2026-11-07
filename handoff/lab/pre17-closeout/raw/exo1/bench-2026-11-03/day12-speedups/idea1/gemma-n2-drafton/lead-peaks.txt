@@ -1,0 +1,40 @@
+22:54:42 [mlx-worker] session bf4b08b80ed140ad: pipeline, reused 0/44, 128 generated, total 4.65s, peak 7.57 GB
+22:54:44 [mlx-worker] split speculate: accepted_frac 0.312 < break_even 0.350 over 48 tokens; guess-ahead off for this chat
+22:54:46 [mlx-worker] session c2b69ba4c3f4494b: pipeline, reused 0/46, 128 generated, total 8.15s, peak 7.57 GB
+22:54:48 [mlx-worker] split speculate: accepted_frac 0.229 < break_even 0.350 over 48 tokens; guess-ahead off for this chat
+22:54:50 [mlx-worker] session f214ada83c7042be: pipeline, reused 0/44, 128 generated, total 4.64s, peak 7.59 GB
+22:54:52 [mlx-worker] split speculate: accepted_frac 0.188 < break_even 0.350 over 48 tokens; guess-ahead off for this chat
+22:54:55 [mlx-worker] session 380c529cb06b4884: pipeline, reused 0/46, 128 generated, total 8.45s, peak 7.59 GB
+22:55:14 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:14 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:14 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:14 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:14 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:15 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:55:16 [mlx-worker] split speculate: accepted_frac 0.333 < break_even 0.350 over 48 tokens; guess-ahead off for this chat
+22:55:16 [mlx-worker] pipeline speculate trim failed: FrontError('lead cache not trimmable (need for speculative decoding)')
+22:56:16 [mlx-worker] session 7ab2b822583d4f3d: pipeline, reused 0/7129, 1536 generated, total 81.25s, peak 8.87 GB

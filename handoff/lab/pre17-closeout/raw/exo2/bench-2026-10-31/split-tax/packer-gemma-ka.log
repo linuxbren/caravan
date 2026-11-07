@@ -1,0 +1,10 @@
+21:22:55 [mlx-worker] packer GPU keepalive enabled (warms Metal while waiting for the lead)
+21:22:55 [mlx-worker] packer stage packer 1: layers 0-14 of 30 of mlx-community--gemma-4-26b-a4b-it-4bit loaded in 2.3s, 6.9 GB of layers; wired (0, 19069665280); persist=off
+21:22:55 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch 6266d7de8c11)
+21:23:06 [mlx-worker] lead connected from 169.254.4.161
+21:23:09 [mlx-worker] lead disconnected (peer closed the connection)
+21:23:10 [mlx-worker] lead connected from 169.254.4.161
+21:23:12 [mlx-worker] lead disconnected (peer closed the connection)
+21:23:41 [mlx-worker] lead connected from 169.254.4.161
+21:25:26 [mlx-worker] lead disconnected (peer closed the connection)
+21:25:30 [mlx-worker] packer 1 shutting down; saved 0 session(s) with unsaved turns

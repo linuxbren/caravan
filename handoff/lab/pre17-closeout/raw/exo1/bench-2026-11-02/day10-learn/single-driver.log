@@ -1,0 +1,11 @@
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+cleared /Users/brenden/.caravan/bench-2026-11-02/day10-learn/tuned-settings.json
+38107
+[single 0] tps=11.429 learn={'norm_tps': 8.857, 'winner': {'pipeline_chats': 1}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[single 1] tps=7.246 learn={'norm_tps': 5.457, 'winner': {'pipeline_chats': 1}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[single 2] tps=17.045 learn={'norm_tps': 14.146, 'winner': {'pipeline_chats': 1}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[single pair@3] agg=17.238 learn={'norm_tps': 22.751, 'winner': {'pipeline_chats': 1}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[single 5] tps=20.833 learn={'norm_tps': 18.717, 'winner': {'pipeline_chats': 1}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[single pair@6] agg=10.595 learn={'norm_tps': 9.118, 'winner': {'pipeline_chats': 1}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+wrote /Users/brenden/.caravan/bench-2026-11-02/day10-learn/llama-single/result.json

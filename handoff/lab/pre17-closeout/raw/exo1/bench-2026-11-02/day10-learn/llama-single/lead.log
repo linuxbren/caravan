@@ -1,0 +1,25 @@
+19:47:39 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+19:47:40 [mlx-worker] warm-up 0.15s
+19:47:40 [mlx-worker] loaded mlx-community--Meta-Llama-3.1-8B-Instruct-4bit (llama) in 0.6s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+19:47:40 [mlx-worker] auto pipeline: chats=1 (Day 9 memory guess; no saved winner yet)
+19:47:40 [mlx-worker] listening on http://127.0.0.1:8194
+19:47:40 [mlx-worker] restored d10-0 from disk: 41 tokens in 0.00s
+19:47:41 [mlx-worker] session d10-0: hit-disk, reused 41/42 tokens, read 1 in 0.00s, 2 generated, total 0.18s, peak 4.66 GB
+19:47:41 [mlx-worker] restored d10-1 from disk: 47 tokens in 0.01s
+19:47:41 [mlx-worker] session d10-1: hit-disk, reused 47/48 tokens, read 1 in 0.01s, 1 generated, total 0.14s, peak 4.66 GB
+19:47:41 [mlx-worker] restored d10-2 from disk: 39 tokens in 0.00s
+19:47:42 [mlx-worker] session d10-2: hit-disk, reused 39/40 tokens, read 1 in 0.01s, 6 generated, total 0.36s, peak 4.66 GB
+19:47:44 [mlx-worker] session d10-p3-1-1793670462299817000: cold, reused 0/43 tokens, read 43 in 0.29s, 44 generated, total 2.22s, peak 4.83 GB
+19:47:44 [mlx-worker] saved d10-0: 41 tokens, 5 MB in 0.00s
+19:47:44 [mlx-worker] evicted 1 session(s) from memory: d10-0
+19:47:44 [mlx-worker] session d10-p3-0-1793670462299268000: cold, reused 0/43 tokens, read 43 in 0.27s, 2 generated, total 0.44s, peak 4.86 GB
+19:47:45 [mlx-worker] ignoring d10-5.safetensors: cache layout differs -- starting cold
+19:47:46 [mlx-worker] saved d10-1: 47 tokens, 6 MB in 0.00s
+19:47:46 [mlx-worker] evicted 1 session(s) from memory: d10-1
+19:47:46 [mlx-worker] session d10-5: cold, reused 0/42 tokens, read 42 in 0.28s, 14 generated, total 0.96s, peak 4.86 GB
+19:47:46 [mlx-worker] saved d10-2: 39 tokens, 5 MB in 0.00s
+19:47:46 [mlx-worker] evicted 1 session(s) from memory: d10-2
+19:47:46 [mlx-worker] session d10-p6-1-1793670466351517000: cold, reused 0/44 tokens, read 44 in 0.28s, 2 generated, total 0.45s, peak 4.86 GB
+19:47:47 [mlx-worker] saved d10-p3-1-1793670462299817000: 42 tokens, 6 MB in 0.00s
+19:47:47 [mlx-worker] evicted 1 session(s) from memory: d10-p3-1-1793670462299817000
+19:47:47 [mlx-worker] session d10-p6-0-1793670466350937000: cold, reused 0/45 tokens, read 45 in 0.27s, 12 generated, total 0.86s, peak 4.86 GB

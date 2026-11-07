@@ -1,0 +1,22 @@
+23:28:55 [mlx-worker] split shared-prefix cache: on (Day 12 prototype)
+23:28:56 [mlx-worker] fuse kernels: off
+23:28:56 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+23:28:58 [mlx-worker] split lead: lead: layers 15-29 of 30 here, packer 1: layers 0-14 of 30 at 169.254.103.191:5560
+23:28:58 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+23:28:58 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+23:28:58 [mlx-worker] warm-up 0.13s
+23:28:58 [mlx-worker] loaded mlx-community--gemma-4-26b-a4b-it-4bit (gemma4) in 1.9s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+23:28:58 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)
+23:28:58 [mlx-worker] listening on http://127.0.0.1:8194
+23:29:22 [mlx-worker] shared-prefix stored n=4096 reserved=spc_p4096_a2547169a9e96ac9 bytes=210763776
+23:29:22 [mlx-worker] session 9b69661f512746f8: cold, reused 0/8925 tokens, read 8925 in 23.53s, 8 generated, total 23.91s, peak 8.7 GB
+23:29:22 [mlx-worker] session 16d0c0c7a7d449fa: lead reuses 4096, packer 1 0 -- both re-read cold
+23:29:22 [mlx-worker] shared-prefix hit n=0 key=spc_p4096_a2547169a9e96ac9 -> 16d0c0c7a7d449fa
+23:29:46 [mlx-worker] session 16d0c0c7a7d449fa: shared-prefix-split-resync, reused 0/8926 tokens, read 8926 in 23.49s, 8 generated, total 23.87s, peak 9.12 GB
+23:29:46 [mlx-worker] session 0067ea0923264fa8: lead reuses 4096, packer 1 0 -- both re-read cold
+23:29:46 [mlx-worker] shared-prefix hit n=0 key=spc_p4096_a2547169a9e96ac9 -> 0067ea0923264fa8
+23:30:10 [mlx-worker] session 0067ea0923264fa8: shared-prefix-split-resync, reused 0/8926 tokens, read 8926 in 23.51s, 8 generated, total 23.89s, peak 9.33 GB
+23:30:12 [mlx-worker] shared-prefix stored n=512 reserved=spc_p512_a62d7666862c7dcd bytes=93487104
+23:30:12 [mlx-worker] saved 9b69661f512746f8: 8924 tokens, 210 MB in 0.09s
+23:30:12 [mlx-worker] evicted 2 session(s) from memory: spc_p4096_a2547169a9e96ac9, 9b69661f512746f8
+23:30:13 [mlx-worker] session e8e558da95164470: cold, reused 0/824 tokens, read 824 in 1.91s, 8 generated, total 2.17s, peak 9.33 GB

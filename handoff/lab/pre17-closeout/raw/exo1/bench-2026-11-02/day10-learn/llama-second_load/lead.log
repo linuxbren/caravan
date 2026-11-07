@@ -1,0 +1,22 @@
+19:37:44 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+19:37:44 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers (llama))
+19:37:45 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.104.38:5560
+19:37:45 [mlx-worker] auto pipeline: chats=2 (headroom 3.1 GB after ~2.0 GB weights on 26 GB; Mini benches peak at 2 chats)
+19:37:45 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+19:37:45 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+19:37:45 [mlx-worker] warm-up 0.15s
+19:37:45 [mlx-worker] loaded mlx-community--Meta-Llama-3.1-8B-Instruct-4bit (llama) in 0.6s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+19:37:45 [mlx-worker] learned split: packer_layers=16 (saved winner for spanned)
+19:37:45 [mlx-worker] learned pipeline: chats=2 (saved winner for spanned)
+19:37:45 [mlx-worker] learned guess-ahead: off (saved winner for spanned)
+19:37:45 [mlx-worker] flag guess-ahead: off
+19:37:45 [mlx-worker] split pipeline chats=2 (idea 1; overlap packer/lead across sessions)
+19:37:45 [mlx-worker] listening on http://127.0.0.1:8194
+19:37:46 [mlx-worker] restored d10-0 from disk: 41 tokens in 0.00s
+19:37:46 [mlx-worker] session d10-0: pipeline, reused 41/42, 3 generated, total 0.14s, peak 2.38 GB
+19:37:46 [mlx-worker] restored d10-1 from disk: 47 tokens in 0.00s
+19:37:46 [mlx-worker] session d10-1: pipeline, reused 47/48, 2 generated, total 0.11s, peak 2.38 GB
+19:37:46 [mlx-worker] learn: re-check pipeline_chats=1 against current pipeline_chats=2
+19:37:47 [mlx-worker] restored d10-2 from disk: 39 tokens in 0.01s
+19:37:47 [mlx-worker] session d10-2: pipeline, reused 39/40, 7 generated, total 0.33s, peak 2.38 GB
+19:37:47 [mlx-worker] learn: keep packer_layers=16: best so far at 16.93 tok/s over 27 replies

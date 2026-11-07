@@ -1,0 +1,5 @@
+21:53:37 [mlx-worker] packer stage packer 1: layers 0-14 of 30 of mlx-community--gemma-4-26b-a4b-it-4bit loaded in 2.3s, 6.9 GB of layers; wired (0, 19069665280); persist=off
+21:53:37 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch 78e5d540c038)
+21:53:47 [mlx-worker] lead connected from 169.254.4.161
+21:55:25 [mlx-worker] lead disconnected (peer closed the connection)
+21:55:34 [mlx-worker] packer 1 shutting down; saved 0 session(s) with unsaved turns

@@ -1,0 +1,84 @@
+{
+  "tag": "A",
+  "speculate": {
+    "k": 3,
+    "from_draft": 26,
+    "accepted_frac": 0.406,
+    "verify_rounds": 38,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.2925,
+    "verify_s": 3.4074,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 38,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 26,
+      "n_gen": 48,
+      "accepted_frac": 0.542,
+      "break_even_frac": 0.8
+    }
+  }
+}
+{
+  "tag": "B",
+  "speculate": {
+    "k": 3,
+    "from_draft": 26,
+    "accepted_frac": 0.406,
+    "verify_rounds": 38,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.2888,
+    "verify_s": 3.4069,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 38,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 26,
+      "n_gen": 48,
+      "accepted_frac": 0.542,
+      "break_even_frac": 0.8
+    }
+  }
+}
+{
+  "tag": "C",
+  "speculate": {
+    "k": 3,
+    "from_draft": 26,
+    "accepted_frac": 0.406,
+    "verify_rounds": 38,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.291,
+    "verify_s": 3.4095,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 38,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 26,
+      "n_gen": 48,
+      "accepted_frac": 0.542,
+      "break_even_frac": 0.8
+    }
+  }
+}

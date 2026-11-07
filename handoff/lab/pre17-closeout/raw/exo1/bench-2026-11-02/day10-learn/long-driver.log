@@ -1,0 +1,18 @@
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+lead pid 37871
+[short 0] tps=21.127 learn={'norm_tps': 16.729, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[short 1] tps=19.608 learn={'norm_tps': 15.196, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[short 2] tps=21.472 learn={'norm_tps': 18.044, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'pipeline_chats', 'value': 1}, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 6}}
+[short pair@3] agg=17.747 learn={'norm_tps': 22.478, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': {'aggregate_tps': 17.819, 'n': 1}, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 4}}
+[short 5] tps=22.059 learn={'norm_tps': 19.972, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 3}}
+[short pair@6] agg=12.298 learn={'norm_tps': 16.968, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 1}}
+[long 0] tps=20.769 learn={'norm_tps': 20.262, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': {'aggregate_tps': 7.207, 'n': 1}, 'trial': None}
+[long 1] tps=20.316 learn={'norm_tps': 19.82, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[long 2] tps=20.579 learn={'norm_tps': 20.076, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'pipeline_chats', 'value': 1}, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 6}}
+[long 3] tps=22.041 learn={'norm_tps': 21.502, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 5}}
+[long 4] tps=21.739 learn={'norm_tps': 21.208, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': {'aggregate_tps': 7.781, 'n': 1}, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 4}}
+[long 5] tps=21.704 learn={'norm_tps': 21.174, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 3}}
+[long 6] tps=21.757 learn={'norm_tps': 21.225, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'pipeline_chats', 'value': 1}, 'pipeline_probe': {'aggregate_tps': 7.769, 'n': 1}, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 2}}
+[long 7] tps=21.774 learn={'norm_tps': 21.242, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 1}}
+wrote /Users/brenden/.caravan/bench-2026-11-02/day10-learn/llama-long_prompt/result.json

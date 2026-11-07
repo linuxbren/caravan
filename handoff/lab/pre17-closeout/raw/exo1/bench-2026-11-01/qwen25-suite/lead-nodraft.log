@@ -1,0 +1,35 @@
+16:35:36 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+16:35:36 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.104.38:5560
+16:35:36 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+16:35:37 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+16:35:37 [mlx-worker] warm-up 0.27s
+16:35:37 [mlx-worker] loaded mlx-community--Qwen2.5-14B-Instruct-4bit (qwen2) in 0.8s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+16:35:37 [mlx-worker] listening on http://127.0.0.1:8194
+16:35:38 [mlx-worker] session ebfceac417db46c3: cold, reused 0/35 tokens, read 35 in 0.51s, 3 generated, total 0.92s, peak 4.26 GB
+16:35:49 [mlx-worker] session 5e49189a67de4d68: cold, reused 0/42 tokens, read 42 in 0.51s, 128 generated, total 10.89s, peak 4.3 GB
+16:36:00 [mlx-worker] session 13f3aec92ac94a16: cold, reused 0/42 tokens, read 42 in 0.51s, 128 generated, total 10.91s, peak 4.32 GB
+16:36:04 [mlx-worker] session 54a4b6e9ceab4835: cold, reused 0/65 tokens, read 65 in 0.52s, 40 generated, total 3.90s, peak 4.4 GB
+16:36:08 [mlx-worker] saved ebfceac417db46c3: 34 tokens, 3 MB in 0.00s
+16:36:08 [mlx-worker] evicted 1 session(s) from memory: ebfceac417db46c3
+16:36:08 [mlx-worker] session fb261e882c4b4bc2: cold, reused 0/65 tokens, read 65 in 0.52s, 40 generated, total 3.90s, peak 4.42 GB
+16:36:10 [mlx-worker] saved 5e49189a67de4d68: 41 tokens, 4 MB in 0.00s
+16:36:10 [mlx-worker] evicted 1 session(s) from memory: 5e49189a67de4d68
+16:36:10 [mlx-worker] session 24f1c54af0d04560: cold, reused 0/72 tokens, read 72 in 0.76s, 15 generated, total 2.13s, peak 4.42 GB
+16:36:12 [mlx-worker] saved 13f3aec92ac94a16: 41 tokens, 4 MB in 0.00s
+16:36:12 [mlx-worker] evicted 1 session(s) from memory: 13f3aec92ac94a16
+16:36:12 [mlx-worker] session 1d65bc2572a54ea3: cold, reused 0/72 tokens, read 72 in 0.76s, 15 generated, total 2.13s, peak 4.42 GB
+16:36:18 [mlx-worker] saved 54a4b6e9ceab4835: 64 tokens, 6 MB in 0.00s
+16:36:18 [mlx-worker] evicted 1 session(s) from memory: 54a4b6e9ceab4835
+16:36:18 [mlx-worker] session 8df8455fab104dc5: cold, reused 0/58 tokens, read 58 in 0.52s, 58 generated, total 5.35s, peak 4.42 GB
+16:36:23 [mlx-worker] saved fb261e882c4b4bc2: 64 tokens, 6 MB in 0.00s
+16:36:23 [mlx-worker] evicted 1 session(s) from memory: fb261e882c4b4bc2
+16:36:23 [mlx-worker] session 47ed16b03dee4736: cold, reused 0/58 tokens, read 58 in 0.52s, 58 generated, total 5.35s, peak 4.42 GB
+16:36:24 [mlx-worker] saved 24f1c54af0d04560: 71 tokens, 7 MB in 0.00s
+16:36:24 [mlx-worker] evicted 1 session(s) from memory: 24f1c54af0d04560
+16:36:24 [mlx-worker] session 5a4218e810984253: cold, reused 0/42 tokens, read 42 in 0.51s, 1 generated, total 0.76s, peak 4.42 GB
+16:36:25 [mlx-worker] saved 1d65bc2572a54ea3: 71 tokens, 7 MB in 0.00s
+16:36:25 [mlx-worker] evicted 1 session(s) from memory: 1d65bc2572a54ea3
+16:36:25 [mlx-worker] session ad8c8f6f2d7c485b: cold, reused 0/38 tokens, read 38 in 0.51s, 1 generated, total 0.75s, peak 4.42 GB
+16:36:25 [mlx-worker] saved 8df8455fab104dc5: 57 tokens, 6 MB in 0.00s
+16:36:25 [mlx-worker] evicted 1 session(s) from memory: 8df8455fab104dc5
+16:36:25 [mlx-worker] session 79022680a9554222: cold, reused 0/40 tokens, read 40 in 0.51s, 2 generated, total 0.83s, peak 4.42 GB

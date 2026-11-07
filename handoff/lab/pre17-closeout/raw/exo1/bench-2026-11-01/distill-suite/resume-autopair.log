@@ -1,0 +1,356 @@
+=== RESUME_FROM_AUTOPAIR distill-suite Sun Nov  1 17:15:06 CST 2026 ===
+=== autopair + first-load gate ===
+cleared first_load for deepseek-r1-distill-qwen
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/distill-suite/lead-autopair.log
+17:15:12 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+17:15:12 [mlx-worker] split speculate: auto-pair deepseek-r1-distill-qwen -> Qwen2.5-0.5B-Instruct-4bit
+17:15:13 [mlx-worker] split speculate: draft Qwen2.5-0.5B-Instruct-4bit, k=3, vocab=exact remap=0 (idea 3 guess-ahead)
+17:15:13 [mlx-worker] split speculate: running first-load quality + speed gate...
+17:15:45 [mlx-worker] split speculate: first-load keep baseline=11.17 spec=13.98 break_even=0.255
+{
+  "tag": "autopair",
+  "mode": "suite",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 16.9,
+    "repeat": 17.4,
+    "code_edit": 17.9,
+    "code_cont": 21.2
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 16.9,
+      "speculate": {
+        "k": 3,
+        "from_draft": 58,
+        "accepted_frac": 0.453,
+        "verify_rounds": 70,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.8053,
+        "verify_s": 6.778,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 71,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 58,
+          "n_gen": 128,
+          "accepted_frac": 0.453,
+          "break_even_frac": 0.255
+        }
+      },
+      "peak_gb": 4.67,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 16.9,
+      "speculate": {
+        "k": 3,
+        "from_draft": 58,
+        "accepted_frac": 0.453,
+        "verify_rounds": 70,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.8078,
+        "verify_s": 6.7758,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 71,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 58,
+          "n_gen": 128,
+          "accepted_frac": 0.453,
+          "break_even_frac": 0.255
+        }
+      },
+      "peak_gb": 4.67,
+      "error": null
+    }
+  ],
+  "repeat": [
+    {
+      "write_tps": 17.4,
+      "speculate": {
+        "k": 3,
+        "from_draft": 59,
+        "accepted_frac": 0.461,
+        "verify_rounds": 69,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.7924,
+        "verify_s": 6.5959,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 69,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 59,
+          "n_gen": 128,
+          "accepted_frac": 0.461,
+          "break_even_frac": 0.255
+        }
+      }
+    },
+    {
+      "write_tps": 17.4,
+      "speculate": {
+        "k": 3,
+        "from_draft": 59,
+        "accepted_frac": 0.461,
+        "verify_rounds": 69,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.7929,
+        "verify_s": 6.5963,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 69,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 59,
+          "n_gen": 128,
+          "accepted_frac": 0.461,
+          "break_even_frac": 0.255
+        }
+      }
+    }
+  ],
+  "code_edit": [
+    {
+      "write_tps": 17.9,
+      "speculate": {
+        "k": 3,
+        "from_draft": 61,
+        "accepted_frac": 0.477,
+        "verify_rounds": 67,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.7765,
+        "verify_s": 6.4094,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 67,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 61,
+          "n_gen": 128,
+          "accepted_frac": 0.477,
+          "break_even_frac": 0.255
+        }
+      }
+    },
+    {
+      "write_tps": 17.9,
+      "speculate": {
+        "k": 3,
+        "from_draft": 61,
+        "accepted_frac": 0.477,
+        "verify_rounds": 67,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.7744,
+        "verify_s": 6.412,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 67,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 61,
+          "n_gen": 128,
+          "accepted_frac": 0.477,
+          "break_even_frac": 0.255
+        }
+      }
+    }
+  ],
+  "code_cont": [
+    {
+      "write_tps": 21.2,
+      "speculate": {
+        "k": 3,
+        "from_draft": 72,
+        "accepted_frac": 0.562,
+        "verify_rounds": 56,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.6562,
+        "verify_s": 5.4345,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 57,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 72,
+          "n_gen": 128,
+          "accepted_frac": 0.562,
+          "break_even_frac": 0.255
+        }
+      }
+    },
+    {
+      "write_tps": 21.2,
+      "speculate": {
+        "k": 3,
+        "from_draft": 72,
+        "accepted_frac": 0.562,
+        "verify_rounds": 56,
+        "prompt_lookup_n": null,
+        "draft_model": true,
+        "draft_s": 0.6548,
+        "verify_s": 5.4362,
+        "pl_hits": 0,
+        "pl_misses": 0,
+        "sources": {
+          "draft_model": 57,
+          "prompt_lookup": 0,
+          "none": 0
+        },
+        "shutoff": {
+          "disabled": false,
+          "reason": null,
+          "from_draft": 72,
+          "n_gen": 128,
+          "accepted_frac": 0.562,
+          "break_even_frac": 0.255
+        }
+      }
+    }
+  ]
+}
+17:15:12 [mlx-worker] split speculate: auto-pair deepseek-r1-distill-qwen -> Qwen2.5-0.5B-Instruct-4bit
+17:15:13 [mlx-worker] split speculate: running first-load quality + speed gate...
+17:15:45 [mlx-worker] split speculate: first-load keep baseline=11.17 spec=13.98 break_even=0.255
+/Users/brenden/.caravan/bench-2026-11-01/mini_suite_resume_from_autopair.sh: line 12: 22306 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+=== shut-off (be=0.80) ===
+raised be DeepSeek-R1-Distill-Qwen-14B-4bit::Qwen2.5-0.5B-Instruct-4bit
+LEAD_UP /Users/brenden/.caravan/bench-2026-11-01/distill-suite/lead-shutoff.log
+{
+  "tag": "A",
+  "speculate": {
+    "k": 3,
+    "from_draft": 26,
+    "accepted_frac": 0.406,
+    "verify_rounds": 38,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.2925,
+    "verify_s": 3.4074,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 38,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 26,
+      "n_gen": 48,
+      "accepted_frac": 0.542,
+      "break_even_frac": 0.8
+    }
+  }
+}
+{
+  "tag": "B",
+  "speculate": {
+    "k": 3,
+    "from_draft": 26,
+    "accepted_frac": 0.406,
+    "verify_rounds": 38,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.2888,
+    "verify_s": 3.4069,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 38,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 26,
+      "n_gen": 48,
+      "accepted_frac": 0.542,
+      "break_even_frac": 0.8
+    }
+  }
+}
+{
+  "tag": "C",
+  "speculate": {
+    "k": 3,
+    "from_draft": 26,
+    "accepted_frac": 0.406,
+    "verify_rounds": 38,
+    "prompt_lookup_n": null,
+    "draft_model": true,
+    "draft_s": 0.291,
+    "verify_s": 3.4095,
+    "pl_hits": 0,
+    "pl_misses": 0,
+    "sources": {
+      "draft_model": 38,
+      "prompt_lookup": 0,
+      "none": 0
+    },
+    "shutoff": {
+      "disabled": true,
+      "reason": "accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat",
+      "from_draft": 26,
+      "n_gen": 48,
+      "accepted_frac": 0.542,
+      "break_even_frac": 0.8
+    }
+  }
+}
+17:17:06 [mlx-worker] split speculate: first-load cache hit keep=1 break_even=0.800
+17:17:09 [mlx-worker] split speculate: accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat
+17:17:14 [mlx-worker] split speculate: accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat
+17:17:19 [mlx-worker] split speculate: accepted_frac 0.542 < break_even 0.800 over 48 tokens; guess-ahead off for this chat
+/Users/brenden/.caravan/bench-2026-11-01/mini_suite_resume_from_autopair.sh: line 12: 22515 Killed: 9               nohup $PY agent/mlx_worker.py --model "$M" --split-role lead --split-peer "$PEER" --split-packer-layers "$K" --host 127.0.0.1 --port 8194 "$@" > "$log" 2>&1
+restored be DeepSeek-R1-Distill-Qwen-14B-4bit::Qwen2.5-0.5B-Instruct-4bit 0.255
+=== SUITE_RESUME_DONE Sun Nov  1 17:17:25 CST 2026 ===

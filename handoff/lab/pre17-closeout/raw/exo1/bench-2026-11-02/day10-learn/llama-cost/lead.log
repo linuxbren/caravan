@@ -1,0 +1,74 @@
+19:40:09 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+19:40:09 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers (llama))
+19:40:09 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.104.38:5560
+19:40:09 [mlx-worker] auto pipeline: chats=2 (headroom 3.1 GB after ~2.0 GB weights on 26 GB; Mini benches peak at 2 chats)
+19:40:09 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+19:40:09 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+19:40:09 [mlx-worker] warm-up 0.15s
+19:40:09 [mlx-worker] loaded mlx-community--Meta-Llama-3.1-8B-Instruct-4bit (llama) in 0.6s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+19:40:09 [mlx-worker] flag guess-ahead: off
+19:40:09 [mlx-worker] split pipeline chats=2 (idea 1; overlap packer/lead across sessions)
+19:40:09 [mlx-worker] listening on http://127.0.0.1:8194
+19:40:10 [mlx-worker] restored d10-0 from disk: 41 tokens in 0.00s
+19:40:10 [mlx-worker] session d10-0: pipeline, reused 41/42, 3 generated, total 0.14s, peak 2.38 GB
+19:40:10 [mlx-worker] restored d10-1 from disk: 47 tokens in 0.01s
+19:40:10 [mlx-worker] session d10-1: pipeline, reused 47/48, 2 generated, total 0.10s, peak 2.38 GB
+19:40:11 [mlx-worker] session d10-p2-1-1793670011211895000: pipeline, reused 0/43, 3 generated, total 0.41s, peak 2.49 GB
+19:40:11 [mlx-worker] learn: queue split packer_layers=14 for next load (near current 16)
+19:40:12 [mlx-worker] session d10-p2-0-1793670011211345000: pipeline, reused 0/40, 7 generated, total 0.89s, peak 2.49 GB
+19:40:12 [mlx-worker] learn: keep packer_layers=16: best so far at 14.65 tok/s over 4 replies
+19:40:13 [mlx-worker] saved d10-0: 41 tokens, 3 MB in 0.00s
+19:40:13 [mlx-worker] saved d10-1: 47 tokens, 3 MB in 0.00s
+19:40:13 [mlx-worker] evicted 2 session(s) from memory: d10-0, d10-1
+19:40:13 [mlx-worker] session d10-p4-1-1793670012317720000: pipeline, reused 0/42, 15 generated, total 1.29s, peak 2.52 GB
+19:40:15 [mlx-worker] session d10-p4-0-1793670012317195000: pipeline, reused 0/43, 64 generated, total 3.17s, peak 2.52 GB
+19:40:16 [mlx-worker] saved d10-p2-1-1793670011211895000: 42 tokens, 3 MB in 0.00s
+19:40:16 [mlx-worker] saved d10-p2-0-1793670011211345000: 39 tokens, 3 MB in 0.00s
+19:40:16 [mlx-worker] evicted 2 session(s) from memory: d10-p2-1-1793670011211895000, d10-p2-0-1793670011211345000
+19:40:16 [mlx-worker] session d10-p6-1-1793670016023272000: pipeline, reused 0/44, 3 generated, total 0.42s, peak 2.52 GB
+19:40:17 [mlx-worker] session d10-p6-0-1793670016022720000: pipeline, reused 0/45, 13 generated, total 1.15s, peak 2.52 GB
+19:40:17 [mlx-worker] learn: keep pipeline_chats=2: best concurrent probe so far at 15.96 tok/s over 3 probes
+19:40:17 [mlx-worker] learn: keep packer_layers=16: best so far at 15.45 tok/s over 8 replies
+19:40:18 [mlx-worker] saved d10-p4-1-1793670012317720000: 41 tokens, 3 MB in 0.00s
+19:40:18 [mlx-worker] saved d10-p4-0-1793670012317195000: 42 tokens, 3 MB in 0.00s
+19:40:18 [mlx-worker] evicted 2 session(s) from memory: d10-p4-1-1793670012317720000, d10-p4-0-1793670012317195000
+19:40:18 [mlx-worker] session d10-p8-0-1793670017393063000: pipeline, reused 0/42, 8 generated, total 0.94s, peak 2.52 GB
+19:40:18 [mlx-worker] session d10-p8-1-1793670017393538000: pipeline, reused 0/44, 9 generated, total 0.71s, peak 2.52 GB
+19:40:18 [mlx-worker] learn: keep pipeline_chats=2: best concurrent probe so far at 16.17 tok/s over 4 probes
+19:40:19 [mlx-worker] saved d10-p6-1-1793670016023272000: 43 tokens, 3 MB in 0.00s
+19:40:19 [mlx-worker] saved d10-p6-0-1793670016022720000: 44 tokens, 3 MB in 0.00s
+19:40:19 [mlx-worker] evicted 2 session(s) from memory: d10-p6-1-1793670016023272000, d10-p6-0-1793670016022720000
+19:40:19 [mlx-worker] session d10-p10-0-1793670018624396000: pipeline, reused 0/45, 3 generated, total 0.42s, peak 2.53 GB
+19:40:19 [mlx-worker] learn: try pipeline_chats=1: exploring near pipeline_chats=2 (have 0/3 samples)
+19:40:19 [mlx-worker] session d10-p10-1-1793670018624912000: pipeline, reused 0/42, 8 generated, total 0.94s, peak 2.53 GB
+19:40:19 [mlx-worker] learn: keep packer_layers=16: best so far at 14.82 tok/s over 12 replies
+19:40:20 [mlx-worker] saved d10-p8-0-1793670017393063000: 41 tokens, 3 MB in 0.00s
+19:40:20 [mlx-worker] evicted 1 session(s) from memory: d10-p8-0-1793670017393063000
+19:40:20 [mlx-worker] session d10-p12-0-1793670019779848000: pipeline, reused 0/42, 3 generated, total 0.42s, peak 2.53 GB
+19:40:20 [mlx-worker] learn: keep pipeline_chats=2: need 3 concurrent probes each (have 4 vs challenger 1=1)
+19:40:20 [mlx-worker] saved d10-p8-1-1793670017393538000: 43 tokens, 3 MB in 0.00s
+19:40:20 [mlx-worker] evicted 1 session(s) from memory: d10-p8-1-1793670017393538000
+19:40:20 [mlx-worker] session d10-p12-1-1793670019780440000: pipeline, reused 0/48, 2 generated, total 0.37s, peak 2.53 GB
+19:40:21 [mlx-worker] saved d10-p10-0-1793670018624396000: 44 tokens, 3 MB in 0.00s
+19:40:21 [mlx-worker] evicted 1 session(s) from memory: d10-p10-0-1793670018624396000
+19:40:21 [mlx-worker] session d10-p14-1-1793670020786286000: pipeline, reused 0/43, 3 generated, total 0.42s, peak 2.53 GB
+19:40:21 [mlx-worker] learn: keep pipeline_chats=2: need 3 concurrent probes each (have 4 vs challenger 1=2)
+19:40:21 [mlx-worker] saved d10-p10-1-1793670018624912000: 41 tokens, 3 MB in 0.00s
+19:40:21 [mlx-worker] evicted 1 session(s) from memory: d10-p10-1-1793670018624912000
+19:40:21 [mlx-worker] session d10-p14-0-1793670020785715000: pipeline, reused 0/40, 7 generated, total 0.59s, peak 2.53 GB
+19:40:21 [mlx-worker] learn: keep packer_layers=16: best so far at 15.43 tok/s over 16 replies
+19:40:22 [mlx-worker] saved d10-p12-0-1793670019779848000: 41 tokens, 3 MB in 0.00s
+19:40:22 [mlx-worker] evicted 1 session(s) from memory: d10-p12-0-1793670019779848000
+19:40:22 [mlx-worker] session d10-p16-1-1793670022016130000: pipeline, reused 0/42, 15 generated, total 0.95s, peak 2.53 GB
+19:40:22 [mlx-worker] learn: keep pipeline_chats=2: concurrent 16.17 still ahead of 8.15 tok/s
+19:40:22 [mlx-worker] learn: end trial pipeline_chats=1; back to winner pipeline_chats=2
+19:40:25 [mlx-worker] saved d10-p12-1-1793670019780440000: 47 tokens, 3 MB in 0.00s
+19:40:25 [mlx-worker] evicted 1 session(s) from memory: d10-p12-1-1793670019780440000
+19:40:25 [mlx-worker] session d10-p16-0-1793670022015539000: pipeline, reused 0/43, 45 generated, total 2.28s, peak 2.53 GB
+19:40:26 [mlx-worker] saved d10-p14-1-1793670020786286000: 42 tokens, 3 MB in 0.00s
+19:40:26 [mlx-worker] saved d10-p14-0-1793670020785715000: 39 tokens, 3 MB in 0.00s
+19:40:26 [mlx-worker] evicted 2 session(s) from memory: d10-p14-1-1793670020786286000, d10-p14-0-1793670020785715000
+19:40:26 [mlx-worker] session d10-p18-1-1793670025467633000: pipeline, reused 0/44, 3 generated, total 0.71s, peak 2.53 GB
+19:40:26 [mlx-worker] learn: re-check pipeline_chats=1 against current pipeline_chats=2
+19:40:26 [mlx-worker] session d10-p18-0-1793670025467060000: pipeline, reused 0/45, 13 generated, total 0.87s, peak 2.53 GB
+19:40:26 [mlx-worker] learn: keep packer_layers=16: best so far at 15.72 tok/s over 20 replies

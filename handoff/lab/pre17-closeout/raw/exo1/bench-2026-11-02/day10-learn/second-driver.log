@@ -1,0 +1,7 @@
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+lead pid 37785
+[second 0] tps=20.979 learn={'norm_tps': 16.612, 'winner': {'guess_ahead': False, 'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[second 1] tps=19.231 learn={'norm_tps': 14.904, 'winner': {'guess_ahead': False, 'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'pipeline_chats', 'value': 1}, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 6}}
+[second 2] tps=21.605 learn={'norm_tps': 18.155, 'winner': {'guess_ahead': False, 'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': {'name': 'pipeline_chats', 'value': 1, 'remaining': 5}}
+wrote /Users/brenden/.caravan/bench-2026-11-02/day10-learn/llama-second_load/result.json

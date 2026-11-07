@@ -26,3 +26,16 @@ Audience: a friend into computers and AI who doesn’t know local-AI lingo (GGUF
 | LAB-2026-11-03-02 | 2026-11-03 | 2026-11-03_caravan-v0-to-v3-day12-scoreboard_v19.mp4 | Day 12 vs Caravan v0 / v1 / v2 / v2.1, gaps filled by the Nov 4 re-measure: writing per model (Qwen3 41.4→47.0→49.1→51.0 one Mini vs split 45.4 / guess 59.0 / two chats 72.5; Gemma 34.4→39.8→42.2→41.3 vs 37.9 / 58.4; GPT-OSS 35.9→35.3→37.4→36.5 vs split 31.9; Llama 21.2→23.1→23.6→23.3 vs 22.6 / 49.7 / 39.4), reading 512 (Day 12 split Qwen3 462.4, Gemma 425.9), first-word race on a new chat with a shared ~4k prompt (v2.1 10.1 s, split 9.5 s, shared start 5.2 s; bare v0/v1 servers ~0.4 s). Script: make_runtime_video_v19.py, data v19_data.json, chart /workspace/out/v19_chart.png | experiments.md v0/v1/v2/v2.1 + day12-speedups + v19-remeasure/RESULTS.md | 1:39 | draft; not posted |
 | LAB-2026-11-04-01 | 2026-11-04 | 2026-11-04_caravan-v3-day12-plus-v0-to-v3-scoreboard_v20.mp4 | Combined: the full Day 12 v18 video, then a bridge ("How far since Day 1?") and the v19 v0→v3 comparison per model (writing, reading, first-word race, takeaways). Built by concatenating v18 with make_runtime_video_v19.py --part compare | v18 + v19 sources | 3:01 | draft; not posted |
 | LAB-2026-11-04-02 | 2026-11-04 | 2026-11-04_caravan-v3-day13-gemma-shared-prefix-self-tune_v21.mp4 | Day 13 Gemma shared-prefix fix + self-tune: Gemma wait 11.8→1.55 s (~7.6×) with same answers; Qwen3/Llama paired 9.3→5.0 / 17.5→8.9; learn chose on for all three in 7 chats (Gemma setup ~23 s once); hit-time caveat (learn reused 4096 vs bench 2048). Payoff first 3s. Script: make_runtime_video_v21.py | experiments.md Day 13 + day13-gemma-prefix + day13-spc-learn | 1:15 | draft; not posted |
+
+## Pre-Day-17 archive closeout (Nov 6, America/Chicago)
+
+- **v22** — `2026-11-04_caravan-day1-to-day13-improvements_v22.mp4`,
+  2:09; original Day 1–13 recap, renderer `make_runtime_video_v22.py`,
+  `v22_data.json`, `stills_v22/`. Recovered from the untracked box files;
+  this archive does not assert that it was posted.
+- **Day 16 tour** — [original](../pre17-closeout/day16/caravan-day16-tour.mp4),
+  1:26.63; [Meadow](../pre17-closeout/day16/caravan-day16-tour-meadow.mp4),
+  1:48.50. Original stills and unposted caption draft live beside the videos.
+  These are UI demonstrations, not fresh benchmark results.
+- Full per-day accounting and known recovery gaps:
+  [Days 1–16 audit](../../../docs/DAY1-16-AUDIT.md).

@@ -1,0 +1,5 @@
+14:19:34 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+14:19:34 [mlx-worker] split speculate: auto-pair llama3 -> Llama-3.2-1B-Instruct-4bit
+14:19:35 [mlx-worker] split speculate: draft Llama-3.2-1B-Instruct-4bit, k=3, vocab=exact remap=0 (idea 3 guess-ahead)
+14:19:35 [mlx-worker] split speculate: running first-load quality + speed gate...
+14:19:40 [mlx-worker] split speculate: first-load keep baseline=19.29 spec=35.87 break_even=0.450

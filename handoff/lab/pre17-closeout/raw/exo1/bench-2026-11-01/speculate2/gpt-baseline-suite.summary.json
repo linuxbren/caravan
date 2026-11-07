@@ -1,0 +1,57 @@
+{
+  "tag": "baseline",
+  "mode": "suite",
+  "quality_ok": "3/3",
+  "medians": {
+    "count": 34.0,
+    "repeat": 33.9,
+    "code_edit": 33.2,
+    "code_cont": 34.0
+  },
+  "count": [
+    {
+      "ok": true,
+      "write_tps": 34.1,
+      "speculate": null,
+      "peak_gb": 6.13,
+      "error": null
+    },
+    {
+      "ok": true,
+      "write_tps": 34.0,
+      "speculate": null,
+      "peak_gb": 6.14,
+      "error": null
+    }
+  ],
+  "repeat": [
+    {
+      "write_tps": 33.9,
+      "speculate": null
+    },
+    {
+      "write_tps": 34.0,
+      "speculate": null
+    }
+  ],
+  "code_edit": [
+    {
+      "write_tps": 33.2,
+      "speculate": null
+    },
+    {
+      "write_tps": 33.4,
+      "speculate": null
+    }
+  ],
+  "code_cont": [
+    {
+      "write_tps": 34.0,
+      "speculate": null
+    },
+    {
+      "write_tps": 34.0,
+      "speculate": null
+    }
+  ]
+}

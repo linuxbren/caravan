@@ -1,0 +1,17 @@
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+cleared /Users/brenden/.caravan/bench-2026-11-02/day10-learn/tuned-settings.json
+lead pid 37818
+[before 0] tps=21.277 learn={'norm_tps': 16.848, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[before 1] tps=20.0 learn={'norm_tps': 15.5, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[before 2] tps=21.672 learn={'norm_tps': 18.211, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'packer_layers', 'value': 14}, 'pipeline_probe': None, 'trial': None}
+[before pair@3] agg=18.459 learn={'norm_tps': 19.59, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': {'aggregate_tps': 18.541, 'n': 2}, 'trial': None}
+[before 5] tps=22.157 learn={'norm_tps': 20.06, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+lead pid 37830
+[after 0] tps=22.059 learn={'norm_tps': 17.467, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'packer_layers', 'value': 14}, 'pipeline_probe': None, 'trial': None}
+[after 1] tps=21.978 learn={'norm_tps': 17.033, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[after 2] tps=22.152 learn={'norm_tps': 18.615, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[after 3] tps=22.222 learn={'norm_tps': 17.597, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+wrote /Users/brenden/.caravan/bench-2026-11-02/day10-learn/llama-pull_plug/result.json

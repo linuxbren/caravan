@@ -1,0 +1,20 @@
+23:24:29 [mlx-worker] split shared-prefix cache: on (Day 12 prototype)
+23:24:29 [mlx-worker] fuse kernels: off
+23:24:29 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+23:24:30 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.103.191:5560
+23:24:30 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+23:24:30 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+23:24:30 [mlx-worker] warm-up 0.16s
+23:24:30 [mlx-worker] loaded mlx-community--Meta-Llama-3.1-8B-Instruct-4bit (llama) in 0.6s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+23:24:30 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)
+23:24:30 [mlx-worker] listening on http://127.0.0.1:8194
+23:25:06 [mlx-worker] shared-prefix stored n=4096 reserved=spc_p4096_69d4f97bb8ce440a bytes=503316480
+23:25:07 [mlx-worker] session ae467c98913948fa: cold, reused 0/7672 tokens, read 7672 in 35.62s, 1 generated, total 35.78s, peak 3.3 GB
+23:25:07 [mlx-worker] shared-prefix hit n=4096 key=spc_p4096_69d4f97bb8ce440a -> f6056335e2144cf3
+23:25:25 [mlx-worker] session f6056335e2144cf3: shared-prefix-hit-memory, reused 4096/7673 tokens, read 3577 in 17.72s, 2 generated, total 17.94s, peak 4.34 GB
+23:25:25 [mlx-worker] shared-prefix hit n=4096 key=spc_p4096_69d4f97bb8ce440a -> 1a142938be924c87
+23:25:42 [mlx-worker] session 1a142938be924c87: shared-prefix-hit-memory, reused 4096/7673 tokens, read 3577 in 17.72s, 2 generated, total 17.94s, peak 4.84 GB
+23:25:46 [mlx-worker] shared-prefix stored n=512 reserved=spc_p512_5bdc6a4f5e8e9aac bytes=67108864
+23:25:46 [mlx-worker] saved ae467c98913948fa: 7671 tokens, 503 MB in 0.13s
+23:25:46 [mlx-worker] evicted 2 session(s) from memory: spc_p4096_69d4f97bb8ce440a, ae467c98913948fa
+23:25:46 [mlx-worker] session bd5a0b2ad4ef4dfa: cold, reused 0/843 tokens, read 843 in 3.58s, 1 generated, total 3.71s, peak 4.93 GB

@@ -1,0 +1,39 @@
+{
+  "models": {
+    "mlx-community--DeepSeek-R1-Distill-Qwen-14B-4bit:spanned": {
+      "hardware": "spanned",
+      "model": "mlx-community--DeepSeek-R1-Distill-Qwen-14B-4bit",
+      "pending_reload": {
+        "packer_layers": 22
+      },
+      "reply_n": 12,
+      "stats": {
+        "packer_layers:24": {
+          "mean": 12.32021144275411,
+          "n": 12,
+          "samples": [
+            12.298,
+            12.266,
+            12.295,
+            12.33,
+            12.287,
+            12.329,
+            12.306,
+            12.312,
+            12.354,
+            12.37,
+            12.333,
+            12.362
+          ],
+          "sum": 147.84253731304932
+        }
+      },
+      "updated_at": "2026-11-03T03:44:29Z",
+      "winner": {
+        "packer_layers": 24,
+        "pipeline_chats": 2
+      }
+    }
+  },
+  "version": 1
+}

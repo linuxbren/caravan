@@ -1,0 +1,100 @@
+{
+  "models": [
+    {
+      "tag": "qwen3-30b",
+      "path": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+      "exists": true,
+      "config_mtp_fields": {},
+      "config_soft_mentions": [],
+      "model_type": "qwen3_moe",
+      "architectures": [
+        "Qwen3MoeForCausalLM"
+      ],
+      "num_hidden_layers": 48,
+      "weight_mtp_like": [],
+      "weight_mtp_count": 0,
+      "verdict": "NO_MTP_IN_MLX_COPY"
+    },
+    {
+      "tag": "gemma4-26b",
+      "path": "/Users/brenden/.exo/models/mlx-community--gemma-4-26b-a4b-it-4bit",
+      "exists": true,
+      "config_mtp_fields": {},
+      "config_soft_mentions": [],
+      "model_type": "gemma4",
+      "architectures": [
+        "Gemma4ForConditionalGeneration"
+      ],
+      "num_hidden_layers": null,
+      "weight_mtp_like": [],
+      "weight_mtp_count": 0,
+      "verdict": "NO_MTP_IN_MLX_COPY"
+    },
+    {
+      "tag": "gpt-oss-20b",
+      "path": "/Users/brenden/.exo/models/mlx-community--gpt-oss-20b-MXFP4-Q8",
+      "exists": true,
+      "config_mtp_fields": {},
+      "config_soft_mentions": [],
+      "model_type": "gpt_oss",
+      "architectures": [
+        "GptOssForCausalLM"
+      ],
+      "num_hidden_layers": 24,
+      "weight_mtp_like": [],
+      "weight_mtp_count": 0,
+      "verdict": "NO_MTP_IN_MLX_COPY"
+    },
+    {
+      "tag": "llama31-8b",
+      "path": "/Users/brenden/.caravan/mlx-models/mlx-community--Meta-Llama-3.1-8B-Instruct-4bit",
+      "exists": true,
+      "config_mtp_fields": {},
+      "config_soft_mentions": [],
+      "model_type": "llama",
+      "architectures": [
+        "LlamaForCausalLM"
+      ],
+      "num_hidden_layers": 32,
+      "weight_mtp_like": [],
+      "weight_mtp_count": 0,
+      "verdict": "NO_MTP_IN_MLX_COPY"
+    },
+    {
+      "tag": "deepseek-r1-distill-qwen-14b",
+      "path": "/Users/brenden/.caravan/mlx-models/mlx-community--DeepSeek-R1-Distill-Qwen-14B-4bit",
+      "exists": true,
+      "config_mtp_fields": {},
+      "config_soft_mentions": [],
+      "model_type": "qwen2",
+      "architectures": [
+        "Qwen2ForCausalLM"
+      ],
+      "num_hidden_layers": 48,
+      "weight_mtp_like": [],
+      "weight_mtp_count": 0,
+      "verdict": "NO_MTP_IN_MLX_COPY"
+    },
+    {
+      "tag": "qwen25-14b",
+      "path": "/Users/brenden/.caravan/mlx-models/mlx-community--Qwen2.5-14B-Instruct-4bit",
+      "exists": true,
+      "config_mtp_fields": {},
+      "config_soft_mentions": [],
+      "model_type": "qwen2",
+      "architectures": [
+        "Qwen2ForCausalLM"
+      ],
+      "num_hidden_layers": 48,
+      "weight_mtp_like": [],
+      "weight_mtp_count": 0,
+      "verdict": "NO_MTP_IN_MLX_COPY"
+    }
+  ],
+  "notes": {
+    "qwen3": "Qwen3 MoE releases sometimes include MTP in original BF16; MLX 4-bit community quants usually strip them. Check Qwen/Qwen3-30B-A3B on HF for mtp_* tensors.",
+    "gpt-oss": "OpenAI gpt-oss MXFP4 MLX copy has no small draft sibling; MTP unknown \u2014 check openai/gpt-oss-20b original for eagle/mtp.",
+    "deepseek": "DeepSeek V3/R1-style MTP is the inspiration; we have DeepSeek-R1-Distill-Qwen-14B-4bit which is a distill and likely has NO MTP heads.",
+    "feasibility": "Cheap restore requires (1) original tensors present on HF, (2) matching hidden size / vocab with MLX copy, (3) attaching as draft in guess-ahead path. If MLX copy has zero mtp_* keys, must download original MTP-only tensors and quantize \u2014 medium overnight job, not a same-evening prototype unless tensors are small."
+  }
+}

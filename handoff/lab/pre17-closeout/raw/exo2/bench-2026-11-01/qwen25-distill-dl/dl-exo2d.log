@@ -1,0 +1,12 @@
+HF_TOKEN_SET False
+START mlx-community/Qwen2.5-14B-Instruct-4bit
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Fetching 12 files:  50%|█████     | 6/12 [17:18<17:18, 173.14s/it]Fetching 12 files:  58%|█████▊    | 7/12 [22:44<16:52, 202.43s/it]Fetching 12 files: 100%|██████████| 12/12 [22:44<00:00, 113.69s/it]
+DONE mlx-community/Qwen2.5-14B-Instruct-4bit size 8.321 GB
+START mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit
+Fetching 9 files:   0%|          | 0/9 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 9 files:  11%|█         | 1/9 [00:00<00:01,  5.68it/s]Fetching 9 files:  22%|██▏       | 2/9 [00:00<00:01,  5.46it/s]Fetching 9 files:  33%|███▎      | 3/9 [00:00<00:01,  5.77it/s]Fetching 9 files:  44%|████▍     | 4/9 [11:08<21:59, 263.86s/it]Fetching 9 files:  56%|█████▌    | 5/9 [15:31<17:34, 263.62s/it]Fetching 9 files:  67%|██████▋   | 6/9 [15:32<08:42, 174.08s/it]Fetching 9 files:  78%|███████▊  | 7/9 [15:32<03:54, 117.24s/it]Fetching 9 files:  89%|████████▉ | 8/9 [15:33<01:20, 80.40s/it] Fetching 9 files: 100%|██████████| 9/9 [15:34<00:00, 55.34s/it]Fetching 9 files: 100%|██████████| 9/9 [15:34<00:00, 103.78s/it]
+DONE mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit size 8.321 GB
+START mlx-community/Qwen2.5-0.5B-Instruct-4bit
+Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]Fetching 11 files:   9%|▉         | 1/11 [00:00<00:02,  4.65it/s]Fetching 11 files:  18%|█▊        | 2/11 [00:00<00:01,  4.75it/s]Fetching 11 files:  27%|██▋       | 3/11 [00:00<00:01,  4.80it/s]Fetching 11 files:  36%|███▋      | 4/11 [00:00<00:01,  4.73it/s]Fetching 11 files:  45%|████▌     | 5/11 [00:01<00:01,  3.50it/s]Fetching 11 files:  55%|█████▍    | 6/11 [00:29<00:48,  9.66s/it]Fetching 11 files:  64%|██████▎   | 7/11 [00:29<00:26,  6.61s/it]Fetching 11 files:  73%|███████▎  | 8/11 [00:29<00:13,  4.57s/it]Fetching 11 files:  82%|████████▏ | 9/11 [00:30<00:06,  3.30s/it]Fetching 11 files:  91%|█████████ | 10/11 [00:30<00:02,  2.34s/it]Fetching 11 files: 100%|██████████| 11/11 [00:30<00:00,  1.71s/it]Fetching 11 files: 100%|██████████| 11/11 [00:30<00:00,  2.79s/it]
+DONE mlx-community/Qwen2.5-0.5B-Instruct-4bit size 0.29 GB
+ALL_DONE

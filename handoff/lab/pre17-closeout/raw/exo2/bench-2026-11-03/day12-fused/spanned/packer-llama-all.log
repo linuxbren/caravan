@@ -1,0 +1,8 @@
+21:11:00 [mlx-worker] fuse kernels: force_fused on mlx_lm.models.base, mlx_lm.models.llama, mlx_lm.models.qwen2, mlx_lm.models.qwen3, mlx_lm.models.qwen3_moe, mlx_lm.models.gemma, mlx_lm.models.gpt_oss; metal_swiglu
+21:11:00 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers (llama))
+21:11:00 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+21:11:00 [mlx-worker] packer stage packer 1: layers 0-15 of 32 of mlx-community--Meta-Llama-3.1-8B-Instruct-4bit loaded in 0.1s, 2.0 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/mlx/prompt-cache
+21:11:00 [mlx-worker] packer stage listening on 169.254.103.191:5560 (epoch 6511bde83644)
+21:20:33 [mlx-worker] lead connected from 169.254.199.11
+21:20:48 [mlx-worker] saved b46db4a018204487: 38 tokens, 2 MB in 0.00s
+21:21:40 [mlx-worker] lead disconnected (peer closed the connection)

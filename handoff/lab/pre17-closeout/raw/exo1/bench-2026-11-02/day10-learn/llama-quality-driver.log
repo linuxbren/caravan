@@ -1,0 +1,17 @@
++ pkill -9 -f 'mlx_worker.py' || true
++ pkill -9 -f 'mlx_worker.py' || true
+cleared /Users/brenden/.caravan/bench-2026-11-02/day10-learn/tuned-settings.json
+lead pid 40391
+[quality 0] pass=True final='4' raw='4<|eot_id|>' reason='' ct=2 learn={'norm_tps': 17.033, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 1] pass=True final='the word "cat" spelled out is c-a-t.' raw='The word "cat" spelled out is C-A-T.<|eot_id|>' reason='' ct=13 learn={'norm_tps': 20.184, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 2] pass=True final='yes.' raw='Yes.<|eot_id|>' reason='' ct=3 learn={'norm_tps': 17.728, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': {'name': 'packer_layers', 'value': 14}, 'pipeline_probe': None, 'trial': None}
+[quality 3] pass=True final='4' raw='4<|eot_id|>' reason='' ct=2 learn={'norm_tps': 17.416, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 4] pass=True final='the word "cat" spelled out is c-a-t.' raw='The word "cat" spelled out is C-A-T.<|eot_id|>' reason='' ct=13 learn={'norm_tps': 19.975, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 5] pass=True final='yes.' raw='Yes.<|eot_id|>' reason='' ct=3 learn={'norm_tps': 17.214, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 6] pass=True final='4' raw='4<|eot_id|>' reason='' ct=2 learn={'norm_tps': 16.489, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 7] pass=True final='the word "cat" spelled out is c-a-t.' raw='The word "cat" spelled out is C-A-T.<|eot_id|>' reason='' ct=13 learn={'norm_tps': 20.045, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 8] pass=True final='yes.' raw='Yes.<|eot_id|>' reason='' ct=3 learn={'norm_tps': 17.467, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 9] pass=True final='4' raw='4<|eot_id|>' reason='' ct=2 learn={'norm_tps': 16.667, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 10] pass=True final='the word "cat" spelled out is c-a-t.' raw='The word "cat" spelled out is C-A-T.<|eot_id|>' reason='' ct=13 learn={'norm_tps': 19.975, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+[quality 11] pass=True final='yes.' raw='Yes.<|eot_id|>' reason='' ct=3 learn={'norm_tps': 17.09, 'winner': {'packer_layers': 16, 'pipeline_chats': 2}, 'explore': None, 'pipeline_probe': None, 'trial': None}
+wrote /Users/brenden/.caravan/bench-2026-11-02/day10-learn/llama-quality/result.json

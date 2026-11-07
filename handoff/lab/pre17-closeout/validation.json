@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-06 America/Chicago",
+  "manifest_entries": 688,
+  "unique_destinations": 608,
+  "manifest_hash_size_failures": [],
+  "json_jsonl_valid_files": 283,
+  "original_json_parse_issues": [],
+  "videos": [
+    {
+      "path": "handoff/lab/pre17-closeout/day16/caravan-day16-tour.mp4",
+      "exit_code": 0,
+      "probe": {
+        "format": {
+          "duration": "86.633333",
+          "size": "3347455"
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "path": "handoff/lab/pre17-closeout/day16/caravan-day16-tour-meadow.mp4",
+      "exit_code": 0,
+      "probe": {
+        "format": {
+          "duration": "108.500000",
+          "size": "4275254"
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "path": "handoff/lab/videos/2026-11-04_caravan-day1-to-day13-improvements_v22.mp4",
+      "exit_code": 0,
+      "probe": {
+        "format": {
+          "duration": "129.000000",
+          "size": "3037879"
+        }
+      },
+      "stderr": ""
+    }
+  ],
+  "new_benchmarks_run": 0,
+  "model_or_web_restarts": 0,
+  "git_diff_check": {
+    "exit_code": 2,
+    "reason": "Nine original Markdown trailing-whitespace/hard-line-break findings in two recovered source notes; originals preserved byte-for-byte. New docs clean."
+  }
+}

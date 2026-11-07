@@ -1,0 +1,13 @@
+22:35:43 [mlx-worker] fuse kernels: off
+22:35:43 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+22:35:44 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.103.191:5560
+22:35:44 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+22:35:44 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+22:35:44 [mlx-worker] warm-up 0.17s
+22:35:44 [mlx-worker] loaded mlx-community--Meta-Llama-3.1-8B-Instruct-4bit (llama) in 0.6s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+22:35:44 [mlx-worker] split pipeline chats=1 (idea 1; overlap packer/lead across sessions)
+22:35:44 [mlx-worker] listening on http://127.0.0.1:8194
+22:35:46 [mlx-worker] session 1c52d2c830604f3a: pipeline, reused 0/39, 8 generated, total 0.64s, peak 2.42 GB
+22:35:52 [mlx-worker] session 5d22683fae7240d8: pipeline, reused 0/60, 128 generated, total 5.94s, peak 2.51 GB
+22:35:58 [mlx-worker] session 104016c7ab4948b5: pipeline, reused 0/59, 128 generated, total 5.96s, peak 2.52 GB
+22:36:24 [mlx-worker] session da316347e8144201: pipeline, reused 0/5694, 19 generated, total 26.50s, peak 3.24 GB

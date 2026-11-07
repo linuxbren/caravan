@@ -1,0 +1,21 @@
+19:39:47 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+19:39:47 [mlx-worker] auto split: packer_layers=16 (equal RAM ~26/26 GB; balanced cut K=16 for 32 layers (llama))
+19:39:47 [mlx-worker] learn: want packer_layers=14 (queued from last run), packer has K=16; keeping loaded K=16 (restart packer without --split-packer-layers to try 14)
+19:39:47 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.104.38:5560
+19:39:47 [mlx-worker] auto pipeline: chats=2 (headroom 3.1 GB after ~2.0 GB weights on 26 GB; Mini benches peak at 2 chats)
+19:39:47 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+19:39:47 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+19:39:47 [mlx-worker] warm-up 0.14s
+19:39:47 [mlx-worker] loaded mlx-community--Meta-Llama-3.1-8B-Instruct-4bit (llama) in 0.6s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+19:39:47 [mlx-worker] learned split: packer_layers=16 (saved winner for spanned)
+19:39:47 [mlx-worker] learned pipeline: chats=2 (saved winner for spanned)
+19:39:47 [mlx-worker] try split: packer_layers=14 (queued from last run)
+19:39:47 [mlx-worker] flag guess-ahead: off
+19:39:47 [mlx-worker] split pipeline chats=2 (idea 1; overlap packer/lead across sessions)
+19:39:47 [mlx-worker] listening on http://127.0.0.1:8194
+19:39:49 [mlx-worker] session d10b-0: pipeline, reused 0/42, 3 generated, total 0.42s, peak 2.43 GB
+19:39:49 [mlx-worker] learn: queue split packer_layers=14 for next load (near current 16)
+19:39:49 [mlx-worker] session d10b-1: pipeline, reused 0/48, 2 generated, total 0.38s, peak 2.47 GB
+19:39:49 [mlx-worker] learn: keep packer_layers=16: best so far at 17.60 tok/s over 8 replies
+19:39:50 [mlx-worker] session d10b-2: pipeline, reused 0/40, 7 generated, total 0.61s, peak 2.47 GB
+19:39:51 [mlx-worker] session d10b-3: pipeline, reused 0/43, 3 generated, total 0.42s, peak 2.48 GB

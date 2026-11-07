@@ -1,0 +1,211 @@
+[rc=0]
+[rc=0]
+[rc=0]
+[rc=0]
+=== start gemma-base-off K=even pipe=1 01:25:03
+01:25:08 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+01:25:08 [mlx-worker] packer stage packer 1: layers 0-14 of 30 of mlx-community--gemma-4-26b-a4b-it-4bit loaded in 2.3s, 6.9 GB of layers; wired (0, 19069665280); persist=off
+01:25:08 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch f162ae40dbc6)
+[rc=0]
+01:25:13 [mlx-worker] split lead: lead: layers 15-29 of 30 here, packer 1: layers 0-14 of 30 at 169.254.104.38:5560
+01:25:13 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+01:25:13 [mlx-worker] warm-up 0.14s
+01:25:13 [mlx-worker] loaded mlx-community--gemma-4-26b-a4b-it-4bit (gemma4) in 1.7s; sessions<= 8, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=off
+01:25:13 [mlx-worker] listening on http://127.0.0.1:8194
+[rc=0]
+=== baseline gemma-base-off 01:25:14
+{"name": "tg128_1", "ok": true, "wall_s": 3.697, "prompt_n": 44, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.288, "ttft_s": 0.337, "total_s": 3.695, "peak_gb": 7.41, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 0.98, "wait_s": 1.677, "front_s": 1.602, "net_s": 0.075}, "content": "", "read_tps": 152.8, "write_tps": 37.8}
+{"name": "calib", "ok": true, "wall_s": 12.339, "prompt_n": 4862, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 12.259, "ttft_s": 12.327, "total_s": 12.335, "peak_gb": 8.67, "split": {"calls": 8, "mb_out": 0.06, "mb_in": 27.39, "wait_s": 6.385, "front_s": 6.367, "net_s": 0.018}, "content": "<|channel>", "read_tps": 396.6}
+{"name": "pp512_0", "ok": true, "wall_s": 1.175, "prompt_n": 475, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 1.112, "ttft_s": 1.165, "total_s": 1.172, "peak_gb": 8.67, "split": {"calls": 6, "mb_out": 0.01, "mb_in": 2.68, "wait_s": 0.604, "front_s": 0.599, "net_s": 0.005}, "content": "<|channel>", "read_tps": 427.2}
+{"name": "pp512_1", "ok": true, "wall_s": 1.174, "prompt_n": 476, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 1.113, "ttft_s": 1.165, "total_s": 1.172, "peak_gb": 8.67, "split": {"calls": 6, "mb_out": 0.01, "mb_in": 2.69, "wait_s": 0.603, "front_s": 0.598, "net_s": 0.005}, "content": "<|channel>", "read_tps": 427.7}
+{"name": "pp4096_0", "ok": true, "wall_s": 10.236, "prompt_n": 4048, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 10.167, "ttft_s": 10.225, "total_s": 10.232, "peak_gb": 8.9, "split": {"calls": 7, "mb_out": 0.05, "mb_in": 22.8, "wait_s": 5.297, "front_s": 5.282, "net_s": 0.014}, "content": "<|channel>", "read_tps": 398.2}
+{"name": "pp4096_1", "ok": true, "wall_s": 10.246, "prompt_n": 4052, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 10.177, "ttft_s": 10.236, "total_s": 10.243, "peak_gb": 9.05, "split": {"calls": 7, "mb_out": 0.05, "mb_in": 22.83, "wait_s": 5.3, "front_s": 5.287, "net_s": 0.014}, "content": "<|channel>", "read_tps": 398.2}
+{"name": "quality", "ok": true, "wall_s": 40.398, "prompt_n": 7129, "gen_n": 565, "cached": 0, "how": "cold", "prefill_s": 18.472, "ttft_s": 18.546, "total_s": 40.376, "peak_gb": 9.27, "split": {"calls": 574, "mb_out": 0.13, "mb_in": 43.38, "wait_s": 18.95, "front_s": 18.617, "net_s": 0.333}, "content": "1) ORCHID-7419\n2) 391\n3) Canberra", "read_tps": 385.9, "write_tps": 25.8}
+{"name": "quality_score", "score": 3, "detail": {"code": true, "mult": true, "capital": true}, "score_incl_reasoning": 3, "finish": 565}
+[rc=0]
+[rc=0]
+[rc=0]
+=== start gptoss-base-off K=even pipe=1 01:26:47
+01:26:51 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+01:26:51 [mlx-worker] packer stage packer 1: layers 0-11 of 24 of mlx-community--gpt-oss-20b-MXFP4-Q8 loaded in 2.0s, 5.4 GB of layers; wired (0, 19069665280); persist=off
+01:26:51 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch bb99200b72c2)
+[rc=0]
+01:26:56 [mlx-worker] split lead: lead: layers 12-23 of 24 here, packer 1: layers 0-11 of 24 at 169.254.104.38:5560
+01:26:56 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+01:26:56 [mlx-worker] warm-up 0.18s
+01:26:56 [mlx-worker] loaded mlx-community--gpt-oss-20b-MXFP4-Q8 (gpt_oss) in 2.7s; sessions<= 8, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=off
+01:26:56 [mlx-worker] listening on http://127.0.0.1:8194
+[rc=0]
+=== baseline gptoss-base-off 01:26:57
+{"name": "tg128_1", "ok": true, "wall_s": 4.043, "prompt_n": 92, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.288, "ttft_s": 0.337, "total_s": 4.041, "peak_gb": 6.15, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 1.28, "wait_s": 1.687, "front_s": 1.608, "net_s": 0.079}, "content": "", "read_tps": 319.4, "write_tps": 34.3}
+{"name": "calib", "ok": true, "wall_s": 8.902, "prompt_n": 3930, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 8.834, "ttft_s": 8.887, "total_s": 8.898, "peak_gb": 6.78, "split": {"calls": 7, "mb_out": 0.04, "mb_in": 22.64, "wait_s": 4.647, "front_s": 4.632, "net_s": 0.015}, "content": "", "read_tps": 444.9}
+{"name": "pp512_0", "ok": true, "wall_s": 1.257, "prompt_n": 540, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 1.195, "ttft_s": 1.245, "total_s": 1.255, "peak_gb": 6.78, "split": {"calls": 6, "mb_out": 0.01, "mb_in": 3.12, "wait_s": 0.651, "front_s": 0.645, "net_s": 0.006}, "content": "", "read_tps": 451.9}
+{"name": "pp512_1", "ok": true, "wall_s": 1.26, "prompt_n": 542, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 1.199, "ttft_s": 1.248, "total_s": 1.258, "peak_gb": 6.78, "split": {"calls": 6, "mb_out": 0.01, "mb_in": 3.13, "wait_s": 0.65, "front_s": 0.645, "net_s": 0.005}, "content": "", "read_tps": 452.0}
+{"name": "pp4096_0", "ok": true, "wall_s": 9.188, "prompt_n": 4047, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 9.12, "ttft_s": 9.173, "total_s": 9.183, "peak_gb": 6.88, "split": {"calls": 7, "mb_out": 0.04, "mb_in": 23.32, "wait_s": 4.793, "front_s": 4.779, "net_s": 0.014}, "content": "", "read_tps": 443.8}
+{"name": "pp4096_1", "ok": true, "wall_s": 9.186, "prompt_n": 4046, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 9.118, "ttft_s": 9.171, "total_s": 9.181, "peak_gb": 6.93, "split": {"calls": 7, "mb_out": 0.04, "mb_in": 23.31, "wait_s": 4.794, "front_s": 4.78, "net_s": 0.014}, "content": "", "read_tps": 443.7}
+{"name": "quality", "ok": true, "wall_s": 15.828, "prompt_n": 5713, "gen_n": 85, "cached": 0, "how": "cold", "prefill_s": 13.111, "ttft_s": 13.163, "total_s": 15.814, "peak_gb": 7.0, "split": {"calls": 93, "mb_out": 0.06, "mb_in": 33.41, "wait_s": 7.986, "front_s": 7.918, "net_s": 0.068}, "content": "ORCHID-7419  \n391  \nCanberra", "read_tps": 435.7, "write_tps": 31.7}
+{"name": "quality_score", "score": 3, "detail": {"code": true, "mult": true, "capital": true}, "score_incl_reasoning": 3, "finish": 85}
+[rc=0]
+[rc=0]
+[rc=0]
+=== start qwen-base-off K=even pipe=1 01:28:01
+01:28:06 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+01:28:06 [mlx-worker] packer stage packer 1: layers 0-23 of 48 of mlx-community--Qwen3-30B-A3B-4bit loaded in 2.7s, 8.4 GB of layers; wired (0, 19069665280); persist=off
+01:28:06 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch d3aa44514bd2)
+[rc=0]
+01:28:12 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.104.38:5560
+01:28:12 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+01:28:12 [mlx-worker] warm-up 0.14s
+01:28:12 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 3.2s; sessions<= 8, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=off
+01:28:12 [mlx-worker] listening on http://127.0.0.1:8194
+[rc=0]
+=== baseline qwen-base-off 01:28:13
+{"name": "tg128_1", "ok": true, "wall_s": 3.102, "prompt_n": 42, "gen_n": 128, "cached": 0, "how": "cold", "prefill_s": 0.282, "ttft_s": 0.322, "total_s": 3.1, "peak_gb": 8.7, "split": {"calls": 133, "mb_out": 0.01, "mb_in": 0.71, "wait_s": 1.49, "front_s": 1.417, "net_s": 0.073}, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-four, thirty-five, thirty-six, thirty-seven, thirty-eight, thirty-nine, forty,", "read_tps": 148.9, "write_tps": 45.7}
+{"name": "calib", "ok": true, "wall_s": 11.488, "prompt_n": 4712, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 11.427, "ttft_s": 11.478, "total_s": 11.483, "peak_gb": 9.49, "split": {"calls": 8, "mb_out": 0.04, "mb_in": 19.3, "wait_s": 5.872, "front_s": 5.858, "net_s": 0.015}, "content": "", "read_tps": 412.4}
+{"name": "pp512_0", "ok": true, "wall_s": 1.082, "prompt_n": 478, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 1.034, "ttft_s": 1.076, "total_s": 1.08, "peak_gb": 9.49, "split": {"calls": 6, "mb_out": 0.0, "mb_in": 1.96, "wait_s": 0.552, "front_s": 0.547, "net_s": 0.005}, "content": "", "read_tps": 462.3}
+{"name": "pp512_1", "ok": true, "wall_s": 1.088, "prompt_n": 479, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 1.04, "ttft_s": 1.082, "total_s": 1.086, "peak_gb": 9.49, "split": {"calls": 6, "mb_out": 0.0, "mb_in": 1.97, "wait_s": 0.559, "front_s": 0.547, "net_s": 0.011}, "content": "", "read_tps": 460.6}
+{"name": "pp4096_0", "ok": true, "wall_s": 9.487, "prompt_n": 4042, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 9.424, "ttft_s": 9.478, "total_s": 9.483, "peak_gb": 9.76, "split": {"calls": 7, "mb_out": 0.03, "mb_in": 16.56, "wait_s": 4.85, "front_s": 4.835, "net_s": 0.015}, "content": "", "read_tps": 428.9}
+{"name": "pp4096_1", "ok": true, "wall_s": 9.49, "prompt_n": 4045, "gen_n": 1, "cached": 0, "how": "cold", "prefill_s": 9.426, "ttft_s": 9.48, "total_s": 9.485, "peak_gb": 9.96, "split": {"calls": 7, "mb_out": 0.03, "mb_in": 16.57, "wait_s": 4.851, "front_s": 4.839, "net_s": 0.012}, "content": "", "read_tps": 429.1}
+{"name": "quality", "ok": true, "wall_s": 19.305, "prompt_n": 6918, "gen_n": 25, "cached": 0, "how": "cold", "prefill_s": 18.501, "ttft_s": 18.556, "total_s": 19.289, "peak_gb": 10.29, "split": {"calls": 34, "mb_out": 0.06, "mb_in": 28.45, "wait_s": 9.843, "front_s": 9.808, "net_s": 0.035}, "content": "1) ORCHID-7419  \n2) 391  \n3) Canberra", "read_tps": 373.9, "write_tps": 32.7}
+{"name": "quality_score", "score": 3, "detail": {"code": true, "mult": true, "capital": true}, "score_incl_reasoning": 3, "finish": 25}
+[rc=0]
+[rc=0]
+[rc=0]
+=== BASELINES DONE 01:29:20
+=== start gemma-pipe K=16 pipe=3 01:29:20
+01:29:25 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+01:29:25 [mlx-worker] packer stage packer 1: layers 0-15 of 30 of mlx-community--gemma-4-26b-a4b-it-4bit loaded in 2.4s, 7.3 GB of layers; wired (0, 19069665280); persist=off
+01:29:25 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch f29d715384b2)
+[rc=0]
+01:29:32 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+01:29:32 [mlx-worker] warm-up 0.14s
+01:29:32 [mlx-worker] loaded mlx-community--gemma-4-26b-a4b-it-4bit (gemma4) in 3.6s; sessions<= 8, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=off
+01:29:32 [mlx-worker] split pipeline chats=3 (idea 1; overlap packer/lead across sessions)
+01:29:32 [mlx-worker] listening on http://127.0.0.1:8194
+[rc=0]
+=== pipe N=1 gemma-pipe 01:29:33
+{"name": "warm", "ok": true, "wall_s": 0.454, "session": "71a7140b76104640", "prompt_n": 21, "gen_n": 8, "how": "cold", "prefill_s": 0.16, "ttft_s": 0.192, "total_s": 0.379, "peak_gb": 6.9, "split": {"calls": 17, "mb_out": 0.0, "mb_in": 0.25, "wait_s": 0.36, "front_s": 0.253, "net_s": 0.108}, "pipeline": null, "content": "", "write_tps": 37.4}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 3.694, "session": "df9d2b04138e4c90", "prompt_n": 46, "gen_n": 128, "how": "cold", "prefill_s": 0.297, "ttft_s": 0.327, "total_s": 3.691, "peak_gb": 6.95, "split": {"calls": 150, "mb_out": 0.01, "mb_in": 1.23, "wait_s": 2.072, "front_s": 1.889, "net_s": 0.183}, "pipeline": null, "content": "", "write_tps": 37.8}
+{"name": "tg128_w0_aggregate", "n": 1, "ok_n": 1, "wall_s": 3.695, "gen_tokens_sum": 128, "per_chat_write_tps": [37.8], "per_chat_ttft_s": [0.327], "per_chat_peak_gb": [6.95], "aggregate_write_tps_wall": 37.4, "aggregate_write_tps_sum": 37.8}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 3.754, "session": "f5eb7571dacb4a2c", "prompt_n": 44, "gen_n": 128, "how": "cold", "prefill_s": 0.287, "ttft_s": 0.317, "total_s": 3.751, "peak_gb": 6.95, "split": {"calls": 283, "mb_out": 0.02, "mb_in": 2.21, "wait_s": 3.845, "front_s": 3.588, "net_s": 0.257}, "pipeline": null, "content": "", "write_tps": 37.0}
+{"name": "tg128_w1_aggregate", "n": 1, "ok_n": 1, "wall_s": 3.754, "gen_tokens_sum": 128, "per_chat_write_tps": [37.0], "per_chat_ttft_s": [0.317], "per_chat_peak_gb": [6.95], "aggregate_write_tps_wall": 36.6, "aggregate_write_tps_sum": 37.0}
+{"name": "quality", "ok": true, "wall_s": 40.617, "session": "26eade373fb541b8", "prompt_n": 7129, "gen_n": 566, "how": "cold", "prefill_s": 18.489, "ttft_s": 18.534, "total_s": 40.61, "peak_gb": 8.21, "split": {"calls": 857, "mb_out": 0.16, "mb_in": 45.58, "wait_s": 23.852, "front_s": 23.251, "net_s": 0.601}, "pipeline": null, "content": "1) ORCHID-7419\n2) 391\n3) Canberra<turn|>", "write_tps": 25.6}
+[rc=0]
+=== pipe N=2 gemma-pipe 01:30:23
+{"name": "warm", "ok": true, "wall_s": 0.473, "session": "75fa6bb5ad4d4367", "prompt_n": 21, "gen_n": 8, "how": "cold", "prefill_s": 0.159, "ttft_s": 0.188, "total_s": 0.374, "peak_gb": 8.21, "split": {"calls": 870, "mb_out": 0.16, "mb_in": 45.74, "wait_s": 24.119, "front_s": 23.425, "net_s": 0.695}, "pipeline": null, "content": "", "write_tps": 37.6}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 4.429, "session": "bff6f70372eb4ca4", "prompt_n": 43, "gen_n": 128, "how": "cold", "prefill_s": 0.283, "ttft_s": 0.615, "total_s": 4.425, "peak_gb": 8.21, "split": {"calls": 1135, "mb_out": 0.18, "mb_in": 47.69, "wait_s": 28.282, "front_s": 26.73, "net_s": 1.552}, "pipeline": null, "content": "", "write_tps": 33.3}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 4.444, "session": "6d3e808c883345f5", "prompt_n": 47, "gen_n": 128, "how": "cold", "prefill_s": 0.301, "ttft_s": 0.333, "total_s": 4.143, "peak_gb": 8.21, "split": {"calls": 1136, "mb_out": 0.18, "mb_in": 47.69, "wait_s": 28.282, "front_s": 26.73, "net_s": 1.552}, "pipeline": null, "content": "", "write_tps": 33.3}
+{"name": "tg128_w0_aggregate", "n": 2, "ok_n": 2, "wall_s": 4.445, "gen_tokens_sum": 256, "per_chat_write_tps": [33.3, 33.3], "per_chat_ttft_s": [0.615, 0.333], "per_chat_peak_gb": [8.21, 8.21], "aggregate_write_tps_wall": 61.0, "aggregate_write_tps_sum": 66.6}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 4.45, "session": "c46b1c3c5e2340d1", "prompt_n": 47, "gen_n": 128, "how": "cold", "prefill_s": 0.301, "ttft_s": 0.627, "total_s": 4.445, "peak_gb": 8.21, "split": {"calls": 1402, "mb_out": 0.2, "mb_in": 49.67, "wait_s": 32.459, "front_s": 30.014, "net_s": 2.445}, "pipeline": null, "content": "", "write_tps": 33.3}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 4.464, "session": "6848a48e4edb4e75", "prompt_n": 46, "gen_n": 128, "how": "cold", "prefill_s": 0.296, "ttft_s": 0.328, "total_s": 4.146, "peak_gb": 8.21, "split": {"calls": 1403, "mb_out": 0.2, "mb_in": 49.67, "wait_s": 32.46, "front_s": 30.014, "net_s": 2.445}, "pipeline": null, "content": "", "write_tps": 33.3}
+{"name": "tg128_w1_aggregate", "n": 2, "ok_n": 2, "wall_s": 4.465, "gen_tokens_sum": 256, "per_chat_write_tps": [33.3, 33.3], "per_chat_ttft_s": [0.627, 0.328], "per_chat_peak_gb": [8.21, 8.21], "aggregate_write_tps_wall": 60.9, "aggregate_write_tps_sum": 66.6}
+{"name": "quality", "ok": true, "wall_s": 40.535, "session": "b6d7ddeba1d64b88", "prompt_n": 7129, "gen_n": 566, "how": "cold", "prefill_s": 18.491, "ttft_s": 18.536, "total_s": 40.528, "peak_gb": 8.43, "split": {"calls": 1978, "mb_out": 0.34, "mb_in": 93.04, "wait_s": 52.448, "front_s": 49.667, "net_s": 2.782}, "pipeline": null, "content": "1) ORCHID-7419\n2) 391\n3) Canberra<turn|>", "write_tps": 25.7}
+[rc=0]
+=== pipe N=3 gemma-pipe 01:31:14
+{"name": "warm", "ok": true, "wall_s": 0.491, "session": "627e9c00a34d40d5", "prompt_n": 21, "gen_n": 8, "how": "cold", "prefill_s": 0.155, "ttft_s": 0.185, "total_s": 0.373, "peak_gb": 8.43, "split": {"calls": 1992, "mb_out": 0.34, "mb_in": 93.2, "wait_s": 52.736, "front_s": 49.841, "net_s": 2.895}, "pipeline": null, "content": "", "write_tps": 37.2}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 6.627, "session": "0e5520589b4f4acf", "prompt_n": 45, "gen_n": 128, "how": "cold", "prefill_s": 0.292, "ttft_s": 0.605, "total_s": 6.623, "peak_gb": 8.43, "split": {"calls": 2389, "mb_out": 0.37, "mb_in": 96.13, "wait_s": 58.963, "front_s": 54.741, "net_s": 4.222}, "pipeline": null, "content": "", "write_tps": 21.1}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 6.657, "session": "885830882d644e97", "prompt_n": 47, "gen_n": 128, "how": "cold", "prefill_s": 0.301, "ttft_s": 0.333, "total_s": 6.047, "peak_gb": 8.43, "split": {"calls": 2392, "mb_out": 0.37, "mb_in": 96.13, "wait_s": 58.979, "front_s": 54.753, "net_s": 4.226}, "pipeline": null, "content": "", "write_tps": 22.2}
+{"name": "tg128_w0_chat2", "ok": true, "wall_s": 6.642, "session": "5bbc7722e4ff4af1", "prompt_n": 43, "gen_n": 128, "how": "cold", "prefill_s": 0.282, "ttft_s": 0.617, "total_s": 6.332, "peak_gb": 8.43, "split": {"calls": 2391, "mb_out": 0.37, "mb_in": 96.13, "wait_s": 58.978, "front_s": 54.753, "net_s": 4.225}, "pipeline": null, "content": "", "write_tps": 22.2}
+{"name": "tg128_w0_aggregate", "n": 3, "ok_n": 3, "wall_s": 6.658, "gen_tokens_sum": 384, "per_chat_write_tps": [21.1, 22.2, 22.2], "per_chat_ttft_s": [0.605, 0.333, 0.617], "per_chat_peak_gb": [8.43, 8.43, 8.43], "aggregate_write_tps_wall": 59.8, "aggregate_write_tps_sum": 65.5}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 6.668, "session": "aa4d8863736444ed", "prompt_n": 45, "gen_n": 128, "how": "cold", "prefill_s": 0.292, "ttft_s": 0.324, "total_s": 6.043, "peak_gb": 8.43, "split": {"calls": 2792, "mb_out": 0.41, "mb_in": 99.07, "wait_s": 65.231, "front_s": 59.668, "net_s": 5.563}, "pipeline": null, "content": "", "write_tps": 22.2}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 6.652, "session": "3ffb6f769b894f19", "prompt_n": 46, "gen_n": 128, "how": "cold", "prefill_s": 0.296, "ttft_s": 0.621, "total_s": 6.34, "peak_gb": 8.43, "split": {"calls": 2791, "mb_out": 0.41, "mb_in": 99.07, "wait_s": 65.23, "front_s": 59.668, "net_s": 5.562}, "pipeline": null, "content": "", "write_tps": 22.2}
+{"name": "tg128_w1_chat2", "ok": true, "wall_s": 6.636, "session": "c6ff34e290314fc0", "prompt_n": 45, "gen_n": 128, "how": "cold", "prefill_s": 0.293, "ttft_s": 0.619, "total_s": 6.632, "peak_gb": 8.43, "split": {"calls": 2789, "mb_out": 0.41, "mb_in": 99.07, "wait_s": 65.214, "front_s": 59.656, "net_s": 5.558}, "pipeline": null, "content": "", "write_tps": 21.1}
+{"name": "tg128_w1_aggregate", "n": 3, "ok_n": 3, "wall_s": 6.668, "gen_tokens_sum": 384, "per_chat_write_tps": [22.2, 22.2, 21.1], "per_chat_ttft_s": [0.324, 0.621, 0.619], "per_chat_peak_gb": [8.43, 8.43, 8.43], "aggregate_write_tps_wall": 59.8, "aggregate_write_tps_sum": 65.5}
+{"name": "quality", "ok": true, "wall_s": 40.571, "session": "225ff0d2ae3e436f", "prompt_n": 7129, "gen_n": 566, "how": "cold", "prefill_s": 18.49, "ttft_s": 18.535, "total_s": 40.563, "peak_gb": 8.43, "split": {"calls": 3367, "mb_out": 0.54, "mb_in": 142.45, "wait_s": 85.238, "front_s": 79.332, "net_s": 5.907}, "pipeline": null, "content": "1) ORCHID-7419\n2) 391\n3) Canberra<turn|>", "write_tps": 25.6}
+[rc=0]
+[rc=0]
+[rc=0]
+=== start gptoss-pipe K=13 pipe=3 01:32:18
+01:32:22 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+01:32:22 [mlx-worker] packer stage packer 1: layers 0-12 of 24 of mlx-community--gpt-oss-20b-MXFP4-Q8 loaded in 2.2s, 5.9 GB of layers; wired (0, 19069665280); persist=off
+01:32:22 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch f9c09143e0e0)
+[rc=0]
+01:32:27 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+01:32:27 [mlx-worker] warm-up 0.19s
+01:32:27 [mlx-worker] loaded mlx-community--gpt-oss-20b-MXFP4-Q8 (gpt_oss) in 2.6s; sessions<= 8, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=off
+01:32:27 [mlx-worker] split pipeline chats=3 (idea 1; overlap packer/lead across sessions)
+01:32:27 [mlx-worker] listening on http://127.0.0.1:8194
+[rc=0]
+=== pipe N=1 gptoss-pipe 01:32:28
+{"name": "warm", "ok": true, "wall_s": 0.566, "session": "736185ff787849da", "prompt_n": 71, "gen_n": 8, "how": "cold", "prefill_s": 0.264, "ttft_s": 0.295, "total_s": 0.505, "peak_gb": 5.67, "split": {"calls": 17, "mb_out": 0.0, "mb_in": 0.54, "wait_s": 0.451, "front_s": 0.349, "net_s": 0.102}, "pipeline": null, "content": "", "write_tps": 33.3}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 4.08, "session": "1275cc14b35848b1", "prompt_n": 91, "gen_n": 128, "how": "cold", "prefill_s": 0.285, "ttft_s": 0.316, "total_s": 4.077, "peak_gb": 5.69, "split": {"calls": 150, "mb_out": 0.01, "mb_in": 1.81, "wait_s": 2.261, "front_s": 2.085, "net_s": 0.177}, "pipeline": null, "content": "", "write_tps": 33.8}
+{"name": "tg128_w0_aggregate", "n": 1, "ok_n": 1, "wall_s": 4.081, "gen_tokens_sum": 128, "per_chat_write_tps": [33.8], "per_chat_ttft_s": [0.316], "per_chat_peak_gb": [5.69], "aggregate_write_tps_wall": 33.5, "aggregate_write_tps_sum": 33.8}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 4.077, "session": "3fe8da18bb9d4a48", "prompt_n": 93, "gen_n": 128, "how": "cold", "prefill_s": 0.288, "ttft_s": 0.318, "total_s": 4.074, "peak_gb": 5.7, "split": {"calls": 283, "mb_out": 0.02, "mb_in": 3.08, "wait_s": 4.074, "front_s": 3.824, "net_s": 0.25}, "pipeline": null, "content": "", "write_tps": 33.8}
+{"name": "tg128_w1_aggregate", "n": 1, "ok_n": 1, "wall_s": 4.077, "gen_tokens_sum": 128, "per_chat_write_tps": [33.8], "per_chat_ttft_s": [0.318], "per_chat_peak_gb": [5.7], "aggregate_write_tps_wall": 33.5, "aggregate_write_tps_sum": 33.8}
+{"name": "quality", "ok": true, "wall_s": 15.836, "session": "3a2c229856e24923", "prompt_n": 5713, "gen_n": 86, "how": "cold", "prefill_s": 13.126, "ttft_s": 13.159, "total_s": 15.829, "peak_gb": 6.37, "split": {"calls": 376, "mb_out": 0.09, "mb_in": 36.49, "wait_s": 12.695, "front_s": 12.378, "net_s": 0.318}, "pipeline": null, "content": "ORCHID-7419  \n391  \nCanberra", "write_tps": 31.8}
+[rc=0]
+=== pipe N=2 gptoss-pipe 01:32:55
+{"name": "warm", "ok": true, "wall_s": 0.586, "session": "600ba1a42aa047c4", "prompt_n": 71, "gen_n": 8, "how": "cold", "prefill_s": 0.259, "ttft_s": 0.289, "total_s": 0.498, "peak_gb": 6.37, "split": {"calls": 389, "mb_out": 0.09, "mb_in": 36.94, "wait_s": 13.018, "front_s": 12.616, "net_s": 0.401}, "pipeline": null, "content": "", "write_tps": 33.5}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 4.975, "session": "c9f51d71468743b2", "prompt_n": 91, "gen_n": 128, "how": "cold", "prefill_s": 0.285, "ttft_s": 0.602, "total_s": 4.971, "peak_gb": 6.37, "split": {"calls": 654, "mb_out": 0.11, "mb_in": 39.47, "wait_s": 17.738, "front_s": 16.094, "net_s": 1.644}, "pipeline": null, "content": "", "write_tps": 29.1}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 4.992, "session": "18a7a75242194b24", "prompt_n": 91, "gen_n": 128, "how": "cold", "prefill_s": 0.286, "ttft_s": 0.32, "total_s": 4.69, "peak_gb": 6.37, "split": {"calls": 655, "mb_out": 0.11, "mb_in": 39.47, "wait_s": 17.739, "front_s": 16.094, "net_s": 1.645}, "pipeline": null, "content": "", "write_tps": 29.1}
+{"name": "tg128_w0_aggregate", "n": 2, "ok_n": 2, "wall_s": 4.992, "gen_tokens_sum": 256, "per_chat_write_tps": [29.1, 29.1], "per_chat_ttft_s": [0.602, 0.32], "per_chat_peak_gb": [6.37, 6.37], "aggregate_write_tps_wall": 54.0, "aggregate_write_tps_sum": 58.2}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 4.99, "session": "33a69db130a349b0", "prompt_n": 91, "gen_n": 128, "how": "cold", "prefill_s": 0.285, "ttft_s": 0.319, "total_s": 4.687, "peak_gb": 6.37, "split": {"calls": 922, "mb_out": 0.14, "mb_in": 42.0, "wait_s": 22.457, "front_s": 19.573, "net_s": 2.884}, "pipeline": null, "content": "", "write_tps": 29.1}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 4.972, "session": "31773d6b8063489d", "prompt_n": 91, "gen_n": 128, "how": "cold", "prefill_s": 0.285, "ttft_s": 0.602, "total_s": 4.968, "peak_gb": 6.37, "split": {"calls": 921, "mb_out": 0.14, "mb_in": 42.0, "wait_s": 22.456, "front_s": 19.573, "net_s": 2.883}, "pipeline": null, "content": "", "write_tps": 29.1}
+{"name": "tg128_w1_aggregate", "n": 2, "ok_n": 2, "wall_s": 4.99, "gen_tokens_sum": 256, "per_chat_write_tps": [29.1, 29.1], "per_chat_ttft_s": [0.319, 0.602], "per_chat_peak_gb": [6.37, 6.37], "aggregate_write_tps_wall": 54.0, "aggregate_write_tps_sum": 58.2}
+{"name": "quality", "ok": true, "wall_s": 15.833, "session": "4198d5db826c4879", "prompt_n": 5713, "gen_n": 86, "how": "cold", "prefill_s": 13.122, "ttft_s": 13.154, "total_s": 15.826, "peak_gb": 6.46, "split": {"calls": 1016, "mb_out": 0.2, "mb_in": 75.4, "wait_s": 31.077, "front_s": 28.129, "net_s": 2.949}, "pipeline": null, "content": "ORCHID-7419  \n391  \nCanberra", "write_tps": 31.8}
+[rc=0]
+=== pipe N=3 gptoss-pipe 01:33:23
+{"name": "warm", "ok": true, "wall_s": 0.587, "session": "0171dc907f5542a4", "prompt_n": 71, "gen_n": 8, "how": "cold", "prefill_s": 0.261, "ttft_s": 0.291, "total_s": 0.501, "peak_gb": 6.46, "split": {"calls": 1030, "mb_out": 0.2, "mb_in": 75.85, "wait_s": 31.401, "front_s": 28.37, "net_s": 3.031}, "pipeline": null, "content": "", "write_tps": 33.3}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 7.461, "session": "6e7c8792d5724887", "prompt_n": 92, "gen_n": 128, "how": "cold", "prefill_s": 0.287, "ttft_s": 0.608, "total_s": 7.154, "peak_gb": 6.46, "split": {"calls": 1429, "mb_out": 0.24, "mb_in": 79.66, "wait_s": 38.479, "front_s": 33.599, "net_s": 4.88}, "pipeline": null, "content": "", "write_tps": 19.4}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 7.442, "session": "65f17e0bb72d4c50", "prompt_n": 93, "gen_n": 128, "how": "cold", "prefill_s": 0.288, "ttft_s": 0.607, "total_s": 7.439, "peak_gb": 6.46, "split": {"calls": 1427, "mb_out": 0.24, "mb_in": 79.66, "wait_s": 38.461, "front_s": 33.586, "net_s": 4.875}, "pipeline": null, "content": "", "write_tps": 18.6}
+{"name": "tg128_w0_chat2", "ok": true, "wall_s": 7.477, "session": "2cf3dc55a4854ffc", "prompt_n": 91, "gen_n": 128, "how": "cold", "prefill_s": 0.285, "ttft_s": 0.319, "total_s": 6.866, "peak_gb": 6.46, "split": {"calls": 1430, "mb_out": 0.24, "mb_in": 79.66, "wait_s": 38.479, "front_s": 33.599, "net_s": 4.88}, "pipeline": null, "content": "", "write_tps": 19.4}
+{"name": "tg128_w0_aggregate", "n": 3, "ok_n": 3, "wall_s": 7.478, "gen_tokens_sum": 384, "per_chat_write_tps": [19.4, 18.6, 19.4], "per_chat_ttft_s": [0.608, 0.607, 0.319], "per_chat_peak_gb": [6.46, 6.46, 6.46], "aggregate_write_tps_wall": 53.0, "aggregate_write_tps_sum": 57.4}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 7.434, "session": "286d447bb4ec48b9", "prompt_n": 91, "gen_n": 128, "how": "cold", "prefill_s": 0.286, "ttft_s": 0.601, "total_s": 7.43, "peak_gb": 6.46, "split": {"calls": 1827, "mb_out": 0.27, "mb_in": 83.45, "wait_s": 45.533, "front_s": 38.811, "net_s": 6.722}, "pipeline": null, "content": "", "write_tps": 18.6}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 7.452, "session": "2483df97446c4eed", "prompt_n": 90, "gen_n": 128, "how": "cold", "prefill_s": 0.283, "ttft_s": 0.604, "total_s": 7.147, "peak_gb": 6.46, "split": {"calls": 1829, "mb_out": 0.27, "mb_in": 83.46, "wait_s": 45.551, "front_s": 38.824, "net_s": 6.727}, "pipeline": null, "content": "", "write_tps": 19.4}
+{"name": "tg128_w1_chat2", "ok": true, "wall_s": 7.468, "session": "7f9cd420fa7a4016", "prompt_n": 92, "gen_n": 128, "how": "cold", "prefill_s": 0.286, "ttft_s": 0.32, "total_s": 6.863, "peak_gb": 6.46, "split": {"calls": 1830, "mb_out": 0.27, "mb_in": 83.46, "wait_s": 45.551, "front_s": 38.824, "net_s": 6.728}, "pipeline": null, "content": "", "write_tps": 19.4}
+{"name": "tg128_w1_aggregate", "n": 3, "ok_n": 3, "wall_s": 7.469, "gen_tokens_sum": 384, "per_chat_write_tps": [18.6, 19.4, 19.4], "per_chat_ttft_s": [0.601, 0.604, 0.32], "per_chat_peak_gb": [6.46, 6.46, 6.46], "aggregate_write_tps_wall": 53.0, "aggregate_write_tps_sum": 57.4}
+{"name": "quality", "ok": true, "wall_s": 15.844, "session": "d56c06a6855b484a", "prompt_n": 5713, "gen_n": 86, "how": "cold", "prefill_s": 13.126, "ttft_s": 13.158, "total_s": 15.837, "peak_gb": 6.46, "split": {"calls": 1924, "mb_out": 0.33, "mb_in": 116.86, "wait_s": 54.174, "front_s": 47.38, "net_s": 6.794}, "pipeline": null, "content": "ORCHID-7419  \n391  \nCanberra", "write_tps": 31.7}
+[rc=0]
+[rc=0]
+[rc=0]
+=== start qwen-pipe K=24 pipe=3 01:34:05
+01:34:10 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+01:34:10 [mlx-worker] packer stage packer 1: layers 0-23 of 48 of mlx-community--Qwen3-30B-A3B-4bit loaded in 2.7s, 8.4 GB of layers; wired (0, 19069665280); persist=off
+01:34:10 [mlx-worker] packer stage listening on 169.254.104.38:5560 (epoch d496239fb609)
+[rc=0]
+01:34:16 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+01:34:16 [mlx-worker] warm-up 0.13s
+01:34:16 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 3.2s; sessions<= 8, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=off
+01:34:16 [mlx-worker] split pipeline chats=3 (idea 1; overlap packer/lead across sessions)
+01:34:16 [mlx-worker] listening on http://127.0.0.1:8194
+[rc=0]
+=== pipe N=1 qwen-pipe 01:34:17
+{"name": "warm", "ok": true, "wall_s": 0.36, "session": "103b72613ed34dc7", "prompt_n": 16, "gen_n": 8, "how": "cold", "prefill_s": 0.132, "ttft_s": 0.158, "total_s": 0.316, "peak_gb": 8.64, "split": {"calls": 17, "mb_out": 0.0, "mb_in": 0.16, "wait_s": 0.345, "front_s": 0.214, "net_s": 0.131}, "pipeline": null, "content": "Hello! It looks", "write_tps": 44.3}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 3.144, "session": "4664ab78e0864905", "prompt_n": 42, "gen_n": 128, "how": "cold", "prefill_s": 0.281, "ttft_s": 0.303, "total_s": 3.141, "peak_gb": 8.69, "split": {"calls": 150, "mb_out": 0.01, "mb_in": 0.86, "wait_s": 1.829, "front_s": 1.624, "net_s": 0.205}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 44.7}
+{"name": "tg128_w0_aggregate", "n": 1, "ok_n": 1, "wall_s": 3.145, "gen_tokens_sum": 128, "per_chat_write_tps": [44.7], "per_chat_ttft_s": [0.303], "per_chat_peak_gb": [8.69], "aggregate_write_tps_wall": 44.4, "aggregate_write_tps_sum": 44.7}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 3.147, "session": "85b544812a794440", "prompt_n": 43, "gen_n": 128, "how": "cold", "prefill_s": 0.285, "ttft_s": 0.308, "total_s": 3.144, "peak_gb": 8.7, "split": {"calls": 283, "mb_out": 0.02, "mb_in": 1.57, "wait_s": 3.314, "front_s": 3.037, "net_s": 0.277}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 44.8}
+{"name": "tg128_w1_aggregate", "n": 1, "ok_n": 1, "wall_s": 3.147, "gen_tokens_sum": 128, "per_chat_write_tps": [44.8], "per_chat_ttft_s": [0.308], "per_chat_peak_gb": [8.7], "aggregate_write_tps_wall": 44.4, "aggregate_write_tps_sum": 44.8}
+{"name": "quality", "ok": true, "wall_s": 19.28, "session": "e007bf756ede4f55", "prompt_n": 6918, "gen_n": 26, "how": "cold", "prefill_s": 18.504, "ttft_s": 18.535, "total_s": 19.271, "peak_gb": 9.6, "split": {"calls": 317, "mb_out": 0.08, "mb_in": 30.01, "wait_s": 13.15, "front_s": 12.84, "net_s": 0.31}, "pipeline": null, "content": "1) ORCHID-7419  \n2)\n\n1) ORCHID-7419  \n2) 391  \n3) Canberra<|im_end|>", "write_tps": 34.0}
+[rc=0]
+=== pipe N=2 qwen-pipe 01:34:45
+{"name": "warm", "ok": true, "wall_s": 0.429, "session": "a07596d127ad4262", "prompt_n": 16, "gen_n": 8, "how": "cold", "prefill_s": 0.133, "ttft_s": 0.156, "total_s": 0.313, "peak_gb": 9.6, "split": {"calls": 330, "mb_out": 0.08, "mb_in": 30.1, "wait_s": 13.402, "front_s": 12.982, "net_s": 0.42}, "pipeline": null, "content": "Hello! It looks", "write_tps": 44.6}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 3.763, "session": "4b6d7c6e563a47f7", "prompt_n": 43, "gen_n": 128, "how": "cold", "prefill_s": 0.285, "ttft_s": 0.309, "total_s": 3.474, "peak_gb": 9.6, "split": {"calls": 596, "mb_out": 0.11, "mb_in": 31.51, "wait_s": 16.876, "front_s": 15.819, "net_s": 1.057}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 40.1}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 3.751, "session": "5acf080d8c09444c", "prompt_n": 41, "gen_n": 128, "how": "cold", "prefill_s": 0.274, "ttft_s": 0.583, "total_s": 3.747, "peak_gb": 9.6, "split": {"calls": 595, "mb_out": 0.11, "mb_in": 31.51, "wait_s": 16.876, "front_s": 15.819, "net_s": 1.056}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 40.1}
+{"name": "tg128_w0_aggregate", "n": 2, "ok_n": 2, "wall_s": 3.764, "gen_tokens_sum": 256, "per_chat_write_tps": [40.1, 40.1], "per_chat_ttft_s": [0.309, 0.583], "per_chat_peak_gb": [9.6, 9.6], "aggregate_write_tps_wall": 72.8, "aggregate_write_tps_sum": 80.2}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 3.772, "session": "7260ae9b1854480e", "prompt_n": 42, "gen_n": 128, "how": "cold", "prefill_s": 0.279, "ttft_s": 0.304, "total_s": 3.48, "peak_gb": 9.6, "split": {"calls": 863, "mb_out": 0.13, "mb_in": 32.91, "wait_s": 20.359, "front_s": 18.656, "net_s": 1.703}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 40.0}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 3.758, "session": "3f9fa1ea966544f7", "prompt_n": 41, "gen_n": 128, "how": "cold", "prefill_s": 0.275, "ttft_s": 0.579, "total_s": 3.754, "peak_gb": 9.6, "split": {"calls": 862, "mb_out": 0.13, "mb_in": 32.91, "wait_s": 20.358, "front_s": 18.656, "net_s": 1.702}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 40.0}
+{"name": "tg128_w1_aggregate", "n": 2, "ok_n": 2, "wall_s": 3.772, "gen_tokens_sum": 256, "per_chat_write_tps": [40.0, 40.0], "per_chat_ttft_s": [0.304, 0.579], "per_chat_peak_gb": [9.6, 9.6], "aggregate_write_tps_wall": 72.6, "aggregate_write_tps_sum": 80.0}
+{"name": "quality", "ok": true, "wall_s": 19.293, "session": "868ca881aadd4c70", "prompt_n": 6918, "gen_n": 26, "how": "cold", "prefill_s": 18.512, "ttft_s": 18.542, "total_s": 19.284, "peak_gb": 10.0, "split": {"calls": 898, "mb_out": 0.19, "mb_in": 61.35, "wait_s": 30.204, "front_s": 28.464, "net_s": 1.741}, "pipeline": null, "content": "1) ORCHID-7419  \n2)\n\n1) ORCHID-7419  \n2) 391  \n3) Canberra<|im_end|>", "write_tps": 33.7}
+[rc=0]
+=== pipe N=3 qwen-pipe 01:35:14
+{"name": "warm", "ok": true, "wall_s": 0.462, "session": "fb6e4471c1164fdb", "prompt_n": 16, "gen_n": 8, "how": "cold", "prefill_s": 0.133, "ttft_s": 0.156, "total_s": 0.313, "peak_gb": 10.0, "split": {"calls": 912, "mb_out": 0.19, "mb_in": 61.44, "wait_s": 30.491, "front_s": 28.606, "net_s": 1.885}, "pipeline": null, "content": "Hello! It looks", "write_tps": 44.6}
+{"name": "tg128_w0_chat0", "ok": true, "wall_s": 5.627, "session": "6d1bd724ba6f4ce9", "prompt_n": 40, "gen_n": 128, "how": "cold", "prefill_s": 0.269, "ttft_s": 0.575, "total_s": 5.33, "peak_gb": 10.0, "split": {"calls": 1311, "mb_out": 0.22, "mb_in": 63.54, "wait_s": 35.706, "front_s": 32.875, "net_s": 2.831}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 26.7}
+{"name": "tg128_w0_chat1", "ok": true, "wall_s": 5.613, "session": "9c2e40910d0749fd", "prompt_n": 42, "gen_n": 128, "how": "cold", "prefill_s": 0.281, "ttft_s": 0.574, "total_s": 5.61, "peak_gb": 10.0, "split": {"calls": 1309, "mb_out": 0.22, "mb_in": 63.54, "wait_s": 35.693, "front_s": 32.864, "net_s": 2.829}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 25.2}
+{"name": "tg128_w0_chat2", "ok": true, "wall_s": 5.639, "session": "3c240ebf29d64579", "prompt_n": 42, "gen_n": 128, "how": "cold", "prefill_s": 0.28, "ttft_s": 0.305, "total_s": 5.06, "peak_gb": 10.0, "split": {"calls": 1312, "mb_out": 0.22, "mb_in": 63.54, "wait_s": 35.707, "front_s": 32.875, "net_s": 2.832}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 26.7}
+{"name": "tg128_w0_aggregate", "n": 3, "ok_n": 3, "wall_s": 5.64, "gen_tokens_sum": 384, "per_chat_write_tps": [26.7, 25.2, 26.7], "per_chat_ttft_s": [0.575, 0.574, 0.305], "per_chat_peak_gb": [10.0, 10.0, 10.0], "aggregate_write_tps_wall": 70.9, "aggregate_write_tps_sum": 78.6}
+{"name": "tg128_w1_chat0", "ok": true, "wall_s": 5.631, "session": "67b35a8c47ed4626", "prompt_n": 42, "gen_n": 128, "how": "cold", "prefill_s": 0.28, "ttft_s": 0.593, "total_s": 5.351, "peak_gb": 10.0, "split": {"calls": 1711, "mb_out": 0.26, "mb_in": 65.64, "wait_s": 40.927, "front_s": 37.133, "net_s": 3.794}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 26.7}
+{"name": "tg128_w1_chat1", "ok": true, "wall_s": 5.617, "session": "9eccd7beed9e4a22", "prompt_n": 39, "gen_n": 128, "how": "cold", "prefill_s": 0.265, "ttft_s": 0.569, "total_s": 5.614, "peak_gb": 10.0, "split": {"calls": 1709, "mb_out": 0.26, "mb_in": 65.63, "wait_s": 40.914, "front_s": 37.123, "net_s": 3.791}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 25.2}
+{"name": "tg128_w1_chat2", "ok": true, "wall_s": 5.643, "session": "91943a19b9924078", "prompt_n": 43, "gen_n": 128, "how": "cold", "prefill_s": 0.286, "ttft_s": 0.311, "total_s": 5.069, "peak_gb": 10.0, "split": {"calls": 1712, "mb_out": 0.26, "mb_in": 65.64, "wait_s": 40.927, "front_s": 37.133, "net_s": 3.794}, "pipeline": null, "content": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-fou", "write_tps": 26.7}
+{"name": "tg128_w1_aggregate", "n": 3, "ok_n": 3, "wall_s": 5.644, "gen_tokens_sum": 384, "per_chat_write_tps": [26.7, 25.2, 26.7], "per_chat_ttft_s": [0.593, 0.569, 0.311], "per_chat_peak_gb": [10.0, 10.0, 10.0], "aggregate_write_tps_wall": 70.8, "aggregate_write_tps_sum": 78.6}
+{"name": "quality", "ok": true, "wall_s": 19.285, "session": "cc89b728142f4973", "prompt_n": 6918, "gen_n": 26, "how": "cold", "prefill_s": 18.503, "ttft_s": 18.534, "total_s": 19.276, "peak_gb": 10.0, "split": {"calls": 1747, "mb_out": 0.32, "mb_in": 94.08, "wait_s": 50.767, "front_s": 46.939, "net_s": 3.828}, "pipeline": null, "content": "1) ORCHID-7419  \n2)\n\n1) ORCHID-7419  \n2) 391  \n3) Canberra<|im_end|>", "write_tps": 33.7}
+[rc=0]
+[rc=0]
+[rc=0]
+=== ALL DONE 01:35:55
+no-worker
+free-8194
+[rc=0]
+no-worker
+free-5560
+[rc=0]
+EXIT:0

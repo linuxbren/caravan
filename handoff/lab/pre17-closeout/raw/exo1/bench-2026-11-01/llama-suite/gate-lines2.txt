@@ -1,0 +1,2 @@
+14:28:13 [mlx-worker] split speculate: auto-pair llama3 -> Llama-3.2-1B-Instruct-4bit
+14:28:14 [mlx-worker] split speculate: draft Llama-3.2-1B-Instruct-4bit, k=3, vocab=exact remap=0 (idea 3 guess-ahead)
