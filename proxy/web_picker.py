@@ -1644,6 +1644,13 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                     if isinstance(p, dict) and p.get("msg") != "skipped":
                         pp = dict(p)
                         pp["pct"] = 100
+                        if not pp.get("total_bytes"):
+                            # Finished before the first measure (e.g. a resumed Mini whose
+                            # files were all on disk already): fall back to the planned size.
+                            rt = next((r.get("total_bytes") for r in runners
+                                       if (r.get("id") or r.get("label")) == rid), None)
+                            if rt:
+                                pp["total_bytes"] = int(rt)
                         if pp.get("total_bytes"):
                             pp["have_bytes"] = max(int(pp.get("have_bytes") or 0), int(pp["total_bytes"]))
                         pp["speed_bps"] = 0; pp["eta_s"] = None; pp["stalled"] = False

@@ -78,3 +78,17 @@ class ResumeBase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DoneBeforeFirstMeasure(unittest.TestCase):
+    def test_done_uses_planned_size(self):
+        job = web_picker.start_download("x/fast", runners=[{
+            "id": "exo1", "label": "EXO1", "role": "lead", "dest": "/nonexistent",
+            "run": lambda *a: None, "measure": lambda: (time.sleep(2) or {"have_bytes": 0}),
+            "total_bytes": 278064920}])
+        for _ in range(30):
+            if web_picker.get_job(job["id"])["status"] == "done":
+                break
+            time.sleep(0.1)
+        p = web_picker.get_job(job["id"])["progress"]["exo1"]
+        self.assertEqual(p["have_bytes"], 278064920)

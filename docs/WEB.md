@@ -596,3 +596,49 @@ Mini, warning when any node fails. Coverage: `test_hf_token_validation.py`.
 Validation record (2026-11-06 CT): first full suite 376/376 passed in 32.489s; final full suite including JS state assertions 377/377 passed in 32.517s. Focused token suite 6/6 passed twice (0.030s each); inline JavaScript syntax check passed. No failed runs. Browser screenshots pending (no desktop agent available to this executor).
 
 Helper follow-up validation: final full suite **377/377 passed in 32.652s** (includes concurrently added tests). Case-sensitive helper IDs are preserved end to end; deletion test exercises `picker_disk_sizes.delete_kind`. Live `/api/helpers` correctly returned no offer for the loaded single-Mini Qwen3. Live disk inventory reported Qwen3 helper 0.35 GB on EXO1, Qwen2.5 helper 0.29 GB on each Mini, Llama helper 0.71 GB on EXO1, Gemma helper 0.19 GB on EXO1, and Orvena native MTP head 0.24 GB on EXO2. An older manually installed Gemma draft (3.58 GB, EXO1) has no catalog pairing, explicitly labelled rather than inventing one. Sizes are rounded actual disk bytes, not advertised download estimates.
+
+## Picker: Resume, auto-retry, the Nov 6 "stall" (Day 17 follow-up)
+
+**What the stall was (22:35–22:52 CST, Brenden's split download of
+mlx-community/Llama-3.2-8X4B-MOE-V2-Dark-Champion-…-21B-Q_6-MLX, 9.15 GB per Mini).**
+Not a network stall. hf_xet buffers a whole shard before it writes it, so `.incomplete` files stood
+still while data kept arriving. Raw samples from the follow-up 21B-MLX job:
+EXO1 22:52:34 → 22:53:05 had 0 bytes on disk while the fetch's open flows went 965,498,666 →
+1,138,735,665 B (about 5.6 MB/s). EXO2's open-flow counter dropped (412,561,019 → 386,083,006)
+while its `.incomplete` jumped 101,125,627 → 197,477,218. At 23:09 EXO1 still had 2,881,923,520 B
+on disk and the net counter went 256 → 325 MB in 30 s (about 2.3 MB/s). The measure preferred the
+disk number, and nettop only sums open flows, so the card said "0.0 MB/s · stalled?".
+Fix: bytes = what was on disk at the start + accumulated positive network deltas (or disk if more).
+
+**Second bug: restart after Stop was killed at once.** Remote runners obeyed `cancel=True` from *any*
+job for the repo, including the old stopped one. When the job was started again at 22:44, EXO2's
+fetch log was empty and its process was gone. Now only a live job's Stop counts.
+
+**HF token.** The fetch runs under `~/.caravan/venvs/mlx/bin/python` (huggingface_hub 2.4.0,
+hf_xet). `mlx_split_fetch._resolve_token()` imports `hf_auth` and passes `token=` to
+`snapshot_download` and `model_info`. Checked on both Minis the way the fetch is launched (not
+printing the token): token resolved, `~/.caravan/hf_token` present, `whoami` → Chalk-Outline,
+access_token. Brenden's 22:35 job started before the token was added at 22:41.
+
+**Resume.** Stopped or failed cards show **Resume** (primary) next to Dismiss.
+`POST /api/picker/download/resume {job_id}` reruns the stored request (same repo, files, placement,
+destinations). `snapshot_download` skips finished files. The card says "Resuming…" and "kept X
+already on disk" until new bytes arrive. Delete still clears partials. Jobs live in memory: after a
+web restart the card re-attaches to the running fetch (`live-*` job) instead of freezing.
+
+**Auto-retry.** Network-type errors (timeouts, connection reset, 5xx/429) retry up to 3 times per
+Mini, after 5, 15 and 45 s. The card shows "network error — retry n/3". Auth, 404, disk-space and
+cancel errors fail at once.
+
+**Max download** defaults to **Any size**. The value was never saved in the browser, so there is
+nothing to migrate.
+
+### Stop / Resume test record (Nov 6, 2026, CST)
+| Run | Model | Placement | Stop | On disk after Stop | Resume |
+|---|---|---|---|---|---|
+| A 23:41 | Qwen2.5-0.5B-Instruct-8bit (525,045,902 B/Mini) | all | at 38 s (EXO1 52% / 277 MB, EXO2 30% / 161 MB received) | both: 0 B safetensors, 45,821 B partials | started from 0: hf_xet does not keep partial files. 400 s wall clock because another worker restarted the web server at 23:43:36; the card froze (fixed, `b944186`) while the fetch still finished: 525,045,902 B on both |
+| B 23:50 | Qwen2.5-0.5B-Instruct-4bit (278,064,920 B/Mini) | all | at 43 s, when EXO1 had finished and EXO2 had not | EXO1 278,064,920 B (done); EXO2 0 B + 2,329,427 B partial | 30 s to Done. **EXO1 fetched 0 bytes** (net never moved, file reused). EXO2 resume base 2,329,427 B, then 18 KB → 62.8 MB → 141.6 MB → 182.5 MB on the network → Done 278,064,920 B |
+
+So Resume reuses finished files on each Mini. Partly downloaded single files restart from 0 under
+hf_xet. Run B also showed EXO1 as "0 MB" at Done (it finished before the first reading); it now
+falls back to the planned size.

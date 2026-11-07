@@ -3,6 +3,15 @@
 
 ## Unreleased
 
+### Picker Resume + stall diagnosis (Nov 6, late)
+- "Stalled" downloads were hf_xet buffering shards while the network kept moving; progress now
+  adds network deltas to the bytes already on disk.
+- Restart after Stop no longer gets killed by the old job's cancel flag.
+- Resume on stopped/failed cards (same files/placement; finished files reused), network
+  auto-retry 3x, re-attach after a web restart, Max download defaults to Any size.
+- HF token verified in the fetch interpreter on both Minis (whoami OK).
+- Raw numbers: WEB.md "Stop / Resume test record".
+
 - GGUF split from the web UI: Settings → Model lists GGUFs on the lead with
   *Where it runs* (one Mini / split across K Minis, default smallest that fits).
   llama.cpp RPC: rpc-server on each peer bound to 127.0.0.1, reached over SSH
