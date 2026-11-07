@@ -662,3 +662,39 @@ nothing to migrate.
 So Resume reuses finished files on each Mini. Partly downloaded single files restart from 0 under
 hf_xet. Run B also showed EXO1 as "0 MB" at Done (it finished before the first reading); it now
 falls back to the planned size.
+
+## Helper Download / Not now — live end-to-end (Nov 7, 12:20–12:24 AM CT)
+
+Setup: Qwen3 30B-A3B 4-bit MLX split EXO1+EXO2 (both Minis have the files; placement file
+temporarily set to split), guess-ahead on. To simulate a missing helper, EXO1's
+`~/.caravan/mlx-models/drafts/Qwen3-0.6B-4bit` (343,236 KB, sha1 list saved) was moved aside.
+Split load ready in ~16 s.
+
+- **Prompt: PASS.** `/api/helpers` offered `Qwen3-0.6B-4bit`; the page opened "A 335 MB helper can
+  make qwen3-30b-a3b-4bit write faster. Download it?" with Download / Not now / Close
+  (`day17-final-helper-ask.png`). 335 MB is the pairing-table estimate (labelled so); real
+  download 0.34 GB, 343,228 KB on disk.
+- **Not now: PASS.** Dialog closed, `guess-ahead-state.json` → `web_download_answers.qwen3-30b-a3b: false`,
+  no job started, a fresh page load did not reopen it.
+- **Change mind: PASS.** Settings → Guess-ahead → "Helper download…" reopened it → Download:
+  0.34 GB in 36 s (~13 MB/s steady, brief 1 MB/s dip at 27 s), live progress "0.15/0.34 GB · 14.1 MB/s · ETA 12s",
+  then "Downloaded. It will be used on the next model load." Answer flipped to true; offer gone.
+  Weight files matched the original byte-for-byte (only README/.gitattributes vs local
+  caravan-*.json metadata differ).
+- **Applies next load: PASS.** Reload ready in 13 s; log "split speculate: draft Qwen3-0.6B-4bit, k=3, vocab=exact".
+
+Effect (one run each, max_tokens 200, temp 0, `/no_think`; Write tok/s):
+
+| Prompt | No helper | Helper | Change | Helper acceptance |
+|---|---|---|---|---|
+| Count 1–60 | 44.98 | 56.13 | +24.8% | 74.5% |
+| Python prime function | 45.00 | 48.98 | +8.8% | 71.0% |
+| 150-word prose | 45.07 | 27.18 | −39.7% | 48.3% |
+
+Mixed, matching the earlier matrix: helps predictable text, hurts free prose. Single runs, not a benchmark.
+
+Restored: original helper folder moved back (sha1 list identical), test download removed, state
+file removed (did not exist before), placement back to `one · EXO1`, Qwen3 30B MLX single on EXO1 ready.
+
+Noticed, not fixed: the helper dialog is an unstyled white box in Amber (not themed); the chip
+row showed "GUESS-AHEAD OFF" while the split ran without a helper.
