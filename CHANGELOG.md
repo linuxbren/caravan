@@ -23,3 +23,6 @@
 - Preserve placement, config pins, PID ownership and web worker-keeping/adoption.
 - See [OPTIMIZE-NOW.md](docs/OPTIMIZE-NOW.md) for the PR comparison and all test
   attempts, including failed runs and deployment status.
+- Live testing also found/fixed an unnecessary single-Mini baseline reload and
+  post-restart load-entry/recovery-release bugs. Final code passes 407 tests on
+  box/EXO1/EXO2 (EXO1: one existing Node-only test skips), plus 24/24 theme parity.

@@ -178,3 +178,43 @@ closure comment once authorized.
   Raw failed run remains EXO1 `/tmp/optimize-live-check-final.json`.
 - Box run 6 after adoption/cleanup corrections: **407 tests / 32.174 s**, all
   passed. Changed modules also parsed as Python 3.9 syntax successfully.
+
+### Final verified state (12:13–12:14 PM CT)
+
+- Recovery/adoption replacement commit: **`f98cc1a`**, following baseline fix
+  **`c9b60d6`** and implementation **`24b3238`**. All pushed as linuxbren.
+- Full suites on final code: box **407 / 32.174 s** passed; EXO1
+  **407 / 34.214 s** successful, 1 existing Node-dependent UI test skipped;
+  EXO2 **407 / 34.719 s** all passed. No final suite failures.
+- Another web-only restart again retained worker PID50958, ready and unpaused.
+- Third live run after adoption fix: **6 prompts / 2 reloads / 0.69 min**,
+  measured end-to-end check **42.282 s**; mean reply **2.135 s**, final reload
+  **14.413 s**. Only KV4 was tried: KV8 and fused On were skipped from persisted
+  hardware loss records. There was no unnecessary initial reload. Every sample
+  had one or zero running options.
+- KV16 scores `[32.380952, 50.847458, 49.792531]`, mean **44.340314**;
+  KV4 scores `[37.229879, 49.663735, 49.408132]`, mean **45.433915**
+  (**+2.47%**). That does **not** clear the 3% switch margin, so retained KV16
+  and recorded KV4 as not beating the incumbent, not as an inference failure.
+- Fourth, skip-only live run: **0 prompts / 0 reloads**, successful (**1.571 s**
+  API-check elapsed including hardware collection). This confirms losing values
+  survive worker reloads and don't re-run on the same hardware.
+- Final model: **Qwen3 30B-A3B 4-bit MLX, single on EXO1, healthy and ready**;
+  KV16, fused Off, `sweep_paused:false`. No unrelated workers were restarted.
+- Raw successful rerun: EXO1 `/tmp/optimize-live-check-verified.json`.
+  The first run and failed second run remain alongside it. All repo changes are
+  documented here, `DAY17.md`, `WEB.md`, `CHANGELOG.md`; diary is Omarchy
+  `~/Documents/obsidian/Projects/Caravan/Optimize Now Scheduler.md`.
+- PR #9 remains open: the actual request found in Brenden's Riley conversation
+  explicitly authorizes personal reimplementation, but closure/comment appeared
+  only in the assistant relay. No closure or comment was sent without that
+  explicit external-action approval. Suggested close comment (after approval):
+  "Reimplemented this on caravan-v3-mlx-split in 24b3238, c9b60d6 and f98cc1a,
+  keeping the newer reload safeguards. The full suite passes on the box and
+  both Minis, and the live pause/hold/commit checks passed. Closing this stale
+  PR without merging it. Details and all test runs are in docs/OPTIMIZE-NOW.md."
+
+Remaining limitations: the existing MLX backend is two-stage, not N-stage;
+GGUF does not expose MLX optimization knobs. Native MTP/adaptive lookup sweeps
+remain intentionally excluded. A hard web crash doesn't resume a benchmark;
+adoption releases live holds and normal tuning status exposes reload drift.

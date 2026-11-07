@@ -123,3 +123,12 @@ direct edits. The existing Optimize now label now drives real paired trials,
 worker pause/hold/commit/release and per-hardware loss records. Retained newer
 worker lifetime/reload/placement safeguards. Full accounting and all test
 attempts, including failed ones: [OPTIMIZE-NOW.md](OPTIMIZE-NOW.md).
+
+Final scheduler verification: implementation `24b3238`, baseline fix `c9b60d6`,
+adoption/cleanup fix `f98cc1a`. Box and both Minis completed the 407-test suite
+(EXO1's existing Node-only token UI assertion skips); browser parity 24/24.
+Live pause/hold/commit passed. Final paired rerun: 6 prompts, 2 reloads, 0.69 min;
+repeat skips everything with 0 prompts/reloads. One failed post-adoption run
+and all earlier failures are retained in the ledger. Qwen3 30B-A3B 4-bit MLX is
+single, healthy and ready on EXO1, ordinary learning unpaused. PR #9 closure
+awaits explicit approval; it was not merged.
