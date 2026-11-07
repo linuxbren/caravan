@@ -146,6 +146,8 @@ class FakeMgr:
         self.running = dict(TS.RELOAD_DEFAULTS)
         self.reloads = []
         self._switch_thread = None
+        # WorkerManager._tuned_entry reads state["split"] (Day 17 spanned key).
+        self.state = {"split": False}
 
     def snapshot(self):
         return dict(self.snap)

@@ -701,7 +701,16 @@ def make_handler(app: App):
             if path == "/api/models/load":
                 return self._api_load(body=body)
             if path == "/api/models/stop":
-                app.mgr.stop(reason="ui")
+                try:
+                    app.mgr.stop(reason="ui")
+                except Exception as e:  # noqa: BLE001 — answer, don't drop the socket
+                    msg = f"{type(e).__name__}: {e}"
+                    try:
+                        app.mgr._set(status="error", error=msg)
+                        app.mgr._note(f"stop failed: {e}")
+                    except Exception:
+                        pass
+                    return self._json(502, {"error": msg, "worker": app.mgr.snapshot()})
                 return self._json(200, app.mgr.snapshot())
             if path == "/api/optimize/start":
                 if app.mgr._switch_thread and app.mgr._switch_thread.is_alive():

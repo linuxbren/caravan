@@ -110,6 +110,17 @@ class CatalogTest(unittest.TestCase):
         self.assertIsNone(catalog.get_model("nope"))
 
 
+def _offline(app):
+    """Keep HTTP tests off the network: no SSH to Minis/packer, no node probes.
+    Without this, /api/models/load (inventory over SSH) and /api/models/stop
+    (packer stop over SSH) hang or fail on hosts that can't reach the Minis."""
+    import subprocess as _sp
+    app.mgr._ssh = lambda cmd, timeout=60: _sp.CompletedProcess(["ssh"], 0, "", "")
+    app.configured_nodes = lambda: []
+    app.nodes = lambda: {"nodes": []}
+    app.gather_model_inventories = lambda: []
+
+
 class WebServerHTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -119,6 +130,7 @@ class WebServerHTTPTest(unittest.TestCase):
                             state_dir=REPO / "handoff" / "lab" / "day15-web" / "test-state",
                             repo=REPO)
         cls.app = web_server.App(mgr)
+        _offline(cls.app)
         # Bind ephemeral port on localhost.
         class _S(ThreadingHTTPServer):
             def server_bind(self):
@@ -241,6 +253,7 @@ class KeepAliveDrainTest(unittest.TestCase):
                             state_dir=REPO / "handoff" / "lab" / "day15-web" / "test-state-ka",
                             repo=REPO)
         cls.app = web_server.App(mgr)
+        _offline(cls.app)
         class _S(ThreadingHTTPServer):
             def server_bind(self):
                 import socketserver
@@ -284,6 +297,25 @@ class KeepAliveDrainTest(unittest.TestCase):
             j = json.loads(raw2.decode())
             self.assertEqual(j["worker"]["status"], "idle")
         finally:
+            conn.close()
+
+    def test_stop_failure_returns_json_and_keeps_socket(self):
+        import http.client, subprocess as _sp
+        saved = self.app.mgr._ssh
+        self.app.mgr._ssh = lambda cmd, timeout=60: _sp.CompletedProcess(["ssh"], 255, "", "unreachable")
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            conn.request("POST", "/api/models/stop", body=b"{}",
+                         headers={"Content-Type": "application/json", "Content-Length": "2"})
+            r1 = conn.getresponse()
+            j = json.loads(r1.read().decode())
+            self.assertEqual(r1.status, 502)
+            self.assertIn("could not stop", j["error"])
+            conn.request("GET", "/api/status", headers={"Connection": "close"})
+            r2 = conn.getresponse(); r2.read()
+            self.assertEqual(r2.status, 200)
+        finally:
+            self.app.mgr._ssh = saved
             conn.close()
 
     def test_stop_drains_body_keep_alive(self):
@@ -415,7 +447,8 @@ class WebSettingsHTTPTest(WebServerHTTPTest):
     def test_page_has_toggles(self):
         with urlopen(self.base + "/", timeout=5) as r:
             html = r.read().decode()
-        for needle in ('id="optRows"', 'id="btnApply"', 'id="activeChips"', "ran with:",
+        # "ran with:" wording dropped on purpose in ba60fa9 (green chips suffice).
+        for needle in ('id="optRows"', 'id="btnApply"', 'id="activeChips"',
                        "settings: state.choice"):
             self.assertIn(needle, html)
 
@@ -426,10 +459,14 @@ class PageOrderTest(unittest.TestCase):
     def test_section_order(self):
         html = (REPO / "proxy" / "web" / "index.html").read_text()
         body = html[html.index("<body>"):]
-        order = ["a-chat", "a-last", "a-settings", "a-clock", "a-miles",
-                 "a-journey", "a-progress", "a-string"]
+        # ba60fa9 (Day 16) intentionally moved load progress into the chat
+        # column (progressCard, shown only on problems) and the string card
+        # into the left Topology drawer, so those two left the main order.
+        order = ["a-chat", "a-last", "a-settings", "a-clock", "a-miles", "a-journey"]
         pos = [body.index(f'{c}"') for c in order]
         self.assertEqual(pos, sorted(pos))
+        self.assertIn('id="progressCard"', body)
+        self.assertIn('id="topoDrawer"', body)
         self.assertLess(body.index('id="modelSelect"'), body.index('id="optRows"'))
         self.assertGreater(body.index('id="modelSelect"'), body.index('a-settings"'))
 

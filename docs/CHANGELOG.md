@@ -42,6 +42,7 @@
 - On disk moved to the Topology drawer as one combined list with location notes.
 - Chat: `Read N tok/s · Write M tok/s` under each reply (prompt/prefill, fallback TTFT).
 - Chat: stats line now reads `Read 58 tok at 279 tok/s · Write 235 tok at 38.6 tok/s · first token 0.25s · total 6.34s`; unknown pieces are dropped.
+- Tests: full box suite green (340 OK) via `PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests`. Fixed /api/models/stop dropping the socket when the packer SSH stop fails (now 502 JSON, status=error); HTTP tests stub SSH/node probes; stale tests updated for ba60fa9 layout (no "ran with:", progress/Topology out of main order) and FakeMgr.state for the Day 17 spanned key. Day 17 "152 passed" was a focused 8-file pytest subset.
 - Numbers: see WEB.md "Test record".
 
 ### Day 17 — earlier 9:28 PM CT verification

@@ -373,3 +373,7 @@ negative exact-format checks: [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
 Final served-UI proof (10:08:53 PM CT): webPID87870→89854, unchanged QwenPID89648,
 ready/singleEXO1/allAuto/KV4 trial; both chip and help verified over HTTP:
 [`split-final-ui-proof.json`](../bench/results/day17/split-final-ui-proof.json).
+
+## Tests
+Full suite (no Minis needed): `PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests` (340 OK, 2026-11-06 CT).
+HTTP tests stub SSH and node probes. If stopping the packer fails, `/api/models/stop` now answers 502 with `{"error", "worker"}` instead of dropping the connection.
