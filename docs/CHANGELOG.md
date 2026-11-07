@@ -3,6 +3,11 @@
 
 ## Unreleased
 
+### Nebula theme
+- Fourth theme, **Nebula**: like Meadow, but deep space. An inline SVG with no photos or outside files: a deep-space gradient, violet, magenta and cyan dust clouds blurred about 40px, one ringed planet, a small moon, and 140 lightly softened stars. It drifts very slowly (160 s) and stops under `prefers-reduced-motion`.
+- Dark frosted-glass panels with light text, aiming for AA. Violet and cyan accents, CRT layers off, rounded sans font with monospace kept for stats. Theme bars use violet, then lavender, then cyan; Heat is unchanged.
+- Specifications: "To first word" is now "To first token".
+
 ### Meadow theme
 - Third theme, **Meadow**, next to Amber and Green in the theme switch (saved in localStorage `caravan-theme`). The idea is a way to "digitally touch grass": sky, trees, fields and a river, but only as an impression.
 - No photos and no external assets. The background is an inline SVG (sky gradient, clouds, tree masses, field bands, misty river) blurred about 34px, so it reads as calm colour and never competes with the chat or the stats.

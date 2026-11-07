@@ -146,6 +146,97 @@
   html[data-theme="omarchy"] .msg.assistant { text-shadow: none; }
   html[data-theme="omarchy"] .stat .v { text-shadow: none; }
   html[data-theme="omarchy"] button.primary { box-shadow: none; color: #10151f; }
+  /* ---- Nebula: blurred painted deep space, dark frosted glass, no CRT ---- */
+  [data-theme="nebula"] {
+    --bg: rgba(10,12,32,.55);
+    --bg2: rgba(16,18,44,.62);
+    --bg3: rgba(28,30,66,.78);
+    --line: rgba(170,160,255,.22);
+    --text: #e8e9ff;
+    --fg: #e8e9ff;
+    --muted: #b4b8dc;
+    --accent: #a78bfa;
+    --accent2: #67e8f9;
+    --glow: transparent;
+    --amber: var(--accent);
+    --amber2: #8be9fb;
+    --teal: var(--accent);
+    --teal2: #8be9fb;
+    --rose: #fda4af;
+    --ok: #6ee7b7;
+    --warn: #fcd34d;
+    --shadow: 0 12px 40px rgba(0,0,10,.45), 0 1px 0 rgba(255,255,255,.06) inset;
+    --radius: 14px;
+    --statmono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: "Nunito", "Avenir Next", "SF Pro Rounded", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: var(--sans);
+    --bloom: none;
+    --scan: transparent;
+  }
+  .nebula-bg { display: none; }
+  html[data-theme="nebula"] .nebula-bg {
+    display: block; position: fixed; inset: -8%; z-index: 0; pointer-events: none;
+    animation: nebulaDrift 160s ease-in-out infinite alternate;
+  }
+  html[data-theme="nebula"] .nebula-bg svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  html[data-theme="nebula"] .nebula-bg .neb-clouds { filter: blur(40px) saturate(1.1); transform: scale(1.06); }
+  html[data-theme="nebula"] .nebula-bg .neb-stars { filter: blur(.6px); opacity: .8; }
+  @keyframes nebulaDrift { from { transform: translate3d(-1%,.4%,0) rotate(-.4deg); } to { transform: translate3d(1%,-.4%,0) rotate(.4deg); } }
+  @media (prefers-reduced-motion: reduce) { html[data-theme="nebula"] .nebula-bg { animation: none; } }
+  html[data-theme="nebula"] body::before,
+  html[data-theme="nebula"] body::after,
+  html[data-theme="nebula"] .crt-wash { display: none; }
+  html[data-theme="nebula"] body { font-family: var(--sans); letter-spacing: normal; background: #070816; }
+  html[data-theme="nebula"] *, html[data-theme="nebula"] *::before { text-shadow: none !important; }
+  html[data-theme="nebula"] .card,
+  html[data-theme="nebula"] .chat.tube,
+  html[data-theme="nebula"] .drawer,
+  html[data-theme="nebula"] .drawer-left,
+  html[data-theme="nebula"] dialog {
+    background: var(--bg2) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2);
+    border: 1px solid rgba(190,180,255,.18) !important;
+    box-shadow: var(--shadow) !important;
+    color: var(--text);
+  }
+  html[data-theme="nebula"] .drawer { background: rgba(14,16,40,.82) !important; }
+  html[data-theme="nebula"] .drawer .drawer-head { background: transparent; }
+  html[data-theme="nebula"] .drawer-backdrop { background: rgba(0,0,10,.35); }
+  html[data-theme="nebula"] .node { background: transparent; border: 0; box-shadow: none; }
+  html[data-theme="nebula"] .mini-shell { background: rgba(22,24,58,.72); border-color: rgba(167,139,250,.35); box-shadow: 0 6px 22px rgba(0,0,10,.35); }
+  html[data-theme="nebula"] .node.lead .mini-shell { border-color: rgba(167,139,250,.6); }
+  html[data-theme="nebula"] .mini-front { background: rgba(10,12,32,.7); border-top-color: rgba(190,180,255,.15); }
+  html[data-theme="nebula"] .mini-front .port { background: rgba(190,180,255,.12); box-shadow: none; border-color: rgba(190,180,255,.3); }
+  html[data-theme="nebula"] .node.fresh .mini-front .led { background: #67e8f9; border-color: #67e8f9; box-shadow: 0 0 5px rgba(103,232,249,.55); }
+  html[data-theme="nebula"] .theme-switch button { color: #b4b8dc; }
+  html[data-theme="nebula"] .theme-switch button.on { background: rgba(167,139,250,.22); color: #8be9fb; }
+  html[data-theme="nebula"][data-bar-colors="theme"] .nstat .fill.lvl-lo { background: #8b7cf6; }
+  html[data-theme="nebula"][data-bar-colors="theme"] .nstat .fill.lvl-mid { background: #a78bfa; }
+  html[data-theme="nebula"][data-bar-colors="theme"] .nstat .fill.lvl-hi { background: #67e8f9; }
+  html[data-theme="nebula"] .nstat .fill { box-shadow: none !important; }
+  html[data-theme="nebula"] .nstat .track { background: rgba(255,255,255,.07); border-color: rgba(190,180,255,.25); }
+  html[data-theme="nebula"] .tag { color: #b4b8dc; }
+  html[data-theme="nebula"] .tag.off { opacity: 1; color: #9ea3cc; }
+  html[data-theme="nebula"] .tag.on { color: #6ee7b7; background: rgba(110,231,183,.12); }
+  html[data-theme="nebula"] .brand h1 { text-transform: none; letter-spacing: .02em; color: #f1f0ff; }
+  html[data-theme="nebula"] .msg { background: rgba(26,28,64,.72); border-color: rgba(190,180,255,.16); }
+  html[data-theme="nebula"] .msg.user { background: rgba(48,40,110,.78); }
+  html[data-theme="nebula"] button.primary { background: #7c5cf0; color: #fff; box-shadow: none; border-color: #7c5cf0; }
+  html[data-theme="nebula"] button.primary:hover { background: #6a48e6; }
+  html[data-theme="nebula"] textarea,
+  html[data-theme="nebula"] input,
+  html[data-theme="nebula"] select { background: rgba(12,14,36,.8) !important; color: var(--text) !important; }
+  html[data-theme="nebula"] textarea { box-shadow: inset 0 1px 3px rgba(0,0,0,.3) !important; border-color: rgba(190,180,255,.25); }
+  html[data-theme="nebula"] .pill,
+  html[data-theme="nebula"] .tag,
+  html[data-theme="nebula"] .chips > *,
+  html[data-theme="nebula"] .theme-switch { background: rgba(16,18,44,.6); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  html[data-theme="nebula"] .progress { background: rgba(8,10,26,.75); color: #c6c9ea; }
+  html[data-theme="nebula"] .nstat,
+  html[data-theme="nebula"] .stat .v,
+  html[data-theme="nebula"] .progress { font-family: var(--statmono); }
+  html[data-theme="nebula"] .dot.ok,
+  html[data-theme="nebula"] [class*="p-dot"] { box-shadow: none; }
   /* ---- Meadow: blurred painted nature, frosted glass, no CRT ---- */
   [data-theme="meadow"] {
     --bg: rgba(255,255,255,.55);
@@ -823,6 +914,163 @@
 </head>
 <body>
 <div class="crt-wash" aria-hidden="true"></div>
+<div class="nebula-bg" aria-hidden="true"><svg class="neb-clouds" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="nbSpace" cx=".5" cy=".45" r=".8"><stop offset="0" stop-color="#1a1640"/><stop offset=".6" stop-color="#0c0d26"/><stop offset="1" stop-color="#05060f"/></radialGradient>
+    <radialGradient id="nbPlanet" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#9fb4ff"/><stop offset=".55" stop-color="#4b3f9e"/><stop offset="1" stop-color="#140f33"/></radialGradient>
+    <radialGradient id="nbMoon" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffd7b0"/><stop offset=".6" stop-color="#b0607a"/><stop offset="1" stop-color="#2a1030"/></radialGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#nbSpace)"/>
+  <ellipse cx="420" cy="360" rx="420" ry="200" fill="#6d3fc8" opacity=".45"/>
+  <ellipse cx="620" cy="460" rx="300" ry="150" fill="#c0408f" opacity=".28"/>
+  <ellipse cx="1150" cy="640" rx="460" ry="180" fill="#2b6fbf" opacity=".38"/>
+  <ellipse cx="1300" cy="560" rx="240" ry="120" fill="#2fb8c9" opacity=".22"/>
+  <ellipse cx="900" cy="250" rx="300" ry="90" fill="#8f5fe0" opacity=".22"/>
+  <circle cx="1310" cy="230" r="120" fill="url(#nbPlanet)" opacity=".85"/>
+  <ellipse cx="1310" cy="232" rx="200" ry="26" fill="none" stroke="#c9c1ff" stroke-width="5" opacity=".35"/>
+  <circle cx="230" cy="820" r="46" fill="url(#nbMoon)" opacity=".7"/>
+</svg><svg class="neb-stars" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="518" cy="151" r="2.0" fill="#efe3ff" opacity="0.38"/>
+  <circle cx="151" cy="583" r="1.6" fill="#ffffff" opacity="0.48"/>
+  <circle cx="694" cy="70" r="0.7" fill="#ffffff" opacity="0.68"/>
+  <circle cx="1323" cy="124" r="0.9" fill="#efe3ff" opacity="0.73"/>
+  <circle cx="1516" cy="577" r="1.3" fill="#ffffff" opacity="0.38"/>
+  <circle cx="75" cy="858" r="1.1" fill="#efe3ff" opacity="0.60"/>
+  <circle cx="188" cy="308" r="2.0" fill="#efe3ff" opacity="0.46"/>
+  <circle cx="914" cy="188" r="0.7" fill="#ffffff" opacity="0.68"/>
+  <circle cx="903" cy="619" r="1.3" fill="#cfe9ff" opacity="0.76"/>
+  <circle cx="1244" cy="466" r="1.3" fill="#ffffff" opacity="0.57"/>
+  <circle cx="1271" cy="699" r="0.9" fill="#dfe6ff" opacity="0.40"/>
+  <circle cx="840" cy="875" r="2.0" fill="#efe3ff" opacity="0.62"/>
+  <circle cx="1568" cy="118" r="1.3" fill="#dfe6ff" opacity="0.45"/>
+  <circle cx="243" cy="489" r="0.7" fill="#ffffff" opacity="0.93"/>
+  <circle cx="1223" cy="573" r="1.1" fill="#dfe6ff" opacity="0.55"/>
+  <circle cx="951" cy="580" r="1.3" fill="#ffffff" opacity="0.39"/>
+  <circle cx="1511" cy="474" r="2.0" fill="#dfe6ff" opacity="0.39"/>
+  <circle cx="1035" cy="993" r="1.3" fill="#cfe9ff" opacity="0.52"/>
+  <circle cx="1419" cy="347" r="1.3" fill="#efe3ff" opacity="0.56"/>
+  <circle cx="187" cy="59" r="1.1" fill="#ffffff" opacity="0.43"/>
+  <circle cx="637" cy="917" r="1.3" fill="#cfe9ff" opacity="0.40"/>
+  <circle cx="643" cy="278" r="0.9" fill="#efe3ff" opacity="0.84"/>
+  <circle cx="445" cy="415" r="1.1" fill="#cfe9ff" opacity="0.76"/>
+  <circle cx="1532" cy="151" r="0.9" fill="#ffffff" opacity="0.44"/>
+  <circle cx="19" cy="831" r="0.9" fill="#ffffff" opacity="0.51"/>
+  <circle cx="233" cy="535" r="1.6" fill="#ffffff" opacity="0.69"/>
+  <circle cx="1105" cy="515" r="1.6" fill="#ffffff" opacity="0.74"/>
+  <circle cx="731" cy="871" r="2.0" fill="#cfe9ff" opacity="0.83"/>
+  <circle cx="637" cy="394" r="1.3" fill="#ffffff" opacity="0.73"/>
+  <circle cx="305" cy="985" r="1.3" fill="#dfe6ff" opacity="0.45"/>
+  <circle cx="961" cy="102" r="1.6" fill="#ffffff" opacity="0.44"/>
+  <circle cx="1518" cy="614" r="0.7" fill="#efe3ff" opacity="0.87"/>
+  <circle cx="602" cy="634" r="1.1" fill="#cfe9ff" opacity="0.71"/>
+  <circle cx="197" cy="849" r="1.3" fill="#dfe6ff" opacity="0.64"/>
+  <circle cx="137" cy="102" r="1.1" fill="#cfe9ff" opacity="0.79"/>
+  <circle cx="1326" cy="161" r="0.7" fill="#efe3ff" opacity="0.47"/>
+  <circle cx="579" cy="690" r="0.7" fill="#dfe6ff" opacity="0.80"/>
+  <circle cx="1566" cy="863" r="2.0" fill="#efe3ff" opacity="0.86"/>
+  <circle cx="587" cy="167" r="0.9" fill="#efe3ff" opacity="0.67"/>
+  <circle cx="527" cy="223" r="0.9" fill="#cfe9ff" opacity="0.83"/>
+  <circle cx="1184" cy="227" r="1.6" fill="#ffffff" opacity="0.65"/>
+  <circle cx="1583" cy="790" r="1.3" fill="#efe3ff" opacity="0.51"/>
+  <circle cx="1530" cy="447" r="2.0" fill="#dfe6ff" opacity="0.94"/>
+  <circle cx="129" cy="102" r="1.3" fill="#ffffff" opacity="0.47"/>
+  <circle cx="772" cy="985" r="1.6" fill="#cfe9ff" opacity="0.85"/>
+  <circle cx="1455" cy="344" r="2.0" fill="#ffffff" opacity="0.40"/>
+  <circle cx="1456" cy="782" r="0.9" fill="#ffffff" opacity="0.64"/>
+  <circle cx="694" cy="636" r="0.7" fill="#cfe9ff" opacity="0.83"/>
+  <circle cx="741" cy="743" r="0.7" fill="#ffffff" opacity="0.78"/>
+  <circle cx="1589" cy="28" r="1.6" fill="#ffffff" opacity="0.89"/>
+  <circle cx="979" cy="596" r="1.3" fill="#dfe6ff" opacity="0.74"/>
+  <circle cx="249" cy="548" r="0.7" fill="#ffffff" opacity="0.36"/>
+  <circle cx="843" cy="934" r="1.3" fill="#ffffff" opacity="0.94"/>
+  <circle cx="1322" cy="211" r="1.1" fill="#efe3ff" opacity="0.48"/>
+  <circle cx="385" cy="586" r="1.1" fill="#ffffff" opacity="0.68"/>
+  <circle cx="97" cy="740" r="1.3" fill="#efe3ff" opacity="0.75"/>
+  <circle cx="673" cy="918" r="1.6" fill="#ffffff" opacity="0.43"/>
+  <circle cx="838" cy="19" r="1.3" fill="#efe3ff" opacity="0.82"/>
+  <circle cx="6" cy="799" r="0.9" fill="#efe3ff" opacity="0.43"/>
+  <circle cx="1160" cy="556" r="1.1" fill="#efe3ff" opacity="0.76"/>
+  <circle cx="889" cy="784" r="0.7" fill="#ffffff" opacity="0.88"/>
+  <circle cx="398" cy="277" r="0.7" fill="#efe3ff" opacity="0.65"/>
+  <circle cx="45" cy="894" r="0.7" fill="#efe3ff" opacity="0.62"/>
+  <circle cx="1557" cy="606" r="0.9" fill="#cfe9ff" opacity="0.77"/>
+  <circle cx="813" cy="807" r="1.6" fill="#efe3ff" opacity="0.91"/>
+  <circle cx="1402" cy="942" r="1.1" fill="#ffffff" opacity="0.90"/>
+  <circle cx="1344" cy="137" r="0.7" fill="#dfe6ff" opacity="0.59"/>
+  <circle cx="116" cy="241" r="0.7" fill="#dfe6ff" opacity="0.48"/>
+  <circle cx="1254" cy="897" r="0.9" fill="#dfe6ff" opacity="0.91"/>
+  <circle cx="229" cy="883" r="1.3" fill="#ffffff" opacity="0.48"/>
+  <circle cx="637" cy="487" r="2.0" fill="#ffffff" opacity="0.85"/>
+  <circle cx="1130" cy="994" r="1.3" fill="#ffffff" opacity="0.55"/>
+  <circle cx="571" cy="92" r="1.1" fill="#efe3ff" opacity="0.36"/>
+  <circle cx="734" cy="703" r="1.3" fill="#efe3ff" opacity="0.55"/>
+  <circle cx="473" cy="961" r="0.7" fill="#ffffff" opacity="0.94"/>
+  <circle cx="1555" cy="105" r="1.1" fill="#ffffff" opacity="0.51"/>
+  <circle cx="433" cy="130" r="1.3" fill="#dfe6ff" opacity="0.86"/>
+  <circle cx="650" cy="537" r="1.6" fill="#dfe6ff" opacity="0.69"/>
+  <circle cx="143" cy="58" r="2.0" fill="#ffffff" opacity="0.46"/>
+  <circle cx="430" cy="17" r="0.7" fill="#ffffff" opacity="0.83"/>
+  <circle cx="973" cy="222" r="1.1" fill="#cfe9ff" opacity="0.87"/>
+  <circle cx="18" cy="994" r="1.3" fill="#dfe6ff" opacity="0.91"/>
+  <circle cx="995" cy="43" r="2.0" fill="#ffffff" opacity="0.49"/>
+  <circle cx="1551" cy="262" r="0.9" fill="#dfe6ff" opacity="0.47"/>
+  <circle cx="1006" cy="531" r="0.9" fill="#efe3ff" opacity="0.52"/>
+  <circle cx="1075" cy="271" r="0.7" fill="#ffffff" opacity="0.95"/>
+  <circle cx="25" cy="733" r="1.6" fill="#efe3ff" opacity="0.94"/>
+  <circle cx="760" cy="935" r="0.7" fill="#cfe9ff" opacity="0.74"/>
+  <circle cx="1050" cy="546" r="1.3" fill="#dfe6ff" opacity="0.93"/>
+  <circle cx="1100" cy="982" r="1.1" fill="#ffffff" opacity="0.47"/>
+  <circle cx="648" cy="348" r="0.7" fill="#ffffff" opacity="0.85"/>
+  <circle cx="113" cy="741" r="1.1" fill="#ffffff" opacity="0.61"/>
+  <circle cx="135" cy="841" r="1.6" fill="#dfe6ff" opacity="0.75"/>
+  <circle cx="958" cy="693" r="0.7" fill="#ffffff" opacity="0.63"/>
+  <circle cx="430" cy="4" r="1.1" fill="#efe3ff" opacity="0.93"/>
+  <circle cx="518" cy="34" r="1.1" fill="#ffffff" opacity="0.48"/>
+  <circle cx="2" cy="382" r="1.3" fill="#ffffff" opacity="0.52"/>
+  <circle cx="397" cy="776" r="0.7" fill="#ffffff" opacity="0.51"/>
+  <circle cx="230" cy="587" r="1.3" fill="#dfe6ff" opacity="0.36"/>
+  <circle cx="1007" cy="84" r="1.6" fill="#ffffff" opacity="0.86"/>
+  <circle cx="1052" cy="716" r="1.6" fill="#dfe6ff" opacity="0.58"/>
+  <circle cx="1153" cy="494" r="1.1" fill="#ffffff" opacity="0.78"/>
+  <circle cx="70" cy="835" r="1.6" fill="#efe3ff" opacity="0.73"/>
+  <circle cx="223" cy="524" r="1.6" fill="#ffffff" opacity="0.69"/>
+  <circle cx="1322" cy="584" r="2.0" fill="#ffffff" opacity="0.76"/>
+  <circle cx="136" cy="42" r="2.0" fill="#ffffff" opacity="0.57"/>
+  <circle cx="603" cy="451" r="0.7" fill="#efe3ff" opacity="0.73"/>
+  <circle cx="1089" cy="489" r="0.7" fill="#ffffff" opacity="0.62"/>
+  <circle cx="1197" cy="503" r="1.6" fill="#efe3ff" opacity="0.41"/>
+  <circle cx="106" cy="737" r="1.1" fill="#dfe6ff" opacity="0.84"/>
+  <circle cx="376" cy="756" r="0.9" fill="#cfe9ff" opacity="0.79"/>
+  <circle cx="790" cy="383" r="1.3" fill="#dfe6ff" opacity="0.90"/>
+  <circle cx="1227" cy="617" r="2.0" fill="#efe3ff" opacity="0.47"/>
+  <circle cx="236" cy="254" r="2.0" fill="#efe3ff" opacity="0.77"/>
+  <circle cx="908" cy="12" r="0.7" fill="#ffffff" opacity="0.64"/>
+  <circle cx="1107" cy="676" r="1.1" fill="#dfe6ff" opacity="0.78"/>
+  <circle cx="743" cy="466" r="0.7" fill="#efe3ff" opacity="0.95"/>
+  <circle cx="319" cy="978" r="1.3" fill="#cfe9ff" opacity="0.36"/>
+  <circle cx="122" cy="507" r="1.3" fill="#cfe9ff" opacity="0.95"/>
+  <circle cx="336" cy="946" r="0.9" fill="#ffffff" opacity="0.39"/>
+  <circle cx="227" cy="524" r="1.1" fill="#efe3ff" opacity="0.43"/>
+  <circle cx="447" cy="113" r="1.1" fill="#cfe9ff" opacity="0.49"/>
+  <circle cx="631" cy="159" r="1.3" fill="#cfe9ff" opacity="0.76"/>
+  <circle cx="483" cy="141" r="1.1" fill="#ffffff" opacity="0.58"/>
+  <circle cx="1344" cy="2" r="1.1" fill="#ffffff" opacity="0.85"/>
+  <circle cx="1504" cy="196" r="0.7" fill="#dfe6ff" opacity="0.89"/>
+  <circle cx="405" cy="65" r="1.3" fill="#efe3ff" opacity="0.95"/>
+  <circle cx="122" cy="925" r="1.1" fill="#dfe6ff" opacity="0.86"/>
+  <circle cx="163" cy="835" r="1.1" fill="#ffffff" opacity="0.73"/>
+  <circle cx="399" cy="266" r="1.6" fill="#dfe6ff" opacity="0.54"/>
+  <circle cx="1256" cy="428" r="0.7" fill="#cfe9ff" opacity="0.84"/>
+  <circle cx="1461" cy="941" r="1.6" fill="#ffffff" opacity="0.47"/>
+  <circle cx="79" cy="732" r="1.3" fill="#ffffff" opacity="0.72"/>
+  <circle cx="1031" cy="286" r="0.7" fill="#efe3ff" opacity="0.90"/>
+  <circle cx="204" cy="472" r="1.1" fill="#dfe6ff" opacity="0.52"/>
+  <circle cx="1182" cy="976" r="1.1" fill="#ffffff" opacity="0.59"/>
+  <circle cx="481" cy="557" r="1.3" fill="#ffffff" opacity="0.42"/>
+  <circle cx="120" cy="501" r="1.3" fill="#cfe9ff" opacity="0.68"/>
+  <circle cx="1450" cy="996" r="1.3" fill="#efe3ff" opacity="0.61"/>
+  <circle cx="308" cy="91" r="1.1" fill="#dfe6ff" opacity="0.68"/>
+</svg></div>
 <div class="meadow-bg" aria-hidden="true"><svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="mdSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fc4ec"/><stop offset=".45" stop-color="#cfe6f3"/><stop offset=".62" stop-color="#eef3df"/></linearGradient>
@@ -856,6 +1104,7 @@
       <button type="button" data-theme="amber" class="on">Amber</button>
       <button type="button" data-theme="green">Green</button>
       <button type="button" data-theme="meadow">Meadow</button>
+      <button type="button" data-theme="nebula">Nebula</button>
     </div>
     <div class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">starting…</span></div>
   </header>
@@ -1018,7 +1267,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const applyTheme = (name) => {
-    const t = (name === "green" || name === "meadow") ? name : "amber";
+    const t = ["green", "meadow", "nebula"].includes(name) ? name : "amber";
     document.documentElement.setAttribute("data-theme", t);
     try { localStorage.setItem("caravan-theme", t); } catch (e) {}
     document.querySelectorAll("#themeSwitch button").forEach((b) => {
