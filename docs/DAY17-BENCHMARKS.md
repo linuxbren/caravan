@@ -302,3 +302,33 @@ semantic summary preserve those failures. Every timestamp in the raw files is CT
 - Browser/delegation tools are not available to this executor. **No new Day17
   screenshots created**; parent must capture2–3 genuine UI shots at
   `/workspace/dbg/shots/day17-*.png` without reloading/changing Qwen.
+
+## Approved live split follow-up — after9:42 PM CT
+Brenden explicitly approved loading Qwen as a split. Preflight `ps` on both
+Minis found no downloads/benchmarks; picker jobs empty. Contrary to the stale
+file assumption, EXO2 already had a complete17.17GB Qwen4-bit copy at
+`~/.caravan/mlx-models/mlx-community--Qwen3-30B-A3B-4bit`. EXO1 had the complete
+335MB Qwen3-0.6B4-bit helper. **No model download/copy/deletion needed.**
+Normal placement helper and `/api/models/load`,24/48 packer layers; original
+one/EXO1 placement backed up. Source **ac48fde** on both nodes. Same Day17
+three prompts, temperature0,seed17,max768,fresh sessions; KV16, learning/PL/
+shared-start off, fused off, keepalive on. Helper k3; one/two HTTP clients
+match pipelineN1/N2. UI path explicitly skips the first-load helper micro-gate,
+so these recorded HTTP requests are the quality/performance experiment.
+
+Initial N1: **6 replies per mode**, median server Write baseline45.1950→helper
+60.2931tok/s. Complete counts and3 generated asserts; strict exact lines retain
+the same Markdown-space failure in both modes. Raw files:
+[`split-baseline-n1.jsonl`](../bench/results/day17/split-baseline-n1.jsonl),
+[`split-draft-n1.jsonl`](../bench/results/day17/split-draft-n1.jsonl).
+
+**Negative:** initial N2 helper count pair timed out around180s; both error rows
+retained in [`split-draft-n2.jsonl`](../bench/results/day17/split-draft-n2.jsonl).
+N2 without helper also stalled before any result row. Stopped only our own
+benchmark drivers; no fabricated0tok/s rate or quality success. Worker/startup
+states, failure note, native sample and logs retained with `split-*` filenames.
+MacOS refused the documented Python3.14 debugger attach (task-port permission);
+no elevation/bypass attempted. On-demand SIGUSR1 stack dumps are added to future
+workers’ own stderr, without locals, periodic sampling or decode overhead;
+49 targeted tests+4subtests pass. Fresh diagnostic retry pending; model will be
+restored to original singleEXO1 after the experiment.

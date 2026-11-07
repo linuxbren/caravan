@@ -81,6 +81,23 @@ def log(msg: str) -> None:
     sys.stderr.flush()
 
 
+def enable_stack_dumps():
+    """SIGUSR1 dumps Python thread stacks to this worker's own stderr, no locals.
+
+    Useful for socket/scheduler stalls without privileged debugger attachment.
+    No periodic sampling or decode-path overhead; unsupported hosts fail soft.
+    """
+    import faulthandler
+    sig = getattr(signal, "SIGUSR1", None)
+    if sig is None:
+        return False
+    try:
+        faulthandler.register(sig, file=sys.stderr, all_threads=True)
+    except (OSError, RuntimeError, ValueError):
+        return False
+    return True
+
+
 def common_prefix(a, b) -> int:
     n = min(len(a), len(b))
     i = 0
@@ -3588,6 +3605,7 @@ def front_main(args):
 
 
 def main(argv=None):
+    enable_stack_dumps()
     ap = build_parser()
     args = ap.parse_args(argv)
     if any(a == '--split-speculate-k' or a.startswith('--split-speculate-k=') for a in (argv or [])):

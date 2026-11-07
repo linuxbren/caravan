@@ -1,0 +1,5 @@
+{
+  "timestamp_ct": "2026-11-06T21:56:02.473107-06:00",
+  "commit": "ac48fde",
+  "note": "N2 both with/without helper stalled; first helper count pair timed out around180s. Stopped only own benchmark drivers. Python3.14 remote debugger stack request refused by macOS task-port permissions; no elevation attempted. Native sample showed lead and packer waiting for socket reads; cause under investigation."
+}

@@ -1,0 +1,29 @@
+21:46:47 [mlx-worker] fuse kernels: off
+21:46:48 [mlx-worker] model_type remap: qwen3_5_text → qwen3_5
+21:46:48 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+21:46:49 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.103.191:5560
+21:46:49 [mlx-worker] split speculate: auto-pair qwen3-30b-a3b -> Qwen3-0.6B-4bit
+21:46:49 [mlx-worker] split speculate: draft Qwen3-0.6B-4bit, k=3, vocab=exact remap=0 (idea 3 guess-ahead)
+21:46:49 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+21:46:49 [mlx-worker] mlx cache_limit 1.5 GB
+21:46:50 [mlx-worker] warm-up 0.13s
+21:46:50 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 1.6s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+21:46:50 [mlx-worker] active settings: {"fuse_kernels": "off", "guess_ahead": true, "guess_ahead_loaded": true, "guess_ahead_mode": "helper", "keepalive": true, "kv_bits": 16, "multi_token_verify": "experimental \u00b7 split draft blocks, live benchmark pending", "native_mtp_available": false, "pinned": [], "pipeline_chats": 1, "prompt_lookup": {"adaptive": false, "enabled": false, "overlap_on": 0.5}, "reload_auto": [], "reload_trial": null, "self_tune": false, "shared_start": false, "two_chats_available": true}
+21:46:50 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)
+21:46:50 [mlx-worker] listening on http://127.0.0.1:8194
+21:46:57 [mlx-worker] session d17-f3223e76a0c246a7a5d5b2a7b9efad24: cold, reused 0/32 tokens, read 32 in 0.23s, 310 generated, total 5.43s, peak 9.11 GB
+21:46:57 [mlx-worker] session d17-f3223e76a0c246a7a5d5b2a7b9efad24: thinking off, reasoning 0 tok, answer 309 tok (of 310 generated, max 768)
+21:47:01 [mlx-worker] session d17-6aa8d8fa3a05474d8c8358f03c1be5c8: cold, reused 0/44 tokens, read 44 in 0.29s, 215 generated, total 4.16s, peak 9.17 GB
+21:47:01 [mlx-worker] session d17-6aa8d8fa3a05474d8c8358f03c1be5c8: thinking off, reasoning 0 tok, answer 214 tok (of 215 generated, max 768)
+21:47:02 [mlx-worker] session d17-00243e8573854c238988dc6de9c4f5ce: cold, reused 0/40 tokens, read 40 in 0.27s, 18 generated, total 0.63s, peak 9.18 GB
+21:47:02 [mlx-worker] session d17-00243e8573854c238988dc6de9c4f5ce: thinking off, reasoning 0 tok, answer 17 tok (of 18 generated, max 768)
+21:47:07 [mlx-worker] session d17-5bb0d90c96d3429a95f6071c88a6d673: cold, reused 0/32 tokens, read 32 in 0.22s, 310 generated, total 5.43s, peak 9.23 GB
+21:47:07 [mlx-worker] session d17-5bb0d90c96d3429a95f6071c88a6d673: thinking off, reasoning 0 tok, answer 309 tok (of 310 generated, max 768)
+21:47:11 [mlx-worker] saved d17-f3223e76a0c246a7a5d5b2a7b9efad24: 31 tokens, 2 MB in 0.00s
+21:47:11 [mlx-worker] evicted 1 session(s) from memory: d17-f3223e76a0c246a7a5d5b2a7b9efad24
+21:47:11 [mlx-worker] session d17-422c712fda224cbeb418fe51ef91453d: cold, reused 0/44 tokens, read 44 in 0.29s, 215 generated, total 4.16s, peak 9.23 GB
+21:47:11 [mlx-worker] session d17-422c712fda224cbeb418fe51ef91453d: thinking off, reasoning 0 tok, answer 214 tok (of 215 generated, max 768)
+21:47:12 [mlx-worker] saved d17-6aa8d8fa3a05474d8c8358f03c1be5c8: 43 tokens, 2 MB in 0.00s
+21:47:12 [mlx-worker] evicted 1 session(s) from memory: d17-6aa8d8fa3a05474d8c8358f03c1be5c8
+21:47:12 [mlx-worker] session d17-a19e30ba40104b35bcfd20b79cae84ee: cold, reused 0/40 tokens, read 40 in 0.27s, 18 generated, total 0.63s, peak 9.23 GB
+21:47:12 [mlx-worker] session d17-a19e30ba40104b35bcfd20b79cae84ee: thinking off, reasoning 0 tok, answer 17 tok (of 18 generated, max 768)

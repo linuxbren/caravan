@@ -30,6 +30,8 @@ def main():
     ap.add_argument("--include-repeat",action="store_true")
     ap.add_argument("--expect-pid",type=int)
     ap.add_argument("--concurrency",type=int,default=1)
+    ap.add_argument("--timeout-s",type=float,default=180)
+    ap.add_argument("--stop-on-error",action="store_true")
     ap.add_argument("--guard-url", help="UI status root; abort if its ready model/PID changes")
     ap.add_argument("--worker-commit", help="Loaded worker code when runner is a later commit")
     args=ap.parse_args()
@@ -65,7 +67,7 @@ def main():
                 import os
                 try:os.kill(args.expect_pid,0)
                 except ProcessLookupError:raise RuntimeError("Expected worker changed; abort")
-            with urllib.request.urlopen(req,timeout=180) as r:response=json.load(r)
+            with urllib.request.urlopen(req,timeout=args.timeout_s) as r:response=json.load(r)
             row["response"]=response
             if args.guard_url and state()!=guard:raise RuntimeError("UI state changed during request; abort")
             usage=response.get("usage") or {};info=usage.get("caravan") or {}
@@ -105,5 +107,5 @@ def main():
                 row["wave_aggregate_tps"]=sum(r.get("completion_tokens") or 0 for r in rows)/wall if any("response" in r for r in rows) else None
                 with path.open("a") as f:f.write(json.dumps(row)+"\n")
                 print(json.dumps({k:v for k,v in row.items() if k not in ("response","settings","prompt","text")}),flush=True)
-            if any("abort" in r.get("error","") for r in rows):raise RuntimeError("State guard stopped benchmark; rows retained")
+            if (args.stop_on_error and any("error" in r for r in rows)) or any("abort" in r.get("error","") for r in rows):raise RuntimeError("State guard stopped benchmark; rows retained")
 if __name__=="__main__":main()
