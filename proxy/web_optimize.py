@@ -299,10 +299,17 @@ class Optimizer:
                     if self.dirty_reload or reload_drift:
                         self._reload(self.best, restoring=True)
                     self._hold(self.best)
-                    self.mgr.sweep({"release": True})
                 except Exception as error:
                     failure = (failure + "; " if failure else "") + "restore failed: " + str(error)
                     self._log(failure)
+                finally:
+                    # Even a preflight/recovery failure can leave the original
+                    # healthy worker alive. Never strand it in sweep pause.
+                    try:
+                        self.mgr.sweep({"release": True})
+                    except Exception as error:
+                        failure = (failure + "; " if failure else "") + "release failed: " + str(error)
+                        self._log(failure)
             canceled = self._cancel.is_set()
             self._set(running=False, paused=False, error=failure,
                       phase="stopped (error)" if failure else "canceled" if canceled else "done",

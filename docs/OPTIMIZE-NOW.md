@@ -154,3 +154,27 @@ closure comment once authorized.
   EXO1 `/tmp/optimize-live-check.json`.
 - Box run 5 after the live-discovered baseline fix: **405 tests / 32.583 s**,
   all passed. Follow-up deployment/live results recorded below.
+
+### Second live run and adoption correction (12:11 PM CT)
+
+- After `c9b60d6` sync: EXO1 **405 / 34.121 s** successful (same Node-dependent
+  skip); EXO2 **405 / 33.760 s** all passed.
+- Web-only restart preserved the same Qwen worker PID **50958**. The second pass
+  correctly skipped KV8 and fused On as already lost, selected KV4, and sent
+  its 3 incumbent prompts with **0 initial reloads**: baseline fix verified.
+- **Run failed:** **3 prompts / 0 reloads / 0.12 min**, mean reply **2.081 s**.
+  The adopted `_loaded_entry` was an inventory/fit row whose `available_lead`
+  was false. Its first requested switch failed preflight with
+  `FileNotFoundError: model not on this Mini: qwen3-30b-a3b-4bit`; recovery hit
+  the same invalid entry. No worker was killed and no new loss/winner recorded.
+  Cleanup had also skipped release after recovery failed, leaving the live
+  worker paused. Released it immediately through `/caravan/sweep`; response
+  confirmed `paused:false`, Qwen stayed single and healthy.
+- Corrected adoption to retain a resolved `catalog.get_model` load entry plus
+  the actual adopted run mode, not a UI fit row. Cleanup now attempts release
+  even if restoring fails. Added regression tests for both. Confirmed the
+  resolved Qwen path really has `available_lead:true` and one-Mini placement.
+- Targeted checks after correction: **30 tests / 0.838 s**, all passed.
+  Raw failed run remains EXO1 `/tmp/optimize-live-check-final.json`.
+- Box run 6 after adoption/cleanup corrections: **407 tests / 32.174 s**, all
+  passed. Changed modules also parsed as Python 3.9 syntax successfully.

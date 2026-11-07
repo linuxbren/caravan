@@ -190,6 +190,25 @@ class LauncherTest(unittest.TestCase):
             self.assertEqual(saved["pending_reload"],{"kv_bits":4,"keepalive":False})
             self.assertIsNone(saved["reload_trial"])
 
+    def test_adopt_uses_resolved_load_entry_not_inventory_fit_row(self):
+        import web_catalog
+        with tempfile.TemporaryDirectory() as tmp:
+            m=WorkerManager(state_dir=Path(tmp))
+            (Path(tmp)/"lead.pid").write_text("123")
+            inventory={"id":"m","name":"M","lead_path":"/model","available_lead":False}
+            resolved=dict(inventory,available_lead=True)
+            with patch("web_workers.subprocess.check_output",return_value="python mlx_worker.py --model /model --split-role none"), \
+                 patch.object(web_catalog,"list_models",return_value=[inventory]), \
+                 patch.object(web_catalog,"get_model",return_value=resolved), \
+                 patch.object(m,"lead_healthy",return_value=True), \
+                 patch.object(m,"lead_active_settings",return_value={}):
+                self.assertTrue(m.adopt_running())
+            self.assertTrue(m._loaded_entry["available_lead"])
+            self.assertEqual(m._loaded_entry["run_mode"],"single")
+            with patch.object(m,"_do_switch") as load:
+                m.switch("m",entry=m._loaded_entry,wait=True,sweep={"force":{"kv_bits":8}})
+                self.assertTrue(load.called)
+
 
 class FakeMgr:
     def __init__(self):
@@ -280,6 +299,14 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(mgr.state['status'],'ready')
         self.assertEqual(mgr.active['kv_bits'],16)
         self.assertFalse(mgr.entry.get('optimize_hardware'))
+
+    def test_recovery_failure_still_releases_existing_worker(self):
+        mgr=FakeMgr()
+        def switch(*args,**kw): raise RuntimeError("preflight denied")
+        mgr.switch=switch
+        _,opt=self.run_opt(mgr)
+        self.assertIn("restore failed",opt.snapshot()["error"])
+        self.assertEqual(mgr.controls[-1],{"release":True})
 
     def test_pause_at_boundary_then_resume(self):
         mgr=FakeMgr(); gate=threading.Event(); opt=WO.Optimizer(mgr,send=mgr.send)

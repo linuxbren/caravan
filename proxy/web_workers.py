@@ -735,7 +735,8 @@ class WorkerManager:
                     or ("--split-peer" in cmd and "--split-role none" not in cmd
                         and "--split-role=none" not in cmd)
                 )
-                self._loaded_entry = dict(m, run_mode="split" if is_split else "single")
+                self._loaded_entry = dict(catalog.get_model(m["id"]) or m,
+                                          run_mode="split" if is_split else "single")
                 self._set(status="ready", model_id=m["id"], model_name=m["name"],
                           lead_pid=pid, settings=cur, page_settings=cur, split=is_split)
                 active = self.lead_active_settings() or {}
