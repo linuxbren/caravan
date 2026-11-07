@@ -316,7 +316,20 @@ has a small "On disk → Topology" link.
 |---|---|---|---|---|---|
 | Before (Brenden's job `ed0cbfa32943`) | mlx-community/Astrea-R8-Chat-9B-OptiQ-4bit | 8,012,768,155 B | one: EXO2 | disk 2.7 GB @ ~20:44, 5,441,048,548 B @ ~20:48, done ~20:52 (7.85 GB) ≈ 11 MB/s | API `have_bytes 0`, source "starting", no pct for the whole run, then "100% done" |
 | After fix 1 | mlx-community/Qwen2.5-0.5B-Instruct-4bit | 278,064,920 B | one: EXO2 | started ~21:01, done at 33 s ≈ 11 MB/s | starting… 0–9 s, 2 MB/278 MB at 12 s (0.5 MB/s, ETA 9m52s), stuck at 2 MB (xet), Done at 33 s |
-| After fix 2 (nettop) | see CHANGELOG / journal | | | | |
+| After fix 2 (process-tree nettop), 21:31 | Qwen2.5-0.5B-Instruct-4bit | 278,064,920 B | one: EXO2 | done in ~27 s ≈ 10 MB/s | API every ~2.5 s: 0 → 32 KB → 65.7 MB (23%, 10.9 MB/s) → 145.4 MB (52%, 13.2 MB/s) → 179.6 MB (64%) → Done 278 MB. Late measure briefly reopened Done as 99% → fixed (sticky final state) |
+| Copy to all #1, 21:33 | same | 2 × 278 MB | all (EXO2 + EXO1) | EXO2 moved 0→130 MB; EXO1 showed **851.20 GB** | local nettop parse took the biggest number on any row → fixed (only the requested pid, `-x`) |
+| Copy to all #2, 21:36 | same | 2 × 278 MB | all | EXO2 live to 145 MB; EXO1 stuck at 4 MB until Done | local Mini used the in-process hook, blind to xet → local now uses the same process-tree measure |
+| Copy to all #3, 21:38 | same | 2 × 278 MB | all | both done in ~48 s; All Minis 556 MB | both bars live and monotonic: EXO1 4→15→29→51→73→97→121→148→157→174 MB, EXO2 0→42→82→106→135→164 MB, 3–9 MB/s each, then Done 278/278 on both |
+
+Known limit: hf_xet moves compressed/deduped chunks, so network bytes reach only ~55–65% of
+the file size before the files land; the bar then jumps to Done. It never stalls at 0 or goes
+backwards. Updates arrive every ~2.5 s (one `nettop` sample per measure).
+
+Read/Write live check (21:41 CST, Qwen3 30B-A3B on EXO1, chat only):
+`Read 71 tok/s · Write 50.9 tok/s · 25→50 tok · first token 0.41s · total 1.39s`.
+
+EXO2-only check (read-only, `/api/models`, 21:40): Astrea-R8-Chat-9B-OptiQ-4bit, Orvena-4B-MLX-4bit
+and the test Qwen2.5 on EXO2 all `usable: true, run_mode: single`, placement `EXO2`. Not loaded.
 
 ## Chat: Read / Write tok/s
 Under each reply: `Read N tok/s · Write M tok/s · in→out tok · first token Xs · total Ys`.
