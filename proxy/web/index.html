@@ -1051,6 +1051,7 @@
     <div class="card a-progress demoted" id="progressCard">
       <h2>Load progress</h2>
       <div class="progress" id="progressLog">idle</div>
+      <details id="errDetail" hidden style="margin-top:6px;font-size:.7rem;opacity:.85"><summary>Details</summary><pre id="errDetailText" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin:4px 0 0"></pre></details>
     </div>
 
     <div class="messages" id="messages">
@@ -1613,11 +1614,13 @@
     dot.className = "dot";
     if (st === "ready") { dot.classList.add("ok"); text.textContent = `ready · ${snap.model_name || ""}`; }
     else if (st === "error") { dot.classList.add("err"); text.textContent = `error · ${snap.error || ""}`; }
-    else if (st === "idle") { text.textContent = "idle · pick a model"; }
+    else if (st === "idle") { text.textContent = snap.error ? `idle · ${snap.error}` : "idle · pick a model"; }
     else { dot.classList.add("busy"); text.textContent = st.replaceAll("_", " "); }
 
     const prog = (snap.progress || []).slice(-12).map(p => p.msg).join("\n") || "idle";
     $("progressLog").textContent = prog;
+    const ed = $("errDetail");
+    if (ed) { ed.hidden = !snap.error_detail; if (snap.error_detail) $("errDetailText").textContent = snap.error_detail; }
     const pc = $("progressCard");
     if (pc) {
       const bad = /error|fail|Errno|No space|OSError/i.test(prog || "");

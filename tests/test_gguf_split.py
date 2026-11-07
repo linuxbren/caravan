@@ -49,21 +49,27 @@ class Commands(unittest.TestCase):
     def test_llama_args_single_has_no_rpc(self):
         self.assertNotIn("--rpc", G.llama_args("/m.gguf", port=1, peers=[], shares=[1]))
 
-    def test_rpc_start_never_any_and_gated(self):
-        c = G.rpc_start_command("169.254.1.2", ["169.254.1.1"])
-        self.assertIn("rpc_gate.py", c)
-        self.assertIn("--listen 169.254.1.2:50052", c)
-        self.assertIn("-p 50053", c)
+    def test_rpc_start_loopback_only(self):
+        c = G.rpc_start_command()
+        self.assertIn("-H 127.0.0.1 -p 50052", c)
         self.assertNotIn("0.0.0.0", c)
-        with self.assertRaises(ValueError):
-            G.rpc_start_command("0.0.0.0", ["x"])
-        with self.assertRaises(ValueError):
-            G.rpc_start_command("169.254.1.2", [])
+        self.assertNotIn("169.254", c)
 
-    def test_stop_only_tracked_gate(self):
+    def test_tunnel_args(self):
+        a = G.ssh_tunnel_args("b@169.254.1.2", 50062)
+        self.assertIn("127.0.0.1:50062:127.0.0.1:50052", a)
+        self.assertIn("BatchMode=yes", a)
+
+    def test_stop_only_tracked_rpc_server(self):
         c = G.rpc_stop_command()
-        self.assertIn("grep -q rpc_gate.py", c)
+        self.assertIn("grep -q ggml-rpc-server", c)
         self.assertNotIn("pkill", c)
+
+    def test_friendly_error(self):
+        import web_workers as W
+        m = W.gguf_friendly(RuntimeError("lead exited early (rc=-6): ggml-rpc.cpp:547: Failed to connect to x"), ["EXO2"])
+        self.assertEqual(m, "Couldn't reach EXO2 for the split. Try again.")
+        self.assertNotIn("backtrace", W.gguf_friendly(RuntimeError("weird\n0 libggml backtrace"), []))
 
     def test_rpc_host_prefers_link_peer(self):
         self.assertEqual(G.rpc_host(N("exo2", "packer", 24, "169.254.103.191")), "169.254.103.191")

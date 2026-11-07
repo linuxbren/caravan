@@ -1,8 +1,8 @@
 """GGUF (llama.cpp) loads for the web UI: one Mini or split across K Minis.
 
 Same mechanism as the CLI split (Sep 5, commit ae838f1, launchd/com.caravan.*):
-each peer Mini runs `ggml-rpc-server`; the lead runs `llama-server --rpc
-peer1:port,peer2:port,...` and llama.cpp ships each peer its share of the
+each peer Mini runs `ggml-rpc-server` (loopback only); the lead reaches each
+through an SSH tunnel and runs `llama-server --rpc 127.0.0.1:p1,127.0.0.1:p2,...` and llama.cpp ships each peer its share of the
 weights over the network at load. Peers do NOT need the .gguf file -- only
 the lead does. The first load copies the peer's share over Thunderbolt; with
 `rpc-server -c` the peer keeps a local tensor cache so later loads are faster.
@@ -143,34 +143,28 @@ def _rpath(p: str) -> str:
     return ('"$HOME"/' + shlex.quote(p[2:])) if p.startswith("~/") else shlex.quote(p)
 
 
-def rpc_start_command(host: str, allow: list, *, repo: str = "~/cv3", port: int = RPC_PORT,
-                      bin_dir: str = LLAMA_BIN) -> str:
-    """Remote shell: stop our tracked gate, start gate + rpc-server, print PID.
+def rpc_start_command(*, port: int = RPC_PORT, bin_dir: str = LLAMA_BIN) -> str:
+    """Remote shell: stop our tracked rpc-server, start one on 127.0.0.1, print PID.
 
-    Security: rpc-server binds 127.0.0.1:<port+1>; agent/rpc_gate.py listens on
-    the Mini-to-Mini link address `host`:<port> and only accepts IPs in
-    `allow` (Caravan topology). Never 0.0.0.0. `-d MTL0` gives one RPC
-    device per Mini, so RPC<i> in --device maps to peer i.
-    Exit 3 = port busy by something we don't own; 4 = died at start.
+    Security: ggml-rpc-server has no auth, so on a peer it listens on
+    loopback ONLY. The lead reaches it through an SSH local forward
+    (ssh_tunnel_args), so only machines holding Caravan's SSH key -- the
+    topology Minis -- can talk to it, over an encrypted channel. No network
+    listener, no sudo/pf, any number of Minis. (Also sidesteps macOS Local
+    Network privacy, which made llama-server's direct dials fail with
+    "Failed to connect" when launched under the web server.)
+    `-d MTL0` gives one RPC device per Mini, so RPC<i> maps to peer i.
+    Exit 3 = port busy by something we don't own; 4 = died / not listening.
     """
-    if not host or host in ("0.0.0.0", "::"):
-        raise ValueError("rpc-server needs the Mini-to-Mini link address, not all interfaces")
-    allow = [a for a in (allow or []) if a]
-    if not allow:
-        raise ValueError("rpc-server allowlist is empty")
-    gate = _rpath(repo.rstrip("/") + "/agent/rpc_gate.py")
     binp = _rpath(bin_dir.rstrip("/") + "/ggml-rpc-server")
     return (
         "mkdir -p ~/.caravan/web-ui; "
         + rpc_stop_command() + "; "
-        + f"for pp in {int(port)} {int(port) + 1}; do if lsof -nP -iTCP:$pp -sTCP:LISTEN >/dev/null 2>&1; then "
-        "echo PORT_BUSY:$pp; exit 3; fi; done; "
-        f"nohup python3 {gate} --listen {shlex.quote(host)}:{int(port)} "
-        f"--allow {shlex.quote(','.join(allow))} -- {binp} -d MTL0 -p {int(port) + 1} -c "
+        + f"if lsof -nP -iTCP:{int(port)} -sTCP:LISTEN >/dev/null 2>&1; then echo PORT_BUSY; exit 3; fi; "
+        f"nohup {binp} -d MTL0 -H 127.0.0.1 -p {int(port)} -c "
         f"> {RPC_LOG} 2>&1 & echo $! > {RPC_PID}; "
         f"p=$(cat {RPC_PID}); "
-        # Wait until the gate is actually listening (python start can take ~2s).
-        f"for i in $(seq 1 40); do kill -0 $p 2>/dev/null || break; "
+        f"for i in $(seq 1 60); do kill -0 $p 2>/dev/null || break; "
         f"lsof -nP -iTCP:{int(port)} -sTCP:LISTEN >/dev/null 2>&1 && break; sleep 0.25; done; "
         f"kill -0 $p 2>/dev/null || {{ tail -5 {RPC_LOG}; echo DIED; exit 4; }}; "
         f"lsof -nP -iTCP:{int(port)} -sTCP:LISTEN >/dev/null 2>&1 || {{ tail -5 {RPC_LOG}; echo NOT_LISTENING; exit 4; }}; "
@@ -178,12 +172,23 @@ def rpc_start_command(host: str, allow: list, *, repo: str = "~/cv3", port: int 
     )
 
 
+def ssh_tunnel_args(ssh_target: str, local_port: int, remote_port: int = RPC_PORT) -> list:
+    """ssh -L lead 127.0.0.1:<local_port> → peer 127.0.0.1:<remote_port>."""
+    return ["ssh", "-o", "BatchMode=yes", "-o", "ExitOnForwardFailure=yes",
+            "-o", "ServerAliveInterval=15", "-o", "ConnectTimeout=10",
+            "-c", "aes128-gcm@openssh.com,chacha20-poly1305@openssh.com", "-N",
+            "-L", f"127.0.0.1:{int(local_port)}:127.0.0.1:{int(remote_port)}", ssh_target]
+
+
+def tunnel_port(i: int) -> int:
+    return RPC_PORT + 10 + int(i)
+
+
 def rpc_stop_command() -> str:
-    """Kill only the PID we recorded, and only if it is our rpc gate
-    (the gate stops its rpc-server child on SIGTERM)."""
+    """Kill only the PID we recorded, and only if it is ggml-rpc-server."""
     return (
         f"if [ -f {RPC_PID} ]; then p=$(cat {RPC_PID}); "
-        "if ps -p \"$p\" -o command= 2>/dev/null | grep -q rpc_gate.py; then "
+        "if ps -p \"$p\" -o command= 2>/dev/null | grep -q ggml-rpc-server; then "
         "kill \"$p\"; for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 \"$p\" 2>/dev/null || break; sleep 0.3; done; "
         "kill -0 \"$p\" 2>/dev/null && kill -9 \"$p\"; fi; "
         f"rm -f {RPC_PID}; fi"

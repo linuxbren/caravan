@@ -35,6 +35,27 @@ WEB_STATE_DIR = Path(os.environ.get(
     "CARAVAN_WEB_STATE", str(Path.home() / ".caravan" / "web-ui"))).expanduser()
 
 
+class GgufLoadError(RuntimeError):
+    """Short plain message for the page; full log tail in .detail."""
+    def __init__(self, msg: str, detail: str = ""):
+        super().__init__(msg)
+        self.detail = detail
+
+
+def gguf_friendly(err: Exception, peers: list) -> str:
+    t = str(err)
+    names = " + ".join(peers) or "the other Mini"
+    if "Failed to connect" in t or "tunnel" in t.lower() or "RPC handshake" in t:
+        return f"Couldn't reach {names} for the split. Try again."
+    if "rpc-server" in t and "did not start" in t:
+        return f"Couldn't start the split helper on {names}. Try again."
+    if "out of memory" in t.lower() or "failed to allocate" in t.lower():
+        return "Not enough memory for this placement. Try splitting across more Minis."
+    if "missing" in t.lower() or "not found" in t.lower():
+        return t.split("\n")[0][:160]
+    return "The model didn't load. Details below."
+
+
 class WorkerManager:
     def __init__(self, *, python: str = DEFAULT_PY, lead_port: int = LEAD_PORT,
                  packer_peer: str = PACKER_PEER, packer_ssh: str = PACKER_SSH,
@@ -139,6 +160,11 @@ class WorkerManager:
         def run():
             try:
                 self._do_switch(entry, settings)
+            except GgufLoadError as e:
+                # Cleaned up already; leave a sane idle state with a plain message.
+                self._set(status="idle", model_id=None, model_name=None, lead_pid=None,
+                          error=str(e), error_detail=e.detail)
+                self._note("load failed: " + str(e))
             except Exception as e:  # noqa: BLE001 — surface to UI
                 self._set(status="error", error=f"{type(e).__name__}: {e}")
                 self._note(f"error: {e}")
@@ -270,13 +296,27 @@ class WorkerManager:
                 for n in picked]
 
     def _load_gguf(self, entry: dict, settings: dict) -> None:
+        self._quiet_lead_log = True
+        try:
+            self._load_gguf_inner(entry, settings)
+        except Exception as e:  # noqa: BLE001
+            peers = [n for n in (self.state.get("gguf") or {}).get("labels") or []][1:]
+            try:
+                self._kill_gguf()
+            except Exception as ke:  # noqa: BLE001
+                self._note(f"cleanup: {ke}")
+            raise GgufLoadError(gguf_friendly(e, peers), f"{type(e).__name__}: {e}"[-4000:]) from e
+        finally:
+            self._quiet_lead_log = False
+
+    def _load_gguf_inner(self, entry: dict, settings: dict) -> None:
         import gguf_split as G
         place = entry.get("placement") or {}
         nodes = self._gguf_nodes(place)
         peers = [n for n in nodes if not self._node_is_local(n)]
         mode = "split" if peers else "single"
         label = " + ".join(n.get("label") or n.get("id") for n in nodes)
-        self._set(status="stopping", error=None, model_id=entry["id"], model_name=entry["name"],
+        self._set(status="stopping", error=None, error_detail=None, model_id=entry["id"], model_name=entry["name"],
                   progress=[], split=bool(peers), backend="llama",
                   gguf={"nodes": [n.get("id") for n in nodes], "labels": [n.get("label") for n in nodes],
                         "mode": mode})
@@ -293,27 +333,39 @@ class WorkerManager:
         time.sleep(1.0)
         meta = {"lead_pid": None, "peers": [], "model": str(path), "nodes": [n.get("id") for n in nodes]}
         rpc = []
-        all_hosts = [G.rpc_host(n) for n in peers]
-        for n in peers:
+        self._gguf_tunnels = []
+        for i, n in enumerate(peers):
             name = n.get("label") or n.get("id")
-            host = G.rpc_host(n)
-            if not host:
-                raise RuntimeError(f"no Mini-to-Mini link address for {name}; set peer in [web.nodes.{n.get('id')}]")
+            target = (n.get("ssh") or n.get("host") or "").strip()
+            if not target:
+                raise RuntimeError(f"no SSH target for {name}; set ssh in [web.nodes.{n.get('id')}]")
             self._set(status="starting_packer")
-            # Lead's address on the link, as this peer sees it.
-            r = self._ssh_node(n, 'echo "LEADIP:${SSH_CLIENT%% *}"', timeout=20)
-            lead_ip = next((l[7:].strip() for l in (r.stdout or "").splitlines() if l.startswith("LEADIP:")), "")
-            allow = [lead_ip] + [h for h in all_hosts if h != host]
-            self._note(f"starting rpc-server on {name} ({host}:{G.RPC_PORT}, allow {', '.join(a for a in allow if a)})")
-            cmd = G.rpc_start_command(host, allow, repo=n.get("repo") or "~/cv3")
-            r = self._ssh_node(n, cmd, timeout=40)
+            self._note(f"starting rpc-server on {name} (127.0.0.1:{G.RPC_PORT}, reached over SSH)")
+            r = self._ssh_node(n, G.rpc_start_command(), timeout=40)
             pid = G.parse_pid(r.stdout)
             if not pid:
-                raise RuntimeError(f"rpc-server on {name} did not start: {(r.stdout or '')[-300:]} {(r.stderr or '')[-200:]}")
-            meta["peers"].append({"id": n.get("id"), "ssh": n.get("ssh") or n.get("host"), "pid": pid})
+                raise RuntimeError(f"rpc-server on {name} did not start: "
+                                   f"{(r.stdout or '')[-300:]} {(r.stderr or '')[-200:]}")
+            meta["peers"].append({"id": n.get("id"), "ssh": target, "pid": pid})
             self._gguf_meta_path().write_text(json.dumps(meta))
-            rpc.append(f"{host}:{G.RPC_PORT}")
-            self._note(f"rpc-server on {name} up (pid {pid})")
+            lp = G.tunnel_port(i)
+            tun = subprocess.Popen(G.ssh_tunnel_args(target, lp), stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.PIPE, start_new_session=True)
+            self._gguf_tunnels.append(tun)
+            meta.setdefault("tunnels", []).append(tun.pid)
+            self._gguf_meta_path().write_text(json.dumps(meta))
+            import socket as _s
+            for _ in range(40):
+                if tun.poll() is not None:
+                    err = (tun.stderr.read() or b"").decode(errors="replace")[:300]
+                    raise RuntimeError(f"SSH tunnel to {name} failed: {err}")
+                try:
+                    _s.create_connection(("127.0.0.1", lp), timeout=1).close()
+                    break
+                except OSError:
+                    time.sleep(0.25)
+            rpc.append(f"127.0.0.1:{lp}")
+            self._note(f"rpc-server on {name} up (pid {pid}), tunnel 127.0.0.1:{lp}")
         shares = G.tensor_split(nodes)
         args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares)
         self._set(status="starting_lead", packer_pid=None)
@@ -360,6 +412,15 @@ class WorkerManager:
                     os.kill(int(pid), signal.SIGKILL)
             except (ProcessLookupError, OSError, ValueError):
                 pass
+        for tp in meta.get("tunnels") or []:
+            try:
+                cmdline = subprocess.run(["ps", "-p", str(int(tp)), "-o", "command="],
+                                         capture_output=True, text=True).stdout
+                if cmdline.startswith("ssh") and "-L" in cmdline:
+                    os.kill(int(tp), signal.SIGTERM)
+            except (OSError, ValueError):
+                pass
+        self._gguf_tunnels = []
         for p in meta.get("peers") or []:
             target = p.get("ssh")
             if not target:
@@ -889,7 +950,7 @@ class WorkerManager:
             if self._lead_proc and self._lead_proc.poll() is not None:
                 tail = log_path.read_text(errors="replace")[-2000:] if log_path.exists() else ""
                 raise RuntimeError(f"lead exited early (rc={self._lead_proc.returncode}): {tail}")
-            if (not remote) and log_path.exists():
+            if (not remote) and log_path.exists() and not getattr(self, "_quiet_lead_log", False):
                 text = log_path.read_text(errors="replace")
                 if len(text) > last_size:
                     for line in text[last_size:].splitlines():
