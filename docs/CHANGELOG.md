@@ -3,6 +3,20 @@
 
 ## Unreleased
 
+### Picker progress + placement + On disk in Topology (Nov 6)
+- Remote download progress was always 0: the ssh measure script was `repr()`-quoted
+  (invalid shell). Now `shlex.quote`d; errors are shown, not hidden.
+- hf_xet downloads are invisible on disk; progress now also counts per-process
+  network bytes (`nettop`) for the fetch's process tree.
+- Monotonic per-Mini progress with speed/ETA, Done/Stopped/Failed, survives drawer reopen;
+  no auto-load over a ready model.
+- Inline "Step 2 · Choose where it lives" with a button naming the action.
+- Placement saved on the Mini that holds the weights; single-Mini models on any node
+  (e.g. EXO2-only) are usable and route to that node.
+- On disk moved to the Topology drawer as one combined list with location notes.
+- Chat: `Read N tok/s · Write M tok/s` under each reply (prompt/prefill, fallback TTFT).
+- Numbers: see WEB.md "Test record".
+
 ### Day 17 — completed matching-target MTP measurement
 - Orvena4B EXO2 ABBA: **36.95→54.13 median Write tok/s (+46.51%)**, **98.21%**
   accepted proposals; median TTFT0.1748→0.17545s. 12/12 uncapped replies; count
@@ -10,7 +24,9 @@
   examples differ (not bit-exact). No compatibility claim for Qwen3 30B-A3B.
 - Initial Qwen adaptive run is negative: **50.45→47.20tok/s**, zero accepted
   drafts even on repeated text. Fixed high-overlap one-miss poisoning; remeasure
-  before any default change. Focused ownership/worker/gate suite67+4subtests green.
+  before any default change. Fixed-gate copy50.11→72.37tok/s, mixed50.24→47.31;
+  keep default OFF. UI shows both results. Experimental loads disable learning
+  and skip queued reload trials. Native rejects compressed/conflicting modes.
 - Complete prompts, per-run numbers, failures, CT times and commits:
   [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md),
   [raw results](../bench/results/day17/),

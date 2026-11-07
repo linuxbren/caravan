@@ -274,4 +274,51 @@ On EXO2 Orvena4B, OFF/ON/ON/OFF measured36.95→54.13 median Write tok/s,
 a Qwen30B upgrade and not a general quality guarantee. Full TTFT, all individual
 runs, initial failures and commands: [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
 The initial adaptive Qwen comparison was slower and exposed one-miss poisoning;
-the full-window high-overlap fix is awaiting remeasurement. Default remains off.
+the full-window high-overlap fix raises repeated copy50.11→72.37tok/s, but mixed prompts50.24→47.31. Default remains off. Experimental modes disable learning and skip learned reload trials; native refuses compressed caches and simultaneous adaptive PL.
+
+## Picker: placement step, honest progress, On disk in Topology (Day 17 follow-up)
+
+**Placement step.** Picking a quant opens "Step 2 · Choose where it lives" right under
+it, with the recommended option pre-selected. The button says what it will do:
+"Download 0.28 GB to EXO2", "… split across EXO1 + EXO2", "… to each: EXO1, EXO2". Works for
+any node count; no sort menu.
+
+**Progress — what was wrong (found Nov 6, 2026).**
+1. Remote Minis never reported anything. The measure script was sent over ssh quoted with
+   `repr()`, which is not valid shell → `SyntaxError` on every poll → fallback
+   `{have_bytes:0, source:"starting"}`, which `_watch` passed through without pct/msg.
+   Fix: `shlex.quote`, `~/` → `$HOME/`, and `measure_error` surfaces as "can't read progress: …".
+2. hf_xet single-file downloads are invisible on disk until the file lands (no growing
+   `.incomplete`, hook file says 0). Fix: find the fetch's process tree with `ps`
+   (excluding the probe itself), sum per-process `nettop -x` `bytes_in`, and prefer the
+   network count when it is ahead of disk.
+3. Progress is folded monotonically (`monotonic_snap`): bytes/pct never go backwards, pct
+   capped at 99 until done; each Mini ends Done / Stopped / Failed. The job card is per
+   Mini with bytes, MB/s, ETA and an All-Minis total, and is re-adopted from
+   `/api/picker/jobs` when the drawer reopens. A finished download offers Load instead of
+   auto-loading over a ready model.
+
+**Placement saving.** Remote runners now write `caravan-placement.json` on their own Mini
+(ssh). Before, it was written locally on EXO1, leaving placement-only folders there and
+none next to EXO2's weights, so an EXO2-only model showed "not on EXO1".
+
+**Single-Mini on any node.** `web_catalog` accepts a full copy on any configured node
+(placement file or not) and targets that node; `_resolve_worker_node` routes the load to
+the remote single-Mini worker.
+
+**On disk** moved from Models to the bottom of the Topology drawer: one combined list,
+each row with size per Mini and a location note (`EXO2`, `split EXO1+EXO2`, `all`,
+`partial on …`). Delete (stop-then-delete) and the HF cache / guess-ahead rows stay. Models
+has a small "On disk → Topology" link.
+
+### Test record (Nov 6, 2026, CST)
+| Run | Model | Size | Placement | What happened | UI / API |
+|---|---|---|---|---|---|
+| Before (Brenden's job `ed0cbfa32943`) | mlx-community/Astrea-R8-Chat-9B-OptiQ-4bit | 8,012,768,155 B | one: EXO2 | disk 2.7 GB @ ~20:44, 5,441,048,548 B @ ~20:48, done ~20:52 (7.85 GB) ≈ 11 MB/s | API `have_bytes 0`, source "starting", no pct for the whole run, then "100% done" |
+| After fix 1 | mlx-community/Qwen2.5-0.5B-Instruct-4bit | 278,064,920 B | one: EXO2 | started ~21:01, done at 33 s ≈ 11 MB/s | starting… 0–9 s, 2 MB/278 MB at 12 s (0.5 MB/s, ETA 9m52s), stuck at 2 MB (xet), Done at 33 s |
+| After fix 2 (nettop) | see CHANGELOG / journal | | | | |
+
+## Chat: Read / Write tok/s
+Under each reply: `Read N tok/s · Write M tok/s · in→out tok · first token Xs · total Ys`.
+Read = prompt tokens / prefill seconds, falling back to time-to-first-token when the worker
+doesn't report prefill (`web_timing.reply_stats`).
