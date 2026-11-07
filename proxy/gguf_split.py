@@ -167,8 +167,13 @@ def rpc_start_command(host: str, allow: list, *, repo: str = "~/cv3", port: int 
         "echo PORT_BUSY:$pp; exit 3; fi; done; "
         f"nohup python3 {gate} --listen {shlex.quote(host)}:{int(port)} "
         f"--allow {shlex.quote(','.join(allow))} -- {binp} -d MTL0 -p {int(port) + 1} -c "
-        f"> {RPC_LOG} 2>&1 & echo $! > {RPC_PID}; sleep 1.5; "
-        f"p=$(cat {RPC_PID}); kill -0 $p 2>/dev/null || {{ tail -5 {RPC_LOG}; echo DIED; exit 4; }}; "
+        f"> {RPC_LOG} 2>&1 & echo $! > {RPC_PID}; "
+        f"p=$(cat {RPC_PID}); "
+        # Wait until the gate is actually listening (python start can take ~2s).
+        f"for i in $(seq 1 40); do kill -0 $p 2>/dev/null || break; "
+        f"lsof -nP -iTCP:{int(port)} -sTCP:LISTEN >/dev/null 2>&1 && break; sleep 0.25; done; "
+        f"kill -0 $p 2>/dev/null || {{ tail -5 {RPC_LOG}; echo DIED; exit 4; }}; "
+        f"lsof -nP -iTCP:{int(port)} -sTCP:LISTEN >/dev/null 2>&1 || {{ tail -5 {RPC_LOG}; echo NOT_LISTENING; exit 4; }}; "
         "echo PID:$p"
     )
 

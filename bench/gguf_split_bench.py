@@ -51,9 +51,12 @@ def main():
         out.write(json.dumps({**base, "kind": "load", "ok": False, "error": str(e), "ct": now_ct()}) + "\n")
         raise
     st = {}
+    time.sleep(3)  # let the switch thread take over the status
     while time.time() - t0 < 1500:
         st = api("/api/status")["worker"]
-        if st["status"] in ("ready", "error"):
+        if st.get("model_id") == a.model and st["status"] in ("ready", "error"):
+            break
+        if st["status"] in ("idle", "error") and time.time() - t0 > 10:
             break
         time.sleep(2)
     load_s = round(time.time() - t0, 1)
