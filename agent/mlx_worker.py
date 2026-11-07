@@ -1978,8 +1978,13 @@ class Engine:
         if not use_draft and not use_pl:
             raise RuntimeError("speculate called with neither draft nor prompt-lookup")
         num_draft_tokens = int(self.speculate_k)
-        if not hasattr(model, "trim_caches"):
-            raise RuntimeError("idea 3 requires SplitModel.trim_caches")
+        def trim_target(n):
+            if not n:
+                return
+            if hasattr(model, "trim_caches"):
+                model.trim_caches(n, cache)
+            elif trim_prompt_cache(cache, n) != n:
+                raise RuntimeError("prompt lookup needs rewindable target caches")
         # RotatingKVCache may already be full after a long prompt; we still
         # run but only single-token steps until/unless trim room appears (it
         # will not for a full sliding window). Hard-fail only when no cache
@@ -2050,7 +2055,7 @@ class Engine:
             return y_in
 
         def _rewind(num_draft, num_accept):
-            model.trim_caches(num_draft - num_accept, cache)
+            trim_target(num_draft - num_accept)
             if draft_cache is not None:
                 trim_prompt_cache(draft_cache, max(num_draft - num_accept - 1, 0))
 
@@ -2210,6 +2215,7 @@ class Engine:
                     if prev_tokens is not None:
                         prev_tokens = prev_tokens[: -max(num_draft - n, 1)]
                     _rewind(num_draft, n)
+                    num_draft = n = 0
                     if use_draft and src != "draft_model":
                         # After trim, advance draft cache by the accepted tokens we yielded this round
                         # (n drafts + 1 bonus if any). Simpler path: run draft on each accepted token
@@ -2278,6 +2284,25 @@ class Engine:
         yield ("done", info)
 
     def _run(self, key, prompt, body, cancel):
+        # Serial worker request-local experiment: do not mutate saved UI choices.
+        mode = body.get("prompt_lookup")
+        if mode is None:
+            yield from self._run_impl(key, prompt, body, cancel)
+            return
+        if mode not in ("off", "adaptive"):
+            raise ValueError("prompt_lookup must be off or adaptive")
+        if self.client is not None and int(self.pipeline_chats or 1) > 1:
+            raise ValueError("request-local prompt lookup requires serial worker")
+        saved = (self.prompt_lookup_n, self.prompt_lookup_adaptive, self._adaptive_pl_gate)
+        self.prompt_lookup_n = 3 if mode == "adaptive" else 0
+        self.prompt_lookup_adaptive = mode == "adaptive"
+        self._adaptive_pl_gate = adaptive_pl.AdaptivePLGate(ngram_n=3) if mode == "adaptive" else None
+        try:
+            yield from self._run_impl(key, prompt, body, cancel)
+        finally:
+            self.prompt_lookup_n, self.prompt_lookup_adaptive, self._adaptive_pl_gate = saved
+
+    def _run_impl(self, key, prompt, body, cancel):
         if getattr(self, "native_mtp", None) is not None:
             yield from self._run_native_mtp(key, prompt, body, cancel)
             return
@@ -2340,8 +2365,7 @@ class Engine:
                 draft_ok = self.draft_model is not None and not (shut and shut.disabled)
             else:
                 draft_ok = self.draft_model is not None and not (shut and shut.disabled)
-            use_spec = self.client is not None and (
-                draft_ok or int(self.prompt_lookup_n) > 0)
+            use_spec = ((self.client is not None and draft_ok) or int(self.prompt_lookup_n) > 0)
             if use_spec:
                 # Detokenize ourselves (stream_generate path does this inside mlx_lm).
                 detok = self.tokenizer

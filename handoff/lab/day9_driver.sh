@@ -18,9 +18,9 @@ MODELS=(
 )
 
 kill_all() {
-  pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+  true 2>/dev/null || true
   sleep 2
-  pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+  true 2>/dev/null || true
   sleep 2
 }
 
@@ -47,7 +47,7 @@ mode_run() {
   local dir="$R/$tag-$mode"
   mkdir -p "$dir"
   echo "===== LEAD $tag $mode $(date) =====" | tee -a "$R/suite.log"
-  pkill -9 -f 'mlx_worker.py --split-role lead' 2>/dev/null || true
+  true 2>/dev/null || true
   sleep 2
   local args=(--model "$M" --split-role lead --split-peer "$PEER"
               --host 127.0.0.1 --port 8194
@@ -62,7 +62,7 @@ mode_run() {
   wait_health
   $PY "$CV/bench/v3/split_client.py" bench "$URL" "$NAME" "$dir/single.json" | tee "$dir/single.out"
   $PY "$CV/bench/v3/pipeline_bench.py" "$URL" "$NAME" "$dir/pipe-N2.json" 2 | tee "$dir/pipe-N2.out"
-  pkill -9 -f 'mlx_worker.py --split-role lead' 2>/dev/null || true
+  true 2>/dev/null || true
   sleep 2
   echo DONE_LEAD "$tag" "$mode" | tee -a "$R/suite.log"
 }

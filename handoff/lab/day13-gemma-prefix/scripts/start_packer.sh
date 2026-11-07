@@ -11,7 +11,7 @@ case "$TAG" in
 esac
 LPM=$(pmset -g | awk "/lowpowermode/{print \$2}")
 [[ "$LPM" == "0" ]] || { echo REFUSE_LPM_PACKER; exit 2; }
-pkill -9 -f "mlx_worker.py" 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 R=$HOME/.caravan/bench-2026-11-04/day13-gemma-prefix
 mkdir -p "$R"

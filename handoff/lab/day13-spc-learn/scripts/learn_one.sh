@@ -27,7 +27,7 @@ TUNED="$dir/tuned-settings.json"
 rm -f "$TUNED"
 LPM=$(pmset -g | awk '/lowpowermode/{print $2}')
 [[ "$LPM" == "0" ]] || { echo REFUSE_LPM; exit 2; }
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 # Packer must already be up on exo2 (orch starts it).
 args=(--model "$M" --split-role lead --split-peer "$PEER" --host 127.0.0.1 --port 8194
@@ -159,6 +159,6 @@ print("RESULT", json.dumps({
 }))
 PY
 kill -9 "$(cat "$dir/lead.pid")" 2>/dev/null || true
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 echo DONE_LEARN "$TAG"

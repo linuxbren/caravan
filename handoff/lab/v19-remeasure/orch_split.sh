@@ -12,6 +12,6 @@ for TAG in qwen3 gemma gptoss; do
       ssh exo1 "bash ~/.caravan/bench-2026-11-04/v19/scripts/lead_split.sh $TAG prefix $F"
     done
   fi
-  ssh exo2 'pkill -9 -f mlx_worker.py 2>/dev/null || true'; sleep 2
+  ssh exo2 'true 2>/dev/null || true'; sleep 2
 done
 echo ALL_SPLIT_DONE $(date +%T)

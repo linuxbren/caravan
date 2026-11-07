@@ -111,3 +111,23 @@ class WebFlagTests(unittest.TestCase):
         lead,_=S.to_args({})
         self.assertNotIn("--native-mtp",lead)
         self.assertNotIn("--split-prompt-lookup-adaptive",lead)
+
+class RequestLookupTests(unittest.TestCase):
+    def test_override_restored_on_cancel_and_error(self):
+        import mlx_worker as W
+        from types import SimpleNamespace
+        e=W.Engine.__new__(W.Engine);e.client=None;e.pipeline_chats=1
+        e.prompt_lookup_n=0;e.prompt_lookup_adaptive=False;e._adaptive_pl_gate=None
+        def run(*a):
+            self.assertEqual(e.prompt_lookup_n,3)
+            yield ("piece","test",False)
+        e._run_impl=run
+        g=e._run("x",[1],{"prompt_lookup":"adaptive"},None)
+        next(g);g.close()
+        self.assertEqual((e.prompt_lookup_n,e.prompt_lookup_adaptive,e._adaptive_pl_gate),(0,False,None))
+        def fail(*a):
+            raise RuntimeError("test")
+            yield
+        e._run_impl=fail
+        with self.assertRaises(RuntimeError):list(e._run("x",[1],{"prompt_lookup":"adaptive"},None))
+        self.assertEqual((e.prompt_lookup_n,e.prompt_lookup_adaptive,e._adaptive_pl_gate),(0,False,None))

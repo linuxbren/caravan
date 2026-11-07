@@ -63,8 +63,8 @@ run_model() {
   fi
 
   # stop workers for this model before next
-  python3 "$RC" 1 run "pkill -9 -f mlx_worker || true; pkill -9 -f day10_learn || true" >>"$LOG" 2>&1
-  python3 "$RC" 2 run "pkill -9 -f mlx_worker || true" >>"$LOG" 2>&1
+  python3 "$RC" 1 run "true || true; pkill -9 -f day10_learn || true" >>"$LOG" 2>&1
+  python3 "$RC" 2 run "true || true" >>"$LOG" 2>&1
   log "======== DONE $TAG ========"
   update_status "$TAG" "done"
 }

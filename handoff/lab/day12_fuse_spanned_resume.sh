@@ -17,8 +17,8 @@ json.dump(data, open(path,"w"), indent=2)
 PY
 }
 stop_all() {
-  python3 "$RC" 1 run "pkill -9 -f mlx_worker || true; sleep 1; pkill -9 -f mlx_worker || true" >/dev/null 2>&1 || true
-  python3 "$RC" 2 run "pkill -9 -f mlx_worker || true; sleep 1; pkill -9 -f mlx_worker || true" >/dev/null 2>&1 || true
+  python3 "$RC" 1 run "true || true; sleep 1; true || true" >/dev/null 2>&1 || true
+  python3 "$RC" 2 run "true || true; sleep 1; true || true" >/dev/null 2>&1 || true
   sleep 2
 }
 pull_dir() {

@@ -22,7 +22,7 @@ dir="$R/${TAG}-n${N}-${FLAG}"
 mkdir -p "$dir"
 LPM=$(pmset -g | awk "/lowpowermode/{print \$2}")
 [[ "$LPM" == "0" ]] || { echo REFUSE_LPM; exit 2; }
-pkill -9 -f "mlx_worker.py" 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 args=(--model "$M" --split-role lead --split-peer "$PEER"
       --host 127.0.0.1 --port 8194
@@ -49,6 +49,6 @@ open("$dir/quality.json","w").write(json.dumps({"content":j["choices"][0]["messa
 print("QUALITY", j["choices"][0]["message"].get("content"))
 PY
 kill -9 "$(cat "$dir/lead.pid")" 2>/dev/null || true
-pkill -9 -f "mlx_worker.py" 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 echo DONE_DAY13 "$TAG" "$N" "$FLAG"

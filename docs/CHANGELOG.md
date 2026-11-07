@@ -3,6 +3,15 @@
 
 ## Unreleased
 
+### Day 17 follow-up — worker ownership safety
+- UI termination validates tracked PID, exact repository script and node-local
+  endpoint; stale PID markers fail closed and PID reuse is rechecked before
+  escalation. No broad process-name kills. Archived lab sweeps removed too.
+- Single-Mini rewindable targets support request-local adaptive prompt lookup;
+  overrides restore after cancellation/errors. Two-chat split semantics unchanged.
+- Brenden identified the earlier UI switch/stop as his own exploration. All
+  interrupted data stays in [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
+
 ### Day 17 — performance experiments
 - EXO2 native-head run archived in full: 4 completed responses + 8 transport
   failures after a concurrent UI model switch/stop killed the isolated worker.

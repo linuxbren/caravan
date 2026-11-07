@@ -44,8 +44,8 @@ if [[ "$LPM" != "0" ]]; then
 fi
 
 # Stop only lead workers; packer is managed by the orch
-pkill -9 -f 'mlx_worker.py --split-role lead' 2>/dev/null || true
-pkill -9 -f 'mlx_worker.py --split-role none' 2>/dev/null || true
+true 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 
 args=(--model "$M" --split-role lead --split-peer "$PEER"
@@ -78,6 +78,6 @@ fi
 # Capture peak hints from lead log
 grep -E 'peak |fuse kernels:|split lead:' "$dir/lead.log" | tail -40 > "$dir/lead-peaks.txt" || true
 
-pkill -9 -f 'mlx_worker.py --split-role lead' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 echo DONE_SPANNED "$TAG" "$MODE" "n$PIPE" | tee -a "$R/suite.log"

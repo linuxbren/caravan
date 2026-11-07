@@ -12,7 +12,7 @@ case "$TAG" in
 esac
 d=$R/split-$TAG-$MODE-$FLAG; mkdir -p $d
 [[ $(pmset -g | awk '/lowpowermode/{print $2}') == 0 ]] || { echo REFUSE_LPM; exit 2; }
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true; sleep 2
+true 2>/dev/null || true; sleep 2
 args=(--model "$M" --split-role lead --split-peer "$PEER" --host 127.0.0.1 --port 8194
       --split-draft-skip-first-load --no-learn --no-split-draft --split-packer-layers "$K" --split-pipeline-chats 1)
 [[ $FLAG == on ]] && args+=(--split-shared-prefix-cache)
@@ -21,5 +21,5 @@ echo $! > $d/lead.pid
 for i in $(seq 1 400); do grep -qE 'listening on http' $d/lead.log 2>/dev/null && break; sleep 1; done
 if [[ $MODE == bench ]]; then $PY $CV/bench/v3/split_client.py bench $URL $NAME $d/bench.json $NT > $d/bench.out 2>&1
 else $PY $CV/handoff/lab/day12_prefix_bench.py $URL $NAME $d/prefix.json 2048 > $d/prefix.out 2>&1; fi
-kill -9 $(cat $d/lead.pid) 2>/dev/null || true; pkill -9 -f 'mlx_worker.py' 2>/dev/null || true; sleep 2
+kill -9 $(cat $d/lead.pid) 2>/dev/null || true; true 2>/dev/null || true; sleep 2
 echo DONE $TAG $MODE $FLAG

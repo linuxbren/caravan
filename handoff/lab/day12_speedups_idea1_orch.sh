@@ -28,7 +28,7 @@ for TAG in "${TAGS[@]}"; do
     done
   done
 
-  ssh exo2 'pkill -9 -f mlx_worker.py 2>/dev/null || true'
+  ssh exo2 'true 2>/dev/null || true'
   sleep 2
 done
 echo ALL_DONE_IDEA1 $(date)

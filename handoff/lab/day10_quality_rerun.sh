@@ -15,8 +15,8 @@ run_quality(){
   python3 "$RC" 1 get "/Users/brenden/.caravan/bench-2026-11-02/day10-learn/${TAG}-quality/result.json" \
     "/workspace/caravan/handoff/lab/day10-learn-results/${TAG}-quality.json" >>"$LOG" 2>&1 || log "get fail $TAG"
   python3 "$RC" 1 run "tail -20 ~/.caravan/bench-2026-11-02/day10-learn/${TAG}-quality-driver.log; python3 -c \"import json;d=json.load(open('/Users/brenden/.caravan/bench-2026-11-02/day10-learn/${TAG}-quality/result.json')); print('SCORE',d.get('passed'),'/',d.get('total'),'mt',d.get('max_tokens'))\"" >>"$LOG" 2>&1
-  python3 "$RC" 1 run "pkill -9 -f mlx_worker || true; pkill -9 -f day10_learn || true" >>"$LOG" 2>&1
-  python3 "$RC" 2 run "pkill -9 -f mlx_worker || true" >>"$LOG" 2>&1
+  python3 "$RC" 1 run "true || true; pkill -9 -f day10_learn || true" >>"$LOG" 2>&1
+  python3 "$RC" 2 run "true || true" >>"$LOG" 2>&1
   log "======== DONE $TAG ========"
 }
 : > "$LOG"

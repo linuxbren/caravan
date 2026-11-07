@@ -193,8 +193,6 @@ class WorkerManager:
             raise FileNotFoundError("; ".join(problems))
         if settings.get("guess_ahead") == "mtp" and (run_mode != "single" or not entry.get("native_mtp_available")):
             raise ValueError("native MTP needs a single-Mini matching target with an installed head")
-        if settings.get("prompt_lookup") == "adaptive" and run_mode != "split":
-            raise ValueError("adaptive prompt lookup currently needs a split; current single-Mini model stays loaded")
         lead_x, packer_x = web_settings.to_args(settings)
         self._lead_path = entry.get("lead_path")
         for line in self.plan_reload_args(entry, settings, lead_x, packer_x):
@@ -423,53 +421,47 @@ class WorkerManager:
     def _packer_log_remote(self) -> str:
         return "~/.caravan/web-ui/packer.log"
 
+    @staticmethod
+    def _remote_path(path):
+        path = str(path)
+        if path.startswith("~/"):
+            return '"$HOME"/' + shlex.quote(path[2:])
+        return shlex.quote(path)
+
+    def _remote_stop_command(self, repo, marker, *, pid=None, port=None, listen=None):
+        cmd = "python3 " + self._remote_path(str(repo).rstrip("/") + "/proxy/worker_ownership.py")
+        cmd += " --worker " + self._remote_path(str(repo).rstrip("/") + "/agent/mlx_worker.py")
+        cmd += " --pid-file " + self._remote_path(marker)
+        if pid:
+            cmd += " --pid " + str(int(pid))
+        if port is not None:
+            cmd += " --port " + str(int(port))
+        if listen is not None:
+            cmd += " --listen " + shlex.quote(listen)
+        return cmd
+
     def _kill_lead(self) -> None:
-        # Stop SSH tunnel used for non-lead single-Mini loads first.
-        try:
-            self._stop_tunnel()
-        except Exception:
-            pass
-        # Remote single-Mini worker (EXO2 etc.)
+        from worker_ownership import stop
+        self._stop_tunnel()
         meta_path = self.state_dir / "remote-worker.json"
-        if meta_path.is_file():
-            try:
-                meta = json.loads(meta_path.read_text())
-                target = (meta.get("ssh") or "").strip()
-                pid = meta.get("pid")
-                if target:
-                    cmd = "pkill -f 'mlx_worker.py.*--port %d' 2>/dev/null || true; " % int(self.lead_port)
-                    if pid:
-                        cmd += "kill %s 2>/dev/null || true; " % int(pid)
-                    cmd += "rm -f ~/.caravan/web-ui/remote-lead.pid; echo killed"
-                    subprocess.run(
-                        ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target, cmd],
-                        capture_output=True, text=True, timeout=20)
-            except Exception as e:
-                self._note(f"remote lead kill warn: {e}")
-            try:
-                meta_path.unlink()
-            except OSError:
-                pass
-        self._worker_node = None
-        # Only our own worker on the test port / our log marker.
-        if self._lead_proc and self._lead_proc.poll() is None:
-            try:
-                self._lead_proc.send_signal(signal.SIGTERM)
-                self._lead_proc.wait(timeout=8)
-            except Exception:
-                try:
-                    self._lead_proc.kill()
-                except Exception:
-                    pass
+        remote = meta_path.is_file()
+        if remote:
+            meta = json.loads(meta_path.read_text())
+            target = (meta.get("ssh") or "").strip()
+            if target:
+                cmd = self._remote_stop_command(meta.get("repo") or "~/cv3",
+                    "~/.caravan/web-ui/remote-lead.pid", pid=meta.get("pid"), port=self.lead_port)
+                r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target, cmd],
+                                   capture_output=True, text=True, timeout=25)
+                if r.returncode:
+                    raise RuntimeError("could not stop tracked remote worker: " + (r.stderr or ""))
+            meta_path.unlink()
+        if self._lead_proc is not None:
+            stop(self.worker, pid=self._lead_proc.pid, port=self.lead_port)
+        elif not remote:
+            stop(self.worker, pid_file=self.state_dir / "lead.pid", port=self.lead_port)
         self._lead_proc = None
-        # Also clear any leftover mlx_worker we started on this port.
-        subprocess.run(
-            ["pkill", "-f", f"mlx_worker.py.*--port {self.lead_port}"],
-            check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        # Narrow fallback used by Day 12/13 scripts when the port match misses.
-        subprocess.run(
-            ["pkill", "-f", "mlx_worker.py"],
-            check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self._worker_node = None
 
     def _ssh(self, remote_cmd: str, *, timeout: float = 60) -> subprocess.CompletedProcess:
         cmd = [
@@ -480,10 +472,11 @@ class WorkerManager:
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
     def _kill_packer(self) -> None:
-        try:
-            self._ssh("pkill -f mlx_worker.py 2>/dev/null || true; sleep 1; echo killed")
-        except Exception as e:
-            self._note(f"packer kill warn: {e}")
+        cmd = self._remote_stop_command("~/cv3", "~/.caravan/web-ui/packer.pid",
+                                        listen=self.packer_peer)
+        r = self._ssh(cmd, timeout=25)
+        if r.returncode:
+            raise RuntimeError("could not stop tracked packer: " + (r.stderr or ""))
 
     def _resolve_packer_path(self, entry: dict) -> str:
         # Ask EXO2 which candidate exists.
@@ -620,9 +613,8 @@ class WorkerManager:
             "mkdir -p ~/.caravan/web-ui; "
             "LPM=$(pmset -g 2>/dev/null | awk '/lowpowermode/{print $2}'); "
             "[[ \"$LPM\" == \"0\" || -z \"$LPM\" ]] || { echo REFUSE_LPM; exit 2; }; "
-            "old=$(cat ~/.caravan/web-ui/remote-lead.pid 2>/dev/null); "
-            "if [ -n \"$old\" ]; then kill $old 2>/dev/null || true; fi; "
-            f"nohup ~/.caravan/venvs/mlx/bin/python {repo}/agent/mlx_worker.py "
+            + self._remote_stop_command(repo, "~/.caravan/web-ui/remote-lead.pid", port=self.lead_port) + "; "
+            + f"nohup ~/.caravan/venvs/mlx/bin/python {repo}/agent/mlx_worker.py "
             f"--model {shlex.quote(remote_model)} "
             f"--host 127.0.0.1 --port {int(self.lead_port)} --split-role none "
             + (extra + " " if extra else "")
@@ -645,7 +637,7 @@ class WorkerManager:
         (self.state_dir / "remote-worker.json").write_text(json.dumps({
             "pid": pid, "node": node.get("id") or node.get("label"),
             "ssh": node.get("ssh") or node.get("host"),
-            "model": remote_model,
+            "model": remote_model, "repo": repo,
         }))
         return pid
 

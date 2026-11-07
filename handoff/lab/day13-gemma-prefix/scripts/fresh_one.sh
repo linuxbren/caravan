@@ -20,7 +20,7 @@ dir="$R/${TAG}-n${N}-${FLAG}-fresh"
 mkdir -p "$dir"
 LPM=$(pmset -g | awk '/lowpowermode/{print $2}')
 [[ "$LPM" == "0" ]] || { echo REFUSE_LPM; exit 2; }
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 args=(--model "$M" --split-role lead --split-peer "$PEER" --host 127.0.0.1 --port 8194
       --split-draft-skip-first-load --no-learn --no-split-draft
@@ -86,6 +86,6 @@ OUT.write_text(json.dumps(out, indent=2)+"\n")
 print(json.dumps(out, indent=2))
 PY
 kill -9 "$(cat "$dir/lead.pid")" 2>/dev/null || true
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 echo DONE_FRESH "$TAG" "$FLAG"

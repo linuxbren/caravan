@@ -27,9 +27,9 @@ dir="$R/${TAG}-${MODE}"
 mkdir -p "$dir"
 echo "===== ONE-MINI $TAG fuse=$MODE $(date) =====" | tee -a "$R/suite.log"
 
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 
 # Refuse to bench if Low Power Mode is on
@@ -58,6 +58,6 @@ curl -sf "$URL/health" >/dev/null
 
 $PY "$CV/bench/v3/split_client.py" bench "$URL" "$NAME" "$dir/single.json" | tee "$dir/single.out"
 
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 echo DONE_ONE "$TAG" "$MODE" | tee -a "$R/suite.log"

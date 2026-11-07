@@ -99,9 +99,9 @@ def sh(cmd, check=True):
 
 
 def kill_workers():
-    sh("pkill -9 -f 'mlx_worker.py' || true", check=False)
+    sh("true || true", check=False)
     time.sleep(2)
-    sh("pkill -9 -f 'mlx_worker.py' || true", check=False)
+    sh("true || true", check=False)
     time.sleep(2)
 
 

@@ -51,7 +51,7 @@ as the agent `/health` endpoint). There is no login.
 | Start UI | `python3 proxy/web_server.py --host 0.0.0.0 --port 8190` |
 | Stop UI (keeps workers) | Ctrl-C in that terminal, or `curl -X POST http://127.0.0.1:8190/api/shutdown` |
 | Unload model from UI | Unload button, or `curl -X POST http://127.0.0.1:8190/api/models (disk inventory; no static phantoms)/stop` |
-| Panic stop test workers | On each Mini: `pkill -f 'mlx_worker.py'` (only our test workers; leave launchd / exo / Hermes alone) |
+| Panic stop test workers | On each Mini: Use `python3 proxy/worker_ownership.py --worker /absolute/repo/agent/mlx_worker.py --pid-file ~/.caravan/web-ui/lead.pid --port 8194` on that Mini; never sweep by process name |
 
 Env knobs (optional):
 
@@ -250,3 +250,18 @@ independent experiments while another browser/agent switches or stops models.
 [Raw data and state evidence](DAY17-BENCHMARKS.md) preserve all eight failed
 requests. Native MTP remains explicitly experimental; no complete quality gate
 or validated speed gain is claimed. PL and two-chat defaults are unchanged.
+
+### Scoped worker ownership (Day 17 follow-up)
+UI stop/replacement now validates the tracked PID's exact repository script and
+endpoint before SIGTERM, and rechecks identity before any SIGKILL escalation.
+Local lead, remote single-Mini lead and packer each have separate PID markers,
+repo paths and endpoints. A missing/stale marker fails closed; no process-name
+sweep or arbitrary old-PID kill is used. An EXO2 worker on :8294 survives a stop
+of the UI-owned :8194 or packer :5560. Historical lab sweeps were removed (no-op
+cleanup); those old scripts now require explicit scoped cleanup before reuse.
+
+Serial rewindable models (including single-Mini Qwen3) now support adaptive
+prompt lookup; HTTP requests can select `prompt_lookup: "off" | "adaptive"`
+without changing saved UI choices. Overrides restore in finally on error/cancel.
+Adaptive still pins one chat. Two-chat overlap remains a split-only capability;
+two requests to a single-Mini worker are queued, not batched decode.

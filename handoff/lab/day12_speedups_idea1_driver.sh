@@ -50,9 +50,9 @@ fi
 
 # Stop any prior lead on test port (pidfile + pattern)
 if [[ -f "$dir/lead.pid" ]]; then kill -9 "$(cat "$dir/lead.pid")" 2>/dev/null || true; fi
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 
 args=(--model "$M" --split-role lead --split-peer "$PEER"
@@ -85,7 +85,7 @@ $PY "$CV/bench/v3/pipeline_bench.py" "$URL" "$NAME" "$dir/pipe-N${PIPE}.json" "$
 grep -E 'peak |split lead:|speculate' "$dir/lead.log" | tail -40 > "$dir/lead-peaks.txt" || true
 
 if [[ -f "$dir/lead.pid" ]]; then kill -9 "$(cat "$dir/lead.pid")" 2>/dev/null || true; fi
-pkill -9 -f 'mlx_worker.py --split-role lead' 2>/dev/null || true
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 echo DONE_IDEA1 "$TAG" "n$PIPE" "draft$DRAFT" | tee -a "$R/suite.log"

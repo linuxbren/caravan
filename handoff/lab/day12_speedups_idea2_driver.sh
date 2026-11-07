@@ -31,9 +31,9 @@ mkdir -p "$dir"
 LPM=$(pmset -g | awk '/lowpowermode/{print $2}')
 [[ "$LPM" == "0" ]] || { echo REFUSE_LPM; exit 2; }
 
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 
 args=(--model "$M" --split-role lead --split-peer "$PEER"
@@ -51,6 +51,6 @@ for i in $(seq 1 360); do grep -qE 'listening on http' "$dir/lead.log" 2>/dev/nu
 curl -sf "$URL/health" >/dev/null
 $PY "$CV/bench/v3/speculate_bench.py" "$URL" "$NAME" "$dir/suite.json" "$MODE" suite | tee "$dir/suite.out"
 kill -9 "$(cat "$dir/lead.pid")" 2>/dev/null || true
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 echo DONE_IDEA2 "$TAG" "$MODE"

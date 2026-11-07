@@ -129,3 +129,17 @@ the coordinating parent, with awareness of any user-initiated model changes.
 completed **127 passed + 4 subtests** in **12.31 s** on code `f09f6d0`.
 This excludes the previously documented stale HTTP/optimizer fixture failures;
 it does not erase those negative results or substitute for live split tests.
+
+## Approved follow-up, 9:09 PM CT onward
+Brenden confirmed the earlier switch/stop was **him using the UI**, not an
+unidentified agent. Original evidence stays intact. He authorized Qwen reload;
+normal `/api/models/load` restored Qwen3 30B-A3B 4-bit, placement one/EXO1.
+Auto applied an already-pending KV8 trial; any benchmark reload will pin settings
+and record them to avoid mixing learning with measurements.
+
+Worker ownership is now tracked PID + exact script + exact endpoint per node,
+with PID identity rechecked before escalation; no process-name sweeps. Historical
+lab process-name cleanup commands were replaced by no-ops (safe refusal to
+sweep; explicit scoped cleanup needed for reuse). Request-local serial prompt
+lookup now permits a single-Mini Qwen on/off comparison after one code reload.
+Two-chat single-Mini tests measure actual queuing, not split-stage overlap.

@@ -26,8 +26,14 @@ def main():
     ap.add_argument("--model",required=True)
     ap.add_argument("--placement",required=True)
     ap.add_argument("--modes",default="off,on,on,off")
+    ap.add_argument("--max-tokens",type=int,default=768)
+    ap.add_argument("--include-repeat",action="store_true")
+    ap.add_argument("--expect-pid",type=int)
     ap.add_argument("--concurrency",type=int,default=1)
     args=ap.parse_args()
+    if args.include_repeat:
+        passage="The little green robot walks beside the quiet blue river. " * 12
+        PROMPTS.append({"id":"repeat","text":"Repeat the following passage exactly, without commentary:\n"+passage})
     commit=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()
     path=Path(args.output);path.parent.mkdir(parents=True,exist_ok=True)
     def request(prompt,mode,wave,member=0):
@@ -35,9 +41,15 @@ def main():
              "timezone":"America/Chicago (CT)","commit":commit,"model":args.model,
              "placement":args.placement,"mode":mode,"wave":wave,"member":member,
              "concurrency":args.concurrency,"prompt_id":prompt["id"],"prompt":prompt["text"]}
-        body={"messages":[{"role":"user","content":prompt["text"]}],"max_tokens":192,
+        body={"messages":[{"role":"user","content":prompt["text"]}],"max_tokens":args.max_tokens,
               "temperature":0,"seed":17,"stream":False,"chat_template_kwargs":{"enable_thinking":False}}
         if mode in ("on","off"):body["native_mtp"]=mode=="on"
+        if mode in ("pl-off","pl-adaptive"):body["prompt_lookup"]="adaptive" if mode=="pl-adaptive" else "off"
+        if args.expect_pid:
+            import os
+            try:os.kill(args.expect_pid,0)
+            except ProcessLookupError:
+                raise RuntimeError("Expected worker changed; abort rather than fight UI state")
         row["settings"]=body
         req=urllib.request.Request(args.url+"/v1/chat/completions",data=json.dumps(body).encode(),
             headers={"Content-Type":"application/json","X-Caravan-Session":"d17-"+uuid.uuid4().hex})
@@ -76,7 +88,7 @@ def main():
             wall=time.perf_counter()-start
             for row in rows:
                 row["wave_wall_s"]=wall
-                row["wave_aggregate_tps"]=sum(r.get("completion_tokens") or 0 for r in rows)/wall
+                row["wave_aggregate_tps"]=sum(r.get("completion_tokens") or 0 for r in rows)/wall if any("response" in r for r in rows) else None
                 with path.open("a") as f:f.write(json.dumps(row)+"\n")
                 print(json.dumps({k:v for k,v in row.items() if k not in ("response","settings","prompt","text")}),flush=True)
 if __name__=="__main__":main()

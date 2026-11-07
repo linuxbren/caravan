@@ -15,9 +15,9 @@ LPM=$(pmset -g | awk '/lowpowermode/{print $2}')
 if [[ "$LPM" != "0" ]]; then
   echo "REFUSE: Low Power Mode on packer (lowpowermode=$LPM)"; exit 2
 fi
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 R=$HOME/.caravan/bench-2026-11-03/day12-fused/spanned
 mkdir -p "$R"

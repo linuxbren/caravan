@@ -13,7 +13,7 @@ case "$TAG" in
   *) echo "bad tag $TAG"; exit 1 ;;
 esac
 if [[ ! -d "$M" ]]; then echo "missing model $M"; exit 1; fi
-pkill -9 -f 'mlx_worker.py' 2>/dev/null || true
+true 2>/dev/null || true
 sleep 2
 mkdir -p $HOME/.caravan/bench-2026-11-02/day10-learn
 LOG=$HOME/.caravan/bench-2026-11-02/day10-learn/packer-$TAG.log

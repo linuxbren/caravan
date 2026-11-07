@@ -22,7 +22,7 @@ for TAG in "${TAGS[@]}"; do
     echo "==== idea2 $TAG $MODE $(date) ===="
     ssh exo1 "bash \$HOME/dev/caravan-v3/handoff/lab/day12_speedups_idea2_driver.sh $TAG $MODE"
   done
-  ssh exo2 'pkill -9 -f mlx_worker.py 2>/dev/null || true'
+  ssh exo2 'true 2>/dev/null || true'
   sleep 2
 done
 echo ALL_DONE_IDEA2 $(date)
