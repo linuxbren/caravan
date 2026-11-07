@@ -87,7 +87,8 @@ class SettingsListTest(unittest.TestCase):
         self.assertNotIn("gemma-4-26b-a4b-4bit", ids)
         self.assertEqual(rows, [])
 
-    def test_packer_only_gemma_disabled_with_reason(self):
+    def test_packer_only_gemma_usable_on_exo2(self):
+        # Changed Nov 6: a full copy on a non-lead Mini is usable as a single-Mini model there.
         gem = "mlx-community/gemma-4-26b-a4b-it-8bit"
         rows = catalog.build_entries_from_inventories(
             node_inventories=[
@@ -106,8 +107,9 @@ class SettingsListTest(unittest.TestCase):
         )
         self.assertEqual(len(rows), 1)
         r = rows[0]
-        self.assertFalse(r["usable"])
-        self.assertIn("EXO1", r["disabled_reason"])
+        self.assertTrue(r["usable"], r["disabled_reason"])
+        self.assertEqual(r["placement"]["node_ids"], ["exo2"])
+        self.assertEqual(r["lead_path"], "/remote/gemma")
 
     def test_complete_on_both_usable(self):
         rid = "mlx-community/Qwen3-30B-A3B-4bit"
@@ -152,3 +154,43 @@ class SettingsListTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestOneOnNonLead(unittest.TestCase):
+    RID = "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+    NODES = [
+        {"id": "exo1", "label": "EXO1", "role": "lead", "ram": {"available_gb": 20, "total_gb": 24}, "disk": {"free_gb": 100}},
+        {"id": "exo2", "label": "EXO2", "role": "packer", "ram": {"available_gb": 20, "total_gb": 24}, "disk": {"free_gb": 100}},
+        {"id": "exo3", "label": "EXO3", "role": "packer", "ram": {"available_gb": 20, "total_gb": 24}, "disk": {"free_gb": 100}},
+    ]
+
+    def _rows(self, placement=None, on="exo2"):
+        st = {"path": f"/remote/{on}/q", "weights_gb": 0.28, "full_ok": True, "lead_ok": True,
+              "packer_ok": True, "kind": "full", "n_layers": 24}
+        if placement:
+            st["placement"] = placement
+        inv = [{"id": n["id"], "label": n["label"], "role": n["role"],
+                "models": ({self.RID: st} if n["id"] == on else {})} for n in self.NODES]
+        from web_catalog import build_entries_from_inventories
+        return build_entries_from_inventories(node_inventories=inv, nodes=self.NODES)
+
+    def test_no_placement_file_uses_holder(self):
+        r = self._rows()[0]
+        self.assertTrue(r["usable"], r["disabled_reason"])
+        self.assertEqual(r["run_mode"], "single")
+        self.assertEqual(r["placement"]["node_ids"], ["exo2"])
+        self.assertEqual(r["lead_path"], "/remote/exo2/q")
+
+    def test_placement_one_exo2(self):
+        r = self._rows({"mode": "one", "node_ids": ["exo2"], "node_labels": ["EXO2"]})[0]
+        self.assertTrue(r["usable"], r["disabled_reason"])
+        self.assertEqual(r["lead_path"], "/remote/exo2/q")
+
+    def test_placement_label_case_mismatch(self):
+        r = self._rows({"mode": "one", "node_ids": [], "node_labels": ["exo2"]})[0]
+        self.assertTrue(r["usable"], r["disabled_reason"])
+
+    def test_third_node(self):
+        r = self._rows(on="exo3")[0]
+        self.assertTrue(r["usable"], r["disabled_reason"])
+        self.assertEqual(r["placement"]["node_ids"], ["exo3"])

@@ -251,14 +251,12 @@ def build_entries_from_inventories(
         if place_mode == "one":
             # Usable as a single-Mini model on the Mini that holds the full copy.
             found = False
+            want_keys = {str(x).lower() for x in (place_ids | place_labels)}
             for ni in node_inventories or []:
                 label = ni.get("label") or ni.get("id")
                 nid = ni.get("id")
-                if place_ids and nid not in place_ids and label not in place_labels:
+                if want_keys and str(nid).lower() not in want_keys and str(label).lower() not in want_keys:
                     continue
-                if place_labels and label not in place_labels and (nid not in place_ids if place_ids else True):
-                    if place_ids and nid not in place_ids:
-                        continue
                 st = (ni.get("models") or {}).get(rid) or {}
                 if st.get("full_ok") or st.get("lead_ok"):
                     found = True
@@ -311,9 +309,28 @@ def build_entries_from_inventories(
                     "reason": local_i.get("reason"),
                 }
             if not (st.get("full_ok") or st.get("lead_ok")):
-                usable = False
-                why = st.get("reason") or (f"missing shards on {label}" if st else f"not on {label}")
-                reasons.append(why)
+                # Not on the lead: accept a full copy on ANY configured Mini and run
+                # the single-Mini worker there (any node count).
+                alt = None
+                for ni in node_inventories or []:
+                    nst = (ni.get("models") or {}).get(rid) or {}
+                    if nst.get("full_ok"):
+                        alt = (ni, nst)
+                        break
+                if alt:
+                    ni, nst = alt
+                    if nst.get("path"):
+                        lead_path = nst["path"]
+                    placement = {
+                        "mode": "one", "k": 1,
+                        "node_ids": [ni.get("id")], "node_labels": [ni.get("label") or ni.get("id")],
+                        "full_copy": True, "inferred": True,
+                    }
+                    need_split = False
+                else:
+                    usable = False
+                    why = st.get("reason") or (f"missing shards on {label}" if st else f"not on {label}")
+                    reasons.append(why)
 
         # Architecture support (e.g. qwen3_5_text remapped; truly unknown flagged)
         try:

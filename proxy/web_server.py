@@ -257,25 +257,35 @@ class App:
             "  except Exception: pass\n"
             "net_raw=None; pid=None\n"
             "try:\n"
-            "  pat=('mlx_split_fetch.py %s'%repo) if repo else 'mlx_split_fetch.py'\n"
-            "  r=subprocess.run(['pgrep','-f',pat],capture_output=True,text=True,timeout=3)\n"
-            "  pids=[int(x) for x in (r.stdout or '').split() if x.strip().isdigit()]\n"
-            "  for pid in pids:\n"
-            "    r2=subprocess.run(['nettop','-P','-L','1','-p',str(pid),'-J','bytes_in'],\n"
-            "                      capture_output=True,text=True,timeout=4)\n"
-            "    nums=re.findall(r'\\d+', (r2.stdout or '').replace(',',''))\n"
-            "    if nums:\n"
-            "      net_raw=max(int(x) for x in nums); break\n"
+            "  ps=subprocess.run(['ps','-axo','pid=,ppid=,command='],capture_output=True,text=True,timeout=3).stdout\n"
+            "  rows=[]\n"
+            "  for ln in ps.splitlines():\n"
+            "    f=ln.split(None,2)\n"
+            "    if len(f)==3 and f[0].isdigit() and f[1].isdigit(): rows.append((int(f[0]),int(f[1]),f[2]))\n"
+            "  root={r[0] for r in rows if 'mlx_split_fetch' in r[2] and 'import json' not in r[2] and (not repo or repo in r[2])}\n"
+            "  tree=set(root); grew=True\n"
+            "  while grew:\n"
+            "    grew=False\n"
+            "    for a,b,_c in rows:\n"
+            "      if b in tree and a not in tree: tree.add(a); grew=True\n"
+            "  if root:\n"
+            "    pid=min(root)\n"
+            "    r2=subprocess.run(['nettop','-P','-x','-L','1','-J','bytes_in'],capture_output=True,text=True,timeout=6)\n"
+            "    tot=0\n"
+            "    for ln in (r2.stdout or '').splitlines():\n"
+            "      m=re.match(r'^.*\\.(\\d+),(\\d+),?$', ln.strip())\n"
+            "      if m and int(m.group(1)) in tree: tot+=int(m.group(2))\n"
+            "    net_raw=tot\n"
             "except Exception:\n"
             "  pass\n"
             "net_have=None\n"
             "if net_raw is not None:\n"
-            "  if baseline is None: baseline=net_raw\n"
+            "  if baseline is None: baseline=0\n"
             "  net_have=max(0, net_raw-int(baseline))\n"
             "source='starting'; out_have=0\n"
             "if hook_have: out_have=hook_have; source='hook'\n"
+            "elif net_have and net_have>have: out_have=net_have; source='nettop'\n"
             "elif inc>0 or done>0: out_have=have; source='disk'\n"
-            "elif net_have and net_have>0: out_have=net_have; source='nettop'\n"
             "elif have>0: out_have=have; source='disk'\n"
             "print(json.dumps({'have_bytes':out_have,'n_incomplete':n,'done_bytes':done,"
             "'source':source,'pid':pid,'net_raw':net_raw,'net_baseline':baseline,"
@@ -913,10 +923,13 @@ def make_handler(app: App):
                 invs = app.gather_model_inventories()
                 place_by = {}
                 held_by = {}
+                part_by = {}
                 for ni in invs:
                     label = ni.get("label") or ni.get("id")
                     for rid, st in (ni.get("models") or {}).items():
                         held_by.setdefault(rid, []).append(label)
+                        if not st.get("full_ok") and not st.get("lead_ok") and not st.get("packer_ok"):
+                            part_by.setdefault(rid, []).append(label)
                         if st.get("placement") and rid not in place_by:
                             place_by[rid] = st["placement"]
                 for e in models:
@@ -924,6 +937,9 @@ def make_handler(app: App):
                     e["held_on"] = held_by.get(rid) or list((e.get("size_by_label") or {}).keys())
                     if rid in place_by:
                         e["placement"] = place_by[rid]
+                    if rid in part_by:
+                        e["incomplete_on"] = part_by[rid]
+                    e["n_nodes"] = len(cfg_nodes)
             except Exception:
                 pass
 
@@ -1288,6 +1304,7 @@ def make_handler(app: App):
                             return snap
                         return _m
                     measure = _mk_local_measure(n, dest)
+                    save_placement = None
                 else:
                     dest = "~/.caravan/mlx-models/%s" % folder
                     run = make_run_remote(n)
@@ -1299,6 +1316,15 @@ def make_handler(app: App):
                             return snap
                         return _m
                     measure = _mk_measure(n, dest)
+                    def _mk_save(nn, dd):
+                        def _s(blob):
+                            import shlex
+                            rd = "$HOME/" + dd[2:] if dd.startswith("~/") else dd
+                            cmd = 'mkdir -p "%s" && printf %%s %s > "%s/caravan-placement.json"' % (
+                                rd, shlex.quote(json.dumps(blob, indent=2)), rd)
+                            app._ssh_fn()(nn, cmd, timeout=30)
+                        return _s
+                    save_placement = _mk_save(n, dest)
                 tb = totals.get("each") if full_copy else (
                     totals.get("lead") if role == "lead" else totals.get("packer")
                 )
@@ -1312,6 +1338,7 @@ def make_handler(app: App):
                     "run": run,
                     "measure": measure,
                     "total_bytes": tb,
+                    "save_placement": save_placement,
                 })
 
             job = web_picker.start_download(

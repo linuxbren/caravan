@@ -871,6 +871,12 @@
     appearance: none; background: transparent; border: 1px solid #ff5a5a66; color: #ff8a8a;
     font: inherit; font-size: .62rem; padding: 2px 8px; border-radius: 4px; cursor: pointer;
   }
+  .topo-disk { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 4px; }
+  .picker-disk .d-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+  .picker-disk .d-row .p-meta { font-size: .66rem; }
+  @media (max-width: 560px) { .picker-disk .d-row { flex-wrap: wrap; } }
+  .picker-disk-link { margin-top: 12px; }
+  button.linkish { appearance: none; background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-size: .7rem; cursor: pointer; text-decoration: underline; }
   .picker-status { color: var(--muted); margin: 6px 0; min-height: 1.2em; }
   .picker-job { margin-top: 8px; padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 6px; }
   .picker-job .bar { height: 4px; background: var(--bg3); border-radius: 2px; margin: 4px 0; overflow: hidden; }
@@ -1045,6 +1051,10 @@
   <div class="topo-body" id="topoBody">
     <!-- Cards built from /api/nodes (N Minis from config). -->
   </div>
+  <div class="topo-disk">
+    <div class="picker-section">On disk · all Minis</div>
+    <div class="picker-disk" id="pickerDisk">loading…</div>
+  </div>
 </aside>
 
 <aside class="drawer-left" id="pickerDrawer" aria-hidden="true">
@@ -1076,8 +1086,7 @@
     <div class="picker-status" id="pickerStatus">Open to search Hugging Face…</div>
     <div class="picker-job" id="pickerJob" hidden></div>
     <div id="pickerList"></div>
-    <div class="picker-section">On disk</div>
-    <div class="picker-disk" id="pickerDisk">loading…</div>
+    <div class="picker-disk-link"><button type="button" class="linkish" id="btnDiskInTopo">On disk → Topology</button></div>
   </div>
 </aside>
 
@@ -2252,6 +2261,7 @@
     const btn = document.getElementById("btnOpenTopo");
     if (btn) { btn.classList.add("on"); btn.setAttribute("aria-pressed", "true"); }
     if (document.visibilityState === "visible") startNodesPoll();
+    if (window.refreshDisk) try { window.refreshDisk(); } catch (e) {}
   }
   function closeTopo() {
     stopNodesPoll();
@@ -2742,6 +2752,21 @@
       }
     }
 
+    // Compact "where is it" note for one combined row: EXO2 · split EXO1+EXO2 · all.
+    function diskLocation(m) {
+      const held = m.held_on || Object.keys(m.size_by_label || {});
+      const pl = m.placement || {};
+      const labs = (pl.node_labels && pl.node_labels.length) ? pl.node_labels : held;
+      let loc = "";
+      if (pl.mode === "split") loc = "split " + labs.join("+");
+      else if (pl.mode === "all" || (m.n_nodes > 1 && held.length >= m.n_nodes)) loc = "all";
+      else loc = labs.join(", ");
+      const part = m.incomplete_on || [];
+      if (part.length) loc += (loc ? " · " : "") + "partial on " + part.join(", ");
+      return loc;
+    }
+    window.refreshDisk = () => refreshDisk();
+
     function diskRow(label, sizes, opts) {
       opts = opts || {};
       const row = document.createElement("div");
@@ -2812,11 +2837,7 @@
         for (const m of models) {
           const sizes = m.size_gb || {};
           const blocked = !!(cur && (String(cur).includes(m.id) || String(m.id).includes(String(cur))));
-          const held = (m.held_on || []).join(", ");
-          const place = m.placement ? (m.placement.mode === "one" ? ("1 Mini · " + ((m.placement.node_labels||[]).join(",") || held))
-            : m.placement.mode === "all" ? "copy on all"
-            : m.placement.mode === "split" ? ("split · " + ((m.placement.node_labels||[]).join("+") || held))
-            : "") : (held ? ("on " + held) : "");
+          const place = diskLocation(m);
           el.appendChild(diskRow(m.name, sizes, {
             disabled: blocked,
             note: place || undefined,
@@ -2840,6 +2861,10 @@
   })();
 
   document.getElementById("btnCloseTopo").addEventListener("click", closeTopo);
+  document.getElementById("btnDiskInTopo").addEventListener("click", () => {
+    openTopo();
+    setTimeout(() => { const d = document.getElementById("pickerDisk"); if (d) d.scrollIntoView({ block: "start", behavior: "smooth" }); }, 120);
+  });
   document.addEventListener("visibilitychange", () => {
     if (!document.getElementById("topoDrawer").classList.contains("open")) return;
     if (document.visibilityState === "visible") startNodesPoll();

@@ -1574,10 +1574,20 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
             if place:
                 try:
                     from placement import write_placement
+                    blob = {**place, "repo_id": repo_id}
                     for r in runners:
                         dest = r.get("dest")
-                        if dest:
-                            write_placement(dest, {**place, "repo_id": repo_id})
+                        if not dest:
+                            continue
+                        try:
+                            # Remote runners save on their own Mini; writing locally left
+                            # placement-only folders on EXO1 and none next to the weights.
+                            if callable(r.get("save_placement")):
+                                r["save_placement"](blob)
+                            else:
+                                write_placement(dest, blob)
+                        except Exception:
+                            pass
                 except Exception:
                     pass
             _job_set(jid, status="done", model_folder=folder)

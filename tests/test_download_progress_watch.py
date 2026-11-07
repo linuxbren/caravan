@@ -50,3 +50,23 @@ class TestRemoteRawFolded(unittest.TestCase):
         time.sleep(1.2)
         p = web_picker.get_job(job["id"])["progress"]["exo2"]
         self.assertIn("can't read progress", p["msg"])
+
+
+class RemotePlacementSave(unittest.TestCase):
+    def test_remote_runner_saves_on_its_own_node(self):
+        import tempfile, os
+        saved = []
+        local = tempfile.mkdtemp()
+        remote_dest = os.path.join(local, "should-not-exist")
+        job = web_picker.start_download("x/place", runners=[{
+            "id": "exo2", "label": "EXO2", "role": "packer", "dest": remote_dest,
+            "run": lambda *a: None, "measure": lambda: {"have_bytes": 0},
+            "total_bytes": 10, "save_placement": saved.append}],
+            placement={"mode": "one", "node_ids": ["exo2"], "node_labels": ["EXO2"]})
+        for _ in range(40):
+            if web_picker.get_job(job["id"])["status"] in ("done", "error"):
+                break
+            time.sleep(0.1)
+        self.assertEqual(saved[0]["node_ids"], ["exo2"])
+        self.assertEqual(saved[0]["repo_id"], "x/place")
+        self.assertFalse(os.path.exists(remote_dest))
