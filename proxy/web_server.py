@@ -733,6 +733,17 @@ def make_handler(app: App):
                 return self._json(200, {"ok": True})
             if path == "/api/picker/download":
                 return self._api_picker_download(body=body)
+            if path == "/api/picker/download/resume":
+                old = web_picker.get_job((body or {}).get("job_id") or "") or {}
+                if not old:
+                    return self._json(404, {"error": "unknown job"})
+                if old.get("status") not in ("cancelled", "error"):
+                    return self._json(409, {"error": "job is %s, not stopped/failed" % old.get("status")})
+                req = dict(old.get("request") or {})
+                if not req:
+                    req = {"repo_id": old.get("repo_id"), "placement": old.get("placement")}
+                req["resume_of"] = old.get("id")
+                return self._api_picker_download(body=req)
             if path == "/api/picker/download/cancel":
                 jid = (body or {}).get("job_id") or ""
                 return self._json(200, web_picker.cancel_job(jid, kill_procs=app.picker_kill_all))
@@ -1278,7 +1289,10 @@ def make_handler(app: App):
                     import time as _t
                     while True:
                         for j in web_picker.list_jobs():
-                            if j.get("repo_id") == repo_id and j.get("cancel"):
+                            # Only a live job's Stop counts. An older stopped job for the same
+                            # repo keeps cancel=True forever and used to kill every restart.
+                            if (j.get("repo_id") == repo_id and j.get("cancel")
+                                    and j.get("status") in ("running", "cancelling", "queued")):
                                 app.picker_kill_node(node, repo_id, j)
                                 raise RuntimeError("cancelled")
                         check = app._ssh_fn()(node,
@@ -1359,6 +1373,12 @@ def make_handler(app: App):
                 total_bytes_lead=totals.get("lead"),
                 total_bytes_packer=totals.get("packer"),
             )
+            req = {k: v for k, v in body.items() if k != "resume_of"}
+            extra = {"request": req}
+            if body.get("resume_of"):
+                extra.update(resume_of=body["resume_of"], resuming=True)
+            web_picker._job_set(job["id"], **extra)
+            job = {**job, **extra}
             return self._json(200, {
                 "job": job,
                 "totals": totals,

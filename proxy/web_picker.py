@@ -1336,6 +1336,46 @@ def monotonic_snap(prev: dict, snap: dict) -> dict:
     return out
 
 
+RETRY_MAX = 3
+RETRY_BACKOFF_S = (5, 15, 45)
+_NET_ERR_WORDS = ("timed out", "timeout", "connection", "reset by peer", "temporarily",
+                  "incompleteread", "remote end closed", "502", "503", "504", "429",
+                  "network", "ssl", "eof occurred", "name resolution", "broken pipe")
+
+
+def is_network_error(e) -> bool:
+    """Retry only transport-ish failures; auth/404/disk errors fail at once."""
+    s = str(e).lower()
+    if any(w in s for w in ("401", "403", "404", "gated", "unauthorized", "no space", "cancelled")):
+        return False
+    return any(w in s for w in _NET_ERR_WORDS)
+
+
+def _sleep_unless_cancel(jid: str, secs: float) -> bool:
+    end = time.time() + secs
+    while time.time() < end:
+        if (get_job(jid) or {}).get("cancel"):
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def accumulate_net(prev: Optional[dict], net_raw) -> int:
+    """Monotonic network byte count from nettop's per-process sum.
+
+    nettop only sums open flows, so the raw number drops whenever a connection
+    closes (Nov 6: 969 MB -> 836 MB mid-download). Add positive deltas only.
+    """
+    acc = int((prev or {}).get("net_acc") or 0)
+    last = (prev or {}).get("net_last")
+    if net_raw is None:
+        return acc
+    net_raw = int(net_raw)
+    if last is None:
+        return acc + net_raw  # first reading for this process: all of it is new
+    return acc + max(0, net_raw - int(last))
+
+
 def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                    packer_layers: Optional[int] = None,
                    dest_lead: Optional[str] = None,
@@ -1417,6 +1457,14 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                     else:
                         # Raw have_bytes — fold through combine with prev for speed/stall
                         have = int(m.get("have_bytes") or 0)
+                        net_acc = accumulate_net(prev, m.get("net_raw"))
+                        disk0 = (prev or {}).get("disk0")
+                        if disk0 is None:
+                            disk0 = int(m.get("disk_have") or 0)  # already on disk (resume)
+                        disk_now = int(m.get("disk_have") or 0)
+                        # hf_xet buffers whole files: disk sits still while the network moves.
+                        # Bytes = what was on disk at start + bytes received since, or disk if more.
+                        have = max(have, disk_now, int(disk0) + net_acc)
                         n_inc = int(m.get("n_incomplete") or 0)
                         now = time.time()
                         speed = 0.0
@@ -1460,6 +1508,9 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             "source": m.get("source") or ("starting" if have == 0 else "disk"),
                             "net_baseline": m.get("net_baseline") or (prev or {}).get("net_baseline"),
                             "pid": m.get("pid") or (prev or {}).get("pid"),
+                            "net_acc": net_acc, "net_last": m.get("net_raw"),
+                            "net_seen": bool((prev or {}).get("net_seen") or m.get("net_raw") is not None),
+                            "disk0": int(disk0), "resume_base": int(disk0),
                         }
                 except Exception as e:  # noqa: BLE001
                     snap = {"pct": 0, "msg": f"measure error: {e}", "t": time.time(),
@@ -1482,6 +1533,8 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                     snap = monotonic_snap(prev_p, snap)
                     snap["label"] = prev_p.get("label")
                     snap["role"] = prev_p.get("role")
+                    if prev_p.get("retry"):
+                        snap["retry"] = prev_p["retry"]
                     if prev_p.get("stage") and not (
                             snap.get("have_bytes") and str(prev_p["stage"]).startswith("starting")):
                         snap["stage"] = prev_p.get("stage")
@@ -1534,7 +1587,25 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                 try:
                     if not fn:
                         raise RuntimeError(f"no runner for {rid}")
-                    fn(repo_id, dest, packer_layers, prog)
+                    attempt = 0
+                    while True:
+                        try:
+                            fn(repo_id, dest, packer_layers, prog)
+                            break
+                        except Exception as e:  # noqa: BLE001
+                            j_now = get_job(jid) or {}
+                            if j_now.get("cancel") or attempt >= RETRY_MAX or not is_network_error(e):
+                                raise
+                            attempt += 1
+                            wait = RETRY_BACKOFF_S[min(attempt - 1, len(RETRY_BACKOFF_S) - 1)]
+                            with _jobs_lock:
+                                cur = dict(_jobs[jid]["progress"].get(rid) or {})
+                                cur["retry"] = {"n": attempt, "of": RETRY_MAX, "wait_s": wait,
+                                                "error": str(e)[-160:]}
+                                cur["stage"] = f"network error, retry {attempt}/{RETRY_MAX} in {wait}s"
+                                _jobs[jid]["progress"][rid] = cur
+                            if stop_evt.wait(0) or _sleep_unless_cancel(jid, wait):
+                                raise
                 except Exception as e:  # noqa: BLE001
                     errors.append(f"{rid}: {e}")
                 finally:

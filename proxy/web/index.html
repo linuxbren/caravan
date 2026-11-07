@@ -1110,10 +1110,10 @@
     <div class="picker-size-filter" id="pickerSizeFilter" style="display:flex;gap:8px;align-items:center;margin:0 0 8px;font-size:.7rem;color:var(--muted)">
       <label for="pickerMaxGb">Max download</label>
       <select id="pickerMaxGb" style="background:var(--bg3);color:var(--fg);border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);border-radius:4px;padding:2px 6px;font:inherit">
-        <option value="0">Any size</option>
+        <option value="0" selected>Any size</option>
         <option value="5">≤ 5 GB</option>
         <option value="10">≤ 10 GB</option>
-        <option value="20" selected>≤ 20 GB</option>
+        <option value="20">≤ 20 GB</option>
         <option value="50">≤ 50 GB</option>
       </select>
     </div>
@@ -1466,7 +1466,7 @@
         <div class="row"><span class="name">${o.label}</span>
           <span class="seg">${o.values.filter(v => v !== "mtp" || $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true").map(v =>
             `<button type="button" data-v="${v}" class="${state.choice[o.id] === v ? "sel" : ""} ${v === "auto" ? "auto" : ""}">${v === "mtp" ? "Native MTP · test" : v === "adaptive" ? "Adaptive · test" : (VAL_LABEL[v] || v)}</button>`).join("")}</span></div>
-        <div class="help">${o.help}${o.id === "guess_ahead" && $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true" ? " Native MTP is a matching-head experiment: greedy only, fresh caches, no self-tuning. Day17 Orvena4B on EXO2:36.95→54.13 Write tok/s,98.21% accepted; small semantic checks passed, not bit-exact." : ""}</div>
+        <div class="help">${o.help}${o.id === "guess_ahead" && $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true" ? " Native MTP uses a built-in guess-ahead head instead of a separate helper. Up to ~46% faster writing replies in our tests; requires a matching head and one chat at a time." : ""}</div>
         ${state.filePins[o.id] && state.choice[o.id] === "auto"
           ? `<div class="help filepin">config.toml: ${VAL_LABEL[state.filePins[o.id]] || state.filePins[o.id]} (used while this is Auto)</div>` : ""}
         <div class="now"></div>
@@ -2329,7 +2329,7 @@
     const CATEGORY = ["chat","coding","reasoning","vision","image-to-image","voice","cloud"];
     const state = {
       source: "all", q: "", category: "chat", newer: false,
-      fit: new Set(), maxGb: 20,
+      fit: new Set(), maxGb: 0,
       groups: [], job: null, searchTimer: null, abort: null, searchSeq: 0,
       onlineNodes: 2, maxSplitStages: 2, nodeLabels: ["EXO1", "EXO2"],
     };
@@ -2717,7 +2717,7 @@
       const st = j.status === "done" ? "done" : j.status === "error" ? "failed"
         : (j.status === "cancelled" || j.status === "cancelling") ? "stopped" : "running";
       const stLabel = { done: "Done", failed: "Failed", stopped: "Stopped", running: j.status === "queued" ? "Starting" : "Downloading" }[st];
-      let tHave = 0, tTot = 0, tSpeed = 0;
+      let tHave = 0, tTot = 0, tSpeed = 0, tBase = 0;
       let rowsHtml = "";
       for (const r of runners) {
         const p = prog[r.id] || prog[r.role] || {};
@@ -2727,7 +2727,10 @@
         const pct = st === "done" ? 100 : (p.pct || 0);
         const speed = p.speed_bps ? (p.speed_bps / 1e6).toFixed(1) + " MB/s" : "";
         const eta = st === "running" && p.eta_s != null ? "ETA " + fmtEta(p.eta_s) : "";
-        const note = (p.msg || "").startsWith("can't read") ? p.msg : (p.stalled ? "no new bytes for 30s+ (stalled?)" : (p.stage || ""));
+        tBase += p.resume_base || 0;
+        let note = (p.msg || "").startsWith("can't read") ? p.msg : (p.stalled ? "no new bytes for 30s+ (stalled?)" : (p.stage || ""));
+        if (st === "running" && p.retry && p.retry.n) note = `network error — retry ${p.retry.n}/${p.retry.of}` + (note && note.startsWith("network") ? "" : ` · ${note}`);
+        if (j.resuming && p.resume_base) note = `kept ${fmtBytes(p.resume_base)} already on disk` + (note && !String(note).startsWith("starting") ? " · " + note : "");
         rowsHtml += `<div class="j-node ${p.stalled ? "stalled" : ""} ${starting ? "starting" : ""}">
           <div class="j-line"><b>${escapeHtml(r.label || r.id)}</b><span>${starting ? "starting…" : pct + "%"}</span></div>
           <div class="bar"><i style="width:${pct}%"></i></div>
@@ -2735,14 +2738,18 @@
           ${note ? `<div class="j-sub">${escapeHtml(note)}</div>` : ""}
         </div>`;
       }
-      let head = `<div class="j-head"><span class="j-state ${st}">${stLabel}</span><span>${escapeHtml(j.repo_id || "")}</span>`;
+      const resumingNow = st === "running" && j.resuming && tHave <= tBase + 1e6;
+      let head = `<div class="j-head"><span class="j-state ${st}">${resumingNow ? "Resuming…" : (st === "running" && j.resuming ? "Downloading (resumed)" : stLabel)}</span><span>${escapeHtml(j.repo_id || "")}</span>`;
       if (j.note) head += `<span class="p-meta">· ${escapeHtml(j.note)}</span>`;
       head += `</div>`;
       if (runners.length > 1 && tTot) head += `<div class="j-sub">All Minis: ${fmtBytes(tHave)} / ${fmtBytes(tTot)}${tSpeed ? " · " + (tSpeed/1e6).toFixed(1) + " MB/s" : ""}</div>`;
       if (st === "failed" && j.error) head += `<div class="j-sub" style="color:var(--rose)">${escapeHtml(j.error)}</div>`;
       let actions = `<div class="j-actions">`;
       if (st === "running") actions += `<button type="button" class="ghost" id="btnCancelJob">Stop</button>`;
-      else actions += `<button type="button" class="ghost" id="btnDismissJob">Dismiss</button>`;
+      else {
+        if (st === "stopped" || st === "failed") actions += `<button type="button" class="primary" id="btnResumeJob" title="Restart the same files and placement; finished files and partials on disk are reused">Resume</button>`;
+        actions += `<button type="button" class="ghost" id="btnDismissJob">Dismiss</button>`;
+      }
       if (st === "done" && state.jobLoadable) actions += `<button type="button" class="primary" id="btnLoadJob">Load ${escapeHtml((j.repo_id || "").split("/").pop())}</button>`;
       actions += `</div>`;
       el.innerHTML = head + rowsHtml + actions;
@@ -2752,6 +2759,16 @@
           await api("/api/picker/download/cancel", { method: "POST", body: JSON.stringify({ job_id: j.id }) });
           $("pickerStatus").textContent = "Stopping download…";
         } catch (e) { alert(e.message); }
+      };
+      const rs = $("btnResumeJob");
+      if (rs) rs.onclick = async () => {
+        rs.disabled = true; rs.textContent = "Resuming…";
+        try {
+          const r = await api("/api/picker/download/resume", { method: "POST", body: JSON.stringify({ job_id: j.id }) });
+          state.job = r.job; state.jobLoadable = false; showJob();
+          $("pickerStatus").textContent = "Resuming " + (j.repo_id || "") + "…";
+          pollJob(r.job.id, { repo_id: j.repo_id });
+        } catch (e) { rs.disabled = false; rs.textContent = "Resume"; alert(e.message); }
       };
       const d = $("btnDismissJob");
       if (d) d.onclick = () => { state.job = null; state.jobLoadable = false; showJob(); };
