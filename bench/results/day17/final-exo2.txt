@@ -1,0 +1,10 @@
+49b55a88a5ae6a089b3859b0fb0d0fb45919a8e5
+?? handoff/lab/day15-web/bug-00-initial-gptoss.png
+?? handoff/lab/day15-web/bug-01-gemma-ready.png
+?? handoff/lab/day15-web/bug-02-gemma-just-sent.png
+?? handoff/lab/day15-web/bug-03-gemma-after-wait.png
+?? handoff/lab/day15-web/bug-04-qwen3-ready-check-send.png
+?? handoff/lab/day15-web/bug-repro.json
+?? proxy/web/index.html.bak-pre-amber
+  PID COMMAND
+

@@ -278,3 +278,27 @@ semantic summary preserve those failures. Every timestamp in the raw files is CT
 - No live split; no generic quality proof; no strict bit-identity guarantee.
 - Screenshot capture is still pending: executor has no browser/delegation tool,
   and does not bypass that boundary through Shell-driven browser automation.
+
+## Final verification — 2026-11-06T21:28:40.525945-06:00 (CT)
+- Source **49b55a8**: **145 passed +4 subtests** in12.44s, command and timestamp
+  in [`final-regression-49b55a8.txt`](../bench/results/day17/final-regression-49b55a8.txt).
+  Previously reported failed suites remain documented above; not a full-suite claim.
+- Qwen3 30B-A3B4-bit **ready**, one/EXO1, PID**85235**, worker8194, UI8190.
+  All page preferences restored to **Auto**; active KV16, self-tuning on, helper
+  and prompt lookup off, learned pipeline1/shared-start off/fused off; no trial.
+  Web restarted with `CARAVAN_WEB_KEEP_WORKERS=1`; same worker PID survived.
+- Isolated EXO2 PID99963/8294 stopped by exact PID/script/port helper. Target,
+  extracted head and inventory symlink **kept**; no user models deleted.
+- Ready-state/API proof: [`final-state.json`](../bench/results/day17/final-state.json),
+  [`final-exo1.txt`](../bench/results/day17/final-exo1.txt),
+  [`final-exo2.txt`](../bench/results/day17/final-exo2.txt). Live option text shows
+  both PL outcomes and serial two-chat semantics; picker jobs empty, no HF fetch
+  processes observed on either Mini at final check. Existing unrelated untracked
+  screenshots/backups/videos remain untouched; tracked files synchronized.
+- [Raw manifest](../bench/results/day17/manifest.json): **85 rows**,77 responses,
+  **8 transport errors**, plus the separate11/12-row harness anomaly. All exact
+  prompts/settings, raw text, quality negatives, source/worker commits and CT times
+  retained. Documentation-only evidence commit follows the runtime source commit.
+- Browser/delegation tools are not available to this executor. **No new Day17
+  screenshots created**; parent must capture2–3 genuine UI shots at
+  `/workspace/dbg/shots/day17-*.png` without reloading/changing Qwen.

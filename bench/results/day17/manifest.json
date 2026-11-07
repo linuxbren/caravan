@@ -1,0 +1,161 @@
+{
+  "recorded_at_ct": "2026-11-06T21:28:40.525945-06:00",
+  "runtime_source_commit": "49b55a8",
+  "raw_files": [
+    {
+      "file": "concurrency1-after.jsonl",
+      "bytes": 9599,
+      "sha256": "a5852cab5e38b3c009b432bd2b2027d14673cac522c6c8880e847003b299b9b0",
+      "rows": 3,
+      "response_rows": 3,
+      "errors": 0,
+      "first_ct": "2026-11-06T21:23:59.801344-06:00",
+      "last_ct": "2026-11-06T21:24:10.800026-06:00",
+      "commits": [
+        "589bd926c34538c7051b779be78bca15c16ed9d0"
+      ],
+      "models": [
+        "mlx-community/Qwen3-30B-A3B-4bit"
+      ],
+      "placements": [
+        "one/exo1"
+      ]
+    },
+    {
+      "file": "concurrency1-before.jsonl",
+      "bytes": 9605,
+      "sha256": "32595cd049cf6680142d94d7404dd1ec32b016f92b2d770054be96c8d1117978",
+      "rows": 3,
+      "response_rows": 3,
+      "errors": 0,
+      "first_ct": "2026-11-06T21:19:35.413463-06:00",
+      "last_ct": "2026-11-06T21:19:46.621917-06:00",
+      "commits": [
+        "589bd926c34538c7051b779be78bca15c16ed9d0"
+      ],
+      "models": [
+        "mlx-community/Qwen3-30B-A3B-4bit"
+      ],
+      "placements": [
+        "one/exo1"
+      ]
+    },
+    {
+      "file": "concurrency2-complete.jsonl",
+      "bytes": 38403,
+      "sha256": "8a97a21994bda0219b43790950613a8cd6bfc62fc0d0d2cbdcbe9ca877571ae7",
+      "rows": 12,
+      "response_rows": 12,
+      "errors": 0,
+      "first_ct": "2026-11-06T21:23:13.076888-06:00",
+      "last_ct": "2026-11-06T21:23:58.379779-06:00",
+      "commits": [
+        "589bd926c34538c7051b779be78bca15c16ed9d0"
+      ],
+      "models": [
+        "mlx-community/Qwen3-30B-A3B-4bit"
+      ],
+      "placements": [
+        "one/exo1"
+      ]
+    },
+    {
+      "file": "concurrency2-interrupted.jsonl",
+      "bytes": 35904,
+      "sha256": "6510cf682c52f67e928c6974004a54b64fd87d22c6e3f8c7cc33444b91665f07",
+      "rows": 11,
+      "response_rows": 11,
+      "errors": 0,
+      "first_ct": "2026-11-06T21:19:47.398232-06:00",
+      "last_ct": "2026-11-06T21:20:32.486900-06:00",
+      "commits": [
+        "589bd926c34538c7051b779be78bca15c16ed9d0"
+      ],
+      "models": [
+        "mlx-community/Qwen3-30B-A3B-4bit"
+      ],
+      "placements": [
+        "one/exo1"
+      ]
+    },
+    {
+      "file": "mtp-abba-complete.jsonl",
+      "bytes": 39297,
+      "sha256": "9e0862f3362d49dfbca1cea0e8d35ad84de84b74988afec375b115aad155974e",
+      "rows": 12,
+      "response_rows": 12,
+      "errors": 0,
+      "first_ct": "2026-11-06T21:13:56.306995-06:00",
+      "last_ct": "2026-11-06T21:14:50.342715-06:00",
+      "commits": [
+        "f4457430f09158b9a93b1d2e0273cdca2efd5255"
+      ],
+      "models": [
+        "Orvena/Orvena-4B-MLX-4bit"
+      ],
+      "placements": [
+        "one/exo2"
+      ]
+    },
+    {
+      "file": "mtp-abba-interrupted.jsonl",
+      "bytes": 19276,
+      "sha256": "bfab32d16b4f451ab34f82cc9bbbaaccb85b4104978d0d333388674e0fc2c492",
+      "rows": 12,
+      "response_rows": 4,
+      "errors": 8,
+      "first_ct": "2026-11-06T21:01:33.088160-06:00",
+      "last_ct": "2026-11-06T21:01:48.284109-06:00",
+      "commits": [
+        "b892595e57379c8b41a3a428e0c84eadc45cb22f"
+      ],
+      "models": [
+        "Orvena/Orvena-4B-MLX-4bit"
+      ],
+      "placements": [
+        "EXO2 single; fresh-cache; native head BF16"
+      ]
+    },
+    {
+      "file": "pl-abba-fixed.jsonl",
+      "bytes": 62490,
+      "sha256": "3d810ba088669dafabad2016b06bbe7819f592435ae2f6a220e6c0ed847b83d7",
+      "rows": 16,
+      "response_rows": 16,
+      "errors": 0,
+      "first_ct": "2026-11-06T21:18:14.151235-06:00",
+      "last_ct": "2026-11-06T21:19:10.887736-06:00",
+      "commits": [
+        "589bd926c34538c7051b779be78bca15c16ed9d0"
+      ],
+      "models": [
+        "mlx-community/Qwen3-30B-A3B-4bit"
+      ],
+      "placements": [
+        "one/exo1"
+      ]
+    },
+    {
+      "file": "pl-abba-initial.jsonl",
+      "bytes": 62445,
+      "sha256": "ca890ceb1d6f3b54cb525c7758491dd2bdc08a0c460ea1482aaa315221ceb6e0",
+      "rows": 16,
+      "response_rows": 16,
+      "errors": 0,
+      "first_ct": "2026-11-06T21:14:57.521229-06:00",
+      "last_ct": "2026-11-06T21:15:55.376640-06:00",
+      "commits": [
+        "f4457430f09158b9a93b1d2e0273cdca2efd5255"
+      ],
+      "models": [
+        "mlx-community/Qwen3-30B-A3B-4bit"
+      ],
+      "placements": [
+        "one/exo1"
+      ]
+    }
+  ],
+  "note": "All raw rows retained; interrupted attempts are not promoted to completed comparisons. Final evidence captured before documentation-only commit.",
+  "total_rows": 85,
+  "total_errors": 8
+}

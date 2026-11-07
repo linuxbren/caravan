@@ -332,3 +332,9 @@ shows **single Mini, serial**, and prompt-lookup help shows both copy speedup
 and mixed-prompt regression. Live split block verification remains labelled
 **awaiting live benchmark**. Raw prompts, all successful/partial attempts and
 negative exact-format checks: [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
+
+Final live check: Qwen3 30B-A3B4-bit ready singleEXO1, PID85235, Auto preferences,
+active KV16/self-tuning on; helper/PL off. Worker-preserving web restart kept
+that PID. Orvena experiment stopped; matching weights/head kept for an explicit
+future UI load. API evidence and145-test regression are linked from the Day17
+benchmark record. Screenshot capture remains pending the parent’s browser tools.

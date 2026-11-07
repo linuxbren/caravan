@@ -17,6 +17,13 @@
 - Chat: `Read N tok/s · Write M tok/s` under each reply (prompt/prefill, fallback TTFT).
 - Numbers: see WEB.md "Test record".
 
+### Day 17 — final verification
+- **145 passed +4 subtests** on49b55a8. All85 raw rows (including8 transport
+  errors and partial queue attempt) retained in the linked benchmark manifest.
+- Qwen30B4-bit restored ready, singleEXO1, Auto preferences/KV16. Scoped stop
+  removed only the EXO2 experiment process; Orvena weights/head kept.
+- UI restart preserves workers; screenshots remain pending parent capture.
+
 ### Day 17 — completed performance follow-up
 - Qwen single-Mini paired queue baseline: Write50.51/50.48tok/s, harness
   aggregate46.08/46.52tok/s. This is serial queuing, **not split overlap**;

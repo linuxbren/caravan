@@ -1,0 +1,7 @@
+timestamp_ct: 2026-11-06T21:28:40.525945-06:00
+source_commit: 49b55a88a5ae6a089b3859b0fb0d0fb45919a8e5
+command: uv run --with pytest python -m pytest tests/test_worker_ownership.py tests/test_day17_mtp_verify.py tests/test_adaptive_pl.py tests/test_model_inventory.py tests/test_mlx_worker.py tests/test_mlx_split.py tests/test_mlx_backend.py tests/test_placement_load.py tests/test_tuned_settings.py tests/test_read_tok_s.py -q
+.................................................................... [ 46%]
+........................................................................ [ 96%]
+.....                                                                    [100%]
+145 passed, 4 subtests passed in 12.44s
