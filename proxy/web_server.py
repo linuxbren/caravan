@@ -293,16 +293,25 @@ class App:
                     capture_output=True, text=True, timeout=25,
                 )
             else:
-                script = "python3 -c %s %s %s %s" % (
-                    repr(remote), repr(dest), repr(repo_id or ""), repr(base),
+                # shlex.quote, not repr(): repr() of a script containing quotes is not
+                # valid shell, so every remote measure failed and progress sat at 0.
+                import shlex
+                rdest = dest
+                if rdest.startswith("~/"):
+                    rdest = "$HOME/" + rdest[2:]
+                script = "python3 -c %s \"%s\" %s %s" % (
+                    shlex.quote(remote), rdest.replace('"', ''), shlex.quote(repo_id or ""), shlex.quote(base),
                 )
                 r = self._ssh_fn()(node, script, timeout=25)
             line = (getattr(r, "stdout", "") or "").strip().splitlines()
             if not line:
-                return {"have_bytes": 0, "n_incomplete": 0, "source": "starting"}
+                err = ((getattr(r, "stderr", "") or "").strip().splitlines() or ["no output"])[-1]
+                return {"have_bytes": 0, "n_incomplete": 0, "source": "starting",
+                        "measure_error": err[-200:]}
             return json.loads(line[-1])
-        except Exception:
-            return {"have_bytes": 0, "n_incomplete": 0, "source": "starting"}
+        except Exception as e:  # noqa: BLE001
+            return {"have_bytes": 0, "n_incomplete": 0, "source": "starting",
+                    "measure_error": str(e)[-200:]}
 
     def picker_measure_packer(self, dest: str) -> dict:
         """Back-compat: measure default packer (first non-lead configured node)."""

@@ -877,6 +877,32 @@
   .picker-job .bar > i { display: block; height: 100%; background: var(--accent); width: 0; }
   .picker-job .stalled { color: var(--rose); }
   .picker-job .starting { color: var(--muted); font-style: italic; }
+  .picker-job .bar { height: 8px; }
+  .picker-job .j-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 4px; }
+  .picker-job .j-state { font-weight: 700; }
+  .picker-job .j-state.done { color: var(--ok); }
+  .picker-job .j-state.failed { color: var(--rose); }
+  .picker-job .j-state.stopped { color: var(--warn); }
+  .picker-job .j-node { margin-top: 6px; }
+  .picker-job .j-line { display: flex; justify-content: space-between; gap: 8px; font-size: .68rem; }
+  .picker-job .j-sub { font-size: .62rem; color: var(--muted); }
+  .picker-job .j-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .p-quant.picked { background: color-mix(in srgb, var(--accent) 18%, transparent); outline: 1px solid var(--accent); }
+  .place-step {
+    margin: 6px 8px 10px; padding: 10px 12px; border-radius: 8px;
+    border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg2));
+    animation: placeIn .25s ease-out;
+  }
+  @keyframes placeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .place-step { animation: none; } }
+  .place-step h3 { margin: 0 0 6px; font-size: .78rem; letter-spacing: .04em; color: var(--accent2); }
+  .place-step .step-sub { font-size: .65rem; color: var(--muted); margin-bottom: 6px; }
+  .place-step label { display: flex; gap: 8px; align-items: flex-start; margin: 5px 0; cursor: pointer; }
+  .place-step label.disabled { opacity: .55; cursor: not-allowed; }
+  .place-step .rec { font-size: .6rem; padding: 1px 6px; border-radius: 999px; margin-left: 6px; background: color-mix(in srgb, var(--ok) 22%, transparent); color: var(--ok); }
+  .place-step .why { color: var(--muted); font-size: .62rem; }
+  .place-step .step-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .place-step .step-actions .primary { flex: 1 1 auto; min-width: 0; white-space: normal; }
   .placement-box { margin: 8px 0; padding: 8px; border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 6px; }
   .placement-box label { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0; cursor: pointer; }
   .placement-box label.disabled { opacity: .45; cursor: not-allowed; }
@@ -1048,8 +1074,8 @@
       </select>
     </div>
     <div class="picker-status" id="pickerStatus">Open to search Hugging Face…</div>
-    <div id="pickerList"></div>
     <div class="picker-job" id="pickerJob" hidden></div>
+    <div id="pickerList"></div>
     <div class="picker-section">On disk</div>
     <div class="picker-disk" id="pickerDisk">loading…</div>
   </div>
@@ -2318,6 +2344,18 @@
       adoptLiveFetches();
     }
     async function adoptLiveFetches() {
+      // After a page refresh, pick the running job back up so the bar doesn't vanish.
+      try {
+        const all = await api("/api/picker/jobs");
+        const run = ((all && all.jobs) || []).filter((x) => x.status === "running" || x.status === "queued" || x.status === "cancelling")
+          .sort((a, b) => (b.t || 0) - (a.t || 0))[0];
+        if (run && (!state.job || state.job.id !== run.id) && (!state.job || state.job.status !== "running")) {
+          state.job = run; showJob();
+          pollJob(run.id, { repo_id: run.repo_id });
+          return;
+        }
+        if (state.job) showJob();
+      } catch (_) {}
       try {
         const data = await api("/api/picker/live-fetches");
         const jobs = (data && data.jobs) || [];
@@ -2480,7 +2518,7 @@
             <span class="q-size">${size}</span>
             <span class="q-nodes">${nodes}</span>`;
           btn.title = qfit.reason || q.repo_id;
-          btn.addEventListener("click", () => pickQuant(q));
+          btn.addEventListener("click", () => pickQuant(q, btn));
           quantsEl.appendChild(btn);
         }
         row.appendChild(head);
@@ -2494,7 +2532,7 @@
       return String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
     }
 
-    async function pickQuant(q) {
+    async function pickQuant(q, anchor) {
       if (q.cloud) {
         alert("Ollama Cloud is framework-only for now. Set OLLAMA_API_KEY in config/env.");
         return;
@@ -2522,7 +2560,7 @@
           method: "POST",
           body: JSON.stringify({ weights_gb: q.weights_gb || 0, repo_id: q.repo_id }),
         });
-        const chosen = await choosePlacement(place, q);
+        const chosen = await choosePlacement(place, q, anchor);
         if (!chosen) { $("pickerStatus").textContent = "Download cancelled."; return; }
         placeId = chosen;
       } catch (e) {
@@ -2538,43 +2576,74 @@
         });
         state.job = data.job;
         showJob();
+        try { $("pickerJob").scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {}
         pollJob(data.job.id, q);
       } catch (e) {
         $("pickerStatus").textContent = "Download failed: " + (e.error || e.message || e);
       }
     }
 
-    function choosePlacement(place, q) {
+    function placeButtonLabel(o, q) {
+      const gb = q.weights_gb ? `${q.weights_gb} GB` : "";
+      const names = (o.node_labels || []).join(" + ");
+      if (o.mode === "split") return `Download ${gb} split across ${names}`.replace("  ", " ");
+      if (o.mode === "all") return `Download ${gb} to each: ${names}`.replace("  ", " ");
+      return `Download ${gb} to ${names}`.replace("  ", " ");
+    }
+    // Step 2 renders right under the chosen quant (no scrolling to the bottom).
+    function choosePlacement(place, q, anchor) {
       return new Promise((resolve) => {
-        const el = $("pickerJob");
-        el.hidden = false;
+        document.querySelectorAll(".place-step").forEach((n) => n.remove());
+        document.querySelectorAll(".p-quant.picked").forEach((n) => n.classList.remove("picked"));
+        const el = document.createElement("div");
+        el.className = "place-step"; el.id = "placeStep";
+        if (anchor && anchor.parentNode) { anchor.classList.add("picked"); anchor.after(el); }
+        else { const pj = $("pickerJob"); pj.hidden = false; pj.innerHTML = ""; pj.appendChild(el); }
+        const done = (v) => { el.remove(); if (anchor) anchor.classList.remove("picked"); resolve(v); };
         const opts = (place && place.options) || [];
         const def = (place && place.default_id) || (opts.find(o => o.enabled) || {}).id;
-        let html = `<div class="placement-box"><div><b>Where should ${escapeHtml(q.repo_id)} go?</b></div>`;
+        let html = `<h3>Step 2 · Choose where it lives</h3>
+          <div class="step-sub">${escapeHtml(q.repo_id)}${q.weights_gb ? " · " + q.weights_gb + " GB" : ""}</div>`;
         if (!opts.length) {
-          html += `<div class="why">No placement options.</div></div>`;
-          el.innerHTML = html + `<button type="button" class="ghost" id="btnPlaceCancel">Cancel</button>`;
-          $("btnPlaceCancel").onclick = () => { el.hidden = true; resolve(null); };
+          el.innerHTML = html + `<div class="why">No placement options.</div>
+            <div class="step-actions"><button type="button" class="ghost" id="btnPlaceCancel">Cancel</button></div>`;
+          $("btnPlaceCancel").onclick = () => done(null);
           return;
         }
         for (const o of opts) {
           const dis = !o.enabled;
           html += `<label class="${dis ? "disabled" : ""}">
             <input type="radio" name="placement" value="${escapeHtml(o.id)}" ${o.id===def && !dis ? "checked" : ""} ${dis ? "disabled" : ""} />
-            <span><b>${escapeHtml(o.label)}</b>${dis && o.reason ? `<div class="why">${escapeHtml(o.reason)}</div>` : ""}</span>
+            <span><b>${escapeHtml(o.label)}</b>${o.id===def && !dis ? '<span class="rec">recommended</span>' : ""}${dis && o.reason ? `<div class="why">${escapeHtml(o.reason)}</div>` : ""}</span>
           </label>`;
         }
-        html += `</div>
-          <button type="button" class="primary" id="btnPlaceGo">Download</button>
-          <button type="button" class="ghost" id="btnPlaceCancel">Cancel</button>`;
+        html += `<div class="step-actions">
+            <button type="button" class="primary" id="btnPlaceGo">Download</button>
+            <button type="button" class="ghost" id="btnPlaceCancel">Cancel</button></div>`;
         el.innerHTML = html;
-        $("btnPlaceCancel").onclick = () => { el.hidden = true; resolve(null); };
-        $("btnPlaceGo").onclick = () => {
+        const go = $("btnPlaceGo");
+        const sync = () => {
           const sel = el.querySelector('input[name=placement]:checked');
-          if (!sel) { alert("Pick a placement"); return; }
-          resolve(sel.value);
+          const o = sel && opts.find((x) => x.id === sel.value);
+          go.textContent = o ? placeButtonLabel(o, q) : "Pick where it goes";
+          go.disabled = !o;
+        };
+        el.addEventListener("change", sync); sync();
+        try { el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {}
+        try { go.focus({ preventScroll: true }); } catch (_) {}
+        $("btnPlaceCancel").onclick = () => done(null);
+        go.onclick = () => {
+          const sel = el.querySelector('input[name=placement]:checked');
+          if (sel) done(sel.value);
         };
       });
+    }
+    function fmtBytes(b) { return b == null ? "—" : (b >= 1e9 ? (b/1e9).toFixed(2) + " GB" : (b/1e6).toFixed(0) + " MB"); }
+    function fmtEta(s) {
+      if (s == null || !isFinite(s)) return "—";
+      s = Math.round(s); if (s < 60) return s + "s";
+      if (s < 3600) return Math.floor(s/60) + "m " + (s%60) + "s";
+      return Math.floor(s/3600) + "h " + Math.floor((s%3600)/60) + "m";
     }
     function showJob() {
       const el = $("pickerJob");
@@ -2582,41 +2651,54 @@
       el.hidden = false;
       const j = state.job;
       const prog = j.progress || {};
-      // Prefer runners list; else unique progress entries (skip legacy lead/packer dupes when id present)
-      let rows = [];
-      if (j.runners && j.runners.length) {
-        rows = j.runners.map((r) => {
-          const p = prog[r.id] || prog[r.role] || {};
-          return { label: r.label || r.id, pct: p.pct || 0, msg: p.msg || "", stalled: !!p.stalled, source: p.source || "" };
-        });
-      } else {
-        const seen = new Set();
-        for (const [k, p] of Object.entries(prog)) {
-          if (!p || typeof p !== "object") continue;
-          const label = p.label || k;
-          if (seen.has(label)) continue;
-          // skip bare lead/packer if labeled entry already shown
-          if ((k === "lead" || k === "packer") && p.label && p.label !== k) continue;
-          seen.add(label);
-          rows.push({ label, pct: p.pct || 0, msg: p.msg || "", stalled: !!p.stalled, source: p.source || "" });
-        }
+      const runners = (j.runners && j.runners.length) ? j.runners
+        : Object.keys(prog).filter((k) => k !== "lead" && k !== "packer").map((k) => ({ id: k, label: (prog[k] || {}).label || k }));
+      const st = j.status === "done" ? "done" : j.status === "error" ? "failed"
+        : (j.status === "cancelled" || j.status === "cancelling") ? "stopped" : "running";
+      const stLabel = { done: "Done", failed: "Failed", stopped: "Stopped", running: j.status === "queued" ? "Starting" : "Downloading" }[st];
+      let tHave = 0, tTot = 0, tSpeed = 0;
+      let rowsHtml = "";
+      for (const r of runners) {
+        const p = prog[r.id] || prog[r.role] || {};
+        const have = p.have_bytes || 0, tot = p.total_bytes || 0;
+        tHave += have; tTot += tot; if (st === "running") tSpeed += p.speed_bps || 0;
+        const starting = st === "running" && !have;
+        const pct = st === "done" ? 100 : (p.pct || 0);
+        const speed = p.speed_bps ? (p.speed_bps / 1e6).toFixed(1) + " MB/s" : "";
+        const eta = st === "running" && p.eta_s != null ? "ETA " + fmtEta(p.eta_s) : "";
+        const note = (p.msg || "").startsWith("can't read") ? p.msg : (p.stalled ? "no new bytes for 30s+ (stalled?)" : (p.stage || ""));
+        rowsHtml += `<div class="j-node ${p.stalled ? "stalled" : ""} ${starting ? "starting" : ""}">
+          <div class="j-line"><b>${escapeHtml(r.label || r.id)}</b><span>${starting ? "starting…" : pct + "%"}</span></div>
+          <div class="bar"><i style="width:${pct}%"></i></div>
+          <div class="j-line j-sub"><span>${fmtBytes(have)}${tot ? " / " + fmtBytes(tot) : ""}</span><span>${st === "running" ? [speed, eta].filter(Boolean).join(" · ") : ""}</span></div>
+          ${note ? `<div class="j-sub">${escapeHtml(note)}</div>` : ""}
+        </div>`;
       }
-      let html = `<div>Job ${escapeHtml(j.id)} · ${escapeHtml(j.status)} · ${escapeHtml(j.repo_id || "")}</div>`;
-      if (j.note) html += `<div class="p-meta">${escapeHtml(j.note)}</div>`;
-      for (const r of rows) {
-        const cls = r.stalled ? "stalled" : (r.source === "starting" || (r.msg || "").startsWith("starting") ? "starting" : "");
-        const pctShow = (r.source === "starting" || (r.msg || "").startsWith("starting")) ? "…" : ((r.pct || 0) + "%");
-        html += `<div class="${cls}">${escapeHtml(r.label)} ${pctShow} — ${escapeHtml(r.msg || "")}</div>
-          <div class="bar"><i style="width:${r.pct||0}%"></i></div>`;
-      }
-      html += `<button type="button" class="ghost" id="btnCancelJob">Stop</button>`;
-      el.innerHTML = html;
+      let head = `<div class="j-head"><span class="j-state ${st}">${stLabel}</span><span>${escapeHtml(j.repo_id || "")}</span>`;
+      if (j.note) head += `<span class="p-meta">· ${escapeHtml(j.note)}</span>`;
+      head += `</div>`;
+      if (runners.length > 1 && tTot) head += `<div class="j-sub">All Minis: ${fmtBytes(tHave)} / ${fmtBytes(tTot)}${tSpeed ? " · " + (tSpeed/1e6).toFixed(1) + " MB/s" : ""}</div>`;
+      if (st === "failed" && j.error) head += `<div class="j-sub" style="color:var(--rose)">${escapeHtml(j.error)}</div>`;
+      let actions = `<div class="j-actions">`;
+      if (st === "running") actions += `<button type="button" class="ghost" id="btnCancelJob">Stop</button>`;
+      else actions += `<button type="button" class="ghost" id="btnDismissJob">Dismiss</button>`;
+      if (st === "done" && state.jobLoadable) actions += `<button type="button" class="primary" id="btnLoadJob">Load ${escapeHtml((j.repo_id || "").split("/").pop())}</button>`;
+      actions += `</div>`;
+      el.innerHTML = head + rowsHtml + actions;
       const c = $("btnCancelJob");
       if (c) c.onclick = async () => {
         try {
           await api("/api/picker/download/cancel", { method: "POST", body: JSON.stringify({ job_id: j.id }) });
           $("pickerStatus").textContent = "Stopping download…";
         } catch (e) { alert(e.message); }
+      };
+      const d = $("btnDismissJob");
+      if (d) d.onclick = () => { state.job = null; state.jobLoadable = false; showJob(); };
+      const l = $("btnLoadJob");
+      if (l) l.onclick = async () => {
+        l.disabled = true;
+        try { await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: j.repo_id }) }); $("pickerStatus").textContent = "Loading " + j.repo_id + "…"; }
+        catch (e) { $("pickerStatus").textContent = "Load failed: " + e.message; l.disabled = false; }
       };
     }
     async function pollJob(id, q) {
@@ -2626,19 +2708,27 @@
           const j = await api("/api/picker/jobs/" + id);
           state.job = j; showJob();
           if (j.status === "done") {
-            $("pickerStatus").textContent = "Downloaded. Loading…";
             try { if (typeof refreshModels === "function") await refreshModels(); } catch (_) {}
-            try {
-              await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: q.repo_id }) });
-            } catch (e) {
-              $("pickerStatus").textContent = "Downloaded. Load from Settings: " + e.message;
+            let busy = false;
+            try { const s = await api("/api/status"); busy = !!(s.worker && s.worker.status === "ready"); } catch (_) {}
+            if (busy) {
+              // A model is already loaded: don't swap it out silently. Offer a Load button.
+              state.jobLoadable = true; showJob();
+              $("pickerStatus").textContent = "Downloaded. Press Load to switch to it.";
+            } else {
+              $("pickerStatus").textContent = "Downloaded. Loading…";
+              try {
+                await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: q.repo_id }) });
+              } catch (e) {
+                $("pickerStatus").textContent = "Downloaded. Load from Settings: " + e.message;
+              }
             }
             refreshDisk();
             try { if (typeof refreshModels === "function") await refreshModels(); } catch (_) {}
             return;
           }
-          if (j.status === "error" || j.status === "cancelled" || j.status === "cancelling") {
-            $("pickerStatus").textContent = j.error || j.status;
+          if (j.status === "error" || j.status === "cancelled") {
+            $("pickerStatus").textContent = j.status === "error" ? ("Download failed: " + (j.error || "")) : "Download stopped.";
             return;
           }
         } catch (e) {

@@ -1319,6 +1319,23 @@ def stop_jobs_for_repo(repo_id: str, *, kill_procs: Optional[callable] = None) -
     return out
 
 
+def monotonic_snap(prev: dict, snap: dict) -> dict:
+    """Progress never goes backwards: have_bytes and pct only grow (pct < 100 until done)."""
+    out = dict(snap)
+    ph = int((prev or {}).get("have_bytes") or 0)
+    if int(out.get("have_bytes") or 0) < ph:
+        out["have_bytes"] = ph
+    pp = int((prev or {}).get("pct") or 0)
+    pct = int(out.get("pct") or 0)
+    tot = int(out.get("total_bytes") or (prev or {}).get("total_bytes") or 0)
+    if tot and out.get("have_bytes"):
+        pct = max(pct, min(99, int(int(out["have_bytes"]) * 100 / tot)))
+    out["pct"] = max(0, min(99, max(pct, pp if pp < 100 else 99)))
+    if tot:
+        out["total_bytes"] = tot
+    return out
+
+
 def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                    packer_layers: Optional[int] = None,
                    dest_lead: Optional[str] = None,
@@ -1390,7 +1407,9 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                 try:
                     m = measure() or {}
                     # Remote measure may already be a full progress snap (source/msg/stalled)
-                    if m.get("source") or m.get("msg"):
+                    # Only a snapshot that already carries pct/msg is "full"; a raw remote
+                    # measure ({have_bytes, source, ...}) must be folded for pct/speed/ETA.
+                    if m.get("msg") is not None and m.get("pct") is not None:
                         snap = dict(m)
                         snap.setdefault("t", time.time())
                     else:
@@ -1414,7 +1433,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                         mb_s = speed / 1e6
                         eta_s = ((total - have) / speed) if (speed > 0 and total > have) else None
                         if have == 0:
-                            msg = "starting…"
+                            msg = ("can't read progress: " + str(m["measure_error"])) if m.get("measure_error") else "starting…"
                             pct = 0
                         elif total:
                             msg = f"{have/1e9:.2f}/{total/1e9:.2f} GB · {mb_s:.1f} MB/s · ETA {_fmt_eta(eta_s)}"
@@ -1449,12 +1468,15 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                     repo_id=job_now2.get("repo_id"),
                     pid=(prev or {}).get("pid") or job_now2.get("pids", {}).get(role_id),
                 )
-            # keep label/role
+            # keep label/role; never go backwards
             with _jobs_lock:
                 if jid in _jobs:
                     prev_p = dict(_jobs[jid]["progress"].get(role_id) or {})
+                    snap = monotonic_snap(prev_p, snap)
                     snap["label"] = prev_p.get("label")
                     snap["role"] = prev_p.get("role")
+                    if prev_p.get("stage"):
+                        snap["stage"] = prev_p.get("stage")
                     _jobs[jid]["progress"][role_id] = snap
                     # mirror legacy keys
                     if snap.get("role") == "lead":
@@ -1493,7 +1515,9 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                         raise RuntimeError("cancelled")
                     with _jobs_lock:
                         cur = dict(_jobs[jid]["progress"].get(rid) or {})
-                        cur.update({"pct": pct, "msg": msg})
+                        # Runner milestones are coarse (5/15/30/100). Keep them as a
+                        # stage label; byte-based pct from the watcher stays in charge.
+                        cur["stage"] = msg
                         _jobs[jid]["progress"][rid] = cur
                         if cur.get("role") == "lead":
                             _jobs[jid]["progress"]["lead"] = cur
@@ -1520,10 +1544,18 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
             for e in stops.values():
                 e.set()
 
+            def _mark(state):
+                with _jobs_lock:
+                    for rid, pg in list(_jobs[jid]["progress"].items()):
+                        if isinstance(pg, dict):
+                            pp = dict(pg); pp["state"] = state; pp["speed_bps"] = 0; pp["eta_s"] = None
+                            _jobs[jid]["progress"][rid] = pp
             if get_job(jid) and get_job(jid).get("cancel"):
+                _mark("stopped")
                 _job_set(jid, status="cancelled", error="stopped by user")
                 return
             if errors:
+                _mark("failed")
                 _job_set(jid, status="error", error="; ".join(errors))
                 return
             with _jobs_lock:
@@ -1531,7 +1563,11 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                     if isinstance(p, dict) and p.get("msg") != "skipped":
                         pp = dict(p)
                         pp["pct"] = 100
-                        pp["msg"] = (pp.get("msg") or "done") + " · done"
+                        if pp.get("total_bytes"):
+                            pp["have_bytes"] = max(int(pp.get("have_bytes") or 0), int(pp["total_bytes"]))
+                        pp["speed_bps"] = 0; pp["eta_s"] = None; pp["stalled"] = False
+                        pp["state"] = "done"
+                        pp["msg"] = "done" + (f" · {pp['have_bytes']/1e9:.2f} GB" if pp.get("have_bytes") else "")
                         _jobs[jid]["progress"][rid] = pp
             # Persist placement next to each dest so Settings/load respect it.
             place = (get_job(jid) or {}).get("placement") or placement or {}
