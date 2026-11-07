@@ -5,3 +5,5 @@
 - No permanent silent decline for non-interactive loads; legacy silent declines no longer suppress the web prompt.
 - Show individual draft helpers and native MTP heads in Topology disk inventory; protect helpers while any model is loaded.
 - Tests: 6 new helper tests; full suite 371 passed (32.576s). Initial concurrent-work run: 365 tests / 1 GGUF fixture error, retained in WEB.md.
+
+- Settings: validate HF tokens server-side, hide accepted-token input behind “Use a different token”, retain Cancel and saved-file removal, distinguish rejected credentials from unavailable checks.

@@ -6,6 +6,12 @@ Order: HF_TOKEN / HUGGING_FACE_HUB_TOKEN env → ~/.caravan/hf_token (Settings)
 from __future__ import annotations
 
 import os
+import hashlib
+import json
+import threading
+import time
+import urllib.request
+import urllib.error
 from pathlib import Path
 from typing import Optional
 
@@ -81,3 +87,39 @@ def clear_caravan_token() -> dict:
     except OSError:
         pass
     return token_status()
+
+
+_validation_cache = {}
+_validation_lock = threading.Lock()
+
+
+def validated_token_status() -> dict:
+    """Check whoami server-side; cache only a digest and safe outcome for 60s."""
+    status = token_status()
+    token = resolve_hf_token()
+    if not token:
+        return {**status, "validation": "missing"}
+    key = hashlib.sha256(token.encode()).hexdigest()
+    with _validation_lock:
+        cached = _validation_cache.get(key)
+        if cached and cached[0] > time.monotonic():
+            return {**status, **cached[1]}
+        result = {"validation": "unavailable"}
+        try:
+            request = urllib.request.Request(
+                "https://huggingface.co/api/whoami-v2",
+                headers={"Authorization": "Bearer " + token},
+            )
+            with urllib.request.urlopen(request, timeout=5) as response:
+                info = json.load(response)
+            if isinstance(info, dict) and info.get("name"):
+                result = {"validation": "accepted"}
+        except urllib.error.HTTPError as exc:
+            if exc.code in (401, 403):
+                result = {"validation": "rejected"}
+        except Exception:
+            # Never return exception strings: HTTP clients can include credentials.
+            pass
+        _validation_cache.clear()
+        _validation_cache[key] = (time.monotonic() + 60, result)
+        return {**status, **result}

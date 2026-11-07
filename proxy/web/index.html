@@ -909,6 +909,7 @@
   .placement-box label { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0; cursor: pointer; }
   .placement-box label.disabled { opacity: .45; cursor: not-allowed; }
   .placement-box .why { color: var(--muted); font-size: .65rem; }
+  #hfTokenCard [hidden] { display: none !important; }
   .hf-token-card input[type=password] { width: 100%; background: var(--bg3); color: var(--fg); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 4px; padding: 4px 8px; font: inherit; }
 
   /* Topology bar colors: Theme (accent phosphor) or Heat (green/yellow/red). */
@@ -1165,11 +1166,17 @@
     </div>
     <div class="optcard drawer-section hf-token-card" id="hfTokenCard">
       <h2 class="drawer-section-title"><span class="tip" title="Hugging Face rate-limits unauthenticated downloads. Stored only on each Mini at ~/.caravan/hf_token (chmod 600). Never shown back to the page.">Hugging Face token</span></h2>
-      <div class="help" id="hfTokenStatus">Checking…</div>
-      <input class="drawer-control" type="password" id="hfTokenInput" placeholder="hf_… (optional)" autocomplete="off" spellcheck="false" />
+      <div class="help" id="hfTokenStatus" role="status" aria-live="polite">Checking…</div>
+      <div id="hfTokenEditor">
+      <input class="drawer-control" type="password" id="hfTokenInput" aria-label="Hugging Face token" placeholder="hf_… (optional)" autocomplete="off" spellcheck="false" />
       <div class="applyrow">
         <button class="primary drawer-control" id="btnHfTokenSave" type="button">Save on Minis</button>
-        <button class="ghost drawer-control" id="btnHfTokenClear" type="button">Clear</button>
+        <button class="ghost drawer-control" id="btnHfTokenCancel" type="button" hidden>Cancel</button>
+      </div>
+      </div>
+      <div class="applyrow">
+        <button class="ghost drawer-control" id="btnHfTokenEdit" type="button" hidden>Use a different token</button>
+        <button class="ghost drawer-control" id="btnHfTokenClear" type="button" hidden>Remove saved token</button>
       </div>
       <small>Also used: <code>HF_TOKEN</code> env, or <code>~/.cache/huggingface/token</code> from <code>huggingface-cli login</code>.</small>
     </div>
@@ -1213,6 +1220,7 @@
   })();
 
   const openDrawer = () => {
+    refreshHfTokenStatus();
     $("settingsDrawer").classList.add("open");
     const b = $("drawerBackdrop"); b.hidden = false; b.classList.add("open");
   };
@@ -1221,30 +1229,42 @@
     const b = $("drawerBackdrop"); b.classList.remove("open"); b.hidden = true;
   };
   $("btnOpenSettings").addEventListener("click", openDrawer);
+  let hfTokenState = {};
+  function renderHfTokenStatus(j, editing = false) {
+    hfTokenState = j;
+    const configured = !!j.configured;
+    const accepted = j.validation === "accepted";
+    const source = {settings: "saved in Settings", env: "from HF_TOKEN / HUGGING_FACE_HUB_TOKEN", "huggingface-cli": "from huggingface-cli login"}[j.source] || "";
+    $("hfTokenStatus").textContent = accepted ? "Hugging Face token accepted" + (source ? " — " + source : "")
+      : j.validation === "rejected" ? "Token was rejected by Hugging Face — enter a replacement."
+      : configured ? "Saved, couldn't check right now" + (source ? " — " + source : "")
+      : "Not set — downloads use anonymous HF (rate-limited).";
+    $("hfTokenEditor").hidden = configured && j.validation !== "rejected" && !editing;
+    $("btnHfTokenEdit").hidden = !$("hfTokenEditor").hidden;
+    $("btnHfTokenCancel").hidden = !configured || !editing;
+    $("btnHfTokenClear").hidden = !j.has_settings;
+  }
+  $("btnHfTokenEdit").addEventListener("click", () => {
+    renderHfTokenStatus(hfTokenState, true);
+    $("hfTokenInput").focus();
+  });
+  $("btnHfTokenCancel").addEventListener("click", () => {
+    $("hfTokenInput").value = "";
+    renderHfTokenStatus(hfTokenState);
+  });
   async function refreshHfTokenStatus() {
-    try {
-      const j = await api("/api/hf-token");
-      const el = $("hfTokenStatus");
-      if (!el) return;
-      if (j.configured) {
-        el.textContent = "Configured on this Mini via " + (j.source || "token") + " (value never shown).";
-      } else {
-        el.textContent = "Not set — downloads use anonymous HF (rate-limited).";
-      }
-    } catch (e) {
-      const el = $("hfTokenStatus");
-      if (el) el.textContent = "Could not read token status.";
-    }
+    try { renderHfTokenStatus(await api("/api/hf-token")); }
+    catch (e) { $("hfTokenStatus").textContent = "Could not read token status."; }
   }
   if ($("btnHfTokenSave")) {
     $("btnHfTokenSave").addEventListener("click", async () => {
       const tok = ($("hfTokenInput").value || "").trim();
-      if (!tok) { alert("Paste a token, or use Clear."); return; }
+      if (!tok) { alert("Paste a token."); return; }
       try {
         const j = await api("/api/hf-token", { method: "POST", body: JSON.stringify({ token: tok }) });
         $("hfTokenInput").value = "";
         await refreshHfTokenStatus();
-        alert("Saved on Minis" + (j.nodes ? " (" + j.nodes.filter(n=>n.ok).length + " ok)" : ""));
+        if (j.nodes && j.nodes.some(n => !n.ok)) alert("Saved locally, but some Minis could not save it. Try saving again.");
       } catch (e) { alert(e.error || e.message || e); }
     });
     $("btnHfTokenClear").addEventListener("click", async () => {

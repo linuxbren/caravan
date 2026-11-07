@@ -517,3 +517,17 @@ Helpers download with the regular picker jobs (HF authentication, measured bytes
 Topology → On disk lists individual draft names and native MTP heads (`caravan-mtp` inside model directories), sizes per Mini and paired main models. HF cache remains separate. Individual deletions are conservatively refused whenever a model is loaded, including helpers retained after automatic shutoff; unload first. Helper identities resolve through inventory, not user-provided filesystem paths.
 
 Validation: six new consent/inventory/deletion tests pass. Initial full suite: 365 tests, 1 error in concurrent GGUF work (`test_single_skips_packer`, missing `state_dir`); subsequent full suite: 371 tests, all pass in 32.576 seconds. JavaScript syntax and Python compilation pass. Live preflight: EXO1 Qwen3 30B ready on one Mini; did not reload, stop, download or delete anything. Live UI screenshots and end-to-end helper download remain to be captured.
+
+### Validated Hugging Face token Settings
+
+Settings checks Hugging Face `whoami-v2` server-side (5-second timeout,
+60-second digest-keyed cache). An accepted token hides the password field and
+shows “Hugging Face token accepted” plus its source. “Use a different token”
+opens a blank editor with Cancel. Remove only clears Caravan’s saved file;
+environment/CLI tokens retain their source explanation. HTTP 401/403 shows
+a rejected-token replacement field; network errors and rate limits say
+“Saved, couldn’t check right now”, never “accepted” or “rejected”. No secret
+or upstream exception is returned. Save still propagates to every configured
+Mini, warning when any node fails. Coverage: `test_hf_token_validation.py`.
+
+Validation record (2026-11-06 CT): first full suite 376/376 passed in 32.489s; final full suite including JS state assertions 377/377 passed in 32.517s. Focused token suite 6/6 passed twice (0.030s each); inline JavaScript syntax check passed. No failed runs. Browser screenshots pending (no desktop agent available to this executor).

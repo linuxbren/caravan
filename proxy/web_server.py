@@ -1102,10 +1102,10 @@ def make_handler(app: App):
 
         def _api_hf_token_get(self):
             try:
-                from hf_auth import token_status
-                return self._json(200, token_status())
+                from hf_auth import validated_token_status
+                return self._json(200, validated_token_status())
             except Exception as e:
-                return self._json(500, {"error": str(e), "configured": False})
+                return self._json(500, {"error": "Could not check token status", "configured": False})
 
         def _api_hf_token_set(self, body=None):
             """Store or clear HF token on each Mini. Never echoes the secret."""
