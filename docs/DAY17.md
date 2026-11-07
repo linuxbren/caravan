@@ -96,3 +96,22 @@ file removed (did not exist before), placement back to `one · EXO1`, Qwen3 30B 
 Noticed, not fixed: the helper dialog is an unstyled white box in Amber (not themed); the chip
 row showed "GUESS-AHEAD OFF" while the split ran without a helper.
 Revision (Nov 7 ~12:30 AM CT): Settings scene uses a full-width crop (was letterboxed); speed results and the lockdown check are now text cards built only from DAY17-BENCHMARKS.md / SECURITY.md numbers; 7 long captions shortened; fit check now uses the rendered bbox with a 1120 px limit.
+
+## Fix: helper dialog theme + honest guess-ahead chip (Nov 7, 12:25–12:30 AM CT, d07731c)
+
+- **Dialog.** The helper prompt (`helpers.js`, a plain `<dialog>`) had no base style, so Amber and
+  Green showed the browser's white box; only Meadow/Nebula styled `dialog`. Added one base `dialog`
+  rule using the theme variables (`--bg2`, `--text`, `--line`, `--mono`). Live computed colours:
+  Amber rgb(12,12,8)/rgb(255,233,160), Green rgb(8,17,10)/rgb(184,245,192), Meadow and Nebula keep their glass.
+- **Chip.** The worker reports `guess_ahead` true only when it is split *and* a helper (or MTP head)
+  is loaded (`mlx_worker.active_settings`). With On chosen and no helper on disk it ran
+  without one and the chip said a bare "off". Now, when On was chosen but nothing runs:
+  "guess-ahead on · no helper on disk, not running" (split, `guess_ahead_loaded` false) or
+  "guess-ahead on · split only, not running" (one Mini). Auto/Off unchanged.
+- Live check: split Qwen3 30B + helper moved aside → chip "ON · NO HELPER ON DISK, NOT RUNNING" in all 4 themes;
+  one Mini + On → "ON · SPLIT ONLY, NOT RUNNING"; Auto → "OFF". Nothing downloaded (dialog closed with
+  Close, no answer saved). Helper restored (hashes identical), placement back to one Mini.
+- Tests: box suite OK; JS parses. Live theme parity 23/24 on the first run (the Nebula Models list
+  hadn't finished loading: 95 vs 135 elements), **24/24** on the rerun.
+- Screenshots: `day17-final-helper-ask-{amber,green,meadow,nebula}.png`,
+  `day17-final-chip-{amber,green,meadow,nebula}.png`, `day17-final-chip-single-on.png`.

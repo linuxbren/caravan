@@ -7,6 +7,8 @@
 - `agent/mlx_split.py` imports on Python 3.9 again (EXO1's 2 failing test modules).
 - Meadow/Nebula drawers keep only the inner-edge border: live theme parity 20/24 → 24/24.
 - Overview and verification numbers: [DAY17.md](DAY17.md).
+- Helper download dialog follows all four themes (was a white box in Amber/Green).
+- Guess-ahead chip says "on · no helper on disk, not running" / "on · split only, not running" instead of a bare "off" when On was chosen.
 
 ### Picker Resume + stall diagnosis (Nov 6, late)
 - "Stalled" downloads were hf_xet buffering shards while the network kept moving; progress now
