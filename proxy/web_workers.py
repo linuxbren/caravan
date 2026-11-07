@@ -191,6 +191,10 @@ class WorkerManager:
         problems = self.preflight_load(entry)
         if problems:
             raise FileNotFoundError("; ".join(problems))
+        if settings.get("guess_ahead") == "mtp" and (run_mode != "single" or not entry.get("native_mtp_available")):
+            raise ValueError("native MTP needs a single-Mini matching target with an installed head")
+        if settings.get("prompt_lookup") == "adaptive" and run_mode != "split":
+            raise ValueError("adaptive prompt lookup currently needs a split; current single-Mini model stays loaded")
         lead_x, packer_x = web_settings.to_args(settings)
         self._lead_path = entry.get("lead_path")
         for line in self.plan_reload_args(entry, settings, lead_x, packer_x):

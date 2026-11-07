@@ -128,7 +128,7 @@ Open tasks for this rule:
 
 ## Next, in order
 
-> **Priority rule (Brenden, Nov 3 2026):** performance first, flash second. Re-sort this list whenever new items land. Current order after **Day 15 web UI** (EXO1 `:8190`, model switch + streamed chat + 0.01 s timestamps + real stats; see [WEB.md](WEB.md)) and Day 13 self-tune shared-prefix: re-bench adaptive PL (overlap_on=0.50); then #16 built-in guesser (blocked on MTP/NEXTN MLX weights — GPT-OSS still undrafted); then fewer hand-offs / multi-token verify for N≥2+draft; then #13c settings file; #14 node view (**Day 16 Topology N-node**: disk/temp/CPU per configured Mini, offline cards; string panel remains); model picker (any Ollama local/cloud or HF, with fit/headroom recommendation) parked as flash; #15 Terminal Delight still open. Parked: #17 fused kernels; true batched decode = later/bigger. Day 14 was the v0→now improvements video break.
+> **Priority rule (Brenden, Nov 3–6 2026):** performance first, flash second. Days 15–16 shipped the web interface, picker/placement, N-node Topology, self-tuning controls and four themes. **Day 17 current order:** matching-target native MTP experiment (#16, EXO2 only; Qwen3 on EXO1 untouched), tightened adaptive prompt-lookup re-bench (overlap_on=0.50), two-chat re-bench where no reload is needed, then split N≥2 draft block verification (unit tests first; live split needs approval). Keep experimental defaults conservative until measured. Every run, failure and limitation belongs in [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md). Afterwards: remaining settings/node polish and Terminal Delight; fused kernels and tensor parallel remain parked.
 
 1. ~~**Publish the rebased llama.cpp branch.**~~ **Done (2026-10-31).**
    The fork moved to `linuxbren/llama.cpp`. There, `caravan-patches` is
@@ -318,7 +318,7 @@ Open tasks for this rule:
     change options from Parker Brown's terminal. Integration guide for
     Parker: `docs/INTEGRATING.md`. Shape left open; see "Terminal Delight as
     Caravan's console" below for the options.
-16. **Experiment: put back the built-in guesser that MLX copies strip out.** *Day 12 research: blocked — no MTP tensors in any local MLX copy; Qwen3-30B-A3B not MTP-trained; need Qwen3-Next/NEXTN or similar.*
+16. **Experiment: put back the built-in guesser that MLX copies strip out.** *Day 17: matching Orvena/Qwen3.5-4B head available; EXO2-only experiment, not compatible with loaded Qwen3-30B-A3B. See [measurements and limits](DAY17-BENCHMARKS.md).*
     *Experiment, for possible incorporation; research not started.* Some
     models ship with extra "draft" layers (often called MTP, multi-token
     prediction) that guess the next few words. MLX conversions usually drop

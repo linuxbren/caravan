@@ -3,6 +3,18 @@
 
 ## Unreleased
 
+### Day 17 — performance experiments
+- Matching-target native MTP adapter for dense Qwen3.5/Orvena, greedy-only and
+  single Mini, behind `--native-mtp`; downloads head tensors directly from HF.
+  Target-specific **Native MTP · test** choice appears only with a head installed.
+- Split N≥2 verification cache accounting fixed: rejection trim, all-accepted
+  last-draft replay, and early-stop rewind; per-session detokenizers isolated.
+  Unit tested; live split benchmark awaits approval.
+- Adaptive prompt-lookup experimental control uses overlap_on=0.50, stays off by
+  default. Two-chat availability and pending split verification are explicit.
+- All benchmark numbers, failures, prompts/settings and CT timestamps:
+  [Day 17 benchmark record](DAY17-BENCHMARKS.md).
+
 ### Nebula theme
 - Fourth theme, **Nebula**: the actual JWST "Cosmic Cliffs" (Carina Nebula) image as the background, unblurred, in WebP (about 282 KB) with a JPEG fallback in `proxy/web/assets/`. A very slow drift and zoom stops under `prefers-reduced-motion`. Credit: "Image: NASA, ESA, CSA, STScI" (shown in Nebula). Source: https://esawebb.org/images/weic2205a/ (file: https://cdn.esawebb.org/archives/images/large/weic2205a.jpg), CC BY 4.0. `web_server.py` now serves `/assets/*` from `proxy/web/assets/` with image MIME types, so EXO1 needs a web restart (with `CARAVAN_WEB_KEEP_WORKERS=1`) when this ships.
 - Dark frosted-glass panels with light text. Accents are copper `#e0893a` (the Send button, with dark text) and ice blue `#7cc4ff`. Theme bars go rust, then copper, then ice blue. CRT layers are off; rounded sans font, with monospace kept for stats.

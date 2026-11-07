@@ -594,6 +594,7 @@ class Engine:
             self.pipeline_chats = None
         else:
             self.pipeline_chats = max(1, int(raw_pipe))
+        self.native_mtp = None
         self.draft_model = None
         self.draft_tokenizer = None
         self.speculate_k = int(getattr(args, "split_speculate_k", 4) or 4)
@@ -819,6 +820,12 @@ class Engine:
             self._learn_packer_was_explicit = getattr(args, "split_front_layers", None) is not None
             self.model, self.tokenizer = load(str(self.model_dir))
             add_turn_end_stops(self.tokenizer, log=log)
+        if getattr(args, "native_mtp", False):
+            if self.client is not None:
+                raise ValueError("native MTP experiment is single-Mini only")
+            from native_mtp import load_head
+            self.native_mtp = load_head(self.model_dir, self.model)
+            log("native MTP: matching Qwen3.5 head loaded (experimental, greedy only)")
         cfg = json.loads((self.model_dir / "config.json").read_text())
         self.model_type = cfg.get("model_type", "")
         self.wired_mode = getattr(args, "wired_limit", "startup")
@@ -1005,9 +1012,15 @@ class Engine:
         spec = (info or {}).get("speculate")
         out = {
             "guess_ahead": (bool(spec) if info is not None
-                            else (self.client is not None and self.draft_model is not None
-                                  and self._learn_guess_override is not False)),
-            "guess_ahead_loaded": self.draft_model is not None,
+                            else (self.native_mtp is not None or (self.client is not None and self.draft_model is not None
+                                  and self._learn_guess_override is not False))),
+            "guess_ahead_loaded": self.draft_model is not None or self.native_mtp is not None,
+            "native_mtp_available": self.native_mtp is not None,
+            "guess_ahead_mode": "native_mtp" if self.native_mtp is not None else "helper",
+            "prompt_lookup": {"enabled": bool(self.prompt_lookup_n),
+                              "adaptive": bool(self.prompt_lookup_adaptive), "overlap_on": 0.50},
+            "multi_token_verify": "experimental · split draft blocks, live benchmark pending",
+            "two_chats_available": self.client is not None,
             "self_tune": bool(self._learn_enabled),
             "shared_start": bool(self._shared_prefix_on()),
             "pipeline_chats": self.pipeline_chats,
@@ -2212,7 +2225,60 @@ class Engine:
                 # Stash on self for _run to pick up into info
                 self._last_speculate_stats = stats
 
+    def _run_native_mtp(self, key, prompt, body, cancel):
+        from native_mtp import generate
+        if float(body.get("temperature", 0) or 0) != 0 or body.get("repetition_penalty"):
+            raise ValueError("native MTP experiment requires temperature 0 and no repetition penalty")
+        enabled = body.get("native_mtp", True)
+        if not isinstance(enabled, bool):
+            raise ValueError("native_mtp must be a boolean")
+        t0 = time.time()
+        stats, n, ttft = {}, 0, None
+        detok = self.tokenizer.detokenizer
+        detok.reset()
+        eos = getattr(self.tokenizer, "eos_token_ids", [])
+        if isinstance(eos, int):
+            eos = [eos]
+        words = body.get("stop") or []
+        if isinstance(words, str):
+            words = [words]
+        stops = self.G.make_stop_sequences(self.tokenizer, words).matcher()
+        max_tokens = int(body.get("max_completion_tokens") or body.get("max_tokens") or self.default_max_tokens)
+        finish = "length"
+        gen = generate(self.model, self.native_mtp, prompt, max_tokens,
+                       enabled=enabled, cancel=cancel, stats=stats)
+        try:
+            with self.mx.stream(self.stream):
+                for token, drafted in gen:
+                    if cancel.is_set():
+                        return
+                    if ttft is None:
+                        ttft = time.time() - t0
+                    n += 1
+                    detok.add_token(token)
+                    if token in eos or stops.advance(token):
+                        finish = "stop"
+                        yield ("piece", detok.last_segment, True)
+                        break
+                    yield ("piece", detok.last_segment, False)
+        finally:
+            gen.close()
+        detok.finalize()
+        stats["accepted_frac"] = stats.get("accepted", 0) / max(stats.get("proposed", 0), 1)
+        info = {"prompt_tokens": len(prompt), "cached_tokens": 0, "how": "native-mtp-fresh-cache",
+                "completion_tokens": n, "finish": finish, "prefill_s": round(ttft or 0, 4),
+                "ttft_s": round(ttft or 0, 4), "total_s": round(time.time() - t0, 4),
+                "peak_gb": round(self.mx.get_peak_memory() / 1e9, 3)}
+        if enabled:
+            info["speculate"] = stats
+        info["active"] = self.active_settings(info)
+        info["active"]["guess_ahead_mode"] = "native_mtp" if enabled else "off"
+        yield ("done", info)
+
     def _run(self, key, prompt, body, cancel):
+        if getattr(self, "native_mtp", None) is not None:
+            yield from self._run_native_mtp(key, prompt, body, cancel)
+            return
         mx, G = self.mx, self.G
         t0 = time.time()
         if self.client is not None:
@@ -2595,6 +2661,7 @@ class Engine:
         def _pipe_make_drafts(slot, k):
             """Append up to k draft tokens onto slot; return draft id list (target space)."""
             if (self.draft_model is None or slot.draft_cache is None or k <= 0
+                    or self._learn_guess_override is False
                     or (slot.shut is not None and slot.shut.disabled)):
                 slot.pending_draft = []
                 return []
@@ -2625,7 +2692,9 @@ class Engine:
             model.session_key = slot.key
             toks = list(slot.next_tokens)
             room = max(0, slot.max_tokens - slot.n_gen)
-            k = min(int(self.speculate_k), room) if self.draft_model is not None else 0
+            k = min(int(self.speculate_k), max(0, room - 1)) if self.draft_model is not None else 0
+            if k and not self._speculate_trim_room(slot.session.cache, k + 1):
+                k = 0
             drafts = _pipe_make_drafts(slot, k)
             if drafts:
                 toks = toks + drafts
@@ -2642,7 +2711,9 @@ class Engine:
             model.session_key = slot.key
             toks = list(slot.next_tokens)
             room = max(0, slot.max_tokens - slot.n_gen)
-            k = min(int(self.speculate_k), room) if self.draft_model is not None else 0
+            k = min(int(self.speculate_k), max(0, room - 1)) if self.draft_model is not None else 0
+            if k and not self._speculate_trim_room(slot.session.cache, k + 1):
+                k = 0
             drafts = _pipe_make_drafts(slot, k)
             if drafts:
                 toks = toks + drafts
@@ -2730,7 +2801,8 @@ class Engine:
             if slot.shut.disabled and not was:
                 log(f"split speculate: {slot.shut.reason}")
         if slot._detok is None:
-            detok = getattr(self.tokenizer, "detokenizer", None)
+            import copy
+            detok = copy.deepcopy(getattr(self.tokenizer, "detokenizer", None))
             if detok is not None:
                 try:
                     detok.reset()
@@ -2808,58 +2880,37 @@ class Engine:
                     sampled.append(tok)
                     prev.append(tok)
         slot.h = None
-        # Accept draft prefix then bonus token
+        # One packer forward carried [previous token, d1..dk]. Verify only
+        # the accepted prefix, then emit one target bonus/replacement token.
+        from verify_block import cache_plan
         n_draft = len(drafts)
-        accepted = 0
-        finish = None
-        if n_draft > 0 and n_pred >= n_draft:
-            while accepted < n_draft:
-                if sampled[accepted] != drafts[accepted]:
-                    break
-                finish = self._pipe_emit_token(slot, sampled[accepted], from_draft=True)
-                accepted += 1
-                if finish is not None:
-                    slot.finished = True
-                    slot.finish = finish
-                    slot.next_tokens = [sampled[accepted - 1]]
-                    slot.pending_draft = []
-                    return
-            # bonus / reject token
-            if slot.n_gen < slot.max_tokens:
-                finish = self._pipe_emit_token(slot, sampled[accepted], from_draft=False)
-        else:
-            # single-token path
-            finish = self._pipe_emit_token(slot, sampled[0], from_draft=False)
-            accepted = 0
-        # Target KV advanced n_pred tokens; keep accepted drafts + bonus (if any).
-        if finish is not None and accepted > 0 and accepted <= n_draft and n_draft > 0 and accepted == slot.n_gen:
-            # finished entirely inside accepted drafts (edge): kept = accepted
-            kept = accepted
-        elif n_draft == 0:
-            kept = 1
-        elif finish is not None and accepted < n_draft and slot.n_gen == accepted:
-            kept = accepted
-        else:
-            kept = accepted + 1  # accepted drafts + bonus token
-        trim_n = max(n_pred - kept, 0)
-        if trim_n > 0 and hasattr(model, "trim_caches"):
-            try:
-                model.trim_caches(trim_n, slot.session.cache)
-            except Exception as e:
-                log(f"pipeline speculate trim failed: {e!r}")
-        # Draft cache: drop rejected draft tail; point draft_y at last emitted token.
-        if slot.draft_cache is not None and self.draft_model is not None and n_draft > 0:
-            try:
-                from mlx_lm.models.cache import trim_prompt_cache
-                rej = n_draft - accepted
-                if rej > 0:
-                    trim_prompt_cache(slot.draft_cache, rej)
-            except Exception as e:
-                log(f"pipeline draft trim failed: {e!r}")
-            remap_t2d = getattr(self, "draft_remap_t2d", None) or {}
+        if n_pred != n_draft + 1:
+            raise RuntimeError("split verify returned wrong token count")
+        accepted, finish = 0, None
+        while accepted < n_draft and sampled[accepted] == drafts[accepted]:
+            finish = self._pipe_emit_token(slot, sampled[accepted], from_draft=True)
+            accepted += 1
+            if finish is not None:
+                break
+        stopped_in_draft = finish is not None
+        if not stopped_in_draft:
+            finish = self._pipe_emit_token(slot, sampled[accepted], from_draft=False)
+        plan = cache_plan(n_draft, accepted, stopped_in_draft=stopped_in_draft)
+        if plan["target_trim"]:
+            # Never continue with corrupt KV after a failed trim.
+            model.trim_caches(plan["target_trim"], slot.session.cache)
+        if slot.draft_cache is not None and self.draft_model is not None and n_draft:
+            from mlx_lm.models.cache import trim_prompt_cache
+            if plan["draft_trim"]:
+                trimmed = trim_prompt_cache(slot.draft_cache, plan["draft_trim"])
+                if trimmed != plan["draft_trim"]:
+                    raise RuntimeError("draft cache cannot rewind speculative block")
+            remap = getattr(self, "draft_remap_t2d", None) or {}
             last = slot.all_tokens[-1]
-            did = remap_t2d.get(last, last) if remap_t2d else last
-            slot.draft_y = self.mx.array([did], self.mx.uint32)
+            ids = [remap.get(last, last)]
+            if plan["replay_last_draft"]:
+                ids.insert(0, remap.get(drafts[-1], drafts[-1]))
+            slot.draft_y = mx.array(ids, mx.uint32)
         slot.pending_draft = []
         if finish is not None:
             slot.finished = True
@@ -3361,6 +3412,7 @@ def build_parser():
                          "pass N to pin). Env CARAVAN_MLX_SPLIT_PIPELINE_CHATS")
     ap.set_defaults(split_pipeline_chats_from_env=_pipe_env_set)
     _draft_env = os.environ.get("CARAVAN_MLX_SPLIT_DRAFT_MODEL")
+    ap.add_argument("--native-mtp", action="store_true", help="experimental matching native MTP head; single Mini, greedy only")
     ap.add_argument("--split-draft-model", default=_draft_env or None, metavar="DIR",
                     help="idea 3: local MLX draft model dir on the lead (overrides auto-pair). "
                          "Env CARAVAN_MLX_SPLIT_DRAFT_MODEL")

@@ -104,6 +104,7 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
         "lead_ok": False,
         "packer_ok": False,
         "full_ok": False,
+        "native_mtp_available": (d / "caravan-mtp" / "model.safetensors").is_file() and (d / "caravan-mtp" / "config.json").is_file(),
         "reason": "",
     }
     if not d.is_dir():
@@ -274,6 +275,7 @@ def inventory_payload(*, packer_layers: Optional[int] = None) -> dict:
                 "incomplete_n": len(m.get("incomplete") or []),
                 "missing_n": len(m.get("missing") or []),
                 "placement": m.get("placement"),
+                "native_mtp_available": bool(m.get("native_mtp_available")),
             }
             for rid, m in models.items()
         }

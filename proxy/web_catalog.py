@@ -348,6 +348,7 @@ def build_entries_from_inventories(
             "packer_layers": pk,
             "notes": meta.get("notes") or "",
             "source": source,
+            "native_mtp_available": any(st.get("native_mtp_available") for st in per.values()),
             "lead_path": lead_path,
             "packer_path": packer_path,
             "available_lead": bool(lead_path) and usable,

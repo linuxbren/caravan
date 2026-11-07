@@ -222,3 +222,21 @@ health keep using `127.0.0.1`.
 
 - **Nebula** uses the real JWST "Cosmic Cliffs" image of the Carina Nebula as a fixed, unblurred `background-size: cover` layer (`.nebula-bg`), positioned at `50% 82%` so the cliffs sit along the bottom. It has a very slow 180 s drift and zoom (about 3%) that stops under `prefers-reduced-motion`. The image is `proxy/web/assets/nebula-cosmic-cliffs.webp` (2400×1390, about 282 KB), with `nebula-cosmic-cliffs.jpg` (1920 wide, about 323 KB) as the fallback via `image-set()`. `web_server.py` serves `/assets/<file>` from `proxy/web/assets/` with the right image MIME types and a one-day cache. Dark frosted panels (`backdrop-filter`) keep the text readable; the accents are copper `#e0893a` and ice blue `#7cc4ff`.
   - Credit, shown as a small bottom-right caption only in Nebula: "Image: NASA, ESA, CSA, STScI". Source: https://esawebb.org/images/weic2205a/ (file: https://cdn.esawebb.org/archives/images/large/weic2205a.jpg). Webb images released by ESA/Webb are CC BY 4.0, and NASA-produced imagery is generally not copyrighted; both ask for the credit line above.
+
+## Day 17 performance experiments
+
+- **Guess-ahead → Native MTP · test** appears only for an inventory entry with an
+  installed `caravan-mtp` head. This is a matching dense Qwen3.5/Orvena checkpoint
+  experiment, not an interchangeable helper for Qwen3 30B-A3B. Single Mini only,
+  temperature 0, no repetition penalty, fresh request caches; no shared-start or
+  persistence benefit is claimed for this path. It disables learning during the
+  experiment. Selecting it requires a load/restart, not a hot toggle.
+- **Prompt lookup (experimental)** is separate from two chats: Adaptive uses
+  `--split-prompt-lookup 3 --split-prompt-lookup-adaptive` and overlap_on=0.50.
+  Auto/off retains the off default. Split only; rejected before unloading a
+  single-Mini model. Existing workers need a reload to enable it.
+- Two chats overlaps stages only in a split. Single-Mini requests remain serial.
+  Split draft block verification is experimental and unit-tested; live benchmark
+  awaits approval. Chips report actual capability when the worker exposes it.
+- Numbers, exact prompts/settings, negative results and CT times live in
+  [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md), not inferred from UI settings.
