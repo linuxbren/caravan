@@ -1283,18 +1283,18 @@
       setName("leadName", modelName);
       setName("packerName", modelName);
       if (split && split.lead) {
-        $("leadMeta").textContent =
+        { const _e=$("leadMeta"); if (_e) _e.textContent =
           `weights ${split.lead.weights_gb ?? "?"} GB · active ${split.lead.active_gb ?? "?"} GB\n` +
-          `peak ${split.lead.peak_gb ?? "?"} GB`;
+          `peak ${split.lead.peak_gb ?? "?"} GB`; }
       } else {
-        $("leadMeta").textContent = j.worker.status === "ready" ? "healthy" : (j.worker.status || "waiting");
+        { const _e=$("leadMeta"); if (_e) _e.textContent = j.worker.status === "ready" ? "healthy" : (j.worker.status || "waiting"); }
       }
       if (split && split.packers && split.packers[0]) {
         const p = split.packers[0];
-        $("packerMeta").textContent =
-          `stage ${p.stage || "?"} · weights ${p.weights_gb ?? p.gb ?? "?"} GB`;
+        { const _e=$("packerMeta"); if (_e) _e.textContent =
+          `stage ${p.stage || "?"} · weights ${p.weights_gb ?? p.gb ?? "?"} GB`; }
       } else {
-        $("packerMeta").textContent = j.worker.status === "ready" ? "connected" : "waiting";
+        { const _e=$("packerMeta"); if (_e) _e.textContent = j.worker.status === "ready" ? "connected" : "waiting"; }
       }
     } catch (e) {
       $("statusText").textContent = "UI server unreachable";
