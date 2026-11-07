@@ -474,3 +474,12 @@ are reproducible via `python3 bench/v3/day17_summarize.py` in
 - [Updated manifest](../bench/results/day17/manifest.json): **139 rows,127
   responses,12 transport errors**, plus non-row setup/stall evidence. No failed
   or slow run dropped. Screenshots still require the parent browser tools.
+
+### Final served-UI proof — 10:08:53 PM CT
+Source133fe3d synchronized on all three checkouts. Restarted only web87870→89854
+with `CARAVAN_WEB_KEEP_WORKERS=1` on both old and new web processes; Qwen worker
+**89648 survived unchanged**, ready/singleEXO1, allAuto, queuedKV4 trial active.
+Served HTML contains the tested/negative-inclusive chip, settings API contains
+49.77tok/s slower-helper result. EXO2 has no worker, download or benchmark process.
+[`split-final-ui-proof.json`](../bench/results/day17/split-final-ui-proof.json)
+retains exact API evidence. Evidence-only commit follows; no further reload.

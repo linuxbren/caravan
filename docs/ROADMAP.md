@@ -691,3 +691,7 @@ uncapped replies: baselineN1/N2 aggregate41.54/70.49, helper52.11/49.77tok/s.
 N2 helper is slower and stays experimental. All count/sorting semantic checks
 pass; strict exact-format fails every mode (trailing spaces). Final singleEXO1
 Qwen ready, Auto queuedKV4 trial applied. All failures retained in [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
+
+Final10:08:53PM CT worker-preserving UI refresh verified; QwenPID89648 remains
+ready singleEXO1, allAuto/queuedKV4 trial.
+[Final API proof](../bench/results/day17/split-final-ui-proof.json).

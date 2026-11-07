@@ -1,0 +1,117 @@
+{
+  "timestamp_ct": "2026-11-06T22:08:53.853998-06:00",
+  "commit": "133fe3d",
+  "web_old_pid": 87870,
+  "web_pid": 89854,
+  "worker_pid_preserved": 89648,
+  "ui_chip_updated": true,
+  "settings_help_negative_result": true,
+  "state": {
+    "tuning": {
+      "trial": {
+        "name": "kv_bits",
+        "label": "memory compression",
+        "value": "4-bit",
+        "remaining": 3
+      },
+      "reload_wanted": [],
+      "known": true,
+      "replies_learned": 7,
+      "winner": {
+        "fuse_kernels": "off",
+        "keepalive": true,
+        "kv_bits": 16,
+        "pipeline_chats": 1,
+        "shared_prefix": false
+      }
+    },
+    "optimize": {
+      "running": false,
+      "mode": null,
+      "phase": "idle",
+      "eta_s": null
+    },
+    "worker": {
+      "status": "ready",
+      "model_id": "qwen3-30b-a3b-4bit",
+      "model_name": "Qwen3 30B-A3B 4-bit",
+      "progress": [
+        {
+          "t": 1794024533.634,
+          "msg": "adopted running lead (pid 89648) after web restart"
+        }
+      ],
+      "error": null,
+      "lead_pid": 89648,
+      "packer_pid": null,
+      "lead_url": "http://127.0.0.1:8194",
+      "split": false,
+      "lpm_ok": null,
+      "settings": {
+        "self_tune": "auto",
+        "guess_ahead": "auto",
+        "prompt_lookup": "auto",
+        "shared_start": "auto",
+        "pipeline_chats": "auto",
+        "fuse_kernels": "auto",
+        "kv_bits": "auto",
+        "keepalive": "auto"
+      },
+      "page_settings": {
+        "self_tune": "auto",
+        "guess_ahead": "auto",
+        "prompt_lookup": "auto",
+        "shared_start": "auto",
+        "pipeline_chats": "auto",
+        "fuse_kernels": "auto",
+        "kv_bits": "auto",
+        "keepalive": "auto"
+      },
+      "from_file": {},
+      "config_errors": []
+    },
+    "lead_healthy": true,
+    "split": {
+      "split": false
+    },
+    "active": {
+      "guess_ahead": false,
+      "guess_ahead_loaded": false,
+      "native_mtp_available": false,
+      "guess_ahead_mode": "helper",
+      "prompt_lookup": {
+        "enabled": false,
+        "adaptive": false,
+        "overlap_on": 0.5
+      },
+      "multi_token_verify": "experimental \u00b7 split draft blocks, live benchmark pending",
+      "two_chats_available": false,
+      "self_tune": true,
+      "shared_start": false,
+      "pipeline_chats": 1,
+      "fuse_kernels": "off",
+      "kv_bits": 4,
+      "keepalive": null,
+      "pinned": [
+        "pipeline_chats"
+      ],
+      "reload_auto": [
+        "kv_bits",
+        "fuse_kernels",
+        "keepalive"
+      ],
+      "reload_trial": {
+        "incumbent": 16,
+        "name": "kv_bits",
+        "remaining": 3,
+        "value": 4
+      }
+    },
+    "uptime_s": 0.2,
+    "ports": {
+      "web": 8190,
+      "lead": 8194,
+      "packer": "169.254.103.191:5560"
+    }
+  }
+}

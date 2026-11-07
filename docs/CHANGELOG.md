@@ -4,6 +4,8 @@
 ## Unreleased
 
 ### Day17 — approved live split complete; negative N2 helper result retained
+- Final10:08:53PM CT UI refresh preserves QwenPID89648; served help/chip verified.
+  [API proof](../bench/results/day17/split-final-ui-proof.json).
 - Same-source e6640a0,36/36 uncapped replies. Qwen split baselineN1/N2 aggregate
   **41.54/70.49tok/s**; helperN1/N2 **52.11/49.77tok/s**. N1 Write45.04→60.01,
   N2 Write39.81→27.83; N2 helper is slower, stays experimental, defaults unchanged.

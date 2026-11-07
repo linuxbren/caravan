@@ -359,5 +359,7 @@
   "total_rows": 139,
   "total_responses": 127,
   "total_errors": 12,
-  "note": "All prior attempts retained. Initial N2 baseline stalled before completed rows; startup/sample/logs retained, no fabricated zero rate. Lifecycle/setup events are separate from benchmark rows. Final active KV4 is the existing queued Auto trial, not benchmark KV16. See DAY17-BENCHMARKS.md."
+  "note": "All prior attempts retained. Initial N2 baseline stalled before completed rows; startup/sample/logs retained, no fabricated zero rate. Lifecycle/setup events are separate from benchmark rows. Final active KV4 is the existing queued Auto trial, not benchmark KV16. See DAY17-BENCHMARKS.md.",
+  "final_ui_proof": "split-final-ui-proof.json",
+  "ui_source_commit": "133fe3d"
 }

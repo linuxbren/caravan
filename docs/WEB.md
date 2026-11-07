@@ -369,3 +369,7 @@ negative exact-format checks: [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
   existing EXO2 Qwen kept. All raw prompts/settings/commits/CT times,12 errors,
   and152-test+4subtest validation: [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
   Screenshot capture still requires parent browser tools.
+
+Final served-UI proof (10:08:53 PM CT): webPID87870→89854, unchanged QwenPID89648,
+ready/singleEXO1/allAuto/KV4 trial; both chip and help verified over HTTP:
+[`split-final-ui-proof.json`](../bench/results/day17/split-final-ui-proof.json).
