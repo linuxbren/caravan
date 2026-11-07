@@ -22,8 +22,8 @@ prompt/settings and CT timestamp. No vendor figure is a Caravan measurement.
 - `overlap_on=0.50` refers to adaptive **prompt lookup**, not two-chat scheduling.
   Keep default off until remeasured. The already-running EXO1 worker loads no
   helper, runs single-Mini serial, and exposes no live mutation endpoint for
-  these options. No reload is permitted, so on/off PL and split two-chat
-  comparisons may remain unavailable; ordinary single-Mini concurrent requests
+  these options. The original no-reload phase is superseded by Brenden’s explicit
+  follow-up approval below; ordinary single-Mini concurrent requests
   are not evidence of split overlap.
 - Split N≥2 block verification already existed but had cache-accounting errors:
   all-accepted blocks omitted the last draft input, rejection over-trimmed draft
@@ -32,7 +32,7 @@ prompt/settings and CT timestamp. No vendor figure is a Caravan measurement.
 
 ## Run log
 
-See the interrupted EXO2 run below. No completed on/off claim; all failures retained.
+Complete clean follow-up and interrupted/negative attempts are all retained below.
 
 ## Local validation
 
@@ -61,7 +61,7 @@ box system Python has no pytest. Python compile and browser-JS syntax pass.
   test fixtures missing `FakeMgr.state`; no production optimizer change made.
   Experimental settings guard test then passes: **9 passed + 4 subtests**.
 - Native mode refuses quantized KV settings (fresh hybrid caches are 16-bit).
-  Adaptive prompt lookup explicitly pins one split chat and rejects Two chats=2;
+  Adaptive prompt lookup explicitly pins one chat and rejects Two chats=2;
   the existing N≥2 pipeline does not implement prompt lookup. This prevents a
   visible Adaptive selection from silently doing nothing.
 
@@ -106,7 +106,7 @@ models/load or models/stop. It restarted only the web server, after confirming
 the old process had KEEP_WORKERS=1, and verified Qwen PID 73853 survived that
 restart before starting the experiment.
 
-The manager currently calls unscoped `pkill -f mlx_worker.py` in `_kill_packer`
+The manager at the time called unscoped `pkill -f mlx_worker.py` in `_kill_packer`
 (and a broad local fallback in `_kill_lead`), so any web load/stop can terminate
 an independent experimental worker on EXO2. **Stopped further live tests**;
 coordinate the picker/browser worker before rerunning. Do not silently reload
@@ -143,3 +143,54 @@ lab process-name cleanup commands were replaced by no-ops (safe refusal to
 sweep; explicit scoped cleanup needed for reuse). Request-local serial prompt
 lookup now permits a single-Mini Qwen on/off comparison after one code reload.
 Two-chat single-Mini tests measure actual queuing, not split-stage overlap.
+
+## Completed native-head ABBA — 9:13–9:14 PM CT
+
+Raw: [`mtp-abba-complete.jsonl`](../bench/results/day17/mtp-abba-complete.jsonl);
+[`native-worker-complete.log`](../bench/results/day17/native-worker-complete.log).
+Runner **f445743**, loaded worker **468acf6**. EXO2 PID99963, localhost8294;
+EXO1 remained Qwen PID84363, one/EXO1. The normal UI Qwen reload (84072→84363)
+left the independent native worker alive, validating scoped cleanup live.
+Both low-power modes off, picker jobs empty, no download processes. Temperature0,
+seed17, max768, fresh16-bit caches, no learning/persistence, OFF/ON/ON/OFF.
+**12/12 responses, all natural stop, none capped.** Three identical prompts per
+wave (exact strings and request JSON in raw rows).
+
+| Prompt | OFF median Write tok/s | ON median Write tok/s | OFF / ON median TTFT s |
+|---|---:|---:|---:|
+| Count 1…80 | 34.1733 | 56.5985 | 0.11680 / 0.09445 |
+| Merge sort + 3 asserts | 36.9483 | 54.1346 | 0.17885 / 0.17680 |
+| Exact 3 lines | 36.7097 | 49.5913 | 0.17480 / 0.17620 |
+| All 6 responses per mode | **36.9483** | **54.1346 (+46.51%)** | **0.17480 / 0.17545** |
+
+ON accepted **550/560 =98.2143%** proposals (count99.359%, code96.522%, exact100%).
+Count and three-line texts are byte-identical across modes and pass complete
+checks. Every code response contains3 asserts and passes its generated asserts
+plus7 extra cases (empty, singleton, reverse, duplicates, negatives). Function
+bodies match; chosen assertion examples differ ON vs OFF. Thus this is a small
+semantic quality gate, **not bit-exact decoding or a general quality proof**.
+Potential floating-point/batch-shape drift has not been isolated. One OFF count
+run fell to31.2443tok/s; retained, not discarded as an outlier.
+
+Reproduce summaries/semantic validation with `python3 bench/v3/day17_summarize.py`;
+[`complete-summary.json`](../bench/results/day17/complete-summary.json) includes
+all rows and failures, with code execution restricted and time/resource-limited.
+
+## Initial adaptive PL ABBA — 9:14–9:15 PM CT (negative)
+Raw: [`pl-abba-initial.jsonl`](../bench/results/day17/pl-abba-initial.jsonl).
+Qwen3 30B-A3B4bit singleEXO1 PID84363, worker468acf6, runnerf445743. Self-tune off,
+shared-start off, helper off, pipeline1, KV16, fused off. Same three prompts plus
+12 repeated copies of one sentence; temperature0,seed17,max768,fresh sessions.
+**16/16 responses**. Median Write **50.4466 OFF vs47.1957 adaptive tok/s (-6.44%)**;
+TTFT **0.3255 vs0.3185s**. Repeated passage **50.2493 vs46.9168tok/s**. All ON
+responses accepted0 draft tokens. Each had one failed proposal and the gate then
+stayed closed, including the repeated passage at final overlap1.0.
+Count complete and repeated-passage checks pass. All code passes3 generated+7
+extra tests. Qwen’s exact-format prompt fails in OFF and ON (Markdown trailing
+spaces); this negative is retained, not relabeled a strict pass.
+
+Cause: one suffix mismatch poisoned a high-overlap request before copying began.
+Fix: high-overlap mode gets a full acceptance window before sustained misses shut
+it off. Low-overlap cold probes still shut off after one bad proposal. Added two
+regression tests; focused suite **67 passed +4 subtests**. Default remains OFF
+pending the fixed-gate remeasurement. No split or two-chat overlap claim.

@@ -248,7 +248,7 @@ The first EXO2-only MTP benchmark was interrupted by a separate UI load/stop.
 Current worker cleanup includes broad `pkill -f mlx_worker.py`, so do not run
 independent experiments while another browser/agent switches or stops models.
 [Raw data and state evidence](DAY17-BENCHMARKS.md) preserve all eight failed
-requests. Native MTP remains explicitly experimental; no complete quality gate
+requests. Native MTP remains explicitly experimental; its completed small quality gate
 or validated speed gain is claimed. PL and two-chat defaults are unchanged.
 
 ### Scoped worker ownership (Day 17 follow-up)
@@ -265,3 +265,13 @@ prompt lookup; HTTP requests can select `prompt_lookup: "off" | "adaptive"`
 without changing saved UI choices. Overrides restore in finally on error/cancel.
 Adaptive still pins one chat. Two-chat overlap remains a split-only capability;
 two requests to a single-Mini worker are queued, not batched decode.
+
+### Day 17 clean native-head results
+Native MTP stays labelled **test**, visible only for installed matching heads.
+On EXO2 Orvena4B, OFF/ON/ON/OFF measured36.95→54.13 median Write tok/s,
+98.21% proposal acceptance. Count/exact answers match; sorting code passes its
+3 asserts+7 extra cases, but assertion examples differ across modes. This is not
+a Qwen30B upgrade and not a general quality guarantee. Full TTFT, all individual
+runs, initial failures and commands: [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
+The initial adaptive Qwen comparison was slower and exposed one-miss poisoning;
+the full-window high-overlap fix is awaiting remeasurement. Default remains off.

@@ -83,7 +83,11 @@ class AdaptivePLGate:
         # still shut it — otherwise force_on alone can tank tok/s.
         rate = self.recent_accept_rate()
         if rate is not None and rate < self.accept_off:
-            return False
+            # A chat-template suffix can cause the first copied proposal to
+            # miss before the answer begins. High overlap gets a full window
+            # to recover; low-overlap cold probes still shut off immediately.
+            if not self._force_on or len(self._recent) >= self.window:
+                return False
         if self._force_on:
             return True
         if has_draft:

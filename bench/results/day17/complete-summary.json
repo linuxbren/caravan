@@ -1,0 +1,537 @@
+[
+  {
+    "file": "bench/results/day17/mtp-abba-complete.jsonl",
+    "rows": 12,
+    "errors": 0,
+    "groups": {
+      "off": {
+        "n": 6,
+        "median_write_tps": 36.94832192851146,
+        "median_ttft_s": 0.1748,
+        "native_proposed": 0,
+        "native_accepted": 0,
+        "native_acceptance": null,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 36.94832192851146,
+            "median_ttft_s": 0.17885,
+            "median_wave_aggregate_tps": 35.57389601070352
+          },
+          "count": {
+            "median_write_tps": 34.1732646351426,
+            "median_ttft_s": 0.11679999999999999,
+            "median_wave_aggregate_tps": 33.2562889183536
+          },
+          "quality": {
+            "median_write_tps": 36.70971002613747,
+            "median_ttft_s": 0.1748,
+            "median_wave_aggregate_tps": 25.94591569203883
+          }
+        }
+      },
+      "on": {
+        "n": 6,
+        "median_write_tps": 54.13457615595744,
+        "median_ttft_s": 0.17545,
+        "native_proposed": 560,
+        "native_accepted": 550,
+        "native_acceptance": 0.9821428571428571,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 54.13457615595744,
+            "median_ttft_s": 0.1768,
+            "median_wave_aggregate_tps": 50.7366940641769
+          },
+          "count": {
+            "median_write_tps": 56.59852905205327,
+            "median_ttft_s": 0.09445,
+            "median_wave_aggregate_tps": 54.721271584540986
+          },
+          "quality": {
+            "median_write_tps": 49.59128635718693,
+            "median_ttft_s": 0.1762,
+            "median_wave_aggregate_tps": 29.63597284922971
+          }
+        }
+      }
+    },
+    "quality": [
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:13:56.306995-06:00",
+        "mode": "off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:14:04.981817-06:00",
+        "mode": "off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": true,
+        "timestamp_ct": "2026-11-06T21:14:11.473336-06:00",
+        "mode": "off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:14:12.158859-06:00",
+        "mode": "on",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:14:17.881459-06:00",
+        "mode": "on",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": true,
+        "timestamp_ct": "2026-11-06T21:14:22.391453-06:00",
+        "mode": "on",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:14:22.988444-06:00",
+        "mode": "on",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:14:28.635404-06:00",
+        "mode": "on",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": true,
+        "timestamp_ct": "2026-11-06T21:14:33.037297-06:00",
+        "mode": "on",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:14:33.656686-06:00",
+        "mode": "off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:14:43.789857-06:00",
+        "mode": "off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": true,
+        "timestamp_ct": "2026-11-06T21:14:50.342715-06:00",
+        "mode": "off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      }
+    ]
+  },
+  {
+    "file": "bench/results/day17/mtp-abba-interrupted.jsonl",
+    "rows": 12,
+    "errors": 8,
+    "groups": {
+      "off": {
+        "n": 3,
+        "median_write_tps": 36.491469402571596,
+        "median_ttft_s": 0.174,
+        "native_proposed": 0,
+        "native_accepted": 0,
+        "native_acceptance": null,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 36.613184580290216,
+            "median_ttft_s": 0.1749,
+            "median_wave_aggregate_tps": 35.53281181226657
+          },
+          "count": {
+            "median_write_tps": 36.491469402571596,
+            "median_ttft_s": 0.1373,
+            "median_wave_aggregate_tps": 35.31632911867671
+          },
+          "quality": {
+            "median_write_tps": 35.766884073216914,
+            "median_ttft_s": 0.174,
+            "median_wave_aggregate_tps": 27.330618490255787
+          }
+        }
+      },
+      "on": {
+        "n": 1,
+        "median_write_tps": 54.39580782046536,
+        "median_ttft_s": 0.0934,
+        "native_proposed": 95,
+        "native_accepted": 95,
+        "native_acceptance": 1.0,
+        "per_prompt": {
+          "count": {
+            "median_write_tps": 54.39580782046536,
+            "median_ttft_s": 0.0934,
+            "median_wave_aggregate_tps": 53.12764877022503
+          }
+        }
+      }
+    },
+    "quality": [
+      {
+        "quality_count_prefix": false,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:01:33.088160-06:00",
+        "mode": "off",
+        "prompt_id": "count",
+        "finish_reason": "length",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:01:38.524828-06:00",
+        "mode": "off",
+        "prompt_id": "code",
+        "finish_reason": "length",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 1,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": true,
+        "timestamp_ct": "2026-11-06T21:01:43.929256-06:00",
+        "mode": "off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_count_prefix": false,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:01:44.588378-06:00",
+        "mode": "on",
+        "prompt_id": "count",
+        "finish_reason": "length",
+        "byte_identical_all_modes": true
+      }
+    ]
+  },
+  {
+    "file": "bench/results/day17/pl-abba-initial.jsonl",
+    "rows": 16,
+    "errors": 0,
+    "groups": {
+      "pl-adaptive": {
+        "n": 8,
+        "median_write_tps": 47.19568208588292,
+        "median_ttft_s": 0.3185,
+        "native_proposed": 0,
+        "native_accepted": 0,
+        "native_acceptance": null,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 47.24062040361877,
+            "median_ttft_s": 0.328,
+            "median_wave_aggregate_tps": 44.07938635044232
+          },
+          "count": {
+            "median_write_tps": 47.02875727500101,
+            "median_ttft_s": 0.253,
+            "median_wave_aggregate_tps": 45.31731979706676
+          },
+          "quality": {
+            "median_write_tps": 47.55254056930034,
+            "median_ttft_s": 0.309,
+            "median_wave_aggregate_tps": 26.349348659516846
+          },
+          "repeat": {
+            "median_write_tps": 46.91683114882831,
+            "median_ttft_s": 0.4545,
+            "median_wave_aggregate_tps": 40.44293778281444
+          }
+        }
+      },
+      "pl-off": {
+        "n": 8,
+        "median_write_tps": 50.4465999920277,
+        "median_ttft_s": 0.3255,
+        "native_proposed": 0,
+        "native_accepted": 0,
+        "native_acceptance": null,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 50.73746383324146,
+            "median_ttft_s": 0.3255,
+            "median_wave_aggregate_tps": 47.15509816316265
+          },
+          "count": {
+            "median_write_tps": 50.67461338364348,
+            "median_ttft_s": 0.35350000000000004,
+            "median_wave_aggregate_tps": 47.855423041472434
+          },
+          "quality": {
+            "median_write_tps": 47.832692823308605,
+            "median_ttft_s": 0.306,
+            "median_wave_aggregate_tps": 25.948177073501967
+          },
+          "repeat": {
+            "median_write_tps": 50.24933612381056,
+            "median_ttft_s": 0.4515,
+            "median_wave_aggregate_tps": 42.88224023944569
+          }
+        }
+      }
+    },
+    "quality": [
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:14:57.521229-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:15:04.088874-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:15:08.668967-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": null,
+        "quality_repeat_exact": true,
+        "timestamp_ct": "2026-11-06T21:15:09.322244-06:00",
+        "mode": "pl-off",
+        "prompt_id": "repeat",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:15:12.398302-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:15:19.223160-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:15:24.099823-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": null,
+        "quality_repeat_exact": true,
+        "timestamp_ct": "2026-11-06T21:15:24.782378-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "repeat",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:15:28.077096-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:15:34.935511-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:15:39.815783-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": null,
+        "quality_repeat_exact": true,
+        "timestamp_ct": "2026-11-06T21:15:40.501172-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "repeat",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:15:43.785480-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:15:50.134987-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:15:54.718012-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": null,
+        "quality_repeat_exact": true,
+        "timestamp_ct": "2026-11-06T21:15:55.376640-06:00",
+        "mode": "pl-off",
+        "prompt_id": "repeat",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      }
+    ]
+  }
+]

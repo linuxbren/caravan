@@ -93,6 +93,23 @@ class AdaptivePLGate(unittest.TestCase):
             g.observe_pl_round(proposed=4, accepted=0)
         self.assertFalse(g.should_try_pl(has_draft=True))
 
+    def test_high_overlap_recovers_from_template_suffix_miss(self):
+        g = AP.AdaptivePLGate(window=4)
+        base = list(range(100, 164))
+        g.begin_request(base + base)
+        g.observe_pl_round(proposed=4, accepted=0)
+        self.assertTrue(g.should_try_pl())
+        g.observe_pl_round(proposed=4, accepted=4)
+        self.assertTrue(g.should_try_pl())
+        for _ in range(4):g.observe_pl_round(proposed=4, accepted=0)
+        self.assertFalse(g.should_try_pl())
+
+    def test_low_overlap_still_stops_after_one_bad_probe(self):
+        g = AP.AdaptivePLGate(window=4)
+        g.begin_request(list(range(100)))
+        g.observe_pl_round(proposed=4, accepted=0)
+        self.assertFalse(g.should_try_pl())
+
     def test_snapshot(self):
         g = AP.AdaptivePLGate()
         g.begin_request(list(range(10)))

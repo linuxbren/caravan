@@ -3,6 +3,19 @@
 
 ## Unreleased
 
+### Day 17 — completed matching-target MTP measurement
+- Orvena4B EXO2 ABBA: **36.95→54.13 median Write tok/s (+46.51%)**, **98.21%**
+  accepted proposals; median TTFT0.1748→0.17545s. 12/12 uncapped replies; count
+  and exact-answer equality; code passes3 generated+7 extra tests but assertion
+  examples differ (not bit-exact). No compatibility claim for Qwen3 30B-A3B.
+- Initial Qwen adaptive run is negative: **50.45→47.20tok/s**, zero accepted
+  drafts even on repeated text. Fixed high-overlap one-miss poisoning; remeasure
+  before any default change. Focused ownership/worker/gate suite67+4subtests green.
+- Complete prompts, per-run numbers, failures, CT times and commits:
+  [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md),
+  [raw results](../bench/results/day17/),
+  [reproducible summary](../bench/results/day17/complete-summary.json).
+
 ### Day 17 follow-up — worker ownership safety
 - UI termination validates tracked PID, exact repository script and node-local
   endpoint; stale PID markers fail closed and PID reuse is rechecked before
@@ -20,8 +33,8 @@
   evidence: [Day 17 benchmark record](DAY17-BENCHMARKS.md).
 - Adaptive PL/two-chat reruns remain pending: original single-Mini worker cannot
   enable these without reload; no defaults changed. Live split run still needs
-  approval. Independent EXO2 experiments currently require no concurrent UI
-  load/stop because worker cleanup includes broad process-name kills.
+  approval. The broad cleanup found during that attempt is fixed in the
+  follow-up above; the independent worker survived a normal UI reload.
 - Matching-target native MTP adapter for dense Qwen3.5/Orvena, greedy-only and
   single Mini, behind `--native-mtp`; downloads head tensors directly from HF.
   Target-specific **Native MTP · test** choice appears only with a head installed.

@@ -1432,7 +1432,7 @@
         <div class="row"><span class="name">${o.label}</span>
           <span class="seg">${o.values.filter(v => v !== "mtp" || $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true").map(v =>
             `<button type="button" data-v="${v}" class="${state.choice[o.id] === v ? "sel" : ""} ${v === "auto" ? "auto" : ""}">${v === "mtp" ? "Native MTP · test" : v === "adaptive" ? "Adaptive · test" : (VAL_LABEL[v] || v)}</button>`).join("")}</span></div>
-        <div class="help">${o.help}${o.id === "guess_ahead" && $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true" ? " Native MTP is a matching-head experiment: greedy only, fresh caches, no self-tuning." : ""}</div>
+        <div class="help">${o.help}${o.id === "guess_ahead" && $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true" ? " Native MTP is a matching-head experiment: greedy only, fresh caches, no self-tuning. Day17 Orvena4B on EXO2:36.95→54.13 Write tok/s,98.21% accepted; small semantic checks passed, not bit-exact." : ""}</div>
         ${state.filePins[o.id] && state.choice[o.id] === "auto"
           ? `<div class="help filepin">config.toml: ${VAL_LABEL[state.filePins[o.id]] || state.filePins[o.id]} (used while this is Auto)</div>` : ""}
         <div class="now"></div>
