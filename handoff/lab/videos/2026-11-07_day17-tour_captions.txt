@@ -1,0 +1,30 @@
+   0.0s  Caravan, Day 17: one AI model running across Mac minis.
+   4.2s  Your Mac minis. One model. Built in the open.
+   8.4s  Speed first. We count tok/s, roughly words per second.
+  12.6s  Orvena 4B's built-in guess-ahead: 36.95 to 54.13 tok/s, +46.5%.
+  16.8s  Two chats at once on a split model: +69.7% combined output.
+  21.0s  Prompt lookup: +44% on repeated text, 5.8% slower on mixed chats.
+  25.2s  So prompt lookup stays an experiment for now.
+  29.4s  The model picker: choose a model, then where it lives, right below.
+  33.6s  Download bars now show real network speed, one bar per Mini.
+  37.8s  The 'stall' was our bug: the bar only counted bytes on disk.
+  42.0s  Stopped or failed downloads now get a Resume button.
+  46.2s  Resume picks the download back up, with automatic retry.
+  50.4s  The size filter now defaults to Any size, not 20 GB.
+  54.6s  On disk lists each model and helper by name, per Mini.
+  58.8s  Caravan now asks before downloading a helper: Download or Not now.
+  63.0s  Under each reply: how fast it read your prompt and wrote the answer.
+  67.2s  Settings got the same clean look as Models and Topology.
+  71.4s  One plain hint per setting, with gains only where we measured them.
+  75.6s  Hugging Face token (the key for gated downloads): just 'accepted'.
+  79.8s  Four themes, one layout: 24 of 24 checks line up within 1 pixel.
+  84.0s  The big one: GGUF models now split across both Minis in the web UI.
+  88.2s  GGUF is llama.cpp's model format. The command line could already.
+  92.4s  Only the lead Mini needs the file. The split loaded in 18.6 s.
+  96.6s  Qwen3 30B split over two Minis: 34.7 tok/s. On one Mini: 42.9.
+ 100.8s  Splitting is ~19% slower, so it's for models too big for one Mini.
+ 105.0s  It passed 20 of 20 load and unload steps over 5 cycles.
+ 109.2s  Locked down: the split server only talks to your own Minis.
+ 113.4s  From another laptop on the network, port 50052 is refused.
+ 117.6s  Next: each Mini loads its own share, plus a newer llama.cpp.
+ 121.8s  Then we re-test every speed. That was Day 17.

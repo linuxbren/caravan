@@ -56,3 +56,6 @@ Independent end-to-end check on the live EXO1 :8190 UI with headless Chromium on
 - GGUF stage 2 (peers load their own tensors from disk) — see ROADMAP.
 - llama.cpp b10819 → latest upgrade held until after GGUF split; then rerun the speed tests.
 - Box `stash@{0}` (22:51 CT, Resume WIP on 5b067ba) looks superseded by 2842988; not dropped.
+
+## Day 17 video
+`handoff/lab/videos/2026-11-07_caravan-v3-day17-tour_v23.mp4` — 125 s, 1280x720 H.264, silent, 30 single-line captions in a bottom band (each checked to fit the frame width, no wrapping). Captions: `2026-11-07_day17-tour_captions.txt`; generator: `make_day17_video.py`. Numbers come from the Day 17 fact sheet / DAY17-BENCHMARKS.md.
