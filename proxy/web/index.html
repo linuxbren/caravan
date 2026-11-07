@@ -460,6 +460,15 @@
     border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px;
   }
   select { min-width: 220px; }
+  /* Dialogs (helper prompt) follow the theme; Meadow/Nebula add their glass on top. */
+  dialog {
+    background: var(--bg2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; box-shadow: var(--shadow); padding: 16px 18px; font-family: var(--mono);
+  }
+  dialog h3 { margin: 0 0 10px; color: var(--amber2); font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; }
+  dialog p { color: var(--text); font-size: .8rem; line-height: 1.45; }
+  dialog button { margin-right: 6px; }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
   button {
     cursor: pointer; background: var(--bg3);
     transition: border-color .12s ease, color .12s ease, background .12s ease;
@@ -1399,7 +1408,12 @@
     const out = [];
     const pin = new Set(a.pinned || []);
     const p = (k) => pin.has(k) ? " (pinned)" : "";
-    out.push(["guess-ahead " + (a.guess_ahead_mode === "native_mtp" ? "native MTP · experimental" : (a.guess_ahead ? "on" : "off"))
+    // Asked for On but nothing is running: say why instead of a bare "off".
+    // (Worker only runs a helper when split and a helper/MTP head is loaded.)
+    const gaWhy = (!a.guess_ahead && state.choice.guess_ahead === "on")
+      ? (!a.two_chats_available ? "on · split only, not running"
+         : !a.guess_ahead_loaded ? "on · no helper on disk, not running" : "on · not running") : null;
+    out.push(["guess-ahead " + (a.guess_ahead_mode === "native_mtp" ? "native MTP · experimental" : (a.guess_ahead ? "on" : (gaWhy || "off")))
               + (a.guess_ahead_from_draft != null ? ` · ${a.guess_ahead_from_draft} from helper` : "")
               + p("guess_ahead"), !!a.guess_ahead]);
     out.push(["self-tuning " + (a.self_tune ? "on" : "off"), !!a.self_tune]);
