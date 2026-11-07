@@ -322,3 +322,13 @@ has a small "On disk → Topology" link.
 Under each reply: `Read N tok/s · Write M tok/s · in→out tok · first token Xs · total Ys`.
 Read = prompt tokens / prefill seconds, falling back to time-to-first-token when the worker
 doesn't report prefill (`web_timing.reply_stats`).
+
+### Day 17 single-Mini two-request result and limits
+Two chats only overlaps stages in a split. Qwen single/EXO1 still serializes
+requests: median server Write50.51 vs50.48tok/s (one vs two queued requests),
+harness aggregate46.08 vs46.52. No default change or split-overlap claim.
+Worker TTFT excludes queue wait; harness wall includes state guards. The UI
+shows **single Mini, serial**, and prompt-lookup help shows both copy speedup
+and mixed-prompt regression. Live split block verification remains labelled
+**awaiting live benchmark**. Raw prompts, all successful/partial attempts and
+negative exact-format checks: [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).

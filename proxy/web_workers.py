@@ -340,7 +340,9 @@ class WorkerManager:
 
         Pinned options (On/Off/8/4 in the panel) are untouched. Returns log lines.
         """
-        if settings.get("self_tune") == "off" or not entry.get("lead_path"):
+        if (settings.get("self_tune") == "off" or not entry.get("lead_path")
+                or settings.get("guess_ahead") == "mtp"
+                or settings.get("prompt_lookup") == "adaptive"):
             return []
         auto = [n for n in TS.RELOAD_TRIO if settings.get(n) == "auto"]
         if not auto:

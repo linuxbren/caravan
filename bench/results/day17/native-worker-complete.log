@@ -1,0 +1,21 @@
+21:12:41 [mlx-worker] fuse kernels: off
+21:12:42 [mlx-worker] model_type remap: qwen3_5_text → qwen3_5
+21:12:43 [mlx-worker] native MTP: matching Qwen3.5 head loaded (experimental, greedy only)
+21:12:43 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+21:12:43 [mlx-worker] mlx cache_limit 1.5 GB
+21:12:43 [mlx-worker] warm-up 0.10s
+21:12:43 [mlx-worker] loaded Orvena-target (qwen3_5) in 1.0s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=off
+21:12:43 [mlx-worker] active settings: {"fuse_kernels": "off", "guess_ahead": true, "guess_ahead_loaded": true, "guess_ahead_mode": "native_mtp", "keepalive": null, "kv_bits": 16, "multi_token_verify": "experimental \u00b7 split draft blocks, live benchmark pending", "native_mtp_available": true, "pinned": [], "pipeline_chats": 1, "prompt_lookup": {"adaptive": false, "enabled": false, "overlap_on": 0.5}, "reload_auto": [], "reload_trial": null, "self_tune": false, "shared_start": false, "two_chats_available": false}
+21:12:43 [mlx-worker] listening on http://127.0.0.1:8294
+21:14:04 [mlx-worker] session d17-c2c2a5e6b4074adcbdc4ab37eb0d2bc1: thinking off, reasoning 0 tok, answer 310 tok (of 311 generated, max 768)
+21:14:11 [mlx-worker] session d17-9198177421f448059bc1d95092c63e58: thinking off, reasoning 0 tok, answer 231 tok (of 232 generated, max 768)
+21:14:12 [mlx-worker] session d17-9b2931e26d07403fb0b2e0dc699016c9: thinking off, reasoning 0 tok, answer 17 tok (of 18 generated, max 768)
+21:14:17 [mlx-worker] session d17-510939b86dd040ccb849386c8c5de6de: thinking off, reasoning 0 tok, answer 310 tok (of 311 generated, max 768)
+21:14:22 [mlx-worker] session d17-fcacc52623984bb39bf6755b2cfc4a4f: thinking off, reasoning 0 tok, answer 225 tok (of 226 generated, max 768)
+21:14:22 [mlx-worker] session d17-4e9e0b26186c4a1fa341e26cc9a10c5d: thinking off, reasoning 0 tok, answer 17 tok (of 18 generated, max 768)
+21:14:28 [mlx-worker] session d17-96cdfd098e31418ea3f66b8c1b0274d8: thinking off, reasoning 0 tok, answer 310 tok (of 311 generated, max 768)
+21:14:32 [mlx-worker] session d17-5f8c624deb734c09bbb814e57d5bd60d: thinking off, reasoning 0 tok, answer 225 tok (of 226 generated, max 768)
+21:14:33 [mlx-worker] session d17-413631c604a04bbbb5d25c2b9600d52b: thinking off, reasoning 0 tok, answer 17 tok (of 18 generated, max 768)
+21:14:43 [mlx-worker] session d17-26c0f3f39c2d40e896bf2e6d7218e9f6: thinking off, reasoning 0 tok, answer 310 tok (of 311 generated, max 768)
+21:14:50 [mlx-worker] session d17-0f0169a47f2744629fb600f2abaf86fa: thinking off, reasoning 0 tok, answer 231 tok (of 232 generated, max 768)
+21:14:51 [mlx-worker] session d17-e27abcdb4c70483faf17af3f6923d59d: thinking off, reasoning 0 tok, answer 17 tok (of 18 generated, max 768)

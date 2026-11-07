@@ -1,0 +1,8 @@
+{
+  "timestamp_ct": "2026-11-06T21:24:34.646809-06:00",
+  "commit": "589bd92",
+  "model": "mlx-community/Qwen3-30B-A3B-4bit",
+  "placement": "one/exo1",
+  "worker_pid": 84711,
+  "observation": "Original background shell status froze while its process and remote driver were absent. First paired attempt retained 11/12 rows and never started trailing concurrency1 control. Cause unestablished; worker/model ready and unchanged. Original data/logs retained; repeated paired run and final control completed with remote stdout redirected and foreground Shell wait."
+}

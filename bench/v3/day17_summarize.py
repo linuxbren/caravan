@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Reproducible Day17 medians + restricted, timed semantic code checks."""
 import ast
+import datetime
+from zoneinfo import ZoneInfo
 import json
 import re
 import statistics
@@ -44,7 +46,7 @@ print("PASS")
 
 def summarize(path):
     rows=[json.loads(x) for x in path.read_text().splitlines()]
-    out={'file':str(path),'rows':len(rows),'errors':sum('error' in r for r in rows),'groups':{},'quality':[]}
+    out={'validation_timestamp_ct':datetime.datetime.now(ZoneInfo('America/Chicago')).isoformat(),'file':str(path),'rows':len(rows),'errors':sum('error' in r for r in rows),'groups':{},'quality':[]}
     for mode in sorted({r['mode'] for r in rows}):
         good=[r for r in rows if r['mode']==mode and 'error' not in r]
         if not good:continue
@@ -52,7 +54,8 @@ def summarize(path):
         n=sum(s.get('proposed',0) for s in spec);a=sum(s.get('accepted',0) for s in spec)
         out['groups'][mode]={'n':len(good),'median_write_tps':statistics.median(r['write_tps'] for r in good),
             'median_ttft_s':statistics.median(r['ttft_s'] for r in good),'native_proposed':n,'native_accepted':a,
-            'native_acceptance':a/n if n else None,'per_prompt':{}}
+            'native_acceptance':a/n if n else None,
+            'median_drafted_token_share':statistics.median(r['acceptance'] for r in good) if mode.startswith('pl-') and all(r.get('acceptance') is not None for r in good) else None,'per_prompt':{}}
         for prompt in sorted({r['prompt_id'] for r in good}):
             sub=[r for r in good if r['prompt_id']==prompt]
             waves={r['wave']:r['wave_aggregate_tps'] for r in sub}

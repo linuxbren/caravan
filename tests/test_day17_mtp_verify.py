@@ -106,6 +106,7 @@ class WebFlagTests(unittest.TestCase):
         self.assertIn("--native-mtp",lead);self.assertIn("--no-learn",lead)
         lead,_=S.to_args({"prompt_lookup":"adaptive"})
         self.assertIn("--split-prompt-lookup-adaptive",lead)
+        self.assertIn("--no-learn",lead)
         self.assertEqual(lead[-2:],["--split-pipeline-chats","1"])
         with self.assertRaises(ValueError):S.to_args({"prompt_lookup":"adaptive","pipeline_chats":"2"})
         lead,_=S.to_args({})
@@ -131,3 +132,22 @@ class RequestLookupTests(unittest.TestCase):
         e._run_impl=fail
         with self.assertRaises(RuntimeError):list(e._run("x",[1],{"prompt_lookup":"adaptive"},None))
         self.assertEqual((e.prompt_lookup_n,e.prompt_lookup_adaptive,e._adaptive_pl_gate),(0,False,None))
+
+class ExperimentalReloadSafety(unittest.TestCase):
+    def test_no_auto_reload_trials_in_experimental_modes(self):
+        sys.path.insert(0,str(Path(__file__).resolve().parents[1] / "proxy"))
+        from web_workers import WorkerManager
+        manager=WorkerManager.__new__(WorkerManager)
+        manager._tuned_entry=lambda *a,**kw: self.fail("experiment touched tuning store")
+        for settings in ({"guess_ahead":"mtp"},{"prompt_lookup":"adaptive"}):
+            lead=[];packer=[]
+            self.assertEqual(manager.plan_reload_args({"lead_path":"target"},settings,lead,packer),[])
+            self.assertEqual(lead,[]);self.assertEqual(packer,[])
+
+    def test_native_refuses_compressed_or_combined_ui_modes(self):
+        sys.path.insert(0,str(Path(__file__).resolve().parents[1] / "proxy"))
+        import web_settings as S
+        for settings in ({"guess_ahead":"mtp","kv_bits":"8"},
+                         {"guess_ahead":"mtp","kv_bits":"4"},
+                         {"guess_ahead":"mtp","prompt_lookup":"adaptive"}):
+            with self.assertRaises(ValueError):S.to_args(settings)

@@ -1,5 +1,491 @@
 [
   {
+    "validation_timestamp_ct": "2026-11-06T21:26:13.674750-06:00",
+    "file": "bench/results/day17/concurrency1-after.jsonl",
+    "rows": 3,
+    "errors": 0,
+    "groups": {
+      "pl-off": {
+        "n": 3,
+        "median_write_tps": 50.58301855805551,
+        "median_ttft_s": 0.306,
+        "native_proposed": 0,
+        "native_accepted": 0,
+        "native_acceptance": null,
+        "median_drafted_token_share": null,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 50.67169455573886,
+            "median_ttft_s": 0.326,
+            "median_wave_aggregate_tps": 47.061771728739004
+          },
+          "count": {
+            "median_write_tps": 50.58301855805551,
+            "median_ttft_s": 0.274,
+            "median_wave_aggregate_tps": 48.21930546124431
+          },
+          "quality": {
+            "median_write_tps": 47.76119402985074,
+            "median_ttft_s": 0.306,
+            "median_wave_aggregate_tps": 25.75658873544587
+          }
+        }
+      }
+    },
+    "quality": [
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:23:59.801344-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:24:06.209592-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:24:10.800026-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      }
+    ]
+  },
+  {
+    "validation_timestamp_ct": "2026-11-06T21:26:13.694069-06:00",
+    "file": "bench/results/day17/concurrency1-before.jsonl",
+    "rows": 3,
+    "errors": 0,
+    "groups": {
+      "pl-off": {
+        "n": 3,
+        "median_write_tps": 50.44218801179168,
+        "median_ttft_s": 0.325,
+        "native_proposed": 0,
+        "native_accepted": 0,
+        "native_acceptance": null,
+        "median_drafted_token_share": null,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 50.612052730696796,
+            "median_ttft_s": 0.325,
+            "median_wave_aggregate_tps": 47.02613191510823
+          },
+          "count": {
+            "median_write_tps": 50.44218801179168,
+            "median_ttft_s": 0.463,
+            "median_wave_aggregate_tps": 46.71178304948009
+          },
+          "quality": {
+            "median_write_tps": 47.76119402985074,
+            "median_ttft_s": 0.307,
+            "median_wave_aggregate_tps": 25.756922076407623
+          }
+        }
+      }
+    },
+    "quality": [
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:19:35.413463-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:19:42.027811-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:19:46.621917-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      }
+    ]
+  },
+  {
+    "validation_timestamp_ct": "2026-11-06T21:26:13.711509-06:00",
+    "file": "bench/results/day17/concurrency2-complete.jsonl",
+    "rows": 12,
+    "errors": 0,
+    "groups": {
+      "pl-off": {
+        "n": 12,
+        "median_write_tps": 50.483001224850554,
+        "median_ttft_s": 0.306,
+        "native_proposed": 0,
+        "native_accepted": 0,
+        "native_acceptance": null,
+        "median_drafted_token_share": null,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 50.558697000013936,
+            "median_ttft_s": 0.3245,
+            "median_wave_aggregate_tps": 47.05203191614147
+          },
+          "count": {
+            "median_write_tps": 50.56644353074006,
+            "median_ttft_s": 0.248,
+            "median_wave_aggregate_tps": 48.2289249437762
+          },
+          "quality": {
+            "median_write_tps": 47.69012082444918,
+            "median_ttft_s": 0.306,
+            "median_wave_aggregate_tps": 26.067741879898005
+          }
+        }
+      }
+    },
+    "quality": [
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:23:13.076888-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:23:13.077103-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:23:26.002569-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:23:26.002805-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:23:35.204000-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:23:35.204488-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:23:36.510185-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:23:36.510653-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:23:49.215752-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:23:49.215991-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:23:58.379551-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:23:58.379779-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      }
+    ]
+  },
+  {
+    "validation_timestamp_ct": "2026-11-06T21:26:13.785380-06:00",
+    "file": "bench/results/day17/concurrency2-interrupted.jsonl",
+    "rows": 11,
+    "errors": 0,
+    "groups": {
+      "pl-off": {
+        "n": 11,
+        "median_write_tps": 50.600141209696396,
+        "median_ttft_s": 0.305,
+        "native_proposed": 0,
+        "native_accepted": 0,
+        "native_acceptance": null,
+        "median_drafted_token_share": null,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 50.61801690725046,
+            "median_ttft_s": 0.3255,
+            "median_wave_aggregate_tps": 47.09169380318884
+          },
+          "count": {
+            "median_write_tps": 50.599639939664634,
+            "median_ttft_s": 0.249,
+            "median_wave_aggregate_tps": 48.60074069190491
+          },
+          "quality": {
+            "median_write_tps": 47.76119402985074,
+            "median_ttft_s": 0.305,
+            "median_wave_aggregate_tps": 26.066215161163484
+          }
+        }
+      }
+    },
+    "quality": [
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:19:47.398232-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:19:47.398416-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:20:00.133851-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:20:00.134441-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:20:09.309903-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:20:09.310197-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:20:10.614946-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:20:10.615472-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:20:23.312944-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:20:23.313446-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:20:32.486900-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      }
+    ]
+  },
+  {
+    "validation_timestamp_ct": "2026-11-06T21:26:13.855911-06:00",
     "file": "bench/results/day17/mtp-abba-complete.jsonl",
     "rows": 12,
     "errors": 0,
@@ -11,6 +497,7 @@
         "native_proposed": 0,
         "native_accepted": 0,
         "native_acceptance": null,
+        "median_drafted_token_share": null,
         "per_prompt": {
           "code": {
             "median_write_tps": 36.94832192851146,
@@ -36,6 +523,7 @@
         "native_proposed": 560,
         "native_accepted": 550,
         "native_acceptance": 0.9821428571428571,
+        "median_drafted_token_share": null,
         "per_prompt": {
           "code": {
             "median_write_tps": 54.13457615595744,
@@ -199,6 +687,7 @@
     ]
   },
   {
+    "validation_timestamp_ct": "2026-11-06T21:26:13.928295-06:00",
     "file": "bench/results/day17/mtp-abba-interrupted.jsonl",
     "rows": 12,
     "errors": 8,
@@ -210,6 +699,7 @@
         "native_proposed": 0,
         "native_accepted": 0,
         "native_acceptance": null,
+        "median_drafted_token_share": null,
         "per_prompt": {
           "code": {
             "median_write_tps": 36.613184580290216,
@@ -235,6 +725,7 @@
         "native_proposed": 95,
         "native_accepted": 95,
         "native_acceptance": 1.0,
+        "median_drafted_token_share": null,
         "per_prompt": {
           "count": {
             "median_write_tps": 54.39580782046536,
@@ -290,6 +781,255 @@
     ]
   },
   {
+    "validation_timestamp_ct": "2026-11-06T21:26:13.945515-06:00",
+    "file": "bench/results/day17/pl-abba-fixed.jsonl",
+    "rows": 16,
+    "errors": 0,
+    "groups": {
+      "pl-adaptive": {
+        "n": 8,
+        "median_write_tps": 47.31284222858454,
+        "median_ttft_s": 0.3185,
+        "native_proposed": 0,
+        "native_accepted": 0,
+        "native_acceptance": null,
+        "median_drafted_token_share": 0.021,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 47.20943633929696,
+            "median_ttft_s": 0.3285,
+            "median_wave_aggregate_tps": 44.04226612599892
+          },
+          "count": {
+            "median_write_tps": 44.5566562643644,
+            "median_ttft_s": 0.2515,
+            "median_wave_aggregate_tps": 43.01819573837076
+          },
+          "quality": {
+            "median_write_tps": 47.48640403236503,
+            "median_ttft_s": 0.309,
+            "median_wave_aggregate_tps": 26.265199414276736
+          },
+          "repeat": {
+            "median_write_tps": 72.3685080607832,
+            "median_ttft_s": 0.4545,
+            "median_wave_aggregate_tps": 57.81474589776647
+          }
+        }
+      },
+      "pl-off": {
+        "n": 8,
+        "median_write_tps": 50.23984439754727,
+        "median_ttft_s": 0.3255,
+        "native_proposed": 0,
+        "native_accepted": 0,
+        "native_acceptance": null,
+        "median_drafted_token_share": null,
+        "per_prompt": {
+          "code": {
+            "median_write_tps": 50.458350510978136,
+            "median_ttft_s": 0.3255,
+            "median_wave_aggregate_tps": 46.903420616570514
+          },
+          "count": {
+            "median_write_tps": 50.49604035369694,
+            "median_ttft_s": 0.3425,
+            "median_wave_aggregate_tps": 47.68479514148407
+          },
+          "quality": {
+            "median_write_tps": 47.832692823308605,
+            "median_ttft_s": 0.306,
+            "median_wave_aggregate_tps": 25.832760425343082
+          },
+          "repeat": {
+            "median_write_tps": 50.114949997592554,
+            "median_ttft_s": 0.4515,
+            "median_wave_aggregate_tps": 42.80449395808958
+          }
+        }
+      }
+    },
+    "quality": [
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:18:14.151235-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:18:20.757428-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:18:25.379462-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": null,
+        "quality_repeat_exact": true,
+        "timestamp_ct": "2026-11-06T21:18:26.038150-06:00",
+        "mode": "pl-off",
+        "prompt_id": "repeat",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:18:29.125059-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:18:36.340383-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:18:41.229885-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": null,
+        "quality_repeat_exact": true,
+        "timestamp_ct": "2026-11-06T21:18:41.916749-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "repeat",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:18:44.219669-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:18:51.418690-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:18:56.294288-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": null,
+        "quality_repeat_exact": true,
+        "timestamp_ct": "2026-11-06T21:18:56.979721-06:00",
+        "mode": "pl-adaptive",
+        "prompt_id": "repeat",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_count_prefix": true,
+        "quality_count_complete": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:18:59.279492-06:00",
+        "mode": "pl-off",
+        "prompt_id": "count",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      },
+      {
+        "quality_assert_count": 3,
+        "quality_python_syntax": true,
+        "quality_exact": null,
+        "timestamp_ct": "2026-11-06T21:19:05.638376-06:00",
+        "mode": "pl-off",
+        "prompt_id": "code",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": false,
+        "semantic": {
+          "syntax": true,
+          "assert_count": 3,
+          "generated_and_seven_extra_cases_pass": true,
+          "error": null
+        }
+      },
+      {
+        "quality_exact": false,
+        "timestamp_ct": "2026-11-06T21:19:10.228595-06:00",
+        "mode": "pl-off",
+        "prompt_id": "quality",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true,
+        "lines_ignoring_trailing_spaces": true
+      },
+      {
+        "quality_exact": null,
+        "quality_repeat_exact": true,
+        "timestamp_ct": "2026-11-06T21:19:10.887736-06:00",
+        "mode": "pl-off",
+        "prompt_id": "repeat",
+        "finish_reason": "stop",
+        "byte_identical_all_modes": true
+      }
+    ]
+  },
+  {
+    "validation_timestamp_ct": "2026-11-06T21:26:14.016965-06:00",
     "file": "bench/results/day17/pl-abba-initial.jsonl",
     "rows": 16,
     "errors": 0,
@@ -301,6 +1041,7 @@
         "native_proposed": 0,
         "native_accepted": 0,
         "native_acceptance": null,
+        "median_drafted_token_share": 0.0,
         "per_prompt": {
           "code": {
             "median_write_tps": 47.24062040361877,
@@ -331,6 +1072,7 @@
         "native_proposed": 0,
         "native_accepted": 0,
         "native_acceptance": null,
+        "median_drafted_token_share": null,
         "per_prompt": {
           "code": {
             "median_write_tps": 50.73746383324146,

@@ -18,14 +18,14 @@ OPTIONS = [
      "help": "A small helper model guesses the next few words; the big model checks them in one go.",
      "values": ["auto", "on", "off", "mtp"]},
     {"id": "prompt_lookup", "label": "Prompt lookup (experimental)",
-     "help": "One chat: reuse repeated token sequences with the 0.50 overlap gate; target caches must be rewindable. Off by default; benchmark pending.",
+     "help": "One chat, rewindable caches, overlap gate 0.50. Day 17 Qwen: repeated copy 50.11→72.37 tok/s, mixed prompts 50.24→47.31. Off by default.",
      "values": ["auto", "off", "adaptive"]},
     {"id": "shared_start", "label": "Shared start (trim / rebuild)",
      "help": "Reuse the already-read start of a repeated system prompt. Trims memory back to it, "
              "or rebuilds it on both Minis for models that can't be trimmed (Gemma).",
      "values": ["auto", "on", "off"]},
     {"id": "pipeline_chats", "label": "Two chats",
-     "help": "Overlap two chats across the Minis so neither waits on the other.",
+     "help": "Overlap stages in a split. On a single Mini, two requests queue; no stage overlap.",
      "values": ["auto", "1", "2"]},
     {"id": "fuse_kernels", "label": "Fused kernels",
      "help": "Experimental combined GPU steps (off by default).",
@@ -67,11 +67,15 @@ def to_args(settings) -> tuple[list, list]:
     elif s["guess_ahead"] == "on":
         lead.append("--pin-guess-ahead")
     if s["guess_ahead"] == "mtp":
+        if s["kv_bits"] in ("8", "4"):
+            raise ValueError("native MTP needs uncompressed 16-bit fresh caches")
+        if s["prompt_lookup"] == "adaptive":
+            raise ValueError("native MTP and prompt lookup are separate experimental modes")
         lead += ["--native-mtp", "--no-learn"]
     if s["prompt_lookup"] == "adaptive":
         if s["pipeline_chats"] == "2":
             raise ValueError("adaptive prompt lookup currently needs one chat, not two")
-        lead += ["--split-prompt-lookup", "3", "--split-prompt-lookup-adaptive"]
+        lead += ["--split-prompt-lookup", "3", "--split-prompt-lookup-adaptive", "--no-learn"]
     if s["self_tune"] == "off":
         lead.append("--no-learn")
     if s["shared_start"] == "on":

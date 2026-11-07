@@ -17,14 +17,21 @@
 - Chat: `Read N tok/s · Write M tok/s` under each reply (prompt/prefill, fallback TTFT).
 - Numbers: see WEB.md "Test record".
 
+### Day 17 — completed performance follow-up
+- Qwen single-Mini paired queue baseline: Write50.51/50.48tok/s, harness
+  aggregate46.08/46.52tok/s. This is serial queuing, **not split overlap**;
+  no default change. Initial partial11/12-row attempt retained as well.
+- Split N≥2 draft-block fixes remain unit-tested only; live split awaits approval.
+- All runs and negative quality checks remain in the linked raw record below.
+
 ### Day 17 — completed matching-target MTP measurement
 - Orvena4B EXO2 ABBA: **36.95→54.13 median Write tok/s (+46.51%)**, **98.21%**
   accepted proposals; median TTFT0.1748→0.17545s. 12/12 uncapped replies; count
   and exact-answer equality; code passes3 generated+7 extra tests but assertion
   examples differ (not bit-exact). No compatibility claim for Qwen3 30B-A3B.
 - Initial Qwen adaptive run is negative: **50.45→47.20tok/s**, zero accepted
-  drafts even on repeated text. Fixed high-overlap one-miss poisoning; remeasure
-  before any default change. Fixed-gate copy50.11→72.37tok/s, mixed50.24→47.31;
+  drafts even on repeated text. Fixed high-overlap one-miss poisoning.
+  Fixed-gate copy50.11→72.37tok/s, mixed50.24→47.31;
   keep default OFF. UI shows both results. Experimental loads disable learning
   and skip queued reload trials. Native rejects compressed/conflicting modes.
 - Complete prompts, per-run numbers, failures, CT times and commits:

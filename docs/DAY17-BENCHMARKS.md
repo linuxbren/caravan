@@ -194,3 +194,87 @@ Fix: high-overlap mode gets a full acceptance window before sustained misses shu
 it off. Low-overlap cold probes still shut off after one bad proposal. Added two
 regression tests; focused suite **67 passed +4 subtests**. Default remains OFF
 pending the fixed-gate remeasurement. No split or two-chat overlap claim.
+
+## Fixed-gate adaptive PL ABBA — 9:18–9:19 PM CT
+Raw: [`pl-abba-fixed.jsonl`](../bench/results/day17/pl-abba-fixed.jsonl).
+Worker/runner **589bd92**, Qwen single EXO1 PID84711; same pinned settings/prompts
+as initial run, threshold0.50, k4, OFF/Adaptive/Adaptive/OFF. **16/16 responses**,
+all natural stop. No user-state change observed by per-request guards.
+
+| Prompt | OFF / Adaptive Write tok/s (median) | OFF / Adaptive TTFT s |
+|---|---:|---:|
+| Count | 50.4960 /44.5567 | 0.3425 /0.2515 |
+| Code | 50.4584 /47.2094 | 0.3255 /0.3285 |
+| Strict 3 lines | 47.8327 /47.4864 | 0.3060 /0.3090 |
+| Repeated passage | **50.1149 /72.3685 (+44.41%)** | 0.4515 /0.4545 |
+| All 8 replies per mode | **50.2398 /47.3128 (-5.83%)** | **0.3255 /0.3185** |
+
+Repeated passage now emits104 of133 tokens from lookup (**78.2% drafted-token
+share**), versus0 before the fix; only29 verification rounds. Count:13/310
+(4.2% share), code/exact:0. These PL `accepted_frac` fields are historically
+**accepted-draft/generated tokens**, unlike native MTP’s accepted/proposed.
+The runner retains the original field; do not call78.2% proposal acceptance.
+Exact proposal-token totals are not instrumented for PL and are N/A.
+
+Count complete, repeated passage byte-for-byte, and sorting’s3+7 tests pass.
+Qwen strict-format still fails OFF and ON due to trailing Markdown spaces;
+normalized line content passes. No broad quality or bit-exact guarantee.
+**Keep PL default off:** copy is faster but ordinary/mixed prompts regress.
+UI help now shows both positive and negative results, not just a speed claim.
+Experimental UI loads skip learned reload trials and disable learning; native
+mode rejects compressed caches or simultaneous adaptive PL rather than silently
+ignoring conflicting settings.
+
+## Single-Mini two-request baseline — 9:19–9:24 PM CT
+
+This is **not** a live split and **not** stage-overlap mode. Qwen stays single on
+EXO1; the engine serializes the two requests. Worker/runner **589bd92**, PID84711,
+KV16, learning/helper/shared-start off, pipeline1. Temperature0, seed17, max768,
+unique session IDs, same count/code/strict-format prompts as the MTP run.
+
+Complete controls: [`concurrency1-before.jsonl`](../bench/results/day17/concurrency1-before.jsonl),
+[`concurrency1-after.jsonl`](../bench/results/day17/concurrency1-after.jsonl).
+Complete paired repeat: [`concurrency2-complete.jsonl`](../bench/results/day17/concurrency2-complete.jsonl)
+(12/12 replies). **18/18 responses** in the complete comparison.
+Initial partial attempt: [`concurrency2-interrupted.jsonl`](../bench/results/day17/concurrency2-interrupted.jsonl)
+(11/12 rows retained), [`queue-harness-anomaly.json`](../bench/results/day17/queue-harness-anomaly.json),
+and [`qwen-worker.txt`](../bench/results/day17/qwen-worker.txt). Background-shell
+status froze while its PID/driver were absent; cause unestablished, not blamed
+on Brenden. Worker/model remained ready and unchanged. A foreground repeat with
+remote stdout redirected completed normally; incomplete data was not overwritten.
+
+| Measurement | One request | Two queued requests |
+|---|---:|---:|
+| Median server Write tok/s | 50.5126 | 50.4830 |
+| Median server processing TTFT s | 0.3160 | 0.3060 |
+| Overall harness aggregate tok/s | 46.0763 | 46.5226 |
+| Median harness request+guard wall s | 4.5906 | 9.1788 |
+| Count aggregate tok/s (median waves) | 47.4655 | 48.2289 |
+| Code aggregate tok/s (median waves) | 47.0440 | 47.0520 |
+| Strict-format aggregate tok/s (median waves) | 25.7568 | 26.0677 |
+
+Overall aggregate = summed completion tokens / summed unique-wave wall time:
+**1084/23.526200375s** versus **2168/46.601003791s** (+0.97%, not a stage-overlap
+speedup). `ttft_s` is worker processing time and **excludes queue wait**. Client
+first-token timing was not measured (non-streaming requests). Harness wall times
+include pre/post UI state-guard calls, which can themselves wait for the engine;
+they are **not** a clean end-user chat latency measurement. No default change
+justified; single-Mini remains serial. True split N≥2/two-chat performance still
+awaits Brenden’s approval to load a split; no split was loaded.
+
+All complete-run counts and3+7 sorting tests pass; strict-format still fails in
+all Qwen controls because of trailing Markdown spaces. Off/on/queue raw rows and
+semantic summary preserve those failures. Every timestamp in the raw files is CT.
+
+## Validation and remaining limits
+- Expanded focused regression on589bd92: **143 passed +4 subtests**,12.31s;
+  [`final-regression.txt`](../bench/results/day17/final-regression.txt). Additional
+  experimental reload guards then pass a42-test focused run +4 subtests.
+- Browser JavaScript parses with `node --check`; Python modules compile. This is
+  not a browser screenshot or full end-to-end browser test.
+- Native OFF still has the same head resident; only draft execution toggles.
+  Peak MLX allocation2.848GB in this short test fits EXO2’s25.8GB RAM comfortably.
+  Target/head provenance: [`head-provenance.json`](../bench/results/day17/head-provenance.json).
+- No live split; no generic quality proof; no strict bit-identity guarantee.
+- Screenshot capture is still pending: executor has no browser/delegation tool,
+  and does not bypass that boundary through Shell-driven browser automation.
