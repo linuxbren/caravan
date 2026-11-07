@@ -682,6 +682,9 @@ def make_handler(app: App):
                 return self._api_settings()
             if path == "/api/hf-token":
                 return self._api_hf_token_get()
+            if path == "/api/helpers":
+                import web_helpers
+                return self._json(200, {"offer": web_helpers.offer(app.mgr.snapshot())})
             if path == "/api/picker/search":
                 return self._api_picker_search()
             if path == "/api/picker/disk":
@@ -755,6 +758,15 @@ def make_handler(app: App):
             if path == "/api/shutdown":
                 app.want_shutdown()
                 return self._json(200, {"ok": True})
+            if path == "/api/helpers/answer":
+                import web_helpers
+                p = web_helpers.pairing(body.get("helper_id"))
+                if not p or body.get("action") not in ("download", "decline"):
+                    return self._json(400, {"error": "Unknown helper or action"})
+                web_helpers.answer(p["id"], body["action"] == "download")
+                if body["action"] == "decline":
+                    return self._json(200, {"ok": True})
+                return self._api_picker_download({"repo_id": p["draft"]["hf_repo"], "helper_id": p["id"]})
             if path == "/api/picker/download":
                 return self._api_picker_download(body=body)
             if path == "/api/picker/download/resume":
@@ -932,7 +944,7 @@ def make_handler(app: App):
                 pass
 
             # Cleanup: merge across nodes
-            cleanup_kinds = ("hf-cache", "drafts")
+            cleanup_kinds = ("hf-cache",)
             cleanup = []
             for kind in cleanup_kinds:
                 sizes = {}
@@ -961,6 +973,17 @@ def make_handler(app: App):
                         "size_gb": sizes,
                         "size_by_label": sizes_by_label,
                     })
+
+            helpers = {}
+            for n in cfg_nodes:
+                nid = n.get("id") or n.get("label")
+                for key, h in ((blobs.get(nid) or {}).get("helpers") or {}).items():
+                    e = helpers.setdefault(key, {"id": "cleanup:" + key, "kind": key,
+                        "name": h["name"], "note": "Pairs with " + ", ".join(h.get("pairs") or []),
+                        "size_gb": {}, "size_by_label": {}})
+                    e["size_gb"][nid] = h["size_gb"]
+                    e["size_by_label"][n.get("label") or nid] = h["size_gb"]
+            cleanup.extend(helpers.values())
 
             # Attach placement + held_on from inventories when available
             try:
@@ -1013,14 +1036,18 @@ def make_handler(app: App):
                 k = kind or str(rid).split(":", 1)[-1]
                 results = []
                 for n in cfg_nodes:
-                    kn = "hf-cache" if k in ("hf-cache", "hf_cache", "cache") else "drafts"
+                    kn = "hf-cache" if k in ("hf-cache", "hf_cache", "cache") else k
+                    if kn != "hf-cache" and current:
+                        return self._json(409, {"error": "Stop the loaded model before deleting helpers."})
                     cur = (current or "").replace("'", "")
+                    import shlex
+                    kn = shlex.quote(kn)
                     try:
                         if web_nodes.is_local(n):
                             import subprocess
                             py = str(Path(app.mgr.repo) / "proxy" / "picker_disk_sizes.py")
                             r = subprocess.run(
-                                [sys.executable, py, "--delete", kn, "--current", cur],
+                                [sys.executable, py, "--delete", k, "--current", cur],
                                 capture_output=True, text=True, timeout=300,
                             )
                         else:
@@ -1171,6 +1198,10 @@ def make_handler(app: App):
                 return self._json(400, {"error": "cloud models are framework-only for now"})
             if body.get("source") == "gguf":
                 return self._json(400, {"error": "GGUF download via llama-server is phase 4"})
+            import web_helpers
+            helper = web_helpers.pairing(body.get("helper_id")) if body.get("helper_id") else None
+            if body.get("helper_id") and (not helper or repo != helper["draft"]["hf_repo"]):
+                return self._json(400, {"error": "Invalid helper"})
             packer_layers = body.get("packer_layers")
             try:
                 packer_layers = int(packer_layers) if packer_layers is not None else 24
@@ -1211,6 +1242,11 @@ def make_handler(app: App):
                     "placement": place, "options": opts,
                 })
 
+            if helper:
+                lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
+                if not lead:
+                    return self._json(400, {"error": "No lead configured"})
+                place = {"mode": "one", "full_copy": True, "node_ids": [lead.get("id") or lead.get("label")], "label": "Guess-ahead helper · applies on next load"}
             mode = place.get("mode") or "split"
             full_copy = bool(place.get("full_copy"))
             target_ids = list(place.get("node_ids") or [])
@@ -1377,6 +1413,12 @@ def make_handler(app: App):
                 )
                 if tb is None:
                     tb = totals.get("each") or totals.get("full")
+                if helper:
+                    dest = "~/.caravan/mlx-models/drafts/" + helper["draft"]["name"]
+                    if web_nodes.is_local(n):
+                        dest = str(Path(dest).expanduser())
+                    measure = _mk_local_measure(n, dest) if web_nodes.is_local(n) else _mk_measure(n, dest)
+                    save_placement = None
                 runners.append({
                     "id": nid,
                     "label": n.get("label") or nid,
