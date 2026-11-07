@@ -95,3 +95,4 @@ file removed (did not exist before), placement back to `one · EXO1`, Qwen3 30B 
 
 Noticed, not fixed: the helper dialog is an unstyled white box in Amber (not themed); the chip
 row showed "GUESS-AHEAD OFF" while the split ran without a helper.
+Revision (Nov 7 ~12:30 AM CT): Settings scene uses a full-width crop (was letterboxed); speed results and the lockdown check are now text cards built only from DAY17-BENCHMARKS.md / SECURITY.md numbers; 7 long captions shortened; fit check now uses the rendered bbox with a 1120 px limit.
