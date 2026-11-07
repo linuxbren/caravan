@@ -3,6 +3,8 @@
 
 ## Unreleased
 
+- Change the header tagline to “Your Mac minis. One model. Built in the open.”
+
 ### A3 Caravan identity
 - Finalized the three linked Minis, without an underline, beside a lowercase
   outlined monospace wordmark. Header follows all four theme accents.

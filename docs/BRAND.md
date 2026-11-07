@@ -1,5 +1,7 @@
 # Caravan identity — A3
 
+Current tagline: **Your Mac minis. One model. Built in the open.**
+
 The mark is three evenly spaced, flat rounded Minis, linked through their centers,
 with a small light at each bottom-right corner. No underline and no special lead
 node. Keep the lowercase **caravan** wordmark beside it, not inside the Minis.
