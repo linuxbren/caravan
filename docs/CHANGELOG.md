@@ -4,7 +4,7 @@
 ## Unreleased
 
 ### Nebula theme
-- Fourth theme, **Nebula**: like Meadow, but deep space, with colours inspired by JWST's Cosmic Cliffs (an inline SVG painting, not the photo). The top is a navy-to-cerulean sky with a soft blue haze; a copper, rust and amber dust ridge with a billowy edge fills the lower half, with darker folds and faint lavender glints near the crest. It is blurred about as much as Meadow. Sparse white and pale-blue stars sit on top, a few with a soft 6-point twinkle. It drifts very slowly (160 s) and stops under `prefers-reduced-motion`.
+- Fourth theme, **Nebula**: like Meadow, but deep space, with colours inspired by JWST's Cosmic Cliffs (inline SVG, not the photo). The background is sharp and layered: a blurred navy-to-cerulean haze, then a craggy turbulence-displaced copper ridge with dark folds and pillars, a gold rim glow, gas wisps rising off the crest and blue streaks, then crisp stars with a few 6+2-point diffraction spikes. The frosted panels do the softening. It drifts very slowly (160 s) and stops under `prefers-reduced-motion`.
 - Dark frosted-glass panels with light text. Accents are copper `#e0893a` (the Send button, with dark text) and ice blue `#7cc4ff`. Theme bars go rust, then copper, then ice blue. CRT layers are off; rounded sans font, with monospace kept for stats.
 - Specifications: "To first word" is now "To first token".
 
