@@ -208,7 +208,7 @@ class App:
     def picker_measure_node(self, node: dict, dest: str, *, repo_id: str = "",
                               prev=None) -> dict:
         """Truthful progress on a node: hook/disk/nettop (hf_xet-safe)."""
-        if web_nodes.is_local(node):
+        if False:  # local uses the same process-tree/nettop script as remote (xet-safe)
             try:
                 from download_progress import combine_progress
                 return combine_progress(
@@ -283,9 +283,9 @@ class App:
             "  if baseline is None: baseline=0\n"
             "  net_have=max(0, net_raw-int(baseline))\n"
             "source='starting'; out_have=0\n"
-            "if hook_have: out_have=hook_have; source='hook'\n"
-            "elif net_have and net_have>have: out_have=net_have; source='nettop'\n"
-            "elif inc>0 or done>0: out_have=have; source='disk'\n"
+            "cands=[(hook_have or 0,'hook'),(net_have or 0,'nettop'),(have if (inc>0 or done>0) else 0,'disk')]\n"
+            "best=max(cands,key=lambda c:c[0])\n"
+            "if best[0]>0: out_have,source=best\n"
             "elif have>0: out_have=have; source='disk'\n"
             "print(json.dumps({'have_bytes':out_have,'n_incomplete':n,'done_bytes':done,"
             "'source':source,'pid':pid,'net_raw':net_raw,'net_baseline':baseline,"

@@ -1412,6 +1412,8 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                     if m.get("msg") is not None and m.get("pct") is not None:
                         snap = dict(m)
                         snap.setdefault("t", time.time())
+                        if not snap.get("total_bytes") and total_b:
+                            snap["total_bytes"] = int(total_b)
                     else:
                         # Raw have_bytes — fold through combine with prev for speed/stall
                         have = int(m.get("have_bytes") or 0)
