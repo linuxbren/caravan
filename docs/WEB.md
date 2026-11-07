@@ -377,3 +377,54 @@ ready/singleEXO1/allAuto/KV4 trial; both chip and help verified over HTTP:
 ## Tests
 Full suite (no Minis needed): `PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests` (340 OK, 2026-11-06 CT).
 HTTP tests stub SSH and node probes. If stopping the packer fails, `/api/models/stop` now answers 502 with `{"error", "worker"}` instead of dropping the connection.
+
+### Settings drawer visual alignment (Nov 6, 2026, 10:46 PM CT)
+
+Settings now uses the Models/Topology drawer vocabulary: shared section panels
+(the same border/background as model rows), uppercase section captions, monospace
+labels, muted help text, and a shared compact control tier. The three drawer Close
+buttons share that tier too. There are no setting, API, or JavaScript changes.
+
+Audit before: the 390px Meadow preview mixed 16px action type with 11.52px toggle
+type and 10.4px bar-switch type. Action padding was 10×12px, toggle padding
+4×10px, bar-switch padding 6×10px. Controls ranged from 24px to 66px high;
+experimental labels wrapped to three lines, and adjacent labels squeezed/clipped
+the segmented controls. Section captions, Optimize-now bold text, helper text,
+notes and chips had unrelated sizing and 6/8/10/12px spacing. Sections had no
+consistent panel grouping. The 280px phone drawer left too little content width.
+
+After: controls share 32px height, 6×10px padding and .72rem type; captions use
+.65rem, labels .72rem/600, help .7rem with 1.5 line height. Label/control rows stack
+so every option remains legible, long help wraps, sections use 12px inner padding
+and 16px gaps, and the sticky header stays readable when scrolling. Settings is
+440px on desktop and at most 92vw on phones (never a forced minimum width).
+Primary/selected/disabled treatments remain theme-aware; every setting and action
+is retained, including experimental choices, HF-token controls and topology bars.
+
+Validation: actual headless `/usr/bin/google-chrome` local previews in Amber,
+Green, Meadow and Nebula at 1280×900 and 390×900. All eight after checks passed:
+no document or drawer horizontal overflow, no controls outside the drawer, all
+8 option rows present, and changing Self-tuning Off/Auto still updates local
+selection and resets all choices to Auto. All visible Settings buttons measured
+32px high. JavaScript compared byte-for-byte unchanged against the before file.
+Full suite: **340 tests passed in 28.570s**, exit 0, Nov 6, 2026,
+10:45:54 PM CT (base `5928ea7`, final Settings patch). Command:
+`PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests`.
+
+These screenshots use **local layout fixtures**, not a live inference session:
+real `web_settings.OPTIONS`, one explicitly named layout-preview model with native
+MTP capability to exercise long labels, empty worker status and placeholder token
+status. They do not read, reveal or alter the user's HF token, load a model, apply
+settings, or contact the live web server. The token-status label in these previews
+is not a report of the Minis' actual token state.
+
+Evidence on the box:
+- `/workspace/dbg/shots/settings-before-{amber,green,meadow,nebula}-{1280,390}.png`
+- `/workspace/dbg/shots/settings-after-{amber,green,meadow,nebula}-{1280,390}.png`
+- Additional `-bottom.png` views show lower sections in every theme/width.
+- `/workspace/dbg/shots/settings-compare.png`: actual Meadow phone before/after
+  screenshots, upper and lower views.
+- `/workspace/dbg/shots/settings-{before,after}-checks.json`: measured typography,
+  control heights and overflow diagnostics (before includes the observed issues).
+
+No worker or server restart is needed; `index.html` is served from disk.

@@ -3,6 +3,11 @@
 
 ## Unreleased
 
+- Align Settings with Models/Topology: shared panels, compact controls and Close
+  buttons, consistent type/spacing, stacked option rows, and a wider phone drawer.
+  No settings or API behavior changes. Eight Chrome layout checks pass; before/after
+  evidence and audit are recorded in [WEB.md](WEB.md). Full suite: 340 tests pass.
+
 - Change the header tagline to “Your Mac minis. One model. Built in the open.”
 
 ### A3 Caravan identity

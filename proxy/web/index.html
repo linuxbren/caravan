@@ -364,7 +364,6 @@
   .chathead h2 { margin: 0; }
   .a-settings .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
   .a-settings .chips { margin-bottom: 12px; }
-  .optcard h2 { font-size: .72rem; }
   .tunenote { font-size: 12px; margin-top: 8px; }
   .tunenote:empty, .optbox .help:empty { display: none; }
   .optbox { margin-top: 10px; border-top: 1px solid rgba(127,127,127,.25); padding-top: 8px; }
@@ -828,7 +827,7 @@
     font: inherit; font-size: .65rem; padding: 3px 8px; border-radius: 4px; cursor: pointer;
   }
   .picker-src button.on { color: var(--accent2); border-color: var(--accent); }
-  .p-row {
+  .p-row, .drawer-section {
     border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); border-radius: 8px;
     margin-bottom: 6px; background: color-mix(in srgb, var(--bg2) 80%, transparent); overflow: hidden;
   }
@@ -855,7 +854,7 @@
   .p-quant .q-name { flex: 1; }
   .p-quant .q-size { color: var(--muted); }
   .p-quant .q-nodes { color: var(--muted); min-width: 3.2rem; text-align: right; }
-  .picker-section { margin-top: 14px; color: var(--amber2); letter-spacing: .06em; text-transform: uppercase; font-size: .65rem; }
+  .picker-section, .drawer-section-title { margin-top: 14px; color: var(--amber2); letter-spacing: .06em; text-transform: uppercase; font-size: .65rem; }
   .picker-disk .d-row {
     display: flex; gap: 8px; align-items: center; padding: 6px 0;
     border-bottom: 1px solid color-mix(in srgb, var(--accent) 10%, transparent);
@@ -945,6 +944,49 @@
 
 
   .a-string { display: none !important; }
+
+  /* Drawer design system: the same compact type, panels and controls as Models. */
+  .drawer-control, #settingsDrawer .seg button, #settingsDrawer .theme-switch button {
+    font-family: var(--mono); font-size: .72rem; line-height: 1.4;
+    min-height: 32px; padding: 6px 10px; font-weight: 500;
+  }
+  .drawer-section { padding: 12px; margin: 0; min-width: 0; }
+  .drawer-section-title { margin: 0 0 12px; font-family: var(--mono); font-weight: 600; line-height: 1.4; }
+  #settingsDrawer {
+    width: min(440px, 92vw); min-width: 0;
+    font-family: var(--mono); font-size: .72rem; line-height: 1.5;
+  }
+  #settingsDrawer .drawer-head { background: var(--bg2); backdrop-filter: blur(14px); padding-bottom: 12px; margin-bottom: 16px; }
+  #settingsDrawer .toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  #settingsDrawer #modelSelect { grid-column: 1 / -1; width: 100%; min-width: 0; text-overflow: ellipsis; }
+  #settingsDrawer .optgrid { display: grid; gap: 16px; }
+  #settingsDrawer #optRows { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  #settingsDrawer .opt { padding: 12px 0; gap: 8px; border-bottom: 1px solid var(--line); }
+  #settingsDrawer .opt:last-child { border-bottom: 0; }
+  #settingsDrawer .opt:first-child { padding-top: 0; }
+  #settingsDrawer .opt .row { flex-direction: column; align-items: stretch; gap: 8px; }
+  #settingsDrawer .opt .name, #settingsDrawer .optbox b { font-size: .72rem; font-weight: 600; }
+  #settingsDrawer .seg { display: flex; flex-wrap: wrap; width: 100%; }
+  #settingsDrawer .seg button {
+    flex: 1 0 auto; white-space: nowrap;
+  }
+  #settingsDrawer .seg button.sel { font-weight: 600; }
+  #settingsDrawer .help, #settingsDrawer small, #settingsDrawer .tunenote,
+  #settingsDrawer .pinnote { font-size: .7rem; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+  #settingsDrawer small { display: block; }
+  #settingsDrawer .help.filepin, #settingsDrawer .pinnote { color: var(--accent2); }
+  #settingsDrawer .opt .now { font-size: .65rem; line-height: 1.5; overflow-wrap: anywhere; }
+  #settingsDrawer .opt .now:empty { display: none; }
+  #settingsDrawer .applyrow { flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  #settingsDrawer .applyrow small { flex: 1 1 100%; }
+  #settingsDrawer .optbox { border-top-color: var(--line); padding-top: 12px; margin-top: 16px; }
+  #settingsDrawer .optbox .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  #settingsDrawer .optbox b { grid-column: 1 / -1; }
+  #settingsDrawer .hf-token-card input { padding: 6px 10px; margin-top: 8px; width: 100%; min-width: 0; }
+  #settingsDrawer .hf-token-card small { margin-top: 12px; }
+  #settingsDrawer #barColorSwitch { display: flex; margin-bottom: 8px; }
+  #settingsDrawer #barColorSwitch button { flex: 1; }
+
 </style>
 </head>
 <body>
@@ -1038,7 +1080,7 @@
 <aside class="drawer-left" id="topoDrawer" aria-hidden="true">
   <div class="drawer-head">
     <h2>Topology</h2>
-    <button type="button" class="ghost" id="btnCloseTopo">Close</button>
+    <button type="button" class="ghost drawer-control" id="btnCloseTopo">Close</button>
   </div>
   <div class="topo-body" id="topoBody">
     <!-- Cards built from /api/nodes (N Minis from config). -->
@@ -1052,7 +1094,7 @@
 <aside class="drawer-left" id="pickerDrawer" aria-hidden="true">
   <div class="drawer-head">
     <h2>Models</h2>
-    <button type="button" class="ghost" id="btnClosePicker">Close</button>
+    <button type="button" class="ghost drawer-control" id="btnClosePicker">Close</button>
   </div>
   <div class="picker-body" id="pickerBody">
     <div class="picker-src" id="pickerSrc">
@@ -1086,19 +1128,19 @@
   <aside class="drawer a-settings" id="settingsDrawer" aria-label="Settings">
     <div class="drawer-head">
       <h2>Settings</h2>
-      <button type="button" class="ghost" id="btnCloseSettings">Close</button>
+      <button type="button" class="ghost drawer-control" id="btnCloseSettings">Close</button>
     </div>
     <div class="toolbar">
-      <select id="modelSelect" aria-label="Model"></select>
-      <button class="primary" id="btnLoad">Load model</button>
-      <button class="ghost" id="btnStop" title="Unload">Unload</button>
+      <select class="drawer-control" id="modelSelect" aria-label="Model"></select>
+      <button class="primary drawer-control" id="btnLoad">Load model</button>
+      <button class="ghost drawer-control" id="btnStop" title="Unload">Unload</button>
     </div>
     <div class="optgrid" id="optWrap">
-<div class="optcard">
-      <h2><span class="tip" title="Caravan learns which Optimizations help this model on your Minis.">Optimizations</span></h2>
+<div class="optcard drawer-section">
+      <h2 class="drawer-section-title"><span class="tip" title="Caravan learns which Optimizations help this model on your Minis.">Optimizations</span></h2>
       <div id="optRows"></div>
       <div class="applyrow">
-        <button class="primary" id="btnApply">Apply &amp; restart</button>
+        <button class="primary drawer-control" id="btnApply">Apply &amp; restart</button>
         <small id="optNote">Auto = Caravan decides (learned per model)</small>
       </div>
       <div class="tunenote" id="tuneNote"></div>
@@ -1109,25 +1151,25 @@
             <option value="deep" selected>deep</option>
             <option value="quick">quick</option>
           </select>
-          <button class="primary" id="btnOptStart">Start</button>
-          <button class="ghost" id="btnOptCancel">Cancel</button>
+          <button class="primary drawer-control" id="btnOptStart">Start</button>
+          <button class="ghost drawer-control" id="btnOptCancel">Cancel</button>
         </div>
         <div class="help" id="optTip">Optimize as used stays on when options are Auto — Caravan learns from real chats.</div>
         <div class="help" id="optProgress"></div>
       </div>
     </div>
-    <div class="optcard hf-token-card" id="hfTokenCard">
-      <h2><span class="tip" title="Hugging Face rate-limits unauthenticated downloads. Stored only on each Mini at ~/.caravan/hf_token (chmod 600). Never shown back to the page.">Hugging Face token</span></h2>
+    <div class="optcard drawer-section hf-token-card" id="hfTokenCard">
+      <h2 class="drawer-section-title"><span class="tip" title="Hugging Face rate-limits unauthenticated downloads. Stored only on each Mini at ~/.caravan/hf_token (chmod 600). Never shown back to the page.">Hugging Face token</span></h2>
       <div class="help" id="hfTokenStatus">Checking…</div>
-      <input type="password" id="hfTokenInput" placeholder="hf_… (optional)" autocomplete="off" spellcheck="false" />
-      <div class="applyrow" style="margin-top:6px">
-        <button class="primary" id="btnHfTokenSave" type="button">Save on Minis</button>
-        <button class="ghost" id="btnHfTokenClear" type="button">Clear</button>
+      <input class="drawer-control" type="password" id="hfTokenInput" placeholder="hf_… (optional)" autocomplete="off" spellcheck="false" />
+      <div class="applyrow">
+        <button class="primary drawer-control" id="btnHfTokenSave" type="button">Save on Minis</button>
+        <button class="ghost drawer-control" id="btnHfTokenClear" type="button">Clear</button>
       </div>
       <small>Also used: <code>HF_TOKEN</code> env, or <code>~/.cache/huggingface/token</code> from <code>huggingface-cli login</code>.</small>
     </div>
-    <div class="optcard" id="topoBarsCard">
-      <h2><span class="tip" title="How Topology fills the CPU / GPU / RAM / Disk / Temp bars.">Topology bars</span></h2>
+    <div class="optcard drawer-section" id="topoBarsCard">
+      <h2 class="drawer-section-title"><span class="tip" title="How Topology fills the CPU / GPU / RAM / Disk / Temp bars.">Topology bars</span></h2>
       <div class="theme-switch" id="barColorSwitch" title="Bar colors">
         <button type="button" data-bars="theme" class="on">Theme</button>
         <button type="button" data-bars="heat">Heat</button>
