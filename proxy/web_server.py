@@ -979,7 +979,7 @@ def make_handler(app: App):
                 nid = n.get("id") or n.get("label")
                 for key, h in ((blobs.get(nid) or {}).get("helpers") or {}).items():
                     e = helpers.setdefault(key, {"id": "cleanup:" + key, "kind": key,
-                        "name": h["name"], "note": "Pairs with " + ", ".join(h.get("pairs") or []),
+                        "name": h["name"], "note": ("Pairs with " + ", ".join(h["pairs"])) if h.get("pairs") else "Manually installed helper; no catalog pairing recorded",
                         "size_gb": {}, "size_by_label": {}})
                     e["size_gb"][nid] = h["size_gb"]
                     e["size_by_label"][n.get("label") or nid] = h["size_gb"]
@@ -1026,7 +1026,9 @@ def make_handler(app: App):
         def _api_picker_delete(self, body=None):
             body = body or {}
             rid = body.get("id") or body.get("repo_id") or body.get("kind") or ""
-            kind = (body.get("kind") or "").strip().lower()
+            kind = (body.get("kind") or "").strip()
+            if not kind.startswith(("draft:", "mtp:")):
+                kind = kind.lower()
             if not body.get("confirm"):
                 return self._json(400, {"error": "confirm=true required"})
             current = app.mgr.snapshot().get("model_id")

@@ -87,7 +87,9 @@ def sizes() -> dict:
 
 
 def delete_kind(kind: str, current: str = "") -> dict:
-    kind = (kind or "").strip().lower().replace("cleanup:", "")
+    kind = (kind or "").strip().removeprefix("cleanup:")
+    if not kind.startswith(("draft:", "mtp:")):
+        kind = kind.lower()
     cur = (current or "").lower()
     removed = []
     home = Path.home()

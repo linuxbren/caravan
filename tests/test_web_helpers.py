@@ -49,7 +49,8 @@ class HelperConsentTests(unittest.TestCase):
         self.assertFalse(H.delete_helper(key, self.snap['model_id'])['ok'])
         self.assertTrue(p.exists())
         self.assertFalse(H.delete_helper('draft:../../etc')['ok'])
-        self.assertTrue(H.delete_helper(key)['ok'])
+        import picker_disk_sizes
+        self.assertTrue(picker_disk_sizes.delete_kind(key)['ok'])
 
     def test_unknown_answer_rejected(self):
         with self.assertRaises(ValueError): H.answer('unknown', True)
