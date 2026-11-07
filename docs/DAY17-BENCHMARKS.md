@@ -76,7 +76,7 @@ Status evidence: [`collision-status.json`](../bench/results/day17/collision-stat
 Model **Orvena/Orvena-4B-MLX-4bit**, native head BF16, EXO2-only on localhost
 **8294**; temperature 0, seed 17, max_tokens=192, no persistence/learning,
 fresh caches. Exact prompts and every setting are embedded in each raw row.
-Both Minis had Low Power Mode off; own downloads had completed and picker
+EXO2 had Low Power Mode off; own downloads had completed and picker
 jobs were empty immediately before the run. A *new* picker download/model
 switch subsequently began during the benchmark, so this is **contaminated and
 incomplete**, not a headline performance result.

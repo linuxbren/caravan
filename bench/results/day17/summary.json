@@ -1,0 +1,13 @@
+{
+  "status": "interrupted-and-contaminated; not a validated speedup",
+  "benchmark_commit": "b892595e57379c8b41a3a428e0c84eadc45cb22f",
+  "attempts": 12,
+  "responses": 4,
+  "errors": 8,
+  "count_text_equal": true,
+  "native_quality_gate": "not completed",
+  "clean_rerun_required": true,
+  "exo1_original_worker": "PID 73853 verified intact after web restart; later disappeared during separate UI model switch/stop",
+  "live_split_benchmark": "not run; approval required",
+  "adaptive_pl_and_two_chat": "not measured; original worker required reload and then was no longer running"
+}
