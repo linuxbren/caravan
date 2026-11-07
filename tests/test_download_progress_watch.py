@@ -70,3 +70,17 @@ class RemotePlacementSave(unittest.TestCase):
         self.assertEqual(saved[0]["node_ids"], ["exo2"])
         self.assertEqual(saved[0]["repo_id"], "x/place")
         self.assertFalse(os.path.exists(remote_dest))
+
+
+class FinalStateSticky(unittest.TestCase):
+    def test_done_not_reopened_by_late_measure(self):
+        def measure():
+            time.sleep(0.5)
+            return {"have_bytes": 50, "source": "disk"}
+        job = web_picker.start_download("x/sticky", runners=[{
+            "id": "exo2", "label": "EXO2", "role": "packer", "dest": "/nonexistent",
+            "run": lambda *a: time.sleep(1.0), "measure": measure, "total_bytes": 100}])
+        time.sleep(3.5)
+        p = web_picker.get_job(job["id"])["progress"]["exo2"]
+        self.assertEqual(p["state"], "done")
+        self.assertEqual(p["pct"], 100)

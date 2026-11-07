@@ -1472,10 +1472,13 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
             with _jobs_lock:
                 if jid in _jobs:
                     prev_p = dict(_jobs[jid]["progress"].get(role_id) or {})
+                    if prev_p.get("state") in ("done", "stopped", "failed"):
+                        break  # final state is sticky; a late measure must not reopen it
                     snap = monotonic_snap(prev_p, snap)
                     snap["label"] = prev_p.get("label")
                     snap["role"] = prev_p.get("role")
-                    if prev_p.get("stage"):
+                    if prev_p.get("stage") and not (
+                            snap.get("have_bytes") and str(prev_p["stage"]).startswith("starting")):
                         snap["stage"] = prev_p.get("stage")
                     _jobs[jid]["progress"][role_id] = snap
                     # mirror legacy keys
