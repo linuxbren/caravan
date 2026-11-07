@@ -127,6 +127,7 @@ class WorkerManager:
     def stop(self, *, reason: str = "stop") -> None:
         self._set(status="stopping", error=None)
         self._note(f"stopping workers ({reason})")
+        self._gguf_cancel = True  # a GGUF load in flight stops at its next step
         self._kill_gguf()
         self._kill_lead()
         self._kill_packer()
@@ -305,6 +306,8 @@ class WorkerManager:
                 self._kill_gguf()
             except Exception as ke:  # noqa: BLE001
                 self._note(f"cleanup: {ke}")
+            if getattr(self, "_gguf_cancel", False):
+                raise GgufLoadError("Load stopped.", f"{type(e).__name__}: {e}"[-4000:]) from e
             raise GgufLoadError(gguf_friendly(e, peers), f"{type(e).__name__}: {e}"[-4000:]) from e
         finally:
             self._quiet_lead_log = False
@@ -316,10 +319,10 @@ class WorkerManager:
         peers = [n for n in nodes if not self._node_is_local(n)]
         mode = "split" if peers else "single"
         label = " + ".join(n.get("label") or n.get("id") for n in nodes)
-        self._set(status="stopping", error=None, error_detail=None, model_id=entry["id"], model_name=entry["name"],
-                  progress=[], split=bool(peers), backend="llama",
-                  gguf={"nodes": [n.get("id") for n in nodes], "labels": [n.get("label") for n in nodes],
-                        "mode": mode})
+        gblock = {"nodes": [n.get("id") for n in nodes], "labels": [n.get("label") for n in nodes],
+                  "mode": mode}
+        self._set(status="stopping", error=None, error_detail=None, model_id=entry["id"],
+                  model_name=entry["name"], progress=[], split=bool(peers), backend="llama", gguf=gblock)
         self._note(f"switching to {entry['name']} (GGUF, llama.cpp, {'split across ' if peers else 'on '}{label})")
         path = Path(entry["lead_path"]).expanduser()
         if not path.is_file():
@@ -327,54 +330,54 @@ class WorkerManager:
         binp = Path(G.LLAMA_BIN).expanduser() / "llama-server"
         if not binp.is_file():
             raise FileNotFoundError(f"llama-server not found at {binp} (set CARAVAN_LLAMA_BIN)")
+        self._gguf_cancel = False
         self._kill_gguf()
         self._kill_lead()
         self._kill_packer()
         # _kill_gguf clears the gguf block; put this load's back for Topology.
-        self._set(backend="llama", gguf={"nodes": [n.get("id") for n in nodes],
-                                         "labels": [n.get("label") for n in nodes], "mode": mode})
+        self._set(backend="llama", gguf=gblock, status="starting_packer" if peers else "starting_lead")
         time.sleep(1.0)
-        meta = {"lead_pid": None, "peers": [], "model": str(path), "nodes": [n.get("id") for n in nodes]}
+        meta = {"lead_pid": None, "peers": [], "tunnels": [], "model": str(path),
+                "id": entry["id"], "name": entry["name"], "gguf": gblock}
+        self._write_gguf_meta(meta)
         rpc = []
-        self._gguf_tunnels = []
         for i, n in enumerate(peers):
+            self._check_cancel()
             name = n.get("label") or n.get("id")
             target = (n.get("ssh") or n.get("host") or "").strip()
             if not target:
                 raise RuntimeError(f"no SSH target for {name}; set ssh in [web.nodes.{n.get('id')}]")
-            self._set(status="starting_packer")
             self._note(f"starting rpc-server on {name} (127.0.0.1:{G.RPC_PORT}, reached over SSH)")
             r = self._ssh_node(n, G.rpc_start_command(), timeout=40)
             pid = G.parse_pid(r.stdout)
             if not pid:
                 raise RuntimeError(f"rpc-server on {name} did not start: "
                                    f"{(r.stdout or '')[-300:]} {(r.stderr or '')[-200:]}")
-            meta["peers"].append({"id": n.get("id"), "ssh": target, "pid": pid})
-            self._gguf_meta_path().write_text(json.dumps(meta))
+            meta["peers"].append({"id": n.get("id"), "label": name, "ssh": target, "pid": pid})
+            self._write_gguf_meta(meta)
             lp = G.tunnel_port(i)
-            tun = subprocess.Popen(G.ssh_tunnel_args(target, lp), stdout=subprocess.DEVNULL,
-                                   stderr=subprocess.PIPE, start_new_session=True)
-            self._gguf_tunnels.append(tun)
-            meta.setdefault("tunnels", []).append(tun.pid)
-            self._gguf_meta_path().write_text(json.dumps(meta))
-            import socket as _s
-            for _ in range(40):
-                if tun.poll() is not None:
-                    err = (tun.stderr.read() or b"").decode(errors="replace")[:300]
-                    raise RuntimeError(f"SSH tunnel to {name} failed: {err}")
-                try:
-                    _s.create_connection(("127.0.0.1", lp), timeout=1).close()
-                    break
-                except OSError:
-                    time.sleep(0.25)
+            tun = self._open_tunnel(target, lp)
+            meta["tunnels"].append({"pid": tun.pid, "port": lp, "ssh": target, "id": n.get("id")})
+            self._write_gguf_meta(meta)
+            if not G.wait_port(lp, proc=tun, timeout=10):
+                err = (tun.stderr.read() if tun.poll() is not None and tun.stderr else b"") or b""
+                raise RuntimeError(f"SSH tunnel to {name} failed: {err.decode(errors='replace')[:300]}")
             rpc.append(f"127.0.0.1:{lp}")
             self._note(f"rpc-server on {name} up (pid {pid}), tunnel 127.0.0.1:{lp}")
-        shares = G.tensor_split(nodes)
+        self._check_cancel()
+        free = [self._free_gb(n) for n in nodes] if peers else [None]
+        shares = G.shares_from_free(free) if peers else [1]
+        if peers:
+            self._note("free RAM now: " + ", ".join(
+                f"{n.get('label')} {f if f is not None else '?'} GB" for n, f in zip(nodes, free))
+                + " → split " + ":".join(str(x) for x in shares)
+                + ("" if all(f for f in free) else " (equal: free RAM unknown)"))
+        meta["shares"] = shares
         args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares)
         self._set(status="starting_lead", packer_pid=None)
-        self._note(("starting llama-server on EXO1, split " + ":".join(str(s) for s in shares)
-                    + " (peers get their share over the link; first load copies it, later loads use the peer cache)")
-                   if rpc else "starting llama-server on EXO1 (one Mini)")
+        self._note(("starting llama-server on EXO1, peers get their share over the link "
+                    "(first load copies it, later loads use the peer cache)") if rpc
+                   else "starting llama-server on EXO1 (one Mini)")
         log_path = self._lead_log()
         log_path.write_text("")
         lf = open(log_path, "ab", buffering=0)
@@ -382,16 +385,116 @@ class WorkerManager:
         self._lead_proc = subprocess.Popen(args, stdout=lf, stderr=subprocess.STDOUT,
                                            start_new_session=True)
         meta["lead_pid"] = self._lead_proc.pid
-        self._gguf_meta_path().write_text(json.dumps(meta))
+        self._write_gguf_meta(meta)
         self._set(lead_pid=self._lead_proc.pid)
         t0 = time.time()
         self._wait_lead_ready(timeout=1200)
+        self._check_cancel()
         self._note(f"loaded in {time.time() - t0:.1f}s")
         self._set(status="ready", split=bool(peers))
         self._note("ready")
+        self._start_gguf_watch(meta)
+
+    def _check_cancel(self):
+        if getattr(self, "_gguf_cancel", False):
+            raise RuntimeError("load stopped")
+
+    def _write_gguf_meta(self, meta: dict) -> None:
+        self._gguf_meta_path().write_text(json.dumps(meta))
+
+    def _open_tunnel(self, target: str, port: int):
+        import gguf_split as G
+        return subprocess.Popen(G.ssh_tunnel_args(target, port), stdout=subprocess.DEVNULL,
+                                stderr=subprocess.PIPE, start_new_session=True)
+
+    def _free_gb(self, node: dict):
+        import gguf_split as G
+        try:
+            if self._node_is_local(node):
+                r = subprocess.run(["/bin/sh", "-c", G.FREE_RAM_CMD], capture_output=True,
+                                   text=True, timeout=10)
+            else:
+                r = self._ssh_node(node, G.FREE_RAM_CMD, timeout=15)
+            return G.parse_free_gb(r.stdout)
+        except Exception:  # noqa: BLE001
+            return None
+
+    # Watch a ready GGUF load: if llama-server dies (e.g. a peer's rpc-server
+    # went away mid-chat), clean up everything we started and go idle with a
+    # plain message instead of leaving a dead "ready".
+    def _start_gguf_watch(self, meta: dict) -> None:
+        import gguf_split as G
+        token = object()
+        self._gguf_watch_token = token
+        pid = meta.get("lead_pid")
+
+        def run():
+            while getattr(self, "_gguf_watch_token", None) is token:
+                time.sleep(1.0)
+                if getattr(self, "_gguf_watch_token", None) is not token:
+                    return
+                if self.state.get("status") != "ready" or self.state.get("model_id") != meta.get("id"):
+                    continue
+                proc = self._lead_proc if (self._lead_proc and self._lead_proc.pid == pid) else None
+                dead = (proc.poll() is not None) if proc else ("llama-server" not in G.pid_cmdline(pid))
+                if not dead:
+                    continue
+                tail = ""
+                try:
+                    tail = self._lead_log().read_text(errors="replace")[-3000:]
+                except OSError:
+                    pass
+                peers = [p.get("label") or p.get("id") for p in meta.get("peers") or []]
+                if "RPC" in tail or "rpc" in tail or "Failed to connect" in tail or "Broken pipe" in tail:
+                    msg = (f"Lost {' + '.join(peers) or 'a Mini'} during the split. Load it again."
+                           if peers else "llama-server stopped. Load the model again.")
+                else:
+                    msg = "llama-server stopped. Load the model again."
+                self._gguf_watch_token = None
+                try:
+                    self._kill_gguf()
+                except Exception as e:  # noqa: BLE001
+                    self._note(f"cleanup: {e}")
+                self._set(status="idle", model_id=None, model_name=None, lead_pid=None,
+                          split=False, error=msg, error_detail=tail[-2500:])
+                self._note("load failed: " + msg)
+                return
+        threading.Thread(target=run, daemon=True).start()
+
+    def adopt_gguf(self) -> bool:
+        """After a web restart: re-attach to the llama-server, tunnels and peer
+        rpc-servers recorded in gguf.json (never starts a model)."""
+        import gguf_split as G
+        mp = self._gguf_meta_path()
+        if not mp.is_file():
+            return False
+        try:
+            meta = json.loads(mp.read_text())
+        except ValueError:
+            return False
+        pid = meta.get("lead_pid")
+        if not pid or "llama-server" not in G.pid_cmdline(pid) or not self.lead_healthy():
+            return False
+        for t in meta.get("tunnels") or []:
+            if G.is_tunnel_cmd(G.pid_cmdline(t.get("pid"))):
+                continue
+            tun = self._open_tunnel(t["ssh"], t["port"])  # tunnel died with the old server
+            t["pid"] = tun.pid
+            G.wait_port(t["port"], proc=tun, timeout=10)
+            self._note(f"reopened tunnel 127.0.0.1:{t['port']} to {t.get('id')}")
+        self._write_gguf_meta(meta)
+        gb = meta.get("gguf") or {}
+        self._set(status="ready", model_id=meta.get("id"), model_name=meta.get("name"),
+                  lead_pid=pid, split=gb.get("mode") == "split", backend="llama", gguf=gb,
+                  error=None, error_detail=None)
+        self._note(f"adopted running llama-server (pid {pid}) and "
+                   f"{len(meta.get('tunnels') or [])} tunnel(s) after web restart")
+        self._start_gguf_watch(meta)
+        return True
 
     def _kill_gguf(self) -> None:
-        """Stop only the llama-server / rpc gates this manager recorded."""
+        """Stop only the llama-server, SSH tunnels and peer rpc-servers we recorded."""
+        self._gguf_watch_token = None
         if getattr(self, "state_dir", None) is None:
             return
         mp = self._gguf_meta_path()
@@ -403,38 +506,40 @@ class WorkerManager:
         except ValueError:
             meta = {}
         pid = meta.get("lead_pid")
-        if pid:
+        if pid and "llama-server" in G.pid_cmdline(pid):
             try:
-                cmdline = subprocess.run(["ps", "-p", str(int(pid)), "-o", "command="],
-                                         capture_output=True, text=True).stdout
-                if "llama-server" in cmdline:
-                    os.kill(int(pid), signal.SIGTERM)
-                    for _ in range(30):
-                        time.sleep(0.3)
-                        os.kill(int(pid), 0)
-                    os.kill(int(pid), signal.SIGKILL)
+                os.kill(int(pid), signal.SIGTERM)
+                for _ in range(30):
+                    time.sleep(0.3)
+                    os.kill(int(pid), 0)
+                os.kill(int(pid), signal.SIGKILL)
             except (ProcessLookupError, OSError, ValueError):
                 pass
-        for tp in meta.get("tunnels") or []:
+        if self._lead_proc is not None and pid and self._lead_proc.pid == pid:
             try:
-                cmdline = subprocess.run(["ps", "-p", str(int(tp)), "-o", "command="],
-                                         capture_output=True, text=True).stdout
-                if cmdline.startswith("ssh") and "-L" in cmdline:
-                    os.kill(int(tp), signal.SIGTERM)
-            except (OSError, ValueError):
+                self._lead_proc.wait(timeout=5)
+            except Exception:  # noqa: BLE001
                 pass
-        self._gguf_tunnels = []
+            self._lead_proc = None
+        for t in meta.get("tunnels") or []:
+            tp = t.get("pid") if isinstance(t, dict) else t
+            if tp and G.is_tunnel_cmd(G.pid_cmdline(tp)):
+                try:
+                    os.kill(int(tp), signal.SIGTERM)
+                except (OSError, ValueError):
+                    pass
         for p in meta.get("peers") or []:
             target = p.get("ssh")
             if not target:
                 continue
-            r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target,
-                                G.rpc_stop_command()], capture_output=True, text=True, timeout=30)
-            if r.returncode:
-                self._note(f"could not stop rpc-server on {p.get('id')}: {(r.stderr or '')[:200]}")
+            try:
+                r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target,
+                                    G.rpc_stop_command()], capture_output=True, text=True, timeout=30)
+                if r.returncode:
+                    self._note(f"could not stop rpc-server on {p.get('id')}: {(r.stderr or '')[:200]}")
+            except subprocess.SubprocessError as e:
+                self._note(f"could not stop rpc-server on {p.get('id')}: {e}")
         mp.unlink()
-        if self._lead_proc is not None and pid and self._lead_proc.pid == pid:
-            self._lead_proc = None
         self._set(gguf=None, backend=None)
 
     def _resolve_run_mode(self, entry: dict) -> str:

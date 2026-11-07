@@ -992,6 +992,9 @@
   #settingsDrawer #barColorSwitch { display: flex; margin-bottom: 8px; }
   #settingsDrawer #barColorSwitch button { flex: 1; }
 
+  .opt.mlxoff { opacity: .45; }
+  .opt.mlxoff .seg button { cursor: not-allowed; }
+  .pinnote.mlxnote { margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -1499,8 +1502,12 @@
     const note = pins.length
       ? `<div class="pinnote" id="pinNote">${pins.length} pinned — self-tuning can't change these: ${pins.map(o => o.label).join(", ")}</div>`
       : "";
-    $("optRows").innerHTML = note + state.opts.map(o => `
-      <div class="opt" data-id="${o.id}">
+    // GGUF runs on llama.cpp: every option below is MLX-only today.
+    const selRow = (state.modelRows || {})[$("modelSelect")?.value] || {};
+    const gguf = selRow.source === "gguf";
+    const ggufNote = gguf ? `<div class="pinnote mlxnote">MLX only — this GGUF runs on llama.cpp with its own defaults, so these options are not used.</div>` : "";
+    $("optRows").innerHTML = ggufNote + note + state.opts.map(o => `
+      <div class="opt${gguf ? " mlxoff" : ""}" data-id="${o.id}" ${gguf ? 'aria-disabled="true" title="MLX only — not used for GGUF"' : ""}>
         <div class="row"><span class="name">${o.label}</span>
           <span class="seg">${o.values.filter(v => v !== "mtp" || $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true").map(v =>
             `<button type="button" data-v="${v}" class="${state.choice[o.id] === v ? "sel" : ""} ${v === "auto" ? "auto" : ""}">${v === "mtp" ? "Native MTP · test" : v === "adaptive" ? "Adaptive · test" : (VAL_LABEL[v] || v)}</button>`).join("")}</span></div>
@@ -1511,6 +1518,7 @@
       </div>`).join("");
     for (const row of document.querySelectorAll(".opt")) {
       for (const b of row.querySelectorAll(".seg button")) {
+        if (row.classList.contains("mlxoff")) { b.disabled = true; continue; }
         b.onclick = () => {
           state.choice[row.dataset.id] = b.dataset.v;
           // Self-tuning set to Auto puts every option back on Auto.
@@ -1567,8 +1575,9 @@
       sel.appendChild(opt);
     }
     state.modelRows = Object.fromEntries(models.map(m => [m.id, m]));
-    sel.onchange = renderPlace;
+    sel.onchange = () => { renderPlace(); if (state.opts) renderOpts(); };
     renderPlace();
+    if (state.opts) renderOpts();
   }
 
   // GGUF: choose one Mini or a split across K Minis (llama.cpp RPC).
@@ -2197,17 +2206,8 @@
   function roleTitle(n, idx) {
     const label = n.label || n.id || ("n" + idx);
     const role = (n.role || "").toLowerCase();
-    if (role === "lead") return "Lead · " + label;
-    if (role === "packer") {
-      // Packer N · LABEL (count packers before this one in topoOrder)
-      let k = 0;
-      for (const id of topoOrder) {
-        const prev = nodeLast[id];
-        if (prev && (prev.role || "").toLowerCase() === "packer") k++;
-        if (id === (n.id || label)) break;
-      }
-      return "Packer " + Math.max(1, k) + " · " + label;
-    }
+    // Name the Mini (EXO1, EXO2, …); role only as a suffix. Any number of Minis.
+    if (role === "lead") return label + " · lead";
     return label;
   }
   function ensureCard(n, idx) {

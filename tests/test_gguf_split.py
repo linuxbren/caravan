@@ -12,7 +12,6 @@ sys.path.insert(0, str(ROOT / "proxy"))
 sys.path.insert(0, str(ROOT / "agent"))
 
 import gguf_split as G  # noqa: E402
-import rpc_gate  # noqa: E402
 
 N = lambda i, role, gb, peer="": {"id": i, "label": i.upper(), "role": role,
                                    "host": "local" if role == "lead" else "b@" + peer,
@@ -90,64 +89,40 @@ class Commands(unittest.TestCase):
         self.assertEqual(sorted(ids), ["gguf/a", "gguf/b-00001-of-00003"])
 
 
-class Gate(unittest.TestCase):
-    def test_allowlist(self):
-        self.assertTrue(rpc_gate.allowed("169.254.1.1", {"169.254.1.1"}))
-        self.assertTrue(rpc_gate.allowed("::ffff:169.254.1.1", {"169.254.1.1"}))
-        self.assertFalse(rpc_gate.allowed("192.168.1.79", {"169.254.1.1"}))
+class FreeRam(unittest.TestCase):
+    def test_parse_and_shares(self):
+        self.assertEqual(G.parse_free_gb("16384\n1003681\n"), 16.44)
+        self.assertIsNone(G.parse_free_gb("garbage"))
+        self.assertEqual(G.shares_from_free([16.4, 8.2]), [16.4, 8.2])
+        self.assertEqual(G.shares_from_free([16.4, None, 3]), [1, 1, 1])
 
-    def test_refuses_any_and_host_flag(self):
-        self.assertEqual(rpc_gate.main(["--listen", "0.0.0.0:1", "--allow", "x", "--", "true"]), 2)
-        self.assertEqual(rpc_gate.main(["--listen", "127.0.0.1:1", "--allow", "x", "--", "true", "-H", "0.0.0.0"]), 2)
-        self.assertEqual(rpc_gate.main(["--listen", "127.0.0.1:1", "--allow", "", "--", "true"]), 2)
-
-    def test_end_to_end_allow_and_refuse(self):
-        """Gate on 127.0.0.1 forwards for an allowed IP; refuses others."""
-        def free():
-            s = socket.socket(); s.bind(("127.0.0.1", 0)); p = s.getsockname()[1]; s.close(); return p
-        gp, cp = free(), free()
-        echo = ("import socket,sys;s=socket.socket();s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1);"
-                "s.bind(('127.0.0.1',int(sys.argv[sys.argv.index('-p')+1])));s.listen(5)\n"
-                "while 1:\n c,_=s.accept();c.sendall(c.recv(100));c.close()")
-        tf = tempfile.NamedTemporaryFile("w", suffix=".py", delete=False)
-        tf.write(echo); tf.close()
-        for allow, expect in (("127.0.0.1", b"hi"), ("10.9.9.9", b"")):
-            p = subprocess.Popen([sys.executable, str(ROOT / "agent" / "rpc_gate.py"), "--listen",
-                                  f"127.0.0.1:{gp}", "--allow", allow, "--", sys.executable, tf.name, "-p", str(cp)],
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            try:
-                c = None
-                for _ in range(50):
-                    try:
-                        c = socket.create_connection(("127.0.0.1", gp), timeout=1); break
-                    except OSError:
-                        time.sleep(0.1)
-                time.sleep(0.3)
-                try:
-                    c.sendall(b"hi"); c.settimeout(3); got = c.recv(10)
-                except OSError:
-                    got = b""
-                self.assertEqual(got, expect)
-            finally:
-                p.terminate(); p.wait(5)
+    def test_tunnel_cmd_check(self):
+        self.assertTrue(G.is_tunnel_cmd("ssh -o BatchMode=yes -N -L 127.0.0.1:50062:127.0.0.1:50052 b@h"))
+        self.assertFalse(G.is_tunnel_cmd("/usr/bin/python3 web_server.py"))
 
 
 class Supervisor(unittest.TestCase):
-    def test_link_address(self):
+    def test_tail_loopback_only(self):
         import supervisor
-        self.assertEqual(supervisor.link_address("inet 127.0.0.1\n inet 169.254.103.191 netmask"), "169.254.103.191")
-        self.assertIsNone(supervisor.link_address("inet 192.168.1.38"))
-
-    def test_fail_closed(self):
-        import supervisor
-        with self.assertRaises(RuntimeError):
-            supervisor.rpc_bind_and_allow("0.0.0.0", ["1.2.3.4"], log=lambda m: None)
-        os.environ.pop("CARAVAN_RPC_ALLOW", None)
-        with self.assertRaises(RuntimeError):
-            supervisor.rpc_bind_and_allow("169.254.1.2", [], log=lambda m: None)
-        cmd = supervisor.build_tail_command("169.254.1.2", ["169.254.1.1"])
+        cmd = supervisor.build_tail_command()
+        self.assertEqual(cmd[cmd.index("-H") + 1], "127.0.0.1")
         self.assertNotIn("0.0.0.0", cmd)
-        self.assertIn("169.254.1.2:50052", cmd)
+
+    def test_tunnel_plan_any_n(self):
+        import supervisor
+        plan = supervisor.rpc_tunnel_plan(["169.254.1.2:50052", "169.254.1.3:50052"], user="b")
+        self.assertEqual([a for _, a in plan], ["127.0.0.1:50062", "127.0.0.1:50063"])
+        self.assertIn("127.0.0.1:50063:127.0.0.1:50052", plan[1][0])
+        self.assertEqual(plan[1][0][-1], "b@169.254.1.3")
+
+
+class Cli(unittest.TestCase):
+    def test_stop_without_state(self):
+        os.environ["CARAVAN_CLI_GGUF_STATE"] = "/tmp/nonexistent-cli-gguf.json"
+        import importlib
+        import gguf_split_cli
+        importlib.reload(gguf_split_cli)
+        self.assertEqual(gguf_split_cli.main(["stop"]), 0)
 
 
 if __name__ == "__main__":

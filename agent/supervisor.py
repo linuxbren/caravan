@@ -92,75 +92,58 @@ def resolve_kv_types(settings: "config.LlamaSettings", model_path: str, n_device
     return settings._replace(cache_type_k=ctk, cache_type_v=ctv)
 
 
-def link_address(ifconfig_text: str = None) -> str | None:
-    """This Mini's Thunderbolt Mini-to-Mini address (first 169.254.x.x)."""
-    import re
-    if ifconfig_text is None:
-        try:
-            ifconfig_text = subprocess.run(["ifconfig"], capture_output=True, text=True,
-                                           timeout=5).stdout
-        except (OSError, subprocess.SubprocessError):
-            return None
-    for m in re.finditer(r"inet (169\.254\.\d+\.\d+)", ifconfig_text or ""):
-        return m.group(1)
-    return None
-
-
-def rpc_bind_and_allow(bind: str | None = None, allow=None, log=None) -> tuple[str, list[str]]:
-    """Where rpc-server's gate listens and who may connect. Fails closed.
-
-    bind: CARAVAN_RPC_BIND / config.RPC_BIND_HOST override (warned), else the
-    Thunderbolt link address. Never 0.0.0.0. allow: CARAVAN_RPC_ALLOW /
-    config.RPC_ALLOW (comma list of peer IPs), plus any passed in.
-    """
-    import os
-    say = log or (lambda m: print(m, file=sys.stderr))
-    override = bind or os.environ.get("CARAVAN_RPC_BIND") or getattr(config, "RPC_BIND_HOST", None)
-    if override:
-        if override in ("0.0.0.0", "::"):
-            raise RuntimeError("refusing to bind rpc-server to all interfaces (0.0.0.0); "
-                               "set CARAVAN_RPC_BIND to this Mini's Thunderbolt address")
-        say(f"[caravan-agent] WARNING: rpc-server bind overridden to {override}")
-        host = override
-    else:
-        host = link_address()
-        if not host:
-            raise RuntimeError("no Thunderbolt link address (169.254.x.x) found; refusing to start "
-                               "rpc-server. Connect the Minis or set CARAVAN_RPC_BIND.")
-    al = list(allow or [])
-    extra = os.environ.get("CARAVAN_RPC_ALLOW") or getattr(config, "RPC_ALLOW", "") or ""
-    al += [x.strip() for x in str(extra).split(",") if x.strip()]
-    al = [a for i, a in enumerate(al) if a and a not in al[:i]]
-    if not al:
-        raise RuntimeError("rpc-server allowlist is empty; set CARAVAN_RPC_ALLOW to the lead "
-                           "Mini's Thunderbolt address (comma list for more Minis)")
-    return host, al
-
-
-def build_tail_command(bind: str | None = None, allow=None) -> list[str]:
+def build_tail_command() -> list[str]:
     """--cache (GitHub issue #3, "solved natively") turns a restart from
     a 7-11 minute full re-transfer into a ~50-60s warm-cache load -- see
     docs/LOG.md. Only reason to ever pass RPC_SERVER_USE_CACHE=False is
     disk space on a node too small to hold a cached copy of its shard.
 
-    Security (Day 17): ggml-rpc-server has no auth. It binds 127.0.0.1 on
-    RPC_PORT+1 and agent/rpc_gate.py listens on the Thunderbolt address on
-    RPC_PORT, accepting only allowlisted Caravan peers. See docs/SECURITY.md.
+    Security (Day 17, docs/SECURITY.md): ggml-rpc-server has no auth, so it
+    binds 127.0.0.1 only -- never 0.0.0.0. The lead reaches it through an
+    SSH tunnel (open_rpc_tunnels), the same mechanism as the web UI: only
+    machines holding Caravan's SSH key can connect.
     """
-    from pathlib import Path
-    host, al = rpc_bind_and_allow(bind, allow)
-    gate = Path(__file__).resolve().parent / "rpc_gate.py"
     cmd = [
-        sys.executable, str(gate),
-        "--listen", f"{host}:{config.RPC_PORT}",
-        "--allow", ",".join(al),
-        "--",
         str(config.RPC_SERVER_BIN),
-        "-p", str(config.RPC_PORT + 1),
+        "-d", "MTL0",
+        "-H", "127.0.0.1",
+        "-p", str(config.RPC_PORT),
     ]
     if config.RPC_SERVER_USE_CACHE:
         cmd += ["--cache"]
     return cmd
+
+
+def rpc_tunnel_plan(rpc_addrs: list[str], user: str | None = None) -> list[tuple[list[str], str]]:
+    """For each peer "host:port", the ssh -L command and the local address
+    llama-server should use instead. Local ports RPC_PORT+10+i."""
+    import os
+    import getpass
+    user = user or os.environ.get("CARAVAN_RPC_SSH_USER") or getpass.getuser()
+    plan = []
+    for i, addr in enumerate(rpc_addrs):
+        host, _, port = addr.rpartition(":")
+        lp = config.RPC_PORT + 10 + i
+        cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ExitOnForwardFailure=yes",
+               "-o", "ServerAliveInterval=15", "-o", "ConnectTimeout=10", "-N",
+               "-L", f"127.0.0.1:{lp}:127.0.0.1:{port or config.RPC_PORT}", f"{user}@{host}"]
+        plan.append((cmd, f"127.0.0.1:{lp}"))
+    return plan
+
+
+def open_rpc_tunnels(rpc_addrs: list[str]) -> tuple[list, list[str]]:
+    """Start the SSH tunnels; returns (procs, local rpc addrs). Raises if one fails."""
+    procs, local = [], []
+    for cmd, addr in rpc_tunnel_plan(rpc_addrs):
+        p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, start_new_session=True)
+        time.sleep(1.0)
+        if p.poll() is not None:
+            for q in procs:
+                q.terminate()
+            raise RuntimeError(f"SSH tunnel failed: {' '.join(cmd)}")
+        procs.append(p)
+        local.append(addr)
+    return procs, local
 
 
 def supervise(cmd: list[str], log_path, restart_delay: float = 10.0,

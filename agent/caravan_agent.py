@@ -330,21 +330,26 @@ def main() -> int:
                 return 1
 
             rpc_addrs = _rpc_addrs_from_peers(peers)
-            cmd = supervisor.build_head_command(str(blob_path), rpc_addrs, llama_settings)
+            # Peers' rpc-servers listen on their own loopback; reach them over SSH.
+            tunnel_plan = supervisor.rpc_tunnel_plan(rpc_addrs)
+            cmd = supervisor.build_head_command(str(blob_path), [a for _, a in tunnel_plan], llama_settings)
+            for tcmd, _ in tunnel_plan:
+                print(f"[caravan-agent] tunnel: {' '.join(tcmd)}")
             print(f"[caravan-agent] role: LEAD for {args.model} (formerly 'head')")
             print(f"[caravan-agent] would run: {' '.join(cmd)}")
 
             if args.apply:
                 log_path = config.STATE_DIR / "logs" / "llama-server.log"
                 print(f"[caravan-agent] --apply set, supervising now (log: {log_path})")
-                supervisor.supervise(cmd, log_path)
+                tunnels, _ = supervisor.open_rpc_tunnels(rpc_addrs)
+                try:
+                    supervisor.supervise(cmd, log_path)
+                finally:
+                    for t in tunnels:
+                        t.terminate()
         else:
             role = "tail"
-            try:
-                cmd = supervisor.build_tail_command()
-            except RuntimeError as e:
-                print(f"[caravan-agent] ERROR: {e}", file=sys.stderr)
-                return 1
+            cmd = supervisor.build_tail_command()
             print("[caravan-agent] role: PACKER (formerly 'tail'; no local model -- ready to serve compute)")
             print(f"[caravan-agent] would run: {' '.join(cmd)}")
 

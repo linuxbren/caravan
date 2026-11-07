@@ -224,3 +224,54 @@ def usage_from_timings(usage: Optional[dict], timings: Optional[dict]) -> Option
     cv.setdefault("how", "llama.cpp")
     u["caravan"] = cv
     return u
+
+
+# ----- shared by the web UI and the CLI (one mechanism: SSH tunnels) -----
+
+FREE_RAM_CMD = ("sysctl -n hw.pagesize; vm_stat | awk '/Pages free|Pages inactive|Pages speculative|Pages purgeable/ "
+                "{gsub(\"\\\\.\",\"\",$NF); s+=$NF} END {print s}'")
+
+
+def parse_free_gb(out: str) -> Optional[float]:
+    """stdout of FREE_RAM_CMD → GB the next model could use (free+inactive+speculative+purgeable)."""
+    try:
+        lines = [l.strip() for l in (out or "").splitlines() if l.strip()]
+        page, pages = int(lines[0]), int(lines[1])
+        return round(page * pages / 1e9, 2)
+    except (IndexError, ValueError):
+        return None
+
+
+def shares_from_free(free: list) -> list:
+    """--tensor-split weights from live free RAM per Mini; equal if any unknown."""
+    if not free or any((f is None or f <= 0) for f in free):
+        return [1] * len(free or [])
+    return [round(f, 1) for f in free]
+
+
+def wait_port(port: int, *, proc=None, timeout: float = 10.0) -> bool:
+    import socket
+    import time
+    end = time.time() + timeout
+    while time.time() < end:
+        if proc is not None and proc.poll() is not None:
+            return False
+        try:
+            socket.create_connection(("127.0.0.1", int(port)), timeout=1).close()
+            return True
+        except OSError:
+            time.sleep(0.25)
+    return False
+
+
+def pid_cmdline(pid) -> str:
+    import subprocess
+    try:
+        return subprocess.run(["ps", "-p", str(int(pid)), "-o", "command="],
+                              capture_output=True, text=True, timeout=5).stdout.strip()
+    except (OSError, ValueError, Exception):
+        return ""
+
+
+def is_tunnel_cmd(cmd: str) -> bool:
+    return cmd.startswith("ssh ") and " -L 127.0.0.1:" in cmd and ":127.0.0.1:" in cmd

@@ -1698,7 +1698,9 @@ def main(argv=None):
         repo=Path(args.repo),
     )
     try:
-        if mgr.adopt_running():
+        if mgr.adopt_gguf():
+            print("[caravan-web] adopted running GGUF llama-server from before restart", flush=True)
+        elif mgr.adopt_running():
             print("[caravan-web] adopted running lead from before restart", flush=True)
     except Exception as e:  # noqa: BLE001
         print(f"[caravan-web] adopt skipped: {e}", flush=True)
