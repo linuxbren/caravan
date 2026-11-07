@@ -212,3 +212,10 @@ health keep using `127.0.0.1`.
 - `/api/nodes` sets `model` only on nodes that host the loaded model (`gather_all(..., running_on=[ids])`). Idle nodes get `model: ""` and `layers: null`; the card shows "idle · no model". Split runs list the model on every stage with its layers.
 - The cache is keyed on (ready, model_name, split). On a change, the request waits up to 5 s for a fresh gather instead of serving the stale one.
 - `#emptyState[data-kind="intro"]` is repainted from status: "<model> is ready." when ready, otherwise the pick-a-model hint.
+
+
+### Themes: Amber, Green, Meadow
+- `html[data-theme]` selects the theme; the choice is saved in localStorage `caravan-theme`.
+- **Meadow** is a light, calm theme meant as a way to "digitally touch grass". The `.meadow-bg` layer is an inline SVG painting (sky, clouds, trees, fields, a misty river) with no photos or outside files. It is blurred heavily (`filter: blur(34px)`) so it gives an impression of nature without pulling attention from the chat. It drifts very slowly (120 s, about ±1.2%), and the drift stops under `prefers-reduced-motion: reduce`.
+- Meadow turns off the CRT layers (`body::before/after`, `.crt-wash`) and text glow. Panels, drawers and Mini cards use frosted glass (`backdrop-filter: blur(18px)`) with dark text for WCAG AA. Fonts are a rounded sans stack, with `--statmono` used for stats and logs. Bars: in Theme mode lo/mid/hi are leaf green, green and sky blue; Heat mode is unchanged.
+- Layout: `.drawer #optRows` uses `auto-fit, minmax(300px, 1fr)`, so the 380px Settings drawer shows one column. Under 820px, `.empty` gets a top margin so it clears the stacked chat buttons.

@@ -3,6 +3,16 @@
 
 ## Unreleased
 
+### Meadow theme
+- Third theme, **Meadow**, next to Amber and Green in the theme switch (saved in localStorage `caravan-theme`). The idea is a way to "digitally touch grass": sky, trees, fields and a river, but only as an impression.
+- No photos and no external assets. The background is an inline SVG (sky gradient, clouds, tree masses, field bands, misty river) blurred about 34px, so it reads as calm colour and never competes with the chat or the stats.
+- Frosted-glass panels with dark green-ink text for AA contrast. Scanlines, vignette, bloom and text glow are off. Rounded sans font stack; monospace stays for stats and logs. Leaf green and sky blue accents; the "Theme" bar style uses leaf green, green, then sky blue, and green-yellow-red is unchanged.
+- A very slow drift (about ±1.2% over 120 s) that turns off under `prefers-reduced-motion`.
+
+### Layout fixes (all themes)
+- Settings drawer: the option grid only goes to two columns when the drawer is wide enough, so nothing is cut off at 1280.
+- Phone width: the chat empty state sits below the stacked chat buttons instead of under them.
+
 ### Fixes (Day 16 follow-up)
 - Topology: each node card shows only the model it actually runs. Single mode puts the model on the lead (or the remote worker Mini); other nodes show "idle · no model". Split shows the model on every stage with its layer range. `/api/nodes` now re-gathers right away when the model/mode changes, so the label no longer lags one gather behind.
 - Chat empty state: when a model is ready it reads "<model> is ready. Type a message below to start."; the "Ready when you are… open Settings to load it" text only appears when nothing is loaded.
