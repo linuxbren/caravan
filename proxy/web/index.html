@@ -2664,7 +2664,16 @@
         return;
       }
       if (q.source === "gguf") {
-        alert("GGUF downloads from the picker aren't wired yet. GGUF files already on EXO1 (~/.caravan/models) show up in Settings → Model, where you can run them on one Mini or split across Minis.");
+        // Only the lead needs a GGUF: llama.cpp sends each Mini its share at load.
+        // Where it runs (one Mini / split) is chosen at load time in Settings.
+        if (!q.gguf_file) { alert("Pick one quant file for this GGUF repo."); return; }
+        if (q.fit && q.fit.color === "red" && !confirm(`Won't fit (~${q.weights_gb} GB). ${q.fit.reason || ""}\nDownload anyway?`)) return;
+        $("pickerStatus").textContent = `Downloading ${q.gguf_file} to the lead Mini…`;
+        try {
+          const data = await api("/api/picker/download", { method: "POST",
+            body: JSON.stringify({ repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0 }) });
+          state.job = data.job; showJob(); pollJob(data.job.id, q);
+        } catch (e) { $("pickerStatus").textContent = "Download failed: " + (e.error || e.message || e); }
         return;
       }
       if (q.needs_conversion) {
@@ -2840,7 +2849,7 @@
       const l = $("btnLoadJob");
       if (l) l.onclick = async () => {
         l.disabled = true;
-        try { await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: j.repo_id }) }); $("pickerStatus").textContent = "Loading " + j.repo_id + "…"; }
+        try { await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: j.load_id || j.repo_id }) }); $("pickerStatus").textContent = "Loading " + j.repo_id + "…"; }
         catch (e) { $("pickerStatus").textContent = "Load failed: " + e.message; l.disabled = false; }
       };
     }
@@ -2861,7 +2870,7 @@
             } else {
               $("pickerStatus").textContent = "Downloaded. Loading…";
               try {
-                await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: q.repo_id }) });
+                await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: (j && j.load_id) || q.repo_id }) });
               } catch (e) {
                 $("pickerStatus").textContent = "Downloaded. Load from Settings: " + e.message;
               }

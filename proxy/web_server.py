@@ -233,7 +233,7 @@ class App:
             "d=Path(dest).expanduser()\n"
             "done=inc=n=xet=0\n"
             "if d.exists():\n"
-            "  for p in d.glob('*.safetensors'):\n"
+            "  for p in list(d.glob('*.safetensors'))+list(d.rglob('*.gguf')):\n"
             "    try: done+=p.stat().st_size\n"
             "    except OSError: pass\n"
             "  c=d/'.cache'/'huggingface'/'download'\n"
@@ -1199,8 +1199,24 @@ def make_handler(app: App):
                 return self._json(400, {"error": "repo_id required"})
             if body.get("source") == "cloud" or repo.startswith("ollama-cloud/"):
                 return self._json(400, {"error": "cloud models are framework-only for now"})
+            gguf_file = None
             if body.get("source") == "gguf":
-                return self._json(400, {"error": "GGUF download via llama-server is phase 4"})
+                # llama.cpp RPC ships tensors to peers at load: only the lead needs the file.
+                gguf_file = (body.get("gguf_file") or "").strip()
+                if not gguf_file:
+                    try:
+                        gfs = web_picker._fetch_repo_blobs(repo).get("gguf_files") or []
+                    except Exception:
+                        gfs = []
+                    if len(gfs) == 1:
+                        gguf_file = gfs[0]["rfilename"]
+                if (not gguf_file or ".." in gguf_file or gguf_file.startswith("/")
+                        or not gguf_file.endswith(".gguf")):
+                    return self._json(400, {"error": "pick one GGUF file (quant) to download"})
+                lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
+                if not lead:
+                    return self._json(400, {"error": "No lead configured"})
+                body = dict(body, placement_id=None)
             import web_helpers
             helper = web_helpers.pairing(body.get("helper_id")) if body.get("helper_id") else None
             if body.get("helper_id") and (not helper or repo != helper["draft"]["hf_repo"]):
@@ -1237,6 +1253,8 @@ def make_handler(app: App):
                 weights_gb=weights,
             )
             place = resolve_option(opts, body=body)
+            if gguf_file:
+                place = {"enabled": True}
             if not place:
                 return self._json(400, {"error": "no placement option available", "options": opts})
             if not place.get("enabled"):
@@ -1245,6 +1263,10 @@ def make_handler(app: App):
                     "placement": place, "options": opts,
                 })
 
+            if gguf_file:
+                lid = lead.get("id") or lead.get("label")
+                place = {"mode": "one", "full_copy": True, "node_ids": [lid], "enabled": True,
+                         "label": f"GGUF to {lead.get('label') or lid} · runs on one Mini or split at load"}
             if helper:
                 lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
                 if not lead:
@@ -1271,7 +1293,16 @@ def make_handler(app: App):
                 target_nodes = target_nodes[: web_nodes.MAX_SPLIT_STAGES]
                 n_stages = len(target_nodes)
 
-            totals = app.picker_role_totals(repo, packer_layers, n_stages=max(1, n_stages))
+            if gguf_file:
+                try:
+                    gsz = next((int(g.get("size") or 0) for g in
+                                web_picker._fetch_repo_blobs(repo).get("gguf_files") or []
+                                if g.get("rfilename") == gguf_file), 0)
+                except Exception:
+                    gsz = int(weights * 1e9)
+                totals = {"lead": gsz, "packer": gsz, "each": gsz, "full": gsz}
+            else:
+                totals = app.picker_role_totals(repo, packer_layers, n_stages=max(1, n_stages))
             if full_copy:
                 # Full model bytes for each target
                 full = totals.get("full") or totals.get("lead")
@@ -1292,7 +1323,9 @@ def make_handler(app: App):
                     py = str(Path("~/.caravan/venvs/mlx/bin/python").expanduser())
                     fetch = str(Path(app.mgr.repo) / "agent" / "mlx_split_fetch.py")
                     cmd = [py, fetch, repo_id, dest_q, "--role", role]
-                    if pk and role != "all":
+                    if gguf_file:
+                        cmd += ["--gguf-file", gguf_file]
+                    elif pk and role != "all":
                         cmd += ["--packer-layers", str(int(pk))]
                     prog(1, f"starting {node.get('label') or node.get('id')} fetch ({role})")
                     proc = subprocess.Popen(
@@ -1381,6 +1414,9 @@ def make_handler(app: App):
                     dest = str(Path("~/.caravan/mlx-models").expanduser() / folder)
                     if role == "lead" and web_picker.MLX_MODEL_ROOTS:
                         dest = str(web_picker.MLX_MODEL_ROOTS[0] / folder)
+                    if gguf_file:
+                        import gguf_split
+                        dest = str(gguf_split.GGUF_ROOTS[0] / folder)
                     run = make_run_local(n)
                     def _mk_local_measure(nn, dd, rid=repo, key=nid):
                         def _m():
@@ -1444,6 +1480,8 @@ def make_handler(app: App):
             )
             req = {k: v for k, v in body.items() if k != "resume_of"}
             extra = {"request": req}
+            if gguf_file:
+                extra["load_id"] = "gguf/" + Path(gguf_file).stem
             if body.get("resume_of"):
                 extra.update(resume_of=body["resume_of"], resuming=True)
             web_picker._job_set(job["id"], **extra)

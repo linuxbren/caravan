@@ -127,3 +127,10 @@ class Cli(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GgufFetch(unittest.TestCase):
+    def test_fetch_has_gguf_flag(self):
+        src = (ROOT / "agent" / "mlx_split_fetch.py").read_text()
+        self.assertIn("--gguf-file", src)
+        self.assertIn("def _fetch_gguf", src)

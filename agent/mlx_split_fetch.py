@@ -178,6 +178,8 @@ def main(argv=None):
                     help="layers on Packer 1 (--front-layers: deprecated alias)")
     ap.add_argument("--with-vision", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--gguf-file", default=None,
+                    help="GGUF: fetch just this one file (role must be all; only the lead needs it)")
     ap.add_argument("--no-progress", action="store_true",
                     help="skip JSONL progress emitter (tests)")
     a = ap.parse_args(argv)
@@ -188,6 +190,8 @@ def main(argv=None):
     from huggingface_hub import snapshot_download
     d = Path(a.local_dir).expanduser()
     d.mkdir(parents=True, exist_ok=True)
+    if a.gguf_file:
+        return _fetch_gguf(a, d, token)
     snapshot_download(
         a.repo, local_dir=str(d),
         allow_patterns=["config.json", "model.safetensors.index.json"],
@@ -227,6 +231,36 @@ def main(argv=None):
             )
             write_sizes(d, a.repo, {f: sizes[f] for f in shards})
             print("FETCHED", shown, report["my_gb"], "GB of", report["full_gb"], flush=True)
+    finally:
+        stop_evt.set()
+        if emitter is not None:
+            emitter.join(timeout=2)
+    return report
+
+
+def _fetch_gguf(a, d, token):
+    """One GGUF file → local_dir. Same progress hook / process name as MLX fetches,
+    so the picker's network-byte progress, Stop, Resume and retry all apply.
+    huggingface_hub resumes a partial .incomplete on the next run."""
+    from huggingface_hub import snapshot_download
+    sizes = file_sizes(a.repo, token=token)
+    name = a.gguf_file
+    if name not in sizes:
+        raise SystemExit(f"{name} not in {a.repo}")
+    report = {"repo": a.repo, "role": "all", "files": [name], "gguf": True,
+              "my_gb": round(sizes[name] / 1e9, 2), "full_gb": round(sizes[name] / 1e9, 2)}
+    print(json.dumps(report), flush=True)
+    stop_evt = threading.Event()
+    emitter = None
+    if not a.dry_run and not a.no_progress:
+        emitter = threading.Thread(target=_emit_progress_loop,
+                                   args=(stop_evt, a.repo, d, int(sizes[name]), os.getpid()),
+                                   daemon=True, name="caravan-fetch-progress")
+        emitter.start()
+    try:
+        if not a.dry_run:
+            snapshot_download(a.repo, local_dir=str(d), allow_patterns=[name], token=token)
+            print("FETCHED gguf", report["my_gb"], "GB", flush=True)
     finally:
         stop_evt.set()
         if emitter is not None:
