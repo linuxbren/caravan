@@ -2878,6 +2878,18 @@
         catch (e) { $("pickerStatus").textContent = "Load failed: " + e.message; l.disabled = false; }
       };
     }
+    function askLoadNow(name) {
+      return new Promise((resolve) => {
+        const d = $("loadNowDialog");
+        if (!d || typeof d.showModal !== "function") return resolve(window.confirm("Download finished. Load " + name + " now?"));
+        $("loadNowName").textContent = name;
+        const done = (v) => { try { d.close(); } catch (_) {} resolve(v); };
+        $("loadNowYes").onclick = () => done(true);
+        $("loadNowNo").onclick = () => done(false);
+        d.oncancel = (ev) => { ev.preventDefault(); done(false); };
+        d.showModal();
+      });
+    }
     async function pollJob(id, q) {
       for (let i = 0; i < 900; i++) {
         await new Promise((r) => setTimeout(r, 1000));
@@ -2893,11 +2905,19 @@
               state.jobLoadable = true; showJob();
               $("pickerStatus").textContent = "Downloaded. Press Load to switch to it.";
             } else {
-              $("pickerStatus").textContent = "Downloaded. Loading…";
-              try {
-                await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: (j && j.load_id) || q.repo_id }) });
-              } catch (e) {
-                $("pickerStatus").textContent = "Downloaded. Load from Settings: " + e.message;
+              // Nothing loaded: ask first (Brenden, Day 18). Never auto-load silently.
+              const name = ((j && j.repo_id) || q.repo_id || "").split("/").pop();
+              const yes = await askLoadNow(name);
+              if (yes) {
+                $("pickerStatus").textContent = "Downloaded. Loading…";
+                try {
+                  await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: (j && j.load_id) || q.repo_id }) });
+                } catch (e) {
+                  $("pickerStatus").textContent = "Downloaded. Load from Settings: " + e.message;
+                }
+              } else {
+                state.jobLoadable = true; showJob();
+                $("pickerStatus").textContent = "Downloaded. Press Load when ready.";
               }
             }
             refreshDisk();
@@ -3055,5 +3075,11 @@
 </script>
 <div class="nebula-credit">Image: NASA, ESA, CSA, STScI</div>
 <script src="/helpers.js"></script>
+<dialog id="loadNowDialog" aria-labelledby="loadNowTitle">
+  <h3 id="loadNowTitle">Download finished</h3>
+  <p>No model is loaded. Load <b id="loadNowName"></b> now?</p>
+  <button type="button" class="primary" id="loadNowYes">Load now</button>
+  <button type="button" id="loadNowNo">Not now</button>
+</dialog>
 </body>
 </html>
