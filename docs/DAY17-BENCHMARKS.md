@@ -40,3 +40,18 @@ Pending live EXO2 tests. No fabricated before/after values.
 passes 7 tests (rejection positions k=1..8, all accept, early EOS, invalid plans,
 missing/mismatched heads). `python3 -m pytest ...` failed before test execution:
 box system Python has no pytest. Python compile and browser-JS syntax pass.
+
+### Regression validation, 2026-11-06 CT
+- Initial expanded run: **63 passed, 5 failed**. One new failure was the option
+  order assertion, updated for the new prompt-lookup option. Four were existing
+  web-test assumptions/infrastructure: unknown-model inventory calls timeout
+  twice, old page-toggle assertion, old section-order assertion. Retained as
+  negative results, not silently counted as passes.
+- Focused worker, adaptive PL, inventory, native MTP/block and updated option
+  suite: **55 passed + 4 subtests**. Actual worker-block tests exercise all
+  accept, first/middle reject and early EOS with cache-trim/replay assertions.
+- EXO2 first head extraction attempt failed before fetching because target
+  folder had disappeared during its download; the download process still held
+  open files under that path. Cause not established. Stopped only our own
+  downloader and restarted into isolated `~/.caravan/day17/Orvena-target`.
+  User models untouched; this is a setup failure, not a speed measurement.

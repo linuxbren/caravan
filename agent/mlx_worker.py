@@ -2743,7 +2743,11 @@ class Engine:
         if self.draft_model is not None or int(getattr(self, "prompt_lookup_n", 0) or 0) > 0:
             slot = ready[0]
             self._pipe_lead_sample(slot)
-            if not slot.finished:
+            # No trim RPC may overlap an in-flight forward, but rotate chats
+            # after the block instead of repeatedly priming the same slot.
+            if need:
+                packer_fetch(need[0])
+            elif not slot.finished:
                 packer_fetch(slot)
             return
 

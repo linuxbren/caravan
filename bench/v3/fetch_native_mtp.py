@@ -34,7 +34,6 @@ def main():
     index = json.loads(get("model.safetensors.index.json"))["weight_map"]
     keys = {k: v for k, v in index.items() if k.startswith("mtp.")}
     import numpy as np
-    from safetensors.numpy import save_file
     arrays = {}
     # safetensors numpy cannot encode BF16; use MLX to preserve original bytes.
     import mlx.core as mx
