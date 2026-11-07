@@ -67,3 +67,8 @@ applicable (pre-existing malformed artifacts are reported, not rewritten), and
 probes the three newly committed MP4s. No model benchmark was rerun and no test
 number from Day 17 is assigned to an earlier day. See `validation.json` beside
 the manifest for exact archive-check results.
+
+Archive check totals: **688 source entries**, **608 unique destinations**,
+**283 successful JSON/JSONL source checks across 213 unique files**, zero hash,
+size or JSON parse failures. The original archive commit contains all manifest
+destinations; it adds/updates **548 files** including documentation and media.

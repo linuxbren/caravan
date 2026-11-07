@@ -3,7 +3,6 @@
   "manifest_entries": 688,
   "unique_destinations": 608,
   "manifest_hash_size_failures": [],
-  "json_jsonl_valid_files": 283,
   "original_json_parse_issues": [],
   "videos": [
     {
@@ -45,5 +44,8 @@
   "git_diff_check": {
     "exit_code": 2,
     "reason": "Nine original Markdown trailing-whitespace/hard-line-break findings in two recovered source notes; originals preserved byte-for-byte. New docs clean."
-  }
+  },
+  "json_jsonl_valid_source_checks": 283,
+  "json_jsonl_unique_files": 213,
+  "staged_manifest_destination_check": "All manifest destinations present in archive commit ef7c964"
 }
