@@ -8,7 +8,7 @@ let fails=0,total=0;const report=[];
 for(const [sz,[w,h]] of Object.entries(SIZES)){for(const [v,btn] of Object.entries(VIEWS)){
  const res={};
  for(const t of THEMES){const pg=await b.newPage();await pg.setViewport({width:w,height:h});
-  await pg.goto('process.env.CARAVAN_URL||"http://127.0.0.1:8190/"',{waitUntil:'networkidle2'});
+  await pg.goto(process.env.CARAVAN_URL||'http://127.0.0.1:8190/',{waitUntil:'networkidle2'});
   await pg.evaluate(t=>{document.querySelector(`#themeSwitch button[data-theme="${t}"]`).click()},t);
   if(btn){await pg.evaluate(s=>document.querySelector(s).click(),btn);}
   await pg.evaluate(()=>{const s=document.createElement('style');s.textContent='*,*::before,*::after{transition:none!important;animation:none!important}';document.head.appendChild(s)});

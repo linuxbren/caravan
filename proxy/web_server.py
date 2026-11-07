@@ -12,6 +12,7 @@ Stop with Ctrl-C or:  curl -X POST http://HOST:8190/api/shutdown
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import sys
@@ -1530,10 +1531,16 @@ def make_handler(app: App):
                 return self._json(e.code, {"error": err})
             except URLError as e:
                 return self._json(502, {"error": f"lead unreachable: {e}"})
+            except (OSError, http.client.HTTPException) as e:
+                return self._json(502, {"error": "The model stopped before replying. Check the status line.",
+                                        "detail": str(e)[:300]})
 
             if not stream:
                 try:
                     data = json.loads(upstream.read().decode())
+                except (OSError, ValueError, http.client.HTTPException) as e:
+                    return self._json(502, {"error": "The model stopped mid-reply. Check the status line.",
+                                            "detail": str(e)[:300]})
                 finally:
                     upstream.close()
                 t_done = time.time()
