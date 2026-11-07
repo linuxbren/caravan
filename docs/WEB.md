@@ -233,7 +233,9 @@ health keep using `127.0.0.1`.
   experiment. Selecting it requires a load/restart, not a hot toggle.
 - **Prompt lookup (experimental)** is separate from two chats: Adaptive uses
   `--split-prompt-lookup 3 --split-prompt-lookup-adaptive` and overlap_on=0.50.
-  Auto/off retains the off default. Split only; rejected before unloading a
+  Auto/off retains the off default. Adaptive pins one split chat and refuses
+  an explicit Two chats=2 combination (the pipeline does not implement PL).
+  Split only; rejected before unloading a
   single-Mini model. Existing workers need a reload to enable it.
 - Two chats overlaps stages only in a split. Single-Mini requests remain serial.
   Split draft block verification is experimental and unit-tested; live benchmark

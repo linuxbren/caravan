@@ -97,3 +97,17 @@ class WorkerBlockTests(unittest.TestCase):
                     self.assertEqual(trims,[]);self.assertEqual(draft_trims,[])
                     self.assertEqual(slot.draft_y,[12,13])
                 self.assertEqual(slot.pending_draft,[])
+
+class WebFlagTests(unittest.TestCase):
+    def test_experimental_options_are_real_and_explicit(self):
+        sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"proxy"))
+        import web_settings as S
+        lead,_=S.to_args({"guess_ahead":"mtp"})
+        self.assertIn("--native-mtp",lead);self.assertIn("--no-learn",lead)
+        lead,_=S.to_args({"prompt_lookup":"adaptive"})
+        self.assertIn("--split-prompt-lookup-adaptive",lead)
+        self.assertEqual(lead[-2:],["--split-pipeline-chats","1"])
+        with self.assertRaises(ValueError):S.to_args({"prompt_lookup":"adaptive","pipeline_chats":"2"})
+        lead,_=S.to_args({})
+        self.assertNotIn("--native-mtp",lead)
+        self.assertNotIn("--split-prompt-lookup-adaptive",lead)

@@ -55,3 +55,12 @@ box system Python has no pytest. Python compile and browser-JS syntax pass.
   open files under that path. Cause not established. Stopped only our own
   downloader and restarted into isolated `~/.caravan/day17/Orvena-target`.
   User models untouched; this is a setup failure, not a speed measurement.
+
+- 2026-11-06 **8:58 PM CT** expanded split/placement/tuning regression:
+  **137 passed + 4 subtests, 2 failed**. Both failures are existing optimizer
+  test fixtures missing `FakeMgr.state`; no production optimizer change made.
+  Experimental settings guard test then passes: **9 passed + 4 subtests**.
+- Native mode refuses quantized KV settings (fresh hybrid caches are 16-bit).
+  Adaptive prompt lookup explicitly pins one split chat and rejects Two chats=2;
+  the existing N≥2 pipeline does not implement prompt lookup. This prevents a
+  visible Adaptive selection from silently doing nothing.

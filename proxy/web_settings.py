@@ -18,7 +18,7 @@ OPTIONS = [
      "help": "A small helper model guesses the next few words; the big model checks them in one go.",
      "values": ["auto", "on", "off", "mtp"]},
     {"id": "prompt_lookup", "label": "Prompt lookup (experimental)",
-     "help": "Split only: reuse repeated token sequences with the 0.50 overlap gate. Off by default; benchmark pending.",
+     "help": "One-chat split only: reuse repeated token sequences with the 0.50 overlap gate. Off by default; benchmark pending.",
      "values": ["auto", "off", "adaptive"]},
     {"id": "shared_start", "label": "Shared start (trim / rebuild)",
      "help": "Reuse the already-read start of a repeated system prompt. Trims memory back to it, "
@@ -69,6 +69,8 @@ def to_args(settings) -> tuple[list, list]:
     if s["guess_ahead"] == "mtp":
         lead += ["--native-mtp", "--no-learn"]
     if s["prompt_lookup"] == "adaptive":
+        if s["pipeline_chats"] == "2":
+            raise ValueError("adaptive prompt lookup currently needs one split chat, not two")
         lead += ["--split-prompt-lookup", "3", "--split-prompt-lookup-adaptive"]
     if s["self_tune"] == "off":
         lead.append("--no-learn")
@@ -78,6 +80,8 @@ def to_args(settings) -> tuple[list, list]:
         lead.append("--no-split-shared-prefix-cache")
     if s["pipeline_chats"] in ("1", "2"):
         lead += ["--split-pipeline-chats", s["pipeline_chats"]]
+    if s["prompt_lookup"] == "adaptive":
+        lead += ["--split-pipeline-chats", "1"]
     if s["fuse_kernels"] == "on":
         lead += ["--fuse-kernels", "all"]
         packer += ["--fuse-kernels", "all"]

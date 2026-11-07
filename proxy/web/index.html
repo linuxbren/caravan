@@ -1326,7 +1326,7 @@
               + p("guess_ahead"), !!a.guess_ahead]);
     out.push(["self-tuning " + (a.self_tune ? "on" : "off"), !!a.self_tune]);
     out.push(["shared start " + (a.shared_start ? "on" : "off") + p("shared_prefix"), !!a.shared_start]);
-    if (a.pipeline_chats != null) out.push([`two chats: ${a.pipeline_chats}` + (a.two_chats_available === false ? " · single Mini, serial" : "") + p("pipeline_chats"), a.pipeline_chats > 1]);
+    if (a.pipeline_chats != null) out.push([`two chats: ${a.pipeline_chats}` + ((a.two_chats_available === false || state.workerSplit === false) ? " · single Mini, serial" : "") + p("pipeline_chats"), a.pipeline_chats > 1]);
     if (a.prompt_lookup) out.push([`prompt lookup: ${a.prompt_lookup.enabled ? "adaptive · overlap ≥ 0.50" : "off · experimental"}`, a.prompt_lookup.enabled]);
     if (a.multi_token_verify && a.two_chats_available) out.push(["split block verify · awaiting live benchmark", false]);
     out.push([`memory ${a.kv_bits}-bit`, a.kv_bits && a.kv_bits < 16]);
@@ -1423,7 +1423,7 @@
         <div class="row"><span class="name">${o.label}</span>
           <span class="seg">${o.values.filter(v => v !== "mtp" || $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true").map(v =>
             `<button type="button" data-v="${v}" class="${state.choice[o.id] === v ? "sel" : ""} ${v === "auto" ? "auto" : ""}">${v === "mtp" ? "Native MTP · test" : v === "adaptive" ? "Adaptive · test" : (VAL_LABEL[v] || v)}</button>`).join("")}</span></div>
-        <div class="help">${o.help}</div>
+        <div class="help">${o.help}${o.id === "guess_ahead" && $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true" ? " Native MTP is a matching-head experiment: greedy only, fresh caches, no self-tuning." : ""}</div>
         ${state.filePins[o.id] && state.choice[o.id] === "auto"
           ? `<div class="help filepin">config.toml: ${VAL_LABEL[state.filePins[o.id]] || state.filePins[o.id]} (used while this is Auto)</div>` : ""}
         <div class="now"></div>
@@ -1500,6 +1500,7 @@
   }
   function escHtml(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
   function setStatus(snap) {
+    state.workerSplit = snap?.split;
     try { paintIntro(snap); } catch (e) {}
     const st = (snap && snap.status) || "idle";
     state.loadedModel = (snap && (snap.model_id || snap.model_name)) || "";

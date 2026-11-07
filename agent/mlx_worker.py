@@ -821,6 +821,8 @@ class Engine:
             self.model, self.tokenizer = load(str(self.model_dir))
             add_turn_end_stops(self.tokenizer, log=log)
         if getattr(args, "native_mtp", False):
+            if getattr(args, "kv_bits", None):
+                raise ValueError("native MTP experiment uses uncompressed caches only")
             if self.client is not None:
                 raise ValueError("native MTP experiment is single-Mini only")
             from native_mtp import load_head

@@ -1,6 +1,7 @@
 """Experimental matching-checkpoint Qwen3.5 MTP (Day 17).
 
-Architecture adapted from MIT-licensed mlx-vlm qwen3_5_mtp (Blaizzy et al.).
+Architecture adapted from MIT-licensed mlx-vlm qwen3_5_mtp (Prince Canuma et al.).
+Upstream copyright/permission notice: native_mtp.LICENSE.
 Uses mlx-lm decoder primitives, not mlx-vlm as a runtime dependency.
 Greedy-only, one draft token per verify; fresh request caches. Hybrid rejection
 restores a full cache snapshot and replays the kept input. No unsafe GDN trim.
@@ -22,6 +23,8 @@ def validate_pair(target_config, head_config):
     wanted = head_config.get("text_config", {})
     if target_config.get("model_type") != "qwen3_5" or text.get("num_experts", 0):
         raise ValueError("native MTP currently supports dense Qwen3.5 only")
+    if text.get("mtp_num_hidden_layers", 1) != 1 or not text.get("tie_word_embeddings", True):
+        raise ValueError("native MTP needs one head layer and tied embeddings")
     for key in ("hidden_size", "vocab_size", "num_hidden_layers", "intermediate_size"):
         if text.get(key) != wanted.get(key):
             raise ValueError(f"MTP target mismatch: {key}")
