@@ -79,6 +79,14 @@ class ScheduleTest(unittest.TestCase):
         self.assertEqual(AB.baseline(e,active)["kv_bits"],16)
         self.assertEqual(AB.baseline(e,active,{"kv_bits":"8"})["kv_bits"],8)
 
+    def test_single_never_overlays_unavailable_saved_settings(self):
+        e={"winner":{"keepalive":True,"guess_ahead":True,"shared_prefix":True,"pipeline_chats":2}}
+        base=AB.baseline(e,ACTIVE)
+        self.assertNotIn("keepalive",base)
+        self.assertFalse(base["guess_ahead"])
+        self.assertFalse(base["shared_prefix"])
+        self.assertEqual(base["pipeline_chats"],1)
+
     def test_pending_not_applied_during_sweep(self):
         e = {'pending_reload': {'kv_bits': 8}}
         self.assertEqual(TS.plan_reload(e, ['kv_bits'], apply_pending=False)['values']['kv_bits'],16)
@@ -231,6 +239,12 @@ class RunnerTest(unittest.TestCase):
             self.assertEqual(sum(i['state']=='running' for i in snap['schedule']),1)
         self.assertEqual(s['mode'],'now')
         self.assertEqual(mgr._loaded_entry['placement'],{'nodes':['a']})
+
+    def test_unavailable_saved_keepalive_does_not_trigger_reload(self):
+        mgr=FakeMgr();mgr.entry={"winner":{"keepalive":True}}
+        _,opt=self.run_opt(mgr)
+        self.assertEqual(opt.snapshot()["reloads"],3)
+        self.assertNotIn("keepalive",opt.snapshot()["summary"]["winner"])
 
     def test_cancel_after_challenger_reply_does_not_commit_and_restores(self):
         mgr=FakeMgr(); opt=WO.Optimizer(mgr,send=mgr.send)

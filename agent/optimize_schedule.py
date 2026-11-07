@@ -63,7 +63,12 @@ def baseline(entry, active, settings=None):
             out[name] = active[key]
     for ui, name, _ in KNOBS:
         winner = ((entry or {}).get("winner") or {}).get(name)
-        if (winner is not None and name not in (active.get("pinned") or [])
+        applicable = name in out
+        if name == "guess_ahead" and not active.get("guess_ahead_loaded"):
+            applicable = False
+        if name in ("shared_prefix", "pipeline_chats") and not active.get("two_chats_available", active.get("keepalive") is not None):
+            applicable = False
+        if (applicable and winner is not None and name not in (active.get("pinned") or [])
                 and (not ui or (settings or {}).get(ui, "auto") == "auto")):
             out[name] = winner
     for name in TS.RELOAD_TRIO:

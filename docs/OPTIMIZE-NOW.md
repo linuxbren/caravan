@@ -112,3 +112,45 @@ closure comment once authorized.
   arriving during the comparison (57 vs 96 controls), not a Settings control's
   font/geometry mismatch. A cache-warmed repeat was started; its result is
   recorded separately rather than dropping the unsuccessful run.
+
+### Deployment and first live run (12:07–12:09 PM CT)
+
+- Implementation commit: `24b3238`, pushed and clean-pulled onto EXO1
+  `~/dev/caravan-v3` and EXO2 `~/cv3`. Untracked old HTML backups were not touched.
+- EXO1: **403 tests / 33.623 s**, successful, **1 skipped** (Node isn't installed
+  there, so the existing HF-token JavaScript assertion test skips). Verified
+  separately: HF tests 6 / 0.002 s, 5 passed + that 1 skip.
+- EXO2: **403 tests / 34.346 s**, all passed.
+- Cache-warmed browser parity run 3: **24/24** theme × view × desktop/phone
+  comparisons within 1 px. Static theme tests and JS syntax also passed.
+- Restarted only EXO1 web, with `CARAVAN_WEB_KEEP_WORKERS=1`; it reattached to
+  the same running Qwen worker PID 24646. Reloaded Qwen single once to install
+  the new worker endpoint (PID 50778); the web-only restart had not killed it.
+- Started Optimize, paused before any benchmark prompt (**0 prompts / 0 reloads**
+  at pause), held helper Off, committed the existing KV incumbent 16 with no
+  losing value under the actual hardware hash, then resumed. All API controls
+  returned success. This control-only commit is marked in the store as a manual
+  check, not benchmark evidence.
+- The full first live pass completed: **12 prompts / 5 reloads / 1.51 min**;
+  mean reply **2.053 s**; final measured reload **12.373 s**; no inference errors.
+  Every progress sample had zero or one running option, never two.
+- KV incumbent 16 normalized decode scores:
+  `[30.769231, 50.420168, 50.156740]` (mean **43.782046**).
+  Challenger 8: `[29.310345, 49.663735, 49.689441]` (mean **42.887840**,
+  **−2.04%**). Kept 16; recorded 8 as a loser on this hardware.
+- Fused incumbent Off: `[30.630631, 50.314465, 50.209205]`
+  (mean **43.718100**). Challenger On:
+  `[30.222222, 50.182959, 50.130548]` (mean **43.511910**, **−0.47%**).
+  Kept Off; recorded On as a loser. These are short A/B tuning scores, not
+  broad model-speed claims.
+- **Live-discovered bug:** the old single-Mini entry contains a keepalive winner
+  although single workers report keepalive as unavailable. Overlaying it into
+  the baseline caused an unnecessary initial reload. Fixed baseline overlay to
+  keep unavailable options at their actual running values; added two regression
+  tests (also covering a saved helper winner when no helper is installed).
+  The 5-reload first run is retained here, not silently replaced by a good run.
+- Qwen3 30B-A3B 4-bit MLX finished single on EXO1, healthy and ready; KV 16,
+  fused Off, worker learning unpaused. Raw first run:
+  EXO1 `/tmp/optimize-live-check.json`.
+- Box run 5 after the live-discovered baseline fix: **405 tests / 32.583 s**,
+  all passed. Follow-up deployment/live results recorded below.
