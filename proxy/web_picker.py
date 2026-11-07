@@ -1423,6 +1423,9 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             speed = max(0.0, (have - int(prev["have_bytes"])) / dt)
                         totals = job_now.get("totals") or {}
                         total = int(totals.get(role_id) or total_b or 0)
+                        if total and have > total * 1.5:
+                            # implausible counter (wrong process / scaled nettop): ignore it
+                            have = int((prev or {}).get("have_bytes") or 0)
                         last_byte_t = float((prev or {}).get("last_byte_t") or now)
                         if have > int((prev or {}).get("have_bytes") or 0):
                             last_byte_t = now

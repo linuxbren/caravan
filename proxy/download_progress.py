@@ -94,39 +94,31 @@ def read_hook(repo_or_folder: str) -> Optional[dict]:
 
 
 def nettop_bytes_in(pid: int) -> Optional[int]:
-    """Cumulative bytes received by pid (macOS nettop). None if unavailable."""
+    """Cumulative bytes received by pid (macOS nettop). None if unavailable.
+
+    Only the row named "<proc>.<pid>,<bytes>," for the requested pid counts, read with
+    -x (raw numbers). The old "largest number on any line" parse could pick up another
+    process or a scaled value and reported 851 GB for a 278 MB download (Nov 6, 2026).
+    """
     if not pid or pid <= 0:
         return None
     try:
         r = subprocess.run(
-            ["nettop", "-P", "-L", "1", "-p", str(int(pid)), "-J", "bytes_in"],
+            ["nettop", "-P", "-x", "-L", "1", "-p", str(int(pid)), "-J", "bytes_in"],
             capture_output=True, text=True, timeout=5,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
-    out = (r.stdout or "").strip().splitlines()
-    # Header then one data line. Prefer the last numeric field (bytes_in),
-    # not the pid embedded in "Python.<pid>,<bytes>".
-    for line in reversed(out):
-        if "bytes_in" in line and line.strip().startswith(",") or line.strip() == "bytes_in":
-            continue
-        # CSV-ish: Python.23692,736713004,
-        parts = [p for p in line.replace(" ", "").split(",") if p]
-        for part in reversed(parts):
-            # strip "Python.23692" style prefixes
-            m = re.search(r"(\d+)$", part)
-            if m:
-                val = int(m.group(1))
-                # skip tiny / obvious pids when a larger counter is present
-                if val > 10_000_000 or (val > 0 and len(parts) == 1):
-                    return val
-        nums = [int(n) for n in re.findall(r"\d+", line.replace(",", ""))]
-        # Prefer the largest value that is not equal to the pid we asked about
-        nums = [n for n in nums if n != int(pid)]
-        if nums:
-            return max(nums)
-    return None
+    return parse_nettop_bytes_in(r.stdout or "", int(pid))
 
+
+def parse_nettop_bytes_in(out: str, pid: int) -> Optional[int]:
+    tot, seen = 0, False
+    for line in out.splitlines():
+        m = re.match(r"^.*\.(\d+),(\d+),?\s*$", line.strip())
+        if m and int(m.group(1)) == pid:
+            tot += int(m.group(2)); seen = True
+    return tot if seen else None
 
 def find_fetch_pids(repo_id: str) -> list:
     """Local pids running mlx_split_fetch for repo.
