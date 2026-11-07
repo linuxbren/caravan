@@ -1295,7 +1295,7 @@ class Engine:
                 if job is None:
                     return
                 kind, payload, out = job
-                if kind == "call":
+                if kind in ("call", "read"):
                     try:
                         out.put(("ok", payload()))
                     except BaseException as e:
@@ -1563,10 +1563,14 @@ class Engine:
         # "lead" / "packers" are the names to use; "head" / "front" are deprecated aliases.
         return {"lead": lead, "packers": [front], "head": lead, "front": front, "peer": self.args.split_peer}
 
-    def call(self, fn):
-        """Run fn() on the mlx thread (after any queued generation)."""
+    def call(self, fn, *, between_rounds=False):
+        """Run fn on the socket-owning mlx thread.
+
+        Only read-only RPCs may opt into between-round execution. Cache-mutating
+        administration remains deferred until all decoding slots are idle.
+        """
         out = self._queue_mod.Queue()
-        self.jobs.put(("call", fn, out))
+        self.jobs.put(("read" if between_rounds else "call", fn, out))
         st, v = out.get()
         if st == "err":
             raise v
@@ -1608,7 +1612,9 @@ class Engine:
         packer_avail = None
         if self.client is not None:
             try:
-                st = self.client.call("stats")[0]
+                # HTTP handlers must never read/write the split socket themselves:
+                # concurrent guards/status/decode can consume each other's frames.
+                st = self.call(lambda: self.client.call("stats")[0], between_rounds=True)
                 packer_avail = st.get("mem_available_gb")
             except Exception:
                 packer_avail = None
@@ -2520,9 +2526,11 @@ class Engine:
                     pending.append(None)
                     return
                 kind, payload, out = job
-                if kind == "call":
-                    # Run admin calls only when the pipeline is idle (avoid racing the socket).
-                    if decoding or pending:
+                if kind in ("call", "read"):
+                    # All RPCs execute here on the owner thread, between fully
+                    # drained rounds. Read-only memory stats need not wait for
+                    # an entire chat; mutating admin operations still do.
+                    if kind == "call" and (decoding or pending):
                         pending.append(("call", payload, out))
                     else:
                         try:
@@ -2572,7 +2580,7 @@ class Engine:
                 if job is None:
                     return
                 kind, payload, out = job
-                if kind == "call":
+                if kind in ("call", "read"):
                     try:
                         out.put(("ok", payload()))
                     except BaseException as e:

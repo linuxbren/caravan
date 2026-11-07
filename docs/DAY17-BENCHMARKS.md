@@ -332,3 +332,15 @@ no elevation/bypass attempted. On-demand SIGUSR1 stack dumps are added to future
 workers’ own stderr, without locals, periodic sampling or decode overhead;
 49 targeted tests+4subtests pass. Fresh diagnostic retry pending; model will be
 restored to original singleEXO1 after the experiment.
+
+### N2 cause identified by worker-owned stack dump
+A fresh bounded N2 baseline completed a count pair, then stalled at the next
+code pair. SIGUSR1 dump shows **HTTP handler `apply_memory_guard` and MLX owner
+`split_info` concurrently inside `Client.call("stats")` on the same socket**.
+Packer waits for the next frame while two lead threads wait for replies. Thus
+read-only memory checks can corrupt framing even without helper drafting.
+Fix: memory-stat RPC is queued to the MLX/socket-owner thread. A read-only job
+class can execute between fully drained pipeline rounds; mutating admin calls
+remain deferred until idle. This avoids both the race and serializing entire
+chats behind read-only guards. Two targeted ownership/scheduler tests added;
+**51 passed+4subtests** focused validation. Fresh live comparison follows.

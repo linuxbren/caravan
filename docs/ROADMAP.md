@@ -673,3 +673,13 @@ list above point to it.
 - **RPC is unauthenticated.** Keep it on a private link.
 - **Not released.** There are no packages, and there's no support beyond
   this repo.
+
+
+### Day17 approved split follow-up (after9:42PM CT)
+Brenden approved the live split reload. Existing full Qwen copies on both Minis
+and an installed Qwen3-0.6B helper avoided any download. Initial N1 helper is
+faster; initial N2 both with/without helper stalled. Worker-owned stack evidence
+identified concurrent HTTP memory-guard and scheduler RPC reads on the same
+socket. Read-only stats now queue between drained rounds on the socket owner;
+mutating admin calls still wait for idle. Fresh live validation pending; all
+failures retained in [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).

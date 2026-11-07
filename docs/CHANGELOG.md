@@ -3,6 +3,14 @@
 
 ## Unreleased
 
+### Day17 approved live split — socket ownership fix
+- Live N2 testing exposed a real race: HTTP memory guards read the same split
+  socket as the MLX scheduler/status calls. Initial stalls/errors are retained.
+- Queue memory-stat RPCs to the single socket owner; run read-only checks between
+  drained rounds, but keep cache-mutating admin calls deferred until idle.
+- Two regression tests added;51 focused tests+4subtests pass. See
+  [Day17 record](DAY17-BENCHMARKS.md) for initial split N1 results and N2 failures.
+
 ### Picker progress + placement + On disk in Topology (Nov 6)
 - Remote download progress was always 0: the ssh measure script was `repr()`-quoted
   (invalid shell). Now `shlex.quote`d; errors are shown, not hidden.
