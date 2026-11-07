@@ -2915,8 +2915,8 @@
             note: c.note || "",
             sizeByLabel: c.size_by_label || {},
             onDelete: async () => {
-              const msg = c.kind !== "hf-cache"
-                ? "Delete this helper on all Minis? Stop the loaded model first."
+              const msg = c.kind === "drafts"
+                ? "Delete guess-ahead helper models on ALL Minis? They re-download when needed."
                 : "Delete Hugging Face download cache on ALL Minis? (skips the loaded model)";
               if (!confirm(msg)) return;
               try {
@@ -2979,6 +2979,5 @@
 
 </script>
 <div class="nebula-credit">Image: NASA, ESA, CSA, STScI</div>
-<script src="/helpers.js"></script>
 </body>
 </html>
