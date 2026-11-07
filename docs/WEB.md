@@ -206,3 +206,9 @@ Offline Minis keep a card with an error; last-good metrics are not blanked by
 a failed poll. Single-Mini loads on a non-lead Mini (placement `mode: one` on
 EXO2) run the worker there; the web host tunnels `lead_port` so chat and
 health keep using `127.0.0.1`.
+
+
+### Per-node model label and chat empty state
+- `/api/nodes` sets `model` only on nodes that host the loaded model (`gather_all(..., running_on=[ids])`). Idle nodes get `model: ""` and `layers: null`; the card shows "idle · no model". Split runs list the model on every stage with its layers.
+- The cache is keyed on (ready, model_name, split). On a change, the request waits up to 5 s for a fresh gather instead of serving the stale one.
+- `#emptyState[data-kind="intro"]` is repainted from status: "<model> is ready." when ready, otherwise the pick-a-model hint.

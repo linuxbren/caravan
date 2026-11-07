@@ -68,12 +68,25 @@ class App:
 
     def nodes(self) -> dict:
         """Cached ~400ms; refreshed in the background so polls stay fast."""
+        try:
+            key = self._nodes_key(self.mgr.snapshot())
+        except Exception:
+            key = None
         with self._nodes_lock:
             c = self._nodes_cache
-            stale = c is None or time.time() - c["t"] > self.NODES_TTL
+            changed = c is not None and key is not None and c.get("key") != key
+            stale = c is None or changed or time.time() - c["t"] > self.NODES_TTL
             if stale and not self._nodes_busy:
                 self._nodes_busy = True
                 threading.Thread(target=self._nodes_refresh, daemon=True).start()
+        if changed:
+            # Model/mode changed since last gather: wait for a fresh one so
+            # the per-node model label doesn't lag a gather behind.
+            for _ in range(50):
+                time.sleep(0.1)
+                cc = self._nodes_cache
+                if cc is not None and cc.get("key") == key:
+                    return cc
         if c is None:
             # First call: wait for the first gather.
             for _ in range(150):
@@ -90,17 +103,33 @@ class App:
     def _ssh_fn(self):
         return web_nodes.make_ssh_fn(self.mgr)
 
+    @staticmethod
+    def _nodes_key(snap: dict):
+        ready = snap.get("status") == "ready"
+        return (bool(ready), snap.get("model_name") if ready else None, bool(snap.get("split")))
+
     def _nodes_refresh(self):
         try:
             cfg_nodes = self.configured_nodes()
             snap = self.mgr.snapshot()
             split = self.mgr.lead_split_info() if snap.get("status") == "ready" else None
             model = snap.get("model_name") if snap.get("status") == "ready" else None
+            running_on = None
+            if model and not snap.get("split"):
+                wn = getattr(self.mgr, "_worker_node", None)
+                if wn and wn.get("id"):
+                    running_on = [wn["id"]]
+                else:
+                    running_on = [n.get("id") for n in cfg_nodes if n.get("role") == "lead"][:1]
+                split = None  # single Mini: no packer layer ranges
+            elif not model:
+                running_on = []
             nodes = web_nodes.gather_all(
                 cfg_nodes,
                 ssh_fn=self._ssh_fn(),
                 model=model,
                 split=split,
+                running_on=running_on,
             )
             # link: first packer's peer or mgr default
             peer = None
@@ -111,6 +140,7 @@ class App:
             self._nodes_cache = {
                 "t": time.time(),
                 "status": snap.get("status"),
+                "key": self._nodes_key(snap),
                 "link": (split or {}).get("peer") or peer or self.mgr.packer_peer,
                 "nodes": nodes,
                 "max_split_stages": web_nodes.MAX_SPLIT_STAGES,

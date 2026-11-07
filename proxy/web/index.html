@@ -762,7 +762,7 @@
     </div>
 
     <div class="messages" id="messages">
-      <div class="empty" id="emptyState">
+      <div class="empty" id="emptyState" data-kind="intro">
         <strong>Ready when you are.</strong>
         Pick a model that’s already on the Minis, open Settings to load it, and talk to it.
       </div>
@@ -1237,7 +1237,20 @@
     }
   }
 
+  function paintIntro(snap) {
+    const el = document.querySelector('#emptyState[data-kind="intro"]');
+    if (!el) return;
+    const ready = snap && snap.status === "ready" && snap.model_name;
+    const want = ready ? "ready:" + snap.model_name : "idle";
+    if (el.dataset.shown === want) return;
+    el.dataset.shown = want;
+    el.innerHTML = ready
+      ? `<strong>${escHtml(String(snap.model_name).trim())} is ready.</strong> Type a message below to start.`
+      : `<strong>Ready when you are.</strong> Pick a model that’s already on the Minis, open Settings to load it, and talk to it.`;
+  }
+  function escHtml(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
   function setStatus(snap) {
+    try { paintIntro(snap); } catch (e) {}
     const st = (snap && snap.status) || "idle";
     state.loadedModel = (snap && (snap.model_id || snap.model_name)) || "";
     renderThink();
@@ -1798,7 +1811,7 @@
     }
     const out = Object.assign({}, prev || {});
     for (const [k, v] of Object.entries(next)) {
-      if (v == null) continue;
+      if (v == null && k !== "layers") continue;
       if (k === "ram" || k === "disk") {
         out[k] = Object.assign({}, (prev && prev[k]) || {}, v);
       } else if (k === "error" && next.cpu_pct == null && (prev && prev.cpu_pct != null)) {
@@ -1911,6 +1924,7 @@
       h += `<div class="kv"><span>Temp</span><b>${esc(n.thermal_pressure)}</b></div>`;
     }
     if (n.model) h += `<div class="kv"><span>Model</span><b>${esc(n.model)}</b></div>`;
+    else if (n.model === "") h += `<div class="kv"><span>Model</span><b>idle · no model</b></div>`;
     if (n.layers) h += `<div class="kv"><span>Holds</span><b>${esc(String(n.layers).replace(/^[^:]*:\s*/, ""))}${n.weights_gb ? ` · ${n.weights_gb} GB` : ""}</b></div>`;
     if (!h) {
       if (n.error) return `<span class="err">can't reach: ${esc(n.error)}</span>`;

@@ -3,6 +3,10 @@
 
 ## Unreleased
 
+### Fixes (Day 16 follow-up)
+- Topology: each node card shows only the model it actually runs. Single mode puts the model on the lead (or the remote worker Mini); other nodes show "idle · no model". Split shows the model on every stage with its layer range. `/api/nodes` now re-gathers right away when the model/mode changes, so the label no longer lags one gather behind.
+- Chat empty state: when a model is ready it reads "<model> is ready. Type a message below to start."; the "Ready when you are… open Settings to load it" text only appears when nothing is loaded.
+
 ### Day 16 — Topology N-node, non-lead single Mini, optimize fix
 - **Topology drawer** builds one card per configured Mini (`/api/nodes`); handles 1 / 2 / 3+ and offline nodes without blanking last-good stats.
 - **Single-Mini load on a non-lead Mini** (e.g. EXO2-only placement): start `mlx_worker` there, SSH-tunnel chat/health to the web host.

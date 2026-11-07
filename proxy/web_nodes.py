@@ -181,8 +181,15 @@ def gather_node_stats(node: dict, *, ssh_fn=None, local_gather=None) -> dict:
 
 
 def gather_all(nodes_cfg: list, *, ssh_fn=None, local_gather=None,
-               model: Optional[str] = None, split: Optional[dict] = None) -> list:
-    """Parallel gather for every configured node; annotate layers from split."""
+               model: Optional[str] = None, split: Optional[dict] = None,
+               running_on: Optional[list] = None) -> list:
+    """Parallel gather for every configured node; annotate layers from split.
+
+    running_on: node ids that actually host the loaded model. None means
+    "every node" only when split packers are present; otherwise the lead.
+    Nodes not hosting it get model="" (idle) so the UI never shows a model
+    on a Mini that isn't running it.
+    """
     results = [None] * len(nodes_cfg)
     lock = threading.Lock()
 
@@ -200,12 +207,25 @@ def gather_all(nodes_cfg: list, *, ssh_fn=None, local_gather=None,
     lead_l = (split or {}).get("lead") or {}
     packers = (split or {}).get("packers") or []
     pk_i = 0
+    if running_on is None:
+        if packers:
+            running_on = [n.get("id") for n in nodes_cfg]
+        else:
+            running_on = [n.get("id") for n in nodes_cfg if n.get("role") == "lead"][:1]
+    hosts = set(running_on or [])
     out = []
     for st in results:
         if st is None:
             continue
+        if st.get("id") not in hosts:
+            st["model"] = ""
+            st["layers"] = None
+            out.append(st)
+            continue
         if model and not st.get("offline"):
             st["model"] = model
+        elif not model:
+            st["model"] = ""
         if st.get("role") == "lead" and lead_l:
             st["layers"] = lead_l.get("name")
             st["weights_gb"] = lead_l.get("weights_gb")

@@ -160,3 +160,42 @@ class ResolveWorkerNodeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestModelHosts(unittest.TestCase):
+    CFG = [{"id": "exo1", "role": "lead", "host": "local"},
+           {"id": "exo2", "role": "packer", "host": "x"}]
+
+    def _g(self, **kw):
+        import json, types, web_nodes
+        lg = lambda: {"cpu": 1}
+        ssh = lambda n, cmd, timeout=25: types.SimpleNamespace(returncode=0, stdout=json.dumps({"cpu": 1}), stderr="")
+        return {n["id"]: n for n in web_nodes.gather_all(self.CFG, ssh_fn=ssh, local_gather=lg, **kw)}
+
+    def test_single_lead_only(self):
+        r = self._g(model="JevK5", split=None, running_on=["exo1"])
+        self.assertEqual(r["exo1"]["model"], "JevK5")
+        self.assertEqual(r["exo2"]["model"], "")
+        self.assertIsNone(r["exo2"]["layers"])
+
+    def test_single_default_is_lead(self):
+        r = self._g(model="JevK5", split=None)
+        self.assertEqual(r["exo2"]["model"], "")
+
+    def test_single_remote_worker(self):
+        r = self._g(model="M", split=None, running_on=["exo2"])
+        self.assertEqual(r["exo1"]["model"], "")
+        self.assertEqual(r["exo2"]["model"], "M")
+
+    def test_idle(self):
+        r = self._g(model=None, split=None, running_on=[])
+        self.assertEqual(r["exo1"]["model"], "")
+        self.assertEqual(r["exo2"]["model"], "")
+
+    def test_split_both_with_layers(self):
+        sp = {"lead": {"name": "0-23"}, "packers": [{"name": "24-47"}]}
+        r = self._g(model="Big", split=sp)
+        self.assertEqual(r["exo1"]["model"], "Big")
+        self.assertEqual(r["exo2"]["model"], "Big")
+        self.assertEqual(r["exo1"]["layers"], "0-23")
+        self.assertIn("24-47", str(r["exo2"]["layers"]))
