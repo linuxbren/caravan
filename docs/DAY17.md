@@ -143,3 +143,19 @@ Source ZIP/tar.gz use git archive and omit 74 MB of lab video media via
 Pre-release source suite: **407 tests passed in 32.662s**, no skips or failures.
 Clean-Mac installation is not claimed. Published-asset verification follows
 in a later log entry so the release tag stays fixed.
+
+### Published-asset verification — Nov 7, 2026, 5:40 PM CST
+
+Release: https://github.com/linuxbren/caravan/releases/tag/day17-2026-11-07
+Tag/source commit: `day17-2026-11-07` / `5ea2acbae7989cc71a166ced1c5ef7bac4c1bb17`.
+Downloaded both assets from GitHub; bytes match the local git-archive packages.
+- `caravan-day17.zip`: **18,586,953 bytes**, SHA256 `0c6123df5860abc62accabbec6fa702475d58cc98b10715e40b8ab5bb554b338`.
+- `caravan-day17.tar.gz`: **17,735,121 bytes**, SHA256 `1276a4840351aa9f4ec1e76bf3f5637a3a5000844a27eff802c1a4f68df3231d`.
+Both contain INSTALL.md; ZIP has no export-ignored lab-video directory.
+Extracted the published ZIP in a fresh directory: **407 tests passed in
+32.676s**, no failures/skips (test HTTP disconnects print BrokenPipe tracebacks
+but the suite exits 0). No failed release test attempts.
+EXO1 `~/dev/caravan-v3` and EXO2 `~/cv3` pulled the release commit cleanly.
+Both have an existing untracked `proxy/web/index.html.bak-pre-amber`; preserved.
+No restarts; EXO2 `~/dev/caravan` untouched. Final log-only commit follows the
+fixed release tag and is pulled separately. Obsidian Day 17 Wrap-up updated.
