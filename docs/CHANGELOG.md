@@ -3,6 +3,14 @@
 
 ## Unreleased
 
+### A3 Caravan identity
+- Finalized the three linked Minis, without an underline, beside a lowercase
+  outlined monospace wordmark. Header follows all four theme accents.
+- Added SVG masters, pixel-grid 16/32 favicons, 180/512 PNGs and amber app icon.
+- Chrome checks: 1280px and 390px in Amber, Green, Meadow and Nebula; no
+  horizontal overflow. Static local previews only; no workers restarted.
+- Asset usage, font license and screenshot record: [BRAND.md](BRAND.md).
+
 ### Day17 — approved live split complete; negative N2 helper result retained
 - Final10:08:53PM CT UI refresh preserves QwenPID89648; served help/chip verified.
   [API proof](../bench/results/day17/split-final-ui-proof.json).
