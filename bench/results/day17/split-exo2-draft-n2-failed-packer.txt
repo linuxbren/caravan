@@ -1,0 +1,6 @@
+21:47:35 [mlx-worker] fuse kernels: off
+21:47:37 [mlx-worker] mlx cache_limit 1.5 GB
+21:47:37 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+21:47:37 [mlx-worker] packer stage packer 1: layers 0-23 of 48 of mlx-community--Qwen3-30B-A3B-4bit loaded in 1.2s, 8.4 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/mlx/prompt-cache
+21:47:37 [mlx-worker] packer stage listening on 169.254.103.191:5560 (epoch c94e17e0e43b)
+21:47:40 [mlx-worker] lead connected from 169.254.199.11

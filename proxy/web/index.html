@@ -1337,7 +1337,7 @@
     out.push(["shared start " + (a.shared_start ? "on" : "off") + p("shared_prefix"), !!a.shared_start]);
     if (a.pipeline_chats != null) out.push([`two chats: ${a.pipeline_chats}` + ((a.two_chats_available === false || state.workerSplit === false) ? " · single Mini, serial" : "") + p("pipeline_chats"), a.pipeline_chats > 1]);
     if (a.prompt_lookup) out.push([`prompt lookup: ${a.prompt_lookup.enabled ? "adaptive · overlap ≥ 0.50" : "off · experimental"}`, a.prompt_lookup.enabled]);
-    if (a.multi_token_verify && a.two_chats_available) out.push(["split block verify · awaiting live benchmark", false]);
+    if (a.multi_token_verify && a.two_chats_available) out.push(["split block verify · Qwen N2 tested, helper slower", false]);
     out.push([`memory ${a.kv_bits}-bit`, a.kv_bits && a.kv_bits < 16]);
     out.push(["fused " + (a.fuse_kernels || "off"), a.fuse_kernels && a.fuse_kernels !== "off"]);
     if (a.keepalive != null) out.push(["keep-warm " + (a.keepalive ? "on" : "off"), !!a.keepalive]);

@@ -3,6 +3,22 @@
 
 ## Unreleased
 
+### Day17 — approved live split complete; negative N2 helper result retained
+- Same-source e6640a0,36/36 uncapped replies. Qwen split baselineN1/N2 aggregate
+  **41.54/70.49tok/s**; helperN1/N2 **52.11/49.77tok/s**. N1 Write45.04→60.01,
+  N2 Write39.81→27.83; N2 helper is slower, stays experimental, defaults unchanged.
+- All count/sorting3+7 checks pass; strict-format fails in every mode due to
+  trailing Markdown spaces. Helper74.59% drafted/generated is not proposal acceptance.
+- UI chip/help show measured gains AND regressions. Socket-owner fix survived all
+  paired waves;152 tests+4subtests pass. Prior stalls/timeouts retained.
+- Original singleEXO1 Qwen restored ready, Auto preferences; pre-existing queued
+  KV4 trial applied (benchmarks pinnedKV16). No download/copy/deletion needed;
+  existing EXO2 Qwen and Orvena weights kept, EXO2 workers stopped.
+- All139 raw rows,127 responses,12 transport errors plus non-row failure evidence:
+  [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md),
+  [raw data/manifest](../bench/results/day17/manifest.json),
+  [reproducible quality/summary](../bench/results/day17/complete-summary.json).
+
 ### Day17 approved live split — socket ownership fix
 - Live N2 testing exposed a real race: HTTP memory guards read the same split
   socket as the MLX scheduler/status calls. Initial stalls/errors are retained.
@@ -25,14 +41,14 @@
 - Chat: `Read N tok/s · Write M tok/s` under each reply (prompt/prefill, fallback TTFT).
 - Numbers: see WEB.md "Test record".
 
-### Day 17 — final verification
+### Day 17 — earlier 9:28 PM CT verification
 - **145 passed +4 subtests** on49b55a8. All85 raw rows (including8 transport
   errors and partial queue attempt) retained in the linked benchmark manifest.
 - Qwen30B4-bit restored ready, singleEXO1, Auto preferences/KV16. Scoped stop
   removed only the EXO2 experiment process; Orvena weights/head kept.
 - UI restart preserves workers; screenshots remain pending parent capture.
 
-### Day 17 — completed performance follow-up
+### Day 17 — earlier pre-approval performance follow-up
 - Qwen single-Mini paired queue baseline: Write50.51/50.48tok/s, harness
   aggregate46.08/46.52tok/s. This is serial queuing, **not split overlap**;
   no default change. Initial partial11/12-row attempt retained as well.

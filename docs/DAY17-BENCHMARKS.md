@@ -4,6 +4,8 @@ Every run, including failures and negative results, is retained below or in
 `bench/results/day17/`. Each row includes model, placement, code commit, exact
 prompt/settings and CT timestamp. No vendor figure is a Caravan measurement.
 
+> **Latest, 10:04 PM CT onward:** approved live split matrix completed on `e6640a0`; N2 helper is slower. Qwen is restored single/EXO1, all Auto; the existing queued KV4 trial applied. The dated earlier “pending/no live split/KV16 final” statements below are historical, superseded by the completion section at the end. All139 raw rows (127 responses,12 transport errors) and non-row setup/stall failures are retained.
+
 ## Research and initial implementation
 
 - Native MTP source: [Orvena/Orvena-4B](https://huggingface.co/Orvena/Orvena-4B),
@@ -344,3 +346,131 @@ class can execute between fully drained pipeline rounds; mutating admin calls
 remain deferred until idle. This avoids both the race and serializing entire
 chats behind read-only guards. Two targeted ownership/scheduler tests added;
 **51 passed+4subtests** focused validation. Fresh live comparison follows.
+
+## Completed approved split matrix — Nov 6, 10:01–10:04 PM CT
+
+Source/loaded workers **e6640a0** on both Minis; initial evidence/diagnostic source
+**ac48fde /4ae324a**. The read-only socket-owner fix eliminates the reproduced
+N2 deadlock in this bounded rerun. No model file transfer, download or deletion:
+EXO2 already held the full17.17GB Qwen copy; existing helper335MB on EXO1.
+24+24 layers/48, packer169.254.103.191:5560, lead8194; direct HTTP to lead, not
+proxy FIFO. These are the same three Day17 prompts used above, not a larger
+quality suite. Each configuration has two waves; N1 has one client, N2 has two
+simultaneous clients. KV16, helper k3 when on, self-tuning/shared-start/PL off,
+fused off, keepalive on, temperature0,seed17,max768, no thinking, fresh sessions.
+Every request's active settings and PID guard are preserved in its raw row.
+
+| Config | CT request starts | Lead PID | Replies | Median Write tok/s | Median worker TTFT s | Overall aggregate tok/s |
+|---|---|---:|---:|---:|---:|---:|
+| N1 baseline |10:03:18–10:03:44 PM|89522|6|45.0429|0.3140|41.5415|
+| N1 helper |10:03:55–10:04:15 PM|89599|6|60.0063|0.3625|52.1061|
+| N2 baseline |10:01:43–10:02:13 PM|89330|12|39.8074|0.3855|70.4915|
+| N2 helper, multi-token verify |10:02:24–10:03:06 PM|89406|12|27.8321|0.4745|49.7656|
+
+Raw: [`split-fixed-baseline-n1.jsonl`](../bench/results/day17/split-fixed-baseline-n1.jsonl),
+[`split-fixed-draft-n1.jsonl`](../bench/results/day17/split-fixed-draft-n1.jsonl),
+[`split-fixed-baseline-n2.jsonl`](../bench/results/day17/split-fixed-baseline-n2.jsonl),
+[`split-fixed-draft-n2.jsonl`](../bench/results/day17/split-fixed-draft-n2.jsonl).
+Corresponding `*-state.json`, `*-run.txt`, `*-lead.txt` retain startup, node/settings
+and request output. Lifecycle CT events: `split-fixed-events.jsonl`.
+
+Aggregate = sum completion tokens / sum unique (wave,prompt) wall intervals,
+not sum per-request tok/s: N1 baseline **1084/26.094359001s**, helper
+**1086/20.842084959s**; N2 baseline **2180/30.925711791s**, helper
+**2172/43.644639499s**. Guard overhead is included; server TTFT excludes client
+queue wait. This is non-streaming: client-observed first-token timing is N/A.
+Two-client baseline aggregate rises **69.69%** over one-client baseline; helper
+improves N1 aggregate **25.43%**, but **reduces N2 aggregate29.40%** (and median
+Write30.08%). N1 median Write gain33.22% is a different metric from aggregate.
+The helper path drains speculative blocks serially to preserve cache ownership,
+so it loses normal per-token two-chat overlap. This measurement supports leaving
+N2 helper **experimental**, not defaulting to it or promising fewer handoffs
+means higher throughput. UI help/chip explicitly includes the negative result.
+Existing self-tuning/one-chat defaults are unchanged; these short tests with
+shared-start off do not settle long-prompt/shared-prefix performance.
+
+### Per-prompt medians
+| Prompt | N1 baseline / helper Write tok/s | N2 baseline / helper Write tok/s | N2 baseline / helper TTFT s | N2 baseline / helper wave aggregate tok/s |
+|---|---:|---:|---:|---:|
+| Count |45.0590 /60.0063|39.9567 /28.3760|0.3470 /0.4325|74.8219 /53.6025|
+| Merge sort |45.0923 /56.2862|39.9077 /26.5558|0.4620 /0.5580|71.1356 /48.4208|
+| Strict 3 lines |42.5532 /63.9098|38.6804 /28.4960|0.4325 /0.5305|33.4738 /26.1791|
+
+Helper drafted/generated tokens: **810/1086=74.5856% N1**, **1620/2172=74.5856%
+N2**. These are **NOT accepted/proposed**; proposal acceptance is N/A. Pipeline
+`split.calls` counters are shared/cumulative across overlapping chats and include
+admin/keepalive calls; raw values are retained but not added or marketed as
+per-chat verification round trips. Serial helper source/verify-yield counts
+likewise are not a direct total wire-RPC count. Block width is k3; all-accept,
+rejection and EOS rewind/replay are covered by unit tests.
+
+### Exact prompts and quality
+
+**count**
+```text
+Count from 1 to 80 in order, separated by commas. Output only the numbers.
+```
+
+**code**
+```text
+Write a Python function merge_sort(values) with a helper merge(left, right), then three assert tests including duplicates and an empty list. Output only Python code.
+```
+
+**quality**
+```text
+Reply exactly with these three lines, with no explanation:
+2 + 2 = 4
+France: Paris
+Water: H2O
+```
+
+**36/36 natural stops, none capped.** All12 count responses complete1…80; all12
+sorting responses pass their3 generated asserts plus7 additional semantic cases
+in a restricted/time-limited child. All12 exact-format responses fail strict
+byte-format equality because Qwen emits two Markdown trailing spaces on its first
+two lines. Normalized content passes in every mode. Counts and exact-format
+outputs agree across configurations; sorting assertion examples vary, so **not
+bit-exact output and not a general quality guarantee**. Restricted semantic
+results, all raw quality failures, per-mode medians and aggregate denominators
+are reproducible via `python3 bench/v3/day17_summarize.py` in
+[`complete-summary.json`](../bench/results/day17/complete-summary.json).
+
+### Failures retained, not folded into the successful matrix
+- Initial ac48fde helperN2: paired counts timeout180.02/185.01s; two error rows
+  in `split-draft-n2.jsonl`. BaselineN2 also stalled before any completed row;
+  state/startup/sample retained. No invented0tok/s/TTFT/acceptance.
+- Diagnostic4ae324a baselineN2: count pair **39.9793/40.0000 Write tok/s**, TTFT
+  **0.463/0.243s**, aggregate**74.8807tok/s**, complete counts; subsequent code
+  pair timed out**30.01/35.01s**. Four rows (two responses, two errors) retained
+  in `split-baseline-n2-diagnostic.jsonl`, plus lead/packer stack logs. This is
+  incomplete and not a full-matrix baseline. The stack proves HTTP memory-guard
+  `stats` and owner `split_info` competing for one socket.
+- Official macOS Python3.14 remote-exec task-port attach was denied; no privilege
+  escalation or alternate attach attempted. Added explicit SIGUSR1 worker-owned
+  all-thread stderr dumps without locals or periodic overhead instead.
+- First fixed-run orchestrator had an escaped-quote f-string parse error before
+  making any load/request. Corrected and recorded as a setup event, not an
+  inference failure. Summary tool initially tried parsing lifecycle events as
+  responses (`KeyError: mode`); it now excludes `*-events.jsonl`. An exploratory
+  aggregate calculation used nonexistent `tokens`; corrected to the recorded
+  `completion_tokens`. Neither changed raw measurements.
+
+### Final validation, restoration and storage
+- Expanded focused suite: **152 passed +4 subtests,12.44s**. Exact command, source
+  and CT timestamp: [`split-final-regression.txt`](../bench/results/day17/split-final-regression.txt).
+  This is not a full-suite claim; previously failed suites remain above.
+- Original placement restored through normal UI load, original page preferences
+  **all Auto**. **Qwen3 30B-A3B4-bit ready single EXO1, PID89648**, worker8194;
+  helper/PL off, pipeline1, self-tuning on. Auto applied its **already queued KV4
+  trial**, incumbentKV16, remaining3; unlike pinned benchmarks this is **KV4**.
+  No preference overwritten to conceal that learned trial. Proof:
+  [`split-restored-state.json`](../bench/results/day17/split-restored-state.json).
+- EXO2 packer stopped by normal manager cleanup; isolated Orvena stopped earlier.
+  Orvena target/head/symlink and pre-existing EXO2 Qwen files **kept**, nothing
+  deleted. UI-only restart to refresh help uses KEEP_WORKERS=1; no model reload
+  needed for label-only changes. Loaded worker's literal status description may
+  retain its older “pending” text until its next normal reload; the new UI chip
+  and help use the completed, negative-inclusive result.
+- [Updated manifest](../bench/results/day17/manifest.json): **139 rows,127
+  responses,12 transport errors**, plus non-row setup/stall evidence. No failed
+  or slow run dropped. Screenshots still require the parent browser tools.

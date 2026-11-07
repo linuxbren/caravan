@@ -1,0 +1,48 @@
+22:01:40 [mlx-worker] fuse kernels: off
+22:01:41 [mlx-worker] model_type remap: qwen3_5_text → qwen3_5
+22:01:41 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+22:01:42 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.103.191:5560
+22:01:42 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+22:01:42 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+22:01:42 [mlx-worker] mlx cache_limit 1.5 GB
+22:01:42 [mlx-worker] warm-up 0.13s
+22:01:42 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 1.0s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+22:01:42 [mlx-worker] active settings: {"fuse_kernels": "off", "guess_ahead": false, "guess_ahead_loaded": false, "guess_ahead_mode": "helper", "keepalive": true, "kv_bits": 16, "multi_token_verify": "experimental \u00b7 split draft blocks, live benchmark pending", "native_mtp_available": false, "pinned": [], "pipeline_chats": 2, "prompt_lookup": {"adaptive": false, "enabled": false, "overlap_on": 0.5}, "reload_auto": [], "reload_trial": null, "self_tune": false, "shared_start": false, "two_chats_available": true}
+22:01:42 [mlx-worker] split pipeline chats=2 (idea 1; overlap packer/lead across sessions)
+22:01:42 [mlx-worker] listening on http://127.0.0.1:8194
+22:01:51 [mlx-worker] session d17-bccdff7227964e1885f7a6db128e2526: pipeline, reused 0/32, 310 generated, total 8.16s, peak 8.7 GB
+22:01:51 [mlx-worker] session d17-bccdff7227964e1885f7a6db128e2526: thinking off, reasoning 0 tok, answer 309 tok (of 310 generated, max 768)
+22:01:51 [mlx-worker] session d17-b1913148ebc34ca38dfb270ede19f931: pipeline, reused 0/32, 310 generated, total 7.94s, peak 8.7 GB
+22:01:51 [mlx-worker] session d17-b1913148ebc34ca38dfb270ede19f931: thinking off, reasoning 0 tok, answer 309 tok (of 310 generated, max 768)
+22:01:57 [mlx-worker] session d17-32095d3f6d384b4fb9552a4f8f964932: pipeline, reused 0/44, 217 generated, total 6.01s, peak 8.74 GB
+22:01:57 [mlx-worker] session d17-32095d3f6d384b4fb9552a4f8f964932: thinking off, reasoning 0 tok, answer 216 tok (of 217 generated, max 768)
+22:01:57 [mlx-worker] session d17-4c9d69dbe9914e4e9170901869601720: pipeline, reused 0/44, 217 generated, total 5.72s, peak 8.74 GB
+22:01:57 [mlx-worker] session d17-4c9d69dbe9914e4e9170901869601720: thinking off, reasoning 0 tok, answer 216 tok (of 217 generated, max 768)
+22:01:58 [mlx-worker] saved d17-bccdff7227964e1885f7a6db128e2526: 31 tokens, 2 MB in 0.00s
+22:01:58 [mlx-worker] saved d17-b1913148ebc34ca38dfb270ede19f931: 31 tokens, 2 MB in 0.00s
+22:01:58 [mlx-worker] evicted 2 session(s) from memory: d17-bccdff7227964e1885f7a6db128e2526, d17-b1913148ebc34ca38dfb270ede19f931
+22:01:58 [mlx-worker] session d17-76c6902ace4041a6bf906c366d274b6c: pipeline, reused 0/40, 18 generated, total 1.01s, peak 8.79 GB
+22:01:58 [mlx-worker] session d17-76c6902ace4041a6bf906c366d274b6c: thinking off, reasoning 0 tok, answer 17 tok (of 18 generated, max 768)
+22:01:58 [mlx-worker] session d17-8c05ad16c1b3404a8590f8e54078ae53: pipeline, reused 0/40, 18 generated, total 0.74s, peak 8.79 GB
+22:01:58 [mlx-worker] session d17-8c05ad16c1b3404a8590f8e54078ae53: thinking off, reasoning 0 tok, answer 17 tok (of 18 generated, max 768)
+22:02:06 [mlx-worker] saved d17-32095d3f6d384b4fb9552a4f8f964932: 43 tokens, 2 MB in 0.00s
+22:02:06 [mlx-worker] saved d17-4c9d69dbe9914e4e9170901869601720: 43 tokens, 2 MB in 0.00s
+22:02:06 [mlx-worker] evicted 2 session(s) from memory: d17-32095d3f6d384b4fb9552a4f8f964932, d17-4c9d69dbe9914e4e9170901869601720
+22:02:06 [mlx-worker] session d17-774effc2de2549d28eb24978de37002f: pipeline, reused 0/32, 310 generated, total 8.22s, peak 8.79 GB
+22:02:06 [mlx-worker] session d17-774effc2de2549d28eb24978de37002f: thinking off, reasoning 0 tok, answer 309 tok (of 310 generated, max 768)
+22:02:06 [mlx-worker] session d17-fbbf80c9b87e4dee85652694ec0c99fb: pipeline, reused 0/32, 310 generated, total 8.01s, peak 8.79 GB
+22:02:06 [mlx-worker] session d17-fbbf80c9b87e4dee85652694ec0c99fb: thinking off, reasoning 0 tok, answer 309 tok (of 310 generated, max 768)
+22:02:13 [mlx-worker] saved d17-76c6902ace4041a6bf906c366d274b6c: 39 tokens, 2 MB in 0.00s
+22:02:13 [mlx-worker] saved d17-8c05ad16c1b3404a8590f8e54078ae53: 39 tokens, 2 MB in 0.00s
+22:02:13 [mlx-worker] evicted 2 session(s) from memory: d17-76c6902ace4041a6bf906c366d274b6c, d17-8c05ad16c1b3404a8590f8e54078ae53
+22:02:13 [mlx-worker] session d17-f2d8909cab49498d9b3d71e12bf88a2c: pipeline, reused 0/44, 217 generated, total 6.03s, peak 8.79 GB
+22:02:13 [mlx-worker] session d17-f2d8909cab49498d9b3d71e12bf88a2c: thinking off, reasoning 0 tok, answer 216 tok (of 217 generated, max 768)
+22:02:13 [mlx-worker] session d17-f9b67d20462a4b1aa60b3a4129908eed: pipeline, reused 0/44, 217 generated, total 5.74s, peak 8.79 GB
+22:02:13 [mlx-worker] session d17-f9b67d20462a4b1aa60b3a4129908eed: thinking off, reasoning 0 tok, answer 216 tok (of 217 generated, max 768)
+22:02:14 [mlx-worker] saved d17-774effc2de2549d28eb24978de37002f: 31 tokens, 2 MB in 0.00s
+22:02:14 [mlx-worker] saved d17-fbbf80c9b87e4dee85652694ec0c99fb: 31 tokens, 2 MB in 0.00s
+22:02:14 [mlx-worker] evicted 2 session(s) from memory: d17-774effc2de2549d28eb24978de37002f, d17-fbbf80c9b87e4dee85652694ec0c99fb
+22:02:14 [mlx-worker] session d17-1030216be7f9483d91d995e89cc2b298: pipeline, reused 0/40, 18 generated, total 1.01s, peak 8.79 GB
+22:02:14 [mlx-worker] session d17-1030216be7f9483d91d995e89cc2b298: thinking off, reasoning 0 tok, answer 17 tok (of 18 generated, max 768)
+22:02:14 [mlx-worker] session d17-38c7fdfe10c74af595c77db48a1855bb: pipeline, reused 0/40, 18 generated, total 0.73s, peak 8.79 GB
+22:02:14 [mlx-worker] session d17-38c7fdfe10c74af595c77db48a1855bb: thinking off, reasoning 0 tok, answer 17 tok (of 18 generated, max 768)

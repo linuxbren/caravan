@@ -1,0 +1,82 @@
+21:57:32 [mlx-worker] fuse kernels: off
+21:57:33 [mlx-worker] model_type remap: qwen3_5_text → qwen3_5
+21:57:33 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)
+21:57:34 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.103.191:5560
+21:57:34 [mlx-worker] split speculate: --no-split-draft; auto-pair off
+21:57:34 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)
+21:57:34 [mlx-worker] mlx cache_limit 1.5 GB
+21:57:34 [mlx-worker] warm-up 0.13s
+21:57:34 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 1.0s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/brenden/.caravan/mlx/prompt-cache
+21:57:34 [mlx-worker] active settings: {"fuse_kernels": "off", "guess_ahead": false, "guess_ahead_loaded": false, "guess_ahead_mode": "helper", "keepalive": true, "kv_bits": 16, "multi_token_verify": "experimental \u00b7 split draft blocks, live benchmark pending", "native_mtp_available": false, "pinned": [], "pipeline_chats": 2, "prompt_lookup": {"adaptive": false, "enabled": false, "overlap_on": 0.5}, "reload_auto": [], "reload_trial": null, "self_tune": false, "shared_start": false, "two_chats_available": true}
+21:57:34 [mlx-worker] split pipeline chats=2 (idea 1; overlap packer/lead across sessions)
+21:57:34 [mlx-worker] listening on http://127.0.0.1:8194
+21:57:43 [mlx-worker] session d17-2ce21f00a97847b3bfe43b8a661d052d: pipeline, reused 0/32, 310 generated, total 8.19s, peak 8.7 GB
+21:57:43 [mlx-worker] session d17-2ce21f00a97847b3bfe43b8a661d052d: thinking off, reasoning 0 tok, answer 309 tok (of 310 generated, max 768)
+21:57:43 [mlx-worker] session d17-6b579898cd8c4c09ae17705a89db1029: pipeline, reused 0/32, 310 generated, total 7.97s, peak 8.7 GB
+21:57:43 [mlx-worker] session d17-6b579898cd8c4c09ae17705a89db1029: thinking off, reasoning 0 tok, answer 309 tok (of 310 generated, max 768)
+Thread 0x00000004a78e3000 [Thread-31 (process_request_thread)] (most recent call first):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 369 in wait
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/queue.py", line 199 in get
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 1583 in run
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 3308 in _complete
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 3230 in do_POST
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 488 in handle_one_request
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 500 in handle
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py", line 766 in __init__
+  File "__init__", line ??? in __init__
+  <invalid frame>
+
+Thread 0x00000004a68d7000 [Thread-29 (process_request_thread)] (most recent call first):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 369 in wait
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/queue.py", line 199 in get
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 1570 in call
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 3205 in do_GET
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 488 in handle_one_request
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 500 in handle
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py", line 766 in __init__
+  File "__init__", line ??? in __init__
+  <invalid frame>
+
+Thread 0x00000004a58cb000 [Thread-27 (process_request_thread)] (most recent call first):
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 252 in _recv_exact
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 261 in read_frame
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 381 in _roundtrip
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 403 in call
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 1611 in apply_memory_guard
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 3240 in _complete
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 3230 in do_POST
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 488 in handle_one_request
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 500 in handle
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py", line 766 in __init__
+  File "__init__", line ??? in __init__
+  <invalid frame>
+
+Thread 0x00000004a280b000 [Thread-25 (process_request_thread)] (most recent call first):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 369 in wait
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/queue.py", line 199 in get
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 1570 in call
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 3205 in do_GET
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 488 in handle_one_request
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 500 in handle
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py", line 766 in __init__
+  File "__init__", line ??? in __init__
+  <invalid frame>
+
+Thread 0x000000016cd1b000 [mlx] (most recent call first):
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 252 in _recv_exact
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 261 in read_frame
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 381 in _roundtrip
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_split.py", line 403 in call
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 1554 in split_info
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 2529 in pull_available
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 2536 in _main_pipeline
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 1313 in _main
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1024 in run
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1082 in _bootstrap_inner
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1044 in _bootstrap
+
+Current thread 0x00000001f9706180 (most recent call first):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/selectors.py", line 398 in select
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py", line 235 in serve_forever
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 3634 in main
+  File "/Users/brenden/dev/caravan-v3/agent/mlx_worker.py", line 3639 in <module>

@@ -1,0 +1,19 @@
+21:57:29 [mlx-worker] fuse kernels: off
+21:57:31 [mlx-worker] mlx cache_limit 1.5 GB
+21:57:31 [mlx-worker] packer GPU keepalive on (warms Metal while waiting for the lead)
+21:57:31 [mlx-worker] packer stage packer 1: layers 0-23 of 48 of mlx-community--Qwen3-30B-A3B-4bit loaded in 1.3s, 8.4 GB of layers; wired (0, 19069665280); persist=on /Users/brenden/.caravan/mlx/prompt-cache
+21:57:31 [mlx-worker] packer stage listening on 169.254.103.191:5560 (epoch 83380d18f224)
+21:57:34 [mlx-worker] lead connected from 169.254.199.11
+Thread 0x00000004a10c7000 [caravan-gpu-keepalive] (most recent call first):
+  File "/Users/brenden/cv3/agent/mlx_split.py", line 290 in _run
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1024 in run
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1082 in _bootstrap_inner
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1044 in _bootstrap
+
+Current thread 0x00000001f7726180 (most recent call first):
+  File "/Users/brenden/cv3/agent/mlx_split.py", line 252 in _recv_exact
+  File "/Users/brenden/cv3/agent/mlx_split.py", line 260 in read_frame
+  File "/Users/brenden/cv3/agent/mlx_split.py", line 644 in serve_front
+  File "/Users/brenden/cv3/agent/mlx_worker.py", line 3603 in front_main
+  File "/Users/brenden/cv3/agent/mlx_worker.py", line 3618 in main
+  File "/Users/brenden/cv3/agent/mlx_worker.py", line 3639 in <module>

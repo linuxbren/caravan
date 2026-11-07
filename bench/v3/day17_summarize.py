@@ -56,6 +56,20 @@ def summarize(path):
             'median_ttft_s':statistics.median(r['ttft_s'] for r in good),'native_proposed':n,'native_accepted':a,
             'native_acceptance':a/n if n else None,
             'median_drafted_token_share':statistics.median(r['acceptance'] for r in good) if mode.startswith('pl-') and all(r.get('acceptance') is not None for r in good) else None,'per_prompt':{}}
+        # Wave index repeats for each prompt. Count one wall interval per
+        # (wave, prompt), not once per concurrent completion.
+        wave_groups={}
+        for r in good:wave_groups.setdefault((r['wave'],r['prompt_id']),[]).append(r)
+        complete=all(len(rs)==rs[0]['concurrency'] and any(r['member']==0 for r in rs)
+                     for rs in wave_groups.values())
+        wall=sum(next(r['wave_wall_s'] for r in rs if r['member']==0)
+                 for rs in wave_groups.values()) if complete else None
+        tokens=sum(r['completion_tokens'] for r in good)
+        drafted=sum(s.get('from_draft',0) for s in spec)
+        out['groups'][mode].update({'completion_tokens':tokens,
+            'complete_wave_wall_s':wall,'aggregate_tps':tokens/wall if wall else None,
+            'helper_from_draft':drafted,
+            'helper_drafted_generated_share':drafted/tokens if drafted and tokens else None})
         for prompt in sorted({r['prompt_id'] for r in good}):
             sub=[r for r in good if r['prompt_id']==prompt]
             waves={r['wave']:r['wave_aggregate_tps'] for r in sub}
@@ -75,7 +89,8 @@ def summarize(path):
 
 if __name__=='__main__':
     directory=Path('bench/results/day17')
-    files=[p for p in sorted(directory.glob('*.jsonl'))]
+    # Lifecycle events are raw provenance, not completion benchmark rows.
+    files=[p for p in sorted(directory.glob('*.jsonl')) if not p.name.endswith('-events.jsonl')]
     data=[summarize(p) for p in files]
     (directory/'complete-summary.json').write_text(json.dumps(data,indent=2)+'\n')
     for d in data:print(d['file'],json.dumps(d['groups']))

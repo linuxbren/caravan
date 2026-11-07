@@ -1038,7 +1038,7 @@ class Engine:
             "guess_ahead_mode": "native_mtp" if self.native_mtp is not None else "helper",
             "prompt_lookup": {"enabled": bool(self.prompt_lookup_n),
                               "adaptive": bool(self.prompt_lookup_adaptive), "overlap_on": 0.50},
-            "multi_token_verify": "experimental · split draft blocks, live benchmark pending",
+            "multi_token_verify": "experimental · split draft blocks; Qwen N2 tested, helper slower",
             "two_chats_available": self.client is not None,
             "self_tune": bool(self._learn_enabled),
             "shared_start": bool(self._shared_prefix_on()),

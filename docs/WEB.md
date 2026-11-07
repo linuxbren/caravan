@@ -342,12 +342,30 @@ requests: median server Write50.51 vs50.48tok/s (one vs two queued requests),
 harness aggregate46.08 vs46.52. No default change or split-overlap claim.
 Worker TTFT excludes queue wait; harness wall includes state guards. The UI
 shows **single Mini, serial**, and prompt-lookup help shows both copy speedup
-and mixed-prompt regression. Live split block verification remains labelled
-**awaiting live benchmark**. Raw prompts, all successful/partial attempts and
+and mixed-prompt regression. Approved split block verification is now labelled
+**Qwen N2 tested, helper slower**. Raw prompts, all successful/partial attempts and
 negative exact-format checks: [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
 
-Final live check: Qwen3 30B-A3B4-bit ready singleEXO1, PID85235, Auto preferences,
-active KV16/self-tuning on; helper/PL off. Worker-preserving web restart kept
-that PID. Orvena experiment stopped; matching weights/head kept for an explicit
-future UI load. API evidence and145-test regression are linked from the Day17
-benchmark record. Screenshot capture remains pending the parent’s browser tools.
+### Approved split results shown in the controls
+- **Two chats** help: Qwen30B4-bit split, baseline aggregate one→two chats
+  **41.54→70.49tok/s**. Single-Mini requests still queue.
+- **Guess-ahead** help: split one-chat aggregate**41.54→52.11tok/s**, but
+  two-chat**70.49→49.77tok/s** (helper slower). N2 remains experimental; no
+  global default promoted on these short tests. Active chip says
+  `split block verify · Qwen N2 tested, helper slower`, not “awaiting benchmark”.
+- Measured with helperQwen3-0.6B4-bit, k3, KV16, learning/shared-start/PL off,
+  count/code/exact prompts.36/36 uncapped replies; count and sorting3+7 pass,
+  strict exact-format fails all configurations (trailing spaces). Aggregate
+  counts each concurrent wave once; worker TTFT is not client queue latency.
+- Concurrent HTTP memory guards now queue packer stats to the socket-owner thread
+  between fully drained pipeline rounds. Mutating jobs still wait for idle.
+- Final singleEXO1 Qwen ready PID89648, preferences allAuto, helper/PL off,
+  pipeline1, self-tuning on. Auto applies an existing queued**KV4 trial** with
+  incumbentKV16; this is not the pinnedKV16 benchmark setting. No model reload
+  for label-only changes; web help refreshed with KEEP_WORKERS=1. An already
+  loaded worker may retain its older literal status-description string until
+  next normal load; UI labels/help use the completed result.
+- Orvena experiment and EXO2 packer stopped; matching Orvena target/head and
+  existing EXO2 Qwen kept. All raw prompts/settings/commits/CT times,12 errors,
+  and152-test+4subtest validation: [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
+  Screenshot capture still requires parent browser tools.

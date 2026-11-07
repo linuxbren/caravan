@@ -128,7 +128,7 @@ Open tasks for this rule:
 
 ## Next, in order
 
-> **Priority rule (Brenden, Days 15–17, Nov 3–6 2026):** performance first, flash second. Days 15–16 shipped the web UI, picker/placement, N-node Topology, self-tuning controls and four themes. Day 17 order: matching-target MTP (#16), adaptive prompt lookup (overlap_on=0.50), two-chat re-bench, then split N≥2 draft-block verification. **Measured:** EXO2 Orvena native MTP median36.95→54.13 Write tok/s,98.21% proposal acceptance on three small prompts (semantic checks pass, not bit-exact); Qwen adaptive repeated copy50.11→72.37 but mixed50.24→47.31, so default stays off. Single-Mini queue baseline50.51/50.48 server Write tok/s is not split overlap. Scoped worker ownership replaces name sweeps; all failures retained. Brenden approved the necessary Qwen reloads; final Auto/KV16 Qwen single on EXO1 restored. Live split two-chat/block performance still requires his OK. [Full raw record and reasoning](DAY17-BENCHMARKS.md). Next: approved split measurements, remaining settings/node polish and Terminal Delight; fused kernels and tensor parallel remain parked.
+> **Priority rule (Brenden, Days 15–17, Nov 3–6 2026):** performance first, flash second. Days15–16 shipped web UI, picker/placement, N-node Topology, self-tuning controls and four themes. Day17 measured matching-target MTP (#16), adaptive prompt lookup, two-chat scheduling, then approved split block verification. Orvena EXO2 native MTP36.95→54.13 Write tok/s,98.21% proposals accepted; incompatible with Qwen30B. Qwen copy PL50.11→72.37 but mixed50.24→47.31, so default stays off. Approved split: baseline aggregate N1/N2 **41.54/70.49tok/s**; helper N1/N2 **52.11/49.77tok/s** (N2 helper slower, experimental). Fixed socket-owner race exposed by live N2 tests; all failures retained. Final Qwen singleEXO1 ready, all Auto, pre-existing KV4 trial applied (benchmarks KV16). [Raw results/reasoning](DAY17-BENCHMARKS.md). Next: improve N2 draft overlap before promoting it, remaining settings/node polish and Terminal Delight; fused kernels/tensor parallel parked.
 
 1. ~~**Publish the rebased llama.cpp branch.**~~ **Done (2026-10-31).**
    The fork moved to `linuxbren/llama.cpp`. There, `caravan-patches` is
@@ -318,18 +318,16 @@ Open tasks for this rule:
     change options from Parker Brown's terminal. Integration guide for
     Parker: `docs/INTEGRATING.md`. Shape left open; see "Terminal Delight as
     Caravan's console" below for the options.
-16. **Experiment: put back the built-in guesser that MLX copies strip out.** *Day 17: matching Orvena/Qwen3.5-4B head available; EXO2-only experiment, not compatible with loaded Qwen3-30B-A3B. See [measurements and limits](DAY17-BENCHMARKS.md).*
-    *Experiment, for possible incorporation; research not started.* Some
-    models ship with extra "draft" layers (often called MTP, multi-token
-    prediction) that guess the next few words. MLX conversions usually drop
-    them. Idea: download only those layers from the original weights,
-    compress them to match the MLX copy, attach them in Caravan's loader, and
-    use them for guess-ahead instead of a separate helper model. Check
-    quality (12/12) and speed against today's helper-model guess-ahead.
-    Only works for models that ship these layers; which ones fit on the
-    Minis is still unknown. Inspired by
-    [Jason Haddix's post](https://x.com/Jhaddix/status/2117324109185188281)
-    (about 2.2x on DeepSeek V4.1 Flash on an M3 Ultra).
+16. **Built-in guesser/MTP experiment — Day17 implemented and measured.**
+    Orvena/Orvena-4B-MLX-4bit is a Qwen3.5-4B fine-tune; its omitted BF16 head
+    (15 tensors,230.025MiB) is attached by the native single-Mini greedy adapter.
+    Matching target fits EXO2 (measured peak2.848GB). **Not compatible** with
+    Qwen3-30B-A3B; do not attach across bases. EXO2 OFF/ON ABBA median Write
+    36.95→54.13tok/s,550/560 proposals accepted; all12 uncapped, small semantic
+    checks pass but code assertions differ (not bit-exact). UI option only when
+    a matching head is installed; caches remain16-bit, no N2/native combination.
+    Head extraction, provenance, vendor/source links and every failed run:
+    [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md). Target/head kept, worker stopped.
 17. **Experiment: fused kernels.** *Parked (Day 12, 2026-11-03).* Goal was
     to fuse small GPU steps so the GPU stops and starts less. Research:
     MLX 0.32 / mlx-lm 0.32 already use `mx.fast` for rms_norm, rope, SDPA
@@ -399,6 +397,9 @@ That's part of why a split chat writes 27–40% slower than one Mini
 simplest first:
 
 1. **Run several chats at once.** *Prototype Oct 31 night (`be19fe1`).*
+   Day17 Qwen split baseline aggregate41.54→70.49tok/s (N1→N2); concurrent
+   memory-guard RPC race fixed with owner-thread read jobs. See
+   [raw comparison](DAY17-BENCHMARKS.md#completed-approved-split-matrix--nov-6-10011004-pm-ct).
    While the lead finishes chat A's token, Packer 1 already works on chat
    B's, and they swap. Both Minis stay busy, so total throughput across
    chats rises; a single chat is no faster. Flag
@@ -413,7 +414,11 @@ simplest first:
 2. **Chunked reading.** Cut a long prompt into chunks and read them like
    an assembly line: Packer 1 reads chunk 2 while the lead reads chunk 1.
    Faster long-prompt reads (time to first token); writing is unchanged.
-3. **Guess ahead (speculative decoding).** *Shipped Nov 1 (auto-pair on
+3. **Guess ahead (speculative decoding).** Day17 k3 block verification/cache
+   fixes tested live on Qwen split: N1 aggregate41.54→52.11, but N2
+   70.49→49.77tok/s. N2 helper stays experimental; serial block verification
+   loses normal per-token overlap. All quality negatives and failures retained.
+   *Shipped Nov 1 (auto-pair on
    lead; `--no-split-draft` restores baseline).* A small draft on the lead
    guesses the next few tokens; one Thunderbolt round trip verifies them.
    Pairing table `agent/guessers.json` + vocab match/remap, ask-once
@@ -681,5 +686,8 @@ and an installed Qwen3-0.6B helper avoided any download. Initial N1 helper is
 faster; initial N2 both with/without helper stalled. Worker-owned stack evidence
 identified concurrent HTTP memory-guard and scheduler RPC reads on the same
 socket. Read-only stats now queue between drained rounds on the socket owner;
-mutating admin calls still wait for idle. Fresh live validation pending; all
-failures retained in [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
+mutating admin calls still wait for idle. Fixed-source matrix completed36/36
+uncapped replies: baselineN1/N2 aggregate41.54/70.49, helper52.11/49.77tok/s.
+N2 helper is slower and stays experimental. All count/sorting semantic checks
+pass; strict exact-format fails every mode (trailing spaces). Final singleEXO1
+Qwen ready, Auto queuedKV4 trial applied. All failures retained in [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md).
