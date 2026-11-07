@@ -33,6 +33,9 @@ disks on EXO1 and EXO2):
 
 Open tasks for this rule:
 
+- [x] **GGUF split in the web UI** (Day 17, Nov 6): one Mini or K Minis from
+  Settings, SSH-tunnelled rpc-server. Still open: GGUF downloads from the
+  picker, adopting a running llama-server after a web restart, CLI on SSH tunnels.
 - [ ] **GGUF stage 2** (Next, item 5): the packer loads its tensors from
   its own copy of the file, small tensors included, so the lead sends no
   weights at all.

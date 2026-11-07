@@ -3,6 +3,14 @@
 
 ## Unreleased
 
+- GGUF split from the web UI: Settings → Model lists GGUFs on the lead with
+  *Where it runs* (one Mini / split across K Minis, default smallest that fits).
+  llama.cpp RPC: rpc-server on each peer bound to 127.0.0.1, reached over SSH
+  tunnels; only the lead needs the file. Tracked PIDs, clean Stop, plain errors
+  with collapsed details. Qwen3 30B Q4_K_S split: 34.7 tok/s write vs 42.9 on
+  one Mini. CLI packer no longer binds rpc-server to 0.0.0.0 (allowlisting
+  gate, fails closed). See [WEB.md](WEB.md), [SECURITY.md](SECURITY.md).
+
 - Theme parity: Amber, Green, Meadow and Nebula now share one layout. Theme
   variables are scoped to `html[data-theme]` (they were leaking onto the
   theme-switch buttons), and Meadow/Nebula keep the shared monospace for controls

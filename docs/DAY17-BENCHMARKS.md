@@ -483,3 +483,33 @@ Served HTML contains the tested/negative-inclusive chip, settings API contains
 49.77tok/s slower-helper result. EXO2 has no worker, download or benchmark process.
 [`split-final-ui-proof.json`](../bench/results/day17/split-final-ui-proof.json)
 retains exact API evidence. Evidence-only commit follows; no further reload.
+
+## GGUF split vs one Mini from the web UI — Nov 6, 11:14–11:33 PM CT
+
+**Live numbers** (Qwen3-30B-A3B-Q4_K_S.gguf, 17.46 GB, EXO1+EXO2, llama.cpp
+b10819, 3 prompts × 3 runs, max_tokens 256, temp 0.6; raw rows in
+`bench/results/day17/gguf-split.jsonl`, script `bench/gguf_split_bench.py`):
+
+| CT | commit | placement | load s | Write tok/s median (min–max) | Read tok/s median | first token s median |
+|---|---|---|---|---|---|---|
+| 23:28 | 2dcca97 | split EXO1+EXO2 (first, cold) | 18.6 | 34.52 (34.20–35.08) | 96.06 | 0.255 |
+| 23:31 | 8007789 | split EXO1+EXO2 (warm) | 18.6 | 34.72 (34.13–35.09) | 105.51 | 0.256 |
+| 23:32 | 8007789 | one Mini EXO1 | 13.3 | 42.86 (41.61–43.66) | 111.99 | 0.241 |
+
+Split is ~19% slower than one Mini for a model that fits on one — the split is
+for models that don't fit (that's why one Mini is the default here). Manual
+check before wiring: 33.2 tok/s write through the SSH tunnel.
+
+**Failed runs (kept for the record).**
+- 23:14 CT, 8a29227: bench saw the old MLX "ready" before the switch began
+  (bench race, fixed); the load was then cut off by a web-server restart from
+  parallel work. 9 chats failed (409 / connection closed). Not a measurement.
+- 23:16 and 23:18 CT, d326874: `llama-server` aborted
+  `ggml-rpc.cpp:547: Failed to connect to 169.254.103.191:50052` (rc −6). The
+  peer listener never saw the connection; the same command run from an SSH
+  shell connected. Same symptom llama.cpp's own `transport.cpp` comment notes
+  for launchd-supervised processes (macOS local-network restrictions). A direct
+  rpc-server with no gate failed the same way, so it was not the allowlist gate.
+  Fixed by tunnelling over SSH to loopback (2dcca97).
+
+Details of the mechanism: [WEB.md](WEB.md#gguf-split-from-the-web-ui-day-17-nov-6-2026). Security: [SECURITY.md](SECURITY.md).
