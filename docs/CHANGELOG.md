@@ -4,6 +4,15 @@
 ## Unreleased
 
 ### Day 17 — performance experiments
+- EXO2 native-head run archived in full: 4 completed responses + 8 transport
+  failures after a concurrent UI model switch/stop killed the isolated worker.
+  One capped count pair was byte-identical, 36.49 vs 54.40 tok/s, but **not a
+  validated speedup/quality claim**. Full raw rows, CT times and collision
+  evidence: [Day 17 benchmark record](DAY17-BENCHMARKS.md).
+- Adaptive PL/two-chat reruns remain pending: original single-Mini worker cannot
+  enable these without reload; no defaults changed. Live split run still needs
+  approval. Independent EXO2 experiments currently require no concurrent UI
+  load/stop because worker cleanup includes broad process-name kills.
 - Matching-target native MTP adapter for dense Qwen3.5/Orvena, greedy-only and
   single Mini, behind `--native-mtp`; downloads head tensors directly from HF.
   Target-specific **Native MTP · test** choice appears only with a head installed.

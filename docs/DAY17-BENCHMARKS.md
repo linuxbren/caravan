@@ -32,7 +32,7 @@ prompt/settings and CT timestamp. No vendor figure is a Caravan measurement.
 
 ## Run log
 
-Pending live EXO2 tests. No fabricated before/after values.
+See the interrupted EXO2 run below. No completed on/off claim; all failures retained.
 
 ## Local validation
 
@@ -64,3 +64,62 @@ box system Python has no pytest. Python compile and browser-JS syntax pass.
   Adaptive prompt lookup explicitly pins one split chat and rejects Two chats=2;
   the existing N≥2 pipeline does not implement prompt lookup. This prevents a
   visible Adaptive selection from silently doing nothing.
+
+## EXO2 ABBA attempt interrupted by concurrent UI lifecycle — 9:01–9:02 PM CT
+
+Raw, complete requests/responses/errors:
+[`mtp-abba-interrupted.jsonl`](../bench/results/day17/mtp-abba-interrupted.jsonl)
+(12 rows: **4 responses, 8 transport errors**). Code commit **b892595**.
+Startup/runtime log: [`native-worker-interrupted.log`](../bench/results/day17/native-worker-interrupted.log).
+Status evidence: [`collision-status.json`](../bench/results/day17/collision-status.json).
+
+Model **Orvena/Orvena-4B-MLX-4bit**, native head BF16, EXO2-only on localhost
+**8294**; temperature 0, seed 17, max_tokens=192, no persistence/learning,
+fresh caches. Exact prompts and every setting are embedded in each raw row.
+Both Minis had Low Power Mode off; own downloads had completed and picker
+jobs were empty immediately before the run. A *new* picker download/model
+switch subsequently began during the benchmark, so this is **contaminated and
+incomplete**, not a headline performance result.
+
+| CT start | Mode / prompt | Write tok/s | TTFT s | Acceptance | Quality |
+|---|---|---:|---:|---:|---|
+| 9:01:33 PM | off / count | 36.4915 | 0.1373 | n/a | count-prefix check false: output capped at a partial final number |
+| 9:01:38 PM | off / code | 36.6132 | 0.1749 | n/a | Python syntax true; capped output contains only 1 of requested 3 tests |
+| 9:01:43 PM | off / quality | 35.7669 | 0.1740 | n/a | exact three-line answer true |
+| 9:01:44 PM | on / count | 54.3958 | 0.0934 | 1.0000 | byte-identical to off count, including same truncation |
+| 9:01:48 PM | on / code | n/a | n/a | n/a | connection reset |
+| 9:01:48 PM | remaining 7 requests | n/a | n/a | n/a | connection refused |
+
+Write speed formula `(completion_tokens - 1)/(total_s - ttft_s)`. Error rows'
+`wave_aggregate_tps: 0.0` is an initial harness sentinel (zero successful
+completions), **not a measured 0 tok/s inference rate**. No MTP on-mode quality
+probe completed. The solitary 36.49→54.40 count pair is not enough to claim
+speedup/unchanged quality. Next clean run should raise the token cap or shorten
+count/code prompts so quality isn't mis-scored by truncation.
+
+### Concurrent lifecycle evidence and stop condition
+
+Read-only status shows **UI switched to Orvena on EXO2 at 9:01:44 PM CT**, then
+**UI stopped workers at 9:02:06 PM CT**. Original EXO1 Qwen3 PID **73853** and our
+EXO2 experiment PID **97827** were no longer running. This worker did not call
+models/load or models/stop. It restarted only the web server, after confirming
+the old process had KEEP_WORKERS=1, and verified Qwen PID 73853 survived that
+restart before starting the experiment.
+
+The manager currently calls unscoped `pkill -f mlx_worker.py` in `_kill_packer`
+(and a broad local fallback in `_kill_lead`), so any web load/stop can terminate
+an independent experimental worker on EXO2. **Stopped further live tests**;
+coordinate the picker/browser worker before rerunning. Do not silently reload
+EXO1 against the no-touch constraint. Original Qwen state needs restoration by
+the coordinating parent, with awareness of any user-initiated model changes.
+
+- Adaptive prompt lookup: **not re-benchmarked**. Original worker was single,
+  helper-free, lacked a live settings mutation endpoint; enabling split PL would
+  require a reload. No default change justified. Remains off.
+- Two-chat mode: **not re-benchmarked**. Single-Mini worker has no split overlap;
+  original worker vanished during concurrent UI operations. No default change.
+- N≥2 split draft verification: corrected + unit-tested, **no live split run**.
+- Matching target and head kept on EXO2 at `~/.caravan/day17/Orvena-target`, with
+  a model-inventory symlink `~/.caravan/mlx-models/Orvena--Orvena-4B-MLX-4bit`.
+  No user model deleted. Experiment worker had already been terminated by the
+  concurrent lifecycle, so nothing else was killed/restarted by this worker.

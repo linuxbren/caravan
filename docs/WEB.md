@@ -242,3 +242,11 @@ health keep using `127.0.0.1`.
   awaits approval. Chips report actual capability when the worker exposes it.
 - Numbers, exact prompts/settings, negative results and CT times live in
   [DAY17-BENCHMARKS.md](DAY17-BENCHMARKS.md), not inferred from UI settings.
+
+### Day 17 concurrency caution
+The first EXO2-only MTP benchmark was interrupted by a separate UI load/stop.
+Current worker cleanup includes broad `pkill -f mlx_worker.py`, so do not run
+independent experiments while another browser/agent switches or stops models.
+[Raw data and state evidence](DAY17-BENCHMARKS.md) preserve all eight failed
+requests. Native MTP remains explicitly experimental; no complete quality gate
+or validated speed gain is claimed. PL and two-chat defaults are unchanged.
