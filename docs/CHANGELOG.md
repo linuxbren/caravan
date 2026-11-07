@@ -3,6 +3,11 @@
 
 ## Unreleased
 
+- Replace Settings benchmark-heavy help with plain explanations, measured and
+  scoped percentage hints, and clear mixed/negative results. Keep raw measurements
+  in docs; [WEB.md](WEB.md) maps each hint to its source row. Copy-only live-page
+  mirror avoids a web restart while a remote model is active.
+
 - Align Settings with Models/Topology: shared panels, compact controls and Close
   buttons, consistent type/spacing, stacked option rows, and a wider phone drawer.
   No settings or API behavior changes. Eight Chrome layout checks pass; before/after

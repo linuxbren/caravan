@@ -12,30 +12,28 @@ from pathlib import Path
 # id -> label, plain help, allowed values (first is "auto")
 OPTIONS = [
     {"id": "self_tune", "label": "Self-tuning",
-     "help": "Caravan tries settings on real chats and keeps the faster ones (saved per model).",
+     "help": "Caravan learns from your chats and remembers the faster settings for each MLX model.",
      "values": ["auto", "off"]},
     {"id": "guess_ahead", "label": "Guess-ahead",
-     "help": "A small helper guesses a block; the big model verifies it. Day 17 Qwen30B split aggregate: one chat 41.54→52.11 tok/s; two chats 70.49→49.77 (slower with helper). Experimental for two chats.",
+     "help": "A smaller model guesses upcoming words for the main MLX model to check. Needs a matching helper; up to ~33% faster writing one reply on a split model in our tests, but slower with two chats.",
      "values": ["auto", "on", "off", "mtp"]},
     {"id": "prompt_lookup", "label": "Prompt lookup (experimental)",
-     "help": "One chat, rewindable caches, overlap gate 0.50. Day 17 Qwen: repeated copy 50.11→72.37 tok/s, mixed prompts 50.24→47.31. Off by default.",
+     "help": "Reuse words from your prompt to help the MLX model write repeated text. Up to ~44% faster in our tests on repeated text, but slower on mixed chats; one chat at a time.",
      "values": ["auto", "off", "adaptive"]},
     {"id": "shared_start", "label": "Shared start (trim / rebuild)",
-     "help": "Reuse the already-read start of a repeated system prompt. Trims memory back to it, "
-             "or rebuilds it on both Minis for models that can't be trimmed (Gemma).",
+     "help": "Reuse the beginning of repeated system prompts so the model has less to read. MLX models only.",
      "values": ["auto", "on", "off"]},
     {"id": "pipeline_chats", "label": "Two chats",
-     "help": "Overlap stages in a split. Day 17 Qwen30B without helper: aggregate 41.54→70.49 tok/s (one→two chats). With helper, two chats is slower: 49.77 tok/s. A single Mini queues requests; no stage overlap.",
+     "help": "Let two chats use different Minis at the same time when an MLX model is split. Up to ~70% more combined output in our tests without a helper; no gain on one Mini, and slower with a helper.",
      "values": ["auto", "1", "2"]},
     {"id": "fuse_kernels", "label": "Fused kernels",
-     "help": "Experimental combined GPU steps (off by default).",
+     "help": "Combine small GPU steps when running an MLX model. Experimental — no meaningful speed gain in our tests; some models are incompatible.",
      "values": ["auto", "on"]},
     {"id": "kv_bits", "label": "Memory compression",
-     "help": "Store the chat memory in 8 or 4 bits instead of 16 (less RAM, slightly lower quality). "
-             "16 pins it uncompressed.",
+     "help": "Store MLX chat memory more compactly to save RAM; 16 leaves it uncompressed. May lower quality and slow reading; not supported by every model or Native MTP.",
      "values": ["auto", "16", "8", "4"]},
     {"id": "keepalive", "label": "GPU keep-warm",
-     "help": "Keep the lead's GPU warm while waiting on the other Mini.",
+     "help": "Keep the main GPU warm while it waits for another Mini. Split MLX models only; up to ~50% faster writing replies in our tests.",
      "values": ["auto", "off"]},
 ]
 _BY_ID = {o["id"]: o for o in OPTIONS}

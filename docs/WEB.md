@@ -428,3 +428,50 @@ Evidence on the box:
   control heights and overflow diagnostics (before includes the observed issues).
 
 No worker or server restart is needed; `index.html` is served from disk.
+
+### Plain Settings hints and source mapping (Nov 6, 2026, 10:52 PM CT)
+
+Option help is now plain copy: no development-day labels, named-model scores,
+raw token rates or benchmark jargon. Percentages are qualified observations, not
+promises for every model. Every hint below is paired with its source row; raw
+results remain unchanged in the linked records. Positive rates use
+`100 × (on / off − 1)`. “Combined output” is total output across both chats, not
+the speed of each individual reply.
+
+| Option | Final explanation and hint | Source row / qualification |
+| --- | --- | --- |
+| Self-tuning | Caravan learns from your chats and remembers the faster settings for each MLX model. | [Self-tuning for every option](#self-tuning-for-every-option--deep-optimize-day-15), per-model learning behavior; no isolated speed claim. |
+| Guess-ahead | A smaller model guesses upcoming words for the main MLX model to check. Needs a matching helper; up to ~33% faster writing one reply on a split model in our tests, but slower with two chats. | [DAY17-BENCHMARKS](DAY17-BENCHMARKS.md), final split matrix rows **N1 baseline/helper**, median Write 45.0429 → 60.0063 = +33.22%. **N2 baseline/helper** 39.8074 → 27.8321 = −30.08%; aggregate 70.4915 → 49.7656 = −29.40%. This is specifically one-chat split writing, not a general +33% promise or aggregate gain. |
+| Native MTP (only shown for a capable model) | Native MTP uses the model's built-in predictor instead of a separate helper. Up to ~46% faster writing replies in our tests; needs a matching MTP head and one chat at a time. | [DAY17-BENCHMARKS](DAY17-BENCHMARKS.md), **Completed native-head ABBA**, “All 6 responses per mode” row: 36.9483 → 54.1346 = +46.51%, conservatively abbreviated ~46%. Test had a matching native head, one chat, fresh 16-bit caches; output was not claimed bit-identical. |
+| Prompt lookup | Reuse words from your prompt to help the MLX model write repeated text. Up to ~44% faster in our tests on repeated text, but slower on mixed chats; one chat at a time. | [DAY17-BENCHMARKS](DAY17-BENCHMARKS.md), corrected adaptive prompt-lookup table: **Repeated passage**, 50.1149 → 72.3685 = +44.41%; **All 8 replies per mode**, 50.2398 → 47.3128 = −5.83%. No all-chat speedup implied. |
+| Shared start | Reuse the beginning of repeated system prompts so the model has less to read. MLX models only. | Existing option behavior / worker flags in the [options table](#optimizations); no isolated shared-start A/B number is used. Broader cache reuse results are not attributed to this toggle. |
+| Two chats | Let two chats use different Minis at the same time when an MLX model is split. Up to ~70% more combined output in our tests without a helper; no gain on one Mini, and slower with a helper. | [DAY17-BENCHMARKS](DAY17-BENCHMARKS.md), final split matrix **N1 baseline/N2 baseline**, aggregate 41.5415 → 70.4915 = +69.69%; with helper **N1/N2** 52.1061 → 49.7656 (slower). Single-Mini table: median Write 50.5126 / 50.4830; aggregate 46.0763 / 46.5226 (+0.97%, explicitly not a stage-overlap gain). |
+| Fused kernels | Combine small GPU steps when running an MLX model. Experimental — no meaningful speed gain in our tests; some models are incompatible. | [ROADMAP item 17](ROADMAP.md): one-Mini 23.75 → 23.7 and 50.6 → 50.8; split follow-up within about ±0.5%, some modes crashed on an incompatible model. No positive percentage marketed. |
+| Memory compression | Store MLX chat memory more compactly to save RAM; 16 leaves it uncompressed. May lower quality and slow reading; not supported by every model or Native MTP. | [BENCHMARKS, v1 → v2](BENCHMARKS.md#v1--v2-oct-31), “Other v2 measurements”: 8-bit reading 380 → 325 (−14.47%), still did not fit 16k. [CONFIGURATION](CONFIGURATION.md) `--kv-bits`: quantizes full-attention layers, not all RAM. [DAY17-BENCHMARKS](DAY17-BENCHMARKS.md): native mode rejects compressed caches. No invented measured RAM-saving percentage. |
+| GPU keep-warm | Keep the main GPU warm while it waits for another Mini. Split MLX models only; up to ~50% faster writing replies in our tests. | [BENCHMARKS, GPU keepalive](BENCHMARKS.md#gpu-keepalive-while-waiting-on-the-peer-oct-31-mlx), 4-bit table **Qwen3 30B off/on** 30.4 → 45.6 = +50%. Other rows show smaller gains; no single-Mini benefit claimed and no wattage measurement implied. |
+
+The server's `web_settings.OPTIONS` is the canonical option copy. An equal
+presentation-only `SETTINGS_HELP_COPY` mirror in `index.html` lets an already
+running UI show the new wording without restarting the web process or disrupting
+an active remote worker. A regression test requires exact equality. Only the
+rendered help text is overridden; identifiers, values, defaults, endpoints,
+settings payloads and runtime behavior are unchanged. The existing server process
+retains its imported help strings in `/api/settings` until its next normal
+restart, while the visible page uses the new text immediately after refresh.
+
+Fit check: all four themes at 390px and 1280px, including the longer native-MTP
+variant, using the same local layout fixtures documented above; no horizontal
+overflow. `/workspace/dbg/shots/settings-hints.png` is the actual 390px Meadow
+upper view; `settings-hints-bottom.png` shows the remaining options. Fixture token
+status is not a report of the user's actual HF-token status. No worker or web
+restart was needed.
+
+Verification record (base `2842988` plus hint patch): full suite
+`PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests` passed **348 tests
+in 31.670s**, exit 0, Nov 6, 2026, **10:53:47 PM CT**. Four focused hint tests
+also pass, including copy equality, qualified gains and retained negative results.
+An earlier concurrent-tree run at 10:50:56 PM CT ran 347 tests in 31.660s with
+one error, `test_resume_retry.Retry.test_retries_network_then_succeeds`,
+`KeyError: 'retry'`, while picker retry code was being edited; after the picker
+commit and restored hint edits, the final full run is green. No benchmark rerun
+was performed or needed for this copy-only change.
