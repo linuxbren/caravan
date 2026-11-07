@@ -513,3 +513,24 @@ check before wiring: 33.2 tok/s write through the SSH tunnel.
   Fixed by tunnelling over SSH to loopback (2dcca97).
 
 Details of the mechanism: [WEB.md](WEB.md#gguf-split-from-the-web-ui-day-17-nov-6-2026). Security: [SECURITY.md](SECURITY.md).
+
+
+## GGUF robustness and CLI (Nov 6, 23:40–23:55 CT; Nov 7 download)
+Raw rows: `bench/results/day17/gguf-robustness.jsonl` (26 lines, script
+`bench/gguf_robustness.py`), commit afcf070 unless noted.
+
+- 5 cycles split → MLX → one Mini → split: **20/20 steps OK**. Typical: split
+  load ~24.6 s, Write ~34–36 tok/s; MLX Qwen3 30B 4-bit ~22.9 s, ~51 tok/s;
+  GGUF one Mini 12.5 s, ~43–44 tok/s.
+- Stop mid-load at `starting_packer` and `starting_lead`: idle "Load stopped.",
+  0 processes on both Minis.
+- Kill EXO2 rpc-server mid-chat: idle "Lost EXO2 during the split. Load it
+  again.", 0 processes; first run the chat connection dropped, rerun at
+  2e1f6b5 (23:55) chat got a plain HTTP 502.
+- Re-attach after web restart: adopted llama-server pid 16411 + 1 tunnel,
+  chat 34.47 tok/s. With the tunnel killed before the restart: tunnel reopened
+  but llama-server had already aborted; watchdog → idle, plain error, no orphans.
+- CLI split (`agent/gguf_split_cli.py`, SSH tunnels): ready 13.0 s, Write
+  34.30 / 34.49 / 34.66 tok/s, split 20.0:16.1; Stop → 0 processes.
+- Picker GGUF download (b2b2c26): 807.7 MB in 49 s (~13 MB/s). Stop/Resume
+  works but Resume restarts from 0 % (74 s). File deleted after.

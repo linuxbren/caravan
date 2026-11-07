@@ -21,15 +21,15 @@ Verified Nov 6, 11:30 PM CT, with the split loaded and serving:
 - From EXO1 to EXO2's Thunderbolt 169.254.103.191:50052 and LAN: refused.
 - Split still ran: 34.7 tok/s write (DAY17-BENCHMARKS.md).
 
-**CLI agent (`caravan_agent.py`, packer role).** `supervisor.build_tail_command`
-no longer uses 0.0.0.0. It runs `agent/rpc_gate.py`: rpc-server on
-127.0.0.1:50053 and a small stdlib gate on this Mini's Thunderbolt address
-(first 169.254.x.x, or `CARAVAN_RPC_BIND` with a warning) port 50052 that
-accepts only IPs in `CARAVAN_RPC_ALLOW` (comma list of peer addresses) and
-closes everything else. It fails closed: no link address, an empty allowlist,
-or 0.0.0.0 → refuses to start with a clear error. Unit-tested (allow/refuse
-end to end on loopback); a full live CLI split through the gate was **not**
-re-run tonight. Moving the CLI to the SSH-tunnel design is the simpler next
-step.
+**CLI agent (`caravan_agent.py`, `agent/gguf_split_cli.py`).** Same design as
+the web UI, one mechanism: the packer runs rpc-server on `127.0.0.1:50052`
+only (`supervisor.build_tail_command`), and the lead opens SSH tunnels
+`127.0.0.1:5006i → peer 127.0.0.1:50052` (`CARAVAN_RPC_SSH_USER`). The old
+`agent/rpc_gate.py` allowlist gate was removed (Nov 6, afcf070): SSH keys are
+the allowlist, and nothing listens on a network address. Live CLI split
+Nov 6 ~23:40 CT: ready 13.0 s, Write 34.30 / 34.49 / 34.66 tok/s, split
+20.0:16.1 from free RAM; Stop left 0 processes on both Minis. Non-peer checks
+re-run after: EXO1 → EXO2 Thunderbolt/LAN :50052 refused; Omarchy → EXO2
+LAN/Tailscale/Thunderbolt :50052 refused; EXO2 `lsof` shows 127.0.0.1 only.
 
 Not changed: llama.cpp stays at b10819 on both Minis (matched upgrade later).

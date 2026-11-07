@@ -408,8 +408,28 @@ allowed a GGUF split.
   first-token line as MLX.
 - MLX-only Settings (guess-ahead MTP, keep-warm, KV bits…) are ignored by the
   GGUF path; llama-server runs with `-c 8192 -ngl 999 -fa on --jinja`.
-- Picker search: GGUF fit now allows a split across all online Minis; GGUF
-  *downloads* from the picker are still not wired (message points to Settings).
+- Picker search: GGUF fit allows a split across all online Minis.
+- **Picker downloads (Nov 7, b2b2c26).** Picking a GGUF quant downloads that one
+  file to the lead Mini only (`~/.caravan/models/<owner>--<repo>/`): llama.cpp
+  sends each peer its share at load, so peers need no copy. It reuses the
+  regular job system (network-byte progress, Stop, Resume, auto-retry); the
+  placement is fixed to "GGUF to EXO1 · runs on one Mini or split at load" and
+  where it runs is chosen in Settings. A finished download auto-loads only
+  when nothing is loaded (via its `load_id`, `gguf/<file stem>`); otherwise it
+  offers Load. Live test 00:00–00:03 CT Nov 7, Llama-3.2-1B-Instruct-Q4_K_M.gguf
+  (807,694,464 B): 49 s at ~13 MB/s, listed as `gguf/Llama-3.2-1B-Instruct-Q4_K_M`,
+  worker stayed idle (API path, no auto-load). Stop at 19 % → cancelled, no
+  fetch process left; **Resume restarted from 0 %** (the partial was 16 KB after
+  Stop — hf's single-file partial isn't kept), finished in 74 s. Known limit.
+  Test file deleted afterwards.
+- **Hardening (Nov 6 late, afcf070 / 2e1f6b5).** MLX-only Settings rows are
+  labelled and disabled when a GGUF is selected (theme parity 24/24). After a
+  web restart (KEEP_WORKERS) the server re-attaches to llama-server, tunnels
+  and rpc-servers from `~/.caravan/web-ui/gguf.json`, reopening dead tunnels.
+  `--tensor-split` comes from each Mini's live free RAM (e.g. 20.3:15.6). A
+  watchdog cleans everything up and goes idle ("Lost EXO2 during the split.
+  Load it again.") if llama-server dies; chat answers a plain 502. Topology
+  labels Minis by name ("EXO1 · lead", "EXO2").
 
 **Live numbers** (Qwen3-30B-A3B-Q4_K_S.gguf, 17.46 GB, EXO1+EXO2, llama.cpp
 b10819, 3 prompts × 3 runs, max_tokens 256, temp 0.6; raw rows in
