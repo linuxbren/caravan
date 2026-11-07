@@ -330,6 +330,9 @@ class WorkerManager:
         self._kill_gguf()
         self._kill_lead()
         self._kill_packer()
+        # _kill_gguf clears the gguf block; put this load's back for Topology.
+        self._set(backend="llama", gguf={"nodes": [n.get("id") for n in nodes],
+                                         "labels": [n.get("label") for n in nodes], "mode": mode})
         time.sleep(1.0)
         meta = {"lead_pid": None, "peers": [], "model": str(path), "nodes": [n.get("id") for n in nodes]}
         rpc = []
