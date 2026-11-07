@@ -2875,6 +2875,24 @@
             return;
           }
         } catch (e) {
+          // The web server restarted (job ids are in memory). The fetch keeps running on
+          // the Minis and is re-listed as a live-* job: pick that up instead of freezing.
+          if (/unknown job|not found|404/i.test(e.message || "")) {
+            $("pickerStatus").textContent = "Web server restarted; re-attaching to the running download…";
+            await new Promise((r) => setTimeout(r, 3000));
+            try {
+              const all = await api("/api/picker/jobs");
+              let nj = ((all && all.jobs) || []).filter((x) => x.repo_id === q.repo_id && x.id !== id)
+                .sort((a, b) => (b.t || 0) - (a.t || 0))[0];
+              if (!nj) {
+                const lf = await api("/api/picker/live-fetches");
+                nj = ((lf && lf.jobs) || []).find((x) => x.repo_id === q.repo_id);
+              }
+              if (nj) { state.job = nj; showJob(); pollJob(nj.id, q); return; }
+            } catch (_) {}
+            if (state.job) { state.job = { ...state.job, status: "error", error: "tracking lost after a web restart; files on disk are kept, press Resume to finish" }; showJob(); }
+            return;
+          }
           $("pickerStatus").textContent = e.message;
           return;
         }
