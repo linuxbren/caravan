@@ -204,6 +204,9 @@
   /* Themes change colour only: chat text may use the theme face, controls keep shared metrics. */
   html[data-theme="nebula"] .msg { font-family: var(--sans); }
   html[data-theme="nebula"] *, html[data-theme="nebula"] *::before { text-shadow: none !important; }
+  /* parity: drawers keep only their inner edge border, like Amber/Green (a full border shifted drawer contents 1px) */
+  html[data-theme="nebula"] .drawer-left.drawer-left { border-width: 0 1px 0 0 !important; }
+  html[data-theme="nebula"] .drawer.drawer { border-width: 0 0 0 1px !important; }
   html[data-theme="nebula"] .card,
   html[data-theme="nebula"] .chat.tube,
   html[data-theme="nebula"] .drawer,
@@ -296,6 +299,9 @@
   /* Themes change colour only: chat text may use the theme face, controls keep shared metrics. */
   html[data-theme="meadow"] .msg { font-family: var(--sans); }
   html[data-theme="meadow"] *, html[data-theme="meadow"] *::before { text-shadow: none !important; }
+  /* parity: drawers keep only their inner edge border, like Amber/Green (a full border shifted drawer contents 1px) */
+  html[data-theme="meadow"] .drawer-left.drawer-left { border-width: 0 1px 0 0 !important; }
+  html[data-theme="meadow"] .drawer.drawer { border-width: 0 0 0 1px !important; }
   html[data-theme="meadow"] .card,
   html[data-theme="meadow"] .chat.tube,
   html[data-theme="meadow"] .drawer,
