@@ -484,9 +484,52 @@ class GgufUi(unittest.TestCase):
             self.assertEqual(out['stages'][0]['on_disk_bytes'],100)
             self.assertIn('complete GGUF',out['note']);self.assertFalse(out['ready'])
             self.assertEqual(out['entry']['gguf_shares'],[1,1,1])
+            self.assertIs(out['entry']['gguf_peer_files_ready'],False)
 
 
 
+
+
+class GgufVerifiedLaunch(unittest.TestCase):
+    def test_preview_marks_only_safe_complete_peer_files(self):
+        import web_gguf_files as WGF
+        _,_,nodes=model(3);nodes[-1]['host']='local';plan=GgufRanges().plan()
+        app=types.SimpleNamespace(configured_nodes=lambda:nodes,nodes=lambda:{'nodes':nodes})
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d)/'model.gguf';path.write_bytes(b'x'*100)
+            response=types.SimpleNamespace(returncode=0,stdout=json.dumps(dict(downloads=[],download_bytes=0,required_bytes=8,on_disk_bytes=8,allocated_bytes=8,not_needed_for_plan=[])))
+            with mock.patch.object(WGF,'source_manifest',return_value=plan),mock.patch.object(WF,'shell',return_value=response):
+                out=WGF.preview(app,dict(id='gguf/m',lead_path=str(path)),dict(repo_id='org/gguf',gguf_file='model.gguf',counts=[1,1,1]))
+                self.assertTrue(out['ready']);self.assertIs(out['entry']['gguf_peer_files_ready'],True)
+                nodes[0]['ram']['available_gb']=1
+                out=WGF.preview(app,dict(id='gguf/m',lead_path=str(path)),dict(repo_id='org/gguf',gguf_file='model.gguf',counts=[1,1,1]))
+                self.assertFalse(out['ready']);self.assertIs(out['entry']['gguf_peer_files_ready'],False)
+
+    def manager(self):
+        from web_workers import WorkerManager
+        mgr=WorkerManager.__new__(WorkerManager);mgr._note=mock.Mock();mgr._check_cancel=mock.Mock();mgr._ssh_node=mock.Mock(return_value=types.SimpleNamespace(stdout='NO_LOCAL_COPY'))
+        return mgr
+
+    def test_verified_own_files_never_scan_full_peer_gguf(self):
+        mgr=self.manager();meta={};peers=[dict(id=f'n{i}',label=f'Mini {i}') for i in range(3)]
+        mgr._seed_gguf_peers(dict(gguf_peer_files_ready=True),Path('/missing/full.gguf'),[1,1,1,1],peers,meta)
+        mgr._ssh_node.assert_not_called();self.assertEqual(meta['file_mode'],'balance-verified-peer-cache');self.assertNotIn('seed',meta)
+
+    def test_legacy_load_keeps_optional_full_peer_seed(self):
+        self.legacy({})
+
+    def test_truthy_nonboolean_flag_cannot_skip_legacy_seed(self):
+        self.legacy(dict(gguf_peer_files_ready='true'))
+
+    def legacy(self,entry):
+        import gguf_split
+        mgr=self.manager();meta={};peers=[dict(id='p',label='Peer',repo='~/cv3')]
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d)/'model.gguf';path.write_bytes(b'x'*100)
+            with mock.patch.object(gguf_split,'seed_command',return_value='LEGACY_SEED') as seed:
+                mgr._seed_gguf_peers(entry,path,[1,1],peers,meta)
+            seed.assert_called_once_with(path.name,100,[1,1],1,repo='~/cv3')
+        mgr._ssh_node.assert_called_once();self.assertNotIn('file_mode',meta)
 
 
 class FinalStorageRegressions(unittest.TestCase):

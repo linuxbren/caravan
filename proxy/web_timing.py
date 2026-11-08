@@ -12,6 +12,7 @@ as browser ≈ mini - offset, so the UI can line up "you hit send" with
 """
 from __future__ import annotations
 
+import math
 from statistics import median
 from typing import Iterable, Optional, Sequence
 
@@ -124,6 +125,12 @@ def reply_stats(usage: dict, wall_s: Optional[float] = None) -> dict:
             return None
         return round(n / secs, 2)
 
+    def measured_rate(key, n, secs):
+        value = caravan.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0:
+            return round(value, 2)
+        return rate(n, secs)
+
     # Writing speed: completion tokens over (total - ttft), matching how
     # Day 12 scoreboards measure decode. Fall back to total if ttft missing.
     write_s = None
@@ -164,8 +171,8 @@ def reply_stats(usage: dict, wall_s: Optional[float] = None) -> dict:
         "ttft_s": ttft_s,
         "prefill_s": prefill_s,
         # Read speed: prompt tokens / prefill; time-to-first-token when prefill isn't reported.
-        "read_tok_s": rate(pt, prefill_s if prefill_s is not None else ttft_s),
-        "write_tok_s": rate(ct, write_s),
+        "read_tok_s": measured_rate("read_tok_s", pt, prefill_s if prefill_s is not None else ttft_s),
+        "write_tok_s": measured_rate("write_tok_s", ct, write_s),
         "how": how,
         "shared_start": shared_hit,
         "guess_ahead": guess,

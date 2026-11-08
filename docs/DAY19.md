@@ -921,3 +921,34 @@ total 0.255 s, 32.79 tok/s; agent-crash reply: TTFT 0.077 s, total 0.262 s,
 32.43 tok/s. These are single short checks, not medians. All temporary labels
 were booted out and worker plans archived under day19-live/retired-service-plans;
 no permanent LaunchAgent was installed and no reboot was attempted.
+
+
+GGUF live integration exposed an unnecessary legacy step: even after Balance
+verified all peer-only files, reload scanned the peer's already-existing full
+GGUF and seeded a padded layer on either side. The native assignment itself
+was correct: preview [19,37), legacy padded seed [18,37). No missing model layer
+or wrong answer was observed. The initial 12.094 s load included **5.8 s** of
+this optional scan; it reported 55 already-cached tensors / 940,038,144 B,
+versus the exact own-files requirement of 901,994,496 B.
+
+A freshly verified, safe and complete Balance plan now explicitly chooses the
+peer-only tensor-cache path and skips the legacy full-GGUF scan/padded seed.
+Normal legacy loads keep their compatible optional seeding. The lead still
+requires the complete GGUF; small tensors and real cache misses can cross RPC.
+Four regressions cover complete/unsafe readiness gating, N-peer no-full-copy
+launch, legacy fallback, and rejecting a truthy nonboolean flag.
+
+
+The first new own-file launcher test run caught a missing local import in the
+extracted legacy-seed helper (two regressions failed); corrected before commit.
+A tenth live issue affected **reported GGUF speed**, not generated answers:
+the UI divided seven output tokens by native timing for six decode intervals
+(45.22 displayed vs llama.cpp **38.75 tok/s**) and divided all 38 warm prompt
+tokens by the one-uncached-token prefill time. The proxy/UI now preserve native
+`predicted_per_second` and `prompt_per_second`, with finite/nonnegative checks
+and the existing calculation as fallback. Native cold/warm and invalid-rate
+regressions added. All benchmark GGUF speed figures use native rates, not the
+inflated pre-fix display. GGUF `ttft_s` remains a prefill-time estimate; it is
+not a measured end-to-end streaming first-token latency.
+
+Validation after GGUF integration/telemetry fixes: **663 passed, 39.501 s**.

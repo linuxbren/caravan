@@ -78,6 +78,6 @@ p=json.loads(sys.argv[2]); print(json.dumps(status(p)))
     out = dict(format='gguf', repo_id=repo, model_id=entry['id'], counts=counts,
                node_ids=[n['id'] for n in nodes], mode='auto' if body.get('counts') is None else 'manual',
                margin_gb=1.75, safe=safe, ready=ready, stages=stages, file_requests=requests,
-               entry=dict(entry, placement={'mode':'split','node_ids':[n['id'] for n in nodes]}, gguf_shares=counts),
+               entry=dict(entry, placement={'mode':'split','node_ids':[n['id'] for n in nodes]}, gguf_shares=counts, gguf_peer_files_ready=ready),
                note='GGUF: shares, not exact MLX layer counts. Lead keeps the complete GGUF; peers fetch only assigned tensors >10 MiB. Smaller tensors still cross RPC. Retained cache files are never deleted. First source verification can take a while.')
     return out

@@ -442,6 +442,53 @@ class WorkerManager:
                 + " → split " + ":".join(str(x) for x in shares)
                 + ("" if all(f for f in free) else " (equal: free RAM unknown)"))
         meta["shares"] = shares
+        self._seed_gguf_peers(entry, path, shares, peers, meta)
+        try:
+            import gguf_tune as GT
+            tune = (dict(entry["tune_override"]) if isinstance(entry.get("tune_override"), dict)
+                    else GT.best_tune(path, 1 + len(rpc)))
+        except Exception:  # noqa: BLE001 - tuning is optional
+            tune = {}
+        if tune:
+            self._note(f"GGUF tuned settings from Optimize now: {tune}")
+        args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares, tune=tune)
+        self._set(status="starting_lead", packer_pid=None)
+        seeded = bool(meta.get("seed"))
+        if not rpc:
+            self._note("starting llama-server on EXO1 (one Mini)")
+        elif meta.get("file_mode") == "balance-verified-peer-cache":
+            self._note("starting llama-server using verified peer-only tensor caches; small tensors and cache misses still cross RPC")
+        elif seeded:
+            self._note("starting llama-server on EXO1; peers with their own copy load from disk, others get their share over the link")
+        else:
+            self._note("starting llama-server on EXO1, peers get their share over the link (first load copies it, later loads use the peer cache)")
+        log_path = self._lead_log()
+        log_path.write_text("")
+        lf = open(log_path, "ab", buffering=0)
+        self._worker_node = None
+        self._lead_proc = subprocess.Popen(args, stdout=lf, stderr=subprocess.STDOUT,
+                                           start_new_session=True)
+        meta["lead_pid"] = self._lead_proc.pid
+        self._write_gguf_meta(meta)
+        self._set(lead_pid=self._lead_proc.pid)
+        t0 = time.time()
+        self._wait_lead_ready(timeout=1200)
+        self._check_cancel()
+        self._note(f"loaded in {time.time() - t0:.1f}s")
+        # GGUF Optimize now reads this (it refused "needs a GGUF model loaded" before).
+        self._loaded_entry = {k: v for k, v in entry.items() if k != "tune_override"}
+        self._set(status="ready", split=bool(peers))
+        self._note("ready")
+        self._start_gguf_watch(meta)
+
+    def _seed_gguf_peers(self, entry, path, shares, peers, meta):
+        import gguf_split as G
+        # A fresh Balance reload has already checked each peer's assigned files.
+        # Do not scan a legacy full peer GGUF or seed its padded extra layers.
+        if entry.get("gguf_peer_files_ready") is True:
+            meta["file_mode"] = "balance-verified-peer-cache"
+            self._note("using each Mini's verified assigned tensor cache; no complete peer GGUF needed")
+            return
         for i, n in enumerate(peers):
             # GGUF stage 2: a peer with its own copy fills its rpc cache from disk.
             self._check_cancel()
@@ -461,40 +508,6 @@ class WorkerManager:
             elif r is not None:
                 self._note(f"{name}: no complete local {path.name}; existing RPC tensor cache is still used, "
                            "and cache misses / small tensors may cross the link")
-        try:
-            import gguf_tune as GT
-            tune = (dict(entry["tune_override"]) if isinstance(entry.get("tune_override"), dict)
-                    else GT.best_tune(path, 1 + len(rpc)))
-        except Exception:  # noqa: BLE001 - tuning is optional
-            tune = {}
-        if tune:
-            self._note(f"GGUF tuned settings from Optimize now: {tune}")
-        args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares, tune=tune)
-        self._set(status="starting_lead", packer_pid=None)
-        seeded = bool(meta.get("seed"))
-        self._note(("starting llama-server on EXO1; peers with their own copy load from disk, "
-                    "others get their share over the link" if seeded else
-                    "starting llama-server on EXO1, peers get their share over the link "
-                    "(first load copies it, later loads use the peer cache)") if rpc
-                   else "starting llama-server on EXO1 (one Mini)")
-        log_path = self._lead_log()
-        log_path.write_text("")
-        lf = open(log_path, "ab", buffering=0)
-        self._worker_node = None
-        self._lead_proc = subprocess.Popen(args, stdout=lf, stderr=subprocess.STDOUT,
-                                           start_new_session=True)
-        meta["lead_pid"] = self._lead_proc.pid
-        self._write_gguf_meta(meta)
-        self._set(lead_pid=self._lead_proc.pid)
-        t0 = time.time()
-        self._wait_lead_ready(timeout=1200)
-        self._check_cancel()
-        self._note(f"loaded in {time.time() - t0:.1f}s")
-        # GGUF Optimize now reads this (it refused "needs a GGUF model loaded" before).
-        self._loaded_entry = {k: v for k, v in entry.items() if k != "tune_override"}
-        self._set(status="ready", split=bool(peers))
-        self._note("ready")
-        self._start_gguf_watch(meta)
 
     def _check_cancel(self):
         if getattr(self, "_gguf_cancel", False):

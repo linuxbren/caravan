@@ -80,6 +80,25 @@ class Commands(unittest.TestCase):
         self.assertEqual(u["caravan"]["total_s"], 1.2)
         self.assertEqual(u["completion_tokens"], 50)
 
+    def test_native_rates_preserved_for_cold_and_cached_prompts(self):
+        from web_timing import reply_stats
+        for cached,prompt_n,pms,read,write in [(0,38,146.569,259.2635,38.74617),(37,1,24.482,40.8463,42.46735)]:
+            with self.subTest(cached=cached):
+                usage={"prompt_tokens":38,"completion_tokens":7,"prompt_tokens_details":{"cached_tokens":cached}}
+                timings={"prompt_n":prompt_n,"prompt_ms":pms,"prompt_per_second":read,"predicted_n":7,"predicted_ms":154.854,"predicted_per_second":write}
+                stats=reply_stats(G.usage_from_timings(usage,timings))
+                self.assertEqual(stats["read_tok_s"],round(read,2));self.assertEqual(stats["write_tok_s"],round(write,2))
+                self.assertEqual(stats["prompt_tokens"],38);self.assertEqual(stats["cached_tokens"],cached)
+
+    def test_invalid_native_rates_use_existing_timing_fallback(self):
+        from web_timing import reply_stats
+        for bad in [float("nan"),float("inf"),-1,True,"fast"]:
+            with self.subTest(rate=bad):
+                usage=G.usage_from_timings({"prompt_tokens":10},{"prompt_n":10,"prompt_ms":200,"predicted_n":50,"predicted_ms":1000,"prompt_per_second":bad,"predicted_per_second":bad})
+                stats=reply_stats(usage);self.assertEqual(stats["read_tok_s"],50);self.assertEqual(stats["write_tok_s"],50)
+                usage["caravan"].update(read_tok_s=bad,write_tok_s=bad)
+                self.assertEqual(reply_stats(usage)["write_tok_s"],50)
+
     def test_scan_skips_shards_and_mmproj(self):
         with tempfile.TemporaryDirectory() as d:
             for n in ("a.gguf", "mmproj-a.gguf", "b-00002-of-00003.gguf", "b-00001-of-00003.gguf"):

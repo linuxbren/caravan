@@ -235,6 +235,15 @@ def usage_from_timings(usage: Optional[dict], timings: Optional[dict]) -> Option
     if pms is not None and dms is not None:
         cv.setdefault("total_s", round((pms + dms) / 1000.0, 4))
     cv.setdefault("how", "llama.cpp")
+    # Native decode excludes the first token's prefill interval; warm prompt
+    # rates count only uncached tokens. Dividing total usage by these times
+    # inflates short/warm runs, so preserve llama.cpp's measured rates.
+    import math
+    for key, source in (("read_tok_s", "prompt_per_second"),
+                        ("write_tok_s", "predicted_per_second")):
+        value = timings.get(source)
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0:
+            cv.setdefault(key, round(value, 2))
     u["caravan"] = cv
     return u
 
