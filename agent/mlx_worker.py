@@ -3043,6 +3043,24 @@ class Engine:
 
 
 
+def _timing_line(info):
+    """Per-reply timing summary, matching the UI stats line:
+    Read X tok at Y tok/s . Write Z tok at W tok/s . first token A s . total B s"""
+    pt = int(info.get("prompt_tokens") or 0)
+    cached = int(info.get("cached_tokens") or 0)
+    n = int(info.get("completion_tokens") or 0)
+    ttft = float(info.get("ttft_s") or 0.0)
+    pre = float(info.get("prefill_s") or ttft or 0.0)
+    total = float(info.get("total_s") or 0.0)
+    new = max(pt - cached, 0)
+    read_tps = new / pre if pre > 0 else 0.0
+    gen_s = total - ttft
+    write_tps = (n - 1) / gen_s if n > 1 and gen_s > 0 else 0.0
+    mode = "split" if info.get("split") else "single"
+    return (f"timing ({mode}): read {pt} tok ({cached} cached) at {read_tps:.1f} tok/s, "
+            f"write {n} tok at {write_tps:.2f} tok/s, first token {ttft:.2f} s, total {total:.2f} s")
+
+
 def _think_label(body):
     """Thinking setting a request asked for, for the log: on / off / effort / default."""
     t = body.get("thinking")
@@ -3377,6 +3395,11 @@ def make_handler(engine: "Engine"):
                         f"{_ntok(engine.tokenizer, ''.join(seen['r']))} tok, answer "
                         f"{_ntok(engine.tokenizer, ''.join(seen['c']))} tok "
                         f"(of {info['completion_tokens']} generated, max {body.get('max_tokens')})")
+                except Exception:
+                    pass
+            if info is not None:
+                try:
+                    log(f"session {key}: " + _timing_line(info))
                 except Exception:
                     pass
             if info is not None and guard_meta:
