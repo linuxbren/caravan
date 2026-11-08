@@ -26,5 +26,5 @@
  100.0s  So the current llama.cpp stays the default for now.
  104.0s  Every reply now logs first-token time and write speed.
  108.0s  Brenden's test: 31 replies, about 12 tok/s, no gibberish.
- 112.0s  486 tests pass. Released as day18-2026-11-07.
+ 112.0s  487 tests pass. Out now as the Day 18 release.
  116.0s  Next: a Balance control for splits. That was Day 18.

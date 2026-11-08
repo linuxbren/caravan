@@ -37,7 +37,7 @@ S = [
  ("__llama__", "So the current llama.cpp stays the default for now."),
  ("__test__", "Every reply now logs first-token time and write speed."),
  ("__test__", "Brenden's test: 31 replies, about 12 tok/s, no gibberish."),
- ("__test__", "486 tests pass. Released as day18-2026-11-07."),
+ ("__test__", "487 tests pass. Out now as the Day 18 release."),
  (TITLE, "Next: a Balance control for splits. That was Day 18."),
 ]
 
@@ -53,7 +53,7 @@ def title_img():
         logo = Image.open(os.path.join(SH, "logo-tagline.png")).convert("RGBA")
     im.paste(logo, ((W - logo.width)//2, (H - BAND - logo.height)//2 - 30), logo)
     f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 34)
-    d = ImageDraw.Draw(im); t = "Day 18 · Nov 7, 2026"
+    d = ImageDraw.Draw(im); t = os.environ.get("VIDEO_SUBTITLE", "Day 18")  # rule: no dates on screen
     d.text(((W - d.textlength(t, font=f))//2, (H-BAND)//2 + 60), t, font=f, fill=(220, 210, 190))
     return im
 
@@ -83,7 +83,7 @@ def lock_img():
         ("Omarchy -> exo1:50052", "refused", G),
         ("EXO1 -> EXO2 Thunderbolt/LAN", "refused (uses SSH tunnel)", G),
         ("Split still ran", "34.7 tok/s write", Y)],
-        "Recorded Nov 6, 2026. Source: docs/SECURITY.md, docs/DAY17.md")
+        "Source: docs/SECURITY.md, docs/DAY17.md")
 
 def dl_img(): return card("Downloads and loading", [
  ("Resume", "HTTP Range, mid-file", G), ("  verified live", "EXO1 and EXO2", G),
@@ -126,14 +126,17 @@ def llama_img(): return card("llama.cpp 6a1a922 (old) vs 76a67730 (new), write t
 def test_img(): return card("Timing log and Brenden's live test", [
  ("Per-reply log line", "first token + write tok/s", G),
  ("  test chat", "0.51 s first, 14.05 tok/s", G),
- ("Brenden's session, 16/16", "31 replies, 7:27-7:46 PM CT", G),
+ ("Brenden's session, 16/16", "31 replies in about 19 min", G),
  ("  average write speed", "11.96 tok/s (~13.7 early)", G),
  ("  gibberish / 507s", "none", G),
- ("  lead Mini peak", "13.07 GB", Y)], "486 tests OK. Release day18-2026-11-07")
+ ("  lead Mini peak", "13.07 GB", Y)], "487 tests OK. Day 18 release")
 CARDS = {"__dl__": dl_img, "__out__": out_img, "__split__": split_img, "__pick__": pick_img,
  "__gguf__": gguf_img, "__llama__": llama_img, "__test__": test_img}
 
 def check():
+    import re
+    DATE = re.compile(r"20\d\d|\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d")
+    for _, c in S: assert not DATE.search(c), ("date on screen", c)
     d = ImageDraw.Draw(Image.new("RGB", (1, 1)))
     for i, (_, c) in enumerate(S):
         l, t, r, b = d.textbbox((0, 0), c, font=FONT)
