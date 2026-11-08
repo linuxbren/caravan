@@ -14,13 +14,18 @@ KNOBS = (("guess_ahead", "guess_ahead", False),
          ("kv_bits", "kv_bits", True),
          ("fuse_kernels", "fuse_kernels", True),
          ("keepalive", "keepalive", True),
-         (None, "packer_layers", True))
+         (None, "packer_layers", True),
+         # Day 18: experimental modes, tried last. Both load with --no-learn, so
+         # the runner commits their result from a normal (learning) worker.
+         (None, "native_mtp", True),
+         (None, "adaptive_lookup", True))
+EXPERIMENTAL = ("native_mtp", "adaptive_lookup")
 LIVE = {"guess_ahead", "shared_prefix", "pipeline_chats"}
 
 
 def validate(name, value):
     """Reject malformed controls before mutating the worker or its store."""
-    if name in ("guess_ahead", "shared_prefix", "keepalive"):
+    if name in ("guess_ahead", "shared_prefix", "keepalive", "native_mtp", "adaptive_lookup"):
         if not isinstance(value, bool):
             raise ValueError(name + " needs a boolean")
     elif name in ("kv_bits", "pipeline_chats", "packer_layers"):
@@ -63,7 +68,7 @@ def baseline(entry, active, settings=None):
             out[name] = active[key]
     for ui, name, _ in KNOBS:
         winner = ((entry or {}).get("winner") or {}).get(name)
-        applicable = name in out
+        applicable = name in out and name not in EXPERIMENTAL  # start from what is loaded
         if name == "guess_ahead" and not active.get("guess_ahead_loaded"):
             applicable = False
         if name in ("shared_prefix", "pipeline_chats") and not active.get("two_chats_available", active.get("keepalive") is not None):
@@ -90,12 +95,19 @@ def schedule(entry, settings, active, fp, *, n_layers=None):
         unavailable.add("packer_layers")
     if not active.get("kv_quant_supported", True):
         unavailable.add("kv_bits")
+    # Native MTP: one Mini, an installed head, 16-bit KV. Adaptive lookup: one chat.
+    if not active.get("native_mtp_on_disk") or active.get("split"):
+        unavailable.add("native_mtp")
+    if active.get("adaptive_lookup") is None:
+        unavailable.add("adaptive_lookup")
+    exp_pin = {"native_mtp": "guess_ahead", "adaptive_lookup": "prompt_lookup"}
     items = []
     for ui, name, reload in KNOBS:
         item = dict(name=name, reload=reload, incumbent=base.get(name), challenger=None, state="pending", skip=None)
         if name in unavailable:
             item["skip"] = "unavailable"
-        elif name in pinned or ui and settings.get(ui, "auto") != "auto":
+        elif (name in pinned or ui and settings.get(ui, "auto") != "auto"
+              or name in exp_pin and settings.get(exp_pin[name], "auto") != "auto"):
             item["skip"] = "pinned"
         elif base.get(name) is None:
             item["skip"] = "no baseline"
@@ -105,8 +117,12 @@ def schedule(entry, settings, active, fp, *, n_layers=None):
                 alternatives = [v for v in (8, 4, 16) if v != inc]
             elif name == "fuse_kernels":
                 alternatives = ["on" if inc == "off" else "off"]
-            elif name == "keepalive":
+            elif name in ("keepalive", "native_mtp", "adaptive_lookup"):
                 alternatives = [not inc]
+                if name == "native_mtp" and not inc and base.get("kv_bits") not in (None, 16):
+                    alternatives = []  # MTP needs uncompressed 16-bit caches
+                if name == "adaptive_lookup" and not inc and base.get("pipeline_chats") == 2:
+                    alternatives = []  # lookup needs one chat
             else:
                 alternatives = TS.neighbors(name, inc, n_layers=n_layers)
                 if name == "packer_layers":

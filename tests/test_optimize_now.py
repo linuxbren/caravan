@@ -71,7 +71,7 @@ class ScheduleTest(unittest.TestCase):
     def test_layer_cut_bounds(self):
         a = dict(ACTIVE, keepalive=True, two_chats_available=True, packer_layers=1, n_layers=32)
         items = AB.schedule({}, {}, a, 'a', n_layers=32)
-        self.assertEqual(items[-1]['challenger'], 2)
+        self.assertEqual(next(i for i in items if i['name'] == 'packer_layers')['challenger'], 2)
 
     def test_saved_best_overlays_probe_but_not_pins(self):
         active=dict(ACTIVE, kv_bits=8)

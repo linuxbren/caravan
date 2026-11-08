@@ -27,6 +27,8 @@ GGUF_ROOTS = [Path(p).expanduser() for p in os.environ.get(
 # headroom for KV cache + compute buffers on top of the weights.
 GPU_FRACTION = 0.75
 HEADROOM_GB = 1.5
+GGUF_UBATCH = (256, 512, 1024)
+GGUF_KNOBS = (("flash_attn", ("on", "off")), ("ubatch", GGUF_UBATCH))
 RPC_PID = "~/.caravan/web-ui/rpc-server.pid"
 RPC_LOG = "~/.caravan/web-ui/rpc-server.log"
 
@@ -126,12 +128,23 @@ def tensor_split(nodes: list) -> list:
 
 
 def llama_args(model_path: str, *, port: int, peers: list, shares: list,
-               ctx: int = GGUF_CTX, bin_dir: str = LLAMA_BIN) -> list:
-    """llama-server argv. peers = ["host:port", ...] (empty for one Mini)."""
+               ctx: int = GGUF_CTX, bin_dir: str = LLAMA_BIN,
+               tune: Optional[dict] = None) -> list:
+    """llama-server argv. peers = ["host:port", ...] (empty for one Mini).
+    tune (Day 18, GGUF Optimize now): {"flash_attn": "on"|"off", "ubatch": int}."""
+    tune = tune or {}
+    fa = tune.get("flash_attn", "on")
+    if fa not in ("on", "off"):
+        raise ValueError("flash_attn must be on or off")
     args = [str(Path(bin_dir).expanduser() / "llama-server"),
             "-m", str(Path(model_path).expanduser()),
             "--host", "127.0.0.1", "--port", str(int(port)),
-            "-c", str(int(ctx)), "-ngl", "999", "-fa", "on", "--jinja"]
+            "-c", str(int(ctx)), "-ngl", "999", "-fa", fa, "--jinja"]
+    if tune.get("ubatch"):
+        ub = int(tune["ubatch"])
+        if ub not in GGUF_UBATCH:
+            raise ValueError("ubatch must be one of %s" % (GGUF_UBATCH,))
+        args += ["-ub", str(ub), "-b", str(max(ub, 2048))]
     if peers:
         devs = ["MTL0"] + [f"RPC{i}" for i in range(len(peers))]
         args += ["--rpc", ",".join(peers), "--device", ",".join(devs),
@@ -304,3 +317,17 @@ def parse_seed(stdout: str) -> Optional[dict]:
             except ValueError:
                 return None
     return None
+
+
+def gguf_schedule(best: dict, losses: list) -> list:
+    """GGUF Optimize now plan: one llama-server option at a time (each needs a
+    reload), skipping recorded losers ("name=value"), same 3% margin as MLX."""
+    items = []
+    for name, values in GGUF_KNOBS:
+        inc = best.get(name, "on" if name == "flash_attn" else 512)
+        alts = [v for v in values if v != inc and f"{name}={v}" not in losses]
+        if name == "ubatch":
+            alts.sort(key=lambda v: abs(v - inc))
+        items.append({"name": name, "incumbent": inc, "challenger": alts[0] if alts else None,
+                      "skip": None if alts else "already lost", "reload": True})
+    return items

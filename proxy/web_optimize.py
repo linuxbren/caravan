@@ -49,6 +49,23 @@ def prompt_plan(i):
     return [{"role": "user", "content": (PREDICTABLE if i % 3 == 1 else LONG)[0]}]
 
 
+def experimental_settings(settings, values):
+    """Page settings for a reload with native MTP / adaptive lookup on or off."""
+    s = dict(settings or {})
+    if "native_mtp" in values:
+        if values["native_mtp"]:
+            s["guess_ahead"] = "mtp"
+        elif s.get("guess_ahead") == "mtp":
+            s["guess_ahead"] = "auto"
+    if "adaptive_lookup" in values:
+        if values["adaptive_lookup"]:
+            s["prompt_lookup"] = "adaptive"
+            s["pipeline_chats"] = "1"
+        elif s.get("prompt_lookup") == "adaptive":
+            s["prompt_lookup"] = "auto"
+    return s
+
+
 class Canceled(Exception):
     pass
 
@@ -149,8 +166,9 @@ class Optimizer:
         self._set(phase="restoring winners" if restoring else "reloading one option")
         force = {n: values[n] for n in TS.RELOAD_TRIO if n in values}
         sweep = {"force": force, "packer_layers": values.get("packer_layers")}
+        settings = experimental_settings(self.settings, values)
         t0 = time.monotonic()
-        self.mgr.switch(self.model_id, wait=True, settings=self.settings,
+        self.mgr.switch(self.model_id, wait=True, settings=settings,
                         entry=self.entry, sweep=sweep)
         elapsed = time.monotonic() - t0
         n = self.state["reloads"]
@@ -245,6 +263,12 @@ class Optimizer:
             self._boundary()
             active = self.mgr.lead_active_settings() or {}
             active["kv_quant_supported"] = TS.kv_quant_supported(self.mgr._lead_path)
+            # Day 18: native MTP and adaptive lookup sweeps (both start off).
+            active["split"] = bool(self.mgr.snapshot().get("split"))
+            active["native_mtp_on_disk"] = bool((self.entry or {}).get("native_mtp_available"))
+            active["native_mtp"] = active.get("guess_ahead_mode") == "native_mtp" and bool(active.get("native_mtp_available"))
+            pl = active.get("prompt_lookup")
+            active["adaptive_lookup"] = bool(pl.get("adaptive")) if isinstance(pl, dict) else None
             self.fp = AB.fingerprint(self.mgr.optimize_hardware(), split=self.mgr.snapshot().get("split"))
             self.pinned = set(active.get("pinned") or [])
             self.mgr.sweep({"pause": True})
@@ -276,6 +300,10 @@ class Optimizer:
                 winner, lost = (ch, inc) if AB.pick(a, b) else (inc, ch)
                 result = dict(name=name, incumbent=inc, challenger=ch,
                               incumbent_scores=a, challenger_scores=b, winner=winner, lost=lost)
+                if name in AB.EXPERIMENTAL and self.current.get(name):
+                    # The experimental worker runs with --no-learn and can't record;
+                    # go back to the normal worker to commit, then apply the winner.
+                    self._apply(name, False)
                 self.mgr.sweep({"commit": dict(name=name, winner=winner, lost=lost,
                     fingerprint=self.fp, measurements=result)})
                 self.best[name] = winner
