@@ -863,6 +863,10 @@ def check_local_shards(model_dir, role, front_layers=None):
     return sorted(need)
 
 
+class MissingWeightsError(RuntimeError):
+    pass
+
+
 class Stage:
     """Loads only this stage's layers (lazy load, then evaluate just the
     needed weights) and runs them. Works for qwen3_moe, qwen3_5(_moe),
@@ -876,7 +880,20 @@ class Stage:
         self.mx = mx
         self._cam, self._csm = create_attention_mask, create_ssm_mask
         check_local_shards(model_dir, role, front_layers)
-        model, self.config = load_model(model_dir, lazy=True, strict=False)
+        loaded_keys = set()
+        import mlx.nn as _nn
+        _orig_lw = _nn.Module.load_weights
+
+        def _spy(mod, file_or_weights, *a, **kw):
+            if isinstance(file_or_weights, list):
+                loaded_keys.update(k for k, _ in file_or_weights)
+            return _orig_lw(mod, file_or_weights, *a, **kw)
+        _nn.Module.load_weights = _spy
+        try:
+            model, self.config = load_model(model_dir, lazy=True, strict=False)
+        finally:
+            _nn.Module.load_weights = _orig_lw
+        self._loaded_keys = loaded_keys
         self.model = model
         self.lm = getattr(model, "language_model", None) or model
         self.inner = self.lm.model
@@ -901,6 +918,7 @@ class Stage:
             need.append(self.inner.norm.parameters())
             if not self.tied:
                 need.append(self.lm.lm_head.parameters())
+        self._assert_loaded(role, a, b)
         mx.eval(need)
         # Some models (qwen3_5) build their cache by looking at every layer,
         # so make an empty template now, while all layers are still there.
@@ -912,6 +930,32 @@ class Stage:
                 self.inner.layers[i] = None
         import copy
         self._make_full = lambda: copy.deepcopy(self._proto)
+
+    def _assert_loaded(self, role, a, b):
+        """strict=False must never leave a weight THIS stage uses at random
+        init. Fail loudly instead of generating gibberish."""
+        from mlx.utils import tree_flatten
+        if not self._loaded_keys:
+            return
+        pre = "language_model." if self.lm is not self.model else ""
+        mods = [(f"{pre}model.layers.{i}", self.inner.layers[i]) for i in range(a, b)]
+        if role == "front" or self.tied:
+            mods.append((f"{pre}model.embed_tokens", self.inner.embed_tokens))
+        if role == "head":
+            mods.append((f"{pre}model.norm", self.inner.norm))
+            if not self.tied:
+                mods.append((f"{pre}lm_head", self.lm.lm_head))
+        missing = []
+        for prefix, m in mods:
+            for k, _ in tree_flatten(m.parameters()):
+                if f"{prefix}.{k}" not in self._loaded_keys:
+                    missing.append(f"{prefix}.{k}")
+        if missing:
+            who = {"head": "lead", "front": "packer"}.get(role, role)
+            raise MissingWeightsError(
+                f"{who} stage would run with {len(missing)} weight(s) missing from the local "
+                f"shards (random init), e.g. {missing[:4]}. tied_embeddings={self.tied}. "
+                "Fetch the shards that hold them before loading.")
 
     def _kind(self, i, layer):
         if getattr(layer, "is_linear", False):

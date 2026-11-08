@@ -56,7 +56,21 @@ def n_layers_of(config):
 
 
 def tied_of(config, weight_map):
-    """Tied embeddings = no lm_head weights in the checkpoint (the head then needs embed_tokens)."""
+    """Tied embeddings: the head stage computes logits with embed_tokens.
+
+    True when the checkpoint has no lm_head weights, OR when config.json says
+    tie_word_embeddings=true (top level or text_config). mlx_lm follows the
+    config flag: it builds no lm_head module and drops lm_head.* in sanitize,
+    even if the file ships one. Day 18 bug: Dark Champion 21B (mixtral) ships
+    lm_head AND tie_word_embeddings=true, so the lead skipped the embed shard
+    and strict=False left embed_tokens at random init -> pure gibberish."""
+    cfg = config or {}
+    flags = [cfg.get("tie_word_embeddings")]
+    for sub in ("text_config", "llm_config"):
+        if isinstance(cfg.get(sub), dict):
+            flags.append(cfg[sub].get("tie_word_embeddings"))
+    if any(f is True for f in flags):
+        return True
     return not any("lm_head" in k for k in weight_map)
 
 

@@ -173,3 +173,35 @@ relay) that can't be tested beyond 2 Minis here. Question for Brenden: which one
 ## Queued for the Minis (needs Brenden's go-ahead)
 
 See the report. Tests at the end of the code work: 436 OK on the box.
+
+## Dark Champion 21B gibberish: root cause (Nov 7, read-only diagnosis)
+
+**Symptom:** `mlx-community/Llama-3.2-8X4B-MOE-V2-Dark-Champion-...-21B-MLX` as a 2-Mini split (EXO2 packer layers 0-23, EXO1 lead 24-31) printed multilingual token salad from the first token, ran to 768 tokens, ~12 tok/s.
+
+**Root cause: the two sides disagree on whether embeddings are tied.**
+- config.json says `tie_word_embeddings: true`, but the checkpoint also ships `lm_head.*` (in shard 5).
+- Caravan's `mlx_split_fetch.tied_of()` only checked for `lm_head` in the weight map, so it said "untied" and gave the lead only shards 4-5. Shard 1, which holds `embed_tokens`, wasn't included.
+- mlx_lm's mixtral follows the config. It builds no `lm_head` and drops `lm_head.weight` in sanitize, then computes logits with `embed_tokens.as_linear`.
+- On EXO1, `embed_tokens` was never in any local file. `load_model(strict=False)` left it at random init. The quantize predicate also skipped it because there were no scales. So every logit came from a random matrix.
+- The startup shard check passed because it used the same wrong `tied_of`.
+- Evidence (EXO1, offline):
+  - `ModelArgs.tie_word_embeddings=True` means the model has no lm_head.
+  - `plan_files(...,24)` gives tied=False and head files = shards 4-5 only.
+  - The packer loaded 17.0 GB for 24 layers and the lead about 5.7 GB for 8 layers, so all layer weights were present. Only the output head was garbage.
+- **Not the cause:**
+  - The `model_type remap: qwen3_5_text → qwen3_5` log line. It's a startup patch that runs for every model and is harmless.
+  - The split boundary. It's 24 on both sides.
+  - Missing layer tensors.
+  - Quantization config.
+  - The ignored llama3 rope_scaling. That one is real but secondary.
+
+**Fix (local branch `fix/tied-embed-split`, not committed):**
+1. `tied_of` returns True if `tie_word_embeddings` is true (top level, `text_config`, or `llm_config`) or if there's no lm_head. Downloader, inventory, and the startup check all share it, so the lead now needs shard 1 too.
+2. `Stage` records the keys mlx_lm actually loaded. If any weight this stage uses was missing, it raises `MissingWeightsError` instead of running random weights. This makes the whole "strict=False silently random" class fail loudly.
+3. New tests are in tests/test_tied_embed_split.py.
+
+**To verify (needs Brenden's OK):**
+- Fetch shard 1 (~5.2 GB) to EXO1 with `mlx_split_fetch.py ... --role lead --packer-layers 24`.
+- Restart the split and send one short chat.
+
+**Follow-up:** mlx_lm mixtral uses plain `nn.RoPE` and ignores llama3 `rope_scaling` (factor 32). Quality drops on long contexts. A Caravan patch could swap in `mlx_lm.models.rope_utils.initialize_rope`.
