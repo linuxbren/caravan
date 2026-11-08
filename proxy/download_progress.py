@@ -45,6 +45,10 @@ def measure_disk(dest: str) -> dict:
         if cache_dl.is_dir():
             for p in cache_dl.rglob("*"):
                 if p.is_file() and p.name.endswith(".incomplete"):
+                    # HF can leave the .incomplete beside the finished file: count once.
+                    rel = p.relative_to(cache_dl).as_posix()[: -len(".incomplete")]
+                    if (dest_p / rel).is_file() or (dest_p / p.name[: -len(".incomplete")]).is_file():
+                        continue
                     try:
                         incomplete += p.stat().st_size
                         n_inc += 1
@@ -164,6 +168,22 @@ def fmt_eta(seconds: Optional[float]) -> str:
     return f"{seconds // 3600}h {(seconds % 3600) // 60}m"
 
 
+def grew(prev: Optional[dict], have: int, disk_have=None, net_raw=None) -> bool:
+    """Real growth since the last sample on ANY signal (shown bytes, disk, network),
+    not a new maximum: a clamped or max()'d display value can sit still while
+    files are still landing, which used to raise a false "stalled?"."""
+    if not prev:
+        return have > 0
+    if have > int(prev.get("have_bytes") or 0):
+        return True
+    if disk_have is not None and prev.get("disk_have") is not None and int(disk_have) > int(prev["disk_have"]):
+        return True
+    pn = prev.get("net_raw") if prev.get("net_raw") is not None else prev.get("net_last")
+    if net_raw is not None and pn is not None and int(net_raw) > int(pn):
+        return True
+    return False
+
+
 def combine_progress(
     *,
     dest: str,
@@ -230,6 +250,9 @@ def combine_progress(
         have = int(disk["have_bytes"])
         source = "disk"
 
+    if total > 0:
+        have = min(have, total)  # never show more than the Mini downloads
+
     # Speed from delta
     speed = 0.0
     if prev and prev.get("t") and prev.get("have_bytes") is not None:
@@ -238,7 +261,7 @@ def combine_progress(
 
     stalled = False
     last_byte_t = float((prev or {}).get("last_byte_t") or now)
-    if have > int((prev or {}).get("have_bytes") or 0):
+    if grew(prev, have, disk.get("have_bytes"), net_raw):
         last_byte_t = now
     elif source != "starting" and (now - last_byte_t) >= STALL_SECS:
         stalled = True

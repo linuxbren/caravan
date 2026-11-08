@@ -241,6 +241,8 @@ class App:
             "  if c.is_dir():\n"
             "    for p in c.rglob('*'):\n"
             "      if p.is_file() and p.name.endswith('.incomplete'):\n"
+            "        f=p.relative_to(c).as_posix()[:-11]\n"
+            "        if (d/f).is_file() or (d/p.name[:-11]).is_file(): continue\n"
             "        try:\n"
             "          inc+=p.stat().st_size; n+=1\n"
             "        except OSError: pass\n"
@@ -1403,13 +1405,19 @@ def make_handler(app: App):
                                     and j.get("status") in ("running", "cancelling", "queued")):
                                 app.picker_kill_node(node, repo_id, j)
                                 raise RuntimeError("cancelled")
+                        log_f = "/tmp/caravan-fetch-%s.log" % (node.get("id") or "node")
                         check = app._ssh_fn()(node,
+                            "head -1 %s 2>/dev/null | sed 's/^/REPORT:/'; "
                             "if [ -f %s ]; then pid=$(cat %s); "
                             "if kill -0 $pid 2>/dev/null; then echo RUNNING; "
-                            "else echo DONE; fi; else echo DONE; fi" % (pid_file, pid_file),
+                            "else echo DONE; fi; else echo DONE; fi" % (log_f, pid_file, pid_file),
                             timeout=30,
                         )
                         st = (check.stdout or "").strip().splitlines()
+                        for ln in st:
+                            if ln.startswith("REPORT:"):
+                                web_picker.apply_reported_total(
+                                    repo_id, node.get("id") or node.get("label"), ln[7:])
                         last = st[-1] if st else "DONE"
                         if last == "DONE":
                             break

@@ -1378,6 +1378,27 @@ def accumulate_net(prev: Optional[dict], net_raw) -> int:
     return acc + max(0, net_raw - int(last))
 
 
+def apply_reported_total(repo_id: str, node_id: str, line: str) -> Optional[int]:
+    """Day 18: the fetcher's first line says what THIS Mini really downloads
+    ({"my_gb": ...}, every shard including shared ones). Use it as the Mini's
+    total so progress can't read 17.62/11.77 GB."""
+    try:
+        rep = json.loads((line or "").strip())
+        tb = int(float(rep["my_gb"]) * 1e9)
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return None
+    if tb <= 0:
+        return None
+    for j in list_jobs():
+        if j.get("repo_id") == repo_id and j.get("status") in ("running", "queued"):
+            totals = dict(j.get("totals") or {})
+            if totals.get(node_id) != tb:
+                totals[node_id] = tb
+                _job_set(j["id"], totals=totals)
+            return tb
+    return None
+
+
 def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                    packer_layers: Optional[int] = None,
                    dest_lead: Optional[str] = None,
@@ -1478,8 +1499,11 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                         if total and have > total * 1.5:
                             # implausible counter (wrong process / scaled nettop): ignore it
                             have = int((prev or {}).get("have_bytes") or 0)
+                        if total:
+                            have = min(have, total)  # Day 18: never above this Mini's total
+                        from download_progress import grew as _grew
                         last_byte_t = float((prev or {}).get("last_byte_t") or now)
-                        if have > int((prev or {}).get("have_bytes") or 0):
+                        if _grew(prev, have, disk_now, m.get("net_raw")):
                             last_byte_t = now
                         stalled = (have > 0 or (prev and prev.get("have_bytes"))) and (now - last_byte_t) >= 30
                         pct = 0
@@ -1513,6 +1537,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             "net_acc": net_acc, "net_last": m.get("net_raw"),
                             "net_seen": bool((prev or {}).get("net_seen") or m.get("net_raw") is not None),
                             "disk0": int(disk0), "resume_base": int(disk0),
+                            "disk_have": disk_now,
                         }
                 except Exception as e:  # noqa: BLE001
                     snap = {"pct": 0, "msg": f"measure error: {e}", "t": time.time(),
