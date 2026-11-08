@@ -102,6 +102,65 @@ class App:
             c = self._nodes_cache or {"t": time.time(), "nodes": [], "error": "gathering"}
         return c
 
+    def balance(self, body, *, fresh=False):
+        """Read-only preview. Client supplies counts/IDs, never RAM or file claims."""
+        import split_balance as SB
+        if not isinstance(body, dict):
+            raise ValueError("Balance request must be an object")
+        mid = body.get("model_id") or self.mgr.snapshot().get("model_id")
+        entry = next((m for m in self.list_loadable_models() if m.get("id") == mid or m.get("hf") == mid), None)
+        if not entry or entry.get("source") == "gguf":
+            raise ValueError("Balance needs an installed MLX model")
+        configured = self.configured_nodes()
+        ids = body.get("node_ids")
+        if ids is not None:
+            if not isinstance(ids, list) or len(set(ids)) != len(ids) or not set(ids) <= {n["id"] for n in configured}:
+                raise ValueError("unknown or duplicate Mini IDs")
+            configured = [n for n in configured if n["id"] in ids]
+        if fresh:
+            live = {n["id"]: web_nodes.gather_node_stats(n, ssh_fn=self._ssh_fn()) for n in configured}
+            split = self.mgr.lead_split_info() if self.mgr.snapshot().get("status") == "ready" else {}
+            if split:
+                ids = (self.mgr.snapshot().get("balance") or {}).get("node_ids")
+                ids = ids or [n["id"] for n in SB.pipeline_order(configured)]
+                stage_by_id = dict(zip(ids[:-1], split.get("packers") or []))
+                if ids:
+                    stage_by_id[ids[-1]] = split.get("lead") or {}
+                for n in configured:
+                    stage = stage_by_id.get(n["id"]) or {}
+                    if stage.get("active_gb") is not None:
+                        live[n["id"]]["active_gb"] = stage["active_gb"]
+        else:
+            live = {n["id"]: n for n in (self.nodes().get("nodes") or [])}
+        nodes = SB.pipeline_order([dict(n, **{k: v for k, v in live.get(n["id"], {}).items()
+                                            if k in ("ram", "active_gb", "weights_gb", "model", "offline", "error")})
+                                   for n in configured])
+        d = Path(entry.get("lead_path") or "").expanduser()
+        cfg = json.loads((d / "config.json").read_text())
+        idx = json.loads((d / "model.safetensors.index.json").read_text())
+        from mlx_split_fetch import n_layers_of
+        inventories = {n["id"]: ((entry.get("nodes") or {}).get(n.get("label") or n["id"]) or {}) for n in nodes}
+        weights = (idx.get("metadata") or {}).get("total_size")
+        weights = float(weights) / 1e9 if weights else None
+        if weights is None and any(v.get("full_ok") for v in inventories.values()):
+            weights = entry.get("weights_gb")
+        sizes = {}
+        try:
+            sizes = json.loads((d / "caravan-split-sizes.json").read_text()).get("sizes") or {}
+            if sizes:
+                weights = sum(sizes[f] for f in set(idx["weight_map"].values())) / 1e9
+        except (OSError, ValueError, KeyError):
+            pass
+        out = SB.preview(n_layers_of(cfg), weights, nodes, body.get("counts"),
+                         config=cfg, index=idx, inventories=inventories, sizes=sizes)
+        out["model_id"] = entry["id"]
+        out["node_ids"] = [n["id"] for n in nodes]
+        out["entry"] = dict(entry, split_counts=out["counts"],
+                             pipeline_nodes=[dict(n, model_path=inventories[n["id"]].get("path")) for n in nodes],
+                             run_mode="split", need_split=True, available_lead=out["ready"], usable=out["ready"],
+                             placement={"mode": "split", "node_ids": out["node_ids"]})
+        return out
+
     def configured_nodes(self) -> list:
         """Node list from ~/.caravan/config.toml [web.nodes.*] (defaults EXO1/EXO2)."""
         return web_nodes.nodes_from_config()
@@ -125,6 +184,8 @@ class App:
             if model and gg.get("nodes"):
                 running_on = list(gg["nodes"])
                 split = None  # llama.cpp split: no MLX layer ranges
+            elif model and (snap.get("balance") or {}).get("node_ids"):
+                running_on = snap["balance"]["node_ids"]
             elif model and not snap.get("split"):
                 wn = getattr(self.mgr, "_worker_node", None)
                 if wn and wn.get("id"):
@@ -736,6 +797,13 @@ def make_handler(app: App):
             # (Bad request syntax) and the UI looks "stuck".
             path = self.path.split("?", 1)[0]
             body = self._body()
+            if path == "/api/balance":
+                try:
+                    out = app.balance(body)
+                    out.pop("entry", None)
+                    return self._json(200, out)
+                except (ValueError, OSError, KeyError, TypeError) as e:
+                    return self._json(400, {"error": str(e)})
             if path == "/api/time":
                 return self._api_time(post=True, body=body)
             if path == "/api/models/load":
@@ -755,6 +823,8 @@ def make_handler(app: App):
                     return self._json(502, {"error": msg, "worker": app.mgr.snapshot()})
                 return self._json(200, app.mgr.snapshot())
             if path in ("/api/optimize/start", "/api/optimize/gguf/start"):
+                if len((app.mgr.snapshot().get("balance") or {}).get("counts") or []) > 2:
+                    return self._json(409, {"error": "Optimize now is not yet safe for N-stage MLX Balance; use measured replies instead"})
                 if app.mgr._switch_thread and app.mgr._switch_thread.is_alive():
                     return self._json(409, {"error": "a model load is in progress"})
                 if app.optimizer.snapshot().get("running"):
@@ -1600,9 +1670,20 @@ def make_handler(app: App):
                 if not opt.get("enabled"):
                     return self._json(400, {"error": opt.get("reason") or "placement doesn't fit"})
                 entry["placement"] = {"mode": opt["mode"], "node_ids": opt["node_ids"]}
+            if body.get("balance"):
+                if app._inflight:
+                    return self._json(409, {"error": "Wait for the current reply before reloading"})
+                try:
+                    plan = app.balance(dict(body, model_id=mid), fresh=True)
+                    if not plan["ready"]:
+                        plan.pop("entry", None)
+                        return self._json(409, {"error": "Split needs files or more memory; nothing was changed", "balance": plan})
+                    entry = plan["entry"]
+                except (ValueError, OSError, KeyError, TypeError) as e:
+                    return self._json(400, {"error": str(e)})
             balanced_msg = None
             sc = ((entry or {}).get("split_check")
-                  if entry and entry.get("source") != "gguf" and entry.get("run_mode") == "split" else None)
+                  if entry and not body.get("balance") and entry.get("source") != "gguf" and entry.get("run_mode") == "split" else None)
             if sc and not sc.get("ok") and not body.get("force_split"):
                 if sc.get("better") and sc.get("balanced_ready"):
                     kb = int(sc["balanced_packer_layers"])

@@ -100,6 +100,9 @@ def nodes_from_config(cfg: Optional[dict] = None) -> list:
             "ssh": str(tbl.get("ssh") or ("" if host == "local" else host)),
             "repo": str(tbl.get("repo") or tbl.get("remote_repo") or "~/cv3"),
             "peer": str(tbl.get("peer") or ""),
+            "listen": str(tbl.get("listen") or ""),
+            "upstream_peer": str(tbl.get("upstream_peer") or ""),
+            "physical_id": str(tbl.get("physical_id") or ""),
             "order": int(tbl["order"]) if str(tbl.get("order") or "").isdigit() else len(out),
         }
         out.append(node)

@@ -1,5 +1,13 @@
 # MLX split across two Macs (Caravan v3)
 
+> **Day 19 (2026-11-08):** An experimental N-stage path now exists through
+> Topology → Balance and `--split-counts` / `--split-stage-index` /
+> `--split-upstream`. Missing shards are replanned per stage. See [DAY19.md](DAY19.md)
+> for the API, exact commands, simulation and live-test gate. The older flags,
+> picker download flow and Optimize discussion below remain two-stage. No live
+> N-stage Apple Silicon inference has been verified yet.
+
+
 *Design note, 2026-10-31. Code: `agent/mlx_split.py`, `agent/mlx_worker.py`
 (`--split-role`), `agent/mlx_backend.py` (`mlx.split`),
 `agent/mlx_split_fetch.py` (split download, prototype).*

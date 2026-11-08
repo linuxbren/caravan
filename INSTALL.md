@@ -88,10 +88,14 @@ web server with `CARAVAN_WEB_KEEP_WORKERS=1` set before its command; that proces
 will then keep its workers when it exits. Check Topology before loading. Peers need a reachable
 worker link (MLX TCP 5560); keep it on your private network.
 
-Topology and GGUF support multiple Minis. MLX split execution and Optimize now
-are still two-stage (lead plus one packer): adding more nodes does not turn MLX
-into an arbitrary-length pipeline. Download the model to the selected Minis via
-the picker before a split load. See [MLX-SPLIT.md](docs/MLX-SPLIT.md).
+Topology and GGUF support multiple Minis. The experimental **Topology → Balance**
+path now plans and launches N-stage MLX pipelines, with a live memory/file preview
+and an explicit reload button. Existing picker downloads and Optimize now remain
+two-stage; do not run Optimize on an N-stage Balance load. Extra stage shards can
+be fetched directly on each Mini with `mlx_split_fetch.py --split-counts ...
+--stage-index ...`. No files are copied from the lead. Three/four-stage behavior
+is covered by fake-node socket tests; Apple Silicon inference is not yet live
+verified. See [Day 19 setup/testing](docs/DAY19.md) and [MLX-SPLIT.md](docs/MLX-SPLIT.md).
 Some older two-Mini paths still use lab defaults; if a load targets EXO2 instead
 of your configured peer, stop and inspect [WEB.md](docs/WEB.md) rather than
 assuming this release is a turnkey installer for every network.

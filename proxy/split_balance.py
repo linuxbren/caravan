@@ -113,3 +113,85 @@ def balanced_packer_layers(n_layers, weights_gb, stage_nodes, cap_fn=None) -> Op
         return None
     counts = balanced_counts(int(n_layers), caps, per_layer_gb(weights_gb, n_layers))
     return counts[0] if len(counts) == 2 else counts[0]
+
+
+def preview(n_layers, weights_gb, nodes, counts=None, *, config=None, index=None,
+            inventories=None, sizes=None):
+    """Read-only Balance API contract, shared by web and future TUI.
+
+    Nodes are in forward order (lead last); inventories are keyed by node ID.
+    Unknown files/RAM never become a green reload button. Estimates are NOT a
+    speed prediction or a guarantee for a long context's growing KV cache.
+    """
+    import math
+    from mlx_split import plan_ranges
+    nodes = list(nodes)
+    if len(nodes) < 2 or len({n.get("id") for n in nodes}) != len(nodes) or any(not n.get("id") for n in nodes):
+        raise ValueError("need at least two uniquely identified Minis")
+    if sum(n.get("role") == "lead" for n in nodes) != 1 or nodes[-1].get("role") != "lead":
+        raise ValueError("pipeline order must be packers first, lead last")
+    try:
+        weights = float(weights_gb)
+    except (ValueError, TypeError):
+        raise ValueError("model weight size is unknown") from None
+    if not math.isfinite(weights) or weights <= 0:
+        raise ValueError("model weight size is unknown")
+    caps = []
+    for node in nodes:
+        ram = node.get("ram") or {}
+        available = ram.get("available_gb", ram.get("free_gb"))
+        if node.get("offline") or node.get("error") or available is None:
+            raise ValueError(f"live free memory is unknown for {node['id']}")
+        # Reclaim only the running worker footprint, never assume total-OS is free.
+        cap = float(available) + max(0.0, float(node.get("active_gb") or node.get("weights_gb") or 0))
+        if not math.isfinite(cap) or cap <= 0:
+            raise ValueError(f"live free memory is unknown for {node['id']}")
+        caps.append(cap)
+    # A second worker on the same Mini does not create another stick of RAM.
+    # Explicit physical_id handles SSH aliases; matching host/SSH also dedupes.
+    groups = {}
+    for i, node in enumerate(nodes):
+        host = node.get("physical_id") or node.get("ssh") or node.get("host") or node["id"]
+        if host in ("local", "localhost", "127.0.0.1"):
+            host = "local"
+        groups.setdefault(host, []).append(i)
+    for members in groups.values():
+        if len(members) > 1:
+            budget = min(caps[i] for i in members) / len(members)
+            for i in members:
+                caps[i] = budget
+    per_layer = per_layer_gb(weights, n_layers)
+    auto = balanced_counts(n_layers, caps, per_layer)
+    chosen = auto if counts is None else list(counts)
+    ranges = plan_ranges(n_layers, chosen)
+    if len(chosen) != len(nodes):
+        raise ValueError("one layer count is required for each Mini")
+    raw_free = [cap - k * per_layer - STAGE_OVERHEAD_GB for cap, k in zip(caps, chosen)]
+    free = [round(value, 2) for value in raw_free]
+    files = None
+    if config is not None and index is not None:
+        from mlx_split_fetch import plan_stage_files
+        files = plan_stage_files(config, index, chosen)["stages"]
+    stages = []
+    for i, node in enumerate(nodes):
+        inv = (inventories or {}).get(node["id"]) or {}
+        have = inv.get("shards_present")
+        missing = None if files is None or have is None else sorted(files[i] - set(have))
+        # Inventory distinguishes present-but-incomplete files; never count those ready.
+        if missing is not None:
+            missing = sorted(set(missing) | (set(files[i]) & set(inv.get("incomplete") or [])))
+        stages.append({"id": node["id"], "label": node.get("label") or node["id"],
+                       "role": node.get("role"), "range": list(ranges[i]), "layers": chosen[i],
+                       "capacity_gb": round(caps[i], 2),
+                       "estimated_use_gb": round(chosen[i] * per_layer + STAGE_OVERHEAD_GB, 2),
+                       "headroom_gb": free[i], "safe": raw_free[i] >= MARGIN_GB,
+                       "downloads": missing,
+                       "metadata_ready": all(inv.get(k) for k in ("has_config", "has_index", "has_tokenizer")),
+                       "download_bytes": (sum(sizes[f] for f in missing)
+                                          if missing is not None and all(f in (sizes or {}) for f in missing) else None)})
+    safe = min(raw_free) >= MARGIN_GB
+    ready = safe and all(s["downloads"] == [] and s["metadata_ready"] for s in stages)
+    return {"mode": "auto" if counts is None else "manual", "counts": chosen,
+            "auto_counts": auto, "margin_gb": MARGIN_GB, "safe": safe,
+            "ready": ready, "stages": stages, "reload_required": True,
+            "speed": None, "note": "Memory is estimated; real speed appears after reload and a reply. No downloads have started."}

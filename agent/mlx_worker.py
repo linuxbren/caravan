@@ -711,6 +711,10 @@ class Engine:
                 self.client.enable_gpu_keepalive(mx)
                 log("lead GPU keepalive on (warms Metal while waiting for packer 1)")
             # ROADMAP #13a: auto packer layers when --split-packer-layers omitted.
+            counts = S.parse_counts(getattr(args, "split_counts", None))
+            if counts:
+                S.plan_ranges(S.read_n_layers(self.model_dir), counts)
+                args.split_front_layers = sum(counts[:-1])
             self._learn_packer_was_explicit = args.split_front_layers is not None
             if args.split_front_layers is None:
                 hello0 = self.client.call("hello", proto=S.PROTO)[0]
@@ -763,12 +767,16 @@ class Engine:
                                 TS.save_store(st, tpath)
                             except OSError:
                                 pass
-            self.stage = S.Stage(self.model_dir, "head", args.split_front_layers)
+            self.stage = S.Stage(self.model_dir, "head", args.split_front_layers, counts, len(counts) - 1 if counts else None)
             self.model = S.SplitModel(self.stage, self.client)
             self.tokenizer = load_tokenizer(self.model_dir, eos_token_ids=cfg0.get("eos_token_id"))
             add_turn_end_stops(self.tokenizer, log=log)
             hello = self.client.call("hello", proto=S.PROTO)[0]
-            if hello.get("range") != [0, self.stage.range[0]] or hello.get("n_layers") != self.stage.n_layers:
+            expected = S.plan_ranges(self.stage.n_layers, counts)[:-1] if counts else None
+            actual = [tuple(x["range"]) for x in hello.get("stages", [hello])]
+            if ((expected is not None and actual != expected)
+                    or hello.get("range") != [0, self.stage.range[0]]
+                    or hello.get("n_layers") != self.stage.n_layers):
                 raise RuntimeError(f"Packer 1 ({S.title_from_label(hello.get('stage'))}) doesn't match the lead "
                                    f"({S.stage_title('head', self.stage.range, self.stage.n_layers)})")
             log(f"split lead: {S.stage_title('head', self.stage.range, self.stage.n_layers)} here, "
@@ -1576,7 +1584,7 @@ class Engine:
                 "peak_gb": round(self.mx.get_peak_memory() / 1e9, 2)}
         front.setdefault("name", S.title_from_label(front.get("stage")))
         # "lead" / "packers" are the names to use; "head" / "front" are deprecated aliases.
-        return {"lead": lead, "packers": [front], "head": lead, "front": front, "peer": self.args.split_peer}
+        return {"lead": lead, "packers": front.get("packers") or [front], "head": lead, "front": front, "peer": self.args.split_peer}
 
     def call(self, fn, *, between_rounds=False):
         """Run fn on the socket-owning mlx thread.
@@ -3493,6 +3501,9 @@ def build_parser():
                     help="lead: HTTP + last layers + lm_head, asks --split-peer (Packer 1) for the first layers; "
                          "packer: embeddings + first layers, listens on --split-listen (no HTTP). "
                          "head/front: deprecated aliases for lead/packer")
+    ap.add_argument("--split-counts", help="N-stage layer counts in forward order, e.g. 10,10,12")
+    ap.add_argument("--split-stage-index", type=int, help="packer index (zero-based) in --split-counts")
+    ap.add_argument("--split-upstream", help="middle packer: previous packer's HOST:PORT")
     ap.add_argument("--split-peer", default=None, help="lead: Packer 1's HOST:PORT (Thunderbolt address)")
     ap.add_argument("--split-listen", default=None, help="packer: HOST:PORT to listen on (Thunderbolt address)")
     ap.add_argument("--split-packer-layers", "--split-front-layers", dest="split_front_layers", type=int, default=None, metavar="K",
@@ -3590,7 +3601,16 @@ def front_main(args):
     t0 = time.time()
     model_dir = Path(args.model).expanduser().resolve()
     mem_total, mem_avail = S.host_memory_gb()
-    if args.split_front_layers is None:
+    counts = S.parse_counts(getattr(args, "split_counts", None))
+    stage_index = getattr(args, "split_stage_index", None)
+    if counts:
+        ranges = S.plan_ranges(S.read_n_layers(model_dir), counts)
+        if stage_index is None or not 0 <= stage_index < len(counts) - 1:
+            raise ValueError("packer requires --split-stage-index before the lead")
+        if bool(stage_index) != bool(getattr(args, "split_upstream", None)):
+            raise ValueError("only middle packers require --split-upstream")
+        args.split_front_layers = ranges[stage_index][1]
+    elif args.split_front_layers is None:
         n_layers = S.read_n_layers(model_dir)
         mt = S.read_model_type(model_dir)
         # Peer RAM unknown at packer start; assume symmetric (two Minis). Lead
@@ -3598,7 +3618,7 @@ def front_main(args):
         k, reason = S.choose_packer_layers(n_layers, mem_total, mem_total, mt)
         args.split_front_layers = k
         log(f"auto split: packer_layers={k} ({reason})")
-    stage = S.Stage(model_dir, "front", args.split_front_layers)
+    stage = S.Stage(model_dir, "front", args.split_front_layers, counts, stage_index)
     wired = apply_startup_wiring(getattr(args, "wired_limit", "startup"), mx, maybe_set_recommended_wired_limit)
     if args.cache_limit_gb is not None and args.cache_limit_gb > 0:
         mx.set_cache_limit(int(args.cache_limit_gb * (1 << 30)))
@@ -3625,7 +3645,8 @@ def front_main(args):
         with mx.stream(stream):
             return stage.front_forward(tokens, cache)
 
-    info = {"stage": label, "range": list(stage.range), "n_layers": stage.n_layers,
+    packer_name = f"packer {(stage_index or 0) + 1}: layers {stage.range[0]}-{stage.range[1]-1} of {stage.n_layers}"
+    info = {"name": packer_name, "stage": label, "range": list(stage.range), "n_layers": stage.n_layers,
             "model_type": stage.model_type, "mlx_lm": _version("mlx_lm"),
             "mem_total_gb": round(mem_total, 2), "mem_available_gb": round(mem_avail, 2),
             "packer_layers": int(stage.range[1])}
@@ -3639,11 +3660,24 @@ def front_main(args):
             _tot, _avail = S.host_memory_gb()
         except Exception:
             _tot, _avail = info.get("mem_total_gb"), info.get("mem_available_gb")
-        return {"stage": label, "weights_gb": round(stage.nbytes() / 1e9, 2),
+        return {"name": packer_name, "stage": label, "weights_gb": round(stage.nbytes() / 1e9, 2),
                 "active_gb": round(mx.get_active_memory() / 1e9, 2),
                 "peak_gb": round(mx.get_peak_memory() / 1e9, 2),
                 "sessions": len(store.sessions), "session_gb": round(store.total_bytes() / 1e9, 3),
                 "mem_total_gb": _tot, "mem_available_gb": _avail}
+    if counts and stage_index > 0:
+        upstream = S.FrontClient(args.split_upstream)
+        hello = upstream.call("hello", proto=S.PROTO)[0]
+        actual = [tuple(x["range"]) for x in hello.get("stages", [hello])]
+        if actual != ranges[:stage_index] or hello.get("n_layers") != stage.n_layers:
+            raise ValueError("upstream pipeline ranges do not match this stage")
+        def hidden_forward(header, payload, cache):
+            with mx.stream(stream):
+                return stage.middle_forward(header, payload, cache)
+        local = state
+        state = S.ChainState(local, upstream, hidden_forward, stats_fn=stats)
+        if getattr(args, "split_keepalive", True):
+            state.keepalive = S.GpuKeepalive(mx)
     stop = threading.Event()
 
     def _term(*_):

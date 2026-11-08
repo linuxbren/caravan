@@ -220,10 +220,14 @@ class WorkerManager:
             raise RuntimeError("Low Power Mode is on — turn it off before loading a model")
         if entry.get("source") == "gguf":
             return self._load_gguf(entry, settings)
+        if entry.get("split_counts"):
+            from web_pipeline import load_pipeline
+            return load_pipeline(self, entry, settings)
         run_mode = self._resolve_run_mode(entry)
         entry = dict(entry)
         entry["run_mode"] = run_mode
         entry["need_split"] = run_mode == "split"
+        self._set(balance=None)
         self._set(status="stopping", error=None, model_id=entry["id"],
                   model_name=entry["name"], progress=[], split=(run_mode == "split"))
         self._note(f"switching to {entry['name']} ({run_mode})")
@@ -770,6 +774,12 @@ class WorkerManager:
                                           run_mode="split" if is_split else "single")
                 self._set(status="ready", model_id=m["id"], model_name=m["name"],
                           lead_pid=pid, settings=cur, page_settings=cur, split=is_split)
+                try:
+                    balance = json.loads((self.state_dir / "pipeline-balance.json").read_text())
+                    if is_split and balance.get("lead_pid") == pid:
+                        self._set(balance=balance)
+                except (OSError, ValueError):
+                    pass
                 active = self.lead_active_settings() or {}
                 if active.get("sweep_paused"):
                     self.sweep({"release": True})
@@ -835,6 +845,9 @@ class WorkerManager:
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
     def _kill_packer(self) -> None:
+        from web_pipeline import stop_pipeline
+        if stop_pipeline(self):
+            return
         cmd = self._remote_stop_command("~/cv3", "~/.caravan/web-ui/packer.pid",
                                         listen=self.packer_peer)
         r = self._ssh(cmd, timeout=25)

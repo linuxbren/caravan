@@ -1,3 +1,10 @@
+### Day 19 Balance + N-stage MLX checkpoint — 2026-11-08
+- Experimental N-stage layer/shard plans and middle-packer transport; own per-stage caches, restore agreement and chain epoch invalidation.
+- Topology Balance Auto/one-layer sliders, live memory/download preview and an explicit fresh-checked reload API, shared with a future TUI. No automatic downloads.
+- N-stage launch/owned cleanup and web-restart node mapping. Serial, learning/guess-ahead off; N-stage Optimize is blocked. Old picker/download paths retain their two-stage gate until live verification.
+- **529 tests pass (37.908 s), 42 new**; 3/4/7-stage socket simulations pass. No Mini contacted, no new inference benchmark. [Details and live steps](docs/DAY19.md).
+- Easy install/auto-start, local-file ownership follow-up, diary sync and the final Day 19 release remain coordinator work.
+
 ### Day 18 release notes drafted — 2026-11-07
 - Draft at `docs/release-notes/day18.md` (RELEASES.md doesn't name a location; this is the new home for notes). Not tagged or published. Planned tag `day18-2026-11-07`. Before publishing: final commit, test count, and the fresh-package check.
 

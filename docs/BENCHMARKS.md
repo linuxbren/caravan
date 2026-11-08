@@ -1064,3 +1064,15 @@ temp 0, no prompt cache, 3 runs, Caravan commit 1955cab-era web server.
   FIFO still one-at-a-time for MLX).
 - A GGUF split where the packer loads its own part from its own disk
   (stage 2; not built).
+
+
+## Day 19 — N-stage Balance correctness checkpoint (2026-11-08)
+
+No Mini was contacted and no new inference/Thunderbolt/RAM benchmark was run.
+Do not compare the fake-node simulator's wall time with real model tok/s.
+The Linux-box simulator verified 3, 4 and 7 stages: forward order was complete,
+cold reuse 0 tokens, second-turn reuse 2 tokens, and each stage saved/restored
+its own cache. Full details and regression counts: [DAY19.md](DAY19.md).
+N-stage write/read/first-token/load-time/RAM results remain **pending**. Use an
+already-installed small model on two Minis with a second packer process first;
+that verifies correctness, not a third GPU's throughput.

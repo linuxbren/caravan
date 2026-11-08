@@ -14,6 +14,31 @@ the whole group is the **string**. The old words "head", "front" and
 "tail" survive only in older log entries, internal code names and
 deprecated flag aliases.
 
+## Day 19 order (2026-11-08)
+
+Brenden's order: **(1) Balance + 3+ Mini MLX split, (2) easy install and
+auto-start, (3) each Mini keeps its own files.** This checkpoint implements
+only (1), box-side. No Mini was contacted or restarted.
+
+- [x] Shared read-only Balance preview API: Auto from live free/reclaimable RAM,
+  1.75 GB margin, integer layer-boundary controls, memory/headroom and missing
+  shard preview; changing a boundary replans downloads for every stage.
+- [x] Explicit reload path: fresh stats + local shard checks before stopping the
+  current model; no implicit downloads; real per-reply speed shown afterwards.
+- [x] N-stage ranges, direct-source shard planner/CLI, middle-packer transport,
+  recursive session agreement/epoch invalidation, N-packer telemetry and owned
+  web launch/cleanup. Fake 3/4-node framed-socket tests and standalone simulator.
+- [ ] Live Apple Silicon checks, real third-worker simulation, UI usability and
+  performance measurements. This is **experimental**, not a new speed claim.
+- [ ] Promote N-stage planning into the old picker/download/Optimize paths once
+  live verified; those legacy paths still use the two-stage limit. No silent
+  promotion of untested N-stage concurrency/speculation (pinned off here).
+- [ ] Automatic multi-link Thunderbolt discovery/routing. Explicit `peer`,
+  `listen` and `upstream_peer` allow the chain to use different links; a triangle
+  of cables is not automatically configured. Use a trusted private link only.
+
+Details, test numbers, API and exact live-test steps: [DAY19.md](DAY19.md).
+
 ## Firm rules
 
 ### Each packer keeps its share of the model on its own disk (GGUF and MLX)
@@ -643,7 +668,7 @@ list above point to it.
 | Split link is unauthenticated | Thunderbolt-only cable between two trusted Macs. | Before the split runs over LAN/Tailscale. |
 | No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token without keepalive, about as much as the whole model on one Mac; the cable is <1 ms. Part of that was Metal cool-down after the idle wait (~5 ms/half); idea 6 (GPU keepalive, default on) removes it and raises writing ~28–50%. The rest is still serial turn-taking and graph-build overhead. Idea 5 confirmed moving layers does not raise single-chat writing. | After v3 merges. Do ideas 1 and 3 on top of keepalive; use idea 5's balanced cuts with idea 1. Also try compiling each stage's graph. |
 | `--kv-bits` with the split | Untested. | With the 8-bit chat memory item. |
-| More than two stages (one lead, several packers) | Two Macs today. | When a third Mac joins; needs re-planning of the cut and of split downloads. |
+| More than two stages (one lead, several packers) | Experimental N-stage Balance/CLI path implemented on Day 19; 3/4-stage fake socket tests pass. No live Apple Silicon N-stage inference yet. Legacy picker/Optimize stays two-stage. | Run the Day 19 live checks (a second packer process can simulate a third Mini), then promote the legacy paths. |
 | Split download used for one model only | Qwen3 30B 8-bit ran from split downloads. For Gemma 4 8-bit and GPT-OSS 20B 8-bit, the lead downloaded its files plus the packer-only ones and copied them to the packer over Thunderbolt (one internet download instead of two). | When split download is wired into the agent (Next #3). |
 | Qwen3.6 35B (hybrid attention) doesn't reuse the chat | Its linear-attention layers can't be rewound, and the template drops the reasoning from earlier replies, so every turn diverges and re-reads the whole chat (11 s at 4k, 53 s at 16k), also after a restart. Same on one Mac. | With per-model profiles: keep the reasoning in the history for hybrid models, or snapshot at the end of the user turn. |
 | Split download: resume and clean-up of interrupted downloads | Resume continues partial files since Day 18 (HTTP Range). Clean-up still open; stale `.incomplete` files from killed downloads stay on disk (nothing deleted). | When split download is wired into the agent. |

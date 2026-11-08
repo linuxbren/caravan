@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Caravan v3 (2026-10-31): one MLX model split across two Minis.
+"""Caravan v3 (2026-10-31): one MLX model split across N Minis (legacy two-stage flags kept).
 
 Pipeline split by layers, the way exo and llama.cpp's RPC backend do it,
 but with Caravan's per-session caches kept on both sides.
@@ -71,6 +71,36 @@ def plan_split(n_layers: int, front_layers=None):
         raise ValueError(f"packer layers must be 1..{n - 1}, got {k}")
     return (0, k), (k, n)
 
+
+
+def plan_ranges(n_layers, counts):
+    """Contiguous half-open ranges in forward order (packers, then lead).
+
+    Counts are explicit integers, not percentages; every stage owns >=1 layer.
+    This is the single range contract for workers, downloads and Balance.
+    """
+    n = int(n_layers)
+    counts = list(counts)
+    if (not counts or any(type(k) is not int or k < 1 for k in counts)
+            or sum(counts) != n):
+        raise ValueError("layer counts must be positive integers adding up to the model's layers")
+    end, ranges = 0, []
+    for k in counts:
+        ranges.append((end, end + k))
+        end += k
+    return ranges
+
+
+def parse_counts(value):
+    if value is None:
+        return None
+    try:
+        counts = [int(k.strip()) for k in value.split(",")]
+    except (ValueError, AttributeError):
+        raise ValueError("--split-counts must be comma-separated layer counts") from None
+    if len(counts) < 2 or min(counts) < 1:
+        raise ValueError("--split-counts needs at least two positive layer counts")
+    return counts
 
 
 def read_n_layers(model_dir) -> int:
@@ -363,6 +393,20 @@ class FrontClient:
         if old is not None and old != self.epoch and self.on_new_epoch:
             self.on_new_epoch(old, self.epoch)
 
+    def refresh_epoch(self):
+        """Before session reuse, ask the entire chain for its current epoch.
+
+        Do not recurse through hello on every token: that would multiply tiny
+        control round trips with each extra stage. A broken upstream fwd fails
+        the request; the next prepare performs this check before reusing KV.
+        """
+        self._ensure()
+        if self.hello and self.hello.get("stages"):
+            hello = self._roundtrip({"op": "hello", "proto": PROTO})[0]
+            old, self.epoch, self.hello = self.epoch, hello.get("epoch"), hello
+            if old != self.epoch and self.on_new_epoch:
+                self.on_new_epoch(old, self.epoch)
+
     def close(self):
         if self.sock is not None:
             try:
@@ -615,6 +659,72 @@ class FrontState:
         return {"error": f"unknown op {op!r}"}, b""
 
 
+class ChainState:
+    """One middle packer plus its upstream chain, using the existing protocol.
+
+    Lead commands travel backwards; fwd states return in layer order. Each
+    process keeps its own KV and files. The aggregate epoch changes if ANY
+    upstream process restarts, so the lead cannot reuse an orphaned cache.
+    """
+    def __init__(self, local, upstream, forward_hidden, stats_fn=None):
+        self.local, self.upstream = local, upstream
+        self.forward_hidden, self.stats_fn = forward_hidden, stats_fn
+        self._pending = None
+        self._upstream_epoch = None
+        local.forward = self._forward
+        upstream.on_new_epoch = self._restarted
+        self.epoch = local.epoch
+
+    def _restarted(self, old, new):
+        st = self.local.store
+        st.sessions.clear()
+        self.local.cur = self.local.scratch = None
+        st.ops.release()
+        self.local.epoch = uuid.uuid4().hex[:12]
+
+    def _forward(self, tokens, cache):
+        return self.forward_hidden(*self._pending, cache)
+
+    def handle(self, h, payload):
+        op = h.get("op")
+        # Check epochs before using any local state, including session fwd.
+        self.upstream._ensure()
+        rh, rp = self.upstream.call(op, payload, **{k: v for k, v in h.items() if k != "op"})
+        if op == "hello":
+            if self._upstream_epoch is not None and self._upstream_epoch != rh["epoch"]:
+                self._restarted(self._upstream_epoch, rh["epoch"])
+            self._upstream_epoch = rh["epoch"]
+            info = dict(self.local.info, proto=PROTO)
+            stages = rh.get("stages") or [dict(rh)]
+            info["stages"] = stages + [dict(self.local.info)]
+            info["range"] = [0, self.local.info["range"][1]]
+            info["epoch"] = self.local.epoch + ":" + rh["epoch"]
+            self.epoch = info["epoch"]
+            return info, b""
+        if op == "stats":
+            here = self.stats_fn() if self.stats_fn else dict(self.local.info)
+            return {"packers": (rh.get("packers") or [rh]) + [here]}, b""
+        self._pending = (rh, rp)
+        try:
+            lh, lp = self.local.handle(h, payload)
+        finally:
+            self._pending = None
+        if "error" in rh or "error" in lh:
+            raise FrontError(str(rh.get("error") or lh.get("error")))
+        if op == "restore":
+            verdict = combine_restore(lh.get("result"), lh.get("digest"), rh.get("result"), rh.get("digest"))
+            if verdict == "mismatch":
+                self.local.store.drop([h.get("key")])
+                self.upstream.call("drop", keys=[h.get("key")])
+                return {"result": "rejected", "digest": None}, b""
+        if op == "prepare" and lh.get("n") != rh.get("n"):
+            self.local.handle({"op": "reset"}, b"")
+            self.upstream.call("reset")
+            self.upstream.call("prepare", key=h.get("key"), prompt=h["prompt"])
+            lh, lp = self.local.handle(h, payload)
+        return lh, lp
+
+
 def serve_front(listen, state: FrontState, log=print, stats_fn=None, stop=None):
     """Accept one head at a time and answer its ops, on the calling thread
     (MLX work stays on one thread). A dropped connection just waits for the
@@ -648,7 +758,7 @@ def serve_front(listen, state: FrontState, log=print, stats_fn=None, stop=None):
                     if warm is not None:
                         warm.stop()
                 t0 = time.perf_counter()
-                if h.get("op") == "stats" and stats_fn:
+                if h.get("op") == "stats" and stats_fn and not isinstance(state, ChainState):
                     rh, rp = stats_fn(), b""
                 else:
                     try:
@@ -696,7 +806,7 @@ class SplitSessions:
 
     def restore(self, key) -> str:
         """Both halves or neither."""
-        self.client._ensure()       # may clear our sessions if the front restarted
+        self.client.refresh_epoch()  # may clear sessions if ANY packer restarted
         r = self.store.restore(key)
         s = self.store.sessions.get(key)
         hd = tokens_digest(s.tokens) if s else None
@@ -713,7 +823,7 @@ class SplitSessions:
         return "rejected"
 
     def prepare(self, key, prompt):
-        self.client._ensure()       # notice a restarted front before trusting our memory
+        self.client.refresh_epoch()  # notice a restarted chain before trusting memory
         from_disk = False
         if key not in self.store.sessions:
             from_disk = self.restore(key) == "restored" if _valid(self.store, key) else False
@@ -809,14 +919,16 @@ def safetensors_expected_size(path):
         return None
 
 
-def _fetch_hint(d, who, front_layers, repo=None):
+def _fetch_hint(d, who, front_layers, repo=None, counts=None, stage_index=None):
     cmd = f"python3 agent/mlx_split_fetch.py {repo or '<repo>'} {d} --role {who}"
-    if front_layers is not None:
+    if counts is not None:
+        cmd += " --split-counts " + ",".join(map(str, counts)) + f" --stage-index {stage_index}"
+    elif front_layers is not None:
         cmd += f" --packer-layers {front_layers}"
     return cmd
 
 
-def check_local_shards(model_dir, role, front_layers=None):
+def check_local_shards(model_dir, role, front_layers=None, counts=None, stage_index=None):
     """A split-downloaded model dir (agent/mlx_split_fetch.py) holds only some
     shards; strict=False loading would then silently leave missing weights at
     their random init. Refuse to start unless this stage's shards are here
@@ -829,9 +941,17 @@ def check_local_shards(model_dir, role, front_layers=None):
     d = Path(model_dir)
     idx, cfg = d / "model.safetensors.index.json", d / "config.json"
     if not idx.exists() or not cfg.exists():
+        if counts is not None:
+            raise FileNotFoundError(f"N-stage split needs config.json and model.safetensors.index.json in {d}")
         return []
     from mlx_split_fetch import plan_files
-    need = plan_files(json.loads(cfg.read_text()), json.loads(idx.read_text()), front_layers)[role]
+    if counts is None:
+        need = plan_files(json.loads(cfg.read_text()), json.loads(idx.read_text()), front_layers)[role]
+    else:
+        if type(stage_index) is not int or not 0 <= stage_index < len(counts):
+            raise ValueError("N-stage split needs a valid zero-based stage index")
+        from mlx_split_fetch import plan_stage_files
+        need = plan_stage_files(json.loads(cfg.read_text()), json.loads(idx.read_text()), counts)["stages"][stage_index]
     who = {"head": "lead", "front": "packer"}.get(role, role)
     recorded, repo = {}, None
     if (d / SIZES_FILE).exists():
@@ -843,7 +963,7 @@ def check_local_shards(model_dir, role, front_layers=None):
     missing = sorted(f for f in need if not (d / f).exists())
     if missing:
         raise FileNotFoundError(f"{who} stage needs {missing} in {d}. Fetch them from the source: "
-                                + _fetch_hint(d, who, front_layers, repo))
+                                + _fetch_hint(d, who, front_layers, repo, counts, stage_index))
     bad = []
     for f in sorted(need):
         actual = (d / f).stat().st_size
@@ -859,7 +979,7 @@ def check_local_shards(model_dir, role, front_layers=None):
     if bad:
         raise ShardSizeError(f"{who} stage: wrong size in {d}: " + "; ".join(bad)
                              + ". Move the bad file(s) aside, then fetch them again from the source: "
-                             + _fetch_hint(d, who, front_layers, repo))
+                             + _fetch_hint(d, who, front_layers, repo, counts, stage_index))
     return sorted(need)
 
 
@@ -880,14 +1000,14 @@ class Stage:
     needed weights) and runs them. Works for qwen3_moe, qwen3_5(_moe),
     gemma4 and gpt_oss by reading layer attributes, not by per-model forks."""
 
-    def __init__(self, model_dir, role, front_layers=None):
+    def __init__(self, model_dir, role, front_layers=None, counts=None, stage_index=None):
         import mlx.core as mx
         import mlx.nn as nn  # noqa: F401
         from mlx_lm.utils import load_model
         from mlx_lm.models.base import create_attention_mask, create_ssm_mask
         self.mx = mx
         self._cam, self._csm = create_attention_mask, create_ssm_mask
-        check_local_shards(model_dir, role, front_layers)
+        check_local_shards(model_dir, role, front_layers, counts, stage_index)
         loaded_keys = set()
         import mlx.nn as _nn
         _orig_lw = _nn.Module.load_weights
@@ -920,6 +1040,14 @@ class Stage:
         fr, hr = plan_split(n, front_layers)
         self.role = role
         self.range = fr if role == "front" else hr
+        if counts is not None:
+            ranges = plan_ranges(n, counts)
+            if stage_index is None or not 0 <= stage_index < len(ranges):
+                raise ValueError("invalid split stage index")
+            if (role == "head") != (stage_index == len(ranges) - 1):
+                raise ValueError("only the last stage can be the lead")
+            self.range = ranges[stage_index]
+        self.first = self.range[0] == 0
         a, b = self.range
         self.layers = list(self.inner.layers[a:b])
         self.kinds = [self._kind(i, l) for i, l in zip(range(a, b), self.layers)]
@@ -929,7 +1057,7 @@ class Stage:
         self.window = getattr(self.inner, "window_size", None)
         # Only these weights get read from disk.
         need = [l.parameters() for l in self.layers]
-        if role == "front" or self.tied:
+        if (role == "front" and self.range[0] == 0) or (role == "head" and self.tied):
             need.append(self.inner.embed_tokens.parameters())
         if role == "head":
             need.append(self.inner.norm.parameters())
@@ -956,7 +1084,7 @@ class Stage:
             return
         pre = "language_model." if self.lm is not self.model else ""
         mods = [(f"{pre}model.layers.{i}", self.inner.layers[i]) for i in range(a, b)]
-        if role == "front" or self.tied:
+        if (role == "front" and self.range[0] == 0) or (role == "head" and self.tied):
             mods.append((f"{pre}model.embed_tokens", self.inner.embed_tokens))
         if role == "head":
             mods.append((f"{pre}model.norm", self.inner.norm))
@@ -1033,6 +1161,13 @@ class Stage:
         mx = self.mx
         x = mx.array(tokens, dtype=mx.int32)[None]
         h = self.run_layers(self.embed(x), cache)
+        mx.eval(h, [c.state for c in cache])
+        return {"dtype": str(h.dtype).split(".")[-1], "shape": list(h.shape)}, array_bytes(mx, h)
+
+    def middle_forward(self, header, payload, cache):
+        """Hidden states -> hidden states; middle packers never embed tokens."""
+        mx = self.mx
+        h = self.run_layers(array_from(mx, header, payload), cache)
         mx.eval(h, [c.state for c in cache])
         return {"dtype": str(h.dtype).split(".")[-1], "shape": list(h.shape)}, array_bytes(mx, h)
 

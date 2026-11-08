@@ -1109,6 +1109,14 @@
   <div class="topo-body" id="topoBody">
     <!-- Cards built from /api/nodes (N Minis from config). -->
   </div>
+  <section class="drawer-section" id="balancePanel" aria-label="Split Balance">
+    <h3>Balance</h3>
+    <p class="help">Auto uses each Mini's free memory. Move a boundary one layer at a time to try your own split.</p>
+    <button type="button" class="ghost" id="balanceAuto">Auto / refresh</button>
+    <div id="balancePreview" aria-live="polite">Choose an installed MLX model in Settings, then Auto / refresh.</div>
+    <button type="button" id="balanceApply" disabled>Reload this split</button>
+    <p class="help" id="balanceSpeed">Real speed will appear after reload and a reply.</p>
+  </section>
   <div class="topo-disk">
     <div class="picker-section">On disk · all Minis</div>
     <div class="picker-disk" id="pickerDisk">loading…</div>
@@ -1770,6 +1778,7 @@
   }
 
   function showStats(stats, ts) {
+    window.dispatchEvent(new CustomEvent("caravan-reply-stats", {detail: {stats, model: state.loadedModel}}));
     $("sTotal").innerHTML = `${fmt(stats.total_s)} <small>s</small>`;
     $("sTtft").innerHTML = `${fmt(stats.ttft_s)} <small>s</small>`;
     const read = stats.read_tok_s != null
@@ -3133,5 +3142,6 @@
   <button type="button" class="primary" id="loadNowYes">Load now</button>
   <button type="button" id="loadNowNo">Not now</button>
 </dialog>
+<script src="/balance.js"></script>
 </body>
 </html>

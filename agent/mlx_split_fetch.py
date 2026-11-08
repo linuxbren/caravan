@@ -1,4 +1,4 @@
-"""Split download for a two-Mini MLX split (Caravan v3 prototype, 2026-10-31).
+"""Split download for an N-Mini MLX split (Caravan v3 prototype, 2026-10-31).
 
 Each Mini fetches only the safetensors shards that hold *its* layers,
 straight from Hugging Face -- nothing is relayed through the lead.
@@ -137,6 +137,37 @@ def plan_files(config, index, front_layers=None, with_vision=False):
     return out
 
 
+def plan_stage_files(config, index, counts, with_vision=False):
+    """N-stage shard plan. Whole boundary shards can be needed by many stages."""
+    from mlx_split import plan_ranges
+    wm = index["weight_map"]
+    why = head_only_reason(config, wm)
+    if why:
+        raise ValueError(f"cannot split: {why}")
+    ranges = plan_ranges(n_layers_of(config), counts)
+    tied = tied_of(config, wm)
+    stages = [set() for _ in ranges]
+    last = len(stages) - 1
+    for name, filename in wm.items():
+        if any(name.startswith(v) or ("." + v) in name for v in VISION):
+            owners = range(len(stages)) if with_vision else []
+        elif MTP.search(name):
+            owners = [last]
+        elif LAYER.search(name):
+            layer = int(LAYER.search(name).group(1))
+            owners = [i for i, (a, b) in enumerate(ranges) if a <= layer < b]
+        elif "embed_tokens" in name:
+            owners = {0, last} if tied else [0]
+        elif "lm_head" in name or re.search(r"(?:^|\.)norm\.", name):
+            owners = [last]
+        else:
+            owners = range(len(stages))
+        for i in owners:
+            stages[i].add(filename)
+    shared = {f for files in stages for f in files if sum(f in fs for fs in stages) > 1}
+    return {"stages": stages, "split": ranges, "tied": tied, "shared": shared}
+
+
 def file_sizes(repo, token=None):
     from huggingface_hub import HfApi
     info = HfApi(token=token).model_info(repo, files_metadata=True)
@@ -223,6 +254,8 @@ def main(argv=None):
                          "head/front: deprecated aliases")
     ap.add_argument("--packer-layers", "--front-layers", dest="front_layers", type=int, metavar="K",
                     help="layers on Packer 1 (--front-layers: deprecated alias)")
+    ap.add_argument("--split-counts", help="N-stage counts in forward order, e.g. 10,10,12")
+    ap.add_argument("--stage-index", type=int, help="zero-based stage in --split-counts")
     ap.add_argument("--with-vision", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--gguf-file", default=None,
@@ -246,18 +279,31 @@ def main(argv=None):
     )
     cfg = json.loads((d / "config.json").read_text())
     idx = json.loads((d / "model.safetensors.index.json").read_text())
-    p = plan_files(cfg, idx, a.front_layers, a.with_vision)
+    if a.split_counts:
+        from mlx_split import parse_counts
+        p = plan_stage_files(cfg, idx, parse_counts(a.split_counts), a.with_vision)
+        if a.stage_index is None or not 0 <= a.stage_index < len(p["stages"]):
+            ap.error("--split-counts requires a valid --stage-index")
+        if a.role != "all" and (a.role == "head") != (a.stage_index == len(p["stages"])-1):
+            ap.error("--role lead must use the last stage; packer must use an earlier stage")
+        p["front"], p["head"] = p["stages"][0], p["stages"][-1]
+    else:
+        if a.stage_index is not None:
+            ap.error("--stage-index requires --split-counts")
+        p = plan_files(cfg, idx, a.front_layers, a.with_vision)
     sizes = file_sizes(a.repo, token=token)
     if a.role == "all":
         mine = sorted({f for f in sizes if f.endswith(".safetensors")}
-                      or (p["front"] | p["head"]))
+                      or (set().union(*p["stages"]) if a.split_counts else (p["front"] | p["head"])))
     else:
-        mine = sorted(p[a.role])
+        mine = sorted(p["stages"][a.stage_index] if a.split_counts else p[a.role])
     gb = lambda fs: round(sum(sizes.get(f, 0) for f in fs) / 1e9, 2)  # noqa: E731
     shards = sorted(f for f in sizes if f.endswith(".safetensors"))
+    other = (set().union(*(files for i, files in enumerate(p["stages"]) if i != a.stage_index))
+             if a.split_counts else p["head" if a.role == "front" else "front"])
     report = {"repo": a.repo, "role": shown, "split": p["split"], "tied": p["tied"], "files": mine,
               "shared": sorted(p["shared"]), "my_gb": gb(mine), "full_gb": gb(shards),
-              "other_gb": 0 if a.role == "all" else gb(p["head" if a.role == "front" else "front"])}
+              "other_gb": 0 if a.role == "all" else gb(other)}
     print(json.dumps(report), flush=True)
 
     stop_evt = threading.Event()
