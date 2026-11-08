@@ -302,3 +302,11 @@ Tonight's case: Dark Champion 21B 8-bit (32 layers, ~0.71 GB/layer) on two 24 GB
 
 ### Day 18 release notes drafted — 2026-11-07
 - Draft at `docs/release-notes/day18.md` (RELEASES.md doesn't name a location; this is the new home for notes). Not tagged or published. Planned tag `day18-2026-11-07`. Before publishing: final commit, test count, and the fresh-package check.
+
+### Brenden's Dark Champion test session (Nov 7, 7:27–7:46 PM CT, 16/16 split)
+Taken from the EXO1 lead.log; Brenden ran the chats himself.
+- 31 turns in one chat, with the context growing from 854 to 5,849 tokens (prompt cache reused all earlier turns each time).
+- Overall speed including reading: about 12–13 tok/s early in the chat, about 10–11 tok/s past 5k tokens of context (e.g. 514 tok in 41.29 s; 245 tok in 24.39 s at 5.2k context).
+- No 507 memory refusals and no gibberish. Lead peak memory went from 12.84 to 13.07 GB. After the session, EXO1 had 65,181 free pages and EXO2 had 24,396 (16 KB pages).
+- One BrokenPipeError at about 7:42 PM. This is likely a reply that was stopped or a closed tab, and the next turn worked.
+- Note: the chat reused session 897be30c98f2d82b, the same one as the earlier gibberish reply, so that reply was probably still in its history.
