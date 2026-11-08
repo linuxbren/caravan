@@ -281,3 +281,11 @@ Replies: "Hello!" and a clean ~330-word sourdough explanation with 5 numbered ti
 **Rope log:** no "rope scaling: applied" line in lead.log/packer.log. The split Stage logged via print() (block-buffered stdout). Fixed to a flushed stderr logger; shows on next reload (not reloaded for it).
 
 **Follow-up (not fixed):** split chooser should pick a more balanced packer_layers when the saved point leaves one Mini under the headroom margin (24/8 left EXO2 at 17 GB on 24 GB). Also EXO1/EXO2 checkouts drifted by one commit during the run because another job was pushing.
+
+### GGUF Optimize now wired to the button — 2026-11-07
+- New `proxy/web_gguf_optimize.py` (`GgufOptimizer`) wraps `gguf_tune.GgufTuner` and reports in the same shape as the MLX Optimize now: phase, prompts, reloads, per-option schedule (pending/running/kept/skipped + winner), `reply_s`, `reload_s`, `eta_s`, summary. ETA = for each unsettled option, (2 − arms done) × (reload + 2 replies), plus one final reload of the winner.
+- Endpoints: `POST /api/optimize/start` now picks the GGUF runner when the loaded model is llama.cpp (`backend == "llama"`); `POST /api/optimize/gguf/start` forces it. `GET /api/optimize`, `/pause`, `/cancel` follow whichever runner started last.
+- Reloads go through `mgr.switch(..., entry={..., tune_override})`; the GGUF launcher uses `tune_override` instead of the saved best when present. Waits for your chats and honours Pause; Cancel finishes the current step, then reloads the best settings.
+- UI: the Optimize now panel labels GGUF runs "(GGUF, each option reloads llama.cpp twice)".
+- Tests: 4 new with a fake tuner/manager (`tests/test_day18_gguf_optimize_web.py`). Full suite 471 OK (32.8s). **Not run live yet.**
+- Docs cleanup check: no duplicated "GGUF Optimize now runner" section exists in docs/DAY18.md or CHANGELOG.md (the earlier "duplicate" was two files' output printed back to back). Nothing to remove.

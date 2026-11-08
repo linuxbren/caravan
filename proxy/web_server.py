@@ -38,6 +38,7 @@ import web_optimize  # noqa: E402
 import web_picker  # noqa: E402
 import web_nodes  # noqa: E402
 import web_alert  # noqa: E402
+import web_gguf_optimize  # noqa: E402
 
 DEFAULT_HOST = os.environ.get("CARAVAN_WEB_HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.environ.get("CARAVAN_WEB_PORT", "8190"))
@@ -64,7 +65,9 @@ class App:
         self._nodes_lock = threading.Lock()
         self._nodes_cache = None
         self._nodes_busy = False
-        self.optimizer = web_optimize.Optimizer(mgr, inflight=lambda: self._inflight)
+        self.mlx_optimizer = web_optimize.Optimizer(mgr, inflight=lambda: self._inflight)
+        self.gguf_optimizer = web_gguf_optimize.GgufOptimizer(mgr, inflight=lambda: self._inflight)
+        self.optimizer = self.mlx_optimizer
 
     # ---- ROADMAP #14: live node view (GET /api/nodes) -------------------
     NODES_TTL = 0.4
@@ -751,11 +754,21 @@ def make_handler(app: App):
                         pass
                     return self._json(502, {"error": msg, "worker": app.mgr.snapshot()})
                 return self._json(200, app.mgr.snapshot())
-            if path == "/api/optimize/start":
+            if path in ("/api/optimize/start", "/api/optimize/gguf/start"):
                 if app.mgr._switch_thread and app.mgr._switch_thread.is_alive():
                     return self._json(409, {"error": "a model load is in progress"})
+                if app.optimizer.snapshot().get("running"):
+                    return self._json(409, {"error": "optimize already running"})
+                gguf = (path.endswith("/gguf/start")
+                        or app.mgr.snapshot().get("backend") == "llama")
                 try:
-                    return self._json(200, app.optimizer.start())
+                    if gguf:
+                        snap_ = app.gguf_optimizer.start()
+                        app.optimizer = app.gguf_optimizer
+                        return self._json(200, snap_)
+                    snap_ = app.mlx_optimizer.start()
+                    app.optimizer = app.mlx_optimizer
+                    return self._json(200, snap_)
                 except RuntimeError as e:
                     return self._json(409, {"error": str(e)})
             if path == "/api/optimize/pause":

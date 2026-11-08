@@ -403,7 +403,8 @@ class WorkerManager:
                 self._note(f"{name}: no local copy of {path.name}; its share goes over the link")
         try:
             import gguf_tune as GT
-            tune = GT.best_tune(path, 1 + len(rpc))
+            tune = (dict(entry["tune_override"]) if isinstance(entry.get("tune_override"), dict)
+                    else GT.best_tune(path, 1 + len(rpc)))
         except Exception:  # noqa: BLE001 - tuning is optional
             tune = {}
         if tune:

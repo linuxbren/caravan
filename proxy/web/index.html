@@ -1491,7 +1491,7 @@
     if (!j.mode) { el.textContent = ""; return; }
     const schedule = j.schedule || [];
     const done = schedule.filter(i => ["kept", "skipped"].includes(i.state)).length;
-    let txt = `Optimize now: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
+    let txt = `Optimize now${j.backend === "llama" ? " (GGUF, each option reloads llama.cpp twice)" : ""}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
     if (schedule.length) txt += ` · ${done}/${schedule.length} options settled`;
     for (const item of schedule) txt += `\n${item.name}: ${item.state}${item.skip ? " — " + item.skip : item.state === "kept" ? " — " + item.winner : ""}`;
     if (j.running) txt += ` · about ${fmtMin(j.eta_s)} left`;

@@ -62,6 +62,9 @@ Env knobs (optional):
 - `CARAVAN_ALERT_WEBHOOK_URL` (alert_url): opt-in. When set, POST `{model, warnings, mini, caravan_version}` once per model/warning set the first time the picker shows a ⚠. Unset by default = nothing is sent. Never commit a real value.
 - `CARAVAN_ALERT_WEBHOOK_KEY` (alert_key): optional secret sent as `Authorization: Bearer <key>` and `X-Webhook-Key: <key>`. Dedupe file: `~/.caravan/alert-sent.json` (delete it to re-send).
 
+### Optimize now for GGUF models
+With a GGUF model loaded, **Optimize now** runs the llama.cpp tuner (`POST /api/optimize/start`, or `/api/optimize/gguf/start`). It tries one llama-server option at a time, with two reloads per option, and keeps a challenger only if it's more than 3% faster. Progress, ETA, Pause and Cancel work like MLX. Winners are saved in `~/.caravan/gguf-tuned.json` and used on the next load.
+
 ### Report this model
 When a model has a ⚠, the line under the picker has a **Report this model** link. It opens a prefilled GitHub issue (label `model-report`) with the repo id, warning text, Caravan version, `model_type`, and tie flag only. You can edit it on GitHub before sending; Caravan never sends it for you.
 
