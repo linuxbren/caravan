@@ -838,6 +838,12 @@ class Engine:
         else:
             self._learn_packer_was_explicit = getattr(args, "split_front_layers", None) is not None
             self.model, self.tokenizer = load(str(self.model_dir))
+            try:
+                from mlx_arch import fix_rope_scaling
+                import json as _json
+                fix_rope_scaling(self.model, _json.loads((self.model_dir / "config.json").read_text()), log=log)
+            except Exception as _e:
+                log(f"rope scaling patch skipped: {_e!r}")
             add_turn_end_stops(self.tokenizer, log=log)
         if getattr(args, "native_mtp", False):
             if getattr(args, "kv_bits", None):

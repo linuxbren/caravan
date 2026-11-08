@@ -1,3 +1,10 @@
+### Rope scaling for classes that ignore it (mixtral etc.) — 2026-11-07
+- Some mlx_lm classes ignore `rope_scaling` because they build a plain `nn.RoPE`. Examples: mixtral, qwen3_moe, phi3, gemma2, and about 40 more in mlx_lm 0.32.2.
+- `proxy/mlx_arch.fix_rope_scaling()` swaps those for `mlx_lm.models.rope_utils.initialize_rope(...)` when config (or text_config) asks for scaling. Types covered: llama3, yarn, dynamic, and linear.
+- Applied after load in the single-Mini worker and in split `Stage` (lead and packer). Classes that already scale (llama, qwen2/3, gpt_oss) are left alone. Site-packages is not edited.
+- Tests: 5 new (fake RoPE/config). Full suite 445 OK (32.8s).
+- Live check (testing window): load Dark Champion. Worker/packer logs should show `rope scaling: applied llama3 to N attention layer(s)`, and a long prompt should stay coherent.
+
 ### Releases — 2026-11-07
 - First daily source release: `day17-2026-11-07`; main fast-forwarded to current work.
 - Root INSTALL.md covers the web UI, dependencies, private-network setup and more Minis.

@@ -894,6 +894,15 @@ class Stage:
         finally:
             _nn.Module.load_weights = _orig_lw
         self._loaded_keys = loaded_keys
+        try:
+            import os as _os, sys as _sys
+            _px = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "proxy")
+            if _px not in _sys.path:
+                _sys.path.insert(0, _px)
+            from mlx_arch import fix_rope_scaling
+            fix_rope_scaling(model, self.config, log=print)
+        except Exception as _e:  # never block a load on this
+            print(f"rope scaling patch skipped: {_e!r}")
         self.model = model
         self.lm = getattr(model, "language_model", None) or model
         self.inner = self.lm.model

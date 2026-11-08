@@ -90,3 +90,61 @@ def apply_mlx_lm_remaps(log=None) -> list:
                 except Exception:
                     pass
     return applied
+
+
+def _text_cfg(config: dict) -> dict:
+    cfg = dict(config or {})
+    for sub in ("text_config", "llm_config"):
+        if isinstance(cfg.get(sub), dict):
+            merged = dict(cfg[sub])
+            for k, v in cfg.items():
+                merged.setdefault(k, v)
+            return merged
+    return cfg
+
+
+def _iter_layers(model):
+    lm = getattr(model, "language_model", None) or model
+    inner = getattr(lm, "model", None) or lm
+    return list(getattr(inner, "layers", None) or [])
+
+
+def fix_rope_scaling(model, config: dict, *, nn=None, initialize_rope=None, log=None) -> int:
+    """Day 18: some mlx_lm model classes (mixtral, qwen3_moe, phi3, ...) build a
+    plain nn.RoPE and ignore config.rope_scaling. Mixtral-shaped Llama 3.x
+    merges (Dark Champion) ship llama3 scaling (factor 32), so long prompts
+    drift. Swap any *plain* nn.RoPE for mlx_lm's initialize_rope(...) when the
+    config asks for scaling. Classes that already scale (llama, qwen2/3,
+    gpt_oss ...) keep their own rope objects, so this is a no-op for them.
+    Returns the number of attention modules patched."""
+    cfg = _text_cfg(config)
+    sc = cfg.get("rope_scaling") or cfg.get("rope_parameters")
+    if not isinstance(sc, dict):
+        return 0
+    rt = sc.get("type") or sc.get("rope_type") or "default"
+    if rt == "default" or (rt == "linear" and not sc.get("factor")):
+        return 0
+    if nn is None:
+        import mlx.nn as nn  # type: ignore
+    if initialize_rope is None:
+        from mlx_lm.models.rope_utils import initialize_rope  # type: ignore
+    n = 0
+    for layer in _iter_layers(model):
+        if layer is None:
+            continue
+        attn = getattr(layer, "self_attn", None) or getattr(layer, "attention", None)
+        rope = getattr(attn, "rope", None)
+        if rope is None or type(rope) is not nn.RoPE:
+            continue
+        if rt == "linear" and abs(float(getattr(rope, "scale", 1.0)) - 1.0) > 1e-9:
+            continue  # class already applied linear scaling
+        attn.rope = initialize_rope(
+            rope.dims, rope.base, rope.traditional, sc,
+            cfg.get("max_position_embeddings"))
+        n += 1
+    if n and log:
+        try:
+            log(f"rope scaling: applied {rt} to {n} attention layer(s) (mlx_lm class ignored it)")
+        except Exception:
+            pass
+    return n
