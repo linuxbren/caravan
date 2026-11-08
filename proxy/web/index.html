@@ -1160,6 +1160,7 @@
       <button class="primary drawer-control" id="btnLoad">Load model</button>
       <button class="ghost drawer-control" id="btnStop" title="Unload">Unload</button>
     </div>
+    <div class="help" id="modelWarn" hidden></div>
     <div class="optgrid" id="optWrap">
 <div class="optcard drawer-section">
       <h2 class="drawer-section-title"><span class="tip" title="Caravan learns which Optimizations help this model on your Minis.">Optimizations</span></h2>
@@ -1592,7 +1593,7 @@
       if (warns.length) label += " ⚠";
       opt.textContent = label;
       opt.disabled = !usable;
-      opt.title = [m.disabled_reason || m.hf || m.name, ...warns.map(w => "⚠ " + w)].join("\n");
+      opt.title = [m.disabled_reason || m.hf || m.name, ...(warns.length ? ["⚠ means Caravan noticed something unusual about this model:"] : []), ...warns.map(w => "• " + w)].join("\n");
       if (m.id === cur || m.hf === cur) opt.selected = true;
       sel.appendChild(opt);
     }
@@ -1606,6 +1607,9 @@
   function renderPlace() {
     const ps = $("placeSelect");
     const m = (state.modelRows || {})[$("modelSelect").value];
+    const mw = $("modelWarn");
+    const warns = (m && m.warnings) || [];
+    if (mw) { mw.hidden = !warns.length; mw.textContent = warns.length ? "⚠ Heads-up about this model: " + warns.join(" ") : ""; }
     const opts = (m && m.placement_options) || [];
     ps.hidden = !opts.length;
     if (!opts.length) { ps.innerHTML = ""; return; }

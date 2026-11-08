@@ -246,3 +246,6 @@ See the report. Tests at the end of the code work: 436 OK on the box.
 - Not yet wired to the Optimize now button. That needs a web endpoint that calls `GgufTuner` with the launcher's restart. Next step.
 - Tests: 5 new. Full suite 461 OK (32.8s). One failed test run: my test assumed ubatch 1024 is the first challenger, but the schedule picks 256 (a tie in distance from 512, so 256 comes first). The test was fixed; the code was unchanged.
 - Live check: run the tuner against a small GGUF (Qwen2.5-3B q4_0) on 1 and 2 Minis. Expect about 6 reloads per run.
+
+### ⚠ model warnings: plain-language hints (Nov 7, ~7:10 PM CT)
+Brenden asked that users understand what ⚠ means. The hover text now starts with "⚠ means Caravan noticed something unusual about this model:". Each warning is rewritten to say what's off, whether it still runs, and what to do. macOS select menus don't show hover text on options, so the warning also shows as a line under the model picker when that model is selected.

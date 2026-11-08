@@ -15,11 +15,11 @@ class ModelWarnings(unittest.TestCase):
         w = A.model_warnings({"model_type": "mixtral", "tie_word_embeddings": True},
                              {"lm_head.weight": "a", "model.embed_tokens.weight": "b"})
         self.assertEqual(len(w), 1)
-        self.assertIn("lm_head", w[0])
+        self.assertIn("extra output table", w[0])
 
     def test_untied_without_lm_head(self):
         w = A.model_warnings({"tie_word_embeddings": False}, {"model.embed_tokens.weight": "b"})
-        self.assertIn("random", w[0])
+        self.assertIn("gibberish", w[0])
 
     def test_consistent_models_clean(self):
         self.assertEqual(A.model_warnings({"tie_word_embeddings": True}, {"model.embed_tokens.weight": "b"}), [])
@@ -39,7 +39,7 @@ class ModelWarnings(unittest.TestCase):
                 "model.embed_tokens.weight": "a.safetensors", "lm_head.weight": "a.safetensors",
                 "model.layers.0.w": "a.safetensors", "model.layers.1.w": "a.safetensors"}}))
             r = MI.inspect_tree(d)
-            self.assertTrue(any("lm_head" in w for w in r["warnings"]))
+            self.assertTrue(any("extra output table" in w for w in r["warnings"]))
 
 
 if __name__ == "__main__":

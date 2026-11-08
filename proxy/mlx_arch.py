@@ -158,18 +158,18 @@ def model_warnings(config: dict, weight_map: Optional[dict] = None) -> list:
     mt = str(cfg.get("model_type") or "")
     # A top-level *_text type (VLM wrappers keep it in text_config, which is fine).
     if mt.endswith("_text") and mt not in MODEL_TYPE_REMAP:
-        out.append(f"model_type {mt} is not in Caravan's remap table; mlx_lm may not support it")
+        out.append(f"Caravan hasn't seen this model type ({mt}) before. It may not load, or it may give garbled replies. If it does, try another version of the model.")
     if mt.endswith("_mtp") or mt.endswith("_nextn"):
-        out.append(f"{mt} is a guess-ahead helper head, not a chat model")
+        out.append("This is a helper that makes another model faster, not a chat model on its own. Use it with its main model, not by itself.")
     if weight_map:
         flags = [cfg.get("tie_word_embeddings")]
         if isinstance(cfg.get("text_config"), dict):
             flags.append(cfg["text_config"].get("tie_word_embeddings"))
         has_lm = any("lm_head" in k for k in weight_map)
         if any(f is True for f in flags) and has_lm:
-            out.append("config ties embeddings but the files ship lm_head; mlx_lm ignores lm_head "
-                       "and uses embed_tokens (the lead needs the embedding shard)")
+            out.append("This model's files don't quite match its settings (it ships an extra output table it won't use). "
+                       "Caravan handles this: it still runs, but when split, every Mini needs the first file of the model.")
         elif flags[0] is False and not has_lm and not any(f is True for f in flags):
-            out.append("config says untied embeddings but the files have no lm_head; "
-                       "the output layer would be random")
+            out.append("This model is missing the part that picks each next word, so it would reply with gibberish. "
+                       "Try another download of this model.")
     return out
