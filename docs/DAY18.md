@@ -310,3 +310,10 @@ Taken from the EXO1 lead.log; Brenden ran the chats himself.
 - No 507 memory refusals and no gibberish. Lead peak memory went from 12.84 to 13.07 GB. After the session, EXO1 had 65,181 free pages and EXO2 had 24,396 (16 KB pages).
 - One BrokenPipeError at about 7:42 PM. This is likely a reply that was stopped or a closed tab, and the next turn worked.
 - Note: the chat reused session 897be30c98f2d82b, the same one as the earlier gibberish reply, so that reply was probably still in its history.
+
+### Per-reply timing log + wrap-up — 2026-11-07, ~7:55 PM CT
+- e9159c8: `agent/mlx_worker.py` `_timing_line()` and a flushed `log()` line after each reply's answer line, single-Mini and split: `session X: timing (single|split): read X tok (C cached) at Y tok/s, write Z tok at W tok/s, first token A s, total B s`. Write speed = (tokens − 1) / (total − first token). Tests: 2 new (`tests/test_timing_log.py`). Full suite **486 OK (33.8 s)**.
+- Both Minis pulled to e9159c8 (`git pull --ff-only`, clean). Only the EXO1 web server was restarted (`CARAVAN_WEB_KEEP_WORKERS=1`); it adopted the running lead (pid 78216), so Dark Champion stayed loaded. The worker was not restarted, so the timing line starts on the next model load.
+- Read-only checks on EXO1 :8190: status ready, split true; `/api/models` Dark Champion row has the tie-table ⚠ warning; the page has the Report this model link; `split_check` ok at 16/16 (free 5.49/6.79 GB, balanced 15/17, margin 1.75), so no split warning, correctly. Worker :8194 /health 200.
+- Brenden's session summary: 31 turns; learned write speed 11.96 tok/s mean over 29 replies with guess-ahead on vs 11.31 over 3 off; ~13.7 early sliding to ~12; peak lead 13.07 GB; no 507s, no gibberish; one harmless BrokenPipe ~7:42 PM CT.
+- Moved to next dev day: llama.cpp 76a67730 build and benchmarks, GGUF tuner live run, GGUF stage 2 30B load timing, Qwen3.6 download, Balance slider.

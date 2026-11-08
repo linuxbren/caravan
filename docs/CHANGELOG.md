@@ -4,7 +4,7 @@
 ## Unreleased
 
 ### Day 18 (Nov 7, evening CT) — overview: [DAY18.md](DAY18.md)
-- Day 18 (Nov 7): Dark Champion 21B split verified coherent after 07249e7 at 16/16 (14.2 tok/s write, 0.47 s first token, 387 tokens). 24/8 failed with HTTP 507 (EXO2 1.51–1.71 GB free vs 1.75 GB margin). Split Stage rope-scaling notes now logged (flushed stderr instead of print).
+- Day 18 (Nov 7): Dark Champion 21B split verified coherent after 07249e7 at 16/16 (14.2 tok/s write, 0.47 s first token, 387 tokens). 24/8 failed with HTTP 507 (EXO2 1.51–1.71 GB free vs 1.75 GB margin). Split Stage rope-scaling notes now logged (flushed stderr instead of print). Per-reply timing line in lead.log (read/cached, read tok/s, write tok/s, first token, total). 486 tests OK.
 - Download finished + nothing loaded: asks **Load now / Not now** (all four themes); no silent auto-load.
 - Resume continues a partial file with HTTP Range (verified live on both Minis) instead of starting from 0.
 - Split-download progress: no double count of `.incomplete`, total = what that Mini really fetches, never above it; "stalled?" only when nothing grows.

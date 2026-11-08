@@ -1,6 +1,3 @@
-<!-- DRAFT: Day 18 release notes. Not tagged or published yet.
-     Planned tag: day18-2026-11-07 · Title: "Day 18 (Nov 7 2026)" · Assets: caravan-day18.zip, caravan-day18.tar.gz
-     Before publishing: fill in the final commit, the test count and the fresh-package check (docs/RELEASES.md steps 2-6). -->
 # Day 18
 
 Safer split models, downloads that resume, GGUF peers loading from their own disk, and more Optimize now coverage.
@@ -28,6 +25,9 @@ Safer split models, downloads that resume, GGUF peers loading from their own dis
 - **GGUF stage 2:** GGUF downloads go to every online Mini. At a split load, each peer fills its rpc-server cache from its own copy, so its share no longer crosses the link. Live: 43 tensors / 0.8 GB seeded in 6.2 s on qwen2.5-3b; Qwen3-30B-A3B EXO2 share 73 tensors / 8.41 GB in 19.0 s, with hashes matching llama.cpp.
 - **GGUF Optimize now:** the button now runs the llama.cpp tuner on GGUF models (flash attention, ubatch). It reloads twice per option and keeps a challenger only if it's more than 3% faster. Progress, ETA, Pause and Cancel work like MLX, and winners are used on the next load.
 
+**Logging**
+- **Per-reply timing line:** the MLX worker now logs, for every reply (single Mini and split), `timing (single|split): read X tok (C cached) at Y tok/s, write Z tok at W tok/s, first token A s, total B s` next to the existing answer line in `lead.log`, matching the stats under each reply in the chat window. Takes effect on the next model load.
+
 **Optimize now (MLX)**
 - New sweep options: native MTP and adaptive prompt lookup, tried last, one at a time, with the same 3% margin.
 
@@ -43,9 +43,11 @@ Upgrading from Day 17: `git pull --ff-only` on each Mini (or extract the new pac
 
 ## Checks and limits
 
-- Box test suite: **TBD** at the release commit (484 OK at d7e2cb3, 33.8 s). A fresh source-package test runs after publishing and is logged in the day record.
+- Box test suite: **486 OK** (33.8 s) at the release commit (484 before the timing log; 2 new tests). A fresh source-package test runs after publishing and is logged in the day record.
 - Verified live on the Minis: Resume (EXO1 and EXO2), GGUF stage 2 (3B), the saved split hotfix, and the Dark Champion tie fix at 16/16.
-- **Not yet run live:** the GGUF Optimize now runner, the MLX MTP/lookup sweeps, split point safety in the picker and load (the Minis need a pull for `shards_present`), the rope scaling log line (the split Stage logger was fixed after the verification run), Report this model, and the opt-in ping.
+- Brenden's test session (Dark Champion 21B, 16/16 split, 7:27–7:46 PM CT): 31 turns, context 854 → 5,849 tokens. Learned write speed averaged 11.96 tok/s over 29 replies with guess-ahead on vs 11.31 tok/s over 3 with it off; about 13.7 early, sliding to about 12. Lead peak memory 13.07 GB. No 507 refusals, no gibberish; one harmless BrokenPipe about 7:42 PM CT.
+- After pulling e9159c8 on both Minis and restarting only the EXO1 web server (`CARAVAN_WEB_KEEP_WORKERS=1`), the loaded model stayed up (same lead worker adopted). The picker data shows the ⚠ warning for Dark Champion, the page has the Report this model link, and `split_check` reports 16/16 OK (5.49/6.79 GB free; balanced 15/17), so no split warning shows, which is correct.
+- **Not yet run live:** the GGUF Optimize now runner, the MLX MTP/lookup sweeps, the ⚠ Split warning on a tight split, the rope scaling and timing log lines (both need a model reload), clicking Report this model, and the opt-in ping.
 - **llama.cpp upgrade: partial.** "Before" numbers were recorded on 6a1a922 (qwen2.5-3b 50.6 tok/s on one Mini; Qwen3-30B-A3B 34.4 one Mini / 35.1 split). The build of upstream 76a67730 was stopped for live testing and both Minis were restored to 6a1a922. The new build is still pending.
 - MLX split is still two stages. The split-safety math covers any number of Minis, but the runtime loads on 2.
 - Qwen3.6-35B-A3B with a helper was investigated only. Native MTP needs MoE head support and split-mode MTP.
