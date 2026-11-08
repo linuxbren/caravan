@@ -40,6 +40,29 @@ class PlanTest(unittest.TestCase):
             self.assertEqual(plistlib.loads(plistlib.dumps(plist)),plist)
             self.assertTrue(plist["StandardOutPath"].startswith(root+"/.caravan/logs/"))
 
+    def test_symlinked_venv_interpreter_keeps_runtime_prefix(self):
+        import venv
+        with tempfile.TemporaryDirectory() as root:
+            env=Path(root)/"venv with spaces"
+            venv.EnvBuilder(with_pip=False,symlinks=True).create(env)
+            python=env/"bin/python"
+            p=self.plan(root,kind="worker",model="/own/model",python=python)
+            self.assertEqual(p["python"],str(python))
+            self.assertEqual(SC.worker_command(p)[0],str(python))
+            executable=SC.render(p)["ProgramArguments"][0]
+            prefix=subprocess.check_output([executable,"-c","import sys;print(sys.prefix)"],text=True).strip()
+            self.assertEqual(prefix,str(env))
+            path=Path(root)/"plan.json";path.write_text(json.dumps(p))
+            self.assertEqual(SC.load(path),p)
+
+    def test_default_venv_symlink_is_not_dereferenced(self):
+        with tempfile.TemporaryDirectory() as root:
+            python=Path(root)/".caravan/venvs/mlx/bin/python"
+            python.parent.mkdir(parents=True);python.symlink_to(sys.executable)
+            p=SC.make_plan(kind="web",home=root,repo=ROOT)
+            self.assertEqual(p["python"],str(python))
+            self.assertEqual(SC.render(p)["EnvironmentVariables"]["PATH"].split(":")[0],str(python.parent))
+
     def test_single_worker_uses_agent_and_own_cache(self):
         with tempfile.TemporaryDirectory() as root:
             p = self.plan(root,kind="worker",name="lead",model="/own/model")

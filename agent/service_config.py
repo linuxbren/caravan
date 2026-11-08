@@ -40,7 +40,9 @@ def make_plan(*, kind, name=None, repo=ROOT, python=None, home=None, host="127.0
         raise ValueError("service name must use 1-64 letters, numbers, _ or -")
     if kind not in ("web", "worker"):
         raise ValueError("choose web or worker")
-    py = absolute(python or home/".caravan/venvs/mlx/bin/python")
+    # A venv's Python is commonly a symlink to Homebrew/system Python. Resolving
+    # that symlink changes sys.prefix and silently loses all venv dependencies.
+    py = os.path.abspath(os.path.expanduser(str(python or home/".caravan/venvs/mlx/bin/python")))
     plan = {"managed_by": OWNER, "schema": 1, "kind": kind, "name": name,
             "label": f"com.caravan.v3.{name}", "repo": str(repo), "python": py,
             "home": str(home), "host": str(host), "port": port(web_port if kind == "web" else lead_port)}

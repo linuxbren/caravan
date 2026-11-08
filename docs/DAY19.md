@@ -863,3 +863,18 @@ Eight additional tests cover 3/4-stage peers, co-hosted RAM, missing/invalid/zer
 telemetry, nested dimensions and low-memory rejection. **648 passed, 38.574 s**.
 Hybrid KV sizing remains conservative; unknown peer telemetry is still reported
 as unknown, not a guarantee of safety.
+
+Sixth real issue was caught by **actual temporary launchd**, not plist tests:
+the plans resolved the venv Python symlink to Homebrew's base interpreter.
+Packer 1 repeatedly exited with `ModuleNotFoundError: mlx`; packer 2 and the
+lead correctly waited/retried instead of downloading anything or killing other
+workers. The 90-second readiness observation failed. Stopped only those test
+jobs and archived their plans; the normal Qwen workers remained alive.
+
+Service plans now keep an absolute **venv interpreter path without dereferencing
+its symlink**, for both agent and child. Added a real temporary-venv subprocess
+regression asserting `sys.prefix`, plus default-venv/PATH and plan round-trip
+checks. **650 passed, 39.594 s**. No pip/dependency change was needed on either
+Mini: MLX was already installed in the correct venv. Existing plans produced
+by old code must be explicitly regenerated with the venv path; they are not
+silently rewritten.
