@@ -305,7 +305,8 @@ class KeepAliveDrainTest(unittest.TestCase):
         saved = self.app.mgr._ssh
         self.app.mgr._ssh = lambda cmd, timeout=60: _sp.CompletedProcess(["ssh"], 255, "", "unreachable")
         peer_patch = mock.patch("web_nodes.nodes_from_config", return_value=[
-            {"id":"test-packer","role":"packer","host":self.app.mgr.packer_ssh,"ssh":self.app.mgr.packer_ssh}])
+            {"id":"test-packer","role":"packer","host":self.app.mgr.packer_ssh,
+             "ssh":self.app.mgr.packer_ssh,"peer":self.app.mgr.packer_peer}])
         peer_patch.start()
         conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         try:

@@ -919,10 +919,12 @@ class WorkerManager:
         from web_pipeline import stop_pipeline
         if stop_pipeline(self):
             return
-        # A fresh single-Mini install must not contact the author's lab peer.
+        # A fresh single-Mini install, or a separate N-stage topology on the
+        # same host, must not clean up the legacy default peer's worker.
         import web_nodes
         peers = [n for n in web_nodes.nodes_from_config() if n.get("role") != "lead"
-                 and (n.get("ssh") or n.get("host")) == self.packer_ssh]
+                 and (n.get("ssh") or n.get("host")) == self.packer_ssh
+                 and self.packer_peer in (n.get("peer"), n.get("listen"))]
         if not peers:
             return
         self._assert_packer_unmanaged()

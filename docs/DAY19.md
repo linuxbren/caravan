@@ -785,3 +785,32 @@ Native new-destination installer dry-runs passed on both Macs without creating
 the destination. Generated web plist preview passed; a temporary web job was
 also bootstrapped successfully from `~/.caravan/day19-live`, **outside**
 `~/Library/LaunchAgents`, on loopback 8193. No permanent LaunchAgent installed.
+
+Pre-load isolation audit found a third safety issue: legacy packer cleanup was
+scoped to SSH host only, not the configured endpoint. A fresh alternate-port
+N-stage web instance on the same host could otherwise reach the normal 5560
+worker's marker. **Caught before any test load; original PIDs stayed alive.**
+Cleanup now requires the configured peer/listen endpoint as well as SSH host.
+Two new regressions cover isolation and preservation of legitimate legacy
+cleanup. An existing stop-error fixture was updated to contain the real peer
+field. First intermediate suite failed that incomplete fixture (200 vs expected
+502), then **636 passed, 39.548 s**. While auditing, the isolated web also used
+an explicit non-matching legacy SSH name; N-stage execution uses configured
+nodes, not that legacy fallback. Do not rely on a new lead port alone for
+isolation of old code.
+
+Own-file transfer checks so far: explicit stop/resume passed, web restart
+rediscovered both UUID-owned transfers, a duplicate Fetch returned HTTP 400
+("untracked download ... still running"), and stopping that rediscovered job
+affected only its transfers. Same-count Balance Fetch resumed retained partial
+bytes; lead partial measured **407,896,064 bytes** before that stop. An observation
+script expecting the old in-memory job ID received 404 after web restart, as
+expected; verification switched to rediscovered records and actual readiness,
+not a false completion claim. No production worker was restarted.
+
+Third-stage scratch store was seeded by an **EXO2-local APFS clone** of its
+already-installed Orvena file, not scp or a lead relay. Independent regular
+file, no symlink, **3,034,300,629 weight bytes**; clone blocks can be shared by
+APFS, so logical/st_blocks totals are not exclusive physical-volume usage.
+Both initial stage stores are independently fetched from the immutable source.
+Native dry-run of all three generated fixed-stage agent plans passed.

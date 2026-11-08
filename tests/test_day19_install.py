@@ -282,6 +282,29 @@ class RunnerTest(unittest.TestCase):
                 mgr._kill_packer()
             ssh.assert_not_called()
 
+    def test_isolated_topology_never_contacts_legacy_endpoint_on_same_host(self):
+        with tempfile.TemporaryDirectory() as root:
+            mgr = W.WorkerManager(state_dir=Path(root)/"state",repo=ROOT,
+                                  packer_ssh="same-mini",packer_peer="10.0.0.2:5560")
+            nodes = [{"id":"scratch","role":"packer","ssh":"same-mini",
+                      "peer":"10.0.0.2:5591","listen":"10.0.0.2:5591"}]
+            with mock.patch("web_nodes.nodes_from_config",return_value=nodes), \
+                 mock.patch.object(mgr,"_ssh") as ssh:
+                mgr._kill_packer()
+            ssh.assert_not_called()
+
+    def test_configured_legacy_endpoint_keeps_owned_cleanup(self):
+        with tempfile.TemporaryDirectory() as root:
+            mgr = W.WorkerManager(state_dir=Path(root)/"state",repo=ROOT,
+                                  packer_ssh="same-mini",packer_peer="10.0.0.2:5560")
+            nodes = [{"id":"legacy","role":"packer","ssh":"same-mini",
+                      "peer":"10.0.0.2:5560"}]
+            with mock.patch("web_nodes.nodes_from_config",return_value=nodes), \
+                 mock.patch.object(mgr,"_assert_packer_unmanaged"), \
+                 mock.patch.object(mgr,"_ssh",return_value=mock.Mock(returncode=0)) as ssh:
+                mgr._kill_packer()
+            self.assertIn("--listen 10.0.0.2:5560",ssh.call_args.args[0])
+
     def test_runtime_cleanup_does_not_delete_replacement_pid(self):
         with tempfile.TemporaryDirectory() as root:
             p = SC.make_plan(kind="worker",model="/m",home=root)
