@@ -904,8 +904,14 @@ def make_handler(app: App):
                 finally:
                     app.chat_end()
             if path == "/api/shutdown":
-                app.want_shutdown()
-                return self._json(200, {"ok": True})
+                # A fast shutdown can otherwise terminate this daemon request
+                # thread after headers but before the JSON body reaches the wire.
+                try:
+                    self._json(200, {"ok": True})
+                    self.wfile.flush()
+                finally:
+                    app.want_shutdown()
+                return
             if path == "/api/helpers/answer":
                 import web_helpers
                 p = web_helpers.pairing(body.get("helper_id"))

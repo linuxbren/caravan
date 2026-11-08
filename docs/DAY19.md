@@ -891,3 +891,33 @@ Five regressions cover idle/partial-frame stops, fragmented-frame integrity,
 an actual connected idle server shutdown, and closed-versus-live TCP ports.
 
 Validation after the shutdown fix: **655 tests passed in 39.648 s**.
+
+
+Eighth issue: normal-web refresh preserved the production workers, but reading
+its shutdown HTTP response raised IncompleteRead (headers advertised 12 bytes,
+body was cut off). Restored the normal web immediately; its original Qwen lead
+was still PID 57464 and healthy. Shutdown now writes and flushes the complete
+JSON response **before** starting server shutdown, and still shuts down if the
+client has disconnected. Two ordering/disconnected-client regressions added.
+
+Validation after response fix: **657 passed, 40.290 s**.
+
+Temporary native launchd checks passed after the fixes: all three stages started
+from local agents, waiting for upstreams without downloading. Initial readiness
+observation was 16.976 s (single observation, includes the retry interval).
+Web kickstart with KEEP_WORKERS kept the exact lead PID and warm sessions.
+Managed Load/Stop/Optimize all returned 409 without touching the services.
+After the idle-read fix, first-packer graceful restart recovered in **16.746 s**
+with the same agent. The old-session reply safely resynchronized cold (0/23
+cached), answered four, TTFT 0.220 s, total 0.406 s.
+
+An older already-running lead agent still used its pre-fix port probe: child
+crash recovery took **47.249 s**, including false TIME_WAIT busy retries. After
+launchd recreated the agent, the fixed-agent child crash recovered in **17.306 s**;
+launchd recovery after killing only our temporary agent took **2.547 s**, with
+its old child confirmed gone. Both recovered replies restored 22/23 prompt
+tokens from disk and answered four. Fixed child recovery reply: TTFT 0.072 s,
+total 0.255 s, 32.79 tok/s; agent-crash reply: TTFT 0.077 s, total 0.262 s,
+32.43 tok/s. These are single short checks, not medians. All temporary labels
+were booted out and worker plans archived under day19-live/retired-service-plans;
+no permanent LaunchAgent was installed and no reboot was attempted.

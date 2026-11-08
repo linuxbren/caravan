@@ -121,6 +121,27 @@ def _offline(app):
     app.gather_model_inventories = lambda: []
 
 
+class ShutdownResponseTest(unittest.TestCase):
+    def handler(self, events):
+        import types
+        app=types.SimpleNamespace(want_shutdown=lambda:events.append("shutdown"))
+        cls=web_server.make_handler(app);h=cls.__new__(cls);h.path="/api/shutdown";h._body=lambda:{}
+        h._json=lambda code,body:events.append((code,body))
+        h.wfile=types.SimpleNamespace(flush=lambda:events.append("flush"))
+        return h
+
+    def test_complete_response_precedes_shutdown(self):
+        events=[];self.handler(events).do_POST()
+        self.assertEqual(events,[(200,{"ok":True}),"flush","shutdown"])
+
+    def test_disconnected_client_still_shuts_down(self):
+        events=[];h=self.handler(events)
+        def disconnected(*args):raise BrokenPipeError("client gone")
+        h._json=disconnected
+        with self.assertRaises(BrokenPipeError):h.do_POST()
+        self.assertEqual(events,["shutdown"])
+
+
 class WebServerHTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
