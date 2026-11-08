@@ -255,3 +255,29 @@ Brenden asked that users understand what ⚠ means. The hover text now starts wi
 - `/api/models` rows now carry `model_type` and `tie_word_embeddings`; the response carries `caravan_version`.
 - **Opt-in warning ping** (`proxy/web_alert.py`): off unless `CARAVAN_ALERT_WEBHOOK_URL` is set (default for everyone: off, no thread, no network). When set, the web server POSTs `{model, warnings, mini, caravan_version}` once per (model, warning set) when `/api/models` first shows it. Optional `CARAVAN_ALERT_WEBHOOK_KEY` goes out as both `Authorization: Bearer <key>` and `X-Webhook-Key: <key>`. Dedupe in `~/.caravan/alert-sent.json`; a failed POST isn't recorded, so it retries on the next picker refresh. Background daemon thread, 5 s timeout, never blocks the UI.
 - Tests: 6 new (`tests/test_day18_model_report.py`): off when unset, payload shape, dedupe, new warning set re-pings, failed post retries, HTML link + template. Full suite 467 OK (32.3s).
+
+## Dark Champion split verification (Nov 7, 2026, ~6:50–7:20 PM CST)
+
+Model: mlx-community/Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX (mixtral class, Llama 3.2 merge, tie_word_embeddings=true, files also ship lm_head).
+Fix under test: 07249e7 (tied_of honors config; Stage refuses missing weights). Minis at b6b4854 (EXO1 web server restarted at b356caf with CARAVAN_WEB_KEEP_WORKERS=1).
+
+**Before (24/8, EXO1 without shard 1):** gibberish, e.g. "Mastدرس أكبر.coeff-galleryelf.teamujete commentary substancesuvwxyz…", ran the full 768 tokens at ~12 tok/s.
+
+**Step 1: fetched shard 1 to EXO1** (5,171,644,799 B, 6m48s; `~/.caravan/venvs/mlx/bin/python agent/mlx_split_fetch.py … --role lead --packer-layers 24`; system python3 lacks huggingface_hub). Reloaded 24/8: packer 17.0 GB of layers on EXO2 (24 GB Mini), lead ~5.7 GB.
+**FAILED: every chat returned HTTP 507** "Not enough memory headroom". EXO2 packer_available_gb 1.51–1.71 (12 retries over ~3 min) vs 1.75 GB safety margin; EXO1 local headroom ~10 GB. Packer counts free + speculative + purgeable + half of inactive.
+
+**Step 2: rebalanced to 16/16** (Brenden approved). Fetched lead files for packer_layers 16 to EXO1 (adds shard 3; lead now holds shards 1,3,4,5 = 18.33 GB on disk). EXO2 already had shards 1–3. Set packer_layers=16 in caravan-placement.json on both Minis; /api/models then reported packer_layers 16, usable, "Fits on 2 Minis, about 13 GB RAM each". Loaded: packer 11.3 GB layers in 4.1s, lead ~11.3 GB in 3.9s; lead auto pipeline chats=1 (tight headroom 1.5 GB). After load vm_stat: EXO1 free 5,388 / inactive 409,090 / wired 854,647 pages; EXO2 free 9,846 / inactive 477,452 / wired 858,719 (16 KB pages; EXO2 ≈ 7.6 GB inactive).
+
+**After (16/16, settings: kv 16, fuse off, keepalive on, no helper):**
+
+| Prompt | max_tokens | Tokens out | First token (mini) | Write tok/s | Read tok/s | Total | Lead peak |
+|---|---|---|---|---|---|---|---|
+| "Say hello in one sentence." | 60 | 3 | 0.508 s (0.71 s client) | 20.0 | 117.8 | 0.66 s | 11.87 GB |
+| "In about 300 words, explain how a sourdough starter works and how to keep one healthy." | 500 | 387 | 0.469 s (0.71 s client) | 14.2 | 140.7 | 27.7 s | 11.93 GB |
+
+Replies: "Hello!" and a clean ~330-word sourdough explanation with 5 numbered tips. Coherent English; gibberish fixed.
+/api/models shows the tie warning ("config ties embeddings but the files ship lm_head…").
+
+**Rope log:** no "rope scaling: applied" line in lead.log/packer.log. The split Stage logged via print() (block-buffered stdout). Fixed to a flushed stderr logger; shows on next reload (not reloaded for it).
+
+**Follow-up (not fixed):** split chooser should pick a more balanced packer_layers when the saved point leaves one Mini under the headroom margin (24/8 left EXO2 at 17 GB on 24 GB). Also EXO1/EXO2 checkouts drifted by one commit during the run because another job was pushing.

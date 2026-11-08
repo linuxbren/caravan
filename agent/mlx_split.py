@@ -863,6 +863,14 @@ def check_local_shards(model_dir, role, front_layers=None):
     return sorted(need)
 
 
+def _stage_log(msg):
+    """Flushed stderr line in the worker log format (print() to a redirected
+    stdout is block-buffered, so rope-scaling notes never reached the log)."""
+    import sys as _s, time as _t
+    _s.stderr.write(f"{_t.strftime('%H:%M:%S')} [mlx-worker] {msg}\n")
+    _s.stderr.flush()
+
+
 class MissingWeightsError(RuntimeError):
     pass
 
@@ -900,9 +908,9 @@ class Stage:
             if _px not in _sys.path:
                 _sys.path.insert(0, _px)
             from mlx_arch import fix_rope_scaling
-            fix_rope_scaling(model, self.config, log=print)
+            fix_rope_scaling(model, self.config, log=_stage_log)
         except Exception as _e:  # never block a load on this
-            print(f"rope scaling patch skipped: {_e!r}")
+            _stage_log(f"rope scaling patch skipped: {_e!r}")
         self.model = model
         self.lm = getattr(model, "language_model", None) or model
         self.inner = self.lm.model
