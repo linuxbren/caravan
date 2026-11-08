@@ -318,3 +318,50 @@ Taken from the EXO1 lead.log; Brenden ran the chats himself.
 - Brenden's session summary: 31 turns; learned write speed 11.96 tok/s mean over 29 replies with guess-ahead on vs 11.31 over 3 off; ~13.7 early sliding to ~12; peak lead 13.07 GB; no 507s, no gibberish; one harmless BrokenPipe ~7:42 PM CT.
 - Moved to next dev day: llama.cpp 76a67730 build and benchmarks, GGUF tuner live run, GGUF stage 2 30B load timing, Qwen3.6 download, Balance slider.
 - **Published:** https://github.com/linuxbren/caravan/releases/tag/day18-2026-11-07 — tag `day18-2026-11-07` at 07aab1b; main fast-forwarded to 07aab1b. Assets: caravan-day18.zip 18,653,892 B, caravan-day18.tar.gz 17,789,227 B. Fresh download of the tar.gz extracted with INSTALL.md present; full suite in the package: 486 OK (33.9 s), 0 failures, 0 skips.
+
+## After release (Nov 7, 8:08–8:32 PM CT)
+
+Brenden approved the queued GGUF Mini work. No new models downloaded; Day 18 tag not moved.
+
+**1. Unload.** Dark Champion 16/16 unloaded through `/api/models/stop` in 2.1 s. Free memory (memory_pressure): EXO1 39% → 90%, EXO2 33% → 89% (24 GB Minis, about 12–13 GB freed each).
+
+**2. llama.cpp 76a67730 vs 6a1a922.** 76a67730 built in a separate git worktree on both Minis, `~/dev/llama.cpp-76a67730` (Release, Metal, RPC, native, shared libs; targets llama-server, ggml-rpc-server, llama-bench; `--version` = 0.9.0-dev build 1379, 76a67730). The 6a1a922 build in `~/dev/llama.cpp/build/bin` is untouched. Each config ran back to back (old then new), loaded through Caravan (`/api/models/load`) with the web server restarted with `CARAVAN_LLAMA_BIN` set. Each config got 3 runs of the baseline prompt ("Write a short story about a caravan crossing a desert at night.", 256 tok, temp 0, no prompt cache) and 2 runs of a 1,505-token prompt for read speed. Script: /tmp/cvbench.py + /tmp/cvmatrix.sh on EXO1 (not in repo). Times 8:15–8:21 PM CT.
+
+| Model | Where | Build | Write tok/s (3 runs) | First token, 13-tok prompt | Read tok/s, 1,505-tok prompt | Load |
+|---|---|---|---|---|---|---|
+| qwen2.5-3b q4_0 | EXO1 | 6a1a922 | 50.4 / 50.3 / 50.2 | 0.072–0.077 s | 554.8 / 555.3 | 3.7 s |
+| qwen2.5-3b q4_0 | EXO1 | 76a67730 | 49.0 / 48.9 / 49.1 | 0.039–0.042 s | 554.7 / 554.7 | 2.5 s |
+| qwen2.5-3b q4_0 | split 2 Minis | 6a1a922 | 41.9 / 41.7 / 41.6 | 0.077–0.087 s | 638.7 / 787.4 | 9.6 s |
+| qwen2.5-3b q4_0 | split 2 Minis | 76a67730 | 41.0 / 41.0 / 41.0 | 0.043–0.054 s | 781.5 / 785.3 | 9.3 s |
+| Qwen3-30B-A3B Q4_K_S | EXO1 | 6a1a922 | 43.3 / 43.2 / 43.4 | 0.155–0.161 s | 402.6 / 403.6 | 3.7 s |
+| Qwen3-30B-A3B Q4_K_S | EXO1 | 76a67730 | 43.5 / 43.5 / 43.4 | 0.144–0.149 s | 435.5 / 435.1 | 2.5 s |
+| Qwen3-30B-A3B Q4_K_S | split 2 Minis | 6a1a922 | 35.1 / 34.9 / 35.1 | 0.167–0.178 s | 458.1 / 579.4 | 16.5 s |
+| Qwen3-30B-A3B Q4_K_S | split 2 Minis | 76a67730 | 35.4 / 35.8 / 35.8 | 0.150–0.173 s | 619.8 / 623.7 | 17.0 s |
+
+Notes:
+- Tonight's 3B numbers match the morning baseline (50.6 single, 41.6–42.1 split). The 30B single-Mini number is 43.3 tonight against the morning's 34.4. Both builds measured 43.3–43.5 back to back, so this is a change in conditions (the morning run was probably with other memory in use), not a build effect. Compare builds within this table only.
+- 76a67730: first token on short prompts about 45% faster (3B), 30B read +8% single and about +7–35% split. Write speed −2.6% on 3B single (50.3 → 49.0), −1.7% on 3B split (41.7 → 41.0), +0.2% on 30B single, +1.6% on 30B split.
+- Shares: 3B split 20.1:20.0 (old) and 20.7:19.9 (new). 30B split 20.3:19.9 for both.
+- **RPC lockdown holds with 76a67730.** On EXO2 the only listener is `ggml-rpc-server -d MTL0 -H 127.0.0.1 -p 50052 -c` (127.0.0.1:50052). On EXO1 the lead reaches it through an ssh forward on 127.0.0.1:50062. A direct `nc` from EXO1 to EXO2's link IP 169.254.103.191:50052 was refused.
+
+**3. GGUF Optimize now, live (6a1a922 build).**
+- The first try was refused with "GGUF Optimize now needs a GGUF model loaded". GGUF loads never set `_loaded_entry`. Fixed in 1ace313: the GGUF load now records the entry, without `tune_override`. 1 new test (`tests/test_gguf_loaded_entry.py`, fails without the fix). Full suite 487 OK (33.9 s).
+- qwen2.5-3b, 1 Mini, 8:25–8:27 PM CT: flash_attn on 50.37 vs off 49.00 tok/s → stay on. ubatch 512 48.59 vs 256 48.41 → stay 512. 8 prompts, 5 reloads, avg reload 11.4 s, reply 4.0 s, 1.5 min total.
+- qwen2.5-3b, 2 Minis, 8:28–8:30 PM CT: flash_attn on 41.84 vs off 40.63 → on. ubatch 512 42.06 vs 256 41.78 → 512. 8 prompts, 5 reloads, avg reload 18.8 s, reply 4.7 s, 2.2 min total.
+- Both winners were saved in `~/.caravan/gguf-tuned.json` (`qwen2.5-3b-instruct-q4_0.gguf|1mini` and `|2mini`: flash_attn on, ubatch 512, with trials and losses).
+- The launcher uses the saved winner. On the next load the activity log said "GGUF tuned settings from Optimize now: {'flash_attn': 'on', 'ubatch': 512}", and llama-server ran with `-fa on … -ub 512 -b 2048` (single and split).
+- Small oddity: the Optimize now schedule shows the ubatch winner as the string '512', while the store has the int 512. This is display only.
+
+**4. GGUF stage 2 load timing.**
+- 3B: EXO2 seeds its share from its own disk, 55 tensors / 0.9 GB (all cached) in 4.8–4.9 s; full load 9.3–9.6 s. Later, with the tuned ubatch: 58 tensors / 1.0 GB (3 new) in 4.7 s, 10.6 s.
+- 30B: **true stage 2 not timed.** EXO2 has no local copy of Qwen3-30B-A3B-Q4_K_S.gguf, and putting one there would be a 17 GB transfer, which the no-download rule rules out. Its share comes over the link and its rpc cache: llama-server loaded in 14.1 s, 16.5 s (6a1a922) and 17.0 s (76a67730) end to end.
+
+**5. Decision: keep 6a1a922 as the default.** 76a67730 is stable (12 loads, 30 generations, no errors) and better on first token and read speed. But write speed, the number users feel on long replies, is 1.7–2.6% lower on 3B and only 0.2–1.6% higher on the 30B. That is not "clearly as good or better". The new build stays in `~/dev/llama.cpp-76a67730` on both Minis for anyone to try with `CARAVAN_LLAMA_BIN=~/dev/llama.cpp-76a67730/build/bin`. Re-test it with the GGUF tuner and longer prompts on a later day.
+
+**6. Final state.**
+- Dark Champion 21B reloaded at 16/16 split (`--split-packer-layers 16`) at 8:31 PM CT, ready in about 16 s. EXO1 web server runs with KEEP_WORKERS=1 and the default 6a1a922 path.
+- The timing line is live. Test chats:
+  - `timing (split): read 45 tok (0 cached) at 120.6 tok/s, write 68 tok at 14.05 tok/s, first token 0.51 s, total 5.28 s`
+  - `read 40 tok (0 cached) at 114.6 tok/s, write 22 tok at 14.05 tok/s, first token 0.42 s, total 1.92 s`
+  - Reply coherent ("Camel, Horned Lizard, Coyote").
+- Free memory after the reload: EXO1 43%, EXO2 41%.

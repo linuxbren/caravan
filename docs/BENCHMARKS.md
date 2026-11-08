@@ -1044,7 +1044,7 @@ temp 0, no prompt cache, 3 runs, Caravan commit 1955cab-era web server.
 | Qwen3-30B-A3B-Q4_K_S | one Mini | 34.4 / 34.4 / 34.4 |
 | Qwen3-30B-A3B-Q4_K_S | split (load 12.1 s) | 35.1 / 35.1 / 34.3 |
 
-"After" (llama.cpp 76a67730) not run yet; see [DAY18.md](DAY18.md) §4.
+"After" (llama.cpp 76a67730), back to back with 6a1a922 the same evening (8:15–8:21 PM CT, write tok/s): 3B single 50.2–50.4 → 48.9–49.1; 3B split 41.6–41.9 → 41.0; 30B single 43.2–43.4 → 43.4–43.5; 30B split 34.9–35.1 → 35.4–35.8. First token on short prompts about 45% faster on 3B. Default kept on 6a1a922. Full table: [DAY18.md](DAY18.md) "After release".
 
 ## Not measured yet
 
