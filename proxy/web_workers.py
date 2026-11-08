@@ -56,6 +56,10 @@ def gguf_friendly(err: Exception, peers: list) -> str:
     return "The model didn't load. Details below."
 
 
+class ManagedServiceError(RuntimeError):
+    """An installed launchd plan, not the web UI, owns this worker."""
+
+
 class WorkerManager:
     def __init__(self, *, python: str = DEFAULT_PY, lead_port: int = LEAD_PORT,
                  packer_peer: str = PACKER_PEER, packer_ssh: str = PACKER_SSH,
@@ -124,7 +128,53 @@ class WorkerManager:
         self._set(lpm_ok=ok)
         return ok
 
+    def _deny_managed_service(self):
+        import service_config as SC
+        try:
+            plan = SC.managed_lead(Path.home(), self.lead_port)
+        except ValueError as e:
+            raise ManagedServiceError(str(e)) from None
+        if plan:
+            raise ManagedServiceError(
+                f"Auto-start service '{plan['name']}' owns this model. "
+                "Use tools/caravan_service.py uninstall --name " + plan["name"] +
+                " on the lead (and uninstall its packer jobs before switching splits). Files are kept.")
+
+    def refresh_managed_service(self):
+        """Adopt a launchd lead even if web started before peers/model were ready."""
+        import service_config as SC
+        from worker_ownership import command_of, matches
+        now = time.monotonic()
+        if now - getattr(self, "_managed_poll_at", 0) < 1:
+            return
+        self._managed_poll_at = now
+        try:
+            plan = SC.managed_lead(Path.home(), self.lead_port)
+        except ValueError as e:
+            self._set(status="error", error=str(e))
+            return
+        if not plan:
+            if self.state.get("managed_service"):
+                self._set(status="idle", model_id=None, model_name=None, lead_pid=None, managed_service=None)
+            return
+        info = {"name":plan["name"], "label":plan["label"], "role":plan["role"],
+                "note":"Owned by launchd; use the service CLI to change or stop it."}
+        runtime = {}
+        try:
+            runtime = json.loads(SC.paths(plan)["runtime"].read_text())
+            pid = int(runtime["pid"])
+            healthy = matches(command_of(pid), Path(plan["repo"])/"agent/mlx_worker.py", port=self.lead_port) and self.lead_healthy()
+        except (OSError,ValueError,KeyError):
+            pid, healthy = None, False
+        mid = Path(plan["model"]).name.replace("--","/")
+        self._lead_path = plan["model"]
+        self._loaded_entry = {"id":mid,"name":mid,"lead_path":plan["model"],"source":"mlx",
+                              "run_mode":"split" if plan["role"] == "lead" else "single"}
+        self._set(status="ready" if healthy else "starting_lead", model_id=mid, model_name=mid,
+                  lead_pid=pid, split=plan["role"] == "lead", managed_service=info)
+
     def stop(self, *, reason: str = "stop") -> None:
+        self._deny_managed_service()
         self._set(status="stopping", error=None)
         self._note(f"stopping workers ({reason})")
         self._gguf_cancel = True  # a GGUF load in flight stops at its next step
@@ -137,6 +187,7 @@ class WorkerManager:
 
     def switch(self, model_id: str, *, wait: bool = False, settings=None,
                entry: Optional[dict] = None, sweep=None) -> dict:
+        self._deny_managed_service()
         settings = web_settings.normalize(settings)
         if entry is None:
             entry = catalog.get_model(model_id)
@@ -663,6 +714,7 @@ class WorkerManager:
             # Packer must have a tree — cheap existence check (same as resolve).
             try:
                 self._resolve_packer_path(entry)
+                self._assert_packer_unmanaged()
             except FileNotFoundError as e:
                 problems.append(
                     "model isn't on the packer Mini (EXO2). "
@@ -757,7 +809,8 @@ class WorkerManager:
                                           text=True, timeout=5).strip()
         except (OSError, ValueError, subprocess.SubprocessError):
             return False
-        if "mlx_worker.py" not in cmd or not self.lead_healthy():
+        from worker_ownership import matches
+        if not matches(cmd,self.worker,port=self.lead_port) or not self.lead_healthy():
             return False
         for m in catalog.list_models():
             lp = m.get("lead_path")
@@ -844,10 +897,30 @@ class WorkerManager:
         ]
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
+    def _assert_packer_unmanaged(self):
+        script = ("import sys;from pathlib import Path;"
+                  "sys.path.insert(0,str(Path('~/cv3').expanduser()/'agent'));"
+                  "from service_config import managed_worker_port;"
+                  f"reserved=managed_worker_port(Path.home(),{int(self.packer_peer.rsplit(':',1)[1])});"
+                  "print('An auto-start service owns this packer; uninstall its job before using web-managed loads' if reserved else '');"
+                  "sys.exit(42 if reserved else 0)")
+        r = self._ssh("python3 -c " + shlex.quote(script),timeout=25)
+        if r.returncode == 42:
+            raise ManagedServiceError((r.stdout or "An auto-start service owns this packer")[-800:])
+        if r.returncode:
+            raise RuntimeError("could not stop tracked packer: ownership check failed: " + (r.stderr or r.stdout or "unknown error")[-800:])
+
     def _kill_packer(self) -> None:
         from web_pipeline import stop_pipeline
         if stop_pipeline(self):
             return
+        # A fresh single-Mini install must not contact the author's lab peer.
+        import web_nodes
+        peers = [n for n in web_nodes.nodes_from_config() if n.get("role") != "lead"
+                 and (n.get("ssh") or n.get("host")) == self.packer_ssh]
+        if not peers:
+            return
+        self._assert_packer_unmanaged()
         cmd = self._remote_stop_command("~/cv3", "~/.caravan/web-ui/packer.pid",
                                         listen=self.packer_peer)
         r = self._ssh(cmd, timeout=25)

@@ -253,8 +253,12 @@ def main() -> int:
              "node's dry run see this one as alive. For testing discovery "
              "across two machines; --apply implies staying up already.",
     )
+    parser.add_argument("--service-config", help="local MLX single/split auto-start plan (no discovery or SSH)")
     config.add_llama_cli_args(parser)
     args = parser.parse_args()
+    if args.service_config:
+        import service_runner
+        return service_runner.run(args.service_config, apply=args.apply)
     config_path = Path(args.config) if args.config else None
     args.model = config.resolve_target_model(args.model, config_path)
     try:

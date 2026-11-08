@@ -1,3 +1,9 @@
+### Day 19 install + auto-start checkpoint — 2026-11-08
+- One-command, idempotent native-Mac installer: platform/Python checks, dedicated clean source copy, reusable MLX venv/dependencies, plain output, portable no-write dry-run and safe config defaults.
+- Generated per-user web and single/N-stage worker LaunchAgents; owned install/uninstall/status/graceful restart, logs under `~/.caravan`, no sudo or author-specific paths. Split workers run through `caravan_agent.py --service-config`, retry missing peers and stop only their own child.
+- Web KEEP_WORKERS plus process-group preservation; late managed-lead adoption; fixed model jobs block conflicting web model control. Web-only auto-start keeps interactive model switching; fixed plans are a separate initial mode.
+- **571 tests pass (37.444 s), 42 new theme 2 tests**. Failed intermediate runs and corrections are recorded in [DAY19.md](docs/DAY19.md). Mac install/launchd/login/reboot still pending; no Mini or Omarchy touched. [Guide](docs/SERVICES.md).
+
 ### Day 19 Balance + N-stage MLX checkpoint — 2026-11-08
 - Experimental N-stage layer/shard plans and middle-packer transport; own per-stage caches, restore agreement and chain epoch invalidation.
 - Topology Balance Auto/one-layer sliders, live memory/download preview and an explicit fresh-checked reload API, shared with a future TUI. No automatic downloads.

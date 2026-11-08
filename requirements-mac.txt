@@ -1,0 +1,3 @@
+# Tested MLX-LM version; transitive packages are not a complete lockfile.
+mlx-lm==0.32.2
+huggingface_hub

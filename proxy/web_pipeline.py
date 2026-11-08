@@ -82,17 +82,26 @@ def load_pipeline(mgr, entry, settings):
         # All shards must pass the worker's exact size checks before stopping a
         # running model. This is rechecked by Stage at load, closing file races.
         if mgr._node_is_local(node):
+            import service_config as SC
+            number = int((node.get("listen") or node.get("peer")).rsplit(":",1)[1]) if i < len(nodes)-1 else mgr.lead_port
+            reserved = SC.managed_worker_port(Path.home(), number)
+            if reserved:
+                raise ValueError(f"Auto-start service {reserved['name']} owns this worker; uninstall that job before using web-managed loads")
             check_local_shards(Path(node["model_path"]).expanduser(),
                                "head" if i == len(nodes)-1 else "front", counts=counts, stage_index=i)
         else:
             # Invoke the node's own code, with an argv JSON (no model files copied).
             script = ("import sys,json;from pathlib import Path;"
-                      "repo,model,counts,i=json.loads(sys.argv[1]);"
+                      "repo,model,counts,i,port=json.loads(sys.argv[1]);"
                       "sys.path.insert(0,str(Path(repo).expanduser()/'agent'));"
+                      "from service_config import managed_worker_port;"
+                      "reserved=managed_worker_port(Path.home(),port);"
+                      "assert reserved is None, 'An auto-start service owns this packer; uninstall its job before using web-managed loads';"
                       "from mlx_split import check_local_shards;"
                       "check_local_shards(Path(model).expanduser(),'front',counts=counts,stage_index=i)")
             cmd = ("~/.caravan/venvs/mlx/bin/python -c " + shlex.quote(script) + " "
-                   + shlex.quote(json.dumps([node.get("repo") or "~/cv3", node["model_path"], counts, i])))
+                   + shlex.quote(json.dumps([node.get("repo") or "~/cv3", node["model_path"], counts, i,
+                                                  int((node.get("listen") or node["peer"]).rsplit(":",1)[1]) ])))
             r = mgr._ssh_node(node, cmd, timeout=60)
             if r.returncode:
                 raise ValueError(f"{node['id']} files not ready: {(r.stderr or r.stdout)[-800:]}")

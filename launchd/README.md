@@ -1,5 +1,27 @@
 # launchd services
 
+## Day 19 generated services (new installs)
+
+Use [SERVICES.md](../docs/SERVICES.md) and `scripts/install.sh` for the new
+per-user web/single/N-stage MLX services. `tools/caravan_service.py` provides
+install, uninstall, status and graceful restart; it generates absolute paths for
+this Mini and logs under `~/.caravan/logs`. MLX workers run through the agent's
+`--service-config` path. Nothing below needs to be edited for a new install.
+This path is still awaiting actual Mac/login/reboot verification.
+
+Do not load these new model jobs alongside another model controller. The web
+job alone preserves/adopts web-managed workers; fixed model auto-start jobs
+reserve their ports and block conflicting web Load/Stop/Optimize operations.
+They are user LaunchAgents (login required), not headless boot daemons.
+
+## Legacy/manual services (historical setup)
+
+The remainder documents the older repository-path plists, lab-specific paths,
+logs and GGUF agent mode. Its statements about missing MLX split plists and
+`~/Library/Logs` apply to that legacy setup, not the generated Day 19 jobs.
+Do not bootstrap author-specific checked-in plists on a new Mini.
+
+
 Keeps Caravan's background processes running across crashes and reboots.
 See [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) and
 [GitHub issue #1](https://github.com/linuxbren/caravan/issues/1).

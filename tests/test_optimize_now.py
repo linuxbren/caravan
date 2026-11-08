@@ -197,7 +197,7 @@ class LauncherTest(unittest.TestCase):
             (Path(tmp)/"lead.pid").write_text("123")
             inventory={"id":"m","name":"M","lead_path":"/model","available_lead":False}
             resolved=dict(inventory,available_lead=True)
-            with patch("web_workers.subprocess.check_output",return_value="python mlx_worker.py --model /model --split-role none"), \
+            with patch("web_workers.subprocess.check_output",return_value=f"python {m.worker} --model /model --split-role none --port {m.lead_port}"), \
                  patch.object(web_catalog,"list_models",return_value=[inventory]), \
                  patch.object(web_catalog,"get_model",return_value=resolved), \
                  patch.object(m,"lead_healthy",return_value=True), \

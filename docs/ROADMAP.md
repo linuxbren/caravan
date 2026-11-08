@@ -17,8 +17,8 @@ deprecated flag aliases.
 ## Day 19 order (2026-11-08)
 
 Brenden's order: **(1) Balance + 3+ Mini MLX split, (2) easy install and
-auto-start, (3) each Mini keeps its own files.** This checkpoint implements
-only (1), box-side. No Mini was contacted or restarted.
+auto-start, (3) each Mini keeps its own files.** Themes (1) and (2) now have
+box-side experimental checkpoints. No Mini or Omarchy was contacted/restarted.
 
 - [x] Shared read-only Balance preview API: Auto from live free/reclaimable RAM,
   1.75 GB margin, integer layer-boundary controls, memory/headroom and missing
@@ -37,7 +37,17 @@ only (1), box-side. No Mini was contacted or restarted.
   `listen` and `upstream_peer` allow the chain to use different links; a triangle
   of cables is not automatically configured. Use a trusted private link only.
 
+- [x] Theme 2: idempotent native-Mac installer; generated per-user web and
+  single/N-stage worker LaunchAgents; owned install/uninstall/status/restart;
+  local agent worker supervision and peer-order retry; protected web adoption.
+- [ ] Real new-Mac install, repeat/install conflict handling, actual launchd,
+  privacy approval, login/reboot, crash recovery and KEEP_WORKERS verification.
+- [ ] UI-driven reconfiguration of fixed auto-start model plans / automatic
+  last-model resume. Today the fixed launchd model plan is a separate ownership
+  mode; uninstall its worker jobs before using UI model switching.
+
 Details, test numbers, API and exact live-test steps: [DAY19.md](DAY19.md).
+Installer/service guide: [SERVICES.md](SERVICES.md).
 
 ## Firm rules
 
@@ -212,9 +222,11 @@ Open tasks for this rule:
      `.incomplete` partial downloads (9.22 GB) from the two 8-bit MLX
      models on EXO2 after checking every finished shard against Hugging
      Face's sizes.
-   - [ ] Start the split from the agent and launchd (today both halves
-     are started by hand; `mlx.split` is only read by the
-     `mlx_backend` command helpers).
+   - [x] Start the split from the agent and launchd: Day 19 explicit local
+     single/N-stage service plans, generated login jobs and local supervision.
+     `caravan_agent.py --service-config ... --apply`; no fixed two-node limit.
+   - [ ] Verify that service path on real Macs/login/reboot; automatic discovery
+     and UI-driven reconfiguration of fixed plans remain follow-ups.
    - [ ] Merge to `main` (waiting for review; not pushed).
 3. **Split download (MLX).** Each Mac downloads only its own layers
    straight from Hugging Face; nothing relayed through the lead. Read
@@ -267,8 +279,11 @@ Open tasks for this rule:
     cache. Then consider preloading recently used sessions at startup.
 11. **Re-measure the two-Mac split** with the v1+ settings (flash
     attention over RPC, automatic KV, larger `ubatch`).
-12. **Packaging.** Templated launchd plists (no machine-specific paths), an
-    install script, and the agent running the proxy itself.
+12. **Packaging.** Day 19 implements an idempotent Mac installer and generated
+    per-user LaunchAgents (no machine-specific paths). The web job runs the UI;
+    worker jobs run through the agent and can start an explicit N-stage split.
+    Live install/login/reboot checks remain pending; agent-owned proxy orchestration
+    and dynamic last-model resume are still follow-ups. [SERVICES.md](SERVICES.md).
 
 13. **Fewer flags: self-tuning defaults + settings file.** Cut down the
     number of knobs people have to learn for day-to-day use, while keeping

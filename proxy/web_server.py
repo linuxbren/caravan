@@ -33,7 +33,7 @@ sys.path.insert(0, str(HERE.parent / "agent"))
 import web_catalog as catalog
 import web_settings  # noqa: E402
 import web_timing as timing  # noqa: E402
-from web_workers import WorkerManager  # noqa: E402
+from web_workers import WorkerManager, ManagedServiceError  # noqa: E402
 import web_optimize  # noqa: E402
 import web_picker  # noqa: E402
 import web_nodes  # noqa: E402
@@ -813,6 +813,8 @@ def make_handler(app: App):
                     return self._json(409, {"error": "Cancel Optimize now and wait before unloading"})
                 try:
                     app.mgr.stop(reason="ui")
+                except ManagedServiceError as e:
+                    return self._json(409, {"error":str(e),"worker":app.mgr.snapshot()})
                 except Exception as e:  # noqa: BLE001 — answer, don't drop the socket
                     msg = f"{type(e).__name__}: {e}"
                     try:
@@ -823,6 +825,11 @@ def make_handler(app: App):
                     return self._json(502, {"error": msg, "worker": app.mgr.snapshot()})
                 return self._json(200, app.mgr.snapshot())
             if path in ("/api/optimize/start", "/api/optimize/gguf/start"):
+                try:
+                    if isinstance(app.mgr, WorkerManager):
+                        app.mgr._deny_managed_service()
+                except ManagedServiceError as e:
+                    return self._json(409, {"error":str(e)})
                 if len((app.mgr.snapshot().get("balance") or {}).get("counts") or []) > 2:
                     return self._json(409, {"error": "Optimize now is not yet safe for N-stage MLX Balance; use measured replies instead"})
                 if app.mgr._switch_thread and app.mgr._switch_thread.is_alive():
@@ -930,6 +937,8 @@ def make_handler(app: App):
             return self._json(200, out)
 
         def _api_status(self):
+            if hasattr(app.mgr,"refresh_managed_service"):
+                app.mgr.refresh_managed_service()
             snap = app.mgr.snapshot()
             healthy = app.mgr.lead_healthy() if snap.get("status") == "ready" else False
             split = app.mgr.lead_split_info() if healthy else None
@@ -1643,6 +1652,11 @@ def make_handler(app: App):
 
 
         def _api_load(self, body=None):
+            if isinstance(app.mgr, WorkerManager):
+                try:
+                    app.mgr._deny_managed_service()
+                except ManagedServiceError as e:
+                    return self._json(409, {"error":str(e)})
             if app.optimizer.snapshot().get("running"):
                 return self._json(409, {"error": "Cancel Optimize now and wait before loading"})
             body = body or {}
