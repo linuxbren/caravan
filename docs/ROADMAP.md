@@ -17,8 +17,8 @@ deprecated flag aliases.
 ## Day 19 order (2026-11-08)
 
 Brenden's order: **(1) Balance + 3+ Mini MLX split, (2) easy install and
-auto-start, (3) each Mini keeps its own files.** Themes (1) and (2) now have
-box-side experimental checkpoints. No Mini or Omarchy was contacted/restarted.
+auto-start, (3) each Mini keeps its own files.** All three now have box-side
+experimental checkpoints; strict GGUF independence is still partial (see below). No Mini or Omarchy was contacted/restarted.
 
 - [x] Shared read-only Balance preview API: Auto from live free/reclaimable RAM,
   1.75 GB margin, integer layer-boundary controls, memory/headroom and missing
@@ -30,8 +30,9 @@ box-side experimental checkpoints. No Mini or Omarchy was contacted/restarted.
   web launch/cleanup. Fake 3/4-node framed-socket tests and standalone simulator.
 - [ ] Live Apple Silicon checks, real third-worker simulation, UI usability and
   performance measurements. This is **experimental**, not a new speed claim.
-- [ ] Promote N-stage planning into the old picker/download/Optimize paths once
-  live verified; those legacy paths still use the two-stage limit. No silent
+- [x] Theme 3: extend the picker/download/catalog/load path past two stages,
+  using exact per-stage shard plans and saved ordered N-stage placements.
+- [ ] Live-verify that picker bridge. N-stage Optimize remains blocked; no silent
   promotion of untested N-stage concurrency/speculation (pinned off here).
 - [ ] Automatic multi-link Thunderbolt discovery/routing. Explicit `peer`,
   `listen` and `upstream_peer` allow the chain to use different links; a triangle
@@ -46,8 +47,22 @@ box-side experimental checkpoints. No Mini or Omarchy was contacted/restarted.
   last-model resume. Today the fixed launchd model plan is a separate ownership
   mode; uninstall its worker jobs before using UI model switching.
 
+- [x] Theme 3 MLX: shared file preview/fetch API + UI, per-Mini logical/allocated
+  usage, explicit missing-only stage downloads from one pinned source revision,
+  SHA256 checks where published, retained-file lists and no automatic pruning.
+  Distinct `model_root` folders support simulated stages on one physical Mini.
+- [x] Experimental GGUF direct-source large-tensor Range fetch into each peer's
+  own native RPC cache. Picker no longer downloads a complete GGUF to every peer.
+- [ ] Full GGUF rule: stock llama.cpp still needs the complete lead file and
+  sends tensors <=10 MiB / cache misses over RPC. Requires loader/protocol work,
+  not a fake partial GGUF. Multi-file GGUF support and very large manifests
+  remain follow-ups; no new live cold/warm-load benchmark is claimed.
+- [ ] Explicit approved per-file cleanup UI, shared-plan/current-service protection,
+  optional RPC cache relocation/caps and live failure/recovery measurements.
+
 Details, test numbers, API and exact live-test steps: [DAY19.md](DAY19.md).
-Installer/service guide: [SERVICES.md](SERVICES.md).
+Installer/service guide: [SERVICES.md](SERVICES.md). File ownership/API/limitations:
+[FILES.md](FILES.md).
 
 ## Firm rules
 
@@ -58,13 +73,20 @@ back to a model the packer already has, should send no weights over the
 cable. A packer that's missing files gets them from the original source
 (Hugging Face), never from the lead.
 
-Where things stand (checked 2026-10-31 against this branch's code and the
-disks on EXO1 and EXO2):
+Historical baseline (checked 2026-10-31 against this branch's code and the
+disks on EXO1 and EXO2; **not a new Day 19 machine inspection**):
 
 | Format | Rule met? | Why |
 |---|---|---|
 | MLX (v3 split) | **Yes** | Packer 1 loads its layers from its own folder (`--model` is a local path) and reads only those weights. The link between the Macs carries hidden states and session commands (`hello`, `prepare`, `fwd`, `save`, `restore` and so on); it has no way to send weights or files. If a shard it needs is missing, the packer refuses to start and names the files to fetch with `mlx_split_fetch.py`. It never downloads on its own and never copies from the lead. On EXO2 the packer loaded in 0.4–7.0 s for every v3 run. |
 | GGUF (llama.cpp RPC) | **Partly** | In llama.cpp's design the lead reads the whole GGUF and sends each packer its tensors at load. With `rpc-server --cache` (on by default in the agent and in the plist) the packer saves each tensor over 10 MiB to `~/Library/Caches/llama.cpp/rpc/`, named by a hash of its contents, and later loads send only the hash for those. Still sent every time: tensors of 10 MiB or less (0.56 GB of the whole Qwen3 30B Q4_K_S file and 0.84 GB of Gemma 4 26B q4_0; the packer gets its layers' share). Sent in full: the first load of any model or of a changed file. EXO2's cache today (504 files, 14.4 GB, written Sep 8–10) holds none of the tensors of the GGUFs now on EXO1, so the next two-Mac GGUF start would be a full cold send. Stage 2 (Next, item 5) is what makes this a yes. |
+
+Day 19 box-only update: MLX ownership now covers arbitrary stages and explicit
+UI source fetch/replanning. GGUF peers can prefetch their >10 MiB tensors directly
+from a verified source into their own cache, instead of downloading a whole
+GGUF. The lead's full-file requirement and small-tensor RPC transfers remain;
+the firm rule is still **partly met**, not a claimed yes. Existing cache contents
+on the Minis were not inspected or changed. See [FILES.md](FILES.md).
 
 Open tasks for this rule:
 
@@ -89,8 +111,9 @@ Open tasks for this rule:
   own safetensors header implies, and the size Hugging Face lists when
   `mlx_split_fetch.py` recorded it (`caravan-split-sizes.json`). A wrong
   size stops the stage with the file name and the fetch command.
-  Still open: checksums (a file of the right size with bad bytes isn't
-  caught).
+  Day 19's new explicit fetch path additionally checks published LFS SHA256s;
+  worker startup alone still does not hash every existing shard. A same-size bad
+  body is not guaranteed to be caught until source verification/fetch.
 - [ ] **MLX: fetch missing shards from the source.** Offer to run
   `mlx_split_fetch.py --role packer` (Hugging Face) instead of stopping
   with an error. Never fetch from the lead.

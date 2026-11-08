@@ -95,10 +95,9 @@ class FitTest(unittest.TestCase):
         f = P.fit_check(weights_gb=22.0, nodes=nodes, safety_gb=1.75, split_ok=True)
         self.assertIn(3, f["fits_on"])
         self.assertNotIn(1, f["fits_on"])
-        # Runtime still 2-stage → note when recommending 3
-        if f["nodes_needed"] == 3:
-            self.assertIn("coming later", f["reason"])
-        self.assertEqual(f["runtime_stages"], 2)
+        # Day19: the runtime and download path now support all configured stages.
+        self.assertNotIn("coming later", f["reason"])
+        self.assertEqual(f["runtime_stages"], 3)
 
     def test_offline_node_excluded_from_fit(self):
         nodes = [

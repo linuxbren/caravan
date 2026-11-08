@@ -288,6 +288,7 @@ def fit_check(
         n for n in (nodes or [])
         if isinstance(n, dict) and not n.get("error") and not n.get("offline")
     ]
+    max_stages = min(max_stages, max(1, len(nodes)))
     if not nodes:
         return {
             "color": "red", "nodes_needed": None, "fits_on": [],
@@ -1287,15 +1288,18 @@ def cancel_job(jid: str, *, kill_procs: Optional[callable] = None) -> dict:
             proc.terminate()
         except Exception:
             pass
-    if repo:
+    if repo and not job.get('file_mode'):
         killed["lead"] = kill_local_fetch(repo)
     if kill_procs:
         try:
             killed["packer"] = kill_procs(repo, job)
         except Exception as e:  # noqa: BLE001
             killed["packer"] = {"ok": False, "error": str(e)}
-    _job_set(jid, status="cancelled", error="stopped by user", kill=killed)
-    return {"ok": True, "job": get_job(jid), "killed": killed}
+    unconfirmed = bool(job.get('file_mode') and not (killed.get('packer') or {}).get('ok'))
+    _job_set(jid, status="error" if unconfirmed else "cancelled",
+             error="Could not confirm transfer stop; it may still be running. Check the transfer log/network." if unconfirmed else "stopped by user",
+             kill=killed, stop_unconfirmed=unconfirmed)
+    return {"ok": not unconfirmed, "job": get_job(jid), "killed": killed}
 
 
 def stop_jobs_for_repo(repo_id: str, *, kill_procs: Optional[callable] = None) -> list:
@@ -1657,8 +1661,10 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             pp = dict(pg); pp["state"] = state; pp["speed_bps"] = 0; pp["eta_s"] = None
                             _jobs[jid]["progress"][rid] = pp
             if get_job(jid) and get_job(jid).get("cancel"):
-                _mark("stopped")
-                _job_set(jid, status="cancelled", error="stopped by user")
+                unconfirmed = bool((get_job(jid) or {}).get('stop_unconfirmed'))
+                _mark("failed" if unconfirmed else "stopped")
+                _job_set(jid, status="error" if unconfirmed else "cancelled",
+                         error="Could not confirm transfer stop; it may still be running. Check transfer logs/network." if unconfirmed else "stopped by user")
                 return
             if errors:
                 _mark("failed")
@@ -1702,10 +1708,10 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                                 r["save_placement"](blob)
                             else:
                                 write_placement(dest, blob)
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            raise RuntimeError(f"downloaded files but could not save placement on {r.get('id')}: {exc}") from exc
                 except Exception:
-                    pass
+                    raise
             _job_set(jid, status="done", model_folder=folder)
         except Exception as e:  # noqa: BLE001
             for e2 in stops.values():

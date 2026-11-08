@@ -109,8 +109,11 @@ class App:
             raise ValueError("Balance request must be an object")
         mid = body.get("model_id") or self.mgr.snapshot().get("model_id")
         entry = next((m for m in self.list_loadable_models() if m.get("id") == mid or m.get("hf") == mid), None)
-        if not entry or entry.get("source") == "gguf":
-            raise ValueError("Balance needs an installed MLX model")
+        if not entry:
+            raise ValueError("Balance needs an installed model")
+        if entry.get("source") == "gguf":
+            import web_gguf_files
+            return web_gguf_files.preview(self, entry, body, fresh=fresh)
         configured = self.configured_nodes()
         ids = body.get("node_ids")
         if ids is not None:
@@ -140,6 +143,21 @@ class App:
         idx = json.loads((d / "model.safetensors.index.json").read_text())
         from mlx_split_fetch import n_layers_of
         inventories = {n["id"]: ((entry.get("nodes") or {}).get(n.get("label") or n["id"]) or {}) for n in nodes}
+        import web_files
+        for n in nodes:
+            inv = inventories[n['id']]
+            if not inv.get('path'):
+                inv['path'] = web_files.model_dest(n,entry['hf'])
+            if fresh or inv.get('storage') is None:
+                try:
+                    inv['storage'] = web_files.inspect_node(self, n, inv['path'])
+                    actual = inv['storage'].get('files')
+                    if actual is not None:
+                        inv['has_config'] = 'config.json' in actual
+                        inv['has_index'] = 'model.safetensors.index.json' in actual
+                        inv['has_tokenizer'] = any(f in actual for f in ('tokenizer.json','tokenizer.model','tokenizer.tiktoken','vocab.json','spiece.model'))
+                except (ValueError, OSError, RuntimeError):
+                    inv['storage'] = {'files': None}
         weights = (idx.get("metadata") or {}).get("total_size")
         weights = float(weights) / 1e9 if weights else None
         if weights is None and any(v.get("full_ok") for v in inventories.values()):
@@ -153,6 +171,17 @@ class App:
             pass
         out = SB.preview(n_layers_of(cfg), weights, nodes, body.get("counts"),
                          config=cfg, index=idx, inventories=inventories, sizes=sizes)
+        from model_files import plan_digest
+        out['repo_id'] = entry['hf']
+        revision = None
+        try:
+            origin = json.loads((d/'caravan-source.json').read_text())
+            if origin.get('repo') == entry['hf']: revision = origin.get('revision')
+        except (OSError,ValueError): pass
+        out['file_requests'] = [dict(format='mlx', revision=revision, repo_id=entry['hf'], dest=inventories[n['id']]['path'],
+                                     counts=out['counts'], stage_index=i,
+                                     metadata_digest=plan_digest(cfg, idx), required_files=out['stages'][i].get('required_files') or [])
+                                for i, n in enumerate(nodes)]
         out["model_id"] = entry["id"]
         out["node_ids"] = [n["id"] for n in nodes]
         out["entry"] = dict(entry, split_counts=out["counts"],
@@ -214,7 +243,7 @@ class App:
                 "key": self._nodes_key(snap),
                 "link": (split or {}).get("peer") or peer or self.mgr.packer_peer,
                 "nodes": nodes,
-                "max_split_stages": web_nodes.MAX_SPLIT_STAGES,
+                "max_split_stages": web_nodes.stage_limit(self.configured_nodes()),
                 "configured": len(cfg_nodes),
                 "online": len(web_nodes.online_nodes(nodes)),
             }
@@ -266,6 +295,9 @@ class App:
 
     def picker_kill_all(self, repo_id: str, job=None) -> dict:
         """Kill fetch on every configured node that participates in download."""
+        if job and job.get('file_mode'):
+            import web_files
+            return web_files.cancel(self, job)
         nodes = web_nodes.split_stage_nodes(self.configured_nodes())
         results = []
         for n in nodes:
@@ -525,7 +557,8 @@ class App:
                 "totals": {nid: total_b for nid in progress} if total_b else {},
                 "note": "adopted live fetch (web restarted or started outside UI)",
             })
-        return jobs
+        import web_files
+        return jobs + web_files.orphans(self,known)
 
     def picker_role_totals(self, repo_id: str, packer_layers: int, n_stages: int = 2) -> dict:
         """Fast per-role byte estimate from HF blobs; refined by fetch JSON later."""
@@ -578,12 +611,15 @@ class App:
             try:
                 if web_nodes.is_local(n):
                     import model_inventory as inv
-                    models = (inv.inventory_payload().get("models") or {})
+                    models = (inv.inventory_payload(roots=[n['model_root']] if n.get('model_root') else None).get("models") or {})
                 else:
                     repo = (n.get("repo") or "~/cv3").rstrip("/")
+                    import web_files
+                    inventory_cmd = web_files.rp(n.get('python') or '~/.caravan/venvs/mlx/bin/python') + ' ' + web_files.rp(repo+'/proxy/picker_disk_sizes.py') + ' --inventory'
+                    if n.get('model_root'): inventory_cmd += ' --model-root ' + web_files.rp(n['model_root'])
                     r = self._ssh_fn()(
                         n,
-                        f"python3 {repo}/proxy/picker_disk_sizes.py --inventory",
+                        inventory_cmd,
                         timeout=25,
                     )
                     if getattr(r, "returncode", 1) == 0 and (getattr(r, "stdout", "") or "").strip():
@@ -627,7 +663,7 @@ class App:
             current_id=current,
             current_hf=current_hf,
             fit_nodes=[n for n in live if isinstance(n, dict) and not n.get("offline") and not n.get("error")],
-            max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+            max_split_stages=web_nodes.stage_limit(self.configured_nodes()),
             include_unusable=True,
         )
         return rows + self.gguf_entries(live or self.configured_nodes(), current)
@@ -740,7 +776,7 @@ def make_handler(app: App):
                     "caravan_version": web_alert.caravan_version(),
                     "current": snap.get("model_id"),
                     "source": "disk",
-                    "max_split_stages": web_nodes.MAX_SPLIT_STAGES,
+                    "max_split_stages": web_nodes.stage_limit(app.configured_nodes()),
                 })
             if path == "/api/optimize":
                 return self._json(200, app.optimizer.snapshot())
@@ -797,12 +833,20 @@ def make_handler(app: App):
             # (Bad request syntax) and the UI looks "stuck".
             path = self.path.split("?", 1)[0]
             body = self._body()
-            if path == "/api/balance":
+            if path in ("/api/balance", "/api/files/preview") :
                 try:
                     out = app.balance(body)
                     out.pop("entry", None)
+                    out.pop("file_requests", None)
                     return self._json(200, out)
-                except (ValueError, OSError, KeyError, TypeError) as e:
+                except Exception as e:
+                    return self._json(400, {"error": str(e)})
+            if path == "/api/files/fetch":
+                try:
+                    import web_files
+                    plan = app.balance(body, fresh=True)
+                    return self._json(200, {"job": web_files.start(app, plan)})
+                except Exception as e:
                     return self._json(400, {"error": str(e)})
             if path == "/api/time":
                 return self._api_time(post=True, body=body)
@@ -883,9 +927,20 @@ def make_handler(app: App):
                 if not req:
                     req = {"repo_id": old.get("repo_id"), "placement": old.get("placement")}
                 req["resume_of"] = old.get("id")
+                if req.get('file_fetch'):
+                    try:
+                        import web_files
+                        return self._json(200, {"job": web_files.start(app, app.balance(req, fresh=True))})
+                    except (ValueError, OSError, KeyError, TypeError, RuntimeError) as e:
+                        return self._json(400, {"error": str(e)})
                 return self._api_picker_download(body=req)
             if path == "/api/picker/download/cancel":
                 jid = (body or {}).get("job_id") or ""
+                if jid.startswith('files-live-'):
+                    import web_files
+                    orphan = next((j for j in app.list_orphan_fetch_jobs() if j.get('id')==jid),None)
+                    if not orphan: return self._json(404,{'error':'transfer is no longer running'})
+                    return self._json(200,web_files.cancel(app,orphan))
                 return self._json(200, web_picker.cancel_job(jid, kill_procs=app.picker_kill_all))
             if path == "/api/picker/delete":
                 return self._api_picker_delete(body=body)
@@ -996,7 +1051,7 @@ def make_handler(app: App):
             cat["groups"] = web_picker.attach_fit(cat.get("groups") or [], online)
             cat["nodes_used"] = len(online)
             cat["nodes_configured"] = len(nodes)
-            cat["max_split_stages"] = web_nodes.MAX_SPLIT_STAGES
+            cat["max_split_stages"] = web_nodes.stage_limit(app.configured_nodes())
             cat["node_labels"] = [n.get("label") or n.get("id") for n in online]
             return self._json(200, cat)
 
@@ -1126,7 +1181,7 @@ def make_handler(app: App):
                     for n in cfg_nodes
                 ],
                 "current": current,
-                "max_split_stages": web_nodes.MAX_SPLIT_STAGES,
+                "max_split_stages": web_nodes.stage_limit(app.configured_nodes()),
             })
 
         def _api_picker_delete(self, body=None):
@@ -1272,12 +1327,12 @@ def make_handler(app: App):
                 n_layers=body.get("n_layers"),
                 ctx_tokens=int(body.get("ctx_tokens") or web_picker.DEFAULT_CTX),
                 split_ok=bool(body.get("split_ok", True)),
-                max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+                max_split_stages=web_nodes.stage_limit(app.configured_nodes()),
             )
             from placement import placement_options
             opts = placement_options(
                 fit=fit, nodes=online,
-                max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+                max_split_stages=web_nodes.stage_limit(app.configured_nodes()),
                 weights_gb=weights,
             )
             return self._json(200, {"fit": fit, **opts})
@@ -1293,7 +1348,7 @@ def make_handler(app: App):
                 n_layers=body.get("n_layers"),
                 ctx_tokens=int(body.get("ctx_tokens") or web_picker.DEFAULT_CTX),
                 split_ok=bool(body.get("split_ok", True)),
-                max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+                max_split_stages=web_nodes.stage_limit(app.configured_nodes()),
             )
             return self._json(200, fit)
 
@@ -1302,6 +1357,11 @@ def make_handler(app: App):
             repo = (body.get("repo_id") or body.get("id") or "").strip()
             if not repo:
                 return self._json(400, {"error": "repo_id required"})
+            try:
+                from model_files import repo_name
+                repo_name(repo)
+            except ValueError as e:
+                return self._json(400, {'error': str(e)})
             if body.get("source") == "cloud" or repo.startswith("ollama-cloud/"):
                 return self._json(400, {"error": "cloud models are framework-only for now"})
             gguf_file = None
@@ -1366,12 +1426,12 @@ def make_handler(app: App):
                     weights = 0.0
             fit = web_picker.fit_check(
                 weights_gb=weights, nodes=online, split_ok=True,
-                max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+                max_split_stages=web_nodes.stage_limit(app.configured_nodes()),
             )
             from placement import placement_options, resolve_option
             opts = placement_options(
                 fit=fit, nodes=online,
-                max_split_stages=web_nodes.MAX_SPLIT_STAGES,
+                max_split_stages=web_nodes.stage_limit(app.configured_nodes()),
                 weights_gb=weights,
             )
             place = resolve_option(opts, body=body)
@@ -1387,13 +1447,12 @@ def make_handler(app: App):
 
             if gguf_file:
                 lid = lead.get("id") or lead.get("label")
-                # GGUF stage 2 (Day 18): every online Mini gets its own copy, so at a
-                # split load each peer fills its rpc cache from its own disk.
-                ids = [lid] + [n.get("id") or n.get("label") for n in online
-                               if (n.get("id") or n.get("label")) != lid]
+                # llama.cpp needs the complete lead file; peers fetch tensor ranges
+                # explicitly from the Balance file view, never a full GGUF copy.
+                ids = [lid]
                 place = {"mode": "one", "full_copy": True, "node_ids": ids, "enabled": True,
                          "label": f"GGUF to {len(ids)} Mini{'s' if len(ids) > 1 else ''} · "
-                                  "each loads its own share from its own disk"}
+                                  "complete lead file; peer tensor fetch in Balance"}
             if helper:
                 lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
                 if not lead:
@@ -1409,6 +1468,17 @@ def make_handler(app: App):
                     target_nodes.append(n)
             if not target_nodes:
                 return self._json(400, {"error": "placement nodes not found", "placement": place})
+            if mode == 'split' and (len(target_nodes) > 2 or any(n.get('model_root') for n in target_nodes)):
+                try:
+                    import web_files
+                    if pk_explicit and body.get('counts') is None:
+                        raise ValueError('Use one count per Mini, not packer_layers, for an N-stage split')
+                    plan = web_files.prepare_new_mlx(app, repo, target_nodes, body.get('counts'))
+                    job = web_files.start(app, plan)
+                    return self._json(200, {'job': job, 'stages': len(target_nodes), 'placement': job.get('placement'),
+                                            'note': 'N-stage own-file download; no files are deleted'})
+                except Exception as e:
+                    return self._json(400, {'error': str(e)})
             # Day 18 split safety: default the split point to a balanced one from each
             # Mini's RAM (24/8 on two 24 GB Minis left EXO2 under the margin → 507).
             balance_note = ""
@@ -1644,7 +1714,7 @@ def make_handler(app: App):
                 "job": job,
                 "totals": totals,
                 "stages": len(runners),
-                "max_split_stages": web_nodes.MAX_SPLIT_STAGES,
+                "max_split_stages": web_nodes.stage_limit(app.configured_nodes()),
                 "note": note,
                 "placement": place,
                 "nodes": [{"id": r["id"], "label": r["label"], "role": r["role"]} for r in runners],
@@ -1691,6 +1761,7 @@ def make_handler(app: App):
                     plan = app.balance(dict(body, model_id=mid), fresh=True)
                     if not plan["ready"]:
                         plan.pop("entry", None)
+                        plan.pop("file_requests", None)
                         return self._json(409, {"error": "Split needs files or more memory; nothing was changed", "balance": plan})
                     entry = plan["entry"]
                 except (ValueError, OSError, KeyError, TypeError) as e:

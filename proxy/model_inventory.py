@@ -108,6 +108,8 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
         "reason": "",
         "warnings": [],
     }
+    from model_files import inspect as inspect_files
+    base['storage'] = inspect_files(d)
     if not d.is_dir():
         base["reason"] = "missing folder"
         return base
@@ -184,6 +186,9 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
     except Exception:  # noqa: BLE001
         pass
     all_shards = sorted(set(wm.values()))
+    full_bytes = (index.get('metadata') or {}).get('total_size')
+    if full_bytes:
+        base['full_weights_gb'] = float(full_bytes)/1e9
     base["weights_gb"] = _weights_gb_from_tree(d, index)
 
     # Role plans (2-stage runtime). The split saved at download time wins over
@@ -227,8 +232,20 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
     missing_lead = sorted(need_lead - present)
     missing_pack = sorted(need_pack - present)
 
+    saved_counts = (base.get('placement') or {}).get('split_counts') or (base.get('placement') or {}).get('layer_plan')
+    if isinstance(saved_counts, list) and len(saved_counts) > 2:
+        try:
+            from mlx_split_fetch import plan_stage_files
+            stage_files = plan_stage_files(cfg, index, saved_counts)['stages']
+            valid = present - set(base['storage'].get('invalid_shards') or [])
+            base['stage_counts'] = saved_counts
+            base['stage_ok'] = [fs <= valid and not base['incomplete'] for fs in stage_files]
+        except (ValueError, TypeError):
+            base['stage_ok'] = []
+
     base["missing"] = missing_all
     base["shards_present"] = sorted(present)
+    base["invalid_shards"] = sorted(set(base['storage'].get('invalid_shards') or []) & present)
     base["lead_ok"] = not missing_lead and not base["incomplete"] and base["has_tokenizer"]
     base["packer_ok"] = not missing_pack and not base["incomplete"] and base["has_tokenizer"]
     base["full_ok"] = not missing_all and not base["incomplete"] and base["has_tokenizer"]
@@ -295,15 +312,20 @@ def _rank(info: dict) -> tuple:
     )
 
 
-def inventory_payload(*, packer_layers: Optional[int] = None) -> dict:
+def inventory_payload(*, packer_layers: Optional[int] = None, roots: Optional[list] = None) -> dict:
     """JSON-friendly scan for local or remote (`picker_disk_sizes --inventory`)."""
-    models = scan_local(packer_layers=packer_layers)
+    models = scan_local(packer_layers=packer_layers, roots=roots)
     return {
         "models": {
             rid: {
                 "path": m.get("path"),
                 "folder": m.get("folder"),
                 "weights_gb": m.get("weights_gb"),
+                "full_weights_gb": m.get("full_weights_gb"),
+                "stage_counts": m.get("stage_counts"),
+                "stage_ok": m.get("stage_ok"),
+                "storage": m.get("storage"),
+                "invalid_shards": m.get("invalid_shards"),
                 "kind": m.get("kind"),
                 "ok": m.get("ok"),
                 "full_ok": m.get("full_ok"),

@@ -16,8 +16,11 @@ from typing import Optional
 import web_catalog as catalog
 import web_settings
 
-# mlx_split.py is still 2-stage (lead + one packer). Raise when N-stage lands.
-MAX_SPLIT_STAGES = int(os.environ.get("CARAVAN_MAX_SPLIT_STAGES", "2"))
+# N-stage runtime: no default topology cap; an explicit operator cap still works.
+MAX_SPLIT_STAGES = int(os.environ.get("CARAVAN_MAX_SPLIT_STAGES", str(__import__("sys").maxsize)))
+
+def stage_limit(nodes):
+    return min(MAX_SPLIT_STAGES, max(1, len(nodes)))
 
 DEFAULT_NODES = [
     {
@@ -101,6 +104,8 @@ def nodes_from_config(cfg: Optional[dict] = None) -> list:
             "repo": str(tbl.get("repo") or tbl.get("remote_repo") or "~/cv3"),
             "peer": str(tbl.get("peer") or ""),
             "listen": str(tbl.get("listen") or ""),
+            "model_root": str(tbl.get("model_root") or ""),
+            "python": str(tbl.get("python") or "~/.caravan/venvs/mlx/bin/python"),
             "upstream_peer": str(tbl.get("upstream_peer") or ""),
             "physical_id": str(tbl.get("physical_id") or ""),
             "order": int(tbl["order"]) if str(tbl.get("order") or "").isdigit() else len(out),

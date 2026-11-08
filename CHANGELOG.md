@@ -1,3 +1,9 @@
+### Day 19 each Mini’s own files checkpoint — 2026-11-08
+- Shared Balance/file preview + explicit Fetch UI/API, per-Mini logical/allocated disk usage, missing-shard replanning and retained-file lists. No automatic pruning or reload. Revision-pinned MLX stage downloads, published SHA256 checks, owned cancellation and restart-discoverable transfers.
+- N-stage legacy picker bridge, saved stage-aware inventories/catalog/load plans, configurable own model roots and co-host simulation isolation. No default two-node cap; N-stage Optimize remains gated.
+- Experimental GGUF peer-only, verified/resumable tensor Range downloads into the native RPC cache. Picker now fetches a complete GGUF only on the lead. **Strict independence remains incomplete:** llama.cpp needs that full lead file; small tensors/cache misses still cross RPC. [Limitations and API](docs/FILES.md).
+- **633 tests pass (39.078 s), 62 new theme 3 tests**. A real-format synthetic GGUF/loopback HTTP/native-cache smoke fetched 12,582,912 peer bytes out of a 37,748,992-byte source, one required tensor only. Not a Mini/inference benchmark. No Mini or Omarchy touched; live steps and failed intermediate runs in [DAY19.md](docs/DAY19.md).
+
 ### Day 19 install + auto-start checkpoint — 2026-11-08
 - One-command, idempotent native-Mac installer: platform/Python checks, dedicated clean source copy, reusable MLX venv/dependencies, plain output, portable no-write dry-run and safe config defaults.
 - Generated per-user web and single/N-stage worker LaunchAgents; owned install/uninstall/status/graceful restart, logs under `~/.caravan`, no sudo or author-specific paths. Split workers run through `caravan_agent.py --service-config`, retry missing peers and stop only their own child.

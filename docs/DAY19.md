@@ -1,4 +1,4 @@
-# Day 19 — Balance and an N-Mini MLX pipeline
+# Day 19 — Balance, easy install and each Mini’s own files
 
 Real date: **2026-11-08 (America/Chicago / CT)**. Box-side checkpoint only.
 No EXO1, EXO2, M3 MacBook or Omarchy commands were run for this work. No model
@@ -7,8 +7,10 @@ confirm Dark Champion's state and the Qwen3.5-27B download before live work.
 
 Brenden's order is (1) Balance + 3+ Mini MLX split, (2) easy install + auto-start,
 (3) each Mini keeps its own files. The original checkpoint below addresses (1);
-theme (2) is appended later in this log. GGUF file ownership/theme (3) remains
-out of scope. Both checkpoints are **experimental until live checks pass**.
+themes (2) and (3) are appended chronologically later in this log. All three
+are **experimental until live checks pass**; strict GGUF independence remains
+partial. Earlier checkpoint limits below are historical where superseded by the
+later theme 3 section. Current operational guide: [FILES.md](FILES.md).
 
 ## What changed
 
@@ -57,14 +59,16 @@ out of scope. Both checkpoints are **experimental until live checks pass**.
   socketpairs, separate local cache folders, save/restore and warm reuse.
   It does not touch the Minis or import MLX.
 
-### Deliberate gates / limits
+### Theme 1 checkpoint gates / limits (historical)
 
-- The new **Balance/CLI execution path supports N**; the old picker placement,
+- At this first checkpoint the new **Balance/CLI execution path supports N**;
+  the old picker placement,
   picker download totals and Optimize sweeps still have their old two-stage
   gate. We did **not** blindly raise `MAX_SPLIT_STAGES` and let the old downloader
   fetch Packer 1's shards for every middle packer. Use the per-stage fetch CLI
   below when Balance says files are missing. The UI only previews missing
   downloads; it does not yet offer a one-click per-stage download job.
+  **Superseded by theme 3 below:** picker/download/catalog bridge and explicit UI Fetch.
 - N-stage Optimize is explicitly rejected by the API. New Balance launches pin
   one concurrent chat, guess-ahead off and learning off. Existing two-Mini
   launches are unchanged. Promote concurrency/speculation/Optimize only after
@@ -515,3 +519,217 @@ Record all live failures, model/counts, service startup/recovery times, PIDs,
 cache reuse and real reply timings here and in the diary/BENCHMARKS as relevant.
 The Obsidian diary remains untouched by this box-only task. No Day 19 final tag,
 release package, video, X draft or main fast-forward was made at this checkpoint.
+
+## Theme 3 — each Mini keeps its own files (box-only checkpoint)
+
+Implemented after themes 1/2, still without contacting EXO1, EXO2 or Omarchy.
+Direct edits only; no cloud agents. This is not a release/main fast-forward.
+[File guide/API/limits](FILES.md) is the operational reference.
+
+### What changed
+
+- New `agent/model_files.py` and shared `web_files.py`: required/missing/retained
+  file plans, per-Mini logical and allocated disk accounting, symlink-safe paths,
+  pinned stage fetches, checksum/metadata validation and owned transfer lifecycle.
+- Balance now offers **Fetch missing files on each Mini**, Stop, byte progress,
+  retained files and disk use. Its own model selector includes incomplete models,
+  without weakening Settings' normal “cannot load incomplete models” guard.
+  Moving one MLX boundary replans every stage's needed shards; Fetch freezes
+  those counts, and Reload remains a separate freshly checked action.
+- Every node downloads directly from the source, with its own HF access. Only
+  JSON plans/commands travel via SSH. Config/index must match the preview before
+  a model folder changes; one immutable source revision covers the whole job.
+  Published LFS SHA256s are checked, including correct-size existing files.
+  Detected corrupt headers, same-size checksum failures and incompatible
+  metadata produce inspect/move-aside errors, not falsely complete jobs.
+- Transfer PID/exit/plan/log records under `~/.caravan/transfers`; Stop verifies
+  a UUID and script identity. No repo-wide kill for new file jobs. A vanished
+  process without a real exit result is an error. Stop failures explicitly warn
+  that a transfer may still run. Detached jobs survive a web-only restart; active
+  owned jobs are rediscovered, duplicate writers blocked, and each MLX agent
+  persists its own successful placement even if the web coordinator went away.
+- The legacy **3+ Mini picker/download/catalog/load** path is now connected to
+  that N-stage planner. It no longer downloads the same “front half” on every
+  packer. Saved ordered counts/IDs and per-stage inventory readiness survive
+  catalog serialization. Optional `model_root`/`python` node config supports
+  distinct simulated stores. Shared physical RAM is still one budget, not two.
+  N-stage Optimize/speculation/concurrency remain gated as in theme 1.
+- New `gguf_files.py` / `web_gguf_files.py`: verified direct-source tensor ranges
+  for N physical RPC peers. Initial lead-file/LFS SHA256 binding, cached tensor
+  offsets/checksums, strict bounded 206 responses, resume, per-tensor SHA256,
+  native FNV cache seeding and retained-cache-key accounting. GGUF controls show
+  device **shares**, lead first; explicit reload uses the previewed shares.
+- GGUF picker now downloads the complete GGUF **only on the lead**, not every
+  online Mini. New installs include the `gguf==0.19.0` metadata reader. Existing
+  llama.cpp `gguf-py` works too; no llama.cpp binary/source was changed.
+
+### Deliberate limitations / remaining work
+
+**The full GGUF goal is NOT achieved by Caravan-only Python changes.** The stock
+lead loader requires the complete GGUF. RPC's hash-cache threshold means tensors
+<=10 MiB still cross the cable, and cache misses still transfer. Peers can avoid
+whole-GGUF downloads and prefetch their large assigned tensors; eliminating all
+weight transfers / the complete lead file requires llama.cpp loader/protocol work.
+No sparse pretend-GGUF workaround is used. Single-file known-SHA sources only;
+peer manifests over 80 KB are refused. No live cold/warm-load or tok/s claim.
+
+Old extra MLX shards, complete peer GGUFs and old caches are **not** automatically
+removed. Lists mean “not needed for this proposed plan,” not “safe garbage.”
+Another split or fixed service may still need them. The existing explicit whole-
+model delete action is separate; there is no new per-shard delete/prune action.
+RPC usage is the whole cache on that node, labeled with its path; retained-key
+lists cover this path's previously recorded tensors, not unknown cache contents.
+Disk snapshots do not reserve disk; GGUF seeding needs one extra staged tensor
+on disk and transient RAM for the native seeder. Verify actual RPC `LLAMA_CACHE`.
+
+Fetch never rewrites fixed launchd model plans or stops/reloads workers. Their
+ownership guard still blocks interactive model reconfiguration; use web-only mode
+or explicitly reinstall fixed jobs with new counts after approval. Historical
+job history is not reconstructed after web restart; active jobs are rediscovered,
+and partial files resume through a fresh same-count Fetch. Automatic multi-link
+Thunderbolt discovery remains open; triangle wiring alone does not configure it.
+
+### Tests and real box-only measurements
+
+All unit tests use fake nodes/temporary directories and loopback HTTP or mocks;
+no SSH to a Mini, live model download, or registered-computer tool was used.
+
+| Run | Result |
+|---|---|
+| Baseline | 571 passed, 38.122 s |
+| First compatibility suite | 571 tests, 37.530 s; **4 failures** |
+| First new file suite | 41 passed, 0.535 s |
+| Files + Balance + picker targeted run | 100 passed, 4.620 s |
+| Native cache/UI/lifecycle additions | 49 passed, 1.108 s |
+| First full green expanded suite | 620 passed, 38.490 s |
+| Files + Balance + inventory targeted run | 109 passed, 5.186 s |
+| Inventory/revision/cache full suite | 627 passed, 38.496 s |
+| Restart-ownership target suite | 61 passed, 1.104 s |
+| Full suite before final orphan/stop reporting review | 632 passed, 38.903 s |
+| Verified orphan/stop-reporting suite | 632 passed, 39.006 s |
+| Final cache-log/runtime-cap review | 632 passed, 39.030 s |
+| **Final verified full suite (two-stage save regression included)** | **633 passed, 39.078 s; 0 failures/errors/skips** |
+
+The initial four failures were three old Balance HTTP fixtures lacking an HF
+identity/real on-disk files, and the old fit test explicitly expecting three
+stages to be “coming later.” Updated the fixture to contain config/index/tokenizer
+and actual named files, and the runtime expectation to N stages; did not bypass
+the new disk checks. Subsequent review caught missing new fields in inventory's
+JSON projection, per-node revision drift, and transfer survival/duplicate-writer
+risks; added regressions before the final suite. The last review also preserved
+`packer_layers` alongside the new two-stage counts, so normal legacy Load cannot
+forget a newly saved Balance after a restart.
+
+Theme 3 adds **62 tests**. Day 19 cumulative: **146 new** above the original 487.
+Coverage includes 3/4-node plans, whole boundary shards, missing/corrupt files,
+no-write retained-file previews, logical/allocated/hardlink/symlink accounting,
+pinned snapshots/ranges/checksums, saved N-stage catalog plans, custom roots,
+exact GGUF range/length/resume/response failures, actual native C cache seeding,
+source identity, isolated process ownership, vanished/failed/unconfirmed-stop
+jobs, restart discovery and explicit preview-vs-fetch HTTP behavior.
+
+Additional smoke on an isolated **box-only** venv with `gguf==0.19.0`: generated a
+real-format 12-layer synthetic GGUF with three >10 MiB tensors, read its actual
+metadata, bound its SHA256 to mocked Hub metadata, served a real loopback HTTP
+Range response, and seeded an actual compiled native FNV cache. Results:
+
+- Complete source: **37,748,992 bytes**.
+- Middle peer required/fetched: **12,582,912 bytes**, only `blk.5.weight`.
+- Exact source range: **12,583,168–25,166,079**, inclusive.
+- One native cache file; zero remaining missing tensors; no peer GGUF copy.
+
+These are synthetic storage/transfer measurements, **not** real model inference,
+Mini network throughput, or speed benchmarks. No new entries pretending otherwise
+were added to inference BENCHMARKS. Logs live on the box under
+`/workspace/day19-theme3-*.log`; no model weights were downloaded for these tests.
+Shell/Python/JavaScript syntax and git diff checks also passed.
+
+### Exact pending live steps (do not execute without clearance)
+
+1. **Wait for Brenden to clear Dark Champion / Qwen download activity.** These
+   are future instructions, not actions performed by this checkpoint.
+   From Omarchy, clean branch-checked Git-only updates:
+
+   ```sh
+   ssh exo1 'cd ~/dev/caravan-v3 && test "$(git branch --show-current)" = caravan-v3-mlx-split && test -z "$(git status --porcelain)" && git pull --ff-only origin caravan-v3-mlx-split'
+   ssh exo2 'cd ~/cv3 && test "$(git branch --show-current)" = caravan-v3-mlx-split && test -z "$(git status --porcelain)" && git pull --ff-only origin caravan-v3-mlx-split'
+   ```
+
+   **Never `~/dev/caravan` on EXO2.** Refuse dirty/unexpected branches; no reset/scp.
+
+2. **Web-only restart, workers/downloads preserved.** Follow theme 2's verified
+   old-web shutdown/migration procedure above; no EXO2 worker restart just to
+   update the UI. If the generated `web` job was installed, from EXO1's correct
+   checkout: `~/.caravan/venvs/mlx/bin/python tools/caravan_service.py restart --name web`.
+   Otherwise stop only the verified old web and relaunch with the same trusted
+   private bind/ports and KEEP_WORKERS explicitly enabled:
+
+   ```sh
+   cd ~/dev/caravan-v3
+   CARAVAN_WEB_KEEP_WORKERS=1 ~/.caravan/venvs/mlx/bin/python proxy/web_server.py \
+     --host 0.0.0.0 --port 8190 --lead-port 8194
+   ```
+
+   Use the existing private/loopback bind instead of `0.0.0.0` where appropriate;
+   never expose this unauthenticated UI publicly. Do not run a second web job on
+   an occupied port. Verify current worker/download PIDs survived.
+
+3. **MLX small-model ownership test.** First use a small already-installed model
+   and the existing two nodes. In Balance, select that model, Auto/refresh,
+   record each stage's files/bytes, move one boundary by one layer and confirm
+   exactly the affected missing/retained lists change. No files should change
+   until Fetch. Fetch, Stop midway, resume with the same counts, verify known
+   sizes/checksums and no obsolete file removal. Explicit Reload only after ready;
+   chat, verify real ranges/readable output and measure actual post-reload speed.
+   Fixed worker services must be explicitly removed/reconfigured first if present.
+
+4. **Third-store simulation on EXO2, not a speed benchmark.** Use the theme 1
+   `sim3` second-worker/alternate-port config and the theme 2 isolated-port
+   recipe, adding `model_root="~/.caravan/mlx-models-sim3"`. Set the same
+   `physical_id="exo2-physical"` on both EXO2-backed node entries; retain distinct
+   worker ports and correct order/upstream. Keep EXO1 `~/dev/caravan-v3` and both
+   EXO2 entries' repo `~/cv3`. Choose a genuinely tiny model that fits both
+   processes' shared GPU/RAM budget. Preview three counts, Fetch, and verify the
+   normal EXO2 tree and sim3 tree contain only their own newly needed whole shards
+   (shared/boundary files excepted). Verify UI/normal picker save and reload the
+   exact N-stage plan. Do not use a large active model for this experiment.
+   Repeat with three physical Minis when available.
+
+5. **Transfer web-restart test.** During a small explicit fetch, restart only web
+   with KEEP_WORKERS enabled. Verify the download survives, appears as a
+   rediscovered transfer, a second writer is refused, Stop affects only that
+   transfer, and same-count Fetch resumes its partial bytes. Test an unreachable
+   peer / failed stop reports uncertainty rather than false success. Inspect
+   `~/.caravan/transfers/<token>.log/.exit/.json/.pid` on the relevant Mini.
+
+6. **GGUF two-/three-physical-Mini test, workloads cleared.** Use a small
+   single-file GGUF already on the lead. Confirm the metadata reader is available
+   (`requirements-mac.txt`, or existing llama.cpp `gguf-py`) and `cc` exists before
+   any optional pip/build change. In Balance enter the original HF repository and
+   exact filename if it was a manual/old copy. Verify source SHA match; review
+   displayed cache paths and live RPC `LLAMA_CACHE`. Use shares `1,1` (lead first)
+   initially. Fetch missing peer tensors, stop/resume once, then explicitly Reload
+   that same preview. Inspect RPC cache hit/miss logs, readable chat, cold/warm
+   load times and actual link bytes; **expect small-tensor traffic**, not zero.
+   Repeat with three physical nodes/shares `1,1,1`; do not co-host GGUF RPC-device
+   simulations. Verify no full peer GGUF appeared and old cache files remain.
+
+7. Record real failures, ranges/counts/shares, per-node logical/allocated bytes,
+   source revision/checksums, download/recovery bytes, startup/cache hits and actual
+   speed here / BENCHMARKS only where measured. Clean up only the specifically
+   installed simulation jobs; keep all model/cache files unless Brenden explicitly
+   approves an exact deletion list. No blanket worker/RPC restarts or process kills.
+
+### Open questions for Brenden (plain language)
+
+- Is the current GGUF compromise useful enough to test now: full file on the
+  lead, only large assigned tensors fetched on peers, small tensors still over
+  RPC? Or should the next priority be changing llama.cpp to meet the strict rule?
+- Should RPC caches move from `~/Library/Caches/llama.cpp` to a Caravan-owned
+  location so macOS cleanup is less likely to evict them? No relocation happened.
+- For cleanup, should the next UI let you review/approve exact files after checking
+  all saved/running/service plans, or keep the current list-only policy for now?
+
+All three themes now have box-side checkpoints, but **GGUF's strict rule and all
+live Mac checks remain open**. Obsidian diary, final release packaging/tag/video/
+X draft and main fast-forward remain untouched coordinator work.

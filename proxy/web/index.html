@@ -1110,9 +1110,20 @@
     <!-- Cards built from /api/nodes (N Minis from config). -->
   </div>
   <section class="drawer-section" id="balancePanel" aria-label="Split Balance">
-    <h3>Balance</h3>
+    <h3>Balance · each Mini’s files</h3>
+    <label>Model to inspect (including incomplete downloads)
+      <select id="balanceModel" class="drawer-control"><option value="">Use Settings model</option></select>
+    </label>
+    <details><summary>GGUF original source (needed for peer tensor fetch)</summary>
+      <label>Hugging Face repository <input id="balanceRepo" placeholder="owner/repository"></label>
+      <label>GGUF filename <input id="balanceFile" placeholder="model-Q4_K_M.gguf"></label>
+      <p>Must match the installed lead file. The first verification hashes that file; no weights are downloaded by a preview.</p>
+    </details>
     <p class="help">Auto uses each Mini's free memory. Move a boundary one layer at a time to try your own split.</p>
     <button type="button" class="ghost" id="balanceAuto">Auto / refresh</button>
+    <button id="balanceFetch" class="btn" disabled>Fetch missing files on each Mini</button>
+    <button id="balanceStop" class="btn" disabled>Stop this fetch</button>
+    <p id="balanceJob" aria-live="polite"></p>
     <div id="balancePreview" aria-live="polite">Choose an installed MLX model in Settings, then Auto / refresh.</div>
     <button type="button" id="balanceApply" disabled>Reload this split</button>
     <p class="help" id="balanceSpeed">Real speed will appear after reload and a reply.</p>

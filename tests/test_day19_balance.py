@@ -389,9 +389,12 @@ class BalanceHttpTest(unittest.TestCase):
         idx["metadata"] = {"total_size": 6_000_000_000}
         (root/"config.json").write_text(json.dumps(cfg))
         (root/"model.safetensors.index.json").write_text(json.dumps(idx))
+        (root/"tokenizer.json").write_text('{}')
+        for name in set(idx['weight_map'].values()):
+            (root/name).write_bytes(b'fixture')
         for n in nodes:
             inv[n["id"]]["path"] = str(root)
-        self.entry = {"id":"tiny", "source":"mlx", "name":"Tiny", "lead_path":str(root),
+        self.entry = {"id":"tiny", "hf":"org/tiny", "source":"mlx", "name":"Tiny", "lead_path":str(root),
                       "weights_gb": 1, "nodes": {n["label"]:inv[n["id"]] for n in nodes}}
         self.app = web_server.App.__new__(web_server.App)
         self.app.mgr = mock.Mock()

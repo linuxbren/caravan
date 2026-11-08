@@ -1,3 +1,6 @@
 # Tested MLX-LM version; transitive packages are not a complete lockfile.
 mlx-lm==0.32.2
 huggingface_hub
+
+# GGUF tensor metadata reader (not the llama.cpp runtime):
+gguf==0.19.0

@@ -240,7 +240,7 @@ def build_entries_from_inventories(
             if st.get("n_layers"):
                 n_layers = st["n_layers"]
             if st.get("weights_gb") is not None:
-                weights = max(weights or 0, float(st["weights_gb"]))
+                weights = max(weights or 0, float(st.get('full_weights_gb') or st["weights_gb"]))
             if role == "lead" and st.get("path"):
                 lead_path = st["path"]
             elif role != "lead" and st.get("path") and packer_path is None:
@@ -314,7 +314,26 @@ def build_entries_from_inventories(
                 st = (by_node.get(stg.get("id") or "") or {}).get("models", {}).get(rid) or {}
             return label, st
 
-        if place_mode == "one":
+        saved_counts = (placement or {}).get('split_counts') or (placement or {}).get('layer_plan')
+        pipeline_nodes = None
+        if place_mode == 'split' and isinstance(saved_counts, list) and len(saved_counts) > 2:
+            need_split = True
+            ids = (placement or {}).get('node_ids') or []
+            configured_by = {n.get('id'): n for n in nodes}
+            pipeline_nodes = []
+            if len(ids) != len(saved_counts) or len(set(ids)) != len(ids):
+                usable = False; reasons.append('invalid saved N-stage placement')
+            for i, nid in enumerate(ids):
+                node = configured_by.get(nid)
+                if node is None:
+                    usable = False; reasons.append(f'Mini {nid} is not configured'); continue
+                label, st = _st_for(node)
+                pipeline_nodes.append(dict(node, model_path=st.get('path')))
+                ready = (st.get('full_ok') and not st.get('invalid_shards')) or (st.get('stage_counts') == saved_counts and
+                         len(st.get('stage_ok') or []) == len(ids) and st['stage_ok'][i])
+                if not ready or not st.get('has_tokenizer'):
+                    usable = False; reasons.append(f'missing stage {i+1} files on {label}')
+        elif place_mode == "one":
             # Usable as a single-Mini model on the Mini that holds the full copy.
             found = False
             want_keys = {str(x).lower() for x in (place_ids | place_labels)}
@@ -433,6 +452,8 @@ def build_entries_from_inventories(
 
         row = {
             "id": mid,
+            "split_counts": saved_counts if pipeline_nodes is not None else None,
+            "pipeline_nodes": pipeline_nodes,
             "name": name,
             "hf": rid,
             "packer_layers": pk,

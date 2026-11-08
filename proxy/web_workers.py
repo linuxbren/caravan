@@ -431,7 +431,11 @@ class WorkerManager:
             self._note(f"rpc-server on {name} up (pid {pid}), tunnel 127.0.0.1:{lp}")
         self._check_cancel()
         free = [self._free_gb(n) for n in nodes] if peers else [None]
-        shares = G.shares_from_free(free) if peers else [1]
+        shares = entry.get('gguf_shares') or (G.shares_from_free(free) if peers else [1])
+        if entry.get('gguf_shares'):
+            import math
+            if len(shares) != len(nodes) or any(isinstance(x,bool) or not isinstance(x,(int,float)) or not math.isfinite(x) or x<=0 for x in shares):
+                raise ValueError('invalid explicit GGUF shares')
         if peers:
             self._note("free RAM now: " + ", ".join(
                 f"{n.get('label')} {f if f is not None else '?'} GB" for n, f in zip(nodes, free))
@@ -455,7 +459,8 @@ class WorkerManager:
                            f"{rep['bytes'] / 1e9:.1f} GB ({rep['new']} new, {rep['have']} cached) "
                            f"in {rep['s']}s")
             elif r is not None:
-                self._note(f"{name}: no local copy of {path.name}; its share goes over the link")
+                self._note(f"{name}: no complete local {path.name}; existing RPC tensor cache is still used, "
+                           "and cache misses / small tensors may cross the link")
         try:
             import gguf_tune as GT
             tune = (dict(entry["tune_override"]) if isinstance(entry.get("tune_override"), dict)

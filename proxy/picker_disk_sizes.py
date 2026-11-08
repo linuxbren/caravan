@@ -146,12 +146,13 @@ def main(argv=None):
     ap.add_argument("--current", default="")
     ap.add_argument("--inventory", action="store_true",
                     help="MLX tree completeness for Settings dropdown")
+    ap.add_argument('--model-root', help='inspect only this MLX model root (no delete behavior change)')
     a = ap.parse_args(argv)
     if a.inventory:
         # Local import so remote Minis with older trees still run --delete/sizes.
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import model_inventory as inv
-        print(json.dumps(inv.inventory_payload()))
+        print(json.dumps(inv.inventory_payload(roots=[a.model_root] if a.model_root else None)))
         return
     if a.delete:
         print(json.dumps(delete_kind(a.delete, a.current)))

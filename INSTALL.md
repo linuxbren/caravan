@@ -26,6 +26,11 @@ model jobs and UI-controlled model switching are separate modes; do not mix
 controllers. LaunchAgents start at **user login**, not before login. Real Mac
 installation/login/reboot tests are still pending.
 
+The current branch also adds per-Mini selective downloads and disk accounting
+in the Balance view; see [FILES.md](docs/FILES.md). The `gguf` dependency reads
+metadata only: this installer does not build llama.cpp or make a partial GGUF
+usable on the lead.
+
 ## Requirements
 
 - Apple Silicon Macs (tested on M4 Mac minis with 24 GB). One Mini works;

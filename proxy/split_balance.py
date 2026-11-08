@@ -180,7 +180,11 @@ def preview(n_layers, weights_gb, nodes, counts=None, *, config=None, index=None
         # Inventory distinguishes present-but-incomplete files; never count those ready.
         if missing is not None:
             missing = sorted(set(missing) | (set(files[i]) & set(inv.get("incomplete") or [])))
-        stages.append({"id": node["id"], "label": node.get("label") or node["id"],
+        from model_files import storage_plan
+        storage = storage_plan(files[i], inv.get('storage'), sizes) if files is not None else {}
+        if inv.get('storage') is not None:
+            missing = storage['downloads']
+        stages.append({**storage, "id": node["id"], "label": node.get("label") or node["id"],
                        "role": node.get("role"), "range": list(ranges[i]), "layers": chosen[i],
                        "capacity_gb": round(caps[i], 2),
                        "estimated_use_gb": round(chosen[i] * per_layer + STAGE_OVERHEAD_GB, 2),

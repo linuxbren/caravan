@@ -60,7 +60,7 @@ def write_placement(model_dir: str | Path, placement: dict) -> Path:
         "full_copy": bool(placement.get("full_copy")),
     }
     # Day 18: the split point the shards were fetched for, so catalog + load agree.
-    for k in ("packer_layers", "n_stages", "layer_plan"):
+    for k in ("packer_layers", "n_stages", "layer_plan", "split_counts"):
         if placement.get(k) is not None:
             blob[k] = placement[k]
     p.write_text(json.dumps(blob, indent=2) + "\n")

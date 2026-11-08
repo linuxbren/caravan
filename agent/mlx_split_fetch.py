@@ -360,6 +360,7 @@ def _fetch_gguf(a, d, token):
     try:
         if not a.dry_run:
             _range_fetch_all(a.repo, d, [name], sizes, token)
+            (d / 'caravan-gguf-source.json').write_text(json.dumps({'repo_id': a.repo, 'filename': name}))
             print("FETCHED gguf", report["my_gb"], "GB", flush=True)
     finally:
         stop_evt.set()
