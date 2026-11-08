@@ -228,6 +228,7 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
     missing_pack = sorted(need_pack - present)
 
     base["missing"] = missing_all
+    base["shards_present"] = sorted(present)
     base["lead_ok"] = not missing_lead and not base["incomplete"] and base["has_tokenizer"]
     base["packer_ok"] = not missing_pack and not base["incomplete"] and base["has_tokenizer"]
     base["full_ok"] = not missing_all and not base["incomplete"] and base["has_tokenizer"]
@@ -317,6 +318,7 @@ def inventory_payload(*, packer_layers: Optional[int] = None) -> dict:
                 "warnings": list(m.get("warnings") or []),
                 "model_type": m.get("model_type"),
                 "tie_word_embeddings": m.get("tie_word_embeddings"),
+                "shards_present": m.get("shards_present"),
             }
             for rid, m in models.items()
         }

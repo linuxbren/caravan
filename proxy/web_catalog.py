@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import re
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -114,6 +115,60 @@ def _default_packer_layers(repo_id: str, n_layers: Optional[int]) -> int:
     if n_layers and 1 < n_layers <= 24:
         return max(1, n_layers // 2)
     return 24
+
+
+def _split_safety(rid, pk, weights, n_layers, stages, fit_nodes, per, lead_path):
+    """Day 18 split point safety for the 2-stage MLX split. Returns None when
+    RAM or size is unknown; else split_balance.check() plus `note`,
+    `balanced_packer_layers`, `extra_files` {label: [files]} and `balanced_ready`."""
+    import split_balance as SB
+    if not (weights and n_layers and pk and fit_nodes):
+        return None
+    live = {(n.get("id") or n.get("label")): n for n in fit_nodes if isinstance(n, dict)}
+    nodes = SB.pipeline_order([dict(s, **{k: v for k, v in (live.get(s.get("id") or s.get("label")) or {}).items()
+                                          if k in ("ram", "active_gb", "weights_gb", "model")})
+                               for s in stages])
+    if len(nodes) != 2 or not all(n.get("ram") for n in nodes):
+        return None
+    caps = SB.caps_for(nodes)
+    labels = [n.get("label") or n.get("id") for n in nodes]
+    per_layer = SB.per_layer_gb(weights, n_layers)
+    chk = SB.check(SB.counts_from_packer_layers(pk, n_layers), caps, per_layer, labels)
+    extra = None
+    if not chk["ok"] and chk["better"]:
+        kb = chk["balanced"][0]
+        chk["balanced_packer_layers"] = kb
+        extra = _extra_files_for(lead_path, kb, nodes, per)
+        chk["extra_files"] = extra
+        chk["balanced_ready"] = extra is not None and not any(extra.values())
+    chk["note"] = SB.message(chk, labels, extra)
+    return chk
+
+
+def _extra_files_for(lead_path, kb, nodes, per):
+    """Files each Mini lacks for packer_layers=kb, from the lead's config +
+    index and each Mini's `shards_present`. None if anything is unknown."""
+    if not lead_path:
+        return None
+    import sys
+    agent = str(Path(__file__).resolve().parent.parent / "agent")
+    if agent not in sys.path:
+        sys.path.insert(0, agent)
+    from mlx_split_fetch import plan_files
+    d = Path(lead_path).expanduser()
+    cfg = json.loads((d / "config.json").read_text())
+    index = json.loads((d / "model.safetensors.index.json").read_text())
+    plan = plan_files(cfg, index, kb)
+    out = {}
+    for n in nodes:
+        label = n.get("label") or n.get("id")
+        st = per.get(label) or {}
+        have = st.get("shards_present")
+        if have is None:
+            return None
+        need = plan["head"] if n.get("role") == "lead" else plan["front"]
+        out[label] = sorted(set(need) - set(have))
+    return out
 
 
 def build_entries_from_inventories(
@@ -355,6 +410,13 @@ def build_entries_from_inventories(
             usable = False
             reasons.append(arch.get("reason") or "unsupported architecture")
 
+        split_chk = None
+        if need_split and (placement or {}).get("mode") not in ("one", "all"):
+            try:
+                split_chk = _split_safety(rid, pk, weights, n_layers, stages, fit_nodes, per, lead_path)
+            except Exception:  # noqa: BLE001 - advisory only
+                split_chk = None
+
         if is_current:
             usable = True  # always keep loaded model selectable
             reasons = []
@@ -380,6 +442,8 @@ def build_entries_from_inventories(
             "warnings": sorted({w for st in per.values() if st for w in (st.get("warnings") or [])}),
             "model_type": next((st.get("model_type") for st in per.values() if st and st.get("model_type")), None),
             "tie_word_embeddings": next((st.get("tie_word_embeddings") for st in per.values() if st and isinstance(st.get("tie_word_embeddings"), bool)), None),
+            "split_check": split_chk,
+            "split_note": (split_chk or {}).get("note") or "",
             "lead_path": lead_path,
             "packer_path": packer_path,
             "available_lead": bool(lead_path) and usable,

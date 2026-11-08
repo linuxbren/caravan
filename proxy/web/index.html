@@ -1591,7 +1591,7 @@
       let label = (usable ? "● " : "○ ") + m.name;
       if (!usable && m.disabled_reason) label += " — " + m.disabled_reason;
       const warns = m.warnings || [];
-      if (warns.length) label += " ⚠";
+      if (warns.length || m.split_note) label += " ⚠";
       opt.textContent = label;
       opt.disabled = !usable;
       opt.title = [m.disabled_reason || m.hf || m.name, ...(warns.length ? ["⚠ means Caravan noticed something unusual about this model:"] : []), ...warns.map(w => "• " + w)].join("\n");
@@ -1632,8 +1632,9 @@
     const m = (state.modelRows || {})[$("modelSelect").value];
     const mw = $("modelWarn");
     const warns = (m && m.warnings) || [];
+    const splitNote = (m && m.split_note) || "";
     if (mw) {
-      mw.hidden = !warns.length;
+      mw.hidden = !warns.length && !splitNote;
       mw.textContent = warns.length ? "⚠ Heads-up about this model: " + warns.join(" ") + " " : "";
       if (warns.length) {
         const a = document.createElement("a");
@@ -1647,6 +1648,12 @@
         const note = document.createElement("span");
         note.textContent = " (opens GitHub, where you can edit it before sending)";
         mw.appendChild(note);
+      }
+      if (splitNote) {
+        const sn = document.createElement("div");
+        sn.id = "splitNote";
+        sn.textContent = "⚠ Split: " + splitNote;
+        mw.appendChild(sn);
       }
     }
     const opts = (m && m.placement_options) || [];

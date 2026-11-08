@@ -1248,6 +1248,8 @@ def make_handler(app: App):
             if body.get("helper_id") and (not helper or repo != helper["draft"]["hf_repo"]):
                 return self._json(400, {"error": "Invalid helper"})
             packer_layers = body.get("packer_layers")
+            pk_explicit = packer_layers is not None
+            n_layers_dl = None
             try:
                 packer_layers = int(packer_layers) if packer_layers is not None else None
             except (TypeError, ValueError):
@@ -1266,6 +1268,7 @@ def make_handler(app: App):
                 except Exception:
                     n_layers = None
                 packer_layers = web_catalog._default_packer_layers(repo, n_layers)
+                n_layers_dl = n_layers
 
             live = (app.nodes() or {}).get("nodes") or []
             online = [n for n in live if isinstance(n, dict) and not n.get("offline") and not n.get("error")]
@@ -1327,6 +1330,23 @@ def make_handler(app: App):
                     target_nodes.append(n)
             if not target_nodes:
                 return self._json(400, {"error": "placement nodes not found", "placement": place})
+            # Day 18 split safety: default the split point to a balanced one from each
+            # Mini's RAM (24/8 on two 24 GB Minis left EXO2 under the margin → 507).
+            balance_note = ""
+            if (mode == "split" and not pk_explicit and not gguf_file and not helper
+                    and n_layers_dl and weights and len(target_nodes) >= 2):
+                try:
+                    import split_balance
+                    live_by = {(n.get("id") or n.get("label")): n for n in online}
+                    stg = [dict(n, **{k: v for k, v in (live_by.get(n.get("id") or n.get("label")) or {}).items()
+                                      if k in ("ram", "active_gb", "weights_gb", "model")})
+                           for n in target_nodes[: web_nodes.MAX_SPLIT_STAGES]]
+                    kb = split_balance.balanced_packer_layers(n_layers_dl, weights, stg)
+                    if kb and kb != packer_layers:
+                        balance_note = f"split point {kb}/{n_layers_dl - kb} (balanced for each Mini's RAM; default was {packer_layers})"
+                        packer_layers = kb
+                except Exception:  # noqa: BLE001 - keep the old default
+                    pass
 
             n_stages = len(target_nodes) if mode == "split" else 1
             note = place.get("label") or ""
@@ -1337,6 +1357,8 @@ def make_handler(app: App):
                 )
                 target_nodes = target_nodes[: web_nodes.MAX_SPLIT_STAGES]
                 n_stages = len(target_nodes)
+            if balance_note:
+                note = (note + " · " if note else "") + balance_note
 
             if gguf_file:
                 try:
@@ -1578,11 +1600,29 @@ def make_handler(app: App):
                 if not opt.get("enabled"):
                     return self._json(400, {"error": opt.get("reason") or "placement doesn't fit"})
                 entry["placement"] = {"mode": opt["mode"], "node_ids": opt["node_ids"]}
+            balanced_msg = None
+            sc = ((entry or {}).get("split_check")
+                  if entry and entry.get("source") != "gguf" and entry.get("run_mode") == "split" else None)
+            if sc and not sc.get("ok") and not body.get("force_split"):
+                if sc.get("better") and sc.get("balanced_ready"):
+                    kb = int(sc["balanced_packer_layers"])
+                    entry = dict(entry, packer_layers=kb)
+                    balanced_msg = (f"Loading at a balanced split ({kb}/{sum(sc['counts']) - kb}) instead of "
+                                    f"the saved {'/'.join(map(str, sc['counts']))}, so every Mini keeps its safety margin.")
+                else:
+                    return self._json(409, {"error": entry.get("split_note") or sc.get("note") or "split too tight",
+                                            "split_check": sc})
             try:
                 snap = app.mgr.switch(mid, wait=False, settings=body.get("settings"),
                                      entry=entry)
             except (ValueError, FileNotFoundError, RuntimeError) as e:
                 return self._json(400, {"error": str(e)})
+            if balanced_msg:
+                try:
+                    app.mgr._note(balanced_msg)
+                except Exception:  # noqa: BLE001
+                    pass
+                snap = dict(snap, balance_note=balanced_msg)
             return self._json(200, snap)
 
         def _api_chat(self, body=None, openai_shape=False):

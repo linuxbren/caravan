@@ -65,6 +65,9 @@ Env knobs (optional):
 ### Optimize now for GGUF models
 With a GGUF model loaded, **Optimize now** runs the llama.cpp tuner (`POST /api/optimize/start`, or `/api/optimize/gguf/start`). It tries one llama-server option at a time, with two reloads per option, and keeps a challenger only if it's more than 3% faster. Progress, ETA, Pause and Cancel work like MLX. Winners are saved in `~/.caravan/gguf-tuned.json` and used on the next load.
 
+### Split point safety
+For a split MLX model, Caravan checks that every Mini keeps the 1.75 GB safety margin (`CARAVAN_MEMORY_SAFETY_GB`) at the saved split point. If one doesn't, the picker shows "⚠ Split:" with a balanced point and any extra files each Mini needs. Loading uses the balanced point when its files are already there; otherwise it refuses with that message (send `force_split: true` to override). New split downloads default to the balanced point. Stage overhead: `CARAVAN_SPLIT_STAGE_OVERHEAD_GB` (1.3).
+
 ### Report this model
 When a model has a ⚠, the line under the picker has a **Report this model** link. It opens a prefilled GitHub issue (label `model-report`) with the repo id, warning text, Caravan version, `model_type`, and tie flag only. You can edit it on GitHub before sending; Caravan never sends it for you.
 
