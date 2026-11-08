@@ -148,3 +148,28 @@ def fix_rope_scaling(model, config: dict, *, nn=None, initialize_rope=None, log=
         except Exception:
             pass
     return n
+
+
+def model_warnings(config: dict, weight_map: Optional[dict] = None) -> list:
+    """Plain-language warnings for checkpoints that mlx_lm would load
+    'successfully' but run wrong (Day 18 Dark Champion lesson). Never blocks."""
+    cfg = config or {}
+    out = []
+    mt = str(cfg.get("model_type") or "")
+    # A top-level *_text type (VLM wrappers keep it in text_config, which is fine).
+    if mt.endswith("_text") and mt not in MODEL_TYPE_REMAP:
+        out.append(f"model_type {mt} is not in Caravan's remap table; mlx_lm may not support it")
+    if mt.endswith("_mtp") or mt.endswith("_nextn"):
+        out.append(f"{mt} is a guess-ahead helper head, not a chat model")
+    if weight_map:
+        flags = [cfg.get("tie_word_embeddings")]
+        if isinstance(cfg.get("text_config"), dict):
+            flags.append(cfg["text_config"].get("tie_word_embeddings"))
+        has_lm = any("lm_head" in k for k in weight_map)
+        if any(f is True for f in flags) and has_lm:
+            out.append("config ties embeddings but the files ship lm_head; mlx_lm ignores lm_head "
+                       "and uses embed_tokens (the lead needs the embedding shard)")
+        elif flags[0] is False and not has_lm and not any(f is True for f in flags):
+            out.append("config says untied embeddings but the files have no lm_head; "
+                       "the output layer would be random")
+    return out

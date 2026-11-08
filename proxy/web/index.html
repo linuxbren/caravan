@@ -1588,9 +1588,11 @@
       const usable = m.usable !== false && (m.available_lead || m.usable);
       let label = (usable ? "● " : "○ ") + m.name;
       if (!usable && m.disabled_reason) label += " — " + m.disabled_reason;
+      const warns = m.warnings || [];
+      if (warns.length) label += " ⚠";
       opt.textContent = label;
       opt.disabled = !usable;
-      opt.title = m.disabled_reason || m.hf || m.name;
+      opt.title = [m.disabled_reason || m.hf || m.name, ...warns.map(w => "⚠ " + w)].join("\n");
       if (m.id === cur || m.hf === cur) opt.selected = true;
       sel.appendChild(opt);
     }

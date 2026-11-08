@@ -224,3 +224,13 @@ See the report. Tests at the end of the code work: 436 OK on the box.
   - `head_only_reason()` refuses to split helper heads (`*_mtp`/`*_nextn`, or no embeddings with fewer layers than config). Split downloads stop with a clear error, and inventory marks them not splittable.
 - Tests: 5 new. Full suite 450 OK (32.3s). One failed run before the fix: `mtp.layers.0` was matched as layer 0, so its MTP check now runs first.
 - Live check: none needed for the planner. For Qwen3.6 native MTP, confirm the lead still finds the MTP head.
+
+### Picker warnings for risky checkpoints
+- `mlx_arch.model_warnings(config, weight_map)` flags four cases. It only warns and never blocks:
+  - a top-level `*_text` model_type that isn't in the remap table
+  - config ties embeddings but the files ship `lm_head` (the Dark Champion case)
+  - config says untied but there's no `lm_head` (the output layer would be random)
+  - `*_mtp`/`*_nextn` helper heads
+- Carried through `inspect_tree` → node inventory → catalog rows (`warnings`). The model picker adds a ⚠ to the name, and the warnings show in its tooltip.
+- Tests: 6 new. Full suite 456 OK (32.8s).
+- Live check: after the Minis pull this, Dark Champion should show ⚠ with the tie note.

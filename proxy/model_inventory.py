@@ -106,6 +106,7 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
         "full_ok": False,
         "native_mtp_available": (d / "caravan-mtp" / "model.safetensors").is_file() and (d / "caravan-mtp" / "config.json").is_file(),
         "reason": "",
+        "warnings": [],
     }
     if not d.is_dir():
         base["reason"] = "missing folder"
@@ -144,6 +145,12 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
         base["kind"] = "partial"
         return base
 
+    try:
+        from mlx_arch import model_warnings
+        base["warnings"] = model_warnings(cfg)
+    except Exception:  # noqa: BLE001
+        pass
+
     # Single-file MLX (no index)
     single = d / "model.safetensors"
     if not base["has_index"]:
@@ -166,6 +173,11 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
         return base
 
     wm = index.get("weight_map") or {}
+    try:
+        from mlx_arch import model_warnings
+        base["warnings"] = model_warnings(cfg, wm)
+    except Exception:  # noqa: BLE001
+        pass
     all_shards = sorted(set(wm.values()))
     base["weights_gb"] = _weights_gb_from_tree(d, index)
 
@@ -297,6 +309,7 @@ def inventory_payload(*, packer_layers: Optional[int] = None) -> dict:
                 "missing_n": len(m.get("missing") or []),
                 "placement": m.get("placement"),
                 "native_mtp_available": bool(m.get("native_mtp_available")),
+                "warnings": list(m.get("warnings") or []),
             }
             for rid, m in models.items()
         }

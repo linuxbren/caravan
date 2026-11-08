@@ -377,6 +377,7 @@ def build_entries_from_inventories(
             "notes": meta.get("notes") or "",
             "source": source,
             "native_mtp_available": any(st.get("native_mtp_available") for st in per.values()),
+            "warnings": sorted({w for st in per.values() if st for w in (st.get("warnings") or [])}),
             "lead_path": lead_path,
             "packer_path": packer_path,
             "available_lead": bool(lead_path) and usable,
