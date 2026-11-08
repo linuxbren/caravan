@@ -457,6 +457,15 @@ check before wiring: 33.2 tok/s write through the SSH tunnel.
   rpc-server with no gate failed the same way, so it was not the allowlist gate.
   Fixed by tunnelling over SSH to loopback (2dcca97).
 
+## Day 18 (Nov 7, 2026)
+
+- After a download, with no model loaded: dialog "No model is loaded. Load <name> now?" → Load now / Not now.
+- Resume uses HTTP Range on `.cache/huggingface/download/<file>.incomplete` (`agent/range_fetch.py`).
+- Progress: `.incomplete` beside a finished file counted once; per-Mini total from the fetcher's `my_gb`; capped; stall = no growth on any signal.
+- `caravan-placement.json` now has `packer_layers` and `n_stages`.
+- GGUF: downloads go to every online Mini; split loads seed peers' rpc cache from their own copy (`agent/gguf_rpc_seed.py`). Notes show "EXO2 loads its share from its own disk: N tensors, X GB".
+- Records: [DAY18.md](DAY18.md).
+
 ## Tests
 Full suite (no Minis needed): `PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests` (350 OK, 2026-11-06 11:30 PM CT; 340 OK earlier).
 HTTP tests stub SSH and node probes. If stopping the packer fails, `/api/models/stop` now answers 502 with `{"error", "worker"}` instead of dropping the connection.

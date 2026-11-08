@@ -130,6 +130,10 @@ Open tasks for this rule:
   one session. With that method, v1, v2 and v2.1 read 4k at 396, 393 and
   396 tok/s.
 
+- **Day 18 (Nov 7):** Load now / Not now prompt; HTTP Range Resume; progress
+  overcount fix; saved split point; GGUF stage 2 (peers load from own disk);
+  Optimize now native MTP + adaptive lookup sweeps. [DAY18.md](DAY18.md)
+
 ## Next, in order
 
 > **Priority rule (Brenden, Days 15–17, Nov 3–6 2026):** performance first, flash second. Days15–16 shipped web UI, picker/placement, N-node Topology, self-tuning controls and four themes. Day17 measured matching-target MTP (#16), adaptive prompt lookup, two-chat scheduling, then approved split block verification. Orvena EXO2 native MTP36.95→54.13 Write tok/s,98.21% proposals accepted; incompatible with Qwen30B. Qwen copy PL50.11→72.37 but mixed50.24→47.31, so default stays off. Approved split: baseline aggregate N1/N2 **41.54/70.49tok/s**; helper N1/N2 **52.11/49.77tok/s** (N2 helper slower, experimental). Fixed socket-owner race exposed by live N2 tests; all failures retained. Final Qwen singleEXO1 ready, all Auto, pre-existing KV4 trial applied (benchmarks KV16). [Raw results/reasoning](DAY17-BENCHMARKS.md). Next: improve N2 draft overlap before promoting it, remaining settings/node polish and Terminal Delight; fused kernels/tensor parallel parked.
@@ -642,7 +646,7 @@ list above point to it.
 | More than two stages (one lead, several packers) | Two Macs today. | When a third Mac joins; needs re-planning of the cut and of split downloads. |
 | Split download used for one model only | Qwen3 30B 8-bit ran from split downloads. For Gemma 4 8-bit and GPT-OSS 20B 8-bit, the lead downloaded its files plus the packer-only ones and copied them to the packer over Thunderbolt (one internet download instead of two). | When split download is wired into the agent (Next #3). |
 | Qwen3.6 35B (hybrid attention) doesn't reuse the chat | Its linear-attention layers can't be rewound, and the template drops the reasoning from earlier replies, so every turn diverges and re-reads the whole chat (11 s at 4k, 53 s at 16k), also after a restart. Same on one Mac. | With per-model profiles: keep the reasoning in the history for hybrid models, or snapshot at the end of the user turn. |
-| Split download: resume and clean-up of interrupted downloads | Prototype; stale `.incomplete` files from killed downloads stay on disk (nothing deleted). | When split download is wired into the agent. |
+| Split download: resume and clean-up of interrupted downloads | Resume continues partial files since Day 18 (HTTP Range). Clean-up still open; stale `.incomplete` files from killed downloads stay on disk (nothing deleted). | When split download is wired into the agent. |
 | v3 bench hits the worker directly | The proxy path was only smoke-tested (turn 1 cold, turn 2 reused, backend=mlx). | With the next proxy benchmark pass. |
 
 ## Known limits

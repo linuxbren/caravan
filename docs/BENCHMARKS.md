@@ -1031,6 +1031,21 @@ Auto matched or beat hand-tuned within run noise (Qwen2.5 pipe wall: auto
 tuned). Unit tests: **133** pass (including `AutoTuneTest`).
 
 
+## llama.cpp 6a1a922 baseline and GGUF stage 2 (Nov 7, 2026, Day 18)
+
+Prompt "Write a short story about a caravan crossing a desert at night.", 256 tokens,
+temp 0, no prompt cache, 3 runs, Caravan commit 1955cab-era web server.
+
+| Model | Where | Write tok/s |
+|---|---|---|
+| qwen2.5-3b-instruct-q4_0 | one Mini | 50.6 / 50.6 / 50.5 |
+| qwen2.5-3b-instruct-q4_0 | split, share over the link (load 4.0 s) | 41.8 / 41.7 / 41.6 |
+| qwen2.5-3b-instruct-q4_0 | split, EXO2 share from own disk (load 3.0 s + 6.2 s seed) | 41.8 / 42.1 / 41.1 |
+| Qwen3-30B-A3B-Q4_K_S | one Mini | 34.4 / 34.4 / 34.4 |
+| Qwen3-30B-A3B-Q4_K_S | split (load 12.1 s) | 35.1 / 35.1 / 34.3 |
+
+"After" (llama.cpp 76a67730) not run yet; see [DAY18.md](DAY18.md) §4.
+
 ## Not measured yet
 
 - The two-Mac split with the v1+ settings (flash attention, automatic

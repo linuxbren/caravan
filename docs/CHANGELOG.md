@@ -3,6 +3,14 @@
 
 ## Unreleased
 
+### Day 18 (Nov 7, evening CT) — overview: [DAY18.md](DAY18.md)
+- Download finished + nothing loaded: asks **Load now / Not now** (all four themes); no silent auto-load.
+- Resume continues a partial file with HTTP Range (verified live on both Minis) instead of starting from 0.
+- Split-download progress: no double count of `.incomplete`, total = what that Mini really fetches, never above it; "stalled?" only when nothing grows.
+- Hotfix: the split point (`packer_layers`) is saved with each download and used by the model list and load; catalog and download defaults match (Dark Champion 21B usable again).
+- GGUF stage 2: GGUF downloads go to every Mini; at a split load each peer fills its rpc-server cache from its own copy, so big tensors don't cross the link. rpc-server stays loopback + SSH tunnel.
+- Optimize now: native MTP and adaptive lookup sweeps (one at a time, 3% margin, losers skipped); GGUF tuning knobs and plan (runner not wired yet).
+
 ### Day 17 verification (Nov 7, 12:20 AM CT)
 - `agent/mlx_split.py` imports on Python 3.9 again (EXO1's 2 failing test modules).
 - Meadow/Nebula drawers keep only the inner-edge border: live theme parity 20/24 → 24/24.
