@@ -401,7 +401,14 @@ class WorkerManager:
                            f"in {rep['s']}s")
             elif r is not None:
                 self._note(f"{name}: no local copy of {path.name}; its share goes over the link")
-        args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares)
+        try:
+            import gguf_tune as GT
+            tune = GT.best_tune(path, 1 + len(rpc))
+        except Exception:  # noqa: BLE001 - tuning is optional
+            tune = {}
+        if tune:
+            self._note(f"GGUF tuned settings from Optimize now: {tune}")
+        args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares, tune=tune)
         self._set(status="starting_lead", packer_pid=None)
         seeded = bool(meta.get("seed"))
         self._note(("starting llama-server on EXO1; peers with their own copy load from disk, "

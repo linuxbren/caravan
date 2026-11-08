@@ -1,3 +1,15 @@
+### GGUF Optimize now runner (offline-tested) — 2026-11-07
+- New `proxy/gguf_tune.py` (`GgufTuner`):
+  - Follows `gguf_schedule()` one option at a time: reload, measure the incumbent, reload, measure the challenger.
+  - Keeps the challenger only if it's more than 3% faster. Otherwise it records the challenger as a loser so it won't be retried.
+  - Saves after every trial, and always leaves the winner running, including after an error.
+- Store: `~/.caravan/gguf-tuned.json`, keyed by `<file>.gguf|<N>mini`.
+- `measure_http()` reads llama-server's own `timings.predicted_per_second`, using 2 fixed prompts, temperature 0, 192 tokens.
+- The web GGUF launcher now passes `best_tune()` to `llama_args(tune=...)`. Bad values are dropped, and with nothing learned the launch behaves as before.
+- Not yet wired to the Optimize now button. That needs a web endpoint that calls `GgufTuner` with the launcher's restart. Next step.
+- Tests: 5 new. Full suite 461 OK (32.8s). One failed test run: my test assumed ubatch 1024 is the first challenger, but the schedule picks 256 (a tie in distance from 512, so 256 comes first). The test was fixed; the code was unchanged.
+- Live check: run the tuner against a small GGUF (Qwen2.5-3B q4_0) on 1 and 2 Minis. Expect about 6 reloads per run.
+
 ### Picker warnings for risky checkpoints — 2026-11-07
 - `mlx_arch.model_warnings(config, weight_map)` flags four cases. It only warns and never blocks:
   - a top-level `*_text` model_type that isn't in the remap table
