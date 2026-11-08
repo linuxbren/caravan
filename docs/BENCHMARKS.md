@@ -1066,13 +1066,139 @@ temp 0, no prompt cache, 3 runs, Caravan commit 1955cab-era web server.
   (stage 2; not built).
 
 
-## Day 19 — N-stage Balance correctness checkpoint (2026-11-08)
+## Day 19 — N-stage Balance box-only checkpoint (2026-11-08, before live clearance)
 
-No Mini was contacted and no new inference/Thunderbolt/RAM benchmark was run.
+At that checkpoint no Mini was contacted and no new inference/Thunderbolt/RAM benchmark was run.
 Do not compare the fake-node simulator's wall time with real model tok/s.
 The Linux-box simulator verified 3, 4 and 7 stages: forward order was complete,
 cold reuse 0 tokens, second-turn reuse 2 tokens, and each stage saved/restored
 its own cache. Full details and regression counts: [DAY19.md](DAY19.md).
-N-stage write/read/first-token/load-time/RAM results remain **pending**. Use an
+The later live checks below supersede the pending two-Mini simulation results. Use an
 already-installed small model on two Minis with a second packer process first;
 that verifies correctness, not a third GPU's throughput.
+
+
+## Day 19 live checks — 2026-11-08, afternoon CST
+
+**Correctness/smoke measurements, not a performance comparison or medians.** Two
+24 GiB M4 Minis; Low Power Mode read back as off on both. The existing 27B Qwen
+split stayed loaded throughout (EXO2 24 / EXO1 40 layers); it was not restarted.
+EXO2 hosted both extra packers in the three-stage simulation, so there were
+**three stages, only two physical GPUs**. Short 6–7-token answers and concurrent
+resident models make these unsuitable for throughput claims. Source artifacts
+are under `~/.caravan/day19-live` on the relevant Mini; exact reply JSON names
+are below. No release made.
+
+### MLX: Orvena/Orvena-4B-MLX-4bit, 32 layers
+
+No-think template option used for the quality rows; answers were correctly
+"four" and "six". Times come from the worker timing log / reply telemetry, not
+HTTP wall time. Counts are packer-first. Cold two-stage load: **6.804 s**;
+saved normal-picker three-stage reload: **7.901 s**. Polls required new PID and
+requested counts; an earlier old-ready-state observation is excluded.
+
+| Artifact `.json` | Split | Prompt / cached | New tokens | Prefill s | First token s | Total s | Write tok/s |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `two-quality-cold` | 16/16 | 34/0 | 6 | .169 | .213 | .392 | 33.52 |
+| `two-quality-warm` (new turn, template diverged) | 16/16 | 61/0 | 6 | .165 | .208 | .387 | 33.52 |
+| `two-after-web-restart` (identical prompt) | 16/16 | 61/60 | 6 | .009 | .053 | .241 | 31.91 |
+| `three-quality-cold` | 11/11/10 | 34/0 | 6 | .264 | .358 | .540 | 32.97 |
+| `three-quality-turn2` (template diverged) | 11/11/10 | 61/0 | 6 | .169 | .218 | .399 | 33.15 |
+| `three-quality-warm-repeat` | 11/11/10 | 61/60 | 6 | .009 | .057 | .247 | 31.58 |
+| `three-quality-restored` (explicit disk restore, then reply) | 11/11/10 | 61/60 | 6 | .012 | .066 | .248 | 32.97 |
+| `service-cold-reply` (native launchd) | 11/11/10 | 24/0 | 6 | .105 | .155 | .337 | 32.97 |
+| `service-warm-reply` | 11/11/10 | 24/23 | 6 | .009 | .057 | .238 | 33.15 |
+| `service-after-lead-child-crash-fixed` | 11/11/10 | 23/22 | 6 | — | .072 | .255 | 32.79 |
+| `service-after-lead-agent-crash` | 11/11/10 | 23/22 | 6 | — | .077 | .262 | 32.43 |
+
+Growing-turn cache reuse was **not** demonstrated for this no-think template:
+it safely diverged and reread the prompt. Identical-prompt warm reuse, explicit
+Save/Restore, web-only restart adoption and crash-time disk restore did work.
+The explicit restore row reports `hit-memory` because Restore loads the disk
+cache before the subsequent chat request. An earlier thinking-only check used
+48 reasoning tokens and no final answer; it is not counted as a quality pass.
+
+Native service startup observation: **16.976 s**. First-packer graceful child
+restart: **16.746 s**, same local agent. Lead child crash: **17.306 s** with the
+fixed agent (older already-running agent took **47.249 s**, including false
+TIME_WAIT busy retries). Agent SIGKILL → launchd recovery: **2.547 s**, old child
+confirmed gone. These are single observations including polling/retry delay.
+
+### Own-files measurements
+
+- The Orvena source is a **single 3,034,300,629-byte safetensors shard** containing
+  all layers. Each stage therefore needs that entire file: whole-shard fetching
+  is not tensor slicing. The EXO2 second test store was an APFS clone, not a
+  symlink or inter-Mini copy. Logical/st_blocks usage is not exclusive physical
+  storage when APFS shares blocks. Multi-shard MLX transfer savings remain to
+  be exercised by a real reload; read-only 27B previews below were tested.
+- Existing 27B split logical on-disk totals: EXO1 **10,731,498,067 B**, EXO2
+  **10,717,679,207 B** including metadata. Preview 16/48 requested EXO1 shard 1
+  (**5,343,269,992 B**), and marked its opposite-side retained shard; 48/16
+  requested EXO2 shard 3 (**5,357,088,982 B**). No production fetch/reload.
+- MLX explicit fetch/stop/resume and web-restart adoption were exercised. Lead
+  partial file reached **407,896,064 B** before the restart/stop/resume check.
+  Duplicate Fetch was refused while the rediscovered owned transfer ran.
+- GGUF `Qwen/Qwen2.5-3B-Instruct-GGUF`, `qwen2.5-3b-instruct-q4_0.gguf`:
+  immutable source **1,997,879,712 B**; first source/hash preview **5.085 s**.
+  Equal shares assign lead slots [0,19), peer [19,37), including output slot 36.
+  Exact assigned peer tensors >10 MiB: **901,994,496 B**. Fetch/stop/resume then
+  ready-preview passed. Shares 2:1 reduced assigned bytes to **673,732,608 B**;
+  **18 prior cache keys / 228,261,888 B** were listed retained, never deleted.
+  Existing peer all-model RPC cache total was **23,474,650,624 B**; do not call
+  this one model's size or claim existing full GGUF copies were deleted.
+
+### GGUF: first native split check, before own-file launcher/rate fixes
+
+Equal shares, isolated lead 8196, RPC 5596 reached over SSH tunnel 5606.
+Answers were "Two plus two is four." Native llama.cpp rates are used below;
+the old UI inflated short-run decode and warm-prefill speeds, now fixed.
+`prompt_ms` is prefill time, **not end-to-end streaming TTFT**.
+
+| Artifact `.json` | Prompt / cached | New tokens | Native prefill ms | Native read tok/s | Native write tok/s |
+|---|---:|---:|---:|---:|---:|
+| `gguf-quality-cold` | 38/0 | 7 | 146.569 | 259.26 | 38.75 |
+| `gguf-quality-warm` | 38/37 | 7 | 24.482 | 40.85 | 42.47 |
+| `gguf-after-web-restart` | 38/37 | 7 | 25.122 | 39.81 | 40.47 |
+
+Initial load: **12.094 s**, including **5.8 s** optional legacy full-peer-GGUF
+seed scan (55 already-cached tensors, 940,038,144 B with one padded layer).
+Interface en2 counters around load: **1,368,325 B received / 91,684,706 B sent**.
+These are aggregate Thunderbolt-interface counters including SSH, probes,
+small tensors and any background traffic, not exact model bytes or a controlled
+cold-cache comparison. The complete legacy peer GGUF already existed and was
+left untouched. Web restart kept lead/RPC/tunnel PIDs unchanged and returned a
+complete shutdown JSON response. See the later verified-own-cache reload below.
+
+
+### GGUF: verified peer-only cache reload after fixes
+
+`76d3c44`, same equal shares/model/ports. Fresh Balance verified the exact
+assigned peer cache, then runtime skipped the full-peer-GGUF scan and padded
+legacy seed (`file_mode=balance-verified-peer-cache`, no `seed` metadata).
+Reload **5.951 s**; aggregate en2 counters **1,376,105 B received / 91,657,390 B
+sent**. Compared with the earlier 12.094 s observation this removes the 5.8 s
+optional scan; these are single warm-cache observations, not a median or a
+controlled cold-cache speedup. The lead still opens its full GGUF.
+
+| Artifact `.json` | Prompt / cached | New tokens | Native prefill ms | Native read tok/s | Native write tok/s | Total telemetry s |
+|---|---:|---:|---:|---:|---:|---:|
+| `gguf-own-cache-cold` | 38/0 | 7 | 136.771 | 277.84 | 40.00 | .2868 |
+| `gguf-own-cache-warm` | 38/37 | 7 | 24.279 | 41.19 | 44.30 | .1597 |
+| `gguf-own-cache-after-web-restart` | 38/37 | 7 | 33.782 | 29.60 | 40.04 | .1836 |
+
+UI rates were asserted equal to the native values for every post-fix reply.
+Representative actual llama.cpp log lines (relative log clock, not wall time):
+
+```text
+slot print_timing: prompt eval time = 136.77 ms / 38 tokens (3.60 ms per token, 277.84 tokens per second)
+slot print_timing:        eval time = 150.00 ms / 7 tokens (25.00 ms per token, 40.00 tokens per second)
+slot print_timing: prompt eval time = 24.28 ms / 1 tokens (24.28 ms per token, 41.19 tokens per second)
+slot print_timing:        eval time = 135.45 ms / 7 tokens (22.57 ms per token, 44.30 tokens per second)
+```
+
+Web-only restart preserved lead/RPC/SSH-tunnel PIDs and cache. All isolated
+GGUF/MLX/web/RPC/tunnel/service processes were then stopped by ownership; the
+original Qwen 27B 24/40 split remained healthy, worker PIDs unchanged.
+Remaining: three physical Minis, multi-shard MLX live savings, fresh install /
+permanent login/reboot, cold-cache GGUF comparison and sustained benchmarks.

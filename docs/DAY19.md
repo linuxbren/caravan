@@ -1,16 +1,20 @@
 # Day 19 — Balance, easy install and each Mini’s own files
 
-Real date: **2026-11-08 (America/Chicago / CT)**. Box-side checkpoint only.
-No EXO1, EXO2, M3 MacBook or Omarchy commands were run for this work. No model
-was stopped, loaded, copied or downloaded on a Mini. Waiting for Brenden to
-confirm Dark Champion's state and the Qwen3.5-27B download before live work.
+Real date: **2026-11-08 (America/Chicago / CST)**. This is a chronological
+log: the original box-only checkpoints come first, followed by the authorized
+live checks starting at **15:22 CST**. Brenden's "do the live checks" clearance
+was received before contacting Omarchy or the Minis. The original 27B Qwen
+workers were not stopped or reloaded; only EXO1's normal web and our isolated
+test jobs were restarted.
 
 Brenden's order is (1) Balance + 3+ Mini MLX split, (2) easy install + auto-start,
-(3) each Mini keeps its own files. The original checkpoint below addresses (1);
-themes (2) and (3) are appended chronologically later in this log. All three
-are **experimental until live checks pass**; strict GGUF independence remains
-partial. Earlier checkpoint limits below are historical where superseded by the
-later theme 3 section. Current operational guide: [FILES.md](FILES.md).
+(3) each Mini keeps its own files. All three now have two-Mini native smoke
+coverage, including a three-stage simulation on two GPUs. **Still experimental**:
+three physical Minis, GUI usability, fresh-account installation and permanent
+login/reboot remain unverified; strict GGUF independence remains partial.
+Older "pending/no Mini touched" statements below describe the checkpoint at
+that time, not the final result. See the final live-validation summary at the
+end, [BENCHMARKS.md](BENCHMARKS.md), and [FILES.md](FILES.md).
 
 ## What changed
 
@@ -952,3 +956,113 @@ inflated pre-fix display. GGUF `ttft_s` remains a prefill-time estimate; it is
 not a measured end-to-end streaming first-token latency.
 
 Validation after GGUF integration/telemetry fixes: **663 passed, 39.501 s**.
+
+
+## Final live validation — Nov 8, 2026, 16:14 CST
+
+### What passed
+
+- Before changes, recorded both loaded models, worker PIDs and download state.
+  Original **Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit**, EXO2 24 /
+  EXO1 40 layers; Dark Champion was on disk, not loaded. No active download was
+  found. Correct branch on both; tracked trees clean, with the pre-existing
+  untracked `proxy/web/index.html.bak-pre-amber` preserved, not erased.
+- Read-only production Auto/16–48/48–16 Balance previews; no production reload
+  or production shard fetch. Explicit isolated MLX reload, correct four/six
+  answers, identical-prompt warm reuse, Save/Restore and web restart adoption.
+- Actual three-stage **11/11/10** chain on ports 5591/5592/8196, including normal
+  saved-picker reload and own model roots. Two packers shared EXO2; this is not
+  a third GPU or a throughput claim. Simulations and unit fixtures cover 3/4+
+  nodes; Optimize/concurrency/speculation remain gated.
+- MLX own-files Fetch/Stop/Resume, duplicate-fetch refusal, download rediscovery
+  across web restart, completion and reload. Boundary moves replanned missing
+  and retained files; no model/cache pruning. The live MLX test model is one
+  whole safetensors shard, so it cannot prove multi-shard download savings.
+- Both Macs' installer dry-runs and native service/plist plans. Real temporary
+  launchd three-stage startup with upstream-order retry, managed-control 409s,
+  web KEEP_WORKERS, graceful peer restart and child/agent crash recovery.
+  All test labels unloaded; plans/logs/models retained outside LaunchAgents.
+- GGUF source-verified peer Range fetch/stop/resume, retained-key replanning,
+  native split inference, warm reuse and web adoption. Final verified-own-cache
+  reload **5.951 s**, metadata `file_mode=balance-verified-peer-cache`, **no legacy
+  full-peer-GGUF seed scan**. The legacy full GGUF already on EXO2 was untouched.
+  Aggregate en2 load delta: **1,376,105 B received / 91,657,390 B sent** (SSH,
+  probes, small tensors and other link traffic included; not exact model bytes).
+  Native output: **40.00 tok/s cold / 44.30 warm**, correct answer four;
+  0/38 then 37/38 cached prompt tokens. UI rates exactly matched native timings.
+  Web-only restart preserved all three lead/RPC/tunnel PIDs and reused 37/38:
+  **40.04 tok/s**, prefill 33.782 ms, total 0.1836 s.
+
+Measured MLX and recovery tables, artifacts and caveats are in BENCHMARKS.
+The fixes and intermediate failures are recorded above, not hidden. A final
+post-cleanup service `status` reported **No managed services installed** on both
+Macs. Asking the uninstall dry-run to use an already-archived test plan correctly
+refused **Owned config is missing**; no bypass or reinstallation was attempted.
+That is a fail-closed refusal, not a permanent install/uninstall migration test.
+
+### Final Mini state
+
+At **16:14 CST**, both correct checkouts were at code fix `76d3c44` (the final
+numbers/docs commit follows), branch `caravan-v3-mlx-split`:
+
+| Host | Left running | Preserved state |
+|---|---|---|
+| EXO1, `~/dev/caravan-v3` | normal web **69242**, port 8190, `CARAVAN_WEB_KEEP_WORKERS=1`; original lead **57464**, port 8194 | Qwen 27B, layers 24–63, ready/healthy |
+| EXO2, `~/cv3` | original packer **54170**, Thunderbolt port 5560 | same Qwen 27B, layers 0–23 |
+
+No test listeners on 5591/5592/8192/8193/8196/5596/5606; no temporary launchd
+labels, no permanent test plists, no active transfer processes, and the normal
+web's live-fetch list was empty. Own scratch/model/cache/log files remain under
+`~/.caravan/day19-live`; test worker plans are archived in
+`retired-service-plans`, and stopped web PID marker is `web-stopped.pid`.
+No existing model/cache files or the unrelated backup were deleted. No scp,
+EXO2 `~/dev/caravan`, Omarchy app changes, cloud agent, release, tag, reboot or
+permanent LaunchAgent install was used.
+
+### Remaining checks / plain-language decisions for Brenden
+
+1. **May we use a spare Mac/account for an actual fresh install and repeated
+   install, then install permanent user-login services and test logout/reboot?**
+   Current checks used dry-runs and temporary launchd only. Do not reboot or
+   migrate the normal jobs without that approval. Keep the venv path, not its
+   resolved Homebrew binary; regenerate old service plans explicitly.
+2. **Third physical Mini and cable routes:** run the same saved ranges on three
+   separate GPUs. A Thunderbolt triangle is physically possible, but automatic
+   multi-link discovery/routing is not implemented; configure each peer/listen/
+   upstream address explicitly. GUI slider/download interaction and longer
+   throughput/low-memory runs still need human-observed testing.
+3. **How strict should “own files” be next?** MLX whole-shard duplication is
+   unavoidable for the present loader; run a multi-shard model from partial
+   stores to verify real transfer savings. GGUF still needs a complete lead
+   file and sends <=10 MiB tensors/cache misses over RPC. Eliminating those
+   needs llama.cpp loader/protocol work. Existing files stay until an explicit
+   approved per-file cleanup design; nothing is silently pruned.
+4. **Auto-start control:** should fixed launchd model plans become editable from
+   Balance, or keep interactive web-managed workers separate? Today fixed plans
+   deliberately block UI Load/Stop/Optimize rather than fight another controller.
+
+Safe source update only (already performed throughout this work; no worker
+restart needed for a documentation-only final commit):
+
+```sh
+# Run from Omarchy; these are the only approved working checkouts.
+ssh exo1 'cd ~/dev/caravan-v3 && git diff --quiet && git diff --cached --quiet && test "$(git branch --show-current)" = caravan-v3-mlx-split && git pull --ff-only origin caravan-v3-mlx-split'
+ssh exo2 'cd ~/cv3 && git diff --quiet && git diff --cached --quiet && test "$(git branch --show-current)" = caravan-v3-mlx-split && git pull --ff-only origin caravan-v3-mlx-split'
+```
+
+These tracked-tree checks deliberately preserve the known untracked backup.
+Never use `~/dev/caravan` on EXO2. For a future approved worker-code activation,
+wait until the current model/reply/download is idle, check a fresh Balance plan,
+then explicitly reload the selected model; a web-only restart does not update
+already-running worker or agent code. Keep **CARAVAN_WEB_KEEP_WORKERS=1** for
+web-only restarts. No production worker reload was done by these live checks.
+
+
+Final exact full-suite command after live cleanup and all fixes:
+
+```sh
+PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests
+```
+
+**663 tests passed in 40.133 s** (30 more than the 633-test pre-live checkpoint).
+No code changed after that run; the final commit records measurements and docs.

@@ -4,8 +4,7 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-11-01 (idea 1 + N=3 stall fix shipped as v3.3; Day 6
-video v12 / techie-friend cut as v3.4; idea 3 guess-ahead auto-pair). Per-version changes: [CHANGELOG.md](CHANGELOG.md).*
+*Last updated 2026-11-08: Day 19 authorized live checks and fixes; development branch only, no release. Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -18,7 +17,7 @@ deprecated flag aliases.
 
 Brenden's order: **(1) Balance + 3+ Mini MLX split, (2) easy install and
 auto-start, (3) each Mini keeps its own files.** All three now have box-side
-experimental checkpoints; strict GGUF independence is still partial (see below). No Mini or Omarchy was contacted/restarted.
+experimental checkpoints and authorized two-Mini live checks; strict GGUF independence is still partial (see below). Original 27B workers were preserved. See [live results](DAY19.md#live-checks-started--nov-8-2026-1522-cst) and [measured smoke numbers](BENCHMARKS.md).
 
 - [x] Shared read-only Balance preview API: Auto from live free/reclaimable RAM,
   1.75 GB margin, integer layer-boundary controls, memory/headroom and missing
@@ -28,12 +27,15 @@ experimental checkpoints; strict GGUF independence is still partial (see below).
 - [x] N-stage ranges, direct-source shard planner/CLI, middle-packer transport,
   recursive session agreement/epoch invalidation, N-packer telemetry and owned
   web launch/cleanup. Fake 3/4-node framed-socket tests and standalone simulator.
-- [ ] Live Apple Silicon checks, real third-worker simulation, UI usability and
-  performance measurements. This is **experimental**, not a new speed claim.
+- [x] Two-Mini Apple Silicon correctness, explicit reload, warm reuse, save/restore,
+  web adoption and a real three-stage simulation (two packers share EXO2).
+- [ ] Three physical GPUs, GUI/slider usability and sustained performance. The
+  API-driven smoke measurements are **experimental**, not a new speed claim.
 - [x] Theme 3: extend the picker/download/catalog/load path past two stages,
   using exact per-stage shard plans and saved ordered N-stage placements.
-- [ ] Live-verify that picker bridge. N-stage Optimize remains blocked; no silent
-  promotion of untested N-stage concurrency/speculation (pinned off here).
+- [x] Live picker bridge: saved 11/11/10 placement, normal picker reload, own
+  stage roots and web-restart adoption. N-stage Optimize remains blocked; no
+  silent promotion of untested concurrency/speculation (pinned off here).
 - [ ] Automatic multi-link Thunderbolt discovery/routing. Explicit `peer`,
   `listen` and `upstream_peer` allow the chain to use different links; a triangle
   of cables is not automatically configured. Use a trusted private link only.
@@ -41,8 +43,11 @@ experimental checkpoints; strict GGUF independence is still partial (see below).
 - [x] Theme 2: idempotent native-Mac installer; generated per-user web and
   single/N-stage worker LaunchAgents; owned install/uninstall/status/restart;
   local agent worker supervision and peer-order retry; protected web adoption.
-- [ ] Real new-Mac install, repeat/install conflict handling, actual launchd,
-  privacy approval, login/reboot, crash recovery and KEEP_WORKERS verification.
+- [x] Native installer/launchd dry-runs and temporary real launchd three-stage
+  startup, managed-control refusal, peer/child/agent recovery and KEEP_WORKERS.
+  Temporary jobs removed; no permanent job or reboot.
+- [ ] Fresh-account actual install/repeat, permanent install/uninstall migration,
+  privacy-prompt behavior and login/reboot (needs Brenden's OK).
 - [ ] UI-driven reconfiguration of fixed auto-start model plans / automatic
   last-model resume. Today the fixed launchd model plan is a separate ownership
   mode; uninstall its worker jobs before using UI model switching.
@@ -56,9 +61,12 @@ experimental checkpoints; strict GGUF independence is still partial (see below).
 - [ ] Full GGUF rule: stock llama.cpp still needs the complete lead file and
   sends tensors <=10 MiB / cache misses over RPC. Requires loader/protocol work,
   not a fake partial GGUF. Multi-file GGUF support and very large manifests
-  remain follow-ups; no new live cold/warm-load benchmark is claimed.
+  remain follow-ups. Short real GGUF cold/warm/restart checks are recorded in
+  BENCHMARKS; they are not controlled cold-cache or sustained benchmarks.
 - [ ] Explicit approved per-file cleanup UI, shared-plan/current-service protection,
-  optional RPC cache relocation/caps and live failure/recovery measurements.
+  optional RPC cache relocation/caps. Live owned transfer stop/resume/restart
+  adoption and retained-file previews passed; multi-shard MLX runtime savings
+  and stricter loader independence still need work.
 
 Details, test numbers, API and exact live-test steps: [DAY19.md](DAY19.md).
 Installer/service guide: [SERVICES.md](SERVICES.md). File ownership/API/limitations:
@@ -248,8 +256,10 @@ Open tasks for this rule:
    - [x] Start the split from the agent and launchd: Day 19 explicit local
      single/N-stage service plans, generated login jobs and local supervision.
      `caravan_agent.py --service-config ... --apply`; no fixed two-node limit.
-   - [ ] Verify that service path on real Macs/login/reboot; automatic discovery
-     and UI-driven reconfiguration of fixed plans remain follow-ups.
+   - [x] Verify temporary real-Mac service startup, crash recovery and web
+     adoption, including co-hosted three-stage simulation (Nov 8).
+   - [ ] Permanent service/login/reboot; automatic discovery and UI-driven
+     reconfiguration of fixed plans remain follow-ups.
    - [ ] Merge to `main` (waiting for review; not pushed).
 3. **Split download (MLX).** Each Mac downloads only its own layers
    straight from Hugging Face; nothing relayed through the lead. Read
@@ -706,7 +716,7 @@ list above point to it.
 | Split link is unauthenticated | Thunderbolt-only cable between two trusted Macs. | Before the split runs over LAN/Tailscale. |
 | No overlap of the two halves, and per-pass overhead (serial pipeline) | Simplicity first. Each half costs 16–24 ms per token without keepalive, about as much as the whole model on one Mac; the cable is <1 ms. Part of that was Metal cool-down after the idle wait (~5 ms/half); idea 6 (GPU keepalive, default on) removes it and raises writing ~28–50%. The rest is still serial turn-taking and graph-build overhead. Idea 5 confirmed moving layers does not raise single-chat writing. | After v3 merges. Do ideas 1 and 3 on top of keepalive; use idea 5's balanced cuts with idea 1. Also try compiling each stage's graph. |
 | `--kv-bits` with the split | Untested. | With the 8-bit chat memory item. |
-| More than two stages (one lead, several packers) | Experimental N-stage Balance/CLI path implemented on Day 19; 3/4-stage fake socket tests pass. No live Apple Silicon N-stage inference yet. Legacy picker/Optimize stays two-stage. | Run the Day 19 live checks (a second packer process can simulate a third Mini), then promote the legacy paths. |
+| More than two stages (one lead, several packers) | Experimental N-stage Balance/CLI/picker path; 3/4-stage fake tests and real 11/11/10 three-stage inference on two GPUs passed Nov 8. Own roots, warm/restore and restart recovery checked. N-stage Optimize remains gated. | Three physical Minis, multi-link topology, GUI usability and sustained performance remain. |
 | Split download used for one model only | Qwen3 30B 8-bit ran from split downloads. For Gemma 4 8-bit and GPT-OSS 20B 8-bit, the lead downloaded its files plus the packer-only ones and copied them to the packer over Thunderbolt (one internet download instead of two). | When split download is wired into the agent (Next #3). |
 | Qwen3.6 35B (hybrid attention) doesn't reuse the chat | Its linear-attention layers can't be rewound, and the template drops the reasoning from earlier replies, so every turn diverges and re-reads the whole chat (11 s at 4k, 53 s at 16k), also after a restart. Same on one Mac. | With per-model profiles: keep the reasoning in the history for hybrid models, or snapshot at the end of the user turn. |
 | Split download: resume and clean-up of interrupted downloads | Resume continues partial files since Day 18 (HTTP Range). Clean-up still open; stale `.incomplete` files from killed downloads stay on disk (nothing deleted). | When split download is wired into the agent. |

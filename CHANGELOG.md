@@ -1,3 +1,8 @@
+### Day 19 authorized live checks and fixes — 2026-11-08 (not a release)
+- Two-Mini Balance/picker reload, actual three-stage 11/11/10 MLX simulation, correct answers, warm reuse, Save/Restore, web adoption, own-files fetch/stop/resume/restart and GGUF native split checks. Original Qwen3.5-27B 24/40 workers preserved; no permanent LaunchAgents/reboot.
+- Fixed inventory metadata readiness, configured execution roots, endpoint-scoped legacy cleanup, verified custom-root adoption, recursive memory guard/nested model dimensions, preserved venv paths, idle-packer graceful stop/TIME_WAIT handling, complete web shutdown responses, verified peer-only GGUF reloads and native GGUF rate reporting.
+- **663 tests pass (40.133 s)** in the final post-cleanup full suite (30 new live-fix regressions). Short-run real measurements and failure notes: [DAY19.md](docs/DAY19.md), [BENCHMARKS.md](docs/BENCHMARKS.md). Three physical Minis, GUI usability, multi-shard MLX savings, fresh-account install and permanent login/reboot remain unverified. Historical box-only checkpoints follow.
+
 ### Day 19 each Mini’s own files checkpoint — 2026-11-08
 - Shared Balance/file preview + explicit Fetch UI/API, per-Mini logical/allocated disk usage, missing-shard replanning and retained-file lists. No automatic pruning or reload. Revision-pinned MLX stage downloads, published SHA256 checks, owned cancellation and restart-discoverable transfers.
 - N-stage legacy picker bridge, saved stage-aware inventories/catalog/load plans, configurable own model roots and co-host simulation isolation. No default two-node cap; N-stage Optimize remains gated.

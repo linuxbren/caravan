@@ -23,8 +23,13 @@ From an existing source copy, preview with
 ready. Explicit per-node single/N-stage model auto-start, install/uninstall/status
 commands and ownership rules: **[SERVICES.md](docs/SERVICES.md)**. Fixed auto-start
 model jobs and UI-controlled model switching are separate modes; do not mix
-controllers. LaunchAgents start at **user login**, not before login. Real Mac
-installation/login/reboot tests are still pending.
+controllers. LaunchAgents start at **user login**, not before login. Native
+dry-runs and temporary three-stage launchd startup/recovery were tested on
+two M4 Minis on Nov 8. A clean-Mac actual install, permanent service migration
+and login/reboot remain pending; no permanent jobs were installed in the test.
+Use the **venv Python path itself**, e.g. `~/.caravan/venvs/mlx/bin/python`, not
+its resolved Homebrew binary. Regenerate plans made before the Day 19 venv-path
+fix; do not hand-edit their JSON. See [live results](docs/DAY19.md).
 
 The current branch also adds per-Mini selective downloads and disk accounting
 in the Balance view; see [FILES.md](docs/FILES.md). The `gguf` dependency reads

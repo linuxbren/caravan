@@ -108,7 +108,14 @@ cache population for any number of physical RPC Minis:
    are listed, never deleted. A SHA256 failure in an existing cache asks you to
    inspect/move that exact file aside; it is not silently overwritten.
 
-Limitations requiring live verification / further llama.cpp work:
+6. A fresh safe/complete Balance reload uses those verified peer-only cache
+   files directly; it does **not** scan a complete peer GGUF or seed padded
+   extra layers. Legacy loads without that verified plan keep optional seeding
+   from an existing full peer file. Nov 8 native equal-share fetch/reload,
+   warm inference and web-restart checks passed; see [DAY19.md](DAY19.md) and
+   [BENCHMARKS.md](BENCHMARKS.md). Existing full peer files were left untouched.
+
+Limitations / remaining live verification and further llama.cpp work:
 
 - **Small tensors still cross RPC**, as do cache misses; strict “no weights over
   the cable” is NOT achieved. The existing RPC hash protocol caches only tensors

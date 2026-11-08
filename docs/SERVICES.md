@@ -1,8 +1,18 @@
 # Install and auto-start on a Mac
 
-Day 19 development feature, **not yet tested on a clean Mac or real launchd**.
+Day 19 development feature. Native dry-runs and temporary real launchd
+three-stage startup/recovery passed on two M4 Minis on Nov 8; **clean-Mac
+installation and permanent login/reboot testing remain pending**. No permanent
+jobs or reboot were used for those checks. See [DAY19.md](DAY19.md).
 Everything below runs as the logged-in user: no sudo, no LaunchDaemons, no
 pre-login boot service, and no automatic changes to macOS privacy settings.
+
+Use the **venv path** (`~/.caravan/venvs/mlx/bin/python`) when generating plans;
+do not resolve its symlink to the base Homebrew interpreter. Older plans made
+before the Day 19 fix must be regenerated explicitly. Restarting only a worker
+child does not refresh its already-running agent code; restart the corresponding
+owned service when deploying agent changes, at a safe time. The web can be
+restarted separately with KEEP_WORKERS without reloading models.
 
 ## One-command setup
 
