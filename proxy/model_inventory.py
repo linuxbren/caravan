@@ -145,6 +145,11 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
         base["kind"] = "partial"
         return base
 
+    base["model_type"] = str(cfg.get("model_type") or "") or None
+    _tie = cfg.get("tie_word_embeddings")
+    if _tie is None and isinstance(cfg.get("text_config"), dict):
+        _tie = cfg["text_config"].get("tie_word_embeddings")
+    base["tie_word_embeddings"] = _tie if isinstance(_tie, bool) else None
     try:
         from mlx_arch import model_warnings
         base["warnings"] = model_warnings(cfg)
@@ -310,6 +315,8 @@ def inventory_payload(*, packer_layers: Optional[int] = None) -> dict:
                 "placement": m.get("placement"),
                 "native_mtp_available": bool(m.get("native_mtp_available")),
                 "warnings": list(m.get("warnings") or []),
+                "model_type": m.get("model_type"),
+                "tie_word_embeddings": m.get("tie_word_embeddings"),
             }
             for rid, m in models.items()
         }

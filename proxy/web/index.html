@@ -1574,6 +1574,7 @@
     const cur = j.current;
     sel.innerHTML = "";
     const models = j.models || [];
+    state.caravanVersion = j.caravan_version || "unknown";
     if (!models.length) {
       const opt = document.createElement("option");
       opt.value = "";
@@ -1603,13 +1604,51 @@
     if (state.opts) renderOpts();
   }
 
+  // Prefilled GitHub issue for a model warning. Only public facts: HF repo id,
+  // warning text, Caravan version, model_type, tie flag. No paths/hosts/IPs/tokens.
+  function modelReportUrl(m, version) {
+    const repo = String((m && (m.hf || m.id)) || "unknown");
+    const warns = (m && m.warnings) || [];
+    const tie = m && typeof m.tie_word_embeddings === "boolean" ? String(m.tie_word_embeddings) : "unknown";
+    const body = [
+      "**Model:** " + repo,
+      "**Caravan version:** " + (version || "unknown"),
+      "**model_type:** " + ((m && m.model_type) || "unknown"),
+      "**tie_word_embeddings:** " + tie,
+      "",
+      "**Warning(s) Caravan showed:**",
+      ...warns.map(w => "- " + w),
+      "",
+      "**What happened when you ran it (optional):**",
+      "",
+    ].join("\n");
+    const q = new URLSearchParams({ labels: "model-report", title: "Model report: " + repo, body });
+    return "https://github.com/linuxbren/caravan/issues/new?" + q.toString();
+  }
+
   // GGUF: choose one Mini or a split across K Minis (llama.cpp RPC).
   function renderPlace() {
     const ps = $("placeSelect");
     const m = (state.modelRows || {})[$("modelSelect").value];
     const mw = $("modelWarn");
     const warns = (m && m.warnings) || [];
-    if (mw) { mw.hidden = !warns.length; mw.textContent = warns.length ? "⚠ Heads-up about this model: " + warns.join(" ") : ""; }
+    if (mw) {
+      mw.hidden = !warns.length;
+      mw.textContent = warns.length ? "⚠ Heads-up about this model: " + warns.join(" ") + " " : "";
+      if (warns.length) {
+        const a = document.createElement("a");
+        a.id = "modelReport";
+        a.href = modelReportUrl(m, state.caravanVersion);
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = "Report this model";
+        a.title = "Opens a new GitHub issue in your browser. You can read and edit it before sending; Caravan sends nothing by itself.";
+        mw.appendChild(a);
+        const note = document.createElement("span");
+        note.textContent = " (opens GitHub, where you can edit it before sending)";
+        mw.appendChild(note);
+      }
+    }
     const opts = (m && m.placement_options) || [];
     ps.hidden = !opts.length;
     if (!opts.length) { ps.innerHTML = ""; return; }

@@ -378,6 +378,8 @@ def build_entries_from_inventories(
             "source": source,
             "native_mtp_available": any(st.get("native_mtp_available") for st in per.values()),
             "warnings": sorted({w for st in per.values() if st for w in (st.get("warnings") or [])}),
+            "model_type": next((st.get("model_type") for st in per.values() if st and st.get("model_type")), None),
+            "tie_word_embeddings": next((st.get("tie_word_embeddings") for st in per.values() if st and isinstance(st.get("tie_word_embeddings"), bool)), None),
             "lead_path": lead_path,
             "packer_path": packer_path,
             "available_lead": bool(lead_path) and usable,

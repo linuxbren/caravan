@@ -37,6 +37,7 @@ from web_workers import WorkerManager  # noqa: E402
 import web_optimize  # noqa: E402
 import web_picker  # noqa: E402
 import web_nodes  # noqa: E402
+import web_alert  # noqa: E402
 
 DEFAULT_HOST = os.environ.get("CARAVAN_WEB_HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.environ.get("CARAVAN_WEB_PORT", "8190"))
@@ -666,8 +667,13 @@ def make_handler(app: App):
             if path == "/api/models":
                 models = app.list_loadable_models()
                 snap = app.mgr.snapshot()
+                try:
+                    web_alert.maybe_alert_async(models)
+                except Exception:  # noqa: BLE001
+                    pass
                 return self._json(200, {
                     "models": models,
+                    "caravan_version": web_alert.caravan_version(),
                     "current": snap.get("model_id"),
                     "source": "disk",
                     "max_split_stages": web_nodes.MAX_SPLIT_STAGES,

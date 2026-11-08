@@ -59,6 +59,11 @@ Env knobs (optional):
 - `CARAVAN_WEB_PACKER_PEER` (`169.254.103.191:5560`)
 - `CARAVAN_WEB_PACKER_SSH` (`brenden@169.254.103.191`)
 - `CARAVAN_WEB_NO_DRAFT=1` to force `--no-split-draft`
+- `CARAVAN_ALERT_WEBHOOK_URL` (alert_url): opt-in. When set, POST `{model, warnings, mini, caravan_version}` once per model/warning set the first time the picker shows a ⚠. Unset by default = nothing is sent. Never commit a real value.
+- `CARAVAN_ALERT_WEBHOOK_KEY` (alert_key): optional secret sent as `Authorization: Bearer <key>` and `X-Webhook-Key: <key>`. Dedupe file: `~/.caravan/alert-sent.json` (delete it to re-send).
+
+### Report this model
+When a model has a ⚠, the line under the picker has a **Report this model** link. It opens a prefilled GitHub issue (label `model-report`) with the repo id, warning text, Caravan version, `model_type`, and tie flag only. You can edit it on GitHub before sending; Caravan never sends it for you.
 
 ## Layout in the repo
 
