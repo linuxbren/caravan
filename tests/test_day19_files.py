@@ -468,6 +468,9 @@ class FinalStorageRegressions(unittest.TestCase):
             self.assertEqual(item['stage_counts'],[4]*3);self.assertTrue(item['stage_ok'][1])
             self.assertGreater(item['storage']['on_disk_bytes'],0)
             self.assertEqual(item['full_weights_gb'],6)
+            self.assertTrue(all(item[k] for k in ('has_config','has_index','has_tokenizer')))
+            plan=B.preview(12,6,nodes,[4]*3,config=cfg,index=idx,inventories={n['id']:item for n in nodes})
+            self.assertTrue(all(stage['metadata_ready'] for stage in plan['stages']))
 
     def test_custom_model_root_and_python_config(self):
         raw={'web':{'nodes':{'sim':{'host':'local','model_root':'~/sim-models','python':'~/special/bin/python'}}}}

@@ -733,3 +733,32 @@ Shell/Python/JavaScript syntax and git diff checks also passed.
 All three themes now have box-side checkpoints, but **GGUF's strict rule and all
 live Mac checks remain open**. Obsidian diary, final release packaging/tag/video/
 X draft and main fast-forward remain untouched coordinator work.
+
+## Live checks started — Nov 8, 2026, 15:22 CST
+
+Brenden cleared live checks. Access is through Omarchy, then separate `ssh exo1`
+/ `ssh exo2` (EXO2 does not resolve from EXO1). No scp or wrong EXO2 checkout.
+
+Initial state: Huihui Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit was ready,
+64 layers split **24 on EXO2 / 40 on EXO1**. Lead PID **57464**, packer PID
+**54170**, original web PID **7067**. Dark Champion was on disk, not loaded.
+No active fetch/download process was found. Original workers were not ours;
+they are being preserved while small-model tests use isolated ports/stores.
+
+Both correct checkouts were on `caravan-v3-mlx-split` at `1ccdb15`, tracked files
+clean but with the same sole untracked `proxy/web/index.html.bak-pre-amber`.
+Preserved that backup and fast-forwarded both to `5ee90bc`; Git did not overwrite
+it. Native installer correctly refused an existing checkout with that untracked
+local change (safety behavior, not a reason to erase the backup).
+
+Restarted only the verified EXO1 web (new PID 64049) with KEEP_WORKERS=1;
+original lead PID/health survived, original packer remains untouched. Isolated
+web uses loopback 8192, lead 8196 and `~/.caravan/day19-live` state/config/stores.
+
+**First live bug:** normal Balance preview showed safe Auto **32/32**, with
+zero missing shards, but `metadata_ready=false` on both Minis. The inventory JSON
+projection omitted `has_config`, `has_index`, `has_tokenizer`, even though the
+on-disk inspector knew them. That also prevented saved N-stage catalog rows
+from becoming usable. Added these booleans to the real serialized contract and
+extended its regression test. Full box suite: **633 passed, 38.751 s**.
+No production model reload/fetch was performed to work around this bug.
