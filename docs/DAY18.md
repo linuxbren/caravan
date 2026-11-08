@@ -365,3 +365,6 @@ Notes:
   - `read 40 tok (0 cached) at 114.6 tok/s, write 22 tok at 14.05 tok/s, first token 0.42 s, total 1.92 s`
   - Reply coherent ("Camel, Horned Lizard, Coyote").
 - Free memory after the reload: EXO1 43%, EXO2 41%.
+
+## Day 18 video
+`handoff/lab/videos/2026-11-08_caravan-v3-day18-roundup_v24.mp4` — 120 s, 1280x720 H.264, silent, 30 single-line captions in a bottom band (each checked to fit, no wrapping). Whole-day roundup: downloads, output fixes, split safety, picker, GGUF and Optimize now, llama.cpp head to head, timing log and Brenden's test. Title cards and number cards only (no new UI screenshots), numbers from this file and release-notes/day18.md. Captions: `2026-11-08_day18-roundup_captions.txt`; generator: `make_day18_video.py`.
