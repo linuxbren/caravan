@@ -1415,7 +1415,11 @@ def make_handler(app: App):
                 online = app.configured_nodes()
             cfg_by_id = {(n.get("id") or n.get("label")): n for n in (live or app.configured_nodes())}
             for n in app.configured_nodes():
-                cfg_by_id.setdefault(n.get("id") or n.get("label"), n)
+                # Stats are a public projection, not the execution configuration.
+                # Preserve RAM observations but take roots/SSH/python/ownership
+                # from server configuration, including custom two-stage roots.
+                key = n.get("id") or n.get("label")
+                cfg_by_id[key] = dict(cfg_by_id.get(key) or {}, **n)
 
             weights = float(body.get("weights_gb") or 0)
             if not weights:

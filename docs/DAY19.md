@@ -762,3 +762,26 @@ on-disk inspector knew them. That also prevented saved N-stage catalog rows
 from becoming usable. Added these booleans to the real serialized contract and
 extended its regression test. Full box suite: **633 passed, 38.751 s**.
 No production model reload/fetch was performed to work around this bug.
+
+Second live bug caught safely before loading: picker assembled execution nodes
+from the live-statistics projection; that projection drops configured custom
+model roots. A custom **two-stage** request therefore fell back to the legacy
+paths instead of the own-files bridge. Stopped only the newly created Orvena
+job. Existing EXO2 Orvena weights/one-Mini placement stayed intact; the partial
+EXO1 default-root download is retained, not silently removed. Execution nodes
+now merge live RAM with authoritative configured roots/SSH/Python/physical IDs.
+Added an HTTP-level regression with projected/misleading live root fields.
+Full box suite: **634 passed, 39.552 s**.
+
+After metadata fix, production Auto preview was **33/31**, safe and ready (free
+RAM changes the recommendation). Read-only boundary previews demonstrated real
+replanning: **16/48** requires EXO1 shard 1, **5,343,269,992 bytes**; **48/16**
+requires EXO2 shard 3, **5,357,088,982 bytes**. The opposite Mini lists shard 2 as
+not needed for that proposed plan. No files were deleted/downloaded and no
+production reload was applied. Existing on-disk totals were EXO1
+**10,731,498,067 bytes**, EXO2 **10,717,679,207 bytes** (metadata included).
+
+Native new-destination installer dry-runs passed on both Macs without creating
+the destination. Generated web plist preview passed; a temporary web job was
+also bootstrapped successfully from `~/.caravan/day19-live`, **outside**
+`~/Library/LaunchAgents`, on loopback 8193. No permanent LaunchAgent installed.

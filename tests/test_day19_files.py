@@ -424,6 +424,38 @@ class TransferLifecycle(unittest.TestCase):
             runners[0]['save_placement']({'counts':[4]*3})
 
 
+class PickerConfiguredRoots(unittest.TestCase):
+    def test_live_stats_projection_cannot_lose_or_override_configured_roots(self):
+        _, _, nodes = model(2)
+        nodes[-1]['host'] = 'local'
+        for n in nodes:
+            n.update(model_root='~/isolated/' + n['id'], physical_id='physical-' + n['id'],
+                     python='~/special/bin/python')
+        live = [{k:v for k,v in n.items() if k not in ('model_root','physical_id','python')}
+                for n in nodes]
+        live[0]['model_root'] = '/not-the-configured-root'
+        app = types.SimpleNamespace(configured_nodes=lambda:nodes, nodes=lambda:{'nodes':live})
+        server = ThreadingHTTPServer(('127.0.0.1',0),WS.make_handler(app))
+        thread = threading.Thread(target=server.serve_forever,daemon=True); thread.start()
+        try:
+            with mock.patch.object(WF,'prepare_new_mlx',return_value={'plan':True}) as prepare, \
+                 mock.patch.object(WF,'start',return_value={'id':'job'}):
+                body = dict(repo_id='org/model',placement_id='split:2',weights_gb=1,
+                            packer_layers=6,counts=[6,6])
+                request = Request('http://127.0.0.1:'+str(server.server_port)+'/api/picker/download',
+                                  data=json.dumps(body).encode(),headers={'Content-Type':'application/json'})
+                with urlopen(request) as response: out=json.load(response)
+                self.assertEqual(out['job']['id'],'job')
+                targets = prepare.call_args.args[2]
+                for target in targets:
+                    original = next(n for n in nodes if n['id']==target['id'])
+                    for key in ('model_root','physical_id','python'):
+                        self.assertEqual(target[key],original[key])
+                    self.assertEqual(target['ram'],original['ram'])
+        finally:
+            server.shutdown();server.server_close();thread.join()
+
+
 class GgufUi(unittest.TestCase):
     def test_picker_downloads_complete_gguf_only_on_lead(self):
         _,_,nodes=model(3);nodes[-1]['host']='local'
