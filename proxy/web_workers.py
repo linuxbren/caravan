@@ -383,6 +383,24 @@ class WorkerManager:
                 + " → split " + ":".join(str(x) for x in shares)
                 + ("" if all(f for f in free) else " (equal: free RAM unknown)"))
         meta["shares"] = shares
+        for i, n in enumerate(peers):
+            # GGUF stage 2: a peer with its own copy fills its rpc cache from disk.
+            self._check_cancel()
+            name = n.get("label") or n.get("id")
+            try:
+                r = self._ssh_node(n, G.seed_command(path.name, path.stat().st_size, shares, i + 1,
+                                                     repo=n.get("repo") or "~/cv3"), timeout=1800)
+                rep = G.parse_seed(r.stdout)
+            except Exception as e:  # noqa: BLE001 - stage 2 is an optimisation only
+                rep, r = None, None
+                self._note(f"{name}: local seed skipped ({e})")
+            if rep:
+                meta.setdefault("seed", {})[n.get("id") or name] = rep
+                self._note(f"{name} loads its share from its own disk: {rep['tensors']} tensors, "
+                           f"{rep['bytes'] / 1e9:.1f} GB ({rep['new']} new, {rep['have']} cached) "
+                           f"in {rep['s']}s")
+            elif r is not None:
+                self._note(f"{name}: no local copy of {path.name}; its share goes over the link")
         args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares)
         self._set(status="starting_lead", packer_pid=None)
         self._note(("starting llama-server on EXO1, peers get their share over the link "

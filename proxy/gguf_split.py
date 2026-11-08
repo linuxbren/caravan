@@ -275,3 +275,32 @@ def pid_cmdline(pid) -> str:
 
 def is_tunnel_cmd(cmd: str) -> bool:
     return cmd.startswith("ssh ") and " -L 127.0.0.1:" in cmd and ":127.0.0.1:" in cmd
+
+
+def seed_command(model_name: str, size: int, shares: list, index: int,
+                 repo: str = "~/cv3") -> str:
+    """Remote shell (GGUF stage 2, Day 18): if this peer has its own copy of the
+    same GGUF (same name and size) under ~/.caravan/models, fill its rpc-server
+    cache for its share so the lead sends only hashes. Prints the seeder's JSON
+    line, or NO_LOCAL_COPY. Never fails the load."""
+    name = shlex.quote(Path(model_name).name)
+    sh = ",".join(str(x) for x in shares)
+    py = _rpath("~/.caravan/venvs/mlx/bin/python")
+    seeder = _rpath(repo.rstrip("/") + "/agent/gguf_rpc_seed.py")
+    return (
+        f"f=$(find \"$HOME\"/.caravan/models -maxdepth 3 -name {name} 2>/dev/null | head -1); "
+        f"if [ -n \"$f\" ] && [ \"$(stat -f %z \"$f\" 2>/dev/null || stat -c %s \"$f\")\" = {int(size)} ]; then "
+        f"{py} {seeder} \"$f\" --shares {shlex.quote(sh)} --index {int(index)} 2>&1 | tail -1; "
+        "else echo NO_LOCAL_COPY; fi"
+    )
+
+
+def parse_seed(stdout: str) -> Optional[dict]:
+    import json
+    for line in reversed((stdout or "").strip().splitlines()):
+        if line.startswith("{"):
+            try:
+                return json.loads(line)
+            except ValueError:
+                return None
+    return None

@@ -15,6 +15,7 @@ import argparse
 import http.client
 import json
 import os
+import shlex
 import sys
 import threading
 import time
@@ -1205,7 +1206,7 @@ def make_handler(app: App):
                 return self._json(400, {"error": "cloud models are framework-only for now"})
             gguf_file = None
             if body.get("source") == "gguf":
-                # llama.cpp RPC ships tensors to peers at load: only the lead needs the file.
+                # Peers can run without the file (RPC ships tensors), but Day 18 copies it to every Mini.
                 gguf_file = (body.get("gguf_file") or "").strip()
                 if not gguf_file:
                     try:
@@ -1269,8 +1270,13 @@ def make_handler(app: App):
 
             if gguf_file:
                 lid = lead.get("id") or lead.get("label")
-                place = {"mode": "one", "full_copy": True, "node_ids": [lid], "enabled": True,
-                         "label": f"GGUF to {lead.get('label') or lid} · runs on one Mini or split at load"}
+                # GGUF stage 2 (Day 18): every online Mini gets its own copy, so at a
+                # split load each peer fills its rpc cache from its own disk.
+                ids = [lid] + [n.get("id") or n.get("label") for n in online
+                               if (n.get("id") or n.get("label")) != lid]
+                place = {"mode": "one", "full_copy": True, "node_ids": ids, "enabled": True,
+                         "label": f"GGUF to {len(ids)} Mini{'s' if len(ids) > 1 else ''} · "
+                                  "each loads its own share from its own disk"}
             if helper:
                 lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
                 if not lead:
@@ -1376,7 +1382,9 @@ def make_handler(app: App):
                         "%s %s --role %s "
                         % (dest_q, pid_file, repo_path, repo_id, dest_q, role)
                     )
-                    if pk and role != "all":
+                    if gguf_file:
+                        script += "--gguf-file %s " % shlex.quote(gguf_file)
+                    elif pk and role != "all":
                         script += "--packer-layers %d " % int(pk)
                     script += (
                         "> /tmp/caravan-fetch-%s.log 2>&1 & echo $! > %s; echo FETCH_STARTED )"
@@ -1432,7 +1440,7 @@ def make_handler(app: App):
                     measure = _mk_local_measure(n, dest)
                     save_placement = None
                 else:
-                    dest = "~/.caravan/mlx-models/%s" % folder
+                    dest = ("~/.caravan/models/%s" if gguf_file else "~/.caravan/mlx-models/%s") % folder
                     run = make_run_remote(n)
                     def _mk_measure(nn, dd, rid=repo, key=nid):
                         def _m():
