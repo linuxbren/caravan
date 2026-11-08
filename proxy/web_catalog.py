@@ -109,7 +109,9 @@ def _default_packer_layers(repo_id: str, n_layers: Optional[int]) -> int:
     m = meta_for(repo_id)
     if m.get("packer_layers"):
         return int(m["packer_layers"])
-    if n_layers and n_layers > 1:
+    # Day 18: match the download default (24, what every split download so far
+    # used); only models with 24 layers or fewer split in half.
+    if n_layers and 1 < n_layers <= 24:
         return max(1, n_layers // 2)
     return 24
 
@@ -205,6 +207,15 @@ def build_entries_from_inventories(
             if isinstance(st, dict) and st.get("placement"):
                 placement = st["placement"]
                 break
+        # Day 18: load at the split the shards were fetched for (saved, else detected).
+        saved_pk = (placement or {}).get("packer_layers")
+        if saved_pk:
+            pk = int(saved_pk)
+        else:
+            for st in per.values():
+                if isinstance(st, dict) and st.get("packer_layers") and not st.get("full_ok"):
+                    pk = int(st["packer_layers"])
+                    break
 
         # Usability across stages
         reasons = []

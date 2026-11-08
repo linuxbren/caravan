@@ -1688,6 +1688,9 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                 try:
                     from placement import write_placement
                     blob = {**place, "repo_id": repo_id}
+                    if packer_layers is not None and not place.get("full_copy"):
+                        blob["packer_layers"] = int(packer_layers)
+                        blob["n_stages"] = len(runners)
                     for r in runners:
                         dest = r.get("dest")
                         if not dest:

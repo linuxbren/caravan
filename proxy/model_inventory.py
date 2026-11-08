@@ -169,11 +169,32 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
     all_shards = sorted(set(wm.values()))
     base["weights_gb"] = _weights_gb_from_tree(d, index)
 
-    # Role plans (2-stage runtime)
+    # Role plans (2-stage runtime). The split saved at download time wins over
+    # the caller's default (Day 18: catalog said 16, shards were fetched for 24).
+    saved_pk = (base["placement"] or {}).get("packer_layers")
+    if saved_pk:
+        packer_layers = int(saved_pk)
     try:
         from mlx_split_fetch import plan_files, n_layers_of
         base["n_layers"] = n_layers_of(cfg)
+        present0 = {f for f in all_shards if (d / f).is_file()}
         plan = plan_files(cfg, index, packer_layers)
+        if (not saved_pk and (base["placement"] or {}).get("mode") == "split"
+                and not set(all_shards) <= present0):
+            # Older split download without a saved split: find one the shards satisfy,
+            # trying the old server default (24) first.
+            def _fits(pk):
+                pl = plan_files(cfg, index, pk)
+                return set(pl["head"]) <= present0 or set(pl["front"]) <= present0
+            if not _fits(packer_layers):
+                n = base["n_layers"] or 0
+                for pk in [24] + list(range(1, n)):
+                    if pk < n and _fits(pk):
+                        packer_layers = pk
+                        plan = plan_files(cfg, index, pk)
+                        base["packer_layers_detected"] = True
+                        break
+        base["packer_layers"] = packer_layers
         need_lead = set(plan["head"])
         need_pack = set(plan["front"])
     except Exception as e:  # noqa: BLE001

@@ -1230,9 +1230,23 @@ def make_handler(app: App):
                 return self._json(400, {"error": "Invalid helper"})
             packer_layers = body.get("packer_layers")
             try:
-                packer_layers = int(packer_layers) if packer_layers is not None else 24
+                packer_layers = int(packer_layers) if packer_layers is not None else None
             except (TypeError, ValueError):
-                packer_layers = 24
+                packer_layers = None
+            if packer_layers is None:
+                # Same default as the catalog (web_catalog._default_packer_layers), and
+                # it is saved in caravan-placement.json, so download/catalog/load agree.
+                import web_catalog
+                n_layers = None
+                try:
+                    import urllib.request
+                    from mlx_split_fetch import n_layers_of
+                    with urllib.request.urlopen(
+                            "https://huggingface.co/%s/resolve/main/config.json" % repo, timeout=10) as r:
+                        n_layers = n_layers_of(json.loads(r.read()))
+                except Exception:
+                    n_layers = None
+                packer_layers = web_catalog._default_packer_layers(repo, n_layers)
 
             live = (app.nodes() or {}).get("nodes") or []
             online = [n for n in live if isinstance(n, dict) and not n.get("offline") and not n.get("error")]
