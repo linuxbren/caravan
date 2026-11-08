@@ -45,6 +45,7 @@ from mlx_split import plan_split  # noqa: E402
 
 SMALL = ["*.json", "*.jinja", "*.txt", "*.model", "*.tiktoken", "*.py"]
 LAYER = re.compile(r"(?:^|\.)layers\.(\d+)\.")
+MTP = re.compile(r"(?:^|\.)mtp\.")
 VISION = ("vision", "audio", "embed_vision", "embed_audio", "multi_modal_projector")
 
 
@@ -78,6 +79,10 @@ def roles_for(name, fr, hr, tied, with_vision=False):
     """Set of roles ("front", "head") that need weight `name`."""
     if any(name.startswith(v) or ("." + v) in name for v in VISION):
         return {"front", "head"} if with_vision else set()
+    if MTP.search(name):
+        # Native multi-token-prediction head (mtp.*): runs on final hidden
+        # states, so only the lead (head stage) ever needs it.
+        return {"head"}
     m = LAYER.search(name)
     if m:
         i = int(m.group(1))
@@ -89,9 +94,37 @@ def roles_for(name, fr, hr, tied, with_vision=False):
     return {"front", "head"}
 
 
+def head_only_reason(config, weight_map):
+    """Non-empty when the repo is a standalone helper head (e.g.
+    mlx-community/Qwen3.6-35B-A3B-MTP-4bit: model_type qwen3_5_mtp, 46 keys,
+    one `layers.0`, no embed_tokens) rather than a chat model. Its config
+    still says num_hidden_layers=40, so splitting it would plan 40 layers
+    that do not exist."""
+    cfg = config or {}
+    mt = str(cfg.get("model_type") or "")
+    if mt.endswith("_mtp") or mt.endswith("_nextn"):
+        return f"{mt} is a guess-ahead helper head, not a chat model"
+    if weight_map and not any("embed_tokens" in k or "wte" in k or "tok_embeddings" in k
+                              for k in weight_map):
+        idx = {int(m.group(1)) for k in weight_map for m in [LAYER.search(k)] if m}
+        try:
+            n = n_layers_of(cfg)
+        except Exception:
+            n = None
+        if n and len(idx) < n:
+            return f"checkpoint has {len(idx)} of {n} layers and no embeddings (helper head?)"
+    return ""
+
+
 def plan_files(config, index, front_layers=None, with_vision=False):
-    """{"front": set(files), "head": set(files), "shared": set(files), "split": (fr, hr), "tied": bool}."""
+    """{"front": set(files), "head": set(files), "shared": set(files), "split": (fr, hr), "tied": bool}.
+
+    Layers numbered >= num_hidden_layers (DeepSeek/GLM nextn MTP layers) go
+    to neither stage: mlx_lm drops them at load. `mtp.*` keys go to the head."""
     wm = index["weight_map"]
+    why = head_only_reason(config, wm)
+    if why:
+        raise ValueError(f"cannot split: {why}")
     n = n_layers_of(config)
     fr, hr = plan_split(n, front_layers)
     tied = tied_of(config, wm)
