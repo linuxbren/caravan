@@ -1638,7 +1638,10 @@ class Engine:
                 # HTTP handlers must never read/write the split socket themselves:
                 # concurrent guards/status/decode can consume each other's frames.
                 st = self.call(lambda: self.client.call("stats")[0], between_rounds=True)
-                packer_avail = st.get("mem_available_gb")
+                # N-stage stats contain every packer, not a top-level free value.
+                # Total upstream layers + tightest free RAM is conservative even
+                # when two simulated stages share one physical Mini.
+                packer_avail = MG.peer_available_gb(st)
             except Exception:
                 packer_avail = None
 

@@ -21,6 +21,10 @@ BYTES_F16 = 2.0
 
 def kv_elems_per_token(cfg: dict) -> int:
     """K+V elements per token for one full layer (all kv heads)."""
+    # Qwen3.5 and other multimodal wrappers keep decoder dimensions here.
+    # Treating all layers as full KV is intentionally conservative for hybrids.
+    if isinstance(cfg.get("text_config"), dict):
+        cfg = dict(cfg, **cfg["text_config"])
     n_kv = int(cfg.get("num_key_value_heads") or cfg.get("num_attention_heads") or 0)
     hd = cfg.get("head_dim")
     if hd is None:
@@ -105,6 +109,29 @@ def host_available_gb() -> tuple[float, float]:
     if override is not None:
         return total, float(override)
     return total, avail
+
+
+def peer_available_gb(stats: dict) -> Optional[float]:
+    """Tightest upstream Mini, for legacy and flattened N-stage stats.
+
+    Never add free RAM from co-hosted stages. The caller budgets all upstream
+    layers against this minimum, conservatively covering shared physical RAM.
+    Missing/invalid telemetry stays unknown rather than claiming a full budget.
+    """
+    import math
+    try:
+        peers = stats["packers"] if "packers" in stats else [stats]
+        if not peers: return None
+        available = []
+        for peer in peers:
+            value = peer.get("mem_available_gb")
+            if value is None or isinstance(value, bool): return None
+            value = float(value)
+            if not math.isfinite(value) or value < 0: return None
+            available.append(value)
+        return min(available)
+    except (TypeError, ValueError, AttributeError, KeyError):
+        return None
 
 
 def headroom_gb(*, safety_gb: float = DEFAULT_SAFETY_GB,
@@ -199,9 +226,9 @@ def plan(
             "headroom_gb": headroom,
             "need_gb": 0.0,
             "prompt_tokens": 0,
-            "budget_tokens": 10**9,
-            "error": None,
-            "ok": True,
+            "budget_tokens": 10**9 if headroom > 0 else 0,
+            "error": None if headroom > 0 else "Free memory is below the safety margin; wait or use a smaller model.",
+            "ok": headroom > 0,
             **{k: hr[k] for k in ("available_gb", "safety_gb", "local_headroom_gb",
                                    "packer_available_gb", "packer_headroom_gb")},
         }

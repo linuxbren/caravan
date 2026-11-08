@@ -844,3 +844,22 @@ all-model RPC cache stayed **23,474,650,624 bytes** (content-key deduplication).
 The peer already had a complete legacy GGUF; it was preserved, not newly copied.
 First immutable-source/hash/metadata preview took **5.085 s**, using the existing
 llama.cpp gguf-py fallback; no pip install was needed.
+
+The actual three-stage UI/picker run reached **[0,11), [11,22), [22,32)** on
+5591/5592/8196 and answered four/six correctly. All three own stores passed the
+revision-pinned file checker; normal picker reload preserved 11/11/10 and
+three-stage cache Save/Restore worked. An initial live harness accepted the
+*old* ready state immediately after an asynchronous Load and got a transition
+409; corrected polling to require the new PID **and** requested counts. That
+near-zero "ready" time is invalid and excluded from benchmarks.
+
+Fifth real issue surfaced in reply telemetry: N-stage packer stats were nested,
+so the old runtime guard read no peer free-RAM value. Qwen3.5 decoder dimensions
+also live in `text_config`, causing a zero KV estimate. The guard now takes the
+lowest known free RAM across all packers (never sums duplicated physical RAM),
+conservatively budgets all preceding layers against it, reads nested decoder
+sizes, and enforces the hard safety margin even for an unknown architecture.
+Eight additional tests cover 3/4-stage peers, co-hosted RAM, missing/invalid/zero
+telemetry, nested dimensions and low-memory rejection. **648 passed, 38.574 s**.
+Hybrid KV sizing remains conservative; unknown peer telemetry is still reported
+as unknown, not a guarantee of safety.

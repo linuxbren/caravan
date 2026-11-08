@@ -108,5 +108,46 @@ class PlanTest(unittest.TestCase):
         self.assertIsNotNone(r["error"])
 
 
+
+
+class NStageMemoryGuardTest(unittest.TestCase):
+    def test_legacy_peer(self):
+        self.assertEqual(MG.peer_available_gb({"mem_available_gb":4.5}),4.5)
+
+    def test_four_stage_chain_uses_tightest_peer(self):
+        self.assertEqual(MG.peer_available_gb({"packers":[{"mem_available_gb":v} for v in (12,3.25,9)]}),3.25)
+
+    def test_cohosted_free_ram_is_not_added(self):
+        self.assertEqual(MG.peer_available_gb({"packers":[{"mem_available_gb":6}]*2}),6)
+
+    def test_missing_invalid_peer_is_unknown(self):
+        for bad in (None, True, -1, float("nan"), float("inf"), "bad"):
+            with self.subTest(value=bad):
+                self.assertIsNone(MG.peer_available_gb({"packers":[{"mem_available_gb":12},{"mem_available_gb":bad}]}))
+        self.assertIsNone(MG.peer_available_gb({"packers":[]}))
+
+    def test_zero_free_ram_is_known_not_missing(self):
+        self.assertEqual(MG.peer_available_gb({"packers":[{"mem_available_gb":0}]}),0)
+
+    def test_nested_qwen35_text_config_has_real_kv_budget(self):
+        cfg={"model_type":"qwen3_5", "text_config":QWEN}
+        self.assertEqual(MG.bytes_per_token_for_layers(cfg,22),MG.bytes_per_token_for_layers(QWEN,22))
+        self.assertGreater(MG.bytes_per_token_for_layers(cfg,22),0)
+
+    def test_low_upstream_peer_rejects_even_with_room_on_lead(self):
+        peers={"packers":[{"mem_available_gb":10},{"mem_available_gb":1.5}]}
+        with mock.patch.object(MG,"host_available_gb",return_value=(24,12)):
+            p=MG.plan([{"role":"user","content":"hello"}],cfg={"text_config":QWEN},
+                      n_layers=10,packer_layers=22,max_tokens=32,count_tokens=lambda m:10,
+                      packer_available_gb=MG.peer_available_gb(peers))
+        self.assertFalse(p["ok"]);self.assertEqual(p["packer_headroom_gb"],0)
+
+    def test_unknown_architecture_still_enforces_hard_margin(self):
+        with mock.patch.object(MG,"host_available_gb",return_value=(24,1)):
+            p=MG.plan([{"role":"user","content":"hello"}],cfg={},n_layers=4,
+                      max_tokens=32,count_tokens=lambda m:10)
+        self.assertFalse(p["ok"]);self.assertIn("safety margin",p["error"])
+
+
 if __name__ == "__main__":
     unittest.main()
