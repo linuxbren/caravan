@@ -814,3 +814,33 @@ file, no symlink, **3,034,300,629 weight bytes**; clone blocks can be shared by
 APFS, so logical/st_blocks totals are not exclusive physical-volume usage.
 Both initial stage stores are independently fetched from the immutable source.
 Native dry-run of all three generated fixed-stage agent plans passed.
+
+Fourth live bug: KEEP_WORKERS preserved the isolated two-stage model, but a web
+restart showed **idle** because `adopt_running()` searched only default model
+roots. It could not match the already-running custom-root lead; a same-ID row
+from a default root was also unsafe to substitute. Added command/PID/count/
+layer/ownership-verified pipeline adoption, including older Day 19 state files,
+and persist the model identity with new Balance state. Four regressions cover
+custom roots, same-ID shadows, stale PID/path/counts and missing stage ownership.
+An initial new fixture forgot its lead.pid and failed; corrected the fixture,
+then **640 passed, 39.546 s**. Workers were preserved during the failed live
+adoption check; the UI was not allowed to reload an unknown worker as a workaround.
+
+Two-stage Orvena 16/16 inference, reload and explicit disk cache restore worked.
+Initial 48-token probes used an unsupported top-level `enable_thinking` field,
+so they hit the reasoning token limit (not a visible-answer quality pass).
+Correct `thinking:false`/`chat_template_kwargs` probes answered **four** and
+**six**. Note: this model's rendered no-think conversation turn diverged and
+safely cold-prefilled; do not label that turn a warm-cache hit. The repeated
+saved prompt did reuse **52/53** tokens after restore. Full reply JSONs and
+worker timing-log snapshots are retained under `~/.caravan/day19-live` on EXO1.
+
+GGUF peer-only fetch Stop/Resume completed against the installed small Qwen2.5
+3B Q4_0: source **1,997,879,712 bytes**, peer plan **901,994,496 bytes**,
+shares 1:1, ranges **[0,19) / [19,37)** (36 blocks plus output-device accounting).
+A 2:1 preview reduced peer-required bytes to **673,732,608**, listing **18**
+retained cache files / **228,261,888 bytes**, without deleting any. Existing
+all-model RPC cache stayed **23,474,650,624 bytes** (content-key deduplication).
+The peer already had a complete legacy GGUF; it was preserved, not newly copied.
+First immutable-source/hash/metadata preview took **5.085 s**, using the existing
+llama.cpp gguf-py fallback; no pip install was needed.

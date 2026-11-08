@@ -817,7 +817,10 @@ class WorkerManager:
         from worker_ownership import matches
         if not matches(cmd,self.worker,port=self.lead_port) or not self.lead_healthy():
             return False
-        for m in catalog.list_models():
+        from web_pipeline import adopted_entry
+        owned = adopted_entry(self, cmd, pid)
+        candidates = ([owned] if owned else []) + catalog.list_models()
+        for m in candidates:
             lp = m.get("lead_path")
             if lp and f"--model {lp}" in cmd:
                 self._lead_path = lp
@@ -828,7 +831,9 @@ class WorkerManager:
                     or ("--split-peer" in cmd and "--split-role none" not in cmd
                         and "--split-role=none" not in cmd)
                 )
-                self._loaded_entry = dict(catalog.get_model(m["id"]) or m,
+                # A default-root row can share the ID with this isolated store.
+                # Never replace a validated owned pipeline with that other path.
+                self._loaded_entry = dict(m if m is owned else (catalog.get_model(m["id"]) or m),
                                           run_mode="split" if is_split else "single")
                 self._set(status="ready", model_id=m["id"], model_name=m["name"],
                           lead_pid=pid, settings=cur, page_settings=cur, split=is_split)

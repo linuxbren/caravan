@@ -65,6 +65,49 @@ def stop_pipeline(mgr):
     return True
 
 
+def adopted_entry(mgr, cmd, pid):
+    """Recover a command-verified owned pipeline outside the default catalog roots.
+
+    No discovery, downloads, process changes, or client-supplied paths. A stale
+    state file cannot turn a different command/range into an adopted pipeline.
+    """
+    from mlx_split import plan_ranges
+    from mlx_split_fetch import n_layers_of
+    import model_inventory as inventory
+    import web_catalog as catalog
+    import web_nodes
+    try:
+        balance = json.loads((mgr.state_dir / "pipeline-balance.json").read_text())
+        records = json.loads((mgr.state_dir / "pipeline.json").read_text())
+        counts, ids = balance["counts"], balance["node_ids"]
+        args = shlex.split(cmd)
+        def flag(key):
+            if key in args: return args[args.index(key)+1]
+            return next((v.split("=",1)[1] for v in args if v.startswith(key+"=")), None)
+        path = Path(flag("--model")).expanduser()
+        if balance["lead_pid"] != pid or flag("--split-role") != "lead": return None
+        if [int(v) for v in flag("--split-counts").split(",")] != counts: return None
+        if balance.get("model_path") and Path(balance["model_path"]).expanduser() != path: return None
+        plan_ranges(n_layers_of(json.loads((path/"config.json").read_text())), counts)
+        if len(ids) != len(counts) or len(set(ids)) != len(ids): return None
+        if [r["id"] for r in records] != ids[:-1]: return None
+        nodes = {n["id"]: n for n in web_nodes.nodes_from_config()}
+        lead = nodes[ids[-1]]
+        if lead.get("role") != "lead" or not web_nodes.is_local(lead): return None
+        if any(nodes[nid].get("role") == "lead" for nid in ids[:-1]): return None
+        if flag("--split-peer") != records[-1]["peer"]: return None
+        repo = inventory.folder_to_repo(path.name)
+        entry = dict(id=balance.get("model_id") or catalog.slug_id(repo),
+                     name=balance.get("model_name") or inventory.pretty_name(repo),
+                     hf=repo, lead_path=str(path), split_counts=counts,
+                     pipeline_nodes=records+[dict(lead, model_path=str(path))],
+                     placement={"mode":"split","node_ids":ids},
+                     run_mode="split", need_split=True, usable=True, available_lead=True)
+        return entry
+    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError):
+        return None
+
+
 def load_pipeline(mgr, entry, settings):
     from mlx_split import plan_ranges, check_local_shards, FrontClient
     counts = entry["split_counts"]
@@ -175,7 +218,8 @@ def load_pipeline(mgr, entry, settings):
         mgr._wait_lead_ready(timeout=600)
         mgr._loaded_entry = dict(entry)
         mgr._lead_path = lead["model_path"]
-        balance = {"counts": counts, "node_ids": [n["id"] for n in nodes], "lead_pid": mgr._lead_proc.pid}
+        balance = {"counts": counts, "node_ids": [n["id"] for n in nodes], "lead_pid": mgr._lead_proc.pid,
+                   "model_id": entry["id"], "model_name": entry["name"], "model_path": mgr._lead_path}
         (mgr.state_dir / "pipeline-balance.json").write_text(json.dumps(balance))
         mgr._set(status="ready", split=True, balance=balance)
         mgr._note("Balance loaded; send a reply to measure real speed")

@@ -379,6 +379,63 @@ class LauncherTest(unittest.TestCase):
             self.assertFalse(path.exists())
 
 
+class PipelineAdoptionTest(unittest.TestCase):
+    def setup_owned(self, root):
+        import web_workers as WW
+        model = Path(root)/"custom"/"org--Tiny"; model.mkdir(parents=True)
+        (model/"config.json").write_text(json.dumps({"num_hidden_layers":12}))
+        repo = Path(__file__).resolve().parents[1]
+        mgr = WW.WorkerManager(state_dir=Path(root)/"state",repo=repo,lead_port=8196)
+        nodes = [dict(id="p1",role="packer",host="mini1",peer="10.0.0.2:5591",model_path="/own/p1"),
+                 dict(id="p2",role="packer",host="mini2",peer="10.0.0.3:5592",model_path="/own/p2"),
+                 dict(id="lead",role="lead",host="local",model_root=str(model.parent))]
+        balance = dict(counts=[4,4,4],node_ids=[n["id"] for n in nodes],lead_pid=123)
+        (mgr.state_dir/"lead.pid").write_text("123")
+        (mgr.state_dir/"pipeline-balance.json").write_text(json.dumps(balance))
+        (mgr.state_dir/"pipeline.json").write_text(json.dumps(nodes[:-1]))
+        cmd = f"python {mgr.worker} --model {model} --port 8196 --split-role lead --split-counts 4,4,4 --split-peer 10.0.0.3:5592"
+        return mgr,cmd,nodes,balance,model
+
+    def test_custom_root_adoption_ignores_same_id_default_root_shadow(self):
+        import web_workers as WW
+        with tempfile.TemporaryDirectory() as root:
+            mgr,cmd,nodes,balance,model = self.setup_owned(root)
+            shadow = dict(id="tiny",name="wrong root",lead_path="/default/org--Tiny")
+            with mock.patch("web_nodes.nodes_from_config",return_value=nodes), \
+                 mock.patch.object(WW.subprocess,"check_output",return_value=cmd), \
+                 mock.patch.object(WW.catalog,"list_models",return_value=[shadow]), \
+                 mock.patch.object(WW.catalog,"get_model",return_value=shadow) as get, \
+                 mock.patch.object(mgr,"lead_healthy",return_value=True), \
+                 mock.patch.object(mgr,"lead_active_settings",return_value={}):
+                self.assertTrue(mgr.adopt_running())
+            get.assert_not_called()
+            self.assertEqual(mgr.snapshot()["balance"]["counts"],[4,4,4])
+            self.assertEqual(mgr._loaded_entry["lead_path"],str(model))
+            self.assertEqual(len(mgr._loaded_entry["pipeline_nodes"]),3)
+
+    def test_different_command_counts_are_not_adopted(self):
+        with tempfile.TemporaryDirectory() as root:
+            mgr,cmd,nodes,_,_ = self.setup_owned(root)
+            with mock.patch("web_nodes.nodes_from_config",return_value=nodes):
+                self.assertIsNone(P.adopted_entry(mgr,cmd.replace("4,4,4","3,4,5"),123))
+
+    def test_stale_pid_or_path_is_not_adopted(self):
+        with tempfile.TemporaryDirectory() as root:
+            mgr,cmd,nodes,balance,_ = self.setup_owned(root)
+            with mock.patch("web_nodes.nodes_from_config",return_value=nodes):
+                self.assertIsNone(P.adopted_entry(mgr,cmd,124))
+                balance["model_path"]="/another/model"
+                (mgr.state_dir/"pipeline-balance.json").write_text(json.dumps(balance))
+                self.assertIsNone(P.adopted_entry(mgr,cmd,123))
+
+    def test_missing_stage_ownership_is_not_adopted(self):
+        with tempfile.TemporaryDirectory() as root:
+            mgr,cmd,nodes,_,_ = self.setup_owned(root)
+            (mgr.state_dir/"pipeline.json").write_text(json.dumps(nodes[:1]))
+            with mock.patch("web_nodes.nodes_from_config",return_value=nodes):
+                self.assertIsNone(P.adopted_entry(mgr,cmd,123))
+
+
 class BalanceHttpTest(unittest.TestCase):
     def setUp(self):
         from http.server import ThreadingHTTPServer
