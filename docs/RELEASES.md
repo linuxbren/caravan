@@ -21,7 +21,7 @@ git archive --format=tar --prefix="caravan-day${DAY}/" "$COMMIT" | gzip -n > "ca
 gh release create "$TAG" --target "$COMMIT" --title "Day ${DAY} (DATE)" --notes-file release-notes.md "caravan-day${DAY}.zip" "caravan-day${DAY}.tar.gz"
 ```
 
-5. Notes must say what changed, link the install guide, report checks and limits.
+5. Draft notes in `docs/release-notes/dayN.md` (pass it as `--notes-file`). Notes must say what changed, link the install guide, report checks and limits.
    `handoff/lab/videos/` is export-ignored to keep source downloads small; media
    remains in Git. Models, dependencies and compiled runtimes are not bundled.
 6. Download the published asset to a fresh directory, extract it, check
