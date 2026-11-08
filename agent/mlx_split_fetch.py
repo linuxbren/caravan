@@ -225,10 +225,8 @@ def main(argv=None):
         emitter.start()
     try:
         if not a.dry_run:
-            snapshot_download(
-                a.repo, local_dir=str(d),
-                allow_patterns=SMALL + mine, token=token,
-            )
+            snapshot_download(a.repo, local_dir=str(d), allow_patterns=SMALL, token=token)
+            _range_fetch_all(a.repo, d, mine, sizes, token)
             write_sizes(d, a.repo, {f: sizes[f] for f in shards})
             print("FETCHED", shown, report["my_gb"], "GB of", report["full_gb"], flush=True)
     finally:
@@ -238,10 +236,19 @@ def main(argv=None):
     return report
 
 
+def _range_fetch_all(repo, d, names, sizes, token):
+    """Big files over HTTP Range so Resume continues a partial file (Day 18)."""
+    import range_fetch
+    for f in names:
+        r = range_fetch.fetch(repo, f, d, int(sizes.get(f) or 0), token=token)
+        if r["resumed_from"] and not r["skipped"]:
+            print("RESUMED", f, "from", r["resumed_from"], "bytes", flush=True)
+
+
 def _fetch_gguf(a, d, token):
     """One GGUF file → local_dir. Same progress hook / process name as MLX fetches,
     so the picker's network-byte progress, Stop, Resume and retry all apply.
-    huggingface_hub resumes a partial .incomplete on the next run."""
+    Big files go through range_fetch, so a partial .incomplete resumes."""
     from huggingface_hub import snapshot_download
     sizes = file_sizes(a.repo, token=token)
     name = a.gguf_file
@@ -259,7 +266,7 @@ def _fetch_gguf(a, d, token):
         emitter.start()
     try:
         if not a.dry_run:
-            snapshot_download(a.repo, local_dir=str(d), allow_patterns=[name], token=token)
+            _range_fetch_all(a.repo, d, [name], sizes, token)
             print("FETCHED gguf", report["my_gb"], "GB", flush=True)
     finally:
         stop_evt.set()
