@@ -430,6 +430,8 @@ class WorkerManager:
         self._wait_lead_ready(timeout=1200)
         self._check_cancel()
         self._note(f"loaded in {time.time() - t0:.1f}s")
+        # GGUF Optimize now reads this (it refused "needs a GGUF model loaded" before).
+        self._loaded_entry = {k: v for k, v in entry.items() if k != "tune_override"}
         self._set(status="ready", split=bool(peers))
         self._note("ready")
         self._start_gguf_watch(meta)
