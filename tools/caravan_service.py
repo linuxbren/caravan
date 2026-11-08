@@ -75,6 +75,9 @@ def ensure_port_free(plan):
     else:
         host, number = plan["host"], plan["port"]
     with socket.socket(socket.AF_INET6 if ":" in host else socket.AF_INET) as sock:
+        # Match the real servers: TIME_WAIT from our last child is not a live
+        # listener. This does not enable SO_REUSEPORT or bypass another listener.
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             sock.bind((host,number))
         except OSError as e:

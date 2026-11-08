@@ -878,3 +878,16 @@ checks. **650 passed, 39.594 s**. No pip/dependency change was needed on either
 Mini: MLX was already installed in the correct venv. Existing plans produced
 by old code must be explicitly regenerated with the venv path; they are not
 silently rewritten.
+
+
+Seventh real issue: SIGTERM of our temporary first packer logged a save but
+never exited while the next stage kept its idle TCP connection open. The
+90-second recovery check failed; the original production packer was untouched.
+Frame reads now poll the stop event while preserving incomplete headers and
+payloads, so idle connections also terminate cleanly. The service port probe
+uses the same SO_REUSEADDR policy as the worker: TIME_WAIT is not mistaken for
+an active listener, while a live listener still blocks a conflicting start.
+Five regressions cover idle/partial-frame stops, fragmented-frame integrity,
+an actual connected idle server shutdown, and closed-versus-live TCP ports.
+
+Validation after the shutdown fix: **655 tests passed in 39.648 s**.

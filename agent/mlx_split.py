@@ -276,11 +276,20 @@ def encode_frame(header: dict, payload: bytes = b"") -> bytes:
     return struct.pack(">IQ", len(h), len(payload)) + h + payload
 
 
-def _recv_exact(sock, n) -> bytes:
+def _recv_exact(sock, n, stop=None) -> bytes:
     buf = bytearray(n)
     view = memoryview(buf)
     got = 0
     while got < n:
+        if stop is not None:
+            import select
+            # Preserve partial frames while polling; a stop must also interrupt
+            # an idle persistent peer, not just the outer accept loop.
+            while not stop.is_set():
+                if select.select([sock], [], [], 0.25)[0]:
+                    break
+            else:
+                raise ConnectionAbortedError("packer stopping")
         r = sock.recv_into(view[got:], n - got)
         if r == 0:
             raise ConnectionError("peer closed the connection")
@@ -288,10 +297,10 @@ def _recv_exact(sock, n) -> bytes:
     return bytes(buf)
 
 
-def read_frame(sock):
-    hl, pl = struct.unpack(">IQ", _recv_exact(sock, 12))
-    header = json.loads(_recv_exact(sock, hl))
-    payload = _recv_exact(sock, pl) if pl else b""
+def read_frame(sock, stop=None):
+    hl, pl = struct.unpack(">IQ", _recv_exact(sock, 12, stop))
+    header = json.loads(_recv_exact(sock, hl, stop))
+    payload = _recv_exact(sock, pl, stop) if pl else b""
     return header, payload
 
 # --- GPU keep-warm while the peer works --------------------------------------
@@ -749,11 +758,11 @@ def serve_front(listen, state: FrontState, log=print, stats_fn=None, stop=None):
         log(f"lead connected from {peer[0]}")
         warm = getattr(state, "keepalive", None)
         try:
-            while True:
+            while not (stop and stop.is_set()):
                 if warm is not None:
                     warm.start()
                 try:
-                    h, p = read_frame(conn)
+                    h, p = read_frame(conn, stop=stop)
                 finally:
                     if warm is not None:
                         warm.stop()

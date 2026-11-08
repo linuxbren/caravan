@@ -63,6 +63,17 @@ class PlanTest(unittest.TestCase):
             self.assertEqual(p["python"],str(python))
             self.assertEqual(SC.render(p)["EnvironmentVariables"]["PATH"].split(":")[0],str(python.parent))
 
+    def test_port_probe_allows_time_wait_but_not_live_listener(self):
+        import socket
+        with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+            listener.bind(("127.0.0.1",0));listener.listen(1);port=listener.getsockname()[1]
+            plan=self.plan("/tmp",kind="web",web_port=port)
+            with self.assertRaises(ValueError):CLI.ensure_port_free(plan)
+            client=socket.create_connection(("127.0.0.1",port));accepted,_=listener.accept()
+            accepted.close();self.assertEqual(client.recv(1),b"");client.close()
+        CLI.ensure_port_free(plan)
+
     def test_single_worker_uses_agent_and_own_cache(self):
         with tempfile.TemporaryDirectory() as root:
             p = self.plan(root,kind="worker",name="lead",model="/own/model")

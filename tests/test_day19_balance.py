@@ -379,6 +379,49 @@ class LauncherTest(unittest.TestCase):
             self.assertFalse(path.exists())
 
 
+class GracefulPackerStopTest(unittest.TestCase):
+    def stopped_read(self, initial):
+        a,b=socket.socketpair();stop=threading.Event();errors=[]
+        if initial:a.sendall(initial)
+        def read():
+            try:S.read_frame(b,stop=stop)
+            except Exception as e:errors.append(e)
+        t=threading.Thread(target=read);t.start();stop.set();t.join(1.5)
+        try:
+            self.assertFalse(t.is_alive(),"stop left a blocked frame reader")
+            self.assertIsInstance(errors[0],ConnectionAbortedError)
+        finally:a.close();b.close();t.join(1)
+
+    def test_stop_interrupts_idle_persistent_frame(self):
+        self.stopped_read(b"")
+
+    def test_stop_interrupts_partial_header_and_payload(self):
+        frame=S.encode_frame({"op":"hello"},b"payload")
+        for prefix in (frame[:5],frame[:-3]):
+            with self.subTest(prefix=len(prefix)):self.stopped_read(prefix)
+
+    def test_stop_aware_read_keeps_fragmented_frame_intact(self):
+        a,b=socket.socketpair();stop=threading.Event();frame=S.encode_frame({"op":"test"},b"payload");out=[]
+        t=threading.Thread(target=lambda:out.append(S.read_frame(b,stop=stop)));t.start()
+        for part in (frame[:5],frame[5:15],frame[15:]):a.sendall(part)
+        t.join(1.5)
+        try:self.assertEqual(out,[({"op":"test"},b"payload")])
+        finally:a.close();b.close();t.join(1)
+
+    def test_server_stops_with_an_idle_connected_peer(self):
+        import types
+        with socket.socket() as probe:probe.bind(("127.0.0.1",0));port=probe.getsockname()[1]
+        ready=threading.Event();stop=threading.Event()
+        state=types.SimpleNamespace(epoch="test",handle=lambda h,p:({"ok":True},b""))
+        t=threading.Thread(target=S.serve_front,args=(f"127.0.0.1:{port}",state),
+                           kwargs={"stop":stop,"log":lambda msg:ready.set() if "listening" in msg else None})
+        t.start();self.assertTrue(ready.wait(2));peer=socket.create_connection(("127.0.0.1",port));peer.settimeout(2)
+        try:
+            peer.sendall(S.encode_frame({"op":"hello"}));self.assertTrue(S.read_frame(peer)[0]["ok"])
+            stop.set();t.join(2);self.assertFalse(t.is_alive(),"idle peer prevented graceful exit")
+        finally:stop.set();peer.close();t.join(2)
+
+
 class PipelineAdoptionTest(unittest.TestCase):
     def setup_owned(self, root):
         import web_workers as WW
