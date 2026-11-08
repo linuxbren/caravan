@@ -1,0 +1,22 @@
+   0.0s  A 21B AI model, split across two Mac minis.
+   3.4s  It answers cleanly. First word in half a second.
+   6.9s  It was speaking gibberish. Here's why.
+  10.9s  One of its word tables never got loaded.
+  14.9s  Now Caravan refuses to run with missing pieces.
+  18.9s  Fixed: same model, clean replies.
+  22.5s  Odd models now get a plain-language ⚠ heads-up.
+  26.5s  One click on Report this model. You review it first.
+  30.1s  Downloads: one bar per Mini, with real speed.
+  34.1s  Stopped downloads now resume mid-file.
+  38.1s  No more starting a 5 GB file over.
+  41.5s  Topology: every Mini's memory, live.
+  45.5s  Caravan now checks free memory before splitting.
+  49.5s  A 24/8 split ran out of room. 16 and 16 just works.
+  52.9s  Optimize now tunes GGUF models too.
+  56.9s  It tries each option and keeps the faster one.
+  61.9s  Newer llama.cpp: faster first word, 2% slower writing.
+  66.1s  So we kept the current one.
+  69.7s  Every reply now logs its first-word time and speed.
+  73.7s  Brenden's test: 31 replies, about 12 tok/s, no gibberish.
+  77.9s  487 tests pass. The Day 18 release is out.
+  81.7s  Next: a Balance control for splits.

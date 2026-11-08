@@ -367,4 +367,8 @@ Notes:
 - Free memory after the reload: EXO1 43%, EXO2 41%.
 
 ## Day 18 video
-`handoff/lab/videos/2026-11-08_caravan-v3-day18-roundup_v24.mp4` — 120 s, 1280x720 H.264, silent, 30 single-line captions in a bottom band (each checked to fit, no wrapping). Whole-day roundup: downloads, output fixes, split safety, picker, GGUF and Optimize now, llama.cpp head to head, timing log and Brenden's test. Title cards and number cards only (no new UI screenshots), numbers from this file and release-notes/day18.md. Captions: `2026-11-08_day18-roundup_captions.txt`; generator: `make_day18_video.py`. No dates on screen (title shows just "Day 18"; release shown as "Day 18 release"); the generator asserts no dates in captions. Test count caption 487.
+`handoff/lab/videos/2026-11-08_caravan-v3-day18-ui-tour_v25.mp4` (replaces v24 cards). 85.5 s, 1280x720 H.264, silent, 22 single-line bottom captions, no dates or times on screen (generator asserts this). Real Caravan web UI footage:
+- Live (recorded read-only from EXO1 :8190 via Omarchy, headless Chromium screencast, Nov 8): picker with the resumed split download bars, Topology with per-Mini memory, Settings with the GGUF Optimize now result. The model was already unloaded (stopped from the UI at 11:22 AM CT, not by the video work), so no live chat.
+- Replayed (current index.html on the box, `day18_replay_server.py` with logged values only): Dark Champion "Hello!" reply with its logged stats (0.51 s first token, 20.0 tok/s write, 118 tok/s read, 0.66 s total), the logged gibberish snippet, and the live `/api/models` ⚠ warning text with Report this model.
+- Two number cards: llama.cpp old vs new, and Brenden's test plus 487 tests.
+Generator: `make_day18_video.py`; captions: `2026-11-08_day18-ui-tour_captions.txt`.
