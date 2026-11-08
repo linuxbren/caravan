@@ -403,7 +403,10 @@ class WorkerManager:
                 self._note(f"{name}: no local copy of {path.name}; its share goes over the link")
         args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares)
         self._set(status="starting_lead", packer_pid=None)
-        self._note(("starting llama-server on EXO1, peers get their share over the link "
+        seeded = bool(meta.get("seed"))
+        self._note(("starting llama-server on EXO1; peers with their own copy load from disk, "
+                    "others get their share over the link" if seeded else
+                    "starting llama-server on EXO1, peers get their share over the link "
                     "(first load copies it, later loads use the peer cache)") if rpc
                    else "starting llama-server on EXO1 (one Mini)")
         log_path = self._lead_log()
