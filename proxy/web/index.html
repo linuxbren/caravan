@@ -1066,6 +1066,8 @@
       </div>
     </div>
 
+    <div id="restoreNotice" role="status" aria-live="polite" hidden style="margin:6px 12px;font-size:.8rem"></div>
+
     <div class="card a-progress demoted" id="progressCard">
       <h2>Load progress</h2>
       <div class="progress" id="progressLog">idle</div>
@@ -1736,6 +1738,12 @@
   async function refreshStatus() {
     try {
       const j = await api("/api/status");
+      const restoreNotice = $("restoreNotice");
+      if (restoreNotice) {
+        const r = j.restore || {};
+        restoreNotice.hidden = !["preparing", "blocked", "save_error"].includes(r.phase);
+        restoreNotice.textContent = r.message || "";
+      }
       setStatus(j.worker);
       state.active = j.active || null;
       renderActive(state.active);

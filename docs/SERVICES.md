@@ -15,6 +15,55 @@ child does not refresh its already-running agent code; restart the corresponding
 owned service when deploying agent changes, at a safe time. The web can be
 restarted separately with KEEP_WORKERS without reloading models.
 
+## Default: restore the last model, owned by the web
+
+**Preferred normal mode (Brenden's Nov 8 design): install the web LaunchAgent,
+not a model-specific worker job.** Every successful load saves the actual model,
+MLX/GGUF engine, placement/ordered Minis, Balance counts or GGUF shares and
+settings in `~/.caravan/web-ui/last-model.json`. It is atomically replaced before
+ready is advertised. User Stop saves an explicit empty selection; next login
+then loads nothing. A failed load keeps the prior successful choice.
+
+On login/boot, the web makes one normal `/api/models/load` request for that
+selection. It uses current topology, fresh files/free-memory checks and normal
+UI loading. Missing Minis/files, unknown RAM, low headroom or malformed saved
+state leave a readable warning in the idle UI, without a retry/crash loop or
+automatic download. Bring the Mini back/fetch files explicitly, then press Load.
+Normal model switching and Balance reload stay unlocked and update the selection.
+A user operation cancels a pending auto-restore. A healthy KEEP_WORKERS restart
+adopts owned workers and keeps the selection rather than loading it twice.
+
+Use stable already-trusted SSH control hosts in `[web.nodes.*]`. For changing
+Thunderbolt data IPs, configure an explicit packer e.g.:
+
+```toml
+[web.nodes.worker2]
+role = "packer"
+host = "USER@STABLE_CONTROL_HOST"
+ssh = "USER@STABLE_CONTROL_HOST"
+repo = "~/cv3" # choose that Mini's actual clone
+peer = "ssh+tb://USER@STABLE_CONTROL_HOST/en2:5560"
+listen = "tb://en2:5560"
+```
+
+Verify the actual hardware interface first. No SSH trust, interface, route,
+auto-login or FileVault setting is created/changed. Every stage's data endpoint
+is resolved on its own Mini; private TB traffic does not fall back to Wi-Fi.
+Remote MLX stages are web-owned via existing SSH/ownership commands; no permanent
+fixed-model worker LaunchAgent is needed, for any number of Minis.
+
+For old fixed-model installations, explicitly uninstall just the model worker
+jobs (keep web). The lab migration removes only `day19-qwen-lead` on EXO1 and
+`day19-qwen-packer` on EXO2. This stops those owned model workers; run it at a
+safe time. It keeps models, cache and logs. Then load once through the web so the
+successful placement becomes the saved selection. Do not hand-create a saved
+record from a partial running process or fabricate a successful load.
+
+Advanced opt-out: set `CARAVAN_WEB_RESTORE_LAST=0` in the web's environment.
+Successful choices are still saved, but startup stays empty/adopts existing
+workers without replay. Fixed model service plans described later are retained
+for explicit advanced compatibility, **not the default auto-start design**.
+
 ## Prepare the next login without taking over today's workers
 
 For a deliberately deferred migration, append **`--no-start --stage-login`**
@@ -117,12 +166,11 @@ interfaces/peers retry safely. Interface/routing setup for three physical Minis
 or a Thunderbolt triangle is still manual; this is not automatic network or
 model discovery. Regenerate existing fixed-IP plans explicitly when migrating.
 
-## Two ownership modes — do not mix model controllers
+## Advanced fixed-model compatibility — not the default
 
-1. **Web-managed (normal interactive use):** auto-start the web service only.
-   Models/Balance starts its workers as before. A web-only restart adopts them
-   and preserves them. A full machine reboot does **not** automatically reload
-   a model in this mode; choose it again in the UI.
+1. **Web-managed (normal):** auto-start only web. It restores the last successful
+   selection at login through the normal UI load path, or nothing if explicitly
+   unloaded. Web-only restarts adopt owned healthy workers and preserve them.
 2. **Fixed model auto-start:** install one local worker plan per participating
    node (plus a web job on the lead). launchd starts `caravan_agent.py
    --service-config ... --apply`; the agent starts/supervises that Mini's local
@@ -197,7 +245,7 @@ from the web-owned `lead.pid` marker, so an alternate-port test does not overwri
 the production lead's ownership. Stop/restart/uninstall the model with
 `--name lead`, not the web UI's Stop button.
 
-## N-Mini split auto-start
+## Advanced fixed N-Mini split plans (legacy opt-in)
 
 All nodes must use **the same positive layer-count list**, in forward order
 (packers first, lead last). Every stage owns at least one layer, counts sum to
@@ -254,6 +302,7 @@ escalates to root or kills a port occupant. Inspect status/logs on failure.
 
 Use a stable already-trusted SSH control hostname/address for `[web.nodes.*]`
 inventory too; legacy lab defaults containing a self-assigned TB IP can go stale.
-This explicit UI topology configuration is separate from dynamic fixed-model
-service endpoints. UI-driven switching/reconfiguration still requires current
-explicit node data endpoints; automatic UI discovery is not implemented.
+Explicit UI topology can now use reboot-safe `ssh+tb://` peers and `tb://`
+listen interfaces too; both normal split loads and last-model restore resolve
+them before starting stages. Arbitrary network/interface discovery is not
+implemented; the operator still chooses the trusted hosts/interfaces/routes.

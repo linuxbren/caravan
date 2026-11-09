@@ -23,7 +23,11 @@ From an existing source copy, preview with
 ready. Explicit per-node single/N-stage model auto-start, install/uninstall/status
 commands and ownership rules: **[SERVICES.md](docs/SERVICES.md)**. Fixed auto-start
 model jobs and UI-controlled model switching are separate modes; do not mix
-controllers. LaunchAgents start at **user login**, not before login. Native
+controllers. **The normal mode now uses only the web service, which restores
+the last successfully loaded model/placement at login through the normal UI
+load path. Explicit Unload saves “restore nothing.” Model switching and Balance
+remain unlocked.** Fixed model-specific jobs below are advanced legacy opt-in,
+not the default. LaunchAgents start at **user login**, not before login. Native
 dry-runs and temporary three-stage launchd startup/recovery were tested on
 two M4 Minis on Nov 8. A fresh isolated-HOME actual install/repeat later passed;
 permanent Qwen web/lead/packer login/reboot recovery then passed on both existing
@@ -178,3 +182,15 @@ PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests
 Node.js enables an optional UI assertion; it may skip if Node is absent.
 See [DAY17.md](docs/DAY17.md) for live lab results and known limits, including
 partial-file downloads that restart from zero.
+
+
+### Last-model auto-start (Nov 8 design update)
+
+Load a model successfully once in Models/Settings/Balance. Caravan saves its
+engine, exact placement/split and settings in `~/.caravan/web-ui/last-model.json`;
+failed loads do not overwrite it. At next login the web restores once using
+fresh node/files/memory validation. Unload before shutdown to restore nothing.
+Missing Minis/files/headroom show a clear idle-UI warning, not an automatic
+retry/download or crash loop. See SERVICES.md for explicit reboot-safe TB peers
+and migration away from old fixed worker jobs. Keep the web LaunchAgent; remote
+stages use normal trusted SSH and need no permanent model-specific agent.

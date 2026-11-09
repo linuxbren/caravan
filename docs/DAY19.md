@@ -1355,3 +1355,50 @@ launchd. To return to interactive model switching, explicitly uninstall only
 repos' service CLI; keep the web service. Do that only at a safe time, and check
 current explicit UI node endpoints. UI editing of fixed auto-start plans and
 automatic last-model/triangle discovery remain separate design work.
+
+
+### Brenden's last-model auto-start design — Nov 8, after 18:44 CST
+
+Brenden asked for the model used before reboot, not a permanently pinned Qwen
+service. This supersedes the fixed-model operating mode documented above.
+
+- The web owns models again. A successful MLX/GGUF load atomically writes
+  `~/.caravan/web-ui/last-model.json` (schema 1, user-only permissions), before
+  advertising ready. It records the actual model/engine, ordered Mini IDs,
+  placement, exact Balance counts or GGUF shares and effective settings/tune.
+  It stores no worker commands, PIDs, RAM/file claims, download flag or transient
+  network addresses. Failed loads do not replace the last successful selection.
+- Explicit user Stop writes a durable null selection. Startup then restores
+  nothing. Shutdown/test cleanup does not masquerade as an explicit unload.
+  Cancelling an in-flight load cannot later re-save/resurrect an unloaded model.
+- The launchd **web only** restores once through `/api/models/load`, the exact
+  normal UI path. Split loads use fresh Balance/files/free-memory checks and
+  resolve explicit TB interfaces from the current topology. Single placements
+  are rechecked against real node inventory/free memory; unknown RAM is blocked.
+  There are no automatic weight downloads, fallback Mini/split changes or
+  automatic retries/crash loops. The idle UI explains a missing Mini/file or
+  memory shortage and remains usable for Load/another choice.
+- Healthy existing owned workers are adopted on a KEEP_WORKERS web restart,
+  rather than reloaded. Remote single-Mini adoption additionally verifies the
+  configured SSH target, remote worker identity/model and exact local tunnel
+  identity; reused/unowned PIDs are never adopted or killed.
+- Model switching and Balance reload are unlocked: there is no fixed worker
+  LaunchAgent in the normal mode. Remote stages are started/stopped over the
+  configured already-trusted SSH control path with owned PID records. No extra
+  permanent per-Mini model agent is required by that path; EXO2 must be awake,
+  reachable and (for Metal) logged in. `CARAVAN_WEB_RESTORE_LAST=0` disables only
+  startup replay, not saving successful choices.
+- Normal Settings/Models split loads also go through the N-node planner rather
+  than the obsolete two-node IP defaults. The explicit legacy force escape
+  hatch remains manual-only and is never saved/replayed by restore.
+
+Regression coverage includes atomic persistence/failure, explicit unload,
+failed-load preservation, exact 3/4-stage counts/placements, engine/settings,
+missing Mini/files/unknown or insufficient memory, corrupt intent, no download
+or command replay, user cancellation/late-token races, KEEP adoption, remote
+worker/tunnel PID reuse and the actual shared HTTP load/Stop routes. Older HTTP
+fixtures now use temporary state folders, not durable preferences inside the
+repository. Native migration/reboot/switch results follow after validation.
+
+Box validation of the revised design: **737 tests passed in 43.429 s**, 43 new
+regressions over 694. Native migration/reboot checks begin after this commit.

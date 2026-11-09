@@ -1,3 +1,8 @@
+### Day 19 last-model auto-start design — 2026-11-08 (not a release)
+- Replaces the normal fixed-model service mode with web-owned last-successful-model restore: atomic model/engine/placement/counts/settings persistence, explicit unload tombstone and one-shot normal UI-path replay. Failed loads keep the previous successful selection; missing Minis/files/memory give a clear idle warning, no auto-download/retry/crash loop.
+- UI model switching and Balance remain unlocked. KEEP_WORKERS adopts existing owned local/pipeline/GGUF workers; remote single-Mini worker/tunnel adoption verifies identities and refuses reused PIDs. Normal split UI loads resolve explicit per-node Thunderbolt interfaces through the shared N-node planner.
+- The lab migration removes only the two installed fixed Qwen worker jobs, keeps web and model files/cache/logs, and records native reboot/switch results in DAY19.md / BENCHMARKS.md. No release/tag.
+
 ### Day 19 authorized reboot recovery — 2026-11-08 (not a release)
 - Rebooted EXO2 first (then repeated after a fix), then EXO1. Existing auto-login/FileVault-off accounts returned unattended; permanent launchd Qwen/web services answered correctly. No login/security/network settings changed.
 - Fixed changing Thunderbolt link-local IPs using explicit verified `tb://` / trusted-SSH `ssh+tb://` service endpoints, owned-child rebind and no LAN data fallback. Native EXO2 stage ready 48.533 s; EXO1 web 42.960 s / split 59.815 s; first correct reply observed 79.569 s after EXO1 restart, including inspection delay.

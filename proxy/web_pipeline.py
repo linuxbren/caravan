@@ -108,16 +108,39 @@ def adopted_entry(mgr, cmd, pid):
         return None
 
 
+def resolve_nodes(mgr, nodes):
+    """Resolve explicit per-node TB interfaces; retain concrete ownership records."""
+    import service_endpoints as SE
+    out=[]
+    for node in nodes:
+        n=dict(node)
+        for key in ("peer","listen","upstream_peer"):
+            value=n.get(key)
+            if not value:continue
+            spec=SE.parse(value)
+            if spec and spec[0] is None and not mgr._node_is_local(n):
+                target=n.get("ssh") or n.get("host")
+                if not target:raise ValueError("Remote Thunderbolt interface needs a trusted SSH control host")
+                value=f"ssh+tb://{target}/{spec[1]}:{spec[2]}"
+            n[key]=SE.resolve(value)
+        out.append(n)
+    return out
+
+
 def load_pipeline(mgr, entry, settings):
     from mlx_split import plan_ranges, check_local_shards, FrontClient
     counts = entry["split_counts"]
-    nodes = entry["pipeline_nodes"]
+    nodes = resolve_nodes(mgr, entry["pipeline_nodes"])
+    entry = dict(entry,pipeline_nodes=nodes)
+    check_cancel = getattr(mgr,"_check_load_cancel",lambda:None)
+    check_cancel()
     plan_ranges(sum(counts), counts)
     if len(nodes) != len(counts) or nodes[-1].get("role") != "lead" or not mgr._node_is_local(nodes[-1]):
         raise ValueError("pipeline needs one local lead last and one layer count per Mini")
     commands = []
     previous = None
     for i, node in enumerate(nodes):
+        check_cancel()
         _marker(node)
         args = stage_args(node, counts, i, previous)
         commands.append(args)
@@ -156,6 +179,7 @@ def load_pipeline(mgr, entry, settings):
     ownership = mgr.state_dir / "pipeline.json"
     try:
         for i, node in enumerate(nodes[:-1]):
+            check_cancel()
             mgr._set(status="starting_packer")
             args = commands[i]
             extras = __import__("web_settings").to_args(dict(settings, pipeline_chats="1", guess_ahead="off"))[1]
@@ -188,6 +212,7 @@ def load_pipeline(mgr, entry, settings):
             deadline = time.monotonic() + 300
             error = None
             while time.monotonic() < deadline:
+                check_cancel()
                 client = FrontClient(node["peer"], timeout=10)
                 try:
                     hello = client.call("hello")[0]

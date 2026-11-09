@@ -96,6 +96,7 @@ class WorkerManager:
         self._lead_path: Optional[str] = None
         self._worker_node: Optional[dict] = None  # None = local lead; else remote node
         self._tunnel_proc: Optional[subprocess.Popen] = None
+        self._load_cancel = threading.Event()
 
     # ----- public ---------------------------------------------------------
 
@@ -112,8 +113,21 @@ class WorkerManager:
             self.state["progress"] = self.state["progress"][-40:]
 
     def _set(self, **kw) -> None:
+        ready = kw.get("status") == "ready"
+        if ready:
+            self._check_load_cancel()
+            hook = getattr(self,"on_load_success",None)
+            future = dict(self.snapshot(),**kw)
+            if callable(hook) and getattr(self,"_loaded_entry",None) and not future.get("managed_service"):
+                # Durable preference before advertising successful readiness.
+                hook(dict(self._loaded_entry),future)
+            self._check_load_cancel()
         with self._lock:
             self.state.update(kw)
+
+    def _check_load_cancel(self):
+        if getattr(self, "_load_cancel", None) and self._load_cancel.is_set():
+            raise RuntimeError("Load cancelled by user")
 
     def check_lpm(self) -> bool:
         """Refuse timing / heavy load if Low Power Mode is on (macOS)."""
@@ -175,6 +189,9 @@ class WorkerManager:
 
     def stop(self, *, reason: str = "stop") -> None:
         self._deny_managed_service()
+        if reason in ("ui", "stop") and callable(getattr(self,"on_user_stop",None)):
+            self.on_user_stop()
+        self._load_cancel.set()
         self._set(status="stopping", error=None)
         self._note(f"stopping workers ({reason})")
         self._gguf_cancel = True  # a GGUF load in flight stops at its next step
@@ -209,8 +226,10 @@ class WorkerManager:
         if self._switch_thread and self._switch_thread.is_alive():
             raise RuntimeError("a model switch is already in progress")
 
+        self._load_cancel = threading.Event()
         def run():
             try:
+                self._check_load_cancel()
                 self._sweep_load = sweep
                 self._do_switch(entry, settings)
             except GgufLoadError as e:
@@ -219,8 +238,15 @@ class WorkerManager:
                           error=str(e), error_detail=e.detail)
                 self._note("load failed: " + str(e))
             except Exception as e:  # noqa: BLE001 — surface to UI
-                self._set(status="error", error=f"{type(e).__name__}: {e}")
-                self._note(f"error: {e}")
+                if self._load_cancel.is_set():
+                    for cleanup in (self._kill_gguf,self._kill_lead,self._kill_packer):
+                        try:cleanup()
+                        except Exception as ex:self._note(f"cancel cleanup: {ex}")
+                    self._set(status="idle",model_id=None,model_name=None,lead_pid=None,packer_pid=None,error=None)
+                    self._note("load cancelled; next login will not resurrect an unloaded model")
+                else:
+                    self._set(status="error", error=f"{type(e).__name__}: {e}")
+                    self._note(f"error: {e}")
             finally:
                 self._sweep_load = None
 
@@ -266,6 +292,7 @@ class WorkerManager:
             self._load_once(entry, settings)
 
     def _load_once(self, entry: dict, settings: dict) -> None:
+        self._check_load_cancel()
         self._reload_trial = None
         if not self.check_lpm():
             raise RuntimeError("Low Power Mode is on — turn it off before loading a model")
@@ -476,7 +503,7 @@ class WorkerManager:
         self._check_cancel()
         self._note(f"loaded in {time.time() - t0:.1f}s")
         # GGUF Optimize now reads this (it refused "needs a GGUF model loaded" before).
-        self._loaded_entry = {k: v for k, v in entry.items() if k != "tune_override"}
+        self._loaded_entry = dict({k: v for k, v in entry.items() if k != "tune_override"}, gguf_shares=shares, _loaded_tune=tune)
         self._set(status="ready", split=bool(peers))
         self._note("ready")
         self._start_gguf_watch(meta)
@@ -1053,6 +1080,21 @@ class WorkerManager:
                 except Exception:
                     pass
         self._tunnel_proc = None
+        adopted=getattr(self,"_adopted_tunnel",None)
+        if adopted:
+            from web_remote_adopt import tunnel_matches
+            from worker_ownership import command_of
+            import signal
+            pid,target,port=adopted
+            if tunnel_matches(command_of(pid),target,port):
+                try:os.kill(pid,signal.SIGTERM)
+                except ProcessLookupError:pass
+                deadline=time.monotonic()+3
+                while tunnel_matches(command_of(pid),target,port) and time.monotonic()<deadline:
+                    time.sleep(.05)
+                if tunnel_matches(command_of(pid),target,port):
+                    raise RuntimeError("Owned SSH tunnel is still stopping; retry shortly. No other PID was touched.")
+            self._adopted_tunnel=None
 
     def _ensure_tunnel(self, node: dict) -> None:
         """Forward local lead_port → remote 127.0.0.1:lead_port so chat/health stay local."""
@@ -1112,6 +1154,9 @@ class WorkerManager:
             "pid": pid, "node": node.get("id") or node.get("label"),
             "ssh": node.get("ssh") or node.get("host"),
             "model": remote_model, "repo": repo,
+            "model_id":entry["id"],"model_name":entry.get("name") or entry["id"],
+            "settings":self.snapshot().get("settings") or {},
+            "tunnel_pid":self._tunnel_proc.pid,
         }))
         return pid
 
@@ -1144,6 +1189,7 @@ class WorkerManager:
         # Packer has no HTTP; watch the log for "loaded".
         deadline = time.time() + timeout
         while time.time() < deadline:
+            self._check_load_cancel()
             r = self._ssh(
                 "tail -n 40 ~/.caravan/web-ui/packer.log 2>/dev/null || true",
                 timeout=20)
@@ -1218,6 +1264,7 @@ class WorkerManager:
         last_size = 0
         remote = bool(getattr(self, "_worker_node", None)) and not self._node_is_local(self._worker_node)
         while time.time() < deadline:
+            self._check_load_cancel()
             if self._lead_proc and self._lead_proc.poll() is not None:
                 tail = log_path.read_text(errors="replace")[-2000:] if log_path.exists() else ""
                 raise RuntimeError(f"lead exited early (rc={self._lead_proc.returncode}): {tail}")

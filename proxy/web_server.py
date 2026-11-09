@@ -68,6 +68,8 @@ class App:
         self.mlx_optimizer = web_optimize.Optimizer(mgr, inflight=lambda: self._inflight)
         self.gguf_optimizer = web_gguf_optimize.GgufOptimizer(mgr, inflight=lambda: self._inflight)
         self.optimizer = self.mlx_optimizer
+        import web_restore
+        self.restore = web_restore.Controller(self)
 
     # ---- ROADMAP #14: live node view (GET /api/nodes) -------------------
     NODES_TTL = 0.4
@@ -853,6 +855,7 @@ def make_handler(app: App):
             if path == "/api/models/load":
                 return self._api_load(body=body)
             if path == "/api/models/stop":
+                if hasattr(app,"restore"):app.restore.cancel()
                 if app.optimizer.snapshot().get("running"):
                     return self._json(409, {"error": "Cancel Optimize now and wait before unloading"})
                 try:
@@ -1009,6 +1012,7 @@ def make_handler(app: App):
                 "optimize": {k: v for k, v in app.optimizer.snapshot().items()
                              if k in ("running", "mode", "phase", "eta_s")},
                 "worker": snap,
+                "restore": app.restore.snapshot() if hasattr(app,"restore") else None,
                 "lead_healthy": healthy,
                 "split": split,
                 "active": active,
@@ -1732,6 +1736,11 @@ def make_handler(app: App):
 
 
         def _api_load(self, body=None):
+            body = body or {}
+            if not isinstance(body,dict):return self._json(400,{"error":"Load request must be an object"})
+            if hasattr(app,"restore"):
+                try:app.restore.authorize(body,begin=True)
+                except ValueError as e:return self._json(409,{"error":str(e)})
             if isinstance(app.mgr, WorkerManager):
                 try:
                     app.mgr._deny_managed_service()
@@ -1755,7 +1764,13 @@ def make_handler(app: App):
                         or str(m.get("hf") or "").lower() == mid_l):
                     entry = m
                     break
-            if entry and entry.get("source") == "gguf":
+            if body.get("engine"):
+                try:
+                    if not entry:raise ValueError("Last model is not installed or cannot be inspected on the configured Minis")
+                    import web_restore
+                    entry = web_restore.validate_placement(app,entry,dict(body,model_id=mid))
+                except (ValueError,OSError,TypeError,KeyError) as e:return self._json(400,{"error":str(e)})
+            if entry and entry.get("source") == "gguf" and not body.get("placement"):
                 entry = dict(entry)
                 pid_ = body.get("placement_id") or entry.get("default_placement")
                 opt = next((o for o in entry.get("placement_options") or [] if o.get("id") == pid_), None)
@@ -1774,6 +1789,8 @@ def make_handler(app: App):
                         plan.pop("file_requests", None)
                         return self._json(409, {"error": "Split needs files or more memory; nothing was changed", "balance": plan})
                     entry = plan["entry"]
+                    if entry.get("source")=="gguf" and isinstance(body.get("gguf_tune"),dict):
+                        entry=dict(entry,tune_override={k:v for k,v in body["gguf_tune"].items() if k in ("flash_attn","ubatch")})
                 except (ValueError, OSError, KeyError, TypeError) as e:
                     return self._json(400, {"error": str(e)})
             balanced_msg = None
@@ -1788,9 +1805,35 @@ def make_handler(app: App):
                 else:
                     return self._json(409, {"error": entry.get("split_note") or sc.get("note") or "split too tight",
                                             "split_check": sc})
+            # Normal Settings/Models split loads use the same N-Mini planner,
+            # not the old hard-coded two-node SSH/IP defaults. Keep the explicit
+            # legacy force escape hatch; startup intent never records/replays it.
+            if (entry and entry.get("source")!="gguf" and not body.get("balance")
+                    and not body.get("force_split") and entry.get("run_mode")=="split"
+                    and (Path(entry.get("lead_path") or "")/"config.json").is_file()
+                    and (Path(entry.get("lead_path") or "")/"model.safetensors.index.json").is_file()):
+                try:
+                    configured=app.configured_nodes()
+                    ids=(entry.get("placement") or {}).get("node_ids") or [n["id"] for n in configured]
+                    counts=entry.get("split_counts")
+                    if counts is None and len(ids)==2:
+                        from mlx_split_fetch import n_layers_of
+                        total=n_layers_of(json.loads((Path(entry["lead_path"])/"config.json").read_text()))
+                        k=int(entry["packer_layers"]);counts=[k,total-k]
+                    plan=app.balance(dict(body,model_id=mid,balance=True,node_ids=ids,counts=counts),fresh=True)
+                    if not plan["ready"]:
+                        plan.pop("entry",None);plan.pop("file_requests",None)
+                        return self._json(409,{"error":"Split needs files or more memory; nothing was changed","balance":plan})
+                    entry=plan["entry"]
+                except (ValueError,OSError,KeyError,TypeError) as e:return self._json(400,{"error":str(e)})
             try:
-                snap = app.mgr.switch(mid, wait=False, settings=body.get("settings"),
-                                     entry=entry)
+                from contextlib import nullcontext
+                guard=app.restore.lock if hasattr(app,"restore") else nullcontext()
+                with guard:
+                    if hasattr(app,"restore"):app.restore.authorize(body)
+                    if entry:
+                        entry = dict(entry,_restore_request={k:v for k,v in body.items() if k in ("placement_id","placement","node_ids","balance","counts","repo_id","gguf_file","gguf_tune")})
+                    snap = app.mgr.switch(mid, wait=False, settings=body.get("settings"),entry=entry)
             except (ValueError, FileNotFoundError, RuntimeError) as e:
                 return self._json(400, {"error": str(e)})
             if balanced_msg:
@@ -2016,6 +2059,8 @@ def main(argv=None):
     try:
         if mgr.adopt_gguf():
             print("[caravan-web] adopted running GGUF llama-server from before restart", flush=True)
+        elif __import__("web_remote_adopt").adopt(mgr):
+            print("[caravan-web] adopted running remote single-Mini worker/tunnel",flush=True)
         elif mgr.adopt_running():
             print("[caravan-web] adopted running lead from before restart", flush=True)
     except Exception as e:  # noqa: BLE001
@@ -2035,6 +2080,7 @@ def main(argv=None):
     print(f"[caravan-web] listening on http://{args.host}:{args.port}", flush=True)
     print(f"[caravan-web] open http://<EXO1-tailscale-or-LAN>:{args.port}/", flush=True)
     print(f"[caravan-web] lead worker port {args.lead_port}; packer {args.packer_peer}", flush=True)
+    app.restore.start(f"http://127.0.0.1:{httpd.server_port}")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import sys
 import threading
+import tempfile
 import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -166,10 +167,12 @@ class ShutdownResponseTest(unittest.TestCase):
 class WebServerHTTPTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Manager that never touches real workers.
+        # Manager that never touches real workers or repository-local state.
+        state = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(state.cleanup)
         mgr = WorkerManager(lead_port=8194, packer_peer="127.0.0.1:5560",
                             packer_ssh="nobody@127.0.0.1",
-                            state_dir=REPO / "handoff" / "lab" / "day15-web" / "test-state",
+                            state_dir=Path(state.name),
                             repo=REPO)
         cls.app = web_server.App(mgr)
         _offline(cls.app)
@@ -290,9 +293,11 @@ class KeepAliveDrainTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        state = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(state.cleanup)
         mgr = WorkerManager(lead_port=8194, packer_peer="127.0.0.1:5560",
                             packer_ssh="nobody@127.0.0.1",
-                            state_dir=REPO / "handoff" / "lab" / "day15-web" / "test-state-ka",
+                            state_dir=Path(state.name),
                             repo=REPO)
         cls.app = web_server.App(mgr)
         _offline(cls.app)

@@ -56,9 +56,11 @@ experimental checkpoints and authorized two-Mini live checks; strict GGUF indepe
   and bounded safe restart-race recovery. See DAY19.md / BENCHMARKS.md.
 - [ ] Separate-account privacy and FileVault-on behavior; those are not covered
   by the existing automatic-login/FileVault-off accounts.
-- [ ] UI-driven reconfiguration of fixed auto-start model plans / automatic
-  last-model resume. Today the fixed launchd model plan is a separate ownership
-  mode; uninstall its worker jobs before using UI model switching.
+- [x] Brenden's revised default: web-owned restore-last-model intent, exact
+  placement/counts/settings and engine; explicit Unload restores nothing.
+  Replay once via normal UI load path with fresh safety checks; UI switching
+  stays unlocked. Fixed model plans are advanced opt-in, not the default.
+  Native migration/reboot results are recorded in DAY19.md.
 
 - [x] Theme 3 MLX: shared file preview/fetch API + UI, per-Mini logical/allocated
   usage, explicit missing-only stage downloads from one pinned source revision,
