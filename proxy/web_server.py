@@ -1014,7 +1014,7 @@ def make_handler(app: App):
                 "active": active,
                 "uptime_s": round(time.time() - app.started, 1),
                 "ports": {"web": DEFAULT_PORT, "lead": app.mgr.lead_port,
-                          "packer": app.mgr.packer_peer},
+                          "packer": (split or {}).get("peer") or app.mgr.packer_peer},
             })
 
         def _api_settings(self):

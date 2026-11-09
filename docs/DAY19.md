@@ -1224,3 +1224,23 @@ hardware/address checks, failed control lookups, changed addresses and N-stage
 plan persistence; full suite **684 passed in 38.669 s**. Final live timings and
 state follow after recovery/EXO1 reboot; this is not a claim of an unassisted
 first EXO2 startup.
+
+
+Post-reboot inspection also caught two display/telemetry issues: the normal web
+status still showed the old configured packer IP even though the live lead used
+the new address; and MLX's short-reply UI write rate counted six tokens over five
+decode intervals (6.51 tok/s), disagreeing with the native timing line (5.43).
+Status now prefers the actual live peer. MLX structured usage supplies the same
+native rates as its log (uncached read tokens, generated tokens minus the first
+for decode), which the UI already honors. Five new timing/HTTP regressions cover
+cold/cached/one-token replies and static/live peer fallback.
+
+The old fallback UI inventory SSH target also used the pre-reboot TB address.
+EXO1's application config now explicitly names the already-trusted stable
+EXO2 SSH control address `brenden@100.90.134.95`, the current Thunderbolt data
+endpoint and the correct node repo paths. Existing model preferences were kept;
+backup: `~/.caravan/config.toml.day19-pre-stable-control`. No SSH trust, OS login,
+security, network address or route setting was changed. The fixed launchd model
+plans resolve changing TB addresses themselves; future UI-driven model switching
+still needs an up-to-date explicit node data endpoint (automatic UI discovery is
+not implemented).

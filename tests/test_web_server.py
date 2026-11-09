@@ -93,6 +93,27 @@ class TimingMathTest(unittest.TestCase):
         self.assertIsNone(timing.mini_to_browser(1.0, None))
 
 
+class RebootStatusPeerTest(unittest.TestCase):
+    def status(self, split):
+        from types import SimpleNamespace as NS
+        import time
+        mgr = NS(snapshot=lambda: {"status":"ready"}, lead_healthy=lambda: True,
+                 lead_split_info=lambda: split, lead_active_settings=lambda: {},
+                 tuning_status=lambda active: None, lead_port=8194,
+                 packer_peer="169.254.103.191:5560")
+        app = NS(mgr=mgr, optimizer=NS(snapshot=lambda: {}), started=time.time())
+        cls = web_server.make_handler(app)
+        handler = cls.__new__(cls)
+        handler._json = lambda code, body: body
+        return handler._api_status()
+
+    def test_reports_live_peer_after_link_local_address_changes(self):
+        self.assertEqual(self.status({"peer":"169.254.201.113:5560"})["ports"]["packer"], "169.254.201.113:5560")
+
+    def test_missing_split_retains_configured_peer(self):
+        self.assertEqual(self.status(None)["ports"]["packer"], "169.254.103.191:5560")
+
+
 class CatalogTest(unittest.TestCase):
     def test_catalog_has_day13_models(self):
         ids = {m["id"] for m in catalog.CATALOG}

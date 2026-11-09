@@ -3054,9 +3054,8 @@ class Engine:
 
 
 
-def _timing_line(info):
-    """Per-reply timing summary, matching the UI stats line:
-    Read X tok at Y tok/s . Write Z tok at W tok/s . first token A s . total B s"""
+def _timing_rates(info):
+    """Native rates shared by structured usage, UI and timing log."""
     pt = int(info.get("prompt_tokens") or 0)
     cached = int(info.get("cached_tokens") or 0)
     n = int(info.get("completion_tokens") or 0)
@@ -3067,6 +3066,19 @@ def _timing_line(info):
     read_tps = new / pre if pre > 0 else 0.0
     gen_s = total - ttft
     write_tps = (n - 1) / gen_s if n > 1 and gen_s > 0 else 0.0
+    return {"read_tok_s": round(read_tps, 1), "write_tok_s": round(write_tps, 2)}
+
+
+def _timing_line(info):
+    """Per-reply timing summary, matching the UI stats line:
+    Read X tok at Y tok/s . Write Z tok at W tok/s . first token A s . total B s"""
+    pt = int(info.get("prompt_tokens") or 0)
+    cached = int(info.get("cached_tokens") or 0)
+    n = int(info.get("completion_tokens") or 0)
+    ttft = float(info.get("ttft_s") or 0.0)
+    total = float(info.get("total_s") or 0.0)
+    rates = _timing_rates(info)
+    read_tps, write_tps = rates["read_tok_s"], rates["write_tok_s"]
     mode = "split" if info.get("split") else "single"
     return (f"timing ({mode}): read {pt} tok ({cached} cached) at {read_tps:.1f} tok/s, "
             f"write {n} tok at {write_tps:.2f} tok/s, first token {ttft:.2f} s, total {total:.2f} s")
@@ -3420,6 +3432,7 @@ def make_handler(engine: "Engine"):
                      "prompt_tokens_details": {"cached_tokens": info["cached_tokens"]},
                      "caravan": {k: info[k] for k in ("how", "prefill_s", "ttft_s", "total_s", "peak_gb", "split", "speculate", "learn", "active", "memory_guard")
                                  if k in info}}
+            usage["caravan"].update(_timing_rates(info))
             try:
                 if stream:
                     send(pack("", "", finish=info["finish"]))
