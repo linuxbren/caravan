@@ -22,6 +22,9 @@ def port(value):
 
 
 def endpoint(value):
+    from service_endpoints import parse
+    if parse(value) is not None:
+        return str(value)
     from mlx_split import _hostport
     host, number = _hostport(value)
     if not host:

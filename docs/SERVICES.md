@@ -91,6 +91,31 @@ Network access, configure Thunderbolt routes, disable sleep or enable auto-login
 Resolve those explicitly on the Macs. A sleeping/logged-out Mini is not promised
 available. No new-Mac install success is claimed until the live checklist passes.
 
+## Reboot-safe Thunderbolt endpoints
+
+macOS can choose a different link-local IPv4 address after a reboot. Do not
+assume that yesterday's `169.254.x.x` address will still belong to the Mini.
+For an explicit, verified Thunderbolt hardware interface, use:
+
+- Packer `--listen tb://en2:5560` (this Mini's active Thunderbolt interface).
+- Lead `--peer ssh+tb://USER@TRUSTED_CONTROL_HOST/en2:5560` (the upstream
+  Mini's interface). A middle packer can use the same syntax for `--upstream`.
+
+First inspect `networksetup -listallhardwareports` on each Mini; `en2` is an
+example, not a universal interface name. The control host must already be
+reachable by non-interactive SSH with an approved host key. SSH only reads the
+peer's hardware/interface addresses; model traffic still uses its verified
+private/link-local Thunderbolt address, with no Wi-Fi/data fallback. No keys,
+login settings, addresses or routes are created or changed. Static `IP:PORT`
+plans remain supported. Preview/dry-run does not contact the peer.
+
+Agents resolve these explicit interfaces before starting a child, and check for
+address changes every ten seconds. A changed address restarts only that agent's
+own worker; a failed control lookup does not kill a healthy worker. Missing
+interfaces/peers retry safely. Interface/routing setup for three physical Minis
+or a Thunderbolt triangle is still manual; this is not automatic network or
+model discovery. Regenerate existing fixed-IP plans explicitly when migrating.
+
 ## Two ownership modes — do not mix model controllers
 
 1. **Web-managed (normal interactive use):** auto-start the web service only.

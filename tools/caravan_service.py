@@ -71,7 +71,8 @@ def validate_files(plan):
 def ensure_port_free(plan):
     if plan["kind"] == "worker" and plan["role"] == "packer":
         from mlx_split import _hostport
-        host, number = _hostport(plan["listen"])
+        from service_endpoints import resolve
+        host, number = _hostport(resolve(plan["listen"]))
     else:
         host, number = plan["host"], plan["port"]
     with socket.socket(socket.AF_INET6 if ":" in host else socket.AF_INET) as sock:

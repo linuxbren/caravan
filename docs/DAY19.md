@@ -1204,3 +1204,23 @@ jobs can be removed without touching today's original workers. Do not use
 `restart` on these production worker plans now: their ports are occupied by the
 unmanaged workers, and the CLI correctly refuses rather than killing them.
 Never use `~/dev/caravan` on EXO2. Nothing here authorizes reboot execution yet.
+
+
+### Actual reboot follow-up — in progress, Nov 8
+
+Preflight on both Minis: automatic login is `brenden`, FileVault is off, and
+`sudo -n true` needs a password. The approved System Events restart succeeded on
+EXO2 first. It came back to the logged-in `brenden` GUI and launchd started its
+agent, but initial model startup failed safely: macOS changed Thunderbolt en2
+from `169.254.103.191` to `169.254.35.180`; the saved fixed listen address was no
+longer local. No unrelated worker, file, download, login or network setting was
+touched. EXO1 was deliberately not rebooted until recovering this first stage.
+
+Fix: explicit reboot-safe `tb://INTERFACE:PORT` local listen and
+`ssh+tb://TRUSTED_CONTROL_HOST/INTERFACE:PORT` upstream discovery, strict existing
+SSH host-key trust, no LAN data fallback, and owned-child rebind on an actual
+address change. See SERVICES.md. Eleven new tests cover validation, private
+hardware/address checks, failed control lookups, changed addresses and N-stage
+plan persistence; full suite **684 passed in 38.669 s**. Final live timings and
+state follow after recovery/EXO1 reboot; this is not a claim of an unassisted
+first EXO2 startup.

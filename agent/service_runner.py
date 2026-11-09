@@ -1,6 +1,6 @@
 """Local MLX worker lifecycle for caravan_agent --service-config.
 
-Each node runs its own plan; no SSH, file relay, downloads or remote process
+Each node runs its own plan; no file relay, downloads or remote process
 control. Missing upstream stages cause a bounded retry, so login order does not
 matter. Only the Popen child this agent created is ever terminated.
 """
@@ -14,6 +14,7 @@ import threading
 import time
 from pathlib import Path
 import service_config as SC
+import service_endpoints as SE
 
 
 def upstream_ready(plan, client_factory=None):
@@ -36,7 +37,7 @@ def write_runtime(plan, child_pid):
     p["runtime"].parent.mkdir(parents=True,exist_ok=True)
     record = {"managed_by":SC.OWNER,"label":plan["label"],"agent_pid":os.getpid(),"pid":child_pid,
               "worker":str(Path(plan["repo"])/"agent/mlx_worker.py"),
-              "port":plan["port"],"listen":plan.get("listen"),"role":plan["role"]}
+              "port":plan["port"],"listen":plan.get("listen"),"peer":plan.get("peer"),"role":plan["role"]}
     temporary = p["runtime"].with_suffix(".tmp")
     temporary.write_text(json.dumps(record)); temporary.replace(p["runtime"])
 
@@ -48,6 +49,17 @@ def clear_runtime(plan,child_pid):
             p.unlink()
     except (OSError,ValueError):
         pass
+
+
+def endpoints_changed(saved, effective):
+    if not SE.dynamic(saved):
+        return False
+    try:
+        current = SE.runtime_plan(saved)
+    except ValueError:
+        # A control-plane outage is not a reason to kill a healthy worker.
+        return False
+    return any(current.get(k) != effective.get(k) for k in ("listen","peer","upstream"))
 
 
 def run(path, *, apply=False, stop=None, popen=subprocess.Popen, retry_seconds=15):
@@ -70,16 +82,22 @@ def run(path, *, apply=False, stop=None, popen=subprocess.Popen, retry_seconds=1
         while not stop.is_set():
             child = None
             try:
-                validate_files(plan)
-                upstream_ready(plan)
+                effective = SE.runtime_plan(plan)
+                cmd = SC.worker_command(effective)
+                validate_files(effective)
+                upstream_ready(effective)
                 if stop.is_set():
                     break
-                ensure_port_free(plan)
+                ensure_port_free(effective)
                 child = popen(cmd)
-                write_runtime(plan,child.pid)
+                write_runtime(effective,child.pid)
                 print(f"[Caravan] Started local {plan['role']} worker pid {child.pid}.",flush=True)
+                refresh_at = time.monotonic() + 10
                 while child.poll() is None and not stop.wait(0.5):
-                    pass
+                    if time.monotonic() >= refresh_at:
+                        if endpoints_changed(plan,effective):
+                            raise RuntimeError("Thunderbolt address changed; restarting only this agent's own worker")
+                        refresh_at = time.monotonic() + 10
                 if stop.is_set() and child.poll() is None:
                     child.terminate()
                     try:
