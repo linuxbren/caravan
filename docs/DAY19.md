@@ -1244,3 +1244,15 @@ security, network address or route setting was changed. The fixed launchd model
 plans resolve changing TB addresses themselves; future UI-driven model switching
 still needs an up-to-date explicit node data endpoint (automatic UI discovery is
 not implemented).
+
+
+Deploying that telemetry fix exposed one more real native issue: the owned
+service CLI's immediate `bootout` → `bootstrap` sometimes returned launchd error
+5 (Input/output error) while the previous job was still unloading. The lead
+remained installed but unloaded; no unrelated process was killed. Fixed with a
+bounded 35-second retry **only** for native bootstrap error 5, checking the job
+is absent and its socket free before retrying. Other errors are not retried;
+there is no sudo/root fallback or PID killing. Five new mocked regressions cover
+transient success, unloading state, occupied ports, other errors and timeout.
+The first isolated timing-test command lacked `agent` on its import path; that
+harness was corrected before its targeted/full test passes.

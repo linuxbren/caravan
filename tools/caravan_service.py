@@ -13,6 +13,8 @@ import plistlib
 import socket
 import subprocess
 import sys
+import time
+import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -167,6 +169,33 @@ def stored(name,home):
     return plan
 
 
+def retry_bootstrap(plan, result, run, *, timeout=35, clock=time.monotonic,
+                    wait=None):
+    """launchd can acknowledge bootout before its old job is fully removed.
+
+    Retry only native transient bootstrap error 5, never privilege errors.
+    Do not bootstrap over a loaded job or occupied socket; never kill a PID.
+    """
+    wait = wait or threading.Event().wait
+    deadline = clock() + timeout
+    target = domain()+"/"+plan["label"]
+    def transient(r):
+        return r.returncode == 5 or "Bootstrap failed: 5:" in (r.stderr or r.stdout)
+    while transient(result) and clock() < deadline:
+        wait(.25)
+        if run(["print",target]).returncode == 0:
+            continue
+        try:
+            ensure_port_free(plan)
+        except ValueError:
+            continue  # allow our old child its normal graceful-exit window
+        result = run(["bootstrap",domain(),str(SC.paths(plan)["plist"])])
+    if transient(result):
+        raise ValueError("launchd did not finish unloading/restarting this owned job within 35s. "
+                         "It remains installed; inspect status/logs. No other process was stopped.")
+    return result
+
+
 def control(action,plan,*,dry_run=False,run=run_launchctl):
     assert_owned(plan,require=True)
     target = domain()+"/"+plan["label"]
@@ -192,6 +221,7 @@ def control(action,plan,*,dry_run=False,run=run_launchctl):
             result = run(["bootout",target])
             if result.returncode == 0:
                 result = run(["bootstrap",domain(),str(SC.paths(plan)["plist"])])
+        result = retry_bootstrap(plan,result,run)
         if result.returncode:
             raise ValueError((result.stderr or result.stdout).strip() or "launchd restart failed")
         print(f"[Caravan] Restarted only {plan['name']}.")
