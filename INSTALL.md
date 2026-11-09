@@ -25,11 +25,19 @@ commands and ownership rules: **[SERVICES.md](docs/SERVICES.md)**. Fixed auto-st
 model jobs and UI-controlled model switching are separate modes; do not mix
 controllers. LaunchAgents start at **user login**, not before login. Native
 dry-runs and temporary three-stage launchd startup/recovery were tested on
-two M4 Minis on Nov 8. A clean-Mac actual install, permanent service migration
-and login/reboot remain pending; no permanent jobs were installed in the test.
+two M4 Minis on Nov 8. A fresh isolated-HOME actual install/repeat later passed;
+a separate macOS account and actual login/reboot remain untested. Real lab
+LaunchAgents are now staged for next login, not loaded; existing workers stay up.
 Use the **venv Python path itself**, e.g. `~/.caravan/venvs/mlx/bin/python`, not
 its resolved Homebrew binary. Regenerate plans made before the Day 19 venv-path
 fix; do not hand-edit their JSON. See [live results](docs/DAY19.md).
+
+Nov 8 follow-up: a real fresh isolated HOME/clone/venv install and repeat reached
+a working spare-port UI with the same PID/config, then were cleaned up. This
+was not a separate macOS account. For a future-login migration that must leave
+today's workers alone, use explicit service install **`--no-start --stage-login`**;
+see SERVICES.md. Real web/Qwen plists are staged on the lab Minis, not loaded.
+No reboot/logout has been performed or authorized by these instructions.
 
 The current branch also adds per-Mini selective downloads and disk accounting
 in the Balance view; see [FILES.md](docs/FILES.md). The `gguf` dependency reads

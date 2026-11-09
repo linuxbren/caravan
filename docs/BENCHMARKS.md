@@ -1202,3 +1202,33 @@ GGUF/MLX/web/RPC/tunnel/service processes were then stopped by ownership; the
 original Qwen 27B 24/40 split remained healthy, worker PIDs unchanged.
 Remaining: three physical Minis, multi-shard MLX live savings, fresh install /
 permanent login/reboot, cold-cache GGUF comparison and sustained benchmarks.
+
+
+## Day 19 follow-up install/service measurements — 2026-11-08, 18:08–18:18 CST
+
+These are **installation/readiness observations, not inference benchmarks**.
+Original Qwen 27B 24/40 split and normal web PIDs stayed unchanged throughout.
+Noninteractive sudo required a password, so the approved clean equivalent used
+EXO1's existing GUI user with a fresh isolated HOME/clone/venv/config/deps.
+A truly separate account, FileVault/permissions and reboot remain untested.
+
+| Native run | Installer exit s | UI verified s | Result |
+|---|---:|---:|---|
+| Fresh install, b1e5410 | 95.897 | 96.189 | new web 73454 on 8197, idle, local-only config |
+| Identical repeat | 1.441 | 1.449 | same PID, config and venv |
+| Updated repeat, a59760c | — | 1.552 | same PID; selected-port message corrected |
+| Isolated staged web activation | — | .135 | real launchctl load/status/log, no model |
+| Isolated staged web restart | — | .132 | real owned restart, then uninstall/cleanup |
+
+Fresh imports/pip check: Python 3.14.7 arm64, MLX 0.32.4, mlx-lm 0.32.2,
+huggingface_hub 2.4.0, gguf 0.19.0. Dependencies are not fully locked; these are
+the versions resolved for this actual run. HTML response 159,019 bytes. Exact
+results/versions/install and native staged-web logs are retained on EXO1 under
+`~/.caravan/day19-fresh-20261108-1808`; temporary HOME/clone/venv/jobs removed.
+
+Three real permanent login plists were installed and linted, **not loaded**:
+EXO1 web + Qwen lead; EXO2 Qwen packer. Explicit next-login staging preserves
+today's original unmanaged web/model and guards ownership once launchd loads
+the jobs. No production startup/reboot timing is claimed. Reboot/logout was
+explicitly forbidden for this run; exact downtime and approval-gated steps are
+in DAY19.md. Follow-up code suite: **673 passed, 39.892 s** (ten new tests).

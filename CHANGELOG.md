@@ -1,3 +1,8 @@
+### Day 19 fresh install and next-login staging — 2026-11-08 (not a release)
+- Native isolated-HOME fresh clone/venv/dependency install reached the web UI in 96.189 s; repeat 1.449 s, same PID/config. Explicit native status/restart/log/uninstall checks passed; temporary environments cleaned up. No separate account was created because noninteractive sudo required a password.
+- Fixed selected-port installer output. Added explicit `--no-start --stage-login`: real LaunchAgents/configs prepared for next login without taking over today's unmanaged workers or web; loaded jobs are protected. Ten new regressions; **673 passed (39.892 s)**.
+- Real EXO1 web/Qwen lead and EXO2 Qwen packer plists installed but deliberately not loaded. Original PIDs 69242/57464/54170 preserved. **No reboot or logout**; [DAY19.md](docs/DAY19.md) records the exact interruption/approval plan and [BENCHMARKS.md](docs/BENCHMARKS.md) the measured install results.
+
 ### Day 19 authorized live checks and fixes — 2026-11-08 (not a release)
 - Two-Mini Balance/picker reload, actual three-stage 11/11/10 MLX simulation, correct answers, warm reuse, Save/Restore, web adoption, own-files fetch/stop/resume/restart and GGUF native split checks. Original Qwen3.5-27B 24/40 workers preserved; no permanent LaunchAgents/reboot.
 - Fixed inventory metadata readiness, configured execution roots, endpoint-scoped legacy cleanup, verified custom-root adoption, recursive memory guard/nested model dimensions, preserved venv paths, idle-packer graceful stop/TIME_WAIT handling, complete web shutdown responses, verified peer-only GGUF reloads and native GGUF rate reporting.

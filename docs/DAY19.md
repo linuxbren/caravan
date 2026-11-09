@@ -1108,3 +1108,99 @@ new test fixture used REPO instead of the file's ROOT constant (eight errors);
 corrected before commit, and targeted staging/installer tests passed.
 
 Follow-up code validation: **673 tests passed in 39.892 s**.
+
+
+### Follow-up native results and permanent service state — 18:18 CST
+
+Updated installer repeat (`--update`, code a59760c) passed in **1.552 s**,
+still PID **73454**, and printed the correct 8197 URL. Native `status` reported
+that isolated LaunchAgent loaded/running. Explicit native `uninstall` then
+removed only its owned job/config/plist; the isolated fresh HOME/clone/venv were
+removed after saving results and version evidence outside that HOME.
+
+Fresh dependencies really installed and imported: native arm64 Python **3.14.7**,
+MLX **0.32.4**, mlx-lm **0.32.2**, huggingface_hub **2.4.0**, GGUF **0.19.0**.
+Pip check passed. The original user's environment/dependencies were not changed.
+A separate tiny staged-web test on 8197/8198 exercised actual staged install,
+inactive/loaded launchctl detection, activation, status, real stdout log,
+restart and uninstall. Single readiness observations: **0.135 s** start,
+**0.132 s** restart; no model involved. Logs were preserved as
+`staged-web-start.log` / `staged-web-restart.log`. A first harness attempt had
+an SSH/heredoc quoting SyntaxError before any execution; corrected, then all
+native checks passed. Both temporary HOMEs and test labels were removed.
+
+**Real permanent LaunchAgents are now installed, deliberately NOT loaded:**
+
+| Mini | Label / name | Fixed next-login purpose |
+|---|---|---|
+| EXO1 | `com.caravan.v3.web` / `web` | normal web, 0.0.0.0:8190 → lead 8194, KEEP_WORKERS=1 |
+| EXO1 | `com.caravan.v3.day19-qwen-lead` / `day19-qwen-lead` | existing local Qwen 27B, counts 24,40, last 40 layers, peer 169.254.103.191:5560 |
+| EXO2 | `com.caravan.v3.day19-qwen-packer` / `day19-qwen-packer` | same model's existing local partial store, first 24 layers, listen 169.254.103.191:5560 |
+
+Each real plist is in that user's `~/Library/LaunchAgents`; owned JSON is
+`~/.caravan/services/login/NAME.json`. All three passed `plutil -lint`, model
+shard/tokenizer validation, and native status **installed, not loaded**.
+The live original web remained **69242**, lead **57464**, packer **54170**;
+Qwen stayed ready, no change to its 24/40 split. Updated service guards also
+confirmed the unloaded staged jobs do not own those live workers. No job was
+bootstrapped for the real model; logs for those never-started jobs may not yet
+exist. Their configured destinations are `~/.caravan/logs/web.log`,
+`day19-qwen-lead.log` and `day19-qwen-packer.log`. Do not call this a passed
+permanent Qwen startup/login test: that is the next approval-gated test.
+
+At **18:17:54–18:17:55 CST**, original three PIDs were unchanged and healthy,
+no model transfers were running, and test ports 5591/5592/8196/8197/8198 and
+fresh/staged-test labels were absent. The only new persistent operational
+state is the three deliberately staged real login services above. Test results,
+install logs and exact versions remain in
+`~/.caravan/day19-fresh-20261108-1808` on EXO1; temporary environments are gone.
+
+### Reboot test plan — prepared, NOT executed
+
+**No reboot or logout was performed. Brenden must approve the interruption.**
+No further install/migration command is needed: the real login plists are staged.
+They start at **user login**, not before FileVault unlock/login, and will retry
+if their upstream/interface is not ready. This is a fixed Qwen model plan,
+not automatic last-selected-model resume.
+
+What a reboot interrupts:
+- EXO2 reboot terminates packer **54170**; the entire two-Mini Qwen split cannot
+  generate while it is down, even if EXO1's web remains open.
+- EXO1 reboot terminates web **69242** and lead **57464**; the normal UI/API and
+  Qwen requests go offline. In-flight replies fail; in-memory/KV state is lost.
+  Finish/save active chats first. New services use separate per-service cache
+  directories, so warm chat reuse is **not** promised. Model files, old cache
+  files, saved chat history/config are not deleted or re-downloaded.
+- Reboot also closes that Mac's SSH sessions and interrupts its other running
+  applications/services. Brenden should save unrelated work; this task did not
+  restart or change those apps.
+
+After explicit downtime approval:
+1. Finish/save active chats and confirm no downloads/new work. Use the Mac's
+   normal **Restart** action on **EXO2**, then log in as Brenden. Wait for its
+   staged packer to report loaded/listening on 5560.
+2. Restart **EXO1**, then log in. Its staged web and lead start automatically;
+   agents tolerate peer startup order. No manual worker start is required.
+3. From Omarchy, run read-only status checks:
+
+```sh
+ssh exo2 'cd ~/cv3 && ~/.caravan/venvs/mlx/bin/python tools/caravan_service.py status --name day19-qwen-packer'
+ssh exo1 'cd ~/dev/caravan-v3 && ~/.caravan/venvs/mlx/bin/python tools/caravan_service.py status --name web && ~/.caravan/venvs/mlx/bin/python tools/caravan_service.py status --name day19-qwen-lead'
+ssh exo1 'curl -fsS http://127.0.0.1:8190/api/status'
+```
+
+Expect new PIDs, healthy Qwen, 24/40 ranges, managed service ownership and a
+sensible short reply. Inspect the three logs above, then warm reuse and web-only
+restart with KEEP_WORKERS. If the Thunderbolt address changed from
+169.254.103.191 or privacy/login permissions block launch, stop and inspect;
+regenerate owned plans explicitly, never hand-edit JSON or kill unknown port
+owners. Permanent fixed workers intentionally block conflicting UI model control
+once active. A cold first chat after reboot is expected, not cache corruption.
+
+To **cancel before reboot**, `uninstall --name day19-qwen-lead` and
+`uninstall --name web` on EXO1, and `uninstall --name day19-qwen-packer` on EXO2
+(using each repo's `tools/caravan_service.py` and existing venv). These unloaded
+jobs can be removed without touching today's original workers. Do not use
+`restart` on these production worker plans now: their ports are occupied by the
+unmanaged workers, and the CLI correctly refuses rather than killing them.
+Never use `~/dev/caravan` on EXO2. Nothing here authorizes reboot execution yet.

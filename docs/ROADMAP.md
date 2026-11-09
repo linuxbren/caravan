@@ -46,8 +46,12 @@ experimental checkpoints and authorized two-Mini live checks; strict GGUF indepe
 - [x] Native installer/launchd dry-runs and temporary real launchd three-stage
   startup, managed-control refusal, peer/child/agent recovery and KEEP_WORKERS.
   Temporary jobs removed; no permanent job or reboot.
-- [ ] Fresh-account actual install/repeat, permanent install/uninstall migration,
-  privacy-prompt behavior and login/reboot (needs Brenden's OK).
+- [x] Fresh isolated HOME/clone/venv actual install and repeats; working spare-port
+  UI, unchanged PID/config and explicit cleanup (same GUI user, not a new account).
+- [x] Real production web/Qwen LaunchAgents installed with next-login staging;
+  no current worker/web takeover or restart. Native staged-web lifecycle/logs checked.
+- [ ] Separate-account privacy/FileVault behavior and actual production login/reboot.
+  No reboot/logout performed; approval-gated interruption plan is in DAY19.md.
 - [ ] UI-driven reconfiguration of fixed auto-start model plans / automatic
   last-model resume. Today the fixed launchd model plan is a separate ownership
   mode; uninstall its worker jobs before using UI model switching.
@@ -258,7 +262,8 @@ Open tasks for this rule:
      `caravan_agent.py --service-config ... --apply`; no fixed two-node limit.
    - [x] Verify temporary real-Mac service startup, crash recovery and web
      adoption, including co-hosted three-stage simulation (Nov 8).
-   - [ ] Permanent service/login/reboot; automatic discovery and UI-driven
+   - [x] Real permanent service plists staged for next login without current takeover.
+   - [ ] Actual production login/reboot; automatic discovery and UI-driven
      reconfiguration of fixed plans remain follow-ups.
    - [ ] Merge to `main` (waiting for review; not pushed).
 3. **Split download (MLX).** Each Mac downloads only its own layers
