@@ -96,17 +96,21 @@ def worker_command(plan):
     return cmd
 
 
-def paths(plan):
+def paths(plan, *, staged=None):
     home = Path(plan["home"])
     root = home/".caravan/services"
-    return {"config": root/f"{plan['name']}.json",
+    canonical = root/f"{plan['name']}.json"
+    login = root/"login"/f"{plan['name']}.json"
+    if staged is None:
+        staged = not canonical.exists() and login.exists()
+    return {"config": login if staged else canonical,
             "plist": home/"Library/LaunchAgents"/f"{plan['label']}.plist",
             "log": home/".caravan/logs"/f"{plan['name']}.log",
             "runtime": root/"runtime"/f"{plan['name']}.json"}
 
 
-def render(plan):
-    p = paths(plan)
+def render(plan, *, staged=None):
+    p = paths(plan, staged=staged)
     if plan["kind"] == "web":
         cmd = [plan["python"], str(Path(plan["repo"])/"proxy/web_server.py"),
                "--host", plan["host"], "--port", str(plan["port"]),
@@ -138,31 +142,55 @@ def load(path):
     return rebuilt
 
 
-def managed_lead(home, lead_port):
-    """Installed lead plan reserves its port even while launchd is retrying.
-
-    The web UI must not kill/reload its child behind launchd's back. Removing
-    the owned job with the service CLI explicitly returns control to the UI.
-    """
+def plan_files(home):
     root = Path(home)/".caravan/services"
-    for path in sorted(root.glob("*.json")):
+    return sorted(root.glob("*.json")) + sorted((root/"login").glob("*.json"))
+
+
+def login_job_loaded(plan):
+    """A staged plan does not own an existing worker until launchd loads it.
+
+    The schema stays compatible; staging lives outside the canonical scan used
+    by an older already-running web server. Errors other than job-not-found
+    fail closed, rather than releasing an active launchd worker to the UI.
+    """
+    import subprocess
+    try:
+        r = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{plan['label']}"],
+                           capture_output=True, text=True, timeout=3)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise ValueError(f"Cannot check staged auto-start ownership: {e}") from None
+    if r.returncode == 0:
+        return True
+    if r.returncode in (3,113) or "Could not find service" in r.stderr or "No such process" in r.stderr:
+        return False
+    raise ValueError(f"Cannot check staged auto-start ownership: {r.stderr.strip()}")
+
+
+def managed_plans(home):
+    root = Path(home)/".caravan/services"
+    for path in plan_files(home):
         try:
-            p = load(path)
+            plan = load(path)
+            if path.parent == root/"login" and not login_job_loaded(plan):
+                continue
         except (ValueError, OSError, KeyError, TypeError) as e:
             raise ValueError(f"Unreadable auto-start plan {path}; repair it before changing workers: {e}") from None
+        yield plan
+
+
+def managed_lead(home, lead_port):
+    """Normal installed plans reserve their port; login-staged plans reserve it
+    only after launchd loads the job. No current worker is adopted by staging."""
+    for p in managed_plans(home):
         if p["kind"] == "worker" and p["role"] in ("single","lead") and p["port"] == lead_port:
             return p
     return None
 
 
 def managed_worker_port(home, number):
-    root = Path(home)/".caravan/services"
-    for path in sorted(root.glob("*.json")):
-        try:
-            p = load(path)
-            reserved = int(p["listen"].rsplit(":",1)[1]) if p.get("role") == "packer" else p["port"]
-        except (ValueError,OSError,KeyError,TypeError) as e:
-            raise ValueError(f"Unreadable auto-start plan {path}; repair it before changing workers: {e}") from None
+    for p in managed_plans(home):
+        reserved = int(p["listen"].rsplit(":",1)[1]) if p.get("role") == "packer" else p["port"]
         if p["kind"] == "worker" and reserved == int(number):
             return p
     return None

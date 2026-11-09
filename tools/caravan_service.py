@@ -84,8 +84,8 @@ def ensure_port_free(plan):
             raise ValueError(f"Port {number} is already busy or {host} is not a local interface. Nothing was stopped: {e}") from None
 
 
-def assert_owned(plan, require=False):
-    p = SC.paths(plan)
+def assert_owned(plan, require=False, *, staged=None):
+    p = SC.paths(plan, staged=staged)
     for key in ("config","plist"):
         if not p[key].exists():
             if require:
@@ -96,18 +96,24 @@ def assert_owned(plan, require=False):
             expected = plan
         else:
             value = plistlib.loads(p[key].read_bytes())
-            expected = SC.render(plan)
+            expected = SC.render(plan, staged=staged)
         if value != expected:
             raise ValueError("Service definition differs. Uninstall the existing owned job before changing its plan; nothing was overwritten")
 
 
-def install(plan, *, start=True, dry_run=False, run=run_launchctl):
+def install(plan, *, start=True, dry_run=False, stage_login=False, run=run_launchctl):
+    if stage_login and start:
+        raise ValueError("--stage-login requires --no-start; it must not take over running workers")
+    staged = True if stage_login else None
+    paths = SC.paths(plan, staged=staged)
+    if stage_login and SC.paths(plan, staged=False)["config"].exists():
+        raise ValueError("This service already has a normal installed plan; nothing was moved or overwritten")
     if dry_run:
-        print(json.dumps({"preview_only":True,"plan":plan,"plist":SC.render(plan),
-                          "files":{k:str(v) for k,v in SC.paths(plan).items()},"start":start},indent=2))
+        print(json.dumps({"preview_only":True,"plan":plan,"plist":SC.render(plan, staged=staged),
+                          "files":{k:str(v) for k,v in paths.items()},"start":start},indent=2))
         return
     check_platform()
-    assert_owned(plan)
+    assert_owned(plan, staged=staged)
     validate_files(plan)
     target = domain()+"/"+plan["label"]
     if start:
@@ -121,7 +127,7 @@ def install(plan, *, start=True, dry_run=False, run=run_launchctl):
         ensure_port_free(plan)
     # Check for another installed worker service reserving the same endpoint.
     root = Path(plan["home"])/".caravan/services"
-    for path in root.glob("*.json"):
+    for path in SC.plan_files(plan["home"]):
         other = SC.load(path)
         if other["name"] == plan["name"]:
             continue
@@ -130,25 +136,30 @@ def install(plan, *, start=True, dry_run=False, run=run_launchctl):
         if (address(other) == address(plan) or (other["kind"] == plan["kind"] == "worker"
                 and other["role"] in ("single","lead") and plan["role"] in ("single","lead"))):
             raise ValueError(f"Another owned service ({other['name']}) reserves this port; no job was changed")
-    paths = SC.paths(plan)
     for key in ("config","plist","log","runtime"):
         paths[key].parent.mkdir(parents=True,exist_ok=True)
     # Refuse to replace unrelated files. Repeated identical installs are safe.
     paths["config"].write_text(json.dumps(plan,indent=2)+"\n")
     paths["config"].chmod(0o600)
-    paths["plist"].write_bytes(plistlib.dumps(SC.render(plan)))
+    paths["plist"].write_bytes(plistlib.dumps(SC.render(plan, staged=staged)))
     if start:
         result = run(["bootstrap",domain(),str(paths["plist"])])
         if result.returncode:
             raise ValueError(f"launchd could not start {plan['name']}: {(result.stderr or result.stdout).strip()}. Files kept; inspect status, then rerun install")
     print(f"[Caravan] {plan['name']} {'installed and started' if start else 'installed, not started'}. It starts at user login.")
     print(f"[Caravan] Log: {paths['log']}")
+    if stage_login:
+        print("[Caravan] Staged for next user login; current workers and web control were not adopted or restarted.")
 
 
 def stored(name,home):
     if not name or not __import__("re").fullmatch(r"[A-Za-z0-9_-]{1,64}",name):
         raise ValueError("choose an installed service --name")
-    path = Path(home)/".caravan/services"/f"{name}.json"
+    root = Path(home)/".caravan/services"
+    paths = [p for p in (root/f"{name}.json",root/"login"/f"{name}.json") if p.exists()]
+    if len(paths) != 1:
+        raise ValueError("Service plan missing or ambiguous; refusing to act")
+    path = paths[0]
     plan = SC.load(path)
     if SC.paths(plan)["config"].resolve() != path.resolve():
         raise ValueError("Service plan points outside this user's managed folder; refusing to act")
@@ -169,6 +180,8 @@ def control(action,plan,*,dry_run=False,run=run_launchctl):
         if loaded.returncode == 0:
             print(loaded.stdout.strip())
         print(f"[Caravan] Log: {SC.paths(plan)['log']}")
+        if SC.paths(plan)["config"].parent.name == "login" and loaded.returncode != 0:
+            print("[Caravan] Staged for next login; current workers remain unmanaged by this job.")
         return
     if action == "restart":
         if loaded.returncode != 0:
@@ -211,6 +224,7 @@ def parser():
     ap.add_argument("--upstream")
     ap.add_argument("--peer")
     ap.add_argument("--no-start",action="store_true")
+    ap.add_argument("--stage-login",action="store_true",help="with --no-start, stage future-login plans without taking over current workers")
     ap.add_argument("--dry-run",action="store_true")
     return ap
 
@@ -224,12 +238,12 @@ def main(argv=None):
                              lead_port=(args.port if args.port is not None else args.lead_port) if args.kind == "worker" else args.lead_port,
                              model=args.model,counts=args.counts,stage_index=args.stage_index,
                              listen=args.listen,upstream=args.upstream,peer=args.peer)
-            install(p,start=not args.no_start,dry_run=args.dry_run)
+            install(p,start=not args.no_start,dry_run=args.dry_run,stage_login=args.stage_login)
         else:
             if args.name:
                 plans = [stored(args.name,Path.home())]
             elif args.action == "status":
-                plans = [stored(p.stem,Path.home()) for p in sorted((Path.home()/".caravan/services").glob("*.json"))]
+                plans = [stored(p.stem,Path.home()) for p in SC.plan_files(Path.home())]
             else:
                 raise ValueError("--name is required; this command never acts on every service implicitly")
             if not plans:

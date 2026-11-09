@@ -354,6 +354,83 @@ class RunnerTest(unittest.TestCase):
         mgr._kill_lead.assert_not_called(); mgr._set.assert_not_called()
 
 
+class LoginStagingTest(unittest.TestCase):
+    def plan(self,home,name="future-lead",number=8194):
+        return SC.make_plan(kind="worker",name=name,home=home,repo=ROOT,python=sys.executable,
+                            model="/own/model",counts=[24,40],stage_index=1,peer="127.0.0.1:5560",lead_port=number)
+
+    def stage(self,plan):
+        run=mock.Mock(side_effect=AssertionError("staging must not call launchctl"))
+        with mock.patch.object(CLI,"check_platform"),mock.patch.object(CLI,"validate_files"):
+            CLI.install(plan,start=False,stage_login=True,run=run)
+        run.assert_not_called()
+
+    def test_staging_requires_no_start_even_for_dry_run(self):
+        with tempfile.TemporaryDirectory() as home:
+            with self.assertRaisesRegex(ValueError,"requires --no-start"):
+                CLI.install(self.plan(home),stage_login=True,dry_run=True)
+            self.assertEqual(list(Path(home).iterdir()),[])
+
+    def test_staged_real_plist_points_at_separate_owned_config(self):
+        with tempfile.TemporaryDirectory() as home:
+            plan=self.plan(home);self.stage(plan);paths=SC.paths(plan)
+            self.assertEqual(paths["config"].parent,Path(home)/".caravan/services/login")
+            self.assertEqual(paths["plist"].parent,Path(home)/"Library/LaunchAgents")
+            self.assertEqual(list((Path(home)/".caravan/services").glob("*.json")),[])
+            plist=plistlib.loads(paths["plist"].read_bytes())
+            self.assertIn(str(paths["config"]),plist["ProgramArguments"]);self.assertTrue(plist["RunAtLoad"])
+            self.assertEqual(SC.load(paths["config"]),plan);self.assertEqual(CLI.stored(plan["name"],home),plan)
+
+    def test_inactive_staged_job_does_not_take_over_current_worker(self):
+        with tempfile.TemporaryDirectory() as home:
+            plan=self.plan(home);self.stage(plan)
+            with mock.patch.object(SC,"login_job_loaded",return_value=False):
+                self.assertIsNone(SC.managed_lead(home,8194));self.assertIsNone(SC.managed_worker_port(home,8194))
+
+    def test_loaded_staged_job_is_protected_after_login(self):
+        with tempfile.TemporaryDirectory() as home:
+            plan=self.plan(home);self.stage(plan)
+            with mock.patch.object(SC,"login_job_loaded",return_value=True):
+                self.assertEqual(SC.managed_lead(home,8194),plan);self.assertEqual(SC.managed_worker_port(home,8194),plan)
+
+    def test_duplicate_normal_and_staged_name_is_refused(self):
+        with tempfile.TemporaryDirectory() as home:
+            plan=self.plan(home);path=SC.paths(plan)["config"];path.parent.mkdir(parents=True);path.write_text(json.dumps(plan))
+            with self.assertRaisesRegex(ValueError,"normal installed plan"):
+                CLI.install(plan,start=False,stage_login=True,dry_run=True)
+            self.assertEqual(SC.load(path),plan)
+
+    def test_staged_plan_reserves_endpoint_against_another_install(self):
+        with tempfile.TemporaryDirectory() as home:
+            self.stage(self.plan(home));other=self.plan(home,name="different")
+            with mock.patch.object(CLI,"check_platform"),mock.patch.object(CLI,"validate_files"):
+                with self.assertRaisesRegex(ValueError,"Another owned service"):
+                    CLI.install(other,start=False)
+            self.assertFalse(SC.paths(other)["config"].exists())
+
+    def test_staged_uninstall_removes_only_owned_definition(self):
+        with tempfile.TemporaryDirectory() as home:
+            plan=self.plan(home);self.stage(plan);paths=SC.paths(plan);marker=Path(home)/"keep";marker.write_text("model")
+            run=mock.Mock(return_value=subprocess.CompletedProcess([],113,"","Could not find service"))
+            with mock.patch.object(CLI,"check_platform"),mock.patch.object(CLI,"gui_ready"):
+                CLI.control("uninstall",plan,run=run)
+            self.assertFalse(paths["config"].exists());self.assertFalse(paths["plist"].exists());self.assertEqual(marker.read_text(),"model")
+
+    def test_launchd_check_distinguishes_missing_loaded_and_unknown(self):
+        with tempfile.TemporaryDirectory() as home:
+            plan=self.plan(home)
+            for code,err,expected in [(0,"",True),(113,"Could not find service",False),(3,"No such process",False)]:
+                with mock.patch("subprocess.run",return_value=subprocess.CompletedProcess([],code,"",err)):
+                    self.assertIs(SC.login_job_loaded(plan),expected)
+            with mock.patch("subprocess.run",return_value=subprocess.CompletedProcess([],1,"","Operation not permitted")):
+                with self.assertRaisesRegex(ValueError,"Cannot check staged"):SC.login_job_loaded(plan)
+
+    def test_corrupt_staged_plan_fails_closed(self):
+        with tempfile.TemporaryDirectory() as home:
+            p=Path(home)/".caravan/services/login/bad.json";p.parent.mkdir(parents=True);p.write_text("broken")
+            with self.assertRaisesRegex(ValueError,"Unreadable auto-start plan"):SC.managed_lead(home,8194)
+
+
 class InstallerScriptTest(unittest.TestCase):
     def script(self,home,*args):
         return subprocess.run(["bash",str(ROOT/"scripts/install.sh"),*args],env=dict(os.environ,HOME=str(home)),
@@ -368,6 +445,13 @@ class InstallerScriptTest(unittest.TestCase):
             self.assertIn("git clone",result.stdout)
             self.assertIn("requirements-mac.txt",result.stdout)
             self.assertIn("caravan_service.py",result.stdout)
+
+    def test_custom_web_port_is_reported_correctly(self):
+        with tempfile.TemporaryDirectory() as root:
+            result=self.script(root,"--dry-run","--python",sys.executable,"--port","8197","--lead-port","8198")
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertIn("Open http://127.0.0.1:8197/",result.stdout)
+            self.assertNotIn("Open http://127.0.0.1:8190/",result.stdout)
 
     def test_worker_without_model_is_only_prepared(self):
         with tempfile.TemporaryDirectory() as root:

@@ -14,6 +14,25 @@ child does not refresh its already-running agent code; restart the corresponding
 owned service when deploying agent changes, at a safe time. The web can be
 restarted separately with KEEP_WORKERS without reloading models.
 
+## Prepare the next login without taking over today's workers
+
+For a deliberately deferred migration, append **`--no-start --stage-login`**
+to each explicit `tools/caravan_service.py install` command. It writes a real
+per-user LaunchAgent, but does not bootstrap/restart a job. Configs are kept in
+`~/.caravan/services/login/NAME.json`; status/uninstall/restart find them by name.
+The current web keeps control until launchd actually loads the fixed-model job
+on the next login. Unknown launchctl errors fail closed. Do not hand-edit plans.
+Normal `--no-start` without `--stage-login` still reserves model ownership
+immediately. This staging option is intended for an agreed fixed-model reboot
+migration, not automatic resumption of whichever model was selected last.
+
+No logout/reboot is performed by installing a staged job. Check model paths,
+counts, peer/listen addresses and logs first; after reboot, each Mac must log in.
+Until then the log may not exist because the job has never run. If you change
+your mind, `uninstall --name NAME` removes only that owned definition and keeps
+models/cache/logs. A manual `restart` still refuses an occupied endpoint rather
+than killing an existing worker.
+
 ## One-command setup
 
 Requires **macOS 14+, Apple Silicon, native Python 3.10+ and Git**. The installer

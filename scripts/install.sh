@@ -12,6 +12,7 @@ usage() {
     'Lead installs the web UI; worker without a model only prepares this Mini.'
 }
 ROLE=lead
+WEB_PORT=8190
 REPO="$HOME/.caravan/src/caravan"
 REF=caravan-v3-mlx-split
 PYTHON=""
@@ -37,6 +38,7 @@ while [ "$#" -gt 0 ]; do
     --model|--counts|--stage-index|--listen|--upstream|--peer|--name|--port|--host|--lead-port)
       [ "$#" -ge 2 ] || fail "$1 needs a value."
       [ "$1" != --model ] || MODEL=1
+      [ "$1" != --port ] || WEB_PORT=$2
       SERVICE_ARGS+=("$1" "$2"); shift 2 ;;
     *) fail "Unknown option: $1. Use --help." ;;
   esac
@@ -147,4 +149,4 @@ else
   "${SERVICE[@]}" ${SERVICE_ARGS[@]+"${SERVICE_ARGS[@]}"}
 fi
 say 'Done. Services start at user login, not before login. Models and SSH setup are not downloaded or configured for you.'
-[ "$ROLE" != lead ] || say 'Open http://127.0.0.1:8190/ (or your chosen port). Logs: ~/.caravan/logs/'
+[ "$ROLE" != lead ] || say "Open http://127.0.0.1:$WEB_PORT/ (local browser). Logs: ~/.caravan/logs/"

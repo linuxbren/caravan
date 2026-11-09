@@ -1066,3 +1066,45 @@ PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests
 
 **663 tests passed in 40.133 s** (30 more than the 633-test pre-live checkpoint).
 No code changed after that run; the final commit records measurements and docs.
+
+
+## Follow-up clearance — Nov 8, 2026, 18:08 CST
+
+Brenden approved the remaining install/service preparation. The follow-up
+explicitly forbids reboot/logout now. Initial checks found original lead 57464,
+packer 54170 and normal web 69242 still running, both correct checkouts at
+b1e5410, and the same preserved untracked backup. `sudo -n -l` required an
+interactive password on both Macs, so no test user was created or password
+collected. Used the approved closest equivalent: a fresh clone, HOME, venv,
+config, state and dependencies on EXO1, with GUI user 501 shared. This is **not**
+a separate-account/macOS-permission or FileVault/login test.
+
+Fresh root: `~/.caravan/day19-fresh-20261108-1808`, its own `home` subdirectory.
+Installer used role lead, `--name day19-fresh-web --host 127.0.0.1 --port 8197
+--lead-port 8198`. First install exited successfully in **95.897 s**, actual web
+HTML/status ready **96.189 s** from start. Repeat exited successfully **1.441 s**,
+UI verified **1.449 s**; **same web PID 73454**, unchanged local-only config and
+same isolated venv sys.prefix. No model was downloaded/loaded by the installer.
+Both returned a working 159,019-byte web page and idle worker state.
+
+Two follow-up issues:
+- Installer's final message still printed 8190 despite `--port 8197`; corrected
+  to report the selected port, with a portable shell regression.
+- Ordinary installed fixed-model plans reserve web control immediately, even
+  when installed with `--no-start`. Installing them for the live Qwen split
+  would therefore take over the existing UI. Added explicit **--stage-login
+  --no-start**: owned configs live under `~/.caravan/services/login`, outside
+  the old running web's canonical scan. Real plists still go in the user's
+  `~/Library/LaunchAgents`, pointing at those configs. Nothing is bootstrapped
+  now. After login loads a job, the updated web/worker guards recognize and
+  protect its staged plan. Job-not-found releases only an inactive staged plan;
+  unknown launchctl failures remain fail-closed. Existing plan schema and
+  normal install behavior are unchanged; original web need not restart.
+
+Ten added tests cover staging without launchctl, actual plist/config location,
+inactive-versus-loaded ownership, duplicate/port conflict guards, explicit
+uninstall, lookup failures, corrupt plans and chosen-port output. An initial
+new test fixture used REPO instead of the file's ROOT constant (eight errors);
+corrected before commit, and targeted staging/installer tests passed.
+
+Follow-up code validation: **673 tests passed in 39.892 s**.
