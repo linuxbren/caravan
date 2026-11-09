@@ -310,3 +310,10 @@ Explicit UI topology can now use reboot-safe `ssh+tb://` peers and `tb://`
 listen interfaces too; both normal split loads and last-model restore resolve
 them before starting stages. Arbitrary network/interface discovery is not
 implemented; the operator still chooses the trusted hosts/interfaces/routes.
+
+## Independent remote-access recovery
+
+See [REMOTE-ACCESS.md](REMOTE-ACCESS.md) for verified LAN SSH aliases, the
+Tailscale-independent EXO2 Thunderbolt jump, per-user Tailscale guards,
+manual recovery limits and the current model-restoration status. These are
+access safeguards, not Caravan model/service restarts.

@@ -1505,3 +1505,18 @@ The additional case protects failed-input persistence. Full log:
 migration passed; **unattended last-model reboot restoration has not yet been
 proved**. The final docs/regression commit changes no live runtime code, so
 EXO1 does not need another web restart just to pull it.
+
+## 2026-11-09 remote-access recovery (CST)
+
+Brenden found EXO2 Tailscale off and needing an update. Only the Tailscale
+`/etc/hosts` alias had been tried previously; LAN SSH was not tested then.
+After today's move/boot, EXO2 returned. Added known-key LAN aliases on Omarchy,
+a verified Tailscale-independent `exo2-via-exo1` Thunderbolt ProxyJump, an
+on-demand fallback helper, and non-root two-minute Tailscale recovery guards
+on both Minis; auto-update/start-at-login were already enabled. **5/5 real
+SSH paths**, **16/16 mocked guard cases**, **3/3 fallback-order cases** passed.
+No Caravan restart/reboot/model load; EXO1 web/lead remain 6835/7134, while EXO2
+has no Caravan packer listener. The Day 19 restoration/reboot test remains
+pending. Both Mini repos have an existing untracked HTML backup; no pull or
+cleanup was attempted. Box regression: **738 tests passed in 43.514 s**.
+Full inventory, installation paths, rollback/manual steps and limitations: [REMOTE-ACCESS.md](REMOTE-ACCESS.md).
