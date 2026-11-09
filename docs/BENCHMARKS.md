@@ -1308,3 +1308,41 @@ snapshots: Omarchy `~/day19-reboot-20261108/`; EXO1 replies:
 `~/.caravan/day19-reboot-20261108/`; runtime logs under each Mini's
 `~/.caravan/logs`. Full failure/recovery/operating-mode notes: DAY19.md.
 Separate-account/FileVault-on and three-physical-Mini coverage remain untested.
+
+
+## Day 19 revised web-owned last-model mode — Nov 8, 19:05–19:12 CST
+
+Code **e0928ad**, same two 24 GB M4 Minis/model as the fixed-service checks,
+but **both fixed Qwen worker jobs removed**. Web-only launchd with KEEP_WORKERS;
+normal web/UI API owns the stages. Qwen3.5-27B MLX 4bit, exact split
+EXO2 layers0–23 / EXO1 layers24–63, counts24/40, no downloads. Settings: no
+self-tune, helper, lookup or shared start; one pipeline chat; KV16; UI fused
+and keepalive Auto (actual fused off / keepalive on). Load-to-ready **10.121 s**.
+
+| Check | Prompt / cached | Output | Prefill s | TTFT s | Native total s | Read tok/s | Write tok/s | Request wall s |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `migrated-qwen-answer` | 26 / 0 | 6 | .522 | .802 | 1.720 | 49.8 | 5.45 | 1.7471 |
+
+Correct answer: “Two plus two equals four.” Native/UI rates identical; peak
+lead allocation9.51GB. Six-token correctness smoke, **not sustained throughput**.
+Native log at **19:05:56 CST**:
+
+```text
+timing (split): read 26 tok (0 cached) at 49.8 tok/s, write 6 tok at 5.45 tok/s, first token 0.80 s, total 1.72 s
+```
+
+**New-mode reboot test did not complete.** EXO2 restart was requested at
+**19:05:56.320 CST**, existing automatic login brenden / FileVault Off,
+System Events returned0. No SSH return observed in the360s monitor; still
+SSH exit255 / connection timed out at19:12:33 CST. Therefore SSH-up,
+GUI/TB-ready, restored-model and first-reply times are **unavailable**, not zero
+or the old fixed-model figures. EXO1 was **not rebooted**. Final local web/lead
+were alive but remote split status failed; no claim of a healthy final split.
+Saved Qwen24/40 intent remains for recovery. No reboot/security/network changes
+beyond that one approved EXO2 restart request. Brenden must check EXO2 locally
+before the remaining reboot/switch/unload tests can resume. See the exact
+recovery checklist and raw artifact locations in [DAY19.md](DAY19.md).
+
+Box final validation: **738 tests, 44.459 s**. Native model switching to Orvena,
+future-request replay and empty-selection restart remain deferred in this mode;
+unit/shared-HTTP coverage is not presented as a native reboot result.

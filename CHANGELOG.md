@@ -1,7 +1,8 @@
 ### Day 19 last-model auto-start design — 2026-11-08 (not a release)
 - Replaces the normal fixed-model service mode with web-owned last-successful-model restore: atomic model/engine/placement/counts/settings persistence, explicit unload tombstone and one-shot normal UI-path replay. Failed loads keep the previous successful selection; missing Minis/files/memory give a clear idle warning, no auto-download/retry/crash loop.
 - UI model switching and Balance remain unlocked. KEEP_WORKERS adopts existing owned local/pipeline/GGUF workers; remote single-Mini worker/tunnel adoption verifies identities and refuses reused PIDs. Normal split UI loads resolve explicit per-node Thunderbolt interfaces through the shared N-node planner.
-- The lab migration removes only the two installed fixed Qwen worker jobs, keeps web and model files/cache/logs, and records native reboot/switch results in DAY19.md / BENCHMARKS.md. No release/tag.
+- Removed only the two installed fixed Qwen jobs; kept web/model files/cache/logs. Normal UI-path Qwen24/40 load/save passed (10.121s), correct cold reply native5.45tok/s /1.7471s wall. New-mode EXO2 restart then failed to return to SSH within360s; EXO1 was NOT rebooted. Native automatic restore/switch/unload tests remain blocked, not passed. Last Qwen intent preserved; final split is not healthy while EXO2 is unreachable.
+- **738 tests pass (44.459s), 44 new restore/HTTP/adoption regressions** including safely rejected unsupported UI settings preserving the last successful preference. Exact native evidence/state/recovery steps: DAY19.md and BENCHMARKS.md. No release/tag.
 
 ### Day 19 authorized reboot recovery — 2026-11-08 (not a release)
 - Rebooted EXO2 first (then repeated after a fix), then EXO1. Existing auto-login/FileVault-off accounts returned unattended; permanent launchd Qwen/web services answered correctly. No login/security/network settings changed.

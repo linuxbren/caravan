@@ -2,7 +2,11 @@
 
 Day 19 development feature. Native three-stage startup/recovery, isolated-HOME
 installation/idempotence and permanent two-Mini Qwen login/reboot recovery passed
-on Nov 8 after the recorded fixes. Both existing accounts had automatic login
+on Nov 8 after the recorded fixes **in the earlier fixed-model mode**. The
+revised web-owned mode loaded/saved Qwen24/40 and answered correctly, but its
+EXO2 reboot test lost SSH for the full360s monitor; EXO1 reboot and native
+restore/switch checks remain blocked. Do not call the new reboot mode validated.
+Both existing accounts had automatic login
 enabled and FileVault off already. A separate clean Mac/account and FileVault-on
 behavior remain untested. See [DAY19.md](DAY19.md).
 Everything below runs as the logged-in user: no sudo, no LaunchDaemons, no

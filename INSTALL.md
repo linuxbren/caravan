@@ -30,8 +30,11 @@ remain unlocked.** Fixed model-specific jobs below are advanced legacy opt-in,
 not the default. LaunchAgents start at **user login**, not before login. Native
 dry-runs and temporary three-stage launchd startup/recovery were tested on
 two M4 Minis on Nov 8. A fresh isolated-HOME actual install/repeat later passed;
-permanent Qwen web/lead/packer login/reboot recovery then passed on both existing
-FileVault-off, auto-login accounts after reboot-safe Thunderbolt fixes. A separate
+**earlier fixed-model** web/lead/packer login/reboot recovery then passed on both
+existing FileVault-off, auto-login accounts after reboot-safe Thunderbolt fixes.
+The revised web-only mode loaded/saved Qwen and answered, but its EXO2 restart
+did not return to SSH within360s; automatic last-model reboot restore remains
+unverified and EXO1 was not rebooted in that attempt. A separate
 macOS account/FileVault-on case remains untested.
 Use the **venv Python path itself**, e.g. `~/.caravan/venvs/mlx/bin/python`, not
 its resolved Homebrew binary. Regenerate plans made before the Day 19 venv-path
@@ -41,8 +44,9 @@ Nov 8 follow-up: a real fresh isolated HOME/clone/venv install and repeat reache
 a working spare-port UI with the same PID/config, then were cleaned up. This
 was not a separate macOS account. For a future-login migration that must leave
 today's workers alone, use explicit service install **`--no-start --stage-login`**;
-see SERVICES.md. The lab web/Qwen jobs are now loaded permanent services, with
-logs under `~/.caravan/logs`. Installer commands themselves never reboot/log out
+see SERVICES.md. The old lab fixed Qwen jobs have now been uninstalled; only
+EXO1 web is permanent, with model stages web-owned and logs under `~/.caravan`.
+EXO2 is currently unreachable after the new-mode reboot attempt; see DAY19. Installer commands themselves never reboot/log out
 or change login/security settings. Use explicit reboot-safe Thunderbolt endpoints
 and stable trusted SSH inventory hosts as described in SERVICES.md.
 

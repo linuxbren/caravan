@@ -4,6 +4,7 @@ from types import SimpleNamespace as NS
 from unittest import mock
 from http.server import ThreadingHTTPServer
 from urllib.request import Request,urlopen
+from urllib.error import HTTPError
 sys.path[:0]=[str(Path(__file__).resolve().parents[1]/"agent"),str(Path(__file__).resolve().parents[1]/"proxy")]
 import web_restore as R
 import web_server as W
@@ -175,6 +176,18 @@ class SharedHTTPTest(unittest.TestCase):
         with mock.patch.object(self.app,"balance",side_effect=lambda body,fresh=False:dict(ready=True,entry=self.entry(body["model_id"]))) as balance:
             self.post("/api/models/load",{"model_id":"q"});self.mgr._switch_thread.join(2)
         self.assertEqual(balance.call_args.args[0]["counts"],[4,8]);self.assertTrue(balance.call_args.kwargs["fresh"]);self.assertEqual(self.app.restore.store.read()["counts"],[4,8])
+
+    def test_invalid_ui_settings_preserve_last_success_without_starting_workers(self):
+        self.app.restore.store.write(request())
+        before=self.app.restore.store.path.read_bytes()
+        for key,value in [("fuse_kernels","off"),("keepalive","on")]:
+            with self.subTest(setting=key):
+                with self.assertRaises(HTTPError) as failure:
+                    self.post("/api/models/load",dict(model_id="small",settings={key:value}))
+                self.assertEqual(failure.exception.code,400)
+                self.assertIn(key,json.loads(failure.exception.read())["error"])
+                self.assertEqual(self.app.restore.store.path.read_bytes(),before)
+                self.assertIsNone(self.mgr._switch_thread)
 
     def test_ui_unload_records_restore_nothing(self):
         self.app.restore.store.write(request());self.post("/api/models/stop",{});self.assertIsNone(self.app.restore.store.read());self.assertEqual(self.mgr.snapshot()["status"],"idle")

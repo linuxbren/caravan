@@ -6,15 +6,18 @@ live checks starting at **15:22 CST**. Brenden's "do the live checks" clearance
 was received before contacting Omarchy or the Minis. The original 27B Qwen
 workers were preserved during the early smoke/install checks. A later explicit
 reboot authorization allowed the Qwen interruption and migration to permanent
-services; final reboot results are at the end.
+services; later the fixed-model jobs were removed for web-owned restore.
+**Latest checkpoint: the new-mode EXO2 reboot lost SSH and did not return within
+the 360-second monitor. EXO1 was NOT rebooted; see the blocked result at the end.**
 
 Brenden's order is (1) Balance + 3+ Mini MLX split, (2) easy install + auto-start,
 (3) each Mini keeps its own files. All three now have two-Mini native smoke
 coverage, including a three-stage simulation on two GPUs. **Still experimental**:
 three physical Minis, GUI usability and a truly separate fresh-account install
 remain unverified; strict GGUF independence remains partial. Permanent user-login
-reboot recovery passed on both existing FileVault-off accounts after the fixes
-recorded below. No login/security settings were changed and no release was made.
+reboot recovery of the **earlier fixed-model mode** passed on both existing
+FileVault-off accounts after the fixes below; this does not validate the newer
+last-model restore mode. No login/security settings were changed and no release was made.
 Older "pending/no Mini touched" statements below describe the checkpoint at
 that time, not the final result. See the final live-validation summary at the
 end, [BENCHMARKS.md](BENCHMARKS.md), and [FILES.md](FILES.md).
@@ -1402,3 +1405,103 @@ repository. Native migration/reboot/switch results follow after validation.
 
 Box validation of the revised design: **737 tests passed in 43.429 s**, 43 new
 regressions over 694. Native migration/reboot checks begin after this commit.
+
+
+### Web-owned migration: native success, reboot blocked — 19:12 CST
+
+Implementation commit: **e0928ad** was pushed and pulled to EXO1
+`~/dev/caravan-v3` and EXO2 **`~/cv3`** before migration. The trees were clean
+apart from the preserved, pre-existing web HTML backup. No cloud agent, scp,
+release/tag, login/security/network setting change or automatic weight download.
+
+Completed:
+
+- Explicitly uninstalled only our `day19-qwen-lead` on EXO1 and
+  `day19-qwen-packer` on EXO2. Their jobs/configs/plists were removed; model
+  shards/cache/logs kept. Kept the real EXO1 web job and its
+  `CARAVAN_WEB_KEEP_WORKERS=1`. Remote MLX stages now belong to the web, not a
+  fixed-model launchd job. No extra per-Mini permanent model agent is needed.
+- Backed up EXO1's config as `~/.caravan/config.toml.day19-pre-last-model`.
+  Explicit EXO2 inventory uses the existing trusted control host and `~/cv3`,
+  `peer="ssh+tb://brenden@100.90.134.95/en2:5560"`,
+  `listen="tb://en2:5560"`. No host-key/trust/routing changes.
+- Restarted only the owned web service. Normal web/UI load API (not a manually
+  fabricated saved file or model-specific agent) loaded Qwen3.5-27B **24/40**
+  on ordered Minis **EXO2, EXO1** in **10.121 s**. It wrote a private `0600`
+  `~/.caravan/web-ui/last-model.json` with engine MLX, exact IDs/counts, split
+  placement and UI settings. No managed-service lock remained. Fresh Balance
+  preview was safe/ready, zero missing downloads. Existing own-shard stores:
+  EXO2 **10,717,679,207 B**, EXO1 **10,731,498,067 B**.
+- Actual inference answered **“Two plus two equals four.”** at 19:05:56 CST.
+  Six output tokens / 26 cold prompt tokens; wall **1.7471 s**, native total
+  **1.720 s**, TTFT **0.802 s**, prefill **0.522 s**, read **49.8 tok/s**,
+  write **5.45 tok/s**, lead peak **9.51 GB**. Native and UI rates matched.
+  This is a short correctness/timing smoke test, not sustained throughput.
+- The first two harness requests were safely rejected before starting workers:
+  it incorrectly used `fuse_kernels=off` (and would also have used unsupported
+  `keepalive=on`). These UI choices are `auto/on` and `auto/off` respectively;
+  corrected to Auto for both. Actual runtime remained fused-off / keepalive-on.
+  Added a regression that both bad inputs return HTTP 400, start no worker and
+  leave the previous successful saved intent byte-for-byte unchanged.
+
+**Reboot result — blocked, not a restore pass:**
+
+- Before EXO2 restart, `autoLoginUser=brenden`, FileVault **Off**, and the
+  System Events restart call returned **0**. Request time
+  **2026-11-08 19:05:56.320 CST**. Previous kernel boot was 18:29:56 CST.
+- The bounded **360 s** monitor never observed SSH returning through Omarchy;
+  it exited failed after roughly 6 minutes. An independent final check at
+  **19:12:33 CST** still returned SSH exit 255 / connection timed out.
+  No SSH-up, GUI/TB-ready, restored-service or post-reboot answer times exist.
+  Do not substitute the earlier fixed-model reboot measurements for these.
+- **Stopped before rebooting EXO1.** Did not send another EXO2 restart, force
+  power, change login/security settings or attempt another access route.
+  The cause is unknown: SSH absence does not prove whether EXO2 is powered off,
+  at a login screen, stalled during restart or only missing its network service.
+- EXO1 remains reachable: web LaunchAgent **6835**, owned Qwen lead **7134**,
+  logs `~/.caravan/logs/web.log` and `~/.caravan/web-ui/lead.log`.
+  Only the web permanent job remains; neither old fixed plist/job nor test
+  listeners 5591/5592/8196 exists on EXO1. Saved intent still says Qwen MLX
+  split EXO2/EXO1 24/40. No explicit Stop was sent (which would erase that
+  preference). The local lead health check still says ready, but split status
+  reports **“Remote end closed connection without response”**: this is **not a
+  working two-Mini split** while EXO2 is unreachable. EXO2's current process,
+  login and download state cannot be verified remotely; fixed-job removal was
+  confirmed before reboot.
+
+Brenden needs to check EXO2 locally: power/display, completed restart, logged-in
+session and normal network/Tailscale availability. No security changes are
+requested. After ordinary `ssh exo2` works again, resume (not a release):
+
+1. Through Omarchy, inspect EXO2 boot time/login/TB and clean tree/branch, then
+   `ssh exo2 'cd ~/cv3 && git pull --ff-only origin caravan-v3-mlx-split'`.
+   **Never use `~/dev/caravan` on EXO2.** EXO2 had e0928ad before restart; the
+   final docs/test-only follow-up cannot be pulled while SSH is down.
+   EXO1 sync is `ssh exo1 'cd ~/dev/caravan-v3 && git pull --ff-only origin caravan-v3-mlx-split'`.
+2. Reload Qwen in normal web Balance with ordered nodes EXO2/EXO1, counts24/40
+   (or the prepared `ui_check.py qwen recovered-qwen`), answer a prompt and
+   verify saved intent. This resolves fresh TB addresses and replaces only
+   owned stages; it does not reinstall the removed fixed jobs.
+3. Recheck EXO1 automatic login/FileVault, then approved EXO1 reboot monitor
+   `reboot_check.py exo1 exo1`. The web must replay the saved request itself;
+   do not manually start the model after reboot. Record SSH/web/ready times
+   and a correct native timing line. Stop on a failed return.
+4. Only after that succeeds, normal UI load Orvena 4B, answer, check the saved
+   single-EXO1 intent and replay it without another reboot. KEEP web restart
+   should adopt the same PID. Explicit Unload should save null; web restart
+   should remain idle. Finally load/answer Qwen24/40 and leave it selected.
+   These live switch/replay/unload/restart checks remain **deferred**, not passed.
+
+Prepared monitors and full migration/load/response/error JSON are on Omarchy:
+`/home/brenden/day19-lastmodel-20261108/`; EXO1 response/status artifacts are
+under `~/.caravan/day19-lastmodel-20261108/`. Relevant files include
+`migration.json`, `migrated-qwen.json`, `migrated-qwen-answer.json`,
+`exo2-reboot.json`, `blocked-final-connectivity.json`, and
+`blocked-after-exo2-reboot.json`. These are retained evidence, not test services.
+
+Final box validation: **738 tests passed in 44.459 s**, **44 new** over 694.
+The additional case protects failed-input persistence. Full log:
+`/workspace/day19-lastmodel-final-tests.log`. Implementation and native API
+migration passed; **unattended last-model reboot restoration has not yet been
+proved**. The final docs/regression commit changes no live runtime code, so
+EXO1 does not need another web restart just to pull it.

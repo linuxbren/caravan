@@ -753,16 +753,20 @@ list above point to it.
   16–30% faster.
 - **GGUF packers still get weights from the lead** on a first load or a
   cache miss, and get the small tensors every time (see Firm rules).
-- **Split auto-start is explicit.** Day 19 generated per-user jobs can start an
-  N-stage split through the agent; permanent two-Mini Qwen reboot passed.
-  Automatic last-UI-model resume/reconfiguration remains pending.
+- **Split auto-start now restores the last successful web selection**, including
+  exact N-node placement/counts/settings, via the normal guarded UI load route.
+  Fixed-model jobs remain advanced opt-in. Earlier fixed-model reboot passed;
+  revised web-owned migration/load passed, but EXO2 never returned to SSH during
+  the360s reboot monitor. Native new-mode restore/switch testing is blocked until
+  EXO2 returns; EXO1 was deliberately not rebooted.
 - **MLX tool calls** are returned as text, not as a `tool_calls` field.
 - **Same first message = same session**, on both backends.
 - **The Thunderbolt address can change.** macOS self-assigns 169.254.x.x
   addresses. The hand-managed plist's `--rpc` fallback is a literal one;
   the agent and `render_llama_plist.py --rpc auto` discover it instead. Day 19
-  fixed MLX service plans support explicit reboot-safe `tb://` / `ssh+tb://`
-  endpoints; legacy UI node data endpoints still need explicit maintenance.
+  MLX service plans **and configured normal UI pipeline nodes** support explicit
+  reboot-safe `tb://` / `ssh+tb://` endpoints. Configure the actual interfaces
+  and stable trusted SSH hosts; automatic triangle discovery remains unimplemented.
 - **Legacy hand-managed launchd plists contain personal absolute paths.**
   Day 19 generated jobs use the installing user's paths; regenerate owned plans
   instead of hand-editing their JSON/plists. The old proxy plist's
