@@ -26,8 +26,9 @@ model jobs and UI-controlled model switching are separate modes; do not mix
 controllers. LaunchAgents start at **user login**, not before login. Native
 dry-runs and temporary three-stage launchd startup/recovery were tested on
 two M4 Minis on Nov 8. A fresh isolated-HOME actual install/repeat later passed;
-a separate macOS account and actual login/reboot remain untested. Real lab
-LaunchAgents are now staged for next login, not loaded; existing workers stay up.
+permanent Qwen web/lead/packer login/reboot recovery then passed on both existing
+FileVault-off, auto-login accounts after reboot-safe Thunderbolt fixes. A separate
+macOS account/FileVault-on case remains untested.
 Use the **venv Python path itself**, e.g. `~/.caravan/venvs/mlx/bin/python`, not
 its resolved Homebrew binary. Regenerate plans made before the Day 19 venv-path
 fix; do not hand-edit their JSON. See [live results](docs/DAY19.md).
@@ -36,8 +37,10 @@ Nov 8 follow-up: a real fresh isolated HOME/clone/venv install and repeat reache
 a working spare-port UI with the same PID/config, then were cleaned up. This
 was not a separate macOS account. For a future-login migration that must leave
 today's workers alone, use explicit service install **`--no-start --stage-login`**;
-see SERVICES.md. Real web/Qwen plists are staged on the lab Minis, not loaded.
-No reboot/logout has been performed or authorized by these instructions.
+see SERVICES.md. The lab web/Qwen jobs are now loaded permanent services, with
+logs under `~/.caravan/logs`. Installer commands themselves never reboot/log out
+or change login/security settings. Use explicit reboot-safe Thunderbolt endpoints
+and stable trusted SSH inventory hosts as described in SERVICES.md.
 
 The current branch also adds per-Mini selective downloads and disk accounting
 in the Balance view; see [FILES.md](docs/FILES.md). The `gguf` dependency reads

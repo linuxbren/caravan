@@ -1091,13 +1091,21 @@ are below. No release made.
 
 ### MLX: Orvena/Orvena-4B-MLX-4bit, 32 layers
 
+**Later correction (18:39 CST):** the write-rate column below preserves the
+historical UI values, which divided all six generated tokens by the five decode
+intervals and overstated native decode by 20% for these six-token replies.
+They are not native throughput numbers. The worker log uses `(tokens - 1) /
+(total - TTFT)`; the reboot-follow-up fix now supplies that exact native rate to
+the UI. Do not use these old UI figures for a performance comparison. New
+native observations and timing lines are in the reboot section below.
+
 No-think template option used for the quality rows; answers were correctly
 "four" and "six". Times come from the worker timing log / reply telemetry, not
 HTTP wall time. Counts are packer-first. Cold two-stage load: **6.804 s**;
 saved normal-picker three-stage reload: **7.901 s**. Polls required new PID and
 requested counts; an earlier old-ready-state observation is excluded.
 
-| Artifact `.json` | Split | Prompt / cached | New tokens | Prefill s | First token s | Total s | Write tok/s |
+| Artifact `.json` | Split | Prompt / cached | New tokens | Prefill s | First token s | Total s | Historical UI write tok/s (inflated) |
 |---|---|---:|---:|---:|---:|---:|---:|
 | `two-quality-cold` | 16/16 | 34/0 | 6 | .169 | .213 | .392 | 33.52 |
 | `two-quality-warm` (new turn, template diverged) | 16/16 | 61/0 | 6 | .165 | .208 | .387 | 33.52 |
@@ -1232,3 +1240,71 @@ today's original unmanaged web/model and guards ownership once launchd loads
 the jobs. No production startup/reboot timing is claimed. Reboot/logout was
 explicitly forbidden for this run; exact downtime and approval-gated steps are
 in DAY19.md. Follow-up code suite: **673 passed, 39.892 s** (ten new tests).
+
+
+## Day 19 actual reboot recovery — 2026-11-08, 18:22–18:40 CST
+
+Two existing 24 GiB M4 Minis, automatic login `brenden` already enabled and
+FileVault already off. Post-reboot `pmset -g` read `lowpowermode 0` on both. System Events restart was noninteractive; no login,
+security or network settings changed. These are **single observed upper bounds
+including polling**, not medians or cold-boot throughput claims.
+
+| Restart run | SSH + GUI s | launchd loaded s | Web ready s | Qwen stage ready s |
+|---|---:|---:|---:|---:|
+| EXO2 original fixed-IP plan | ~60.5 | ~60.5 | n/a | failed; no model by 300 |
+| EXO2 retry with explicit TB interface | 40.105 | 40.105 | n/a | 48.533 packer |
+| EXO1 with dynamic TB peer | 42.960 | 42.960 | 42.960 | 59.815 lead/split |
+
+Original EXO2 TB IPv4 changed `169.254.103.191` → `169.254.35.180`; the old
+saved bind failed safely. After recovery/code fix, a second real reboot changed
+it again to **169.254.201.113**, automatically resolved by the explicit en2
+service plans. The first ~60.5 s observation has a probe gap/whole-second start
+stamp after an expected disconnect timeout; it is not precise boot timing.
+
+Model: `mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit`,
+**24 packer / 40 lead layers**, no-think, temperature 0, max 32 tokens.
+Prompt: “What is two plus two? Answer in one short sentence.” All four checks
+answered **“Two plus two equals four.”** Decode below uses the actual native
+`(completion_tokens - 1)/(total - TTFT)`; read counts **uncached** prompt tokens.
+
+| Artifact / check | Prompt / cached | Answer tokens | Prefill s | TTFT s | Total native s | Native read tok/s | Native write tok/s | Request wall s |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `first-reply.json`, post-reboot cold | 26/0 | 6 | .521 | .801 | 1.722 | 49.9 | 5.43 | 1.7794 |
+| `post-fix-checks.json`, restored after deployment | 26/25 | 6 | .094 | .397 | 1.389 | 10.6 | 5.04 | 1.4432 |
+| same, after owned lead restart (hit-disk) | 26/25 | 6 | .101 | .403 | 1.396 | 9.9 | 5.04 | 1.4630 |
+| same, after web-only restart (hit-memory) | 26/25 | 6 | .038 | .349 | 1.346 | 26.3 | 5.02 | 1.3878 |
+
+First correct reply observed **79.569 s after EXO1's restart request**, prompt
+sent at 77.790 s after inspection; not a minimum time-to-answer measurement.
+That was **140.649 s after EXO2's retry request**, including EXO1's later reboot.
+Short six-token answers, cache state and other resident login apps make these
+correctness/recovery observations, not a sustained throughput comparison.
+
+Actual timing-log lines, clock **CST**:
+
+```text
+18:32:00 [mlx-worker] session 7e246f9658244905: timing (split): read 26 tok (0 cached) at 49.9 tok/s, write 6 tok at 5.43 tok/s, first token 0.80 s, total 1.72 s
+18:39:07 [mlx-worker] session 7e246f9658244905: timing (split): read 26 tok (25 cached) at 9.9 tok/s, write 6 tok at 5.04 tok/s, first token 0.40 s, total 1.40 s
+18:39:10 [mlx-worker] session 7e246f9658244905: timing (split): read 26 tok (25 cached) at 26.3 tok/s, write 6 tok at 5.02 tok/s, first token 0.35 s, total 1.35 s
+```
+
+The original cold reply's old UI erroneously showed 6.51 write tok/s vs native
+5.43. Fixed MLX structured usage and web display now match the log; all three
+post-fix native/UI comparisons passed. Read rates no longer count cached tokens
+as newly read. Earlier MLX historical UI-rate table is labeled accordingly.
+
+Native loaded-lead CLI restart reproduced bootstrap error 5 and safely waited
+for job removal before successful bootstrap: **6.041 s** to ready. No sudo/root
+escalation or unknown-port/PID kill. Web-only restart **1.190 s** to ready,
+KEEP_WORKERS=1, lead **2490** and packer **1037** unchanged; next reply hit memory.
+Network web HTML: HTTP 200 / 159,019 bytes. Topology: 2/2 online. Unchanged
+24/40 Balance preview: safe/ready, zero downloads, logical per-node bytes
+EXO2 **10,717,679,207**, EXO1 **10,731,498,067**. No weights fetched/deleted.
+
+Reboot fix commits **4c4e128**, **4cb8951**, **1479fcf**; final full suite
+**694 passed in 40.143 s**. Permanent launchd web/lead/packer left running Qwen;
+no temporary test listeners/downloads remained. Raw results and native job/PID
+snapshots: Omarchy `~/day19-reboot-20261108/`; EXO1 replies:
+`~/.caravan/day19-reboot-20261108/`; runtime logs under each Mini's
+`~/.caravan/logs`. Full failure/recovery/operating-mode notes: DAY19.md.
+Separate-account/FileVault-on and three-physical-Mini coverage remain untested.

@@ -1,9 +1,10 @@
 # Install and auto-start on a Mac
 
-Day 19 development feature. Native dry-runs and temporary real launchd
-three-stage startup/recovery passed on two M4 Minis on Nov 8; **clean-Mac
-installation and permanent login/reboot testing remain pending**. No permanent
-jobs or reboot were used for those checks. See [DAY19.md](DAY19.md).
+Day 19 development feature. Native three-stage startup/recovery, isolated-HOME
+installation/idempotence and permanent two-Mini Qwen login/reboot recovery passed
+on Nov 8 after the recorded fixes. Both existing accounts had automatic login
+enabled and FileVault off already. A separate clean Mac/account and FileVault-on
+behavior remain untested. See [DAY19.md](DAY19.md).
 Everything below runs as the logged-in user: no sudo, no LaunchDaemons, no
 pre-login boot service, and no automatic changes to macOS privacy settings.
 
@@ -242,5 +243,17 @@ remain follow-ups. See [DAY19.md](DAY19.md) for the two-Mini/three-worker live t
 - MLX 0.32.4 install requirements (macOS 14+, native Python 3.10+):
   https://ml-explore.github.io/mlx/build/html/install.html
 
-Documentation checked 2026-11-08. Actual launchctl/Metal/login/reboot behavior
-still needs verification on the Minis; mocks are not proof of macOS behavior.
+Documentation checked 2026-11-08. Native launchctl/Metal and existing-account
+login/reboot passed on the two lab Minis; see measured results in DAY19.md.
+Mocks alone are not proof of behavior on another Mac/account/security setup.
+
+Native restart note: macOS may acknowledge `bootout` before the old job is fully
+unloaded. The CLI retries only transient bootstrap error 5 for up to 35 seconds,
+checking job absence and a free port. Other errors fail normally; it never
+escalates to root or kills a port occupant. Inspect status/logs on failure.
+
+Use a stable already-trusted SSH control hostname/address for `[web.nodes.*]`
+inventory too; legacy lab defaults containing a self-assigned TB IP can go stale.
+This explicit UI topology configuration is separate from dynamic fixed-model
+service endpoints. UI-driven switching/reconfiguration still requires current
+explicit node data endpoints; automatic UI discovery is not implemented.

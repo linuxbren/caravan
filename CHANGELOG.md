@@ -1,3 +1,9 @@
+### Day 19 authorized reboot recovery — 2026-11-08 (not a release)
+- Rebooted EXO2 first (then repeated after a fix), then EXO1. Existing auto-login/FileVault-off accounts returned unattended; permanent launchd Qwen/web services answered correctly. No login/security/network settings changed.
+- Fixed changing Thunderbolt link-local IPs using explicit verified `tb://` / trusted-SSH `ssh+tb://` service endpoints, owned-child rebind and no LAN data fallback. Native EXO2 stage ready 48.533 s; EXO1 web 42.960 s / split 59.815 s; first correct reply observed 79.569 s after EXO1 restart, including inspection delay.
+- Fixed stale live-peer display, inflated short MLX UI write rates/cached-read rates, and native launchd error-5 restart races with bounded safe retries (no root/unknown-process killing). Native cold 5.43 write tok/s; after web restart 5.02, warm cache retained. Historical inflated UI benchmarks are labeled, not silently reused.
+- **694 tests pass (40.143 s), 21 new reboot regressions**. Permanent fixed-model services left healthy; full timings, raw-artifact locations, remaining account/hardware limits and UI ownership notes: [DAY19.md](docs/DAY19.md), [BENCHMARKS.md](docs/BENCHMARKS.md). No release/tag.
+
 ### Day 19 fresh install and next-login staging — 2026-11-08 (not a release)
 - Native isolated-HOME fresh clone/venv/dependency install reached the web UI in 96.189 s; repeat 1.449 s, same PID/config. Explicit native status/restart/log/uninstall checks passed; temporary environments cleaned up. No separate account was created because noninteractive sudo required a password.
 - Fixed selected-port installer output. Added explicit `--no-start --stage-login`: real LaunchAgents/configs prepared for next login without taking over today's unmanaged workers or web; loaded jobs are protected. Ten new regressions; **673 passed (39.892 s)**.

@@ -4,14 +4,17 @@ Real date: **2026-11-08 (America/Chicago / CST)**. This is a chronological
 log: the original box-only checkpoints come first, followed by the authorized
 live checks starting at **15:22 CST**. Brenden's "do the live checks" clearance
 was received before contacting Omarchy or the Minis. The original 27B Qwen
-workers were not stopped or reloaded; only EXO1's normal web and our isolated
-test jobs were restarted.
+workers were preserved during the early smoke/install checks. A later explicit
+reboot authorization allowed the Qwen interruption and migration to permanent
+services; final reboot results are at the end.
 
 Brenden's order is (1) Balance + 3+ Mini MLX split, (2) easy install + auto-start,
 (3) each Mini keeps its own files. All three now have two-Mini native smoke
 coverage, including a three-stage simulation on two GPUs. **Still experimental**:
-three physical Minis, GUI usability, fresh-account installation and permanent
-login/reboot remain unverified; strict GGUF independence remains partial.
+three physical Minis, GUI usability and a truly separate fresh-account install
+remain unverified; strict GGUF independence remains partial. Permanent user-login
+reboot recovery passed on both existing FileVault-off accounts after the fixes
+recorded below. No login/security settings were changed and no release was made.
 Older "pending/no Mini touched" statements below describe the checkpoint at
 that time, not the final result. See the final live-validation summary at the
 end, [BENCHMARKS.md](BENCHMARKS.md), and [FILES.md](FILES.md).
@@ -1155,7 +1158,7 @@ state is the three deliberately staged real login services above. Test results,
 install logs and exact versions remain in
 `~/.caravan/day19-fresh-20261108-1808` on EXO1; temporary environments are gone.
 
-### Reboot test plan — prepared, NOT executed
+### Historical 18:18 CST reboot plan — superseded by the authorized results below
 
 **No reboot or logout was performed. Brenden must approve the interruption.**
 No further install/migration command is needed: the real login plists are staged.
@@ -1206,7 +1209,7 @@ unmanaged workers, and the CLI correctly refuses rather than killing them.
 Never use `~/dev/caravan` on EXO2. Nothing here authorizes reboot execution yet.
 
 
-### Actual reboot follow-up — in progress, Nov 8
+### Actual reboot follow-up — first failure and recovery, Nov 8
 
 Preflight on both Minis: automatic login is `brenden`, FileVault is off, and
 `sudo -n true` needs a password. The approved System Events restart succeeded on
@@ -1222,8 +1225,7 @@ SSH host-key trust, no LAN data fallback, and owned-child rebind on an actual
 address change. See SERVICES.md. Eleven new tests cover validation, private
 hardware/address checks, failed control lookups, changed addresses and N-stage
 plan persistence; full suite **684 passed in 38.669 s**. Final live timings and
-state follow after recovery/EXO1 reboot; this is not a claim of an unassisted
-first EXO2 startup.
+state are recorded below; the first EXO2 automatic model startup failed safely.
 
 
 Post-reboot inspection also caught two display/telemetry issues: the normal web
@@ -1256,3 +1258,100 @@ there is no sudo/root fallback or PID killing. Five new mocked regressions cover
 transient success, unloading state, occupied ports, other errors and timeout.
 The first isolated timing-test command lacked `agent` on its import path; that
 harness was corrected before its targeted/full test passes.
+
+
+### Completed authorized reboot test — 18:22–18:40 CST, Nov 8
+
+Brenden explicitly authorized restarting the Minis and interrupting Qwen.
+Both automatic-login users were already `brenden`, FileVault was already **off**,
+and noninteractive sudo required a password. System Events Restart worked
+without a prompt. **No auto-login, FileVault, SSH-trust, privacy or network
+settings were changed.** EXO2 was restarted first; after its address fix it was
+restarted again to prove unattended recovery, then EXO1 was restarted once.
+
+Observed readiness times (seconds from that restart request; polling/control
+queries make these upper bounds, not exact internal launch timestamps):
+
+| Run | Request CST | SSH + logged-in GUI | launchd jobs loaded | Web HTML ready | Model stage ready |
+|---|---|---:|---:|---:|---:|
+| EXO2 original fixed-IP plan — failed model startup | 18:22:34 | ~60.5 | ~60.5 | n/a | not ready by 300 s |
+| EXO2 fixed explicit-interface plan | 18:29:40 | 40.105 | 40.105 | n/a | packer 48.533 |
+| EXO1 fixed explicit-interface plan | 18:30:41 | 42.960 | 42.960 | 42.960 | lead/split 59.815 |
+
+The first EXO2 monitor had an uncaught expected SSH-disconnect timeout; continued
+read-only monitoring recorded the ~60.5 s upper bound from a whole-second start
+stamp. It did not issue an extra reboot. The failed original model startup was
+real: launchd/automatic login worked, but the stale bind address did not. After
+the code/plan correction the second reboot independently changed en2 from
+`169.254.35.180` to **169.254.201.113**, and its saved `tb://en2:5560` plan found
+that new address automatically. The lead's saved `ssh+tb://.../en2:5560` peer
+resolved it without manual worker startup or a data-path LAN fallback.
+
+First post-reboot web chat replied **“Two plus two equals four.”** at 18:32:00
+CST: **79.569 s after EXO1's restart request**, including inspection before
+sending the prompt at 77.790 s. Thus this is an observed verification time, not
+a minimum time-to-answer benchmark. It was **140.649 s after EXO2's second
+restart**, including EXO1's subsequent restart and that inspection. Request wall
+time **1.7794 s**, native total **1.722 s**, TTFT **0.801 s**, cold prompt 26/0
+cached tokens, six answer tokens, **49.9 read / 5.43 write tok/s**. Native line
+(Mini log clock, CST):
+
+```text
+18:32:00 [mlx-worker] session 7e246f9658244905: timing (split): read 26 tok (0 cached) at 49.9 tok/s, write 6 tok at 5.43 tok/s, first token 0.80 s, total 1.72 s
+```
+
+After deploying the telemetry/restart fixes, real owned-service tests passed:
+- Disk cache restore after lead restart: **25/26 prompt tokens cached**,
+  **5.04 write tok/s**, TTFT **0.403 s**, total **1.396 s**. Correct answer.
+- The instrumented normal CLI actually reproduced native bootstrap error 5,
+  observed the old job still loaded twice, then absent (113), then successfully
+  bootstrapped it. **6.041 s** to ready; no root escalation or unknown-PID kill.
+- Web-only owned restart: **1.190 s** to ready, KEEP_WORKERS=1; lead **2490** and
+  packer **1037** unchanged. Next reply was **hit-memory**, 25/26 cached,
+  **5.02 write tok/s**, TTFT **0.349 s**, total **1.346 s**; correct answer.
+- Native structured rates, web stats and timing-log rates now agree on every
+  post-fix reply. The earlier short MLX UI rates were inflated; their historical
+  BENCHMARKS table is explicitly labeled, not silently presented as native speed.
+- Omarchy reached the normal network web address with HTTP **200**, 159,019-byte
+  HTML. Topology reported **2/2 online**. Read-only Balance preview at the
+  unchanged 24/40 split was **safe=true, ready=true**, zero missing/download
+  bytes; no download or reload was started by preview. EXO2 logical disk bytes
+  **10,717,679,207**, EXO1 **10,731,498,067**, unchanged from the earlier run.
+
+Final audited state at **18:40:39 CST** (post-reboot `pmset -g` also read
+`lowpowermode 0` on both; read-only, no power-setting changes):
+- **EXO1 `~/dev/caravan-v3`**: permanent launchd web **2517**, port **8190**;
+  lead agent **2487** (PPID 1), its Qwen worker **2490**, localhost **8194**,
+  layers **24–63**. Web is launchd-owned too; KEEP_WORKERS=1 in all generated
+  jobs. The normal web adopts the fixed model and reports the actual new peer.
+- **EXO2 `~/cv3` only**: permanent launchd packer agent **632** (PPID 1), its
+  Qwen worker **1037**, **169.254.201.113:5560**, layers **0–23**. Packer stayed
+  unchanged throughout the later lead/web restart tests.
+- Three intended permanent jobs are running; logs remain under
+  `~/.caravan/logs/{web,day19-qwen-lead,day19-qwen-packer}.log` on their own Mini.
+  Configs remain under `~/.caravan/services/login`; loaded-job guards recognize
+  them. No downloads or isolated test services/processes/listeners remained on
+  **5591/5592/8196/8197/8198/5596/5606**. Existing unrelated login apps were not
+  edited or individually killed; the approved reboots naturally restarted them.
+- Both correct clones are on `caravan-v3-mlx-split`, tracked trees clean. The
+  pre-existing untracked `proxy/web/index.html.bak-pre-amber` is preserved.
+  Code commits: **4c4e128** (TB resolution), **4cb8951** (native telemetry/live
+  peer), **1479fcf** (safe native restart race). Final docs are pushed/pulled too.
+- Exact requested suite: **694 passed in 40.143 s**, 21 new reboot-follow-up
+  regressions over 673. No cloud agent, scp, wrong EXO2 clone, release or tag.
+
+Raw reboot/probe/error-5 traces, response JSON, final native process/job/plist
+snapshots and timing results are retained on Omarchy under
+`~/day19-reboot-20261108/`; EXO1 also keeps reply/post-fix JSON under
+`~/.caravan/day19-reboot-20261108/`. The two native worker/web logs are the source
+for the timing lines. No extra approval/action is needed to complete this reboot
+test. Remaining coverage: a genuinely separate Mac/account, FileVault-on/manual
+unlock, three physical Minis, GUI usability and sustained throughput runs.
+
+**Operating mode left deliberately:** fixed Qwen auto-start. It is answering
+normally, but UI Load/Stop/Balance reload/Optimize are blocked to avoid fighting
+launchd. To return to interactive model switching, explicitly uninstall only
+`day19-qwen-lead` on EXO1 and `day19-qwen-packer` on EXO2 using their intended
+repos' service CLI; keep the web service. Do that only at a safe time, and check
+current explicit UI node endpoints. UI editing of fixed auto-start plans and
+automatic last-model/triangle discovery remain separate design work.

@@ -50,8 +50,12 @@ experimental checkpoints and authorized two-Mini live checks; strict GGUF indepe
   UI, unchanged PID/config and explicit cleanup (same GUI user, not a new account).
 - [x] Real production web/Qwen LaunchAgents installed with next-login staging;
   no current worker/web takeover or restart. Native staged-web lifecycle/logs checked.
-- [ ] Separate-account privacy/FileVault behavior and actual production login/reboot.
-  No reboot/logout performed; approval-gated interruption plan is in DAY19.md.
+- [x] Authorized production reboot/automatic-login recovery of EXO2, then EXO1,
+  including permanent launchd web/Qwen services and a correct reply (Nov 8).
+  Reboot-safe explicit Thunderbolt interface resolution; native timing/UI parity
+  and bounded safe restart-race recovery. See DAY19.md / BENCHMARKS.md.
+- [ ] Separate-account privacy and FileVault-on behavior; those are not covered
+  by the existing automatic-login/FileVault-off accounts.
 - [ ] UI-driven reconfiguration of fixed auto-start model plans / automatic
   last-model resume. Today the fixed launchd model plan is a separate ownership
   mode; uninstall its worker jobs before using UI model switching.
@@ -263,8 +267,9 @@ Open tasks for this rule:
    - [x] Verify temporary real-Mac service startup, crash recovery and web
      adoption, including co-hosted three-stage simulation (Nov 8).
    - [x] Real permanent service plists staged for next login without current takeover.
-   - [ ] Actual production login/reboot; automatic discovery and UI-driven
-     reconfiguration of fixed plans remain follow-ups.
+   - [x] Actual permanent Qwen login/reboot recovery on both existing accounts,
+     including changed link-local addresses (Nov 8).
+   - [ ] Automatic discovery and UI-driven reconfiguration of fixed plans.
    - [ ] Merge to `main` (waiting for review; not pushed).
 3. **Split download (MLX).** Each Mac downloads only its own layers
    straight from Hugging Face; nothing relayed through the lead. Read
@@ -320,8 +325,9 @@ Open tasks for this rule:
 12. **Packaging.** Day 19 implements an idempotent Mac installer and generated
     per-user LaunchAgents (no machine-specific paths). The web job runs the UI;
     worker jobs run through the agent and can start an explicit N-stage split.
-    Live install/login/reboot checks remain pending; agent-owned proxy orchestration
-    and dynamic last-model resume are still follow-ups. [SERVICES.md](SERVICES.md).
+    Isolated-HOME install and permanent production login/reboot passed on Nov 8.
+    Separate-account/FileVault-on checks, agent-owned proxy orchestration and
+    dynamic last-model resume remain follow-ups. [SERVICES.md](SERVICES.md).
 
 13. **Fewer flags: self-tuning defaults + settings file.** Cut down the
     number of knobs people have to learn for day-to-day use, while keeping
@@ -745,15 +751,19 @@ list above point to it.
   16–30% faster.
 - **GGUF packers still get weights from the lead** on a first load or a
   cache miss, and get the small tensors every time (see Firm rules).
-- **The v3 split is started by hand.** The agent and the launchd plists
-  still start a one-Mac MLX worker.
+- **Split auto-start is explicit.** Day 19 generated per-user jobs can start an
+  N-stage split through the agent; permanent two-Mini Qwen reboot passed.
+  Automatic last-UI-model resume/reconfiguration remains pending.
 - **MLX tool calls** are returned as text, not as a `tool_calls` field.
 - **Same first message = same session**, on both backends.
 - **The Thunderbolt address can change.** macOS self-assigns 169.254.x.x
   addresses. The hand-managed plist's `--rpc` fallback is a literal one;
-  the agent and `render_llama_plist.py --rpc auto` discover it instead.
-- **The launchd plists contain absolute paths** for one user's home
-  directory. Edit them for your machine. The proxy plist's
+  the agent and `render_llama_plist.py --rpc auto` discover it instead. Day 19
+  fixed MLX service plans support explicit reboot-safe `tb://` / `ssh+tb://`
+  endpoints; legacy UI node data endpoints still need explicit maintenance.
+- **Legacy hand-managed launchd plists contain personal absolute paths.**
+  Day 19 generated jobs use the installing user's paths; regenerate owned plans
+  instead of hand-editing their JSON/plists. The old proxy plist's
   `CARAVAN_PINNED_SLOT` is a leftover the proxy no longer reads.
 - **Lead selection is "whoever has the model"**: no election, and two Macs
   that both have it aren't handled. The agent doesn't run the proxy yet.
