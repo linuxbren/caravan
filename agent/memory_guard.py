@@ -19,6 +19,17 @@ DEFAULT_SAFETY_GB = 1.75
 BYTES_F16 = 2.0
 
 
+def model_layer_count(cfg: dict) -> int:
+    """Decoder depth, including multimodal wrappers such as Qwen3.5.
+
+    This must agree with the nested dimensions used by kv_elems_per_token;
+    counting a wrapped decoder as one layer grossly inflates context budgets.
+    """
+    if isinstance(cfg.get("text_config"), dict):
+        cfg = dict(cfg, **cfg["text_config"])
+    return max(0, int(cfg.get("num_hidden_layers") or cfg.get("n_layers") or 0))
+
+
 def kv_elems_per_token(cfg: dict) -> int:
     """K+V elements per token for one full layer (all kv heads)."""
     # Qwen3.5 and other multimodal wrappers keep decoder dimensions here.

@@ -1696,7 +1696,7 @@ class Engine:
             n_layers = int(self.stage.range[1] - self.stage.range[0])
             packer_layers = int(self.stage.range[0])
         else:
-            n_layers = int((self.model_cfg or {}).get("num_hidden_layers") or 0)
+            n_layers = MG.model_layer_count(self.model_cfg or {})
             packer_layers = None
         packer_avail = None
         if self.client is not None:
