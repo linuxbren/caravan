@@ -1543,3 +1543,18 @@ is service-continuity verification, not repeated/cold speed evidence or a
 Hermes tool-execution test. Passive Thunderbolt graph observed2 directed
 candidate en2 routes; **no network speed benchmark or routing change**.
 Raw proof: `handoff/lab/day21/live/`; interpretation in DAY21.md.
+
+
+## Day21 Apply-feedback functional check (November9,23:51–23:52 CST)
+
+Not a tuning benchmark. One UI reload of already installed Huihui27/37→24/40
+KV16, EXO2→EXO1: backend Ready plus saved preference **8.82s**, visible done
+message with chat enabled **12.93s** (2-second UI polling contributes).
+Exact-shipped regression **847 tests /44.852s**, versus834 previously (+13).
+
+Post-reload Hermes18090 actual19-tool, medium-effort functional request:
+HTTP200, finishstop and visible response; **11.402s wall /0.403s TTFT /6.22tok/s
+write**;11,310 prompt tokens,11,309 cached. This cached-prefix check proves the
+full-tool-shaped route still responds, not cold-prefill speed or actual tool
+execution. Model remained Huihui24/40 KV16, lead PID39479. No routes changed.
+Evidence: `handoff/lab/day21/apply-feedback/`; private request bodies omitted.

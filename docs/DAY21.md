@@ -441,3 +441,37 @@ correctly rejected the request and the UI reported a clear error. Corrected
 the helper to the actual allowed values (also adaptive lookup/self-tuning),
 and added a JS→real Python normalizer/worker-args contract test rather than
 relying only on a mocked success response. The rejected trial left27/37 intact.
+
+### Live Apply correction proof —23:51–23:52 CST, November9
+
+- Shipped `5b122f7` and settings-contract correction `5cd7a3e`; both Minis
+  ff-only synced. Web-only restarts asserted `CARAVAN_WEB_KEEP_WORKERS=1` and
+  `AbandonProcessGroup=true`, preserving PID35708 until the explicit UI Apply.
+- Omarchy **:18190**: real Adjust24/40 preview, enabled Apply confirmed black
+  (`rgb(0,0,0)`), then one permitted Apply. During reload Apply was gray
+  (`rgb(51,51,51)`), chat/Enter and controls were disabled, and both the Balance
+  and main-chat banners explained the reload. An injected Enter sent no chat.
+- Status progressed stopping → starting lead → Ready (short packer stage fell
+  between2-second polls). The per-Mini checklist ended EXO2 loaded / EXO1 loaded.
+  Backend Ready/saved at23:51:49 CST, **8.82s** after click;
+  completed banner plus chat usable at **12.93s** including poll cadence.
+- Done: **“Ready, new split applied.”** Chat usable again; Apply gray/disabled
+  because24/40 is now already running. No JS errors, unexpected mutations or
+  second reload. Final lead PID**39479**, Huihui **24/40 KV16**, EXO2→EXO1;
+  `last-model.json` explicitly saved the same counts/node order and KV16.
+- Screenshots, captured and visually checked:
+  `/workspace/day21-apply-ready.png`, `/workspace/day21-apply-reloading.png`,
+  `/workspace/day21-apply-done.png`.
+- Exact-shipped regression: **847 passing in44.852s** (+13 since834; +53 since794).
+  Production Node syntax and Python compilation/whitespace checks passed.
+- **:18090** actual full19-tool / medium-effort request: HTTP200, finish`stop`,
+  visible response, **11.402s wall**, TTFT0.403s, write6.22tok/s. This was a
+  cached-prefix functional check (11,309 /11,310 prompt tokens cached), not a
+  cold-prefill benchmark or a tool-execution test. Worker remained39479 and
+  active KV16 /24 packer layers. Private request body was not committed.
+
+Nonprivate evidence and the guarded one-shot live-check script:
+`handoff/lab/day21/apply-feedback/`. Thunderbolt data-plane validation remains
+paused at this checkpoint, pending reporting this priority feedback correction.
+No discovery probes/routing changes, reboot, release tag or worker-service
+restart was made; only the explicitly requested Balance model reload occurred.

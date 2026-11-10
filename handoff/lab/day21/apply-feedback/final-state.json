@@ -1,0 +1,251 @@
+{
+  "status": {
+    "tuning": {
+      "trial": null,
+      "reload_wanted": [],
+      "known": true,
+      "replies_learned": 4,
+      "winner": {
+        "fuse_kernels": "off",
+        "guess_ahead": false,
+        "keepalive": true,
+        "kv_bits": 16,
+        "pipeline_chats": 1,
+        "shared_prefix": false
+      }
+    },
+    "optimize": {
+      "running": false,
+      "mode": null,
+      "phase": "idle",
+      "eta_s": null
+    },
+    "worker": {
+      "status": "ready",
+      "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "model_name": "Huihui Qwen3.5 27B Claude 4.6 Opus abliterated 4bit",
+      "progress": [
+        {
+          "t": 1794289905.214,
+          "msg": "EXO2: 24 layers ready"
+        },
+        {
+          "t": 1794289906.232,
+          "msg": "lead: 23:51:45 [mlx-worker] fuse kernels: off"
+        },
+        {
+          "t": 1794289906.232,
+          "msg": "lead: 23:51:46 [mlx-worker] model_type remap: qwen3_5_text \u2192 qwen3_5"
+        },
+        {
+          "t": 1794289906.232,
+          "msg": "lead: 23:51:46 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)"
+        },
+        {
+          "t": 1794289908.251,
+          "msg": "lead: [transformers] The tokenizer you are loading from '/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit' with a"
+        },
+        {
+          "t": 1794289908.251,
+          "msg": "lead: 23:51:47 [mlx-worker] split lead: lead: layers 24-63 of 64 here, packer 1: layers 0-23 of 64 at 169.254.99.64:5560"
+        },
+        {
+          "t": 1794289908.251,
+          "msg": "lead: 23:51:47 [mlx-worker] split speculate: --no-split-draft; auto-pair off"
+        },
+        {
+          "t": 1794289908.251,
+          "msg": "lead: 23:51:48 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)"
+        },
+        {
+          "t": 1794289908.251,
+          "msg": "lead: 23:51:48 [mlx-worker] mlx cache_limit 1.5 GB"
+        },
+        {
+          "t": 1794289909.261,
+          "msg": "lead: 23:51:48 [mlx-worker] warm-up 0.50s"
+        },
+        {
+          "t": 1794289909.261,
+          "msg": "lead: 23:51:48 [mlx-worker] loaded mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit (qwen3_5) in 2.6s; sessions<= 4, bytes<= 2147483648, prefill ste"
+        },
+        {
+          "t": 1794289909.261,
+          "msg": "lead: 23:51:48 [mlx-worker] active settings: {\"fuse_kernels\": \"off\", \"guess_ahead\": false, \"guess_ahead_loaded\": false, \"guess_ahead_mode\": \"helper\", \"keepalive\": tru"
+        },
+        {
+          "t": 1794289909.261,
+          "msg": "lead: 23:51:48 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)"
+        },
+        {
+          "t": 1794289909.261,
+          "msg": "lead: 23:51:48 [mlx-worker] listening on http://127.0.0.1:8194"
+        },
+        {
+          "t": 1794289909.266,
+          "msg": "lead health ok"
+        },
+        {
+          "t": 1794289909.269,
+          "msg": "Balance loaded; send a reply to measure real speed"
+        }
+      ],
+      "error": null,
+      "lead_pid": 39479,
+      "packer_pid": null,
+      "lead_url": "http://127.0.0.1:8194",
+      "split": true,
+      "lpm_ok": true,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "page_settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "from_file": {},
+      "config_errors": [],
+      "balance": {
+        "counts": [
+          24,
+          40
+        ],
+        "node_ids": [
+          "exo2",
+          "exo1"
+        ],
+        "lead_pid": 39479,
+        "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+        "model_name": "Huihui Qwen3.5 27B Claude 4.6 Opus abliterated 4bit",
+        "model_path": "/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit"
+      }
+    },
+    "restore": {
+      "phase": "saved",
+      "message": "Last successful model saved for next login",
+      "enabled": true,
+      "last_model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "saved_at": 1794289909.268799
+    },
+    "lead_healthy": true,
+    "split": {
+      "lead": {
+        "stage": "head 24-63 of 64",
+        "name": "lead: layers 24-63 of 64",
+        "weights_gb": 8.56,
+        "active_gb": 9.95,
+        "peak_gb": 10.41
+      },
+      "packers": [
+        {
+          "name": "packer 1: layers 0-23 of 64",
+          "stage": "front 0-23 of 64",
+          "weights_gb": 5.14,
+          "active_gb": 6.25,
+          "peak_gb": 6.53,
+          "sessions": 1,
+          "session_gb": 0.4,
+          "mem_total_gb": 25.769803776,
+          "mem_available_gb": 4.591771648
+        }
+      ],
+      "head": {
+        "stage": "head 24-63 of 64",
+        "name": "lead: layers 24-63 of 64",
+        "weights_gb": 8.56,
+        "active_gb": 9.95,
+        "peak_gb": 10.41
+      },
+      "front": {
+        "name": "packer 1: layers 0-23 of 64",
+        "stage": "front 0-23 of 64",
+        "weights_gb": 5.14,
+        "active_gb": 6.25,
+        "peak_gb": 6.53,
+        "sessions": 1,
+        "session_gb": 0.4,
+        "mem_total_gb": 25.769803776,
+        "mem_available_gb": 4.591771648
+      },
+      "peer": "169.254.99.64:5560"
+    },
+    "active": {
+      "guess_ahead": false,
+      "guess_ahead_loaded": false,
+      "native_mtp_available": false,
+      "guess_ahead_mode": "helper",
+      "prompt_lookup": {
+        "enabled": false,
+        "adaptive": false,
+        "overlap_on": 0.5
+      },
+      "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+      "two_chats_available": true,
+      "self_tune": false,
+      "shared_start": false,
+      "pipeline_chats": 1,
+      "fuse_kernels": "off",
+      "kv_bits": 16,
+      "keepalive": true,
+      "pinned": [],
+      "sweep_paused": false,
+      "packer_layers": 24,
+      "n_layers": null,
+      "reload_auto": [],
+      "reload_trial": null
+    },
+    "uptime_s": 106.0,
+    "ports": {
+      "web": 8190,
+      "lead": 8194,
+      "packer": "169.254.99.64:5560"
+    }
+  },
+  "saved_restore": {
+    "schema": 1,
+    "saved_at": 1794289909.267811,
+    "request": {
+      "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "engine": "mlx",
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "placement": {
+        "mode": "split",
+        "node_ids": [
+          "exo2",
+          "exo1"
+        ]
+      },
+      "balance": true,
+      "counts": [
+        24,
+        40
+      ]
+    }
+  }
+}

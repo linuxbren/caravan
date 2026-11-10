@@ -2909,3 +2909,13 @@ locking and exact changed-PID/model/split/KV completion checks. Preserve active
 settings on reload; expose GGUF actual shares for status comparison. Preflight
 found a user-applied27/37 KV16; live demonstration will restore24/40 and save it.
 Thunderbolt data-plane work is paused until this feedback checkpoint is reported.
+
+Apply feedback live proof: `5b122f7` + `5cd7a3e`, ff-only deployed with only
+keep-workers web restarts. One UI Apply restored user27/37 to Huihui24/40 KV16;
+backend8.82s, visible completion/chat usable12.93s; final worker39479 and saved
+startup24/40 KV16 verified. Ready/reloading/done screenshots at
+`/workspace/day21-apply-{ready,reloading,done}.png`.847 tests passing (+13 over834),
+including real JS→Python settings validation that caught and fixed a harmless
+pre-switch rejection. Hermes18090 full19-tool medium request HTTP200/stop,
+visible content,11.402s cached-prefix wall. DAY21/BENCHMARKS have scope/details.
+Further Thunderbolt validation paused for this requested report; no routes/tag/reboot.

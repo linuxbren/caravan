@@ -1,0 +1,370 @@
+{
+  "before": {
+    "status": "ready",
+    "pid": 35708,
+    "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+    "counts": [
+      27,
+      37
+    ],
+    "node_ids": [
+      "exo2",
+      "exo1"
+    ],
+    "kv_bits": 16,
+    "healthy": true,
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "auto",
+      "shared_start": "auto",
+      "pipeline_chats": "1",
+      "fuse_kernels": "auto",
+      "kv_bits": "auto",
+      "keepalive": "auto"
+    }
+  },
+  "errors": [],
+  "loads": [
+    {
+      "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "counts": [
+        24,
+        40
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "balance": true,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      }
+    }
+  ],
+  "blocked": [],
+  "statuses": [
+    {
+      "status": "ready",
+      "pid": 35708,
+      "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "counts": [
+        27,
+        37
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "kv_bits": 16,
+      "healthy": true,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "auto",
+        "shared_start": "auto",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "auto",
+        "keepalive": "auto"
+      },
+      "at": "2026-11-10T05:51:39.334Z"
+    },
+    {
+      "status": "ready",
+      "pid": 35708,
+      "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "counts": [
+        27,
+        37
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "kv_bits": 16,
+      "healthy": true,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "auto",
+        "shared_start": "auto",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "auto",
+        "keepalive": "auto"
+      },
+      "at": "2026-11-10T05:51:41.361Z"
+    },
+    {
+      "status": "stopping",
+      "pid": 35708,
+      "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "counts": [
+        27,
+        37
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "healthy": false,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "at": "2026-11-10T05:51:43.341Z"
+    },
+    {
+      "status": "starting_lead",
+      "pid": 39479,
+      "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "counts": [
+        27,
+        37
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "healthy": false,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "at": "2026-11-10T05:51:45.341Z"
+    },
+    {
+      "status": "starting_lead",
+      "pid": 39479,
+      "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "counts": [
+        27,
+        37
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "healthy": false,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "at": "2026-11-10T05:51:47.341Z"
+    },
+    {
+      "status": "starting_lead",
+      "pid": 39479,
+      "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "counts": [
+        27,
+        37
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "healthy": false,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "at": "2026-11-10T05:51:49.341Z"
+    },
+    {
+      "status": "ready",
+      "pid": 39479,
+      "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "counts": [
+        24,
+        40
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "kv_bits": 16,
+      "healthy": true,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "at": "2026-11-10T05:51:51.439Z"
+    },
+    {
+      "status": "ready",
+      "pid": 39479,
+      "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "counts": [
+        24,
+        40
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "kv_bits": 16,
+      "healthy": true,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "at": "2026-11-10T05:51:53.356Z"
+    }
+  ],
+  "click_at": "2026-11-10T05:51:40.446Z",
+  "ready": {
+    "disabled": false,
+    "background": "rgb(0, 0, 0)",
+    "color": "rgb(245, 245, 245)"
+  },
+  "preview": "Preview: 24 / 40 layers · ≥5.6 GB free per Mini.",
+  "reloading": {
+    "banner": "Reloading model… this takes about 10 seconds",
+    "chatBanner": "Reloading model… this takes about 10 seconds",
+    "applyDisabled": true,
+    "applyBackground": "rgb(51, 51, 51)",
+    "inputDisabled": true,
+    "sendDisabled": true,
+    "fieldsetDisabled": true,
+    "steps": "Stopping old model…Waiting for EXO2Waiting for EXO1Waiting for the model to answer health checks"
+  },
+  "load_responses": [
+    {
+      "status": 200,
+      "body": {
+        "status": "ready",
+        "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+        "model_name": "Huihui Qwen3.5 27B Claude 4.6 Opus abliterated 4bit",
+        "progress": [
+          {
+            "t": 1794289885.968,
+            "msg": "adopted running lead (pid 35708) after web restart"
+          }
+        ],
+        "error": null,
+        "lead_pid": 35708,
+        "packer_pid": null,
+        "lead_url": "http://127.0.0.1:8194",
+        "split": true,
+        "lpm_ok": null,
+        "settings": {
+          "self_tune": "off",
+          "guess_ahead": "off",
+          "prompt_lookup": "auto",
+          "shared_start": "auto",
+          "pipeline_chats": "1",
+          "fuse_kernels": "auto",
+          "kv_bits": "auto",
+          "keepalive": "auto"
+        },
+        "page_settings": {
+          "self_tune": "off",
+          "guess_ahead": "off",
+          "prompt_lookup": "auto",
+          "shared_start": "auto",
+          "pipeline_chats": "1",
+          "fuse_kernels": "auto",
+          "kv_bits": "auto",
+          "keepalive": "auto"
+        },
+        "from_file": {},
+        "config_errors": [],
+        "balance": {
+          "counts": [
+            27,
+            37
+          ],
+          "node_ids": [
+            "exo2",
+            "exo1"
+          ],
+          "lead_pid": 35708,
+          "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+          "model_name": "Huihui Qwen3.5 27B Claude 4.6 Opus abliterated 4bit",
+          "model_path": "/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit"
+        }
+      }
+    }
+  ],
+  "ready_ui_s": 12.93,
+  "done": {
+    "banner": "Ready, new split applied.",
+    "applyDisabled": true,
+    "applyBackground": "rgb(51, 51, 51)",
+    "inputDisabled": false,
+    "sendDisabled": false,
+    "fieldsetDisabled": false,
+    "steps": "✓ Old model stopped✓ EXO2 loaded✓ EXO1 loaded✓ Ready"
+  },
+  "after": {
+    "status": "ready",
+    "pid": 39479,
+    "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+    "counts": [
+      24,
+      40
+    ],
+    "node_ids": [
+      "exo2",
+      "exo1"
+    ],
+    "kv_bits": 16,
+    "healthy": true,
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "fuse_kernels": "auto",
+      "kv_bits": "16",
+      "keepalive": "auto"
+    }
+  },
+  "ok": true
+}
