@@ -2,7 +2,8 @@
 - Clearer Topology Balance (Auto default, per-Mini bars, Adjust sliders, live preview, explicit Apply / Back to auto) with black/gray Apply and locked reload state.
 - Trusted Thunderbolt inventory, bounded interface-pinned TCP22/SSH identity checks, and an opt-in N-Mini plan preview with no apply endpoint. Live two-Mini proof: EXO1→EXO2 verified; reverse TCP reachable but SSH identity unverified.
 - Physical aux title-worker reboot check passed on EXO1: Huihui 24/40 KV16 ready 37.3s after boot, aux health 200 at ~47.1s, title sidecar 0.135s, full 19-tool Hermes replay 11.504s. EXO2 itself did not reboot; its packer was relaunched during restore. Day 20 already proved two-Mini main-model restore.
-- Full suite: **907 tests passed in 45.871 s**, no failures/skips. Details and remaining limits: docs/DAY21.md, docs/BENCHMARKS.md. Install: INSTALL.md, docs/SERVICES.md.
+- Full suite at tag: **907 tests passed in 45.871 s**, no failures/skips. Details and remaining limits: docs/DAY21.md, docs/BENCHMARKS.md. Install: INSTALL.md, docs/SERVICES.md.
+- A later two-Mini cold reboot at 17:29 CST failed automatic restore on a Thunderbolt en2 IPv4 race. **Fixed after release in `51d697a`**: typed retryable unreadiness, bounded backoff, “Waiting for Thunderbolt link…”. Suite **912 passed in 46.264 s**. After a keep-workers web-only restart at 17:38:47 CST, Huihui 24/40 KV16 restored at 17:39:00; aux health 200; title sidecar 0.165s; 19-tool Hermes 11.132s wall / 0.316s TTFT / 6.26 tok/s. Tag `day21-2026-11-10` stays on `b6c9394`.
 
 ### Day 19 release — day19-2026-11-08 (published 2026-11-09 CST)
 - Balance controls and arbitrary-stage MLX planning/transport; installer and native launchd services; per-stage pinned/checksummed own-file fetch. Strict GGUF independence remains partial; N-stage Optimize and three physical Minis remain unverified.

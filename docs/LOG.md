@@ -2999,6 +2999,28 @@ reloaded. Evidence: Omarchy `~/day21-checks/reboot2/`.
 Cause: `web_restore.py` retries only unknown free-memory and unavailable
 Mini errors before a worker is launched. The Thunderbolt IPv4 race is not
 in that list. A retry in the existing pre-worker window is the natural
-fix and is not applied here; it would need another physical reboot to
-prove. Tag `day21-2026-11-10` stays on `b6c9394`; release notes body
-updated in place.
+fix; applied later in `51d697a` (follow-up below). Tag
+`day21-2026-11-10` stays on `b6c9394`; release notes body updated in place.
+
+### Day21 Thunderbolt restore retry follow-up (November10,17:38–17:39 CST)
+
+`51d697a` adds typed `RetryableReadinessError` for Thunderbolt IPv4 /
+interface unreadiness, unknown live memory, and unavailable Minis.
+Restore retries on the flag (including post-200 switch-thread snapshots),
+with 2s…30s backoff inside the existing 600s window and status
+“Waiting for Thunderbolt link…”. Tests cover missing-then-present success
+and never-ready timeout. Full suite **912 passed in46.264s** (was907; +5).
+
+Minis ff-only at `51d697a`. Web-only keep-workers kickstart, new PID3100
+at17:38:47 CST. Aux wrapper739 from17:30:19 was left running and admitted
+itself. en2 already had one IPv4 each, so the first resolve succeeded;
+this live pass exercises the normal restore path, not a fresh IPv4 race.
+
+Controller `POST /api/models/load` restored Huihui24/40 KV16, EXO2→EXO1,
+phase `restored` at17:39:00 (lead PID3169, load5.0s, packer PID2352;
+web-restart-to-ready ~13s). Aux health200 at17:39:06. Title :18090 HTTP200,
+`X-Caravan-Aux: title-sidecar`,0.165s wall. Official 19-tool medium
+Hermes :18090 HTTP200, finish stop, “I'm online and ready to help.”,
+11.132s wall,0.316s TTFT,6.26tok/s,11309/11310 cached. Evidence:
+Omarchy `~/day21-checks/reboot2/`. Tag unmoved; release notes record
+**fixed after release in `51d697a`**.

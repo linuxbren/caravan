@@ -65,6 +65,24 @@ Published Nov 10 CST; development-day tag `day21-2026-11-10`.
   Evidence: Omarchy `~/day21-checks/reboot2/`. The earlier 17:17 EXO1-only
   aux check still stands; this two-Mini cold start did not auto-restore.
 
+## Follow-up
+**Fixed after release in `51d697a`.** Thunderbolt “needs one unambiguous
+IPv4 address” (and related interface unreadiness) is now a typed
+`RetryableReadinessError`, retried with bounded backoff inside the
+existing 600s window and a “Waiting for Thunderbolt link…” status.
+Unknown live memory and unavailable Minis use the same flag. Tests cover
+the address-missing-then-present race and a timeout if the address never
+appears. Full suite **912 passed in 46.264 s** (tag suite was 907 /
+45.871 s). After a keep-workers web-only restart at 17:38:47 CST, the
+normal last-model restore path loaded Huihui 24/40 KV16 (EXO2 first) at
+17:39:00. Aux health 200; title through :18090 HTTP 200,
+`X-Caravan-Aux: title-sidecar`, 0.165s wall; full 19-tool medium Hermes
+through :18090 HTTP 200, finish stop, “I'm online and ready to help.”,
+11.132s wall, 0.316s TTFT, 6.26 tok/s. Thunderbolt IPv4s were already
+present in this live pass, so the first resolve succeeded; the race is
+covered by tests. Tag `day21-2026-11-10` remains on `b6c9394`. Evidence:
+Omarchy `~/day21-checks/reboot2/`.
+
 ## Install
 Download either `caravan-day21.zip` or `caravan-day21.tar.gz`, extract, then
 follow [INSTALL.md](https://github.com/linuxbren/caravan/blob/day21-2026-11-10/INSTALL.md).
@@ -77,7 +95,8 @@ no restart. Preserve unrelated local files. If only the web service must
 restart, use `CARAVAN_WEB_KEEP_WORKERS=1`.
 
 ## Checks and limits
-**907 tests passed in 45.871 s**, zero failures/skips
+Tag suite: **907 tests passed in 45.871 s**, zero failures/skips.
+Follow-up `51d697a` suite: **912 tests passed in 46.264 s**, zero failures/skips.
 (`PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests`). Full
 results are in [DAY21.md](https://github.com/linuxbren/caravan/blob/day21-2026-11-10/docs/DAY21.md)
 and [BENCHMARKS.md](https://github.com/linuxbren/caravan/blob/day21-2026-11-10/docs/BENCHMARKS.md).

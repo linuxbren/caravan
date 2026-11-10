@@ -1599,3 +1599,28 @@ KV16, EXO2→EXO1; new lead PID1036. Evidence: Omarchy `~/day21-checks/reboot/`;
 interpretation in [DAY21.md](DAY21.md). Private request bodies omitted.
 Release-gate suite **907 tests / 45.871s**.
 
+
+## Day21 two-Mini reboot restore failure — 2026-11-10 17:29–17:32 CST
+
+Not a speed claim. Both Minis rebooted (EXO2 kern.boottime 17:30:10 CST).
+Automatic Huihui24/40 KV16 restore blocked at17:30:36 on a Thunderbolt en2
+IPv4 race with no retry. Title and 19-tool Hermes through :18090 both
+returned HTTP502 in ~0.02s. Evidence: Omarchy `~/day21-checks/reboot2/`.
+Interpretation in [DAY21.md](DAY21.md).
+
+## Day21 Thunderbolt restore retry follow-up — 2026-11-10 17:38–17:39 CST
+
+Not a repeated speed claim. After `51d697a` and a keep-workers web-only
+restart (PID3100 at17:38:47 CST), the normal last-model restore path
+loaded Huihui24/40 KV16, EXO2→EXO1, at17:39:00 (lead PID3169, worker
+load5.0s, web-restart-to-ready ~13s). Aux health200 at17:39:06.
+
+Post-restore :18090 title: HTTP200, `title-sidecar`, **0.165s wall** /
+0.055s TTFT. Full19-tool medium Hermes replay (`probe.py`): HTTP200,
+finish stop, visible response, **11.132s wall / 0.316s TTFT / 6.26tok/s
+write**,11310 prompt tokens (11309 cached). Functional recovery check,
+not cold-prefill performance or actual tool execution. Thunderbolt IPv4s
+were already present, so this did not re-race the missing-address case.
+Saved preference Huihui24/40 KV16, EXO2→EXO1. Evidence: Omarchy
+`~/day21-checks/reboot2/`; interpretation in [DAY21.md](DAY21.md).
+Private request bodies omitted. Follow-up suite **912 tests / 46.264s**.

@@ -10,10 +10,16 @@
 - Two-Mini physical reboot at17:29–17:32 CST **failed automatic restore**.
   EXO2 did reboot (kern.boottime17:30:10 CST). Huihui24/40 KV16 did not come
   back; restore blocked at17:30:36 because en2 had no unambiguous IPv4 yet
-  and that error is not retried. Title and full Hermes probes returned502.
+  and that error was not retried. Title and full Hermes probes returned502.
   Evidence: Omarchy `~/day21-checks/reboot2/`.
-- 907 tests passing (release gate45.871s). Tag `day21-2026-11-10` remains on
-  `b6c9394`. [Day21 release notes](release-notes/day21.md) updated in place.
+- Follow-up `51d697a` treats Thunderbolt IPv4 unreadiness as a typed
+  retryable pre-worker error (bounded backoff, 600s timeout, status
+  “Waiting for Thunderbolt link…”). Full suite **912 passed in46.264s**.
+  After a keep-workers web-only restart at17:38:47 CST, the normal restore
+  path loaded Huihui24/40 KV16 (EXO2 first) at17:39:00. Aux health200,
+  title sidecar200 in0.165s, 19-tool Hermes200 in11.132s. Tag
+  `day21-2026-11-10` remains on `b6c9394` (fixed after release in `51d697a`).
+  [Day21 release notes](release-notes/day21.md) updated in place.
 
 ## Phase 1 approval checkpoint
 
@@ -746,8 +752,56 @@ Post-failure probes, nothing restarted:
 The earlier 17:17 EXO1-only aux check remains valid for that narrower case.
 This two-Mini cold start did not auto-restore the split. A retry of the
 unambiguous-IPv4 / interface-not-active errors, in the existing pre-worker
-backoff window, would be the natural fix; it is **not applied here** and would
-need another physical reboot to prove.
+backoff window, is the natural fix. It was applied later in `51d697a`
+(see the follow-up below). The Day21 tag was not moved.
+
+## Thunderbolt restore retry follow-up — November10,17:38–17:39 CST
+
+`51d697a` introduces `RetryableReadinessError` (kinds `thunderbolt`,
+`memory`, `mini`) in `service_endpoints`, `web_restore`, `web_workers`,
+`web_server` and `split_balance`. Restore classifies retryable unreadiness
+by type/flag rather than string matching, including post-200 snapshot
+errors from the background switch thread. Bounded backoff (2s…30s cap)
+runs inside the existing 600s window. While waiting, the restore message
+is “Waiting for Thunderbolt link…”. Timeout names the unreadiness and
+still says to press Load. Tests cover: IPv4 missing then present → restore
+succeeds; never present → blocked after the injected timeout with a clear
+message; the same race over the real guarded HTTP load path. Full suite
+**912 passed in46.264s** (was907; +5), zero failures/skips.
+
+Both Minis were ff-only synced to `51d697a`. Only the EXO1 web service was
+restarted, with `CARAVAN_WEB_KEEP_WORKERS=1` already in the LaunchAgent
+(`launchctl kickstart -k`, new web PID **3100**, started **17:38:47 CST**).
+Workers were idle from the failed restore, so none were kept. Aux was not
+restarted; wrapper PID **739** from17:30:19 stayed in the primary-ready
+wait and admitted itself once the primary came up.
+
+Thunderbolt `en2` already had one IPv4 each from17:31:04 (EXO1
+`169.254.217.10`, EXO2 `169.254.125.22`), so the first resolve succeeded.
+This live pass therefore proves the normal last-model restore path after
+the fix, not a fresh IPv4 race; the race itself is covered by the tests.
+
+Automatic restore used the app path: Controller `POST /api/models/load`
+(web log 200). Huihui24/40 KV16, node order EXO2→EXO1, phase `restored` at
+**17:39:00 CST**. Lead PID **3169** started17:38:54, loaded in5.0s
+(warm-up0.52s), listening17:39:00. Packer PID **2352** started17:38:51 at
+`169.254.125.22:5560`. Web-restart-to-ready **~13s**. last-model
+preference rewritten at that ready time, same Huihui24/40 KV16 EXO2→EXO1
+request.
+
+Aux admitted at17:39:05, loaded Qwen2.5-0.5B in0.4s, listened at17:39:06,
+health **200**. Title and Hermes probes through Omarchy :18090; private
+request bodies stay off-repo. Evidence added under Omarchy
+`~/day21-checks/reboot2/`.
+
+| Check | Result |
+|---|---|
+| Aux :8196 `/health` | **PASS** HTTP200, `{"status": "ok", "worker": "caravan", "split": false}` at17:39:13 (already listening since17:39:06). |
+| Title through :18090 | **PASS** HTTP200 at17:39:13.823 CST, `X-Caravan-Aux: title-sidecar`, finish stop, wall **0.165s**, TTFT0.055s, write227.27tok/s, model Qwen2.5-0.5B-Instruct-4bit. |
+| Full19-tool medium Hermes through :18090 (`probe.py`) | **PASS** HTTP200 at17:39:35–17:39:47 CST, finish stop, visible “I'm online and ready to help.”, wall **11.132s**, TTFT **0.316s**, write **6.26tok/s**, 11310 prompt tokens (11309 cached), KV16, packer layers24. |
+
+No further restart or reboot. Tag `day21-2026-11-10` stays on `b6c9394`.
+Release notes body records this as **fixed after release in `51d697a`**.
 
 ### Published release / downloaded-package verification
 
