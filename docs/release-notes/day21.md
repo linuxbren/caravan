@@ -80,8 +80,19 @@ normal last-model restore path loaded Huihui 24/40 KV16 (EXO2 first) at
 through :18090 HTTP 200, finish stop, “I'm online and ready to help.”,
 11.132s wall, 0.316s TTFT, 6.26 tok/s. Thunderbolt IPv4s were already
 present in this live pass, so the first resolve succeeded; the race is
-covered by tests. Tag `day21-2026-11-10` remains on `b6c9394`. Evidence:
-Omarchy `~/day21-checks/reboot2/`.
+covered by tests. Evidence: Omarchy `~/day21-checks/reboot2/`.
+- Physical two-Mini confirmation, November 10 17:44–17:46 CST, with
+  `51d697a` already deployed. Brenden rebooted EXO2 directly, then EXO1.
+  Both took a new boot (EXO1 17:44:21 CST, EXO2 17:44:23 CST). Automatic
+  Huihui 24/40 KV16 restore **passed**: ready at 17:45:00, EXO1
+  boot-to-ready **39.110s**, worker load 4.7s. Aux health 200 at
+  17:45:07 (~45.8s after EXO1 boot). Title through :18090 HTTP 200,
+  `X-Caravan-Aux: title-sidecar`, 0.154s wall. Full 19-tool medium
+  Hermes through :18090 HTTP 200, finish stop, “I'm online and ready to
+  help.”, 11.368s wall, 0.399s TTFT, 6.26 tok/s. en2 IPv4s had appeared
+  by 17:44:48, before packer start; “Waiting for Thunderbolt link…” was
+  not observed on this pass. Tag `day21-2026-11-10` remains on
+  `b6c9394`. Evidence: Omarchy `~/day21-checks/reboot3/`.
 
 ## Install
 Download either `caravan-day21.zip` or `caravan-day21.tar.gz`, extract, then

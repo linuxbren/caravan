@@ -17,9 +17,16 @@
   “Waiting for Thunderbolt link…”). Full suite **912 passed in46.264s**.
   After a keep-workers web-only restart at17:38:47 CST, the normal restore
   path loaded Huihui24/40 KV16 (EXO2 first) at17:39:00. Aux health200,
-  title sidecar200 in0.165s, 19-tool Hermes200 in11.132s. Tag
-  `day21-2026-11-10` remains on `b6c9394` (fixed after release in `51d697a`).
-  [Day21 release notes](release-notes/day21.md) updated in place.
+  title sidecar200 in0.165s, 19-tool Hermes200 in11.132s.
+- Two-Mini physical reboot at17:44–17:46 CST, with `51d697a` already
+  deployed: **PASS**. Both Minis took a new boot. Automatic Huihui24/40
+  KV16 restore ready in39.110s (EXO1 boot-to-ready); aux health200 at
+  17:45:07 (~45.8s); title sidecar200 in0.154s; 19-tool Hermes200 in
+  11.368s. The “Waiting for Thunderbolt link…” status was not observed
+  (en2 IPv4 appeared by17:44:48, before packer start). Evidence: Omarchy
+  `~/day21-checks/reboot3/`.
+- Tag `day21-2026-11-10` remains on `b6c9394` (fixed after release in
+  `51d697a`). [Day21 release notes](release-notes/day21.md) updated in place.
 
 ## Phase 1 approval checkpoint
 
@@ -816,3 +823,60 @@ Release notes body records this as **fixed after release in `51d697a`**.
   INSTALL.md, and reran the full stdlib suite in a fresh extract: **907
   tests passed in44.187s**, zero failures/skips. This is not a clean-Mac
   install claim. Video is handled separately and is not part of this tag.
+
+
+## Two-Mini physical reboot check 3 — November10,17:44–17:46 CST
+
+Brenden rebooted **both** Minis from Omarchy around17:44 CST, EXO2
+directly first, then EXO1, with follow-up `51d697a` already deployed
+(both checkouts at `05b392a`). Both auto-logged in. No Load, service
+restart or second reboot was issued. Observer and raw files: Omarchy
+`~/day21-checks/reboot3/`.
+
+| Machine | kern.boottime (CST) | Previous boot | Result |
+|---|---|---|---|
+| EXO1 | **17:44:21.205810** | 17:30:03.294769 same day | New boot confirmed; web/proxy/aux launchd up at17:44:35 |
+| EXO2 | **17:44:23.286895** | 17:30:10.488362 same day | **Did reboot.** Issued first, finished coming up ~2.1s after EXO1 |
+
+Automatic Huihui24/40 KV16 restore: **PASS**. Observer (0.4s polls from
+17:44:33) saw connection refused, then `preparing` at17:44:39
+(“Restoring last model: …”), `starting_packer` at17:44:51,
+`starting_lead` at17:44:54 (PID **1055**), and `ready` / phase
+`restored` at **17:45:00.487**. Counts `[24,40]`, KV16, EXO2→EXO1,
+lead healthy. Lead loaded in4.7s (warm-up0.52s) and listened at17:45:00.
+Packer PID **991** started17:44:51 at `169.254.151.30:5560`. last-model
+preference rewritten at17:45:00.316, same Huihui24/40 KV16 request.
+
+| Interval | Time |
+|---|---:|
+| EXO1 boot → lead ready | **39.110s** |
+| EXO2 boot → split ready | **37.029s** |
+| Web start (17:44:35) → ready | **25.316s** |
+| EXO1 boot → aux listening | **45.794s** |
+
+Thunderbolt `en2` addresses changed again (expected): EXO1
+`169.254.128.193` (was `169.254.217.10`), EXO2 `169.254.151.30` (was
+`169.254.125.22`). A first ifconfig around17:44:39–17:44:41 showed
+`en2` active with no IPv4 yet; by **17:44:48** both links had one
+address. The observer never recorded “Waiting for Thunderbolt link…”
+or a `blocked` phase. Packer start was17:44:51, after those addresses
+were present, so this pass proves automatic two-Mini restore with the
+fix deployed; it does not show a live retry of the missing-IPv4 race
+(that race remains covered by tests).
+
+Aux title worker: launchd started the wrapper at17:44:35 (PID **664**,
+runs=1, never exited). It waited on `primary_ready=False` (available
+16.45→13.24→7.63GB; budget0.9GB + reserve1.75GB), admitted at17:45:06,
+loaded Qwen2.5-0.5B in0.4s, listened at **17:45:07**, health **200**.
+
+Post-restore probes, nothing restarted:
+
+| Check | Result |
+|---|---|
+| Aux :8196 `/health` | **PASS** HTTP200, `{"status": "ok", "worker": "caravan", "split": false}` (listening since17:45:07; rechecked17:46:03). |
+| Title through :18090 | **PASS** HTTP200 at17:46:03.657 CST, `X-Caravan-Aux: title-sidecar`, finish stop, wall **0.154s**, TTFT0.054s, write243.9tok/s, model Qwen2.5-0.5B-Instruct-4bit. |
+| Full19-tool medium Hermes through :18090 (`probe.py`) | **PASS** HTTP200 at17:46:03.862–17:46:15.231 CST, finish stop, visible “I'm online and ready to help.”, wall **11.368s**, TTFT **0.399s**, write **6.26tok/s**, 11310 prompt tokens (11309 cached), KV16, packer layers24. |
+
+Tag `day21-2026-11-10` stays on `b6c9394`. Release notes body records
+the earlier code fix as **fixed after release in `51d697a`**, and this
+reboot as the physical two-Mini confirmation.

@@ -3024,3 +3024,30 @@ Hermes :18090 HTTP200, finish stop, “I'm online and ready to help.”,
 11.132s wall,0.316s TTFT,6.26tok/s,11309/11310 cached. Evidence:
 Omarchy `~/day21-checks/reboot2/`. Tag unmoved; release notes record
 **fixed after release in `51d697a`**.
+
+### Day21 two-Mini reboot with restore fix (November10,17:44–17:46 CST)
+
+Brenden rebooted EXO2 directly, then EXO1, with `51d697a` already
+deployed (both Minis at `05b392a`). Both **did reboot**: EXO1
+kern.boottime17:44:21.206 CST (previous17:30:03), EXO2 17:44:23.287 CST
+(previous17:30:10). EXO2 was issued first and came up ~2.1s after EXO1.
+
+Automatic Huihui24/40 KV16 restore **passed**. Observer: refused at
+17:44:33, preparing at17:44:39, starting_packer at17:44:51,
+starting_lead at17:44:54 (PID1055), ready / phase `restored` at
+17:45:00. Lead load4.7s; packer PID991 at `169.254.151.30:5560`.
+EXO1 boot-to-ready **39.110s**; EXO2 boot to split-ready **37.029s**;
+web-start-to-ready25.316s. en2 addresses changed again (EXO1
+169.254.128.193, EXO2 169.254.151.30). en2 was active without a visible
+IPv4 around17:44:39–17:44:41 and had one address each by17:44:48. The
+observer never recorded “Waiting for Thunderbolt link…”; packer start
+followed those addresses, so this is a live two-Mini auto-restore proof
+with the fix present, not a captured retry of the missing-IPv4 race.
+
+Aux wrapper664 from17:44:35 waited, admitted17:45:06, listened
+17:45:07 (**45.794s** after EXO1 boot), health200, launchd runs=1.
+Title :18090 HTTP200, `X-Caravan-Aux: title-sidecar`,0.154s wall,
+0.054s TTFT. Official 19-tool medium Hermes :18090 HTTP200, finish stop,
+“I'm online and ready to help.”,11.368s wall,0.399s TTFT,6.26tok/s,
+11309/11310 cached. Nothing restarted. Evidence: Omarchy
+`~/day21-checks/reboot3/`. Tag unmoved on `b6c9394`.

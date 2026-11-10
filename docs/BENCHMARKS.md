@@ -1624,3 +1624,21 @@ were already present, so this did not re-race the missing-address case.
 Saved preference Huihui24/40 KV16, EXO2→EXO1. Evidence: Omarchy
 `~/day21-checks/reboot2/`; interpretation in [DAY21.md](DAY21.md).
 Private request bodies omitted. Follow-up suite **912 tests / 46.264s**.
+
+## Day21 two-Mini reboot with restore fix — 2026-11-10 17:44–17:46 CST
+
+Not a repeated speed claim. Both Minis rebooted (EXO1 kern.boottime
+17:44:21.206 CST, EXO2 17:44:23.287 CST) with `51d697a` already deployed.
+Automatic Huihui24/40 KV16 restore from EXO1 boot to lead listening
+**39.110s** (worker load4.7s). Aux title worker health200 at **45.794s**,
+after the documented primary-ready/RAM gate.
+
+Post-recovery :18090 title: HTTP200, `title-sidecar`, **0.154s wall** /
+0.054s TTFT. Full19-tool medium Hermes replay: HTTP200, finish stop,
+visible response, **11.368s wall / 0.399s TTFT / 6.26tok/s write**,11310
+prompt tokens (11309 cached). Functional recovery check, not cold-prefill
+performance or actual tool execution. “Waiting for Thunderbolt link…”
+was not observed; en2 IPv4s were present by17:44:48, before packer start.
+Saved preference Huihui24/40 KV16, EXO2→EXO1; new lead PID1055. Evidence:
+Omarchy `~/day21-checks/reboot3/`; interpretation in [DAY21.md](DAY21.md).
+Private request bodies omitted.
