@@ -24,6 +24,7 @@ import web_settings
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "agent"))
 import tuned_settings as TS  # noqa: E402
+from service_endpoints import RetryableReadinessError  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 WORKER = REPO / "agent" / "mlx_worker.py"
@@ -227,6 +228,7 @@ class WorkerManager:
             raise RuntimeError("a model switch is already in progress")
 
         self._load_cancel = threading.Event()
+        self._set(retryable=False, retry_kind=None)
         def run():
             try:
                 self._check_load_cancel()
@@ -242,10 +244,13 @@ class WorkerManager:
                     for cleanup in (self._kill_gguf,self._kill_lead,self._kill_packer):
                         try:cleanup()
                         except Exception as ex:self._note(f"cancel cleanup: {ex}")
-                    self._set(status="idle",model_id=None,model_name=None,lead_pid=None,packer_pid=None,error=None)
+                    self._set(status="idle",model_id=None,model_name=None,lead_pid=None,packer_pid=None,error=None,retryable=False,retry_kind=None)
                     self._note("load cancelled; next login will not resurrect an unloaded model")
+                elif isinstance(e, RetryableReadinessError):
+                    self._set(status="error", error=str(e), retryable=True, retry_kind=e.kind)
+                    self._note(f"error: {e}")
                 else:
-                    self._set(status="error", error=f"{type(e).__name__}: {e}")
+                    self._set(status="error", error=f"{type(e).__name__}: {e}", retryable=False, retry_kind=None)
                     self._note(f"error: {e}")
             finally:
                 self._sweep_load = None

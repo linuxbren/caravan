@@ -7,6 +7,7 @@ from urllib.request import Request,urlopen
 from urllib.error import HTTPError
 sys.path[:0]=[str(Path(__file__).resolve().parents[1]/"agent"),str(Path(__file__).resolve().parents[1]/"proxy")]
 import web_restore as R
+from service_endpoints import RetryableReadinessError
 import web_server as W
 import web_pipeline as P
 from web_workers import WorkerManager
@@ -72,8 +73,8 @@ class ControllerTest(unittest.TestCase):
         attempts=[]
         def post(path,body,**kwargs):
             attempts.append(copy.deepcopy(body))
-            if len(attempts)==1:raise ValueError("live free memory is unknown for n2")
-            if len(attempts)==2:raise ValueError("Mini n2 is unavailable; bring it online and press Load")
+            if len(attempts)==1:raise RetryableReadinessError("live free memory is unknown for n2", kind="memory")
+            if len(attempts)==2:raise RetryableReadinessError("Mini n2 is unavailable; bring it online and press Load", kind="mini")
             self.mgr._set(status="ready")
         with mock.patch.object(c,"http",side_effect=post),mock.patch.object(self.mgr,"lead_healthy",return_value=False):c.start("http://unused",background=False)
         self.assertEqual(c.snapshot()["phase"],"restored");self.assertEqual(delays,[2,4])
@@ -81,11 +82,41 @@ class ControllerTest(unittest.TestCase):
     def test_peer_retry_budget_is_bounded_and_intent_preserved(self):
         now=[0]
         c=R.Controller(self.app,retry_timeout=5,clock=lambda:now[0],wait=lambda s:now.__setitem__(0,now[0]+s));c.store.write(request())
-        with mock.patch.object(c,"http",side_effect=ValueError("Live free memory is unknown for n2")) as http,mock.patch.object(self.mgr,"lead_healthy",return_value=False):c.start("http://unused",background=False)
+        with mock.patch.object(c,"http",side_effect=RetryableReadinessError("Live free memory is unknown for n2", kind="memory")) as http,mock.patch.object(self.mgr,"lead_healthy",return_value=False):c.start("http://unused",background=False)
         self.assertEqual(now[0],5);self.assertEqual(http.call_count,2);self.assertEqual(c.snapshot()["phase"],"blocked");self.assertIsNone(c.token);self.assertEqual(c.store.read()["model_id"],"q")
+    def test_thunderbolt_ipv4_missing_then_present_retries_and_restores(self):
+        now=[0];delays=[];messages=[]
+        def wait(seconds):delays.append(seconds);now[0]+=seconds
+        c=R.Controller(self.app,clock=lambda:now[0],wait=wait);c.store.write(request())
+        attempts=[]
+        def post(path,body,**kwargs):
+            attempts.append(copy.deepcopy(body))
+            if len(attempts)==1:
+                self.mgr._set(status="error",error="Thunderbolt interface en2 needs one unambiguous IPv4 address",retryable=True,retry_kind="thunderbolt")
+                return {"status":"error"}
+            self.mgr._set(status="ready",retryable=False,retry_kind=None)
+            return {"status":"ready"}
+        with mock.patch.object(c,"http",side_effect=post),mock.patch.object(self.mgr,"lead_healthy",return_value=False):
+            orig_note=c.mgr._note
+            def note(msg):messages.append(msg);return orig_note(msg)
+            with mock.patch.object(c.mgr,"_note",side_effect=note):c.start("http://unused",background=False)
+        self.assertEqual(c.snapshot()["phase"],"restored")
+        self.assertEqual(delays,[2]);self.assertEqual(len(attempts),2)
+        self.assertTrue(any("Waiting for Thunderbolt link…" in m for m in messages))
+        self.assertEqual(c.store.read()["counts"],[4,8])
+    def test_thunderbolt_never_ready_blocks_after_timeout_with_clear_message(self):
+        now=[0]
+        c=R.Controller(self.app,retry_timeout=5,clock=lambda:now[0],wait=lambda s:now.__setitem__(0,now[0]+s));c.store.write(request())
+        err=RetryableReadinessError("Thunderbolt interface en2 needs one unambiguous IPv4 address", kind="thunderbolt")
+        with mock.patch.object(c,"http",side_effect=err),mock.patch.object(self.mgr,"lead_healthy",return_value=False):c.start("http://unused",background=False)
+        self.assertEqual(now[0],5);self.assertEqual(c.snapshot()["phase"],"blocked")
+        message=c.snapshot()["message"]
+        self.assertIn("Thunderbolt link was not ready after 5s",message)
+        self.assertIn("Press Load to try again",message)
+        self.assertEqual(c.store.read()["model_id"],"q")
     def test_user_stop_during_backoff_cancels_without_another_post(self):
         c=R.Controller(self.app);c.store.write(request());c._wait=lambda seconds:c.clear()
-        with mock.patch.object(c,"http",side_effect=ValueError("Live free memory is unknown for n2")) as http,mock.patch.object(self.mgr,"lead_healthy",return_value=False):c.start("http://unused",background=False)
+        with mock.patch.object(c,"http",side_effect=RetryableReadinessError("Live free memory is unknown for n2", kind="memory")) as http,mock.patch.object(self.mgr,"lead_healthy",return_value=False):c.start("http://unused",background=False)
         self.assertEqual(http.call_count,1);self.assertEqual(c.snapshot()["phase"],"empty");self.assertIsNone(c.store.read());self.assertIsNone(c.token)
     def test_ambiguous_transport_timeout_is_not_retried(self):
         c=R.Controller(self.app);c.store.write(request())
@@ -198,11 +229,22 @@ class SharedHTTPTest(unittest.TestCase):
         attempts=[]
         def balance(body,fresh=False):
             attempts.append(copy.deepcopy(body))
-            if len(attempts)==1:raise ValueError("live free memory is unknown for n2")
+            if len(attempts)==1:raise RetryableReadinessError("live free memory is unknown for n2", kind="memory")
             return dict(ready=True,entry=self.entry(body["model_id"]))
         self.app.balance=balance;self.app.restore._wait=lambda seconds:None
         self.app.restore.store.write(request());self.app.restore.start(self.url,background=False)
         self.assertEqual(len(attempts),2);self.assertEqual(attempts[0],attempts[1]);self.assertEqual(self.app.restore.snapshot()["phase"],"restored")
+    def test_http_thunderbolt_resolve_race_retries_same_guarded_load(self):
+        attempts=[]
+        def load(entry,settings):
+            attempts.append(entry["id"])
+            if len(attempts)==1:
+                raise RetryableReadinessError("Thunderbolt interface en2 needs one unambiguous IPv4 address", kind="thunderbolt")
+            self.mgr._loaded_entry=entry;self.mgr._set(settings=settings,status="ready",model_id=entry["id"],split=True)
+        self.mgr._do_switch=load
+        self.app.restore._wait=lambda seconds:None
+        self.app.restore.store.write(request());self.app.restore.start(self.url,background=False)
+        self.assertEqual(attempts,["q","q"]);self.assertEqual(self.app.restore.snapshot()["phase"],"restored")
     def test_manual_switch_stays_unlocked_and_replaces_last_model(self):
         self.app.restore.store.write(request());self.post("/api/models/load",dict(model_id="small",balance=True,counts=[4,8],node_ids=["n2","n1"]));self.mgr._switch_thread.join(2);self.assertEqual(self.app.restore.store.read()["model_id"],"small");self.assertNotIn("managed_service",self.mgr.snapshot())
     def test_plain_ui_split_load_uses_n_node_planner_not_legacy_ip_defaults(self):

@@ -48,7 +48,19 @@ class DynamicThunderbolt(unittest.TestCase):
             with self.subTest(result=result),self.assertRaises(ValueError):E.resolve("ssh+tb://host/en2:5560",run=mock.Mock(return_value=result))
 
     def test_timeout_is_retryable_value_error(self):
-        with self.assertRaises(ValueError):E.resolve("tb://en2:5560",run=mock.Mock(side_effect=subprocess.TimeoutExpired("ifconfig",5)))
+        with self.assertRaises(E.RetryableReadinessError) as failure:
+            E.resolve("tb://en2:5560",run=mock.Mock(side_effect=subprocess.TimeoutExpired("ifconfig",5)))
+        self.assertEqual(failure.exception.kind,"thunderbolt");self.assertTrue(failure.exception.retryable)
+    def test_missing_or_ambiguous_ipv4_is_retryable_thunderbolt_unreadiness(self):
+        for cfg in [config().replace("active","inactive"), config()+"inet 169.254.1.3\n", "en2: flags=UP\n status: active\n"]:
+            with self.subTest(config=cfg),self.assertRaises(E.RetryableReadinessError) as failure:
+                E.address(PORTS,cfg,"en2")
+            self.assertEqual(failure.exception.kind,"thunderbolt")
+    def test_public_address_stays_a_permanent_error(self):
+        with self.assertRaises(ValueError) as failure:
+            E.address(PORTS,config("8.8.8.8"),"en2")
+        self.assertFalse(getattr(failure.exception,"retryable",False))
+        self.assertNotIsInstance(failure.exception,E.RetryableReadinessError)
 
     def test_plan_roundtrip_keeps_interface_not_current_ip(self):
         with tempfile.TemporaryDirectory() as d:

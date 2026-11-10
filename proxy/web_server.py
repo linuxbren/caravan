@@ -34,6 +34,7 @@ import web_catalog as catalog
 import web_settings  # noqa: E402
 import web_timing as timing  # noqa: E402
 from web_workers import WorkerManager, ManagedServiceError  # noqa: E402
+from service_endpoints import error_payload  # noqa: E402
 import web_optimize  # noqa: E402
 import web_picker  # noqa: E402
 import web_nodes  # noqa: E402
@@ -1771,12 +1772,12 @@ def make_handler(app: App):
             if not isinstance(body,dict):return self._json(400,{"error":"Load request must be an object"})
             if hasattr(app,"restore"):
                 try:app.restore.authorize(body,begin=True)
-                except ValueError as e:return self._json(409,{"error":str(e)})
+                except ValueError as e:return self._json(409,error_payload(e))
             if isinstance(app.mgr, WorkerManager):
                 try:
                     app.mgr._deny_managed_service()
                 except ManagedServiceError as e:
-                    return self._json(409, {"error":str(e)})
+                    return self._json(409, error_payload(e))
             if app.optimizer.snapshot().get("running"):
                 return self._json(409, {"error": "Cancel Optimize now and wait before loading"})
             body = body or {}
@@ -1800,7 +1801,7 @@ def make_handler(app: App):
                     if not entry:raise ValueError("Last model is not installed or cannot be inspected on the configured Minis")
                     import web_restore
                     entry = web_restore.validate_placement(app,entry,dict(body,model_id=mid))
-                except (ValueError,OSError,TypeError,KeyError) as e:return self._json(400,{"error":str(e)})
+                except (ValueError,OSError,TypeError,KeyError) as e:return self._json(400,error_payload(e))
             if entry and entry.get("source") == "gguf" and not body.get("placement"):
                 entry = dict(entry)
                 pid_ = body.get("placement_id") or entry.get("default_placement")
@@ -1823,7 +1824,7 @@ def make_handler(app: App):
                     if entry.get("source")=="gguf" and isinstance(body.get("gguf_tune"),dict):
                         entry=dict(entry,tune_override={k:v for k,v in body["gguf_tune"].items() if k in ("flash_attn","ubatch")})
                 except (ValueError, OSError, KeyError, TypeError) as e:
-                    return self._json(400, {"error": str(e)})
+                    return self._json(400, error_payload(e))
             balanced_msg = None
             sc = ((entry or {}).get("split_check")
                   if entry and not body.get("balance") and entry.get("source") != "gguf" and entry.get("run_mode") == "split" else None)
@@ -1856,7 +1857,7 @@ def make_handler(app: App):
                         plan.pop("entry",None);plan.pop("file_requests",None)
                         return self._json(409,{"error":"Split needs files or more memory; nothing was changed","balance":plan})
                     entry=plan["entry"]
-                except (ValueError,OSError,KeyError,TypeError) as e:return self._json(400,{"error":str(e)})
+                except (ValueError,OSError,KeyError,TypeError) as e:return self._json(400,error_payload(e))
             try:
                 from contextlib import nullcontext
                 guard=app.restore.lock if hasattr(app,"restore") else nullcontext()
@@ -1866,7 +1867,7 @@ def make_handler(app: App):
                         entry = dict(entry,_restore_request={k:v for k,v in body.items() if k in ("placement_id","placement","node_ids","balance","counts","repo_id","gguf_file","gguf_tune")})
                     snap = app.mgr.switch(mid, wait=False, settings=body.get("settings"),entry=entry)
             except (ValueError, FileNotFoundError, RuntimeError) as e:
-                return self._json(400, {"error": str(e)})
+                return self._json(400, error_payload(e))
             if balanced_msg:
                 try:
                     app.mgr._note(balanced_msg)

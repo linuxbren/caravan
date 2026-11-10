@@ -17,6 +17,8 @@ from __future__ import annotations
 import os
 from typing import Optional
 
+from service_endpoints import RetryableReadinessError
+
 MARGIN_GB = float(os.environ.get("CARAVAN_MEMORY_SAFETY_GB", "1.75"))
 STAGE_OVERHEAD_GB = float(os.environ.get("CARAVAN_SPLIT_STAGE_OVERHEAD_GB", "1.3"))
 
@@ -141,11 +143,11 @@ def preview(n_layers, weights_gb, nodes, counts=None, *, config=None, index=None
         ram = node.get("ram") or {}
         available = ram.get("available_gb", ram.get("free_gb"))
         if node.get("offline") or node.get("error") or available is None:
-            raise ValueError(f"live free memory is unknown for {node['id']}")
+            raise RetryableReadinessError(f"live free memory is unknown for {node['id']}", kind="memory")
         # Reclaim only the running worker footprint, never assume total-OS is free.
         cap = float(available) + max(0.0, float(node.get("active_gb") or node.get("weights_gb") or 0))
         if not math.isfinite(cap) or cap <= 0:
-            raise ValueError(f"live free memory is unknown for {node['id']}")
+            raise RetryableReadinessError(f"live free memory is unknown for {node['id']}", kind="memory")
         caps.append(cap)
     # A second worker on the same Mini does not create another stick of RAM.
     # Explicit physical_id handles SSH aliases; matching host/SSH also dedupes.

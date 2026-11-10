@@ -1,8 +1,10 @@
 """Web-owned last-successful-model intent. No workers, downloads or commands stored.
 
-Boot restore uses the same guarded load endpoint as the UI. Transient offline /
-unknown-memory preflight failures retry for up to ten minutes; permanent safety
-failures still stop immediately. User controls cancel all pending retries.
+Boot restore uses the same guarded load endpoint as the UI. Transient pre-worker
+unreadiness (unknown Mini memory, an unavailable Mini, or a Thunderbolt
+interface that does not yet have one unambiguous IPv4 address) retries with
+bounded backoff for up to ten minutes. Permanent safety failures still stop
+immediately. User controls cancel all pending retries.
 """
 from __future__ import annotations
 import copy
@@ -16,6 +18,7 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 import uuid
 import web_settings
+from service_endpoints import RetryableReadinessError, error_payload
 
 
 def canonical(request):
@@ -130,10 +133,10 @@ def validate_placement(app, entry, body):
     caps=[]
     for nid in ids:
         node=configured[nid];stats=web_nodes.gather_node_stats(node,ssh_fn=app._ssh_fn())
-        if stats.get("offline"):raise ValueError(f"Mini {nid} is unavailable; bring it online and press Load")
+        if stats.get("offline"):raise RetryableReadinessError(f"Mini {nid} is unavailable; bring it online and press Load", kind="mini")
         available=(stats.get("ram") or {}).get("available_gb",(stats.get("ram") or {}).get("free_gb"))
         if isinstance(available,bool) or not isinstance(available,(int,float)) or not math.isfinite(available) or available<=0:
-            raise ValueError(f"Live free memory is unknown for {nid}; nothing was loaded")
+            raise RetryableReadinessError(f"Live free memory is unknown for {nid}; nothing was loaded", kind="memory")
         current=live.get(nid,{})
         footprint=float(current.get("active_gb") or current.get("weights_gb") or 0) if app.mgr.snapshot().get("status")=="ready" and current.get("model") else 0
         caps.append(float(available)+max(0,footprint))
@@ -211,9 +214,48 @@ class Controller:
         try:
             with urlopen(req,timeout=timeout) as r:return json.load(r)
         except HTTPError as e:
-            try:msg=json.loads(e.read()).get("error") or str(e)
-            except Exception:msg=str(e)
-            raise ValueError(msg) from None
+            try:payload=json.loads(e.read())
+            except Exception:payload={}
+            typed=RetryableReadinessError.from_payload(payload)
+            if typed:raise typed from None
+            raise ValueError((payload.get("error") if isinstance(payload,dict) else None) or str(e)) from None
+    def _await_load(self,token):
+        """Wait until the accepted load is ready, or raise a terminal/retryable error.
+
+        /api/models/load starts the switch in the background and returns 200
+        before Thunderbolt resolution or worker launch. Retry only pre-worker
+        unreadiness flagged on the worker snapshot.
+        """
+        deadline=time.monotonic()+1200
+        while time.monotonic()<deadline:
+            with self.lock:
+                if self.token!=token:return
+            snap=self.mgr.snapshot()
+            if snap.get("status")=="ready":
+                return
+            running=getattr(self.mgr,"_switch_thread",None)
+            alive=bool(running and running.is_alive())
+            if snap.get("status")=="error" or (snap.get("status")=="idle" and (snap.get("error") or not alive)):
+                if alive:
+                    running.join(30)
+                    snap=self.mgr.snapshot()
+                typed=RetryableReadinessError.from_state(snap)
+                if typed:raise typed
+                raise ValueError(snap.get("error") or "Model did not become ready")
+            threading.Event().wait(.25)
+        raise ValueError("Timed out restoring last model; use Load to try again")
+    def _backoff(self,token,attempt,error,retry_deadline,delay):
+        remaining=retry_deadline-self._clock()
+        if remaining<=0:
+            raise ValueError(error.timeout_message(self.retry_timeout) if isinstance(error,RetryableReadinessError) else f"Peer readiness timed out after {self.retry_timeout:g}s")
+        pause=min(delay,remaining)
+        with self.lock:
+            if self.cancelled or self.token!=token:return 0
+            message=error.waiting_message(attempt,pause) if isinstance(error,RetryableReadinessError) else f"Waiting for Minis (attempt {attempt}); retry in {pause:g}s: {error}"
+            self.state.update(phase="preparing",attempt=attempt,retry_in_s=pause,message=message)
+        self.mgr._note(self.state["message"])
+        self._wait(pause)
+        return min(delay*2,30)
     def run(self):
         if not self.state["enabled"]:self.note("disabled","Automatic restore disabled; last successful loads are still saved");return
         try:
@@ -229,46 +271,29 @@ class Controller:
             self.mgr._note(self.state["message"])
             healthy=getattr(self.mgr,"lead_healthy",None)
             if callable(healthy) and healthy():raise ValueError("An unadopted worker already owns the lead port; it was not stopped")
-            # Retry only failures known to occur before a worker is launched.
-            # Never retry ambiguous HTTP timeouts, missing files or RAM shortfalls.
+            # Retry only flagged pre-worker unreadiness. Never retry ambiguous
+            # HTTP timeouts, missing files or RAM shortfalls.
             retry_deadline=self._clock()+self.retry_timeout
-            delay=2.0;attempt=0
+            delay=2.0;attempt=0;last_retryable=None
             while True:
                 with self.lock:
                     if self.cancelled or self.token!=token:return
                 remaining=retry_deadline-self._clock()
-                if remaining<=0:raise ValueError("Peer readiness timed out after ten minutes")
+                if remaining<=0:
+                    raise ValueError(last_retryable.timeout_message(self.retry_timeout) if last_retryable else f"Peer readiness timed out after {self.retry_timeout:g}s")
                 attempt+=1
                 try:
-                    self.http("/api/models/load",dict(request,_restore_token=token),timeout=min(180,remaining))
+                    self.http("/api/models/load",dict(request,_restore_token=token),timeout=min(180,max(1,remaining)))
+                    self._await_load(token)
                     break
-                except ValueError as e:
-                    why=str(e).lower()
-                    transient=(why.startswith("live free memory is unknown for ") or
-                               (why.startswith("mini ") and (" is unavailable" in why or why.endswith(" unavailable"))))
-                    if not transient:raise
-                    remaining=retry_deadline-self._clock()
-                    if remaining<=0:raise ValueError("Peer readiness timed out: "+str(e)) from None
-                    pause=min(delay,remaining)
-                    with self.lock:
-                        if self.cancelled or self.token!=token:return
-                        self.state.update(phase="preparing",attempt=attempt,retry_in_s=pause,
-                            message=f"Waiting for Minis (attempt {attempt}); retry in {pause:g}s: {e}")
-                    self.mgr._note(self.state["message"])
-                    self._wait(pause)
-                    delay=min(delay*2,30)
+                except RetryableReadinessError as e:
+                    last_retryable=e
+                    delay=self._backoff(token,attempt,e,retry_deadline,delay)
+                    if delay==0:return
             with self.lock:self.state.pop("retry_in_s",None)
-            deadline=time.monotonic()+1200
-            while time.monotonic()<deadline:
-                with self.lock:
-                    if self.token!=token:return
-                snap=self.mgr.snapshot()
-                if snap.get("status")=="ready":self.note("restored","Last model restored; UI model controls remain available");return
-                running=getattr(self.mgr,"_switch_thread",None)
-                if snap.get("status")=="error" or (snap.get("status")=="idle" and (snap.get("error") or not (running and running.is_alive()))):
-                    raise ValueError(snap.get("error") or "Model did not become ready")
-                threading.Event().wait(.25)
-            raise ValueError("Timed out restoring last model; use Load to try again")
+            if self.mgr.snapshot().get("status")=="ready":
+                self.note("restored","Last model restored; UI model controls remain available");return
+            raise ValueError(self.mgr.snapshot().get("error") or "Model did not become ready")
         except Exception as e:
             with self.lock:
                 if self.cancelled:return
