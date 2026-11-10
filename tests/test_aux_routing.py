@@ -32,3 +32,19 @@ class Aux(unittest.TestCase):
    conn=mock.Mock()
    self.assertIsNone(A.try_title(self.body(),env={"CARAVAN_AUX_MODEL":"small","CARAVAN_AUX_TIMEOUT_S":timeout},connection=conn))
    conn.assert_not_called()
+ def test_compact_prompt_preserves_user_and_language_not_main(self):
+  b=self.body();b["messages"][0]["content"]+="\n- Write the title in Spanish."
+  before=copy.deepcopy(b);msgs=A.title_messages(b)
+  self.assertIn("Spanish",msgs[0]["content"]);self.assertEqual(msgs[1],b["messages"][1]);self.assertEqual(b,before)
+ def test_plain_title_normalization_is_strict_and_optional(self):
+  for text in ['"Fix login button"',"Title: Fix login button","Fix login button."]:
+   self.assertEqual(A.parse_title(text,allow_plain=True),"Fix login button")
+   self.assertIsNone(A.parse_title(text))
+  for text in ['```code```','Good: {"title":"Fix login button"}',"First line\nsecond line", "Sure"]:
+   self.assertIsNone(A.parse_title(text,allow_plain=True))
+ def test_normalized_title_is_json_and_original_request_unchanged(self):
+  b=self.body();before=copy.deepcopy(b)
+  result={"choices":[{"finish_reason":"stop","message":{"content":"Title: Fix login button"}}]}
+  conn=mock.Mock();conn.getresponse.side_effect=[NS(status=200,read=lambda:b"{}"),NS(status=200,read=lambda n:json.dumps(result).encode())]
+  out=A.try_title(b,env={"CARAVAN_AUX_MODEL":"small"},connection=lambda *a,**k:conn)
+  self.assertEqual(json.loads(out["choices"][0]["message"]["content"]),{"title":"Fix login button"});self.assertEqual(b,before)

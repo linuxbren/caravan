@@ -31,6 +31,30 @@ def title_matches_user(title,user):
     words=lambda text:set(re.findall(r"[^\W_]{3,}",text.casefold()))-filler
     return bool(words(title)&words(user))
 
+def title_messages(body):
+    system=body["messages"][0]["content"]
+    language="\n".join(line for line in system.splitlines() if line.startswith("- Write the title in "))
+    compact=('You generate short conversation titles. Return only one JSON object: {"title": "..."}. '
+             'Summarize what the user wants done in 3 to 7 words, sentence case. Preserve technical names. '
+             'Never answer the message or write code. No Markdown or trailing punctuation.\n'+language)
+    return [{"role":"system","content":compact},dict(body["messages"][1])]
+
+def parse_title(text,*,allow_plain=False):
+    if not isinstance(text,str):return None
+    try:
+        value=json.loads(text)
+        if isinstance(value,dict):return value.get("title")
+        if allow_plain and isinstance(value,str):text=value
+        else:return None
+    except ValueError:
+        if not allow_plain:return None
+    text=text.strip()
+    if text.lower().startswith("title:"):text=text[6:].strip()
+    # Only normalize a short single-line title, never an answer, code or a
+    # malformed JSON object. The independent topic/length gates still apply.
+    if any(c in text for c in "\n\r\t`{}[]:;") or len(text.split())<3:return None
+    return text.rstrip(".!?")
+
 def try_title(body,*,env=None,connection=http.client.HTTPConnection):
     env=os.environ if env is None else env
     model=env.get("CARAVAN_AUX_MODEL","").strip()
@@ -47,6 +71,8 @@ def try_title(body,*,env=None,connection=http.client.HTTPConnection):
             if r.status!=200:return None
             r.read()
             data=dict(body,model=model,reasoning_effort="none")
+            compact=env.get("CARAVAN_AUX_COMPACT_PROMPT","1").strip().lower() in ("1","true","on","yes")
+            if compact:data["messages"]=title_messages(body)
             raw=json.dumps(data).encode();fp=hashlib.sha256(raw).hexdigest()[:16]
             conn.request("POST","/v1/chat/completions",body=raw,headers={"Content-Type":"application/json","X-Caravan-Session":"aux_"+fp})
             r=conn.getresponse()
@@ -54,10 +80,11 @@ def try_title(body,*,env=None,connection=http.client.HTTPConnection):
             result=json.loads(r.read(1024*1024))
             choice=result["choices"][0]
             if choice.get("finish_reason")!="stop":return None
-            title=json.loads(choice["message"]["content"])["title"]
+            title=parse_title(choice["message"]["content"],allow_plain=compact)
             if not isinstance(title,str) or not 1<=len(title.split())<=12 or len(title)>160:return None
             if not title_matches_user(title,body["messages"][1]["content"]):return None
-            result["caravan_aux"]={"route":"title-sidecar","model":model}
+            choice["message"]["content"]=json.dumps({"title":title},ensure_ascii=False)
+            result["caravan_aux"]={"route":"title-sidecar","model":model,"compact_prompt":compact}
             return result
         finally:conn.close()
     except (OSError,ValueError,TypeError,KeyError,IndexError,http.client.HTTPException):return None
