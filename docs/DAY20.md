@@ -448,3 +448,24 @@ single-line, checked within1280px; preview stills manually inspected.
 
 Send v5 and its real numbers to X Engagement for review before showing it to
 Brenden. No post/send performed by this executor.
+
+
+### Day 19 video v6 — reviewer trims, no new footage
+
+Output `/workspace/caravan-day19-v6.mp4`, copied to Omarchy
+`~/day19-video/caravan-day19-v6.mp4`; **22.000 s**, 1280×720,24fps,528frames.
+Source-only frame edit of v5: answer retained through7.5s (~1s after completion);
+three status cards52frames each (~2.17s). End cards remain2s each.
+Typing label is YOU throughout, fixed position/color; recovery value now
+**64.7 s** (rounded from64.735s, first failed EXO1 probe to load complete),
+not a power-off stopwatch or reply-latency claim. Other numbers remain
+Huihui27B4-bit,24/40,EXO2 thenEXO1. No speed/test-count/date overlays.
+
+Build `handoff/lab/videos/make_day19_v6.py`; frame-exact source ranges and
+caption timings recorded in script and `day19_captions_v6.txt`. New captions:
+0.000 /2.208 /7.500 /9.667 /11.833 /15.833 /18.000 /20.000s.
+All unchanged wording preserved, including the recovery caption “About a minute
+later, the model is back and answering.” Corrected typing/recovery stills
+visually inspected, single-line bottom captions intact, no cropped text.
+Parent must obtain X Engagement review before showing Brenden. No external
+post/message or service restart performed by this executor.
