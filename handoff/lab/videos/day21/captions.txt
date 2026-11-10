@@ -1,0 +1,6 @@
+0.0–3.0s  Pick how your Macs share the model — or let it decide.
+3.0–6.5s  Adjust the split. Apply is black when it's ready.
+6.5–10.5s  It tells you it's reloading, Mini by Mini.
+10.5–13.5s  Chat is ready again in about 13 seconds.
+13.5–16.5s  It checks the Thunderbolt link between your Macs.
+16.5–20.0s  [plain final card] For the nerds: reload 8.82 s · chat ready 12.93 s

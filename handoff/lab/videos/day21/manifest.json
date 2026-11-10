@@ -1,0 +1,59 @@
+{
+  "duration_s": 20,
+  "fps": 24,
+  "dimensions": [
+    1280,
+    720
+  ],
+  "captions": [
+    {
+      "start_s": 0.0,
+      "end_s": 3.0,
+      "text": "Pick how your Macs share the model — or let it decide."
+    },
+    {
+      "start_s": 3.0,
+      "end_s": 6.5,
+      "text": "Adjust the split. Apply is black when it's ready."
+    },
+    {
+      "start_s": 6.5,
+      "end_s": 10.5,
+      "text": "It tells you it's reloading, Mini by Mini."
+    },
+    {
+      "start_s": 10.5,
+      "end_s": 13.5,
+      "text": "Chat is ready again in about 13 seconds."
+    },
+    {
+      "start_s": 13.5,
+      "end_s": 16.5,
+      "text": "It checks the Thunderbolt link between your Macs."
+    }
+  ],
+  "final_card": {
+    "start_s": 16.5,
+    "end_s": 20.0,
+    "text": "For the nerds: reload 8.82 s · chat ready 12.93 s"
+  },
+  "footage": "Live Day 21 UI screenshots from the Caravan web Balance and Thunderbolt panels. Crops only; no text rewritten inside the screenshots. No new Apply/Load/Unload or screen recording was made for this cut. End card is typographic measured timings, not a reboot claim.",
+  "numbers": {
+    "apply_backend_ready_s": 8.82,
+    "apply_chat_usable_s": 12.93,
+    "caption_chat_ready_rounded_s": 13
+  },
+  "sources": [
+    "docs/release-notes/day21.md: UI Apply Huihui 27/37 back to 24/40 KV16, backend Ready 8.82s, chat usable 12.93s including polling",
+    "docs/DAY21.md: same Apply measurement",
+    "Live screenshots: day21-balance-live.png, day21-apply-ready.png, day21-apply-reloading.png, day21-apply-done.png, day21-tb-verified.png"
+  ],
+  "asset_sha256": {
+    "apply-done.png": "54fc7cfc4bfa048000cfa3342c37aceb43ebe410c3bc636b76d6bb1f110d48ed",
+    "apply-ready.png": "b44d23629f9b3aad1ce0b43fd0bf08ccb4f7bcfa5ff3f206f4985340ac05cc1c",
+    "apply-reloading.png": "4a084d2a2a18f21c56cce52b774c1360c26193a9dc580cb0d65806f5e21b46ae",
+    "balance-auto.png": "db43ea6895b3247f81628fb566a4aa2b0079b7dbb715b9471d1536d9b1b776dc",
+    "tb-verified.png": "97fedd2492a8110b834fd6482d460e74149b9e83e6a113021e322e83c223d01b"
+  },
+  "precision": "Caption 'about 13 seconds' is the rounded chat-usable time. Exact 12.93 s and backend Ready 8.82 s are on the final card. The on-screen reload banner's 'about 10 seconds' is the product estimate, left unaltered in the screenshot."
+}
