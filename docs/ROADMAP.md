@@ -22,7 +22,7 @@ deprecated flag aliases.
 - [x] Self-tune 5s clip v2 (41.53→69.70; interpolated mid frames; Huihui left loaded for re-cut).
 - [x] Day 19 video v3 (`/workspace/caravan-day19-v3.mp4`, 31.6 s, live chat + real path fallback) + X draft (review before Brenden).
 - [x] Historical v3-window deferral superseded by the Day20 reboot2 evidence (not a claim that v3 already proved it).
-- [ ] Balance clearer UI (Day 21; mockup approved to draft: one-line explanation, per-Mini memory bars, Auto default + Adjust slider, live preview, Apply / Back to auto, jargon behind details).
+- [x] Balance clearer UI (Day 21; approved mockup implemented: one-line explanation, per-Mini memory bars, Auto default + Adjust slider, live preview, Apply / Back to auto, jargon behind details).
 
 ## Day 20 checkpoint
 
@@ -37,16 +37,17 @@ deprecated flag aliases.
 - [x] Day20 video + local X drafts (Brenden posts; tone review still available).
 - [ ] Physical reboot check of the newly added auxiliary title worker's RAM/primary-health startup gate (Day 21).
 - [ ] Repeated performance samples (Day 24), max-context sweep and >2-Mini physical measurements before broader speed/capacity claims.
-- [ ] Balance clearer mockup → implementation (Day 21; after Day 19 video/X).
+- [x] Balance clearer mockup → approved real implementation and live preview verification (Day21).
 
 
 ## Day 21 phase 1 checkpoint
 
-- [x] Static clearer Balance Auto/Adjust mockups and PNGs; awaiting Brenden’s okay before building.
+- [x] Balance mockup approved and real Auto-first N-Mini overview implemented (`d56977d`); live default/Adjust screenshots and preview-only checks passed.
 - [x] Two-Mini API switch/unload and Huihui24/40 KV16 restore;9.173s switch,1.782s unload,9.016s restore. See [DAY21.md](DAY21.md).
 - [x] N-Mini Thunderbolt discovery/routing design and two-Mini read-only route check documented; no automatic routing code deployed.
 - [x] Exact auxiliary reboot observer/check steps prepared; Brenden issues reboot.
-- [ ] Balance implementation, discovery implementation and physical aux reboot proof remain pending.
+- [x] Trusted read-only Thunderbolt inventory/candidate graph and explicit UI/API inspection implemented; no automatic route changes.
+- [ ] Verified data-service identity/reachability, automatic route selection and physical aux reboot proof remain pending.
 
 ## Plan: Day 21–25 (agreed 2026-11-09)
 

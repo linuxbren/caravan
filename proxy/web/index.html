@@ -1011,6 +1011,8 @@
   .opt.mlxoff .seg button { cursor: not-allowed; }
   .pinnote.mlxnote { margin-bottom: 6px; }
 
+  #thunderboltPanel { border-top: 1px solid var(--line); font-size: .7rem; line-height: 1.6; overflow-wrap: anywhere; }
+  #thunderboltPanel .help { color: var(--muted); }
   /* Day21 Balance: plain overview; expert file/stage controls remain available. */
   #balancePanel { margin: 16px 0; padding: 18px 12px; border-top: 1px solid var(--line); }
   #balancePanel .balance-heading, #balancePanel .balance-mode-row,
@@ -1176,6 +1178,12 @@
     <p class="balance-help">Bars show estimated model use within each Mini’s usable budget, not total RAM. Actual memory and speed are checked after loading.</p>
   </section>
 
+  <section class="drawer-section" id="thunderboltPanel" aria-label="Thunderbolt discovery">
+    <h3>Thunderbolt links</h3>
+    <p class="help">Inspect trusted Minis and candidate cable routes. This never changes the running connection.</p>
+    <button type="button" class="ghost" id="thunderboltInspect">Inspect links</button>
+    <div id="thunderboltReadout" aria-live="polite">Not inspected. Automatic routing is off.</div>
+  </section>
   <div class="topo-disk">
     <div class="picker-section">On disk · all Minis</div>
     <div class="picker-disk" id="pickerDisk">loading…</div>
@@ -3207,6 +3215,7 @@
   <button type="button" class="primary" id="loadNowYes">Load now</button>
   <button type="button" id="loadNowNo">Not now</button>
 </dialog>
+<script src="/thunderbolt.js"></script>
 <script src="/balance_view.js"></script>
 <script src="/balance.js"></script>
 </body>

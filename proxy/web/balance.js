@@ -78,7 +78,7 @@
         input.oninput=() => {
           counts=V.moveBoundary(counts || next.counts,i,input.value);
           label.textContent=`${stage.label} ↔ ${next.stages[i+1].label} · ${counts[i]} / ${counts[i+1]} layers`;
-          invalidate(`Preview: ${next.stages.map((s,j)=>`${s.label} ${counts[j]} layers`).join(' · ')} · checking memory…`);
+          invalidate(`Preview: ${counts.length <= 2 ? counts.join(' / ') + ' layers' : counts.length + ' Minis'} · checking memory…`);
           clearTimeout(timer); timer=setTimeout(refresh,200);
         };
         row.append(label,input); controls.append(row);

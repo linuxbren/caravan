@@ -2863,3 +2863,26 @@ design. Adjust reveals N-aware controls; existing preview/reload/file APIs are
 unchanged. Added14 production-JS helper/DOM contract cases, including stale
 response and unsafe/duplicate-Apply prevention. Deployment/live proof follows
 with web-only restart and existing model workers preserved. See DAY21.md.
+
+
+### Day21 Balance deployed; passive Thunderbolt inspection
+
+`d56977d` deployed ff-only to both Minis; only web restarted, existing Huihui
+PID30460 adopted unchanged. Live Auto/Adjust screenshots captured through18190;
+slider movement and Back to auto sent previews only. No JS errors/model writes.
+The initial verifier expected a restore status field absent after adoption;
+corrected to inspect the existing saved preference, with no additional restart.
+Full Balance regression808 passed in43.807s (baseline794,+14).
+
+Added configured/trusted-only Thunderbolt inventory and source-route candidate
+graph, cached30s, exposed via explicit Inspect links and GET/api/thunderbolt.
+Strict SSH host keys, no scanning/probes/routing or model changes. Graph edges
+are unverified candidates, never load-ready.25 discovery tests added; full
+regression and live readout recorded below after deployment. See DAY21.md.
+
+
+Final phase2 regression834 passed in44.216s (+40 from794):15 Balance and25
+discovery/readout tests. Corrected GGUF capacity-field compatibility via a
+regression case, without changing its API or performing a live GGUF load.
+Compact result wording fits the actual sidebar; large-N details stay in
+per-boundary controls. Automatic routing remains off.

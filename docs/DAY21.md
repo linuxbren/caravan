@@ -291,8 +291,71 @@ peer labels, paths and errors. Themes inherit the existing UI variables.
 Added production-JS contract coverage for 1/2/3/7-Mini boundaries, constant layer
 totals, safe memory bars, malformed plans, Auto/Adjust/Back transitions, stale
 responses, invalid GGUF shares, exact Apply payload and duplicate/unsafe Apply
-blocking. Baseline794 tests; added14 Balance cases; full regression808 tests passed in43.534s. Deployment uses ff-only pulls
+blocking. Baseline794 tests; added14 Balance cases; full regression808 tests passed in43.807s. Deployment uses ff-only pulls
 and only the existing web LaunchAgent (already configured
 CARAVAN_WEB_KEEP_WORKERS=1 and AbandonProcessGroup=true). Live verification
 will not press Apply, Load or Unload; Huihui24/40 KV16 must retain its PID and
 saved preference. No physical reboot is authorized by this implementation step.
+
+
+### Balance live verification (Omarchy18190)
+
+Deployed `d56977d` by ff-only pulls in EXO1 `~/dev/caravan-v3` and EXO2
+`~/cv3`. Restarted only `com.caravan.v3.web` after checking its plist contains
+CARAVAN_WEB_KEEP_WORKERS=1 and AbandonProcessGroup=true. Existing main worker
+PID **30460** was adopted unchanged; no Apply/Load/Unload request was made.
+
+Real browser screenshots: `/workspace/day21-balance-live.png` (Auto) and
+`/workspace/day21-balance-live-adjust.png` (Adjust open). Browser integration
+checked2 memory cards, hidden-by-default slider, Adjust, moving28/36→29/35
+with immediate disabled Apply and a fresh one-line memory preview, then Back
+to auto. All of these were previews only. Zero JS errors and zero model/file
+mutation requests; an interception guard would have blocked any such request.
+The running/saved split stayed24/40, active KV16. Estimated Auto counts differ
+from the currently applied split by design and are not silently applied.
+
+Initial deployment verifier incorrectly required restore.last_model in the
+status response after adoption and timed out; adoption legitimately reports
+phase=adopted without that field. Corrected verification reads the unchanged
+last-model.json preference and checks the active PID/counts/KV16 separately.
+No second restart or reload was needed to correct the verifier.
+
+## Trusted Thunderbolt read-only implementation
+
+Added an explicit **Inspect links** readout and GET `/api/thunderbolt`. It
+queries only configured Mini identities, with BatchMode and strict existing
+SSH host keys; no mDNS enrollment, scanning or user-supplied API targets. Two
+bounded-concurrency passes (maximum4 inspectors) collect local TB hardware
+interfaces/addresses, then each source Mini’s route to known peer addresses.
+Each snapshot is cached30s; opening Topology does not start inspection.
+
+The directed N-node graph labels every edge **candidate only**, with
+usable_for_routing=false. Source routes must use an observed TB interface or
+a bridge proven to contain only TB hardware members. Public addresses, unknown
+hardware, mixed bridges and ambiguous addresses across Minis are excluded.
+Scoped IPv6 is deferred rather than incorrectly stripping its scope.
+Malformed inventories/offline peers fail closed with diagnostics.
+
+No new sockets/probes, data handshakes, benchmark transfers, route or macOS
+network changes, peer/listen rewrites, model changes or automatic routing.
+Trusted SSH confirms inventory provenance, **not** authenticated raw MLX data
+service identity, cable adjacency or transfer speed. Those checks and actual
+automatic route selection remain future work; the UI says this explicitly.
+25 new discovery tests (23 Python plus2 JS readout contracts) cover parser/bridge/security rules, strict SSH, failed
+inspection, source-specific and asymmetric3-node graphs,7-node fixtures,
+address collisions, cache invalidation and API confinement/read-only failures.
+
+
+### Compatibility correction and final regression
+
+Code review caught that existing GGUF previews return estimated use + headroom
+without a separate capacity_gb. View helpers now derive that usable budget
+without altering the API; unknown values remain blocked. Added a real-contract
+regression (`1570c3e`), so Balance adds15 cases total. Also shortened live
+result wording to fit the actual drawer width; for N>2 the one-line result
+shows Mini count and minimum headroom while per-boundary controls show layers.
+
+Final full box regression: **834 passed in44.216s**, baseline794 (**+40**):
+15 Balance JS/helper/DOM contracts,23 discovery Python cases,2 discovery JS
+readout contracts. Node syntax, Python compilation and git diff checks passed.
+No physical reboot, live GGUF load or production model reload for this work.

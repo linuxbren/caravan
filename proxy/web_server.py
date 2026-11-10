@@ -784,6 +784,14 @@ def make_handler(app: App):
                 return self._json(200, app.optimizer.snapshot())
             if path == "/api/journey":
                 return self._json(200, load_journey())
+            if path == "/api/thunderbolt":
+                import thunderbolt_discovery
+                if not hasattr(app, "thunderbolt_discovery"):
+                    app.thunderbolt_discovery = thunderbolt_discovery.Controller()
+                try:
+                    return self._json(200, app.thunderbolt_discovery.snapshot(app.configured_nodes()))
+                except (ValueError, OSError, RuntimeError) as e:
+                    return self._json(503, {"error": str(e), "read_only": True})
             if path == "/api/nodes":
                 return self._json(200, app.nodes())
             if path == "/api/split":

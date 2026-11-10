@@ -31,8 +31,11 @@
     const safe = plan.stages.every(s => card(s).safe);
     if (!safe) return 'Preview: not enough known free memory on every Mini. Apply is blocked.';
     const free = Math.min(...plan.stages.map(s => s.headroom_gb)).toFixed(1);
-    if (adjusting) return `Preview: ${plan.stages.map((s,i) => `${s.label || s.id} ${plan.counts[i]} ${plan.format === 'gguf' ? 'share' : 'layers'}`).join(' · ')} · at least ${free} GB left per Mini.`;
-    return `Preview: work shared automatically · at least ${free} GB left per Mini.`;
+    if (adjusting) {
+      const split = plan.counts.length <= 2 ? `${plan.counts.join(' / ')} ${plan.format === 'gguf' ? 'shares' : 'layers'}` : `${plan.counts.length} Minis`;
+      return `Preview: ${split} · ≥${free} GB free per Mini.`;
+    }
+    return `Preview: Auto · ≥${free} GB free per Mini.`;
   }
   const api = {valid, card, moveBoundary, summary};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
