@@ -7,7 +7,7 @@ reply. `raw/paired-input-output-proof.json` verifies the8 new-model medium
 pairs. Supplemental Astrea thinking-none short pairs also match input hash/output.
 
 Only explicit successful source rows form the tables. Invalid identity controls,
-namespace/storage rejections, original GPU OOM log and invalid monitor are kept
+namespace/storage rejections, GPU OOM excerpt (original stays on Omarchy) and invalid monitor are kept
 for honesty. `memory-watch-real.jsonl` is valid; `memory-watch.jsonl` is NOT.
 Huihui split reference predates this phase; original timestamps are preserved.
 Text diagnostic logs have normalized line endings/trailing blanks; JSON metrics

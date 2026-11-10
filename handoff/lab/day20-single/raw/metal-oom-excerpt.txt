@@ -1,0 +1,15 @@
+Source: ~/day20-single/raw/initial-huihui-lead.log on Omarchy; log wall time CST. Original retained there.
+564: ----------------------------------------BrokenPipeError: [Errno 32] Broken pipe
+565: ----------------------------------------
+566:
+567: 21:39:37 [mlx-worker] session 675ac1da4e3ff033: generation stopped (RuntimeError('[METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).')); rewound
+568: 21:39:37 [mlx-worker] generation failed: RuntimeError('[METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).')
+569: ------------------------------------------------------------------------------------------------------------------------
+570: --------------------------------------------------------------------------------
+565: ----------------------------------------
+566:
+567: 21:39:37 [mlx-worker] session 675ac1da4e3ff033: generation stopped (RuntimeError('[METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).')); rewound
+568: 21:39:37 [mlx-worker] generation failed: RuntimeError('[METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).')
+569: ------------------------------------------------------------------------------------------------------------------------
+570: --------------------------------------------------------------------------------
+571:
