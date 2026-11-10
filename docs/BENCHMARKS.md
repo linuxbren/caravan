@@ -1518,3 +1518,18 @@ Full settings, failures, storage changes, context limits and provenance: [DAY20.
 | Orvena Qwen3.5-4B 4-bit / 2× 16/16 | 7.150 →5.282 | 108,070 →79,574 | 11,435 / 11,439 |
 
 All config ceilings262,144; RAM budgets above are not validated maxima. Huihui single full Metal OOM, no warm result. Fix1976b7b corrects nested decoder guard depth (64× KV undercount);794tests44.103s. Split mainly enabled large-model capacity, not faster serial dense decode: ~3% Astrea/~6.5% Orvena decode penalty, cold TTFT nearly unchanged. Title worker was off for measurements; restored afterward.
+
+
+## Day 21 operational smoke (not repeated speed claims)
+
+Nov9,2026 CST; two physical24GiB M4 Minis; normal web API, KV16.
+Huihui24/40→Orvena Qwen3.5-4B16/16 **9.173s** to matching healthy Ready,
+unload both **1.782s**, restore saved Huihui24/40 **9.016s**. Orvena's
+short canonical-ID proxy reply **0.369s** wall, finish stop. Initial controller
+slug mismatch returned502 and is excluded, not hidden. Final19-tool medium
+Hermes-prefix replay through18090: **11.350s** wall, **0.383s** native TTFT,
+**6.24tok/s**,11310 prompt tokens, warm checkpoint, finish stop. Title sidecar
+**0.306s** wall, HTTP200. These are one-cycle correctness/recovery checks,
+not cold-performance or end-to-end Hermes tool execution benchmarks.
+Details and raw evidence: [DAY21.md](DAY21.md#live-model-switchunload-verification--nov-9-23022304-cst),
+`handoff/lab/day21/raw/`. No physical reboot was performed.

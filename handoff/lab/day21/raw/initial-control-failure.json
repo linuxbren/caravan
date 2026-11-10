@@ -1,0 +1,5 @@
+{
+  "time_CST": "2026-11-09T23:02:16-06:00",
+  "http": 502,
+  "note": "First controller sent the Caravan web model slug orvena-4b-mlx-4bit to the OpenAI proxy. Its configured MLX route matches canonical Orvena/ repository IDs, not this slug. No error response body was retained. Unload was not reached in this attempt; finally restored Huihui. The corrected canonical-ID run is separate; not counted as a successful reply."
+}

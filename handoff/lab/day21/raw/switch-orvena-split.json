@@ -1,0 +1,12 @@
+{
+  "start_CST": "2026-11-09T23:02:16.944272-06:00",
+  "accepted_s": 2.221,
+  "ready_s": 9.382,
+  "old_pid": 21082,
+  "new_pid": 30166,
+  "counts": [
+    16,
+    16
+  ],
+  "model": "orvena-4b-mlx-4bit"
+}

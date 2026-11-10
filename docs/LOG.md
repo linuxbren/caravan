@@ -2841,3 +2841,16 @@ Face, never from the other Mac). Checksums are still open. 126 tests pass.
 - Power: `sudo powermetrics` needs a password on the Minis. Lead CPU%
   median rose during waits (e.g. Gemma 4.5 → 13.9); packer median
   barely moved with the spawn design. Tables in BENCHMARKS.md.
+
+
+## Day 21 phase 1 — Nov 9, 2026 CST
+
+Created standalone amber Balance Auto/Adjust mockups using the actual UI CSS;
+no deployed UI changes. Live API switch Orvena16/16 took9.173s, unload1.782s,
+Huihui24/40 restore9.016s. Initial test used an unsupported proxy slug and
+returned502; retained separately, then corrected to canonical Orvena/ model ID.
+Final19-tool medium-reasoning prefix replay succeeded through18090 in11.350s
+(native TTFT0.383s, warm checkpoint), title sidecar200 in0.306s. Saved restore
+remains Huihui24/40 KV16. No reboot/service restart or production code changes.
+N-Mini Thunderbolt discovery design, trusted-link/security constraints and exact
+Brenden-run aux reboot checks: DAY21.md. Stop at approval checkpoint.

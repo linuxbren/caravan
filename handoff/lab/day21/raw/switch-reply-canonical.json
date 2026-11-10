@@ -1,0 +1,88 @@
+{
+  "wall_s": 0.369,
+  "response": {
+    "id": "chatcmpl-284604cc05cd",
+    "object": "chat.completion",
+    "created": 1794286994,
+    "model": "Orvena/Orvena-4B-MLX-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "Caravan switch works."
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 21,
+      "completion_tokens": 5,
+      "total_tokens": 26,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.101,
+        "ttft_s": 0.146,
+        "total_s": 0.298,
+        "peak_gb": 1.5,
+        "split": {
+          "calls": 11,
+          "mb_out": 0.0,
+          "mb_in": 0.14,
+          "wait_s": 0.138,
+          "front_s": 0.128,
+          "net_s": 0.01
+        },
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": true,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": true,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": 16,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 8.215,
+          "need_gb": 0.006,
+          "prompt_tokens": 21,
+          "budget_tokens": 125280,
+          "bytes_per_token": 65536.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 15.49,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 13.74,
+          "packer_available_gb": 9.965,
+          "packer_headroom_gb": 8.215,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 207.9,
+        "write_tok_s": 26.32
+      }
+    }
+  }
+}

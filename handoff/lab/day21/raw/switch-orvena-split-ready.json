@@ -1,0 +1,204 @@
+{
+  "tuning": {
+    "trial": null,
+    "reload_wanted": [],
+    "known": true,
+    "replies_learned": 0,
+    "winner": {}
+  },
+  "optimize": {
+    "running": false,
+    "mode": null,
+    "phase": "idle",
+    "eta_s": null
+  },
+  "worker": {
+    "status": "ready",
+    "model_id": "orvena-4b-mlx-4bit",
+    "model_name": "Orvena 4B MLX 4bit",
+    "progress": [
+      {
+        "t": 1794286933.469,
+        "msg": "EXO2: 16 layers ready"
+      },
+      {
+        "t": 1794286934.487,
+        "msg": "lead: 23:02:13 [mlx-worker] fuse kernels: off"
+      },
+      {
+        "t": 1794286934.487,
+        "msg": "lead: 23:02:14 [mlx-worker] model_type remap: qwen3_5_text \u2192 qwen3_5"
+      },
+      {
+        "t": 1794286934.487,
+        "msg": "lead: 23:02:14 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)"
+      },
+      {
+        "t": 1794286936.508,
+        "msg": "lead: 23:02:15 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.99.64:5560"
+      },
+      {
+        "t": 1794286936.508,
+        "msg": "lead: 23:02:15 [mlx-worker] split speculate: --no-split-draft; auto-pair off"
+      },
+      {
+        "t": 1794286936.508,
+        "msg": "lead: 23:02:15 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)"
+      },
+      {
+        "t": 1794286936.508,
+        "msg": "lead: 23:02:15 [mlx-worker] mlx cache_limit 1.5 GB"
+      },
+      {
+        "t": 1794286936.508,
+        "msg": "lead: 23:02:15 [mlx-worker] warm-up 0.11s"
+      },
+      {
+        "t": 1794286936.508,
+        "msg": "lead: 23:02:15 [mlx-worker] loaded Orvena--Orvena-4B-MLX-4bit (qwen3_5) in 1.3s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/br"
+      },
+      {
+        "t": 1794286936.508,
+        "msg": "lead: 23:02:15 [mlx-worker] active settings: {\"fuse_kernels\": \"off\", \"guess_ahead\": false, \"guess_ahead_loaded\": false, \"guess_ahead_mode\": \"helper\", \"keepalive\": tru"
+      },
+      {
+        "t": 1794286936.508,
+        "msg": "lead: 23:02:15 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)"
+      },
+      {
+        "t": 1794286936.508,
+        "msg": "lead: 23:02:15 [mlx-worker] listening on http://127.0.0.1:8194"
+      },
+      {
+        "t": 1794286936.511,
+        "msg": "lead health ok"
+      },
+      {
+        "t": 1794286936.515,
+        "msg": "Balance loaded; send a reply to measure real speed"
+      }
+    ],
+    "error": null,
+    "lead_pid": 30166,
+    "packer_pid": null,
+    "lead_url": "http://127.0.0.1:8194",
+    "split": true,
+    "lpm_ok": true,
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "fuse_kernels": "auto",
+      "kv_bits": "16",
+      "keepalive": "auto"
+    },
+    "page_settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "fuse_kernels": "auto",
+      "kv_bits": "16",
+      "keepalive": "auto"
+    },
+    "from_file": {},
+    "config_errors": [],
+    "balance": {
+      "counts": [
+        16,
+        16
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "lead_pid": 30166,
+      "model_id": "orvena-4b-mlx-4bit",
+      "model_name": "Orvena 4B MLX 4bit",
+      "model_path": "/Users/brenden/.caravan/mlx-models/Orvena--Orvena-4B-MLX-4bit"
+    }
+  },
+  "restore": {
+    "phase": "saved",
+    "message": "Last successful model saved for next login",
+    "enabled": true,
+    "last_model": "orvena-4b-mlx-4bit",
+    "saved_at": 1794286936.5145001
+  },
+  "lead_healthy": true,
+  "split": {
+    "lead": {
+      "stage": "head 16-31 of 32",
+      "name": "lead: layers 16-31 of 32",
+      "weights_gb": 1.0,
+      "active_gb": 1.36,
+      "peak_gb": 1.49
+    },
+    "packers": [
+      {
+        "name": "packer 1: layers 0-15 of 32",
+        "stage": "front 0-15 of 32",
+        "weights_gb": 1.0,
+        "active_gb": 1.36,
+        "peak_gb": 1.49,
+        "sessions": 0,
+        "session_gb": 0.0,
+        "mem_total_gb": 25.769803776,
+        "mem_available_gb": 9.132826624
+      }
+    ],
+    "head": {
+      "stage": "head 16-31 of 32",
+      "name": "lead: layers 16-31 of 32",
+      "weights_gb": 1.0,
+      "active_gb": 1.36,
+      "peak_gb": 1.49
+    },
+    "front": {
+      "name": "packer 1: layers 0-15 of 32",
+      "stage": "front 0-15 of 32",
+      "weights_gb": 1.0,
+      "active_gb": 1.36,
+      "peak_gb": 1.49,
+      "sessions": 0,
+      "session_gb": 0.0,
+      "mem_total_gb": 25.769803776,
+      "mem_available_gb": 9.132826624
+    },
+    "peer": "169.254.99.64:5560"
+  },
+  "active": {
+    "guess_ahead": false,
+    "guess_ahead_loaded": false,
+    "native_mtp_available": false,
+    "guess_ahead_mode": "helper",
+    "prompt_lookup": {
+      "enabled": false,
+      "adaptive": false,
+      "overlap_on": 0.5
+    },
+    "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+    "two_chats_available": true,
+    "self_tune": false,
+    "shared_start": false,
+    "pipeline_chats": 1,
+    "fuse_kernels": "off",
+    "kv_bits": 16,
+    "keepalive": true,
+    "pinned": [],
+    "sweep_paused": false,
+    "packer_layers": 16,
+    "n_layers": null,
+    "reload_auto": [],
+    "reload_trial": null
+  },
+  "uptime_s": 10500.6,
+  "ports": {
+    "web": 8190,
+    "lead": 8194,
+    "packer": "169.254.99.64:5560"
+  }
+}

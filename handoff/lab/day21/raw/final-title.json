@@ -1,0 +1,87 @@
+{
+  "http": 200,
+  "aux_header": "title-sidecar",
+  "wall_s": 0.306,
+  "response": {
+    "id": "chatcmpl-5824d5b362a8",
+    "object": "chat.completion",
+    "created": 1794287081,
+    "model": "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "{\"title\": \"Review Caravan after reboot and improve Hermes speed\"}"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 91,
+      "completion_tokens": 11,
+      "total_tokens": 102,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.03,
+        "ttft_s": 0.043,
+        "total_s": 0.084,
+        "peak_gb": 0.4,
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": false,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": null,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": null,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 5.028,
+          "need_gb": 0.002,
+          "prompt_tokens": 91,
+          "budget_tokens": 409147,
+          "bytes_per_token": 12288.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 6.778,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 5.028,
+          "packer_available_gb": null,
+          "packer_headroom_gb": null,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 3033.3,
+        "write_tok_s": 243.9
+      }
+    },
+    "caravan_aux": {
+      "route": "title-sidecar",
+      "model": "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+      "compact_prompt": true
+    }
+  }
+}

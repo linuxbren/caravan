@@ -1,0 +1,109 @@
+{
+  "status": "ready",
+  "model_id": "orvena-4b-mlx-4bit",
+  "model_name": "Orvena 4B MLX 4bit",
+  "progress": [
+    {
+      "t": 1794286933.469,
+      "msg": "EXO2: 16 layers ready"
+    },
+    {
+      "t": 1794286934.487,
+      "msg": "lead: 23:02:13 [mlx-worker] fuse kernels: off"
+    },
+    {
+      "t": 1794286934.487,
+      "msg": "lead: 23:02:14 [mlx-worker] model_type remap: qwen3_5_text \u2192 qwen3_5"
+    },
+    {
+      "t": 1794286934.487,
+      "msg": "lead: 23:02:14 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)"
+    },
+    {
+      "t": 1794286936.508,
+      "msg": "lead: 23:02:15 [mlx-worker] split lead: lead: layers 16-31 of 32 here, packer 1: layers 0-15 of 32 at 169.254.99.64:5560"
+    },
+    {
+      "t": 1794286936.508,
+      "msg": "lead: 23:02:15 [mlx-worker] split speculate: --no-split-draft; auto-pair off"
+    },
+    {
+      "t": 1794286936.508,
+      "msg": "lead: 23:02:15 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)"
+    },
+    {
+      "t": 1794286936.508,
+      "msg": "lead: 23:02:15 [mlx-worker] mlx cache_limit 1.5 GB"
+    },
+    {
+      "t": 1794286936.508,
+      "msg": "lead: 23:02:15 [mlx-worker] warm-up 0.11s"
+    },
+    {
+      "t": 1794286936.508,
+      "msg": "lead: 23:02:15 [mlx-worker] loaded Orvena--Orvena-4B-MLX-4bit (qwen3_5) in 1.3s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/br"
+    },
+    {
+      "t": 1794286936.508,
+      "msg": "lead: 23:02:15 [mlx-worker] active settings: {\"fuse_kernels\": \"off\", \"guess_ahead\": false, \"guess_ahead_loaded\": false, \"guess_ahead_mode\": \"helper\", \"keepalive\": tru"
+    },
+    {
+      "t": 1794286936.508,
+      "msg": "lead: 23:02:15 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)"
+    },
+    {
+      "t": 1794286936.508,
+      "msg": "lead: 23:02:15 [mlx-worker] listening on http://127.0.0.1:8194"
+    },
+    {
+      "t": 1794286936.511,
+      "msg": "lead health ok"
+    },
+    {
+      "t": 1794286936.515,
+      "msg": "Balance loaded; send a reply to measure real speed"
+    }
+  ],
+  "error": null,
+  "lead_pid": 30166,
+  "packer_pid": null,
+  "lead_url": "http://127.0.0.1:8194",
+  "split": true,
+  "lpm_ok": true,
+  "settings": {
+    "self_tune": "off",
+    "guess_ahead": "off",
+    "prompt_lookup": "off",
+    "shared_start": "off",
+    "pipeline_chats": "1",
+    "fuse_kernels": "auto",
+    "kv_bits": "16",
+    "keepalive": "auto"
+  },
+  "page_settings": {
+    "self_tune": "off",
+    "guess_ahead": "off",
+    "prompt_lookup": "off",
+    "shared_start": "off",
+    "pipeline_chats": "1",
+    "fuse_kernels": "auto",
+    "kv_bits": "16",
+    "keepalive": "auto"
+  },
+  "from_file": {},
+  "config_errors": [],
+  "balance": {
+    "counts": [
+      16,
+      16
+    ],
+    "node_ids": [
+      "exo2",
+      "exo1"
+    ],
+    "lead_pid": 30166,
+    "model_id": "orvena-4b-mlx-4bit",
+    "model_name": "Orvena 4B MLX 4bit",
+    "model_path": "/Users/brenden/.caravan/mlx-models/Orvena--Orvena-4B-MLX-4bit"
+  }
+}

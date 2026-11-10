@@ -1,0 +1,12 @@
+{
+  "start_CST": "2026-11-09T23:02:27.182781-06:00",
+  "accepted_s": 1.377,
+  "ready_s": 10.207,
+  "old_pid": 30166,
+  "new_pid": 30227,
+  "counts": [
+    24,
+    40
+  ],
+  "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit"
+}

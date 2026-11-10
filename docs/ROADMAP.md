@@ -40,6 +40,14 @@ deprecated flag aliases.
 - [ ] Balance clearer mockup → implementation (Day 21; after Day 19 video/X).
 
 
+## Day 21 phase 1 checkpoint
+
+- [x] Static clearer Balance Auto/Adjust mockups and PNGs; awaiting Brenden’s okay before building.
+- [x] Two-Mini API switch/unload and Huihui24/40 KV16 restore;9.173s switch,1.782s unload,9.016s restore. See [DAY21.md](DAY21.md).
+- [x] N-Mini Thunderbolt discovery/routing design and two-Mini read-only route check documented; no automatic routing code deployed.
+- [x] Exact auxiliary reboot observer/check steps prepared; Brenden issues reboot.
+- [ ] Balance implementation, discovery implementation and physical aux reboot proof remain pending.
+
 ## Plan: Day 21–25 (agreed 2026-11-09)
 
 Brenden agreed this order on 2026-11-09. Follow it unless a rabbit hole
