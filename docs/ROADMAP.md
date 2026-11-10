@@ -42,7 +42,7 @@ deprecated flag aliases.
 
 ## Day 21 phase 1 checkpoint
 
-- [x] Balance mockup approved and real Auto-first N-Mini overview implemented (`d56977d`); live default/Adjust screenshots and preview-only checks passed.
+- [x] Balance mockup approved and real Auto-first N-Mini overview implemented (`d56977d`); live default/Adjust screenshots passed. Priority follow-up adds black/gray no-op-aware Apply and explicit reload/chat-lock feedback; live return-to24/40 proof follows.
 - [x] Two-Mini API switch/unload and Huihui24/40 KV16 restore;9.173s switch,1.782s unload,9.016s restore. See [DAY21.md](DAY21.md).
 - [x] N-Mini Thunderbolt discovery/routing design and two-Mini read-only route check documented; no automatic routing code deployed.
 - [x] Exact auxiliary reboot observer/check steps prepared; Brenden issues reboot.

@@ -2899,3 +2899,13 @@ native TTFT,6.24tok/s, warm checkpoint, finish stop; models endpoint200.
 Evidence under handoff/lab/day21/live; remaining safety gates in DAY21.md.
 
 Exact shipped010ee54 regression: 834 passed in44.103s, zero failures; final evidence/docs only after this.
+
+
+### Day21 priority Apply/reload feedback
+
+Added black enabled / gray disabled Apply, no-change detection, clear reload
+banners beside Balance and chat, per-Mini steps, immediate chat/Enter/edit
+locking and exact changed-PID/model/split/KV completion checks. Preserve active
+settings on reload; expose GGUF actual shares for status comparison. Preflight
+found a user-applied27/37 KV16; live demonstration will restore24/40 and save it.
+Thunderbolt data-plane work is paused until this feedback checkpoint is reported.

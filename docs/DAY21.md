@@ -400,3 +400,36 @@ validation, supervised cable-loss tests and opt-in automatic route planning.
 
 Exact shipped application revision `010ee54` rechecked after final UI wording:
 **834 tests passed in44.103s**, zero failures; summary in live/regression.json.
+
+
+## Apply feedback correction (priority before further Thunderbolt work)
+
+Brenden requested an unmistakable reload state and clearer Apply styling.
+Enabled Apply is now solid black with readable light text; disabled Apply is
+gray. A preview identical to the currently applied model/node order/counts
+keeps Apply disabled, as do unknown status, unsafe/stale previews and reloads.
+
+Clicking Apply immediately locks chat/Enter, Balance editing and model controls
+and shows **“Reloading model… this takes about 10 seconds”** beside Balance
+and above chat. Steps show stopping, loading each participating Mini and health
+checks. Polling cannot mistake the previous worker's stale Ready for completion:
+completion requires a changed PID, healthy lead, requested model/counts/node
+order and preserved KV precision. Done says **“Ready, new split applied.”**;
+errors and lost status are explicit. Other-tab reloads/unloads are handled too.
+
+Reload requests preserve the actual active settings, including KV16, instead
+of silently replacing them with page Auto defaults. GGUF status now exposes
+actual applied shares so the same no-change/completion checks can work there.
+No live GGUF load is part of this correction.
+
+Preflight found Huihui **27/37 KV16**, PID35708, loaded at23:35 CST through
+the prior UI (not the24/40 left by the previous executor checkpoint). The
+requested live demonstration will explicitly restore24/40 through the new
+Apply flow and leave it saved. No further Thunderbolt implementation until
+this correction, screenshots and results have been reported.
+
+Regression validation: **846 tests passed in44.805s**, up12 from the prior834
+(+52 versus the original Day21 baseline794). The12 new scenarios cover
+no-op Apply, immediate locks, stale Ready, progress, exact completion, mismatch,
+error, connection loss, external reload/unload, active settings and GGUF shares.
+Node syntax, Python compilation and whitespace checks passed.

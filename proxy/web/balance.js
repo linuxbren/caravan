@@ -8,7 +8,65 @@
   const text = (tag, value) => { const el = document.createElement(tag); el.textContent = value; return el; };
   const model = () => $("balanceModel").value || $("modelSelect").value;
   const fetchButton = $("balanceFetch");
-  let jobId = null;
+  let jobId = null, latest = window.caravanWorkerSnapshot || null, reload = null, finished = false;
+  const busy = st => ['stopping','starting_packer','starting_lead','loading'].includes(st);
+  function notice(title, state, steps=[]) {
+    const box=$('balanceReload'); box.hidden=false; box.dataset.state=state;
+    $('balanceReloadTitle').textContent=title;
+    $('balanceReloadSteps').replaceChildren(...steps.map(s=>text('li',s)));
+    const chat=$('balanceChatNotice');chat.hidden=state==='ready';chat.dataset.state=state;chat.textContent=title;
+  }
+  function lockChat(locked) {
+    window.caravanBalanceReloading=locked;
+    if (locked) { $('btnSend').disabled=true; $('input').disabled=true; }
+    $('balanceControlLock').disabled=locked;
+    $('modelSelect').disabled=locked;
+    if (locked) { $('btnLoad').disabled=true; $('btnApply').disabled=true; }
+  }
+  function updateApply() {
+    apply.disabled=!!reload || !plan || !plan.ready || !plan.stages.every(s=>V.card(s).safe) || !V.changed(plan,latest);
+    if (!reload && !finished && plan && latest?.worker?.status==='ready') notice(apply.disabled?'Ready · this split is already applied or not safe to apply.':'Ready to apply a new split.','ready');
+  }
+  function reloadSteps(w) {
+    const st=(w?.status==='ready' && reload && !reload.external && w.lead_pid===reload.oldPid)?'queued':(w?.status || 'queued'), labels=reload?.target?.stages?.map(s=>s.label) || latest?.worker?.balance?.node_ids || [];
+    const msgs=(w?.progress || []).map(p=>p.msg || '').join('\n');
+    const stopping=st==='stopping'||st==='queued';
+    return [stopping?'Stopping old model…':'✓ Old model stopped',...labels.map((label,i)=>{
+      const last=i===labels.length-1;
+      const ready=st==='ready' || (!last && st==='starting_lead') || msgs.includes(label+': '+(reload?.target?.counts?.[i] || '')+' layers ready');
+      return ready?'✓ '+label+' loaded':stopping?'Waiting for '+label:st==='starting_packer'&&last?'Waiting for '+label:'Loading on '+label+'…';
+    }),st==='ready'?'✓ Ready':'Waiting for the model to answer health checks'];
+  }
+  function onStatus(snapshot) {
+    latest=snapshot;const w=snapshot.worker || {};
+    if (!reload && busy(w.status)) { reload={external:true,started:Date.now(),oldPid:null};finished=false; }
+    if (reload) {
+      lockChat(true);
+      if (w.status==='error') {
+        notice('Reload failed: '+(w.error || 'Check Technical details.'),'error');reload=null;finished=true;lockChat(false);
+      } else if (w.status==='idle' && reload.external) {
+        notice('Model unloaded. Choose a model in Settings.','error');reload=null;finished=true;lockChat(false);
+      } else if (w.status==='ready' && snapshot.lead_healthy) {
+        const newWorker=reload.external || (w.lead_pid && w.lead_pid!==reload.oldPid);
+        const kv=reload.settings?.kv_bits;
+        const matches=reload.external || (V.matches(reload.target,w) && (reload.target.format==='gguf' || !kv || String(snapshot.active?.kv_bits)===kv));
+        if (newWorker) {
+          notice(matches?(reload.external?'Ready, model loaded.':'Ready, new split applied.'):'Reload finished, but the requested split was not confirmed.',''+(matches?'done':'error'),matches?reloadSteps(w):[]);
+          reload=null;finished=true;lockChat(false);
+        } else if (reload.failure || Date.now()-reload.started>180000) {
+          notice('Reload not confirmed: '+(reload.failure || 'timed out; current model is still ready.'),'error');reload=null;finished=true;lockChat(false);
+        }
+      }
+      if (reload) notice(reload.failure?'Reload status uncertain: '+reload.failure+' Checking the model…':'Reloading model… this takes about 10 seconds','reloading',reloadSteps(w));
+    }
+    updateApply();mode();
+  }
+  window.addEventListener('caravan-worker-status',e=>onStatus(e.detail));
+  window.addEventListener('caravan-worker-status-error',()=>{
+    apply.disabled=true;
+    if (reload) { lockChat(true);notice('Connection lost. Reload may still be running; waiting for status.','error'); }
+    latest=null;
+  });
   const request = () => ({model_id: model(), counts, repo_id: $("balanceRepo").value.trim() || undefined,
                           gguf_file: $("balanceFile").value.trim() || undefined});
   async function models() {
@@ -25,8 +83,8 @@
     $("balanceMode").textContent = adjusting ? "Adjusting" : "Auto · recommended";
     $("balanceModeHelp").textContent = adjusting ? "Your split · preview only" : "Auto · Caravan shares the work for you";
     $("balanceAdjust").setAttribute("aria-expanded", String(adjusting));
-    $("balanceAdjust").disabled = adjusting || !plan;
-    $("balanceAuto").disabled = !adjusting;
+    $("balanceAdjust").disabled = !!reload || adjusting || !plan;
+    $("balanceAuto").disabled = !!reload || !adjusting;
     controls.hidden = !adjusting;
   }
   function invalidate(message) {
@@ -86,11 +144,12 @@
     });
     technical.append(text('p',next.note));
     preview.textContent=V.summary(next,adjusting) + (next.ready ? '' : ' Check Technical details before applying.');
-    apply.disabled=!next.ready || !next.stages.every(s=>V.card(s).safe);
+    updateApply();
     fetchButton.disabled=!!jobId || next.stages.some(s=>s.downloads===null) || !next.stages.some(s=>s.downloads.length || !s.metadata_ready);
     mode();
   }
   async function refresh() {
+    if (reload) return;
     invalidate('Checking each Mini’s files and memory…');
     const version=revision, mid=model();
     try {
@@ -107,12 +166,14 @@
     }
   }
   async function reset(reloadModels=false) {
+    if (reload) return;
+    finished=false;
     counts=null; adjusting=false; clearTimeout(timer); invalidate('Checking each Mini’s files and memory…');
     controls.replaceChildren(); mode(); const version=revision;
     try { if (reloadModels) await models(); if (version===revision) await refresh(); }
     catch(error) { if (version===revision) { preview.textContent=error.message; mode(); } }
   }
-  $('balanceAdjust').onclick=() => { if (!plan) return; adjusting=true; counts=[...plan.counts]; draw(plan); };
+  $('balanceAdjust').onclick=() => { if (!plan || reload) return; adjusting=true; counts=[...plan.counts]; draw(plan); };
   $('balanceAuto').onclick=() => reset();
   $('balanceRefresh').onclick=() => { clearTimeout(timer); refresh(); };
   $('balanceModel').onchange=() => reset();
@@ -124,7 +185,7 @@
     if ($('topoDrawer').classList.contains('open')) reset(true);
   });
   fetchButton.onclick = async () => {
-    if (!plan || jobId) return;
+    if (!plan || jobId || reload) return;
     counts = [...plan.counts]; // Freeze the plan being fetched; do not chase changing free RAM.
     const submitted = {...request(), counts, node_ids: plan.node_ids};
     fetchButton.disabled=true; apply.disabled=true;
@@ -157,23 +218,25 @@
     reset(true);
   });
   apply.onclick = async () => {
-    if (!plan || !plan.ready || apply.disabled) return;
+    if (!plan || !plan.ready || apply.disabled || reload || !V.changed(plan,latest)) return;
     clearTimeout(timer);
-    const submittedPlan=plan; ++revision; plan=null;
-    apply.disabled = true;
-    measuredModel = null;
+    const submittedPlan=plan, settings=V.reloadSettings(latest);
+    reload={target:submittedPlan,oldPid:latest.worker.lead_pid,started:Date.now(),settings};
+    finished=false;++revision;plan=null;apply.disabled=true;measuredModel=null;
+    lockChat(true);mode();notice('Reloading model… this takes about 10 seconds','reloading',reloadSteps({status:'queued'}));
     try {
-      const response = await fetch("/api/models/load", {method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({...request(), model_id: submittedPlan.model_id, node_ids: submittedPlan.node_ids, counts: submittedPlan.counts, balance: true})});
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Reload failed");
-      measuredModel = submittedPlan.model_id;
-      $("balanceSpeed").textContent = "Reload requested. Wait for Ready, then send a reply to measure speed.";
-    } catch (error) {
-      preview.append(text("p", error.message));
+      const response=await fetch('/api/models/load',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({...request(),model_id:submittedPlan.model_id,node_ids:submittedPlan.node_ids,counts:submittedPlan.counts,balance:true,settings})});
+      const result=await response.json();
+      if (!response.ok) throw Error(result.error || 'Reload request failed');
+      measuredModel=submittedPlan.model_id;
+      plan=submittedPlan; // Keep display for exact no-change comparison after completion.
+      $('balanceSpeed').textContent='Reloading; measured speed appears after Ready and a reply.';
+    } catch(error) {
+      if (reload) reload.failure=error.message;
+      notice('Reload request failed: '+error.message+'. Checking model status…','error');
     }
-    // Never re-enable from a stale preview: get a fresh memory/file plan.
-    plan = null; mode();
+    updateApply();mode();
   };
   window.addEventListener("caravan-reply-stats", event => {
     const {stats, model: mid} = event.detail;

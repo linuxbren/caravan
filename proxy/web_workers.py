@@ -469,6 +469,8 @@ class WorkerManager:
                 + " → split " + ":".join(str(x) for x in shares)
                 + ("" if all(f for f in free) else " (equal: free RAM unknown)"))
         meta["shares"] = shares
+        gblock["shares"] = list(shares)
+        self._set(gguf=gblock)  # Report the actual applied shares for no-op/reload UI checks.
         self._seed_gguf_peers(entry, path, shares, peers, meta)
         try:
             import gguf_tune as GT

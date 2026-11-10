@@ -13,5 +13,7 @@ class BalanceUiTests(unittest.TestCase):
 
 for case in ('n_boundaries', 'invalid_boundary', 'cards_unknown', 'valid_plan', 'summaries',
              'default_auto', 'adjust_n', 'back_auto', 'slider_pending', 'stale_response',
+             'no_change', 'reload_immediate_lock', 'reload_stale_ready', 'reload_steps', 'reload_done',
+             'reload_mismatch', 'reload_error', 'reload_network_loss', 'external_reload', 'external_unload', 'reload_settings', 'gguf_matches',
              'error_disables', 'gguf_no_capacity', 'gguf_adjust', 'apply_exact', 'unsafe_plan'):
     setattr(BalanceUiTests, 'test_'+case, lambda self, name=case: self.run_case(name))

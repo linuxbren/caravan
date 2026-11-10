@@ -37,7 +37,24 @@
     }
     return `Preview: Auto · ≥${free} GB free per Mini.`;
   }
-  const api = {valid, card, moveBoundary, summary};
+  function matches(plan, worker) {
+    const b=plan?.format==='gguf' ? (worker?.gguf ? {counts:worker.gguf.shares,node_ids:worker.gguf.nodes}:null) : worker?.balance;
+    return !!(valid(plan) && worker && worker.model_id===plan.model_id && b &&
+      JSON.stringify(b.counts)===JSON.stringify(plan.counts) && JSON.stringify(b.node_ids)===JSON.stringify(plan.node_ids));
+  }
+  function changed(plan, snapshot) {
+    return !!(valid(plan) && snapshot?.worker?.status==='ready' && snapshot.lead_healthy && !matches(plan,snapshot.worker));
+  }
+  function reloadSettings(snapshot) {
+    const a=snapshot?.active || {}, out={...(snapshot?.worker?.settings || {})};
+    for (const key of ['self_tune','guess_ahead','shared_start','keepalive']) if (typeof a[key]==='boolean') out[key]=a[key]?'on':'off';
+    if (a.prompt_lookup && typeof a.prompt_lookup.enabled==='boolean') out.prompt_lookup=a.prompt_lookup.enabled?(a.prompt_lookup.adaptive?'auto':'on'):'off';
+    if ([4,8,16].includes(a.kv_bits)) out.kv_bits=String(a.kv_bits);
+    if ([1,2].includes(a.pipeline_chats)) out.pipeline_chats=String(a.pipeline_chats);
+    if (['on','off'].includes(a.fuse_kernels)) out.fuse_kernels=a.fuse_kernels;
+    return out;
+  }
+  const api = {valid, card, moveBoundary, summary, matches, changed, reloadSettings};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CaravanBalanceView = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
