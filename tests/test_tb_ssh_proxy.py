@@ -12,3 +12,9 @@ class Proxy(unittest.TestCase):
   exe=mock.Mock()
   with self.assertRaises(ValueError):T.main(["user@peer","en2","22"],resolve_fn=mock.Mock(side_effect=ValueError("bad endpoint")),exec_fn=exe)
   exe.assert_not_called()
+
+ def test_discovery_never_consumes_parent_ssh_stdin(self):
+  def endpoint(value,run):run(["ssh","peer","command"]);return "169.254.1.2:22"
+  with mock.patch.object(T,"resolve",side_effect=endpoint),mock.patch.object(T.subprocess,"run") as run:
+   self.assertEqual(T.discover("endpoint"),"169.254.1.2:22")
+  self.assertEqual(run.call_args.kwargs["stdin"],T.subprocess.DEVNULL)

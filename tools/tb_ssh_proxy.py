@@ -6,12 +6,20 @@ Control SSH is used only for interface discovery; nc carries the actual SSH
 stream over the newly resolved Thunderbolt address. Never caches an IP or
 changes host-key checking. Any configured peer/interface/port is supported.
 """
-import argparse,os,sys
+import argparse,os,sys,subprocess
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"agent"))
 from service_endpoints import resolve
 
-def main(argv=None,*,resolve_fn=resolve,exec_fn=os.execvp):
+def discover(endpoint):
+    # The parent SSH protocol is already arriving on stdin. Discovery's own SSH
+    # must not consume any of it before nc takes over the byte stream.
+    def run(*args,**kwargs):
+        return subprocess.run(*args,stdin=subprocess.DEVNULL,**kwargs)
+    return resolve(endpoint,run=run)
+
+
+def main(argv=None,*,resolve_fn=discover,exec_fn=os.execvp):
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument("peer");ap.add_argument("interface");ap.add_argument("port",type=int)
     ap.add_argument("--show-address",action="store_true")
