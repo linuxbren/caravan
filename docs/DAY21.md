@@ -565,3 +565,7 @@ connect latency even when existing SSH trust/login prevents a verified hello.
 This does not weaken the identity gate or trigger an alternate login/network.
 Final UI-complete regression: **907 passing**, up60 from847 (+113 from794);
 85 targeted Thunderbolt tests.
+
+Final hardening: management inventory/source-orchestration SSH also explicitly
+disables UpdateHostKeys, not just the interface-bound hello. Existing known
+hosts remain the trust anchors; discovery may not accept/rotate trust entries.

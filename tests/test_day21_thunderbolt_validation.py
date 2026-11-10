@@ -85,7 +85,7 @@ class BoundProbeTests(unittest.TestCase):
         with self.assertRaises(ValueError):P.identity_for({'host':'-oProxyCommand=bad'},inventory('169.254.1.2'))
     def test_remote_probe_strict_management_and_correct_repo(self):
         def run(argv,**kw):
-            self.assertIn('StrictHostKeyChecking=yes',argv);self.assertIn('~/cv3',argv[-1]);self.assertNotIn('dev/caravan',argv[-1]);self.assertEqual(kw['timeout'],42)
+            self.assertIn('StrictHostKeyChecking=yes',argv);self.assertIn('UpdateHostKeys=no',argv);self.assertIn('~/cv3',argv[-1]);self.assertNotIn('dev/caravan',argv[-1]);self.assertEqual(kw['timeout'],42)
             return subprocess.CompletedProcess(argv,0,json.dumps({'status':'unverified'}),'')
         self.assertEqual(P.probe_edge({'host':'u@mini','repo':'~/cv3'},EDGE,IDENTITY,run=run)['status'],'unverified')
     def test_transport_kernel_bound_before_connect(self):

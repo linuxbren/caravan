@@ -53,7 +53,7 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(D.collect_local(['10.0.0.2'],run=run)['routes'][0]['interface'],None)
     def test_ssh_is_strict_and_fixed(self):
         def run(argv,**kw):
-            self.assertIn('StrictHostKeyChecking=yes',argv);self.assertIn('BatchMode=yes',argv)
+            self.assertIn('StrictHostKeyChecking=yes',argv);self.assertIn('BatchMode=yes',argv);self.assertIn('UpdateHostKeys=no',argv)
             self.assertEqual(argv[-2],'trusted-mini');self.assertIn('collect_local',argv[-1])
             return subprocess.CompletedProcess(argv,0,json.dumps(inventory('10.0.0.2')),'')
         D.inspect_node({'host':'trusted-mini','repo':'~/cv3'},['10.0.0.3'],run=run)

@@ -125,7 +125,7 @@ def inspect_node(node, destinations=(), *, run=subprocess.run):
             'from thunderbolt_discovery import collect_local;'
             f'print(json.dumps(collect_local({list(destinations)!r})))')
     command = '/usr/bin/python3 -c ' + shlex.quote(code)
-    result = run(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
+    result = run(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'UpdateHostKeys=no',
                   '-o', 'ConnectTimeout=5', target, command],
                  capture_output=True, text=True, timeout=max(15, 12 + len(destinations)*5))
     if result.returncode:

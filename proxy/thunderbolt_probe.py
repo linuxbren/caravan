@@ -174,7 +174,7 @@ def probe_edge(source_node, edge, identity, *, run=subprocess.run):
             f'sys.path.insert(0,str(Path({repo!r}).expanduser()/"proxy"));'
             'from thunderbolt_probe import local_probe;'
             f'print(json.dumps(local_probe({edge!r},{identity!r})))')
-    r = run(['ssh','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=3',
+    r = run(['ssh','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes','-o','UpdateHostKeys=no','-o','ConnectTimeout=3',
              target,'/usr/bin/python3 -c '+shlex.quote(code)],capture_output=True,text=True,timeout=42)
     if r.returncode: raise RuntimeError('Trusted source inspection unavailable; no fallback')
     result=json.loads(r.stdout)
