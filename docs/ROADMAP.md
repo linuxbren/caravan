@@ -35,7 +35,7 @@ deprecated flag aliases.
 - [x] Same-family single versus split: Huihui full-single GPU OOM, split succeeds; Astrea/Orvena dense decode3–6.5% slower split. Raw matching-pair evidence retained.
 - [x] Correct nested Qwen3.5 single-worker memory guard (1976b7b); no forced unsafe load or model deletion.
 - [x] Day20 video + local X drafts (Brenden posts; tone review still available).
-- [x] Physical reboot check of the newly added auxiliary title worker's RAM/primary-health startup gate (Day 21; EXO1 passed November10,17:17–17:20 CST; EXO2 did not reboot).
+- [x] Physical reboot check of the newly added auxiliary title worker's RAM/primary-health startup gate (Day 21; EXO1 passed November10,17:17–17:20 CST). A later two-Mini cold reboot at17:29 CST confirmed EXO2 also rebooted, but automatic Huihui24/40 restore blocked on a transient en2 IPv4 race and was not retried; title/Hermes returned502. See [DAY21.md](DAY21.md).
 - [ ] Repeated performance samples (Day 24), max-context sweep and >2-Mini physical measurements before broader speed/capacity claims.
 - [x] Balance clearer mockup → approved real implementation and live preview verification (Day21).
 

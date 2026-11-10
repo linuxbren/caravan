@@ -6,13 +6,14 @@
 - Bound TCP22/SSH forward link verified; reverse TCP reachable but identity
   unverified. Opt-in N-Mini plan preview matches current en2 endpoints; no apply.
 - Physical auxiliary title-worker reboot check **passed** on November10,
-  17:17–17:20 CST. EXO1 auto-login recovered Huihui24/40 KV16 (lead PID1036)
-  in37.3s from boot; aux health200 at17:18:18 CST (~47.1s). EXO2 itself did
-  not reboot; its packer was relaunched at17:17:59 as part of automatic restore.
-- 907 tests passing (release gate45.871s). Screenshot:
-  `/workspace/day21-tb-verified.png`.
-- [Day21 release notes](release-notes/day21.md) finalized for tag
-  `day21-2026-11-10`.
+  17:17–17:20 CST on EXO1 only (EXO2 did not reboot in that first attempt).
+- Two-Mini physical reboot at17:29–17:32 CST **failed automatic restore**.
+  EXO2 did reboot (kern.boottime17:30:10 CST). Huihui24/40 KV16 did not come
+  back; restore blocked at17:30:36 because en2 had no unambiguous IPv4 yet
+  and that error is not retried. Title and full Hermes probes returned502.
+  Evidence: Omarchy `~/day21-checks/reboot2/`.
+- 907 tests passing (release gate45.871s). Tag `day21-2026-11-10` remains on
+  `b6c9394`. [Day21 release notes](release-notes/day21.md) updated in place.
 
 ## Phase 1 approval checkpoint
 
@@ -696,6 +697,57 @@ above). Two Minis do not prove physical N-Mini scaling, arbitrary
 bridges/cables, automatic path application, or MLX transport authentication.
 These limits are not hidden by a verified SSH link or by a successful aux
 recovery. EXO2 was not physically rebooted in this check.
+
+
+## Two-Mini physical reboot check — November10,17:29–17:32 CST
+
+Brenden rebooted **both** Minis from Omarchy around17:29 CST, EXO2 directly
+first, then EXO1. Both auto-logged in. No Load, service restart or second
+reboot was issued after the failure. Observer and raw files:
+Omarchy `~/day21-checks/reboot2/`.
+
+| Machine | kern.boottime (CST) | Previous boot | Result |
+|---|---|---|---|
+| EXO1 | **17:30:03.294769** | 17:17:30 same day | New boot confirmed; web/proxy/aux launchd up at17:30:19 |
+| EXO2 | **17:30:10.488362** | November9,20:07:05 | **Did reboot.** Issued first, finished coming up ~7s after EXO1 |
+
+Automatic Huihui24/40 KV16 restore: **FAIL**. Observer at17:30:25 saw
+restore `preparing`. At **17:30:36** (~33s after EXO1 boot, ~17s after web
+start) it went `blocked`:
+
+> Could not restore last model: ValueError: Thunderbolt interface en2 needs
+> one unambiguous IPv4 address. Check Minis/files/memory, then press Load.
+> No automatic retry or download.
+
+By **17:31:04** both `en2` links were active with exactly one IPv4:
+EXO1 `169.254.217.10` (was `169.254.65.20`), EXO2 `169.254.125.22` (was
+`169.254.99.64`). Link-local addresses changing across reboot is expected;
+`tb://` is supposed to resolve the new ones. Restore did not retry after the
+early resolve miss, so the model never loaded. last-model.json stayed at the
+17:18:08 preference (Huihui, `[24,40]`, EXO2→EXO1, KV16) — saved, not applied.
+No lead or packer mlx_worker started.
+
+`proxy/web_restore.py` retries only “live free memory is unknown” and
+“mini … unavailable” before launching a worker. This Thunderbolt IPv4 race is
+the same class of pre-worker unreadiness, but it is not in that list, so one
+failed resolve blocks restore even after `en2` later has a single address.
+
+Aux title worker: **did not reach health200**. launchd started the wrapper at
+17:30:19 (runs=1, never exited) and it stayed in the documented
+`primary_ready=False` wait, with 12–14GB free. :8196 connection refused.
+
+Post-failure probes, nothing restarted:
+
+| Check | Result |
+|---|---|
+| Title through :18090 | **FAIL** HTTP502 at17:32:09.863 CST, wall0.014s, body `mlx_lm.server upstream unreachable`. No `X-Caravan-Aux` header (sidecar never listened). |
+| Full19-tool medium Hermes through :18090 | **FAIL** HTTP502 at17:32:10.026 CST, wall0.023s, same body. No visible answer. |
+
+The earlier 17:17 EXO1-only aux check remains valid for that narrower case.
+This two-Mini cold start did not auto-restore the split. A retry of the
+unambiguous-IPv4 / interface-not-active errors, in the existing pre-worker
+backoff window, would be the natural fix; it is **not applied here** and would
+need another physical reboot to prove.
 
 ### Published release / downloaded-package verification
 

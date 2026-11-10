@@ -2977,3 +2977,28 @@ at17:26:20 CST, tag `b6c9394`. Assets: tar.gz18,273,897B SHA256
 ZIP19,352,327B SHA256
 `e704ca32827a25a8cdbfc48e6d392a853eb379bdbea944b9cfd27ce46706c66b`.
 Fresh downloaded extract: **907 passed in44.187s**, zero failures/skips.
+
+### Day21 two-Mini physical reboot (November10,17:29–17:32 CST)
+
+Brenden rebooted EXO2 directly, then EXO1. Both auto-logged in. EXO2
+**did reboot**: kern.boottime17:30:10.488 CST (previous November9,20:07:05).
+EXO1 kern.boottime17:30:03.295 CST. EXO2 was issued first but came up ~7s
+after EXO1.
+
+Automatic Huihui24/40 KV16 restore **failed**. Observer: preparing at
+17:30:25, blocked at17:30:36 (~33s after EXO1 boot) with
+`Thunderbolt interface en2 needs one unambiguous IPv4 address` and no
+retry. By17:31:04 both en2 links had one IPv4 each (EXO1 169.254.217.10,
+EXO2 169.254.125.22; both addresses changed from the previous boot). No
+lead or packer worker started. last-model preference left at the17:18:08
+Huihui24/40 KV16 save. Aux stayed in `primary_ready=False` wait; :8196
+connection refused. Title :18090 HTTP502 in0.014s; full19-tool Hermes
+HTTP502 in0.023s; no `X-Caravan-Aux` header. Nothing was restarted or
+reloaded. Evidence: Omarchy `~/day21-checks/reboot2/`.
+
+Cause: `web_restore.py` retries only unknown free-memory and unavailable
+Mini errors before a worker is launched. The Thunderbolt IPv4 race is not
+in that list. A retry in the existing pre-worker window is the natural
+fix and is not applied here; it would need another physical reboot to
+prove. Tag `day21-2026-11-10` stays on `b6c9394`; release notes body
+updated in place.

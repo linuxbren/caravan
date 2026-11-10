@@ -51,6 +51,19 @@ Published Nov 10 CST; development-day tag `day21-2026-11-10`.
   Saved Huihui 24/40 KV16, EXO2→EXO1, confirmed after the probes. Evidence
   remains on Omarchy at `~/day21-checks/reboot/`. Private request bodies are
   not in the repo.
+- Two-Mini physical reboot, November 10 17:29–17:32 CST. Brenden rebooted
+  EXO2 directly, then EXO1. EXO2 **did reboot** (kern.boottime 17:30:10 CST;
+  previous boot was November 9 20:07). Automatic Huihui 24/40 KV16 restore
+  **failed**. Restore blocked at 17:30:36 because Thunderbolt en2 did not yet
+  have one unambiguous IPv4, and that error is not in the pre-worker retry
+  list. By 17:31:04 both en2 links had a single new link-local address
+  (EXO1 169.254.217.10, EXO2 169.254.125.22). Aux never reached health 200
+  (it correctly waited for the primary). Title and the full 19-tool Hermes
+  replay through :18090 both returned HTTP 502 (`mlx_lm.server upstream
+  unreachable`) with no `X-Caravan-Aux` header. last-model preference was
+  preserved, not loaded. No Load, restart or further reboot was issued.
+  Evidence: Omarchy `~/day21-checks/reboot2/`. The earlier 17:17 EXO1-only
+  aux check still stands; this two-Mini cold start did not auto-restore.
 
 ## Install
 Download either `caravan-day21.zip` or `caravan-day21.tar.gz`, extract, then
