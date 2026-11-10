@@ -1,0 +1,62 @@
+{
+  "duration_s": 15,
+  "fps": 24,
+  "dimensions": [
+    1280,
+    720
+  ],
+  "captions": [
+    {
+      "start_s": 0.0,
+      "end_s": 3.0,
+      "text": "[hook, no bottom caption] New split, chatting again in 13 seconds"
+    },
+    {
+      "start_s": 3.0,
+      "end_s": 6.0,
+      "text": "Apply is black when the new split is ready."
+    },
+    {
+      "start_s": 6.0,
+      "end_s": 9.5,
+      "text": "It tells you it's reloading, Mini by Mini."
+    },
+    {
+      "start_s": 9.5,
+      "end_s": 12.0,
+      "text": "Chat is ready again in about 13 seconds."
+    },
+    {
+      "start_s": 12.0,
+      "end_s": 15.0,
+      "text": "[plain final card] For the nerds: split 27/37 back to 24/40 · reload 8.82 s · chat ready 12.93 s"
+    }
+  ],
+  "cuts_s": [
+    0.0,
+    3.0,
+    6.0,
+    9.5,
+    12.0
+  ],
+  "transitions": "Hard cuts only; captions change on the cut frame.",
+  "footage": "Live Day 21 Apply screenshots only: apply-ready.png (black Apply, captured after the styling change), apply-reloading.png, apply-done.png. Crops and Gaussian blurs hide model-name, EXO labels, layers, GB budgets, and health-check wording. Screenshot text is not rewritten. No Thunderbolt, no live recording, no Apply/Load/Unload for this cut, no reboot-restore claim.",
+  "numbers": {
+    "apply_backend_ready_s": 8.82,
+    "apply_chat_usable_s": 12.93,
+    "caption_chat_ready_rounded_s": 13,
+    "split_from": "27/37",
+    "split_to": "24/40",
+    "split_shown_on": "nerds card only; 27/37 is not in the screenshots"
+  },
+  "sources": [
+    "docs/release-notes/day21.md: UI Apply Huihui 27/37 back to 24/40 KV16, backend Ready 8.82s, chat usable 12.93s including polling",
+    "/workspace/day21-apply-ready.png, day21-apply-reloading.png, day21-apply-done.png"
+  ],
+  "asset_sha256": {
+    "apply-ready.png": "b44d23629f9b3aad1ce0b43fd0bf08ccb4f7bcfa5ff3f206f4985340ac05cc1c",
+    "apply-reloading.png": "4a084d2a2a18f21c56cce52b774c1360c26193a9dc580cb0d65806f5e21b46ae",
+    "apply-done.png": "54fc7cfc4bfa048000cfa3342c37aceb43ebe410c3bc636b76d6bb1f110d48ed"
+  },
+  "precision": "Hook and caption '13 seconds' / 'about 13 seconds' is the rounded chat-usable time. Exact 12.93 s and backend Ready 8.82 s, plus 27/37 back to 24/40, are on the final card. The reload banner's 'about 10 seconds' is the product estimate, left unaltered."
+}

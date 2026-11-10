@@ -1,0 +1,5 @@
+0.0–3.0s  [hook, no bottom caption] New split, chatting again in 13 seconds
+3.0–6.0s  Apply is black when the new split is ready.
+6.0–9.5s  It tells you it's reloading, Mini by Mini.
+9.5–12.0s  Chat is ready again in about 13 seconds.
+12.0–15.0s  [plain final card] For the nerds: split 27/37 back to 24/40 · reload 8.82 s · chat ready 12.93 s
