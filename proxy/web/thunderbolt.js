@@ -19,7 +19,9 @@
       const row=text('div','');row.className='tb-edge';
       row.append(text('p',`${e.source} → ${e.target}: ${e.source_interface} ${e.source_address || ''} → ${e.target_interface || ''} ${e.address}`));
       const state=['verified','failed'].includes(e.status)?e.status:'unverified';
-      const status=text('span',state==='verified'?`Verified · ${e.latency_ms} ms SSH hello${e.tcp_connect_ms!==undefined?' · '+e.tcp_connect_ms+' ms TCP connect':''}`:state==='failed'?'Failed':'Unverified');
+      let label=state==='verified'?`Verified · ${e.latency_ms} ms SSH hello${e.tcp_connect_ms!==undefined?' · '+e.tcp_connect_ms+' ms TCP connect':''}`:state==='failed'?'Failed':'Unverified';
+      if(state!=='verified')label+=e.reachable===true?' · TCP reachable'+(typeof e.tcp_connect_ms==='number'?' · '+e.tcp_connect_ms+' ms connect':''):e.reachable===false?' · TCP unreachable':' · reachability unknown';
+      const status=text('span',label);
       status.className='tb-status '+state;row.append(status,text('p',e.reason || 'Not validated'));out.append(row);
     }
     if(!(data.graph?.edges || []).length)out.append(text('p','No candidate routes observed. Existing connection was not changed.'));

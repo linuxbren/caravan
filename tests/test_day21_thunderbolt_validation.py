@@ -210,5 +210,5 @@ class ValidationApiTests(unittest.TestCase):
 class ValidationUiTests(unittest.TestCase):
     def run_case(self,name):
         r=subprocess.run(['node',str(ROOT/'tests/js/thunderbolt_harness.js'),name],capture_output=True,text=True,timeout=10);self.assertEqual(r.returncode,0,r.stdout+r.stderr)
-for case in ('validate','no_opt_in','missing_graph','preview','preview_error','preview_expired','expired','failed'):
+for case in ('validate','no_opt_in','missing_graph','preview','preview_error','preview_expired','expired','failed','unverified_reachable'):
     setattr(ValidationUiTests,'test_'+case,lambda self,name=case:self.run_case(name))

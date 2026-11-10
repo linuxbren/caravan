@@ -556,5 +556,12 @@ Physical proof remains limited to the two existing Minis; no third-Mini, cable
 unplug, bridge or address-change/reboot experiment is claimed.
 
 Pre-deploy exact-code regression: **906 tests passing** (+59 versus the Apply
-checkpoint847; +112 versus Day21 baseline794). Thunderbolt-targeted86 cases
+checkpoint847; +112 versus Day21 baseline794). Thunderbolt-targeted84 cases
 include the pre-existing25. Syntax/compilation/whitespace checks passed.
+
+Live inspection confirmed that a link can be TCP-reachable while SSH identity
+remains unverified. The UI now shows those separately, including known TCP
+connect latency even when existing SSH trust/login prevents a verified hello.
+This does not weaken the identity gate or trigger an alternate login/network.
+Final UI-complete regression: **907 passing**, up60 from847 (+113 from794);
+85 targeted Thunderbolt tests.
