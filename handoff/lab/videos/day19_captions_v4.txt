@@ -1,0 +1,8 @@
+   0.0s  Ask a simple question. Watch it answer live.
+   2.2s  The words show up as they're written.
+  12.0s  If the main path drops, another way in is ready.
+  16.0s  It switched on its own. Everything stayed reachable.
+  20.0s  Pull the plug, the computers come back on their own.
+  24.0s  The model needed a Load. Then the same split was ready.
+  28.0s  Two Macs. One model. Built in the open.
+  30.0s  For the nerds: Huihui 24/40 on EXO2 then EXO1.
