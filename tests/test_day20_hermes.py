@@ -40,6 +40,11 @@ class Identity(unittest.TestCase):
         a=self.body();b=json.loads(json.dumps(a,sort_keys=True))
         self.assertEqual(P.mlx_session_fingerprint(a),P.mlx_session_fingerprint(b))
 
+    def test_fifo_status_does_not_enqueue_diagnostics(self):
+        gate=P.FifoGate();self.assertEqual(gate.status(),{"active":False,"waiting":0})
+        ticket,_,_=gate.acquire();self.assertEqual(gate.status(),{"active":True,"waiting":0})
+        gate.release(ticket);self.assertFalse(gate.status()["active"])
+
     def test_prompt_and_ephemeral_calls_unchanged(self):
         for b in [{}, {'prompt':'a'*3000}, {'messages':[]}]:
             self.assertEqual(P.mlx_session_fingerprint(b),P.session_fingerprint(b))
@@ -74,6 +79,18 @@ class Boundary(unittest.TestCase):
     def test_untrusted_client_boundary_is_removed(self):
         self.b.pop('tools');self.b['_caravan_agent_prefix']=1234
         self.e.chat_prompt(self.b);self.assertNotIn('_caravan_agent_prefix',self.b)
+
+    def test_openai_reasoning_none_is_honored(self):
+        self.b["reasoning_effort"]="none"
+        with mock.patch.object(W,"thinking_kwargs",return_value=({},False)) as fn:
+            self.e.chat_prompt(self.b)
+        self.assertFalse(fn.call_args.args[1])
+
+    def test_explicit_thinking_wins(self):
+        self.b.update(reasoning_effort="none",thinking=True)
+        with mock.patch.object(W,"thinking_kwargs",return_value=({},False)) as fn:
+            self.e.chat_prompt(self.b)
+        self.assertTrue(fn.call_args.args[1])
 
     def test_short_prompts_stay_normal(self):
         self.b['tools']=[];self.e.chat_prompt(self.b)

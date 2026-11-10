@@ -44,3 +44,21 @@ New tests exercise stable/changed wire inputs, title isolation, template
 boundaries, chunk cuts, wrapped recurrent state, 1/2/3/5 stages, disk recovery,
 missing-stage rejection, clone failure and launchd plans. Live deployment and
 measurements are recorded below when completed; no speedup is claimed yet.
+
+Hermes title calls explicitly send `reasoning_effort: none`; the MLX worker
+now honors that as thinking off unless `thinking` is explicitly supplied.
+Main Hermes `medium` reasoning remains unchanged. Previously the ignored
+opt-out let short titles consume hundreds of hidden reasoning tokens.
+
+Exact native tokenizer counts for the two captured full-tool requests:
+13,204 / 13,230 tokens, longest common prefix **13,202 tokens**. The system
+message is 14,922 UTF-8 bytes in each; all 21 tools and their serialized bytes
+match exactly. Capture hashes: system `dc45797332eef77786e27a38ea4957ac147ffcf2c069eb1b179ac20ab4ff5f72`,
+tools `9b92b2523ae7e3224464eacc23dec1548dd4ed6cd8e6c0f24c4f2d3acc9df0c3`.
+
+A loopback-only `/caravan/proxy/status` reports FIFO active/waiting counts
+without queuing a model request or revealing prompts. The diagnostic relay
+uses it to decline a benchmark while busy and cancel if another request queues.
+
+Regression gate: `PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests`:
+**764 tests passed in 42.600 s**, up from 738. Compile and whitespace checks pass.

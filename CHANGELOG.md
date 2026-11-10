@@ -155,5 +155,5 @@ Tonight's case: Dark Champion 21B 8-bit (32 layers, ~0.71 GB/layer) on two 24 GB
   reuse across chats and disk restores with stage-local files and N-stage
   digest checks, without reducing Hermes tools or changing the selected model.
 - Add managed loopback OpenAI proxy launchd auto-start (`--kind proxy`).
-- 761 tests pass (23 new). Evidence, setup and live validation: docs/HERMES.md
+- 764 tests pass (26 new). Evidence, setup and live validation: docs/HERMES.md
   and docs/DAY20.md. Reboot testing remains deferred.

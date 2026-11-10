@@ -67,3 +67,8 @@ measurement. The native worker's 589-token request took 28.20 s (9.01 s read),
 while an earlier full-tool 12,175-token request took 199.53 s (190.65 s read).
 Hermes doctor also reported three moderate npm web-workspace advisories; the
 cache patch does not remediate those dependencies.
+
+Hermes title calls explicitly send `reasoning_effort: none`; the MLX worker
+now honors that as thinking off unless `thinking` is explicitly supplied.
+Main Hermes `medium` reasoning remains unchanged. Previously the ignored
+opt-out let short titles consume hundreds of hidden reasoning tokens.

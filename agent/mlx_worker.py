@@ -1880,6 +1880,8 @@ class Engine:
             kw["tools"] = body["tools"]
         prefill_close = False
         think = body.get("thinking")
+        if not isinstance(think, bool) and body.get("reasoning_effort") == "none":
+            think = False  # OpenAI/Hermes auxiliary calls explicitly opt out
         if isinstance(think, bool):
             kw, prefill_close = thinking_kwargs(self.tokenizer, think, kw)
         toks = self.tokenizer.apply_chat_template(msgs, add_generation_prompt=True, tokenize=True, **kw)
