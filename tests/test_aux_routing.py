@@ -24,3 +24,11 @@ class Aux(unittest.TestCase):
   for text in ["not JSON",json.dumps({"title":"word "*20})]:
    conn=mock.Mock();conn.getresponse.side_effect=[NS(status=200,read=lambda:b"{}"),NS(status=200,read=lambda n:json.dumps({"choices":[{"finish_reason":"stop","message":{"content":text}}]}).encode())]
    self.assertIsNone(A.try_title(self.body(),env={"CARAVAN_AUX_MODEL":"small"},connection=lambda *a,**k:conn))
+ def test_unrelated_few_shot_copy_is_rejected(self):
+  self.assertFalse(A.title_matches_user("Fix login button on mobile","Checking Caravan after reboot and improving Hermes speed"))
+  self.assertTrue(A.title_matches_user("Improve Caravan startup speed","Checking Caravan after reboot"))
+ def test_invalid_timeout_fails_closed(self):
+  for timeout in ["nan","inf","-1","0","100","bad"]:
+   conn=mock.Mock()
+   self.assertIsNone(A.try_title(self.body(),env={"CARAVAN_AUX_MODEL":"small","CARAVAN_AUX_TIMEOUT_S":timeout},connection=conn))
+   conn.assert_not_called()
