@@ -897,6 +897,33 @@ def note_upstream_down() -> None:
         _restore_failed.clear()
 
 
+def discover_models():
+    """Only models advertised by live backends; discovery never queues inference."""
+    rows={};reachable=False
+    targets=[ROUTER.llama]
+    if MLX_SETTINGS.enabled:targets.insert(0,ROUTER.mlx)
+    for backend in targets:
+        conn=None
+        try:
+            conn=http.client.HTTPConnection(*backend.address(),timeout=2)
+            conn.request("GET","/v1/models")
+            response=conn.getresponse()
+            if response.status!=200:continue
+            data=json.loads(response.read(1024*1024))
+            if not isinstance(data.get("data"),list):continue
+            reachable=True
+            for item in data["data"]:
+                if not isinstance(item,dict) or not isinstance(item.get("id"),str):continue
+                item=dict(item);mid=item["id"]
+                if backend.name=="mlx" and mid.startswith("/"):
+                    mid=Path(mid).name.replace("--","/",1)
+                item["id"]=mid;rows.setdefault(mid,item)
+        except (OSError,ValueError,http.client.HTTPException):pass
+        finally:
+            if conn is not None:conn.close()
+    return reachable,{"object":"list","data":list(rows.values())}
+
+
 class ProxyHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -1157,6 +1184,14 @@ class ProxyHandler(BaseHTTPRequestHandler):
             conn.close()
 
     def do_GET(self):
+        if self.path.split("?")[0] == "/v1/models":
+            reachable,data=discover_models()
+            body=json.dumps(data if reachable else {"error":"No model backend is reachable"}).encode()
+            self.send_response(200 if reachable else 503)
+            self.send_header("Content-Type","application/json")
+            self.send_header("Content-Length",str(len(body)))
+            self.end_headers();self.wfile.write(body)
+            return
         if self.path.split("?")[0] == "/caravan/proxy/status":
             body = json.dumps(completion_fifo.status()).encode()
             self.send_response(200)

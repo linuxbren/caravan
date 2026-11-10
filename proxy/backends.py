@@ -31,8 +31,8 @@ path) or starts with one of "model_prefixes". The proxy rewrites the
 body's `model` to the local directory when it can find one (an explicit
 mapping, or "<org>--<name>" / "<org>/<name>" under a model_dirs entry --
 exo's own download layout), so mlx_lm.server never tries to fetch from
-Hugging Face. Non-completion requests (GET /v1/models, /slots, /health)
-still go to llama-server.
+Hugging Face. Discovery GET /v1/models aggregates live MLX and llama backends. Other
+non-completion requests (/slots, /health) still go to llama-server.
 
 Step (b), built 2026-10-31 in agent/mlx_worker.py -- the original notes:
   * mlx_lm.models.cache has make_prompt_cache / save_prompt_cache(file,
