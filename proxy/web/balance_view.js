@@ -2,16 +2,19 @@
 (function (root) {
   const finite = n => typeof n === 'number' && Number.isFinite(n);
   function valid(plan) {
-    return !!(plan && Array.isArray(plan.counts) && plan.counts.length &&
+    return !!(plan && typeof plan.model_id === 'string' && plan.model_id && Array.isArray(plan.counts) && plan.counts.length &&
       Array.isArray(plan.stages) && plan.stages.length === plan.counts.length &&
       Array.isArray(plan.node_ids) && plan.node_ids.length === plan.counts.length &&
       new Set(plan.node_ids).size === plan.node_ids.length &&
       plan.counts.every(n => finite(n) && n > 0 && (plan.format === 'gguf' || Number.isInteger(n))));
   }
   function card(stage) {
-    const known = finite(stage.capacity_gb) && stage.capacity_gb > 0 &&
+    // Existing GGUF previews give use + headroom, without a separate capacity.
+    const capacity = stage.capacity_gb === undefined && finite(stage.estimated_use_gb) && finite(stage.headroom_gb)
+      ? stage.estimated_use_gb + stage.headroom_gb : stage.capacity_gb;
+    const known = finite(capacity) && capacity > 0 &&
       finite(stage.estimated_use_gb) && stage.estimated_use_gb >= 0 && finite(stage.headroom_gb);
-    return {known, percent: known ? Math.max(0, Math.min(100, 100 * stage.estimated_use_gb / stage.capacity_gb)) : 0,
+    return {known, capacity, percent: known ? Math.max(0, Math.min(100, 100 * stage.estimated_use_gb / capacity)) : 0,
       safe: known && stage.safe === true, label: stage.label || stage.id || 'Mini'};
   }
   function moveBoundary(counts, index, value) {

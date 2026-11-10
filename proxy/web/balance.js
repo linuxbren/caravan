@@ -42,11 +42,11 @@
       const card = text('article', ''); card.className = 'balance-card' + (c.safe ? '' : ' unsafe');
       const head = text('div', ''); head.className='balance-card-head'; head.append(text('strong', c.label), text('span', 'Estimated memory'));
       const bar = text('div', ''); bar.className='balance-bar'; bar.setAttribute('role','img');
-      bar.setAttribute('aria-label', c.known ? `${c.label}: estimated ${stage.estimated_use_gb} GB of ${stage.capacity_gb} GB usable model budget` : `${c.label}: memory unknown`);
+      bar.setAttribute('aria-label', c.known ? `${c.label}: estimated ${stage.estimated_use_gb} GB of ${c.capacity} GB usable model budget` : `${c.label}: memory unknown`);
       const fill=text('i',''); fill.style.width=c.percent+'%'; bar.append(fill);
       const values=text('div',''); values.className='balance-card-values';
       values.append(text('span',c.known ? `≈${stage.estimated_use_gb.toFixed(2)} GB for model` : 'Model memory unknown'), text('span',c.known ? `≈${stage.headroom_gb.toFixed(2)} GB left` : 'Free memory unknown'));
-      card.append(head,bar,values,text('small',c.known ? `Usable model budget ${stage.capacity_gb.toFixed(2)} GB · room reserved for macOS and other apps` : 'Refresh when this Mini is reachable.'));
+      card.append(head,bar,values,text('small',c.known ? `Usable model budget ${c.capacity.toFixed(2)} GB · room reserved for macOS and other apps` : 'Refresh when this Mini is reachable.'));
       if (!c.safe) card.append(text('small','Not enough known free memory. Apply is blocked.'));
       memory.append(card);
       technical.append(text('p', `${stage.label}: ${next.format === 'gguf' ? 'device share ' + next.counts[i] : 'layers '+stage.range[0]+'–'+(stage.range[1]-1)} · ${stage.safe ? 'memory fits' : 'too tight'} · minimum margin ${next.margin_gb} GB`));

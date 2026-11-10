@@ -13,5 +13,5 @@ class BalanceUiTests(unittest.TestCase):
 
 for case in ('n_boundaries', 'invalid_boundary', 'cards_unknown', 'valid_plan', 'summaries',
              'default_auto', 'adjust_n', 'back_auto', 'slider_pending', 'stale_response',
-             'error_disables', 'gguf_adjust', 'apply_exact', 'unsafe_plan'):
+             'error_disables', 'gguf_no_capacity', 'gguf_adjust', 'apply_exact', 'unsafe_plan'):
     setattr(BalanceUiTests, 'test_'+case, lambda self, name=case: self.run_case(name))
