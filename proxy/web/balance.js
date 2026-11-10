@@ -52,6 +52,7 @@
         const matches=reload.external || (V.matches(reload.target,w) && (reload.target.format==='gguf' || !kv || String(snapshot.active?.kv_bits)===kv));
         if (newWorker) {
           notice(matches?(reload.external?'Ready, model loaded.':'Ready, new split applied.'):'Reload finished, but the requested split was not confirmed.',''+(matches?'done':'error'),matches?reloadSteps(w):[]);
+          $('balanceSpeed').textContent=matches?'Ready. Send a reply to measure real speed.':'Requested split not confirmed; check the current model.';
           reload=null;finished=true;lockChat(false);
         } else if (reload.failure || Date.now()-reload.started>180000) {
           notice('Reload not confirmed: '+(reload.failure || 'timed out; current model is still ready.'),'error');reload=null;finished=true;lockChat(false);

@@ -47,11 +47,14 @@
   }
   function reloadSettings(snapshot) {
     const a=snapshot?.active || {}, out={...(snapshot?.worker?.settings || {})};
-    for (const key of ['self_tune','guess_ahead','shared_start','keepalive']) if (typeof a[key]==='boolean') out[key]=a[key]?'on':'off';
-    if (a.prompt_lookup && typeof a.prompt_lookup.enabled==='boolean') out.prompt_lookup=a.prompt_lookup.enabled?(a.prompt_lookup.adaptive?'auto':'on'):'off';
+    // Match web_settings.OPTIONS: several switches intentionally expose only
+    // Auto plus one explicit value (not arbitrary on/off strings).
+    for (const key of ['guess_ahead','shared_start']) if (typeof a[key]==='boolean' && !(key==='guess_ahead' && out[key]==='mtp')) out[key]=a[key]?'on':'off';
+    for (const key of ['self_tune','keepalive']) if (typeof a[key]==='boolean') out[key]=a[key]?'auto':'off';
+    if (a.prompt_lookup && typeof a.prompt_lookup.enabled==='boolean') out.prompt_lookup=a.prompt_lookup.enabled?(a.prompt_lookup.adaptive?'adaptive':'auto'):'off';
     if ([4,8,16].includes(a.kv_bits)) out.kv_bits=String(a.kv_bits);
     if ([1,2].includes(a.pipeline_chats)) out.pipeline_chats=String(a.pipeline_chats);
-    if (['on','off'].includes(a.fuse_kernels)) out.fuse_kernels=a.fuse_kernels;
+    if (['on','off'].includes(a.fuse_kernels)) out.fuse_kernels=a.fuse_kernels==='on'?'on':'auto';
     return out;
   }
   const api = {valid, card, moveBoundary, summary, matches, changed, reloadSettings};

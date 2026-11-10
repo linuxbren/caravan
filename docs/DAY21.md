@@ -433,3 +433,11 @@ Regression validation: **846 tests passed in44.805s**, up12 from the prior834
 no-op Apply, immediate locks, stale Ready, progress, exact completion, mismatch,
 error, connection loss, external reload/unload, active settings and GGUF shares.
 Node syntax, Python compilation and whitespace checks passed.
+
+Live integration caught a schema mismatch before any worker was disturbed:
+the initial settings-preservation helper sent `fuse_kernels=off` and
+`keepalive=on`, but this API exposes those implicit states as `auto`. The API
+correctly rejected the request and the UI reported a clear error. Corrected
+the helper to the actual allowed values (also adaptive lookup/self-tuning),
+and added a JS→real Python normalizer/worker-args contract test rather than
+relying only on a mocked success response. The rejected trial left27/37 intact.
