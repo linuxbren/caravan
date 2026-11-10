@@ -1805,7 +1805,7 @@ first proven successful web-owned last-model both-Mini restore in this session.
 | First model-bearing :8090 chat probe HTTP 200 | 20:07:50.302 | 1 output token; route/inference check, not complete human reply |
 | First full :18090 MLX chat request sent | 20:07:51.664 | synthetic Hermes-style request, not an actual Hermes app turn |
 | Full :18090 assistant reply complete, HTTP 200 | 20:08:03.913 | `Caravan recovered automatically.` / finish_reason=stop |
-| Watchers stopped | 20:08:42.774 | all three watcher process trees stopped; tunnels/services left running |
+| Probe watchers stopped / capture stop requested | 20:08:42.774 | surviving capture loop finally stopped 20:09:43.347; tunnels/services left running |
 
 The model was loaded about **64.7 s after the first observed EXO1 transport
 failure** (or 57.2 s after the first EXO2 SSH-down sample). These are sampled
