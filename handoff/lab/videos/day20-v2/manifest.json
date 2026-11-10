@@ -1,0 +1,43 @@
+{
+  "duration_s": 14,
+  "fps": 24,
+  "dimensions": [
+    1280,
+    720
+  ],
+  "captions": [
+    {
+      "start_s": 0,
+      "end_s": 3,
+      "text": "Skip minutes of repeated setup before a reply."
+    },
+    {
+      "start_s": 3,
+      "end_s": 7,
+      "text": "Before: rereading the setup took over three minutes."
+    },
+    {
+      "start_s": 7,
+      "end_s": 10,
+      "text": "After: the saved setup takes about a second."
+    }
+  ],
+  "final_card": {
+    "start_s": 10,
+    "end_s": 14,
+    "text": "For the nerds: setup reread 207.87 s to 1.17 s · chat titles 6.458 s to 0.114 s"
+  },
+  "footage": "No live/UI footage. Explicitly labeled animation of recorded measurements; before counter sped up, after counter real elapsed speed to1.17s.",
+  "numbers": {
+    "setup_before_s": 207.87,
+    "setup_after_s": 1.17,
+    "title_before_s": 6.458,
+    "title_after_s": 0.114
+  },
+  "sources": [
+    "docs/DAY20.md: original207.87s prefill and real-use1.17s setup",
+    "docs/DAY20.md: PhaseB title median6.458→.114s",
+    "docs/BENCHMARKS.md: same recorded measurements"
+  ],
+  "precision": "Opening3min→1s is reviewer-requested rounded shorthand. These are setup times, not total reply/first visible word guarantees."
+}

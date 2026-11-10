@@ -875,3 +875,27 @@ Fresh pre-release regression on box:794 tests passed in43.223s; no failures or s
 - Video: `/workspace/caravan-day20.mp4`, Omarchy `~/day20-video/caravan-day20.mp4`,37.000s,1280×720/24fps,637,255B, SHA256 `0f67a9d41441b7b1bccedcefa1cf12d8e7acf535804cdcf2fdabf947bc32c76d`.
 - Final wrap full-prefix19-tool, medium-reasoning reply ended22:17:03.636 CST: “I'm online and ready to help.” .314s native TTFT,6.24tok/s,11.255s wall,finish stop. Huihui EXO2→EXO1 24/40 KV16 ready and saved; no service restarts or model unloads for wrap. This is warm verification, not a new cold performance claim.
 - Both draft files copied to `~/Pictures/x-posts/day20/`; nothing sent to X. X engagement tone/audience proofread remains for the parent to route; it was not available in this executor's tool surface.
+
+## Day20 video v2 — reviewer correction
+
+Reviewer rejected the37-second multi-experiment film. Replaced recommended cut
+with `/workspace/caravan-day20-v2.mp4`, also Omarchy
+`~/day20-video/caravan-day20-v2.mp4`:14.000s,1280×720/24fps,225,415B.
+SHA256 `586621abc480e4b35a8952c2ebd903c2efd40497cffb9c1962f1e0f90e223c65`.
+One idea only: repeated setup207.87→1.17s. Requested rounded3min→1s payoff
+is visible from frame zero. Before is an explicitly labeled accelerated
+measured-time counter; after counter advances in real elapsed time to1.17s.
+**No real/UI footage, invented live timer or actual slow-request time-lapse**
+in this cut. This uses the reviewer-approved counter alternative and avoids
+presenting unrelated Hello footage as a full-prefix before/after comparison.
+Setup numbers are not full-answer or guaranteed first-visible-word timings.
+
+Caption holds:0–3s “Skip minutes of repeated setup before a reply.”;3–7s
+“Before: rereading the setup took over three minutes.”;7–10s “After: the saved
+setup takes about a second.” Plain final card10–14s: “For the nerds: setup
+reread207.87s to1.17s · chat titles6.458s to0.114s”, rendered with the requested
+wording/spaces and line wrapping for phone readability. No model strings,
+brand/theme labels, technical panels, dates, test counts or extra experiment
+beats. Full-size stills and bounds/encoding/source checks passed. Script and
+manifest: `handoff/lab/videos/make_day20_v2.py`, `day20-v2/`. Existing release
+tag remains immutable; no re-release. No model unload/cache reset/reboot.

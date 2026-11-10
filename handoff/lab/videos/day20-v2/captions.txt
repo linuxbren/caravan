@@ -1,0 +1,4 @@
+0.0–3.0s  Skip minutes of repeated setup before a reply.
+3.0–7.0s  Before: rereading the setup took over three minutes.
+7.0–10.0s  After: the saved setup takes about a second.
+10.0–14.0s  [plain final card] For the nerds: setup reread 207.87 s to 1.17 s · chat titles 6.458 s to 0.114 s
