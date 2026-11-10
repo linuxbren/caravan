@@ -1,0 +1,88 @@
+{
+  "label": "huihui-thinking-none",
+  "route": "direct",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:02:09.167010-06:00",
+  "tools": 0,
+  "max_tokens": 512,
+  "reasoning_effort": "none",
+  "request_sha256": "cf8eacce35e6b8198344961fc6f56e6aca8ea4e4bc7a62ff9c920cf9decafc59",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 9.675483985047322,
+  "first_wire_token_s": 1.9909999440424144,
+  "first_visible_s": 1.9910012590116821,
+  "usage": {
+    "prompt_tokens": 58,
+    "completion_tokens": 54,
+    "total_tokens": 112,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "caravan": {
+      "how": "cold",
+      "prefill_s": 0.999,
+      "ttft_s": 1.278,
+      "total_s": 9.413,
+      "peak_gb": 13.18,
+      "split": {
+        "calls": 60,
+        "mb_out": 0.01,
+        "mb_in": 1.16,
+        "wait_s": 3.443,
+        "front_s": 3.401,
+        "net_s": 0.042
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 24,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 4.371,
+        "need_gb": 0.093,
+        "prompt_tokens": 58,
+        "budget_tokens": 26166,
+        "bytes_per_token": 163840.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 6.913,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 5.163,
+        "packer_available_gb": 6.121,
+        "packer_headroom_gb": 4.371,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 58.1,
+      "write_tok_s": 6.52
+    }
+  },
+  "answer": "1. Check if the service process is running in the system monitor.\n2. Verify the local port (e.g., 8080) is listening for connections.\n3. Send a simple test request to the API endpoint to confirm a valid response.",
+  "reasoning_chars": 0,
+  "end_CST": "2026-11-09T21:02:18.842546-06:00"
+}

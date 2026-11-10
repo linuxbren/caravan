@@ -1,0 +1,13 @@
+{
+  "label": "title-small-warm",
+  "start_CST": "2026-11-09T21:14:15.458467-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 64,
+  "lookup": null,
+  "request_sha256": "bdae3d7fb01cb5e7ab2d6630113f826c39cc25f64cf8013526e05f1dd2a3af78",
+  "ok": false,
+  "error": "[Errno 104] Connection reset by peer",
+  "wall_s": 0.005053157976362854,
+  "end_CST": "2026-11-09T21:14:15.463577-06:00"
+}

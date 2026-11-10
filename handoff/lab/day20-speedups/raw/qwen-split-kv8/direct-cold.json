@@ -1,0 +1,88 @@
+{
+  "label": "qwen-split-kv8",
+  "route": "direct",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:07:42.662062-06:00",
+  "tools": 0,
+  "max_tokens": 512,
+  "reasoning_effort": "medium",
+  "request_sha256": "cdd09f6abe725409a382061b4ce6b331375a9bc7239c072067c5f43c883569b6",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 5.748846103029791,
+  "first_wire_token_s": 0.5223300849902444,
+  "first_visible_s": 5.314514818019234,
+  "usage": {
+    "prompt_tokens": 52,
+    "completion_tokens": 225,
+    "total_tokens": 277,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "caravan": {
+      "how": "cold",
+      "prefill_s": 0.344,
+      "ttft_s": 0.392,
+      "total_s": 5.711,
+      "peak_gb": 8.69,
+      "split": {
+        "calls": 231,
+        "mb_out": 0.02,
+        "mb_in": 1.16,
+        "wait_s": 2.748,
+        "front_s": 2.615,
+        "net_s": 0.134
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 8,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 24,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 2.527,
+        "need_gb": 0.016,
+        "prompt_tokens": 52,
+        "budget_tokens": 88899,
+        "bytes_per_token": 28262.4,
+        "error": null,
+        "ok": true,
+        "available_gb": 8.015,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 6.265,
+        "packer_available_gb": 4.277,
+        "packer_headroom_gb": 2.527,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 151.2,
+      "write_tok_s": 42.11
+    }
+  },
+  "answer": "Check service status via system tools. Confirm AI model loading via logs. Test API endpoint for response.",
+  "reasoning_chars": 848,
+  "end_CST": "2026-11-09T21:07:48.410956-06:00"
+}

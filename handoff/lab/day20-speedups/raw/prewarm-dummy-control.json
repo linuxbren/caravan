@@ -1,0 +1,101 @@
+{
+  "label": "prewarm-dummy-control",
+  "start_CST": "2026-11-09T21:12:28.562896-06:00",
+  "tools": 19,
+  "reasoning_effort": "medium",
+  "max_tokens": 1,
+  "lookup": null,
+  "request_sha256": "eabe7f5dc9f7f9a1dca9c2bf85848cf6c25df145c165aabb60c61335cf91ba07",
+  "http": 200,
+  "aux_header": null,
+  "response": {
+    "id": "chatcmpl-e7f66da51676",
+    "object": "chat.completion",
+    "created": 1794280348,
+    "model": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "length",
+        "message": {
+          "role": "assistant",
+          "content": null,
+          "reasoning_content": "The",
+          "reasoning": "The"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 11302,
+      "completion_tokens": 1,
+      "total_tokens": 11303,
+      "prompt_tokens_details": {
+        "cached_tokens": 11301
+      },
+      "caravan": {
+        "how": "hit-memory",
+        "prefill_s": 0.024,
+        "ttft_s": 0.403,
+        "total_s": 0.425,
+        "peak_gb": 10.06,
+        "split": {
+          "calls": 4,
+          "mb_out": 0.05,
+          "mb_in": 0.02,
+          "wait_s": 0.157,
+          "front_s": 0.153,
+          "net_s": 0.004
+        },
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": true,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": true,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": 24,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 4.775,
+          "need_gb": 1.852,
+          "prompt_tokens": 11302,
+          "budget_tokens": 29146,
+          "bytes_per_token": 163840.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 7.491,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 5.741,
+          "packer_available_gb": 6.525,
+          "packer_headroom_gb": 4.775,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 41.7,
+        "write_tok_s": 0.0
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 0.6679704129928723,
+  "end_CST": "2026-11-09T21:12:29.231096-06:00"
+}

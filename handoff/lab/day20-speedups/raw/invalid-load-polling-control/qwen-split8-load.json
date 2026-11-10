@@ -1,0 +1,34 @@
+{
+  "start_CST": "2026-11-09T21:04:27.204739-06:00",
+  "request": {
+    "model_id": "qwen3-30b-a3b-4bit",
+    "engine": "mlx",
+    "placement": {
+      "mode": "split",
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ]
+    },
+    "node_ids": [
+      "exo2",
+      "exo1"
+    ],
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "kv_bits": "8"
+    },
+    "balance": true,
+    "counts": [
+      24,
+      24
+    ]
+  },
+  "error": "HTTP Error 400: Bad Request",
+  "error_body": "{\"error\": \"a model switch is already in progress\"}",
+  "end_CST": "2026-11-09T21:04:28.362676-06:00"
+}

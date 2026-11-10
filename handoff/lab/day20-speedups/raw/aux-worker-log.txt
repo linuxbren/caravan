@@ -1,0 +1,95 @@
+aux wait: primary_ready=True, available_gb=2.911453184, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.9052928, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.784681984, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.752946176, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.745819136, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.754330624, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.747072512, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.735202304, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.744844288, budget_gb=1.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.740404224, budget_gb=1.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.739109888, budget_gb=1.0, reserve_gb=1.75
+21:14:25 [mlx-worker] fuse kernels: off
+21:14:26 [mlx-worker] model_type remap: qwen3_5_text → qwen3_5
+21:14:27 [mlx-worker] wired limit mode off: not set at startup
+21:14:27 [mlx-worker] mlx cache_limit 0.25 GB
+21:14:27 [mlx-worker] mlx memory_limit 1.0 GB
+21:14:27 [mlx-worker] warm-up 0.28s
+21:14:27 [mlx-worker] loaded Qwen3-0.6B-4bit (qwen3) in 0.7s; sessions<= 2, bytes<= 268435456, prefill step 2048, kv bits 16, persist=off
+21:14:27 [mlx-worker] active settings: {"fuse_kernels": "off", "guess_ahead": false, "guess_ahead_loaded": false, "guess_ahead_mode": "helper", "keepalive": null, "kv_bits": 16, "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower", "n_layers": null, "native_mtp_available": false, "packer_layers": null, "pinned": [], "pipeline_chats": 1, "prompt_lookup": {"adaptive": false, "enabled": false, "overlap_on": 0.5}, "reload_auto": [], "reload_trial": null, "self_tune": false, "shared_start": false, "sweep_paused": false, "two_chats_available": false}
+21:14:27 [mlx-worker] listening on http://127.0.0.1:8196
+21:14:43 [mlx-worker] shutting down; saved 0 session(s) with unsaved turns
+21:14:43 [mlx-worker] fuse kernels: off
+21:14:44 [mlx-worker] model_type remap: qwen3_5_text → qwen3_5
+21:14:44 [mlx-worker] wired limit mode off: not set at startup
+21:14:44 [mlx-worker] mlx cache_limit 0.25 GB
+21:14:44 [mlx-worker] mlx memory_limit 0.9 GB
+21:14:44 [mlx-worker] warm-up 0.02s
+21:14:44 [mlx-worker] loaded Qwen3-0.6B-4bit (qwen3) in 0.4s; sessions<= 2, bytes<= 268435456, prefill step 2048, kv bits 16, persist=off
+21:14:44 [mlx-worker] active settings: {"fuse_kernels": "off", "guess_ahead": false, "guess_ahead_loaded": false, "guess_ahead_mode": "helper", "keepalive": null, "kv_bits": 16, "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower", "n_layers": null, "native_mtp_available": false, "packer_layers": null, "pinned": [], "pipeline_chats": 1, "prompt_lookup": {"adaptive": false, "enabled": false, "overlap_on": 0.5}, "reload_auto": [], "reload_trial": null, "self_tune": false, "shared_start": false, "sweep_paused": false, "two_chats_available": false}
+21:14:44 [mlx-worker] listening on http://127.0.0.1:8196
+21:14:46 [mlx-worker] session d20-title-small-cold: cold, reused 0/247 tokens, read 247 in 0.18s, 10 generated, total 0.32s, peak 0.69 GB
+21:14:46 [mlx-worker] session d20-title-small-cold: thinking default, reasoning 0 tok, answer 10 tok (of 10 generated, max 64)
+21:14:46 [mlx-worker] session d20-title-small-cold: timing (single): read 247 tok (0 cached) at 1342.4 tok/s, write 10 tok at 183.67 tok/s, first token 0.27 s, total 0.32 s
+21:14:46 [mlx-worker] session d20-title-small-warm: cold, reused 0/247 tokens, read 247 in 0.08s, 10 generated, total 0.14s, peak 0.75 GB
+21:14:46 [mlx-worker] session d20-title-small-warm: thinking default, reasoning 0 tok, answer 10 tok (of 10 generated, max 64)
+21:14:46 [mlx-worker] session d20-title-small-warm: timing (single): read 247 tok (0 cached) at 2940.5 tok/s, write 10 tok at 187.50 tok/s, first token 0.09 s, total 0.14 s
+21:16:32 [mlx-worker] shutting down; saved 0 session(s) with unsaved turns
+21:16:53 [mlx-worker] fuse kernels: off
+21:16:53 [mlx-worker] model_type remap: qwen3_5_text → qwen3_5
+21:16:53 [mlx-worker] wired limit mode off: not set at startup
+21:16:53 [mlx-worker] mlx cache_limit 0.25 GB
+21:16:53 [mlx-worker] mlx memory_limit 0.9 GB
+21:16:54 [mlx-worker] warm-up 0.27s
+21:16:54 [mlx-worker] loaded Qwen2.5-0.5B-Instruct-4bit (qwen2) in 0.6s; sessions<= 2, bytes<= 268435456, prefill step 2048, kv bits 16, persist=off
+21:16:54 [mlx-worker] active settings: {"fuse_kernels": "off", "guess_ahead": false, "guess_ahead_loaded": false, "guess_ahead_mode": "helper", "keepalive": null, "kv_bits": 16, "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower", "n_layers": null, "native_mtp_available": false, "packer_layers": null, "pinned": [], "pipeline_chats": 1, "prompt_lookup": {"adaptive": false, "enabled": false, "overlap_on": 0.5}, "reload_auto": [], "reload_trial": null, "self_tune": false, "shared_start": false, "sweep_paused": false, "two_chats_available": false}
+21:16:54 [mlx-worker] listening on http://127.0.0.1:8196
+21:16:55 [mlx-worker] session d20-title-qwen25-cold: cold, reused 0/243 tokens, read 243 in 0.07s, 14 generated, total 0.21s, peak 0.57 GB
+21:16:55 [mlx-worker] session d20-title-qwen25-cold: thinking default, reasoning 0 tok, answer 14 tok (of 14 generated, max 64)
+21:16:55 [mlx-worker] session d20-title-qwen25-cold: timing (single): read 243 tok (0 cached) at 3422.5 tok/s, write 14 tok at 232.14 tok/s, first token 0.16 s, total 0.21 s
+21:16:55 [mlx-worker] session d20-title-qwen25-second: cold, reused 0/243 tokens, read 243 in 0.07s, 14 generated, total 0.13s, peak 0.57 GB
+21:16:55 [mlx-worker] session d20-title-qwen25-second: thinking default, reasoning 0 tok, answer 14 tok (of 14 generated, max 64)
+21:16:55 [mlx-worker] session d20-title-qwen25-second: timing (single): read 243 tok (0 cached) at 3521.7 tok/s, write 14 tok at 245.28 tok/s, first token 0.08 s, total 0.13 s
+21:18:48 [mlx-worker] evicted 1 session(s) from memory: d20-title-qwen25-cold
+21:18:48 [mlx-worker] session d20-title-qwen25-garden: cold, reused 0/240 tokens, read 240 in 0.08s, 13 generated, total 0.14s, peak 0.58 GB
+21:18:48 [mlx-worker] session d20-title-qwen25-garden: thinking default, reasoning 0 tok, answer 13 tok (of 13 generated, max 64)
+21:18:48 [mlx-worker] session d20-title-qwen25-garden: timing (single): read 240 tok (0 cached) at 3076.9 tok/s, write 13 tok at 244.90 tok/s, first token 0.09 s, total 0.14 s
+21:18:49 [mlx-worker] evicted 1 session(s) from memory: d20-title-qwen25-second
+21:18:49 [mlx-worker] session d20-title-qwen25-rust: cold, reused 0/241 tokens, read 241 in 0.07s, 64 generated, total 0.31s, peak 0.58 GB
+21:18:49 [mlx-worker] session d20-title-qwen25-rust: thinking default, reasoning 0 tok, answer 64 tok (of 64 generated, max 64)
+21:18:49 [mlx-worker] session d20-title-qwen25-rust: timing (single): read 241 tok (0 cached) at 3394.4 tok/s, write 64 tok at 280.00 tok/s, first token 0.08 s, total 0.31 s
+21:19:27 [mlx-worker] evicted 1 session(s) from memory: d20-title-qwen25-garden
+21:19:27 [mlx-worker] session d20-title-compact-1: cold, reused 0/91 tokens, read 91 in 0.04s, 11 generated, total 0.09s, peak 0.58 GB
+21:19:27 [mlx-worker] session d20-title-compact-1: thinking default, reasoning 0 tok, answer 11 tok (of 11 generated, max 64)
+21:19:27 [mlx-worker] session d20-title-compact-1: timing (single): read 91 tok (0 cached) at 2219.5 tok/s, write 11 tok at 238.10 tok/s, first token 0.05 s, total 0.09 s
+21:19:27 [mlx-worker] evicted 1 session(s) from memory: d20-title-qwen25-rust
+21:19:27 [mlx-worker] session d20-title-compact-2: cold, reused 0/88 tokens, read 88 in 0.03s, 8 generated, total 0.07s, peak 0.58 GB
+21:19:27 [mlx-worker] session d20-title-compact-2: thinking default, reasoning 0 tok, answer 8 tok (of 8 generated, max 64)
+21:19:27 [mlx-worker] session d20-title-compact-2: timing (single): read 88 tok (0 cached) at 2838.7 tok/s, write 8 tok at 225.81 tok/s, first token 0.04 s, total 0.07 s
+21:19:28 [mlx-worker] evicted 1 session(s) from memory: d20-title-compact-1
+21:19:28 [mlx-worker] session d20-title-compact-3: cold, reused 0/89 tokens, read 89 in 0.03s, 8 generated, total 0.07s, peak 0.58 GB
+21:19:28 [mlx-worker] session d20-title-compact-3: thinking default, reasoning 0 tok, answer 8 tok (of 8 generated, max 64)
+21:19:28 [mlx-worker] session d20-title-compact-3: timing (single): read 89 tok (0 cached) at 2871.0 tok/s, write 8 tok at 225.81 tok/s, first token 0.04 s, total 0.07 s
+21:21:02 [mlx-worker] evicted 1 session(s) from memory: d20-title-compact-2
+21:21:02 [mlx-worker] session aux_814f522d8e1c7826: cold, reused 0/91 tokens, read 91 in 0.04s, 11 generated, total 0.09s, peak 0.58 GB
+21:21:02 [mlx-worker] session aux_814f522d8e1c7826: thinking default, reasoning 0 tok, answer 11 tok (of 11 generated, max 64)
+21:21:02 [mlx-worker] session aux_814f522d8e1c7826: timing (single): read 91 tok (0 cached) at 2394.7 tok/s, write 11 tok at 238.10 tok/s, first token 0.04 s, total 0.09 s
+21:21:02 [mlx-worker] evicted 1 session(s) from memory: d20-title-compact-3
+21:21:02 [mlx-worker] session aux_ada7ca978360ec45: cold, reused 0/88 tokens, read 88 in 0.03s, 8 generated, total 0.07s, peak 0.58 GB
+21:21:02 [mlx-worker] session aux_ada7ca978360ec45: thinking default, reasoning 0 tok, answer 8 tok (of 8 generated, max 64)
+21:21:02 [mlx-worker] session aux_ada7ca978360ec45: timing (single): read 88 tok (0 cached) at 2588.2 tok/s, write 8 tok at 225.81 tok/s, first token 0.04 s, total 0.07 s
+21:21:02 [mlx-worker] evicted 1 session(s) from memory: aux_814f522d8e1c7826
+21:21:02 [mlx-worker] session aux_a7f7b4bd6645c26b: cold, reused 0/89 tokens, read 89 in 0.04s, 8 generated, total 0.08s, peak 0.58 GB
+21:21:02 [mlx-worker] session aux_a7f7b4bd6645c26b: thinking default, reasoning 0 tok, answer 8 tok (of 8 generated, max 64)
+21:21:02 [mlx-worker] session aux_a7f7b4bd6645c26b: timing (single): read 89 tok (0 cached) at 2542.9 tok/s, write 8 tok at 225.81 tok/s, first token 0.04 s, total 0.08 s
+21:21:02 [mlx-worker] shutting down; saved 0 session(s) with unsaved turns
+21:21:05 [mlx-worker] fuse kernels: off
+21:21:05 [mlx-worker] model_type remap: qwen3_5_text → qwen3_5
+21:21:06 [mlx-worker] wired limit mode off: not set at startup
+21:21:06 [mlx-worker] mlx cache_limit 0.25 GB
+21:21:06 [mlx-worker] mlx memory_limit 0.9 GB
+21:21:06 [mlx-worker] warm-up 0.06s
+21:21:06 [mlx-worker] loaded Qwen2.5-0.5B-Instruct-4bit (qwen2) in 0.4s; sessions<= 2, bytes<= 268435456, prefill step 2048, kv bits 16, persist=off
+21:21:06 [mlx-worker] active settings: {"fuse_kernels": "off", "guess_ahead": false, "guess_ahead_loaded": false, "guess_ahead_mode": "helper", "keepalive": null, "kv_bits": 16, "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower", "n_layers": null, "native_mtp_available": false, "packer_layers": null, "pinned": [], "pipeline_chats": 1, "prompt_lookup": {"adaptive": false, "enabled": false, "overlap_on": 0.5}, "reload_auto": [], "reload_trial": null, "self_tune": false, "shared_start": false, "sweep_paused": false, "two_chats_available": false}
+21:21:06 [mlx-worker] listening on http://127.0.0.1:8196
+

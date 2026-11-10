@@ -1,0 +1,96 @@
+{
+  "label": "title-auto-rust",
+  "start_CST": "2026-11-09T21:21:02.472549-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 64,
+  "lookup": null,
+  "request_sha256": "b90e43a77c9de8976b075d3c223c7698b3f785291dd7921d01b9ff2ece4e94ce",
+  "http": 200,
+  "aux_header": "title-sidecar",
+  "response": {
+    "id": "chatcmpl-e25f204d6fd6",
+    "object": "chat.completion",
+    "created": 1794280862,
+    "model": "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "{\"title\": \"Learn Rust borrow checker lifetime errors\"}"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 89,
+      "completion_tokens": 8,
+      "total_tokens": 97,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.035,
+        "ttft_s": 0.045,
+        "total_s": 0.076,
+        "peak_gb": 0.58,
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": false,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": null,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": null,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 3.879,
+          "need_gb": 0.002,
+          "prompt_tokens": 89,
+          "budget_tokens": 315612,
+          "bytes_per_token": 12288.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 5.629,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 3.879,
+          "packer_available_gb": null,
+          "packer_headroom_gb": null,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 2542.9,
+        "write_tok_s": 225.81
+      }
+    },
+    "caravan_aux": {
+      "route": "title-sidecar",
+      "model": "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+      "compact_prompt": true
+    }
+  },
+  "ok": true,
+  "wall_s": 0.11358766199555248,
+  "end_CST": "2026-11-09T21:21:02.586188-06:00"
+}

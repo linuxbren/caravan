@@ -1,0 +1,27 @@
+{
+  "start_CST": "2026-11-09T21:04:16.633587-06:00",
+  "request": {
+    "model_id": "qwen3-30b-a3b-4bit",
+    "engine": "mlx",
+    "placement": {
+      "mode": "one",
+      "node_ids": [
+        "exo1"
+      ]
+    },
+    "node_ids": [
+      "exo1"
+    ],
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "kv_bits": "16"
+    }
+  },
+  "error": "HTTP Error 400: Bad Request",
+  "error_body": "{\"error\": \"Not enough free memory to restore this placement with 1.75 GB headroom; choose a smaller model or another split\"}",
+  "end_CST": "2026-11-09T21:04:17.182691-06:00"
+}

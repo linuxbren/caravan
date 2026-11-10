@@ -1,0 +1,97 @@
+{
+  "label": "title-main-before",
+  "start_CST": "2026-11-09T21:04:09.257185-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 64,
+  "lookup": null,
+  "http": 200,
+  "response": {
+    "id": "chatcmpl-773d8d2ea89b",
+    "object": "chat.completion",
+    "created": 1794279849,
+    "model": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "{\"title\": \"Check Caravan after reboot and improve Hermes speed\"}"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 264,
+      "completion_tokens": 14,
+      "total_tokens": 278,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 4.274,
+        "ttft_s": 4.556,
+        "total_s": 6.69,
+        "peak_gb": 13.18,
+        "split": {
+          "calls": 20,
+          "mb_out": 0.0,
+          "mb_in": 2.86,
+          "wait_s": 2.514,
+          "front_s": 2.495,
+          "net_s": 0.019
+        },
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": true,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": true,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": 24,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 4.002,
+          "need_gb": 0.054,
+          "prompt_tokens": 264,
+          "budget_tokens": 24364,
+          "bytes_per_token": 163840.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 6.088,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 4.338,
+          "packer_available_gb": 5.752,
+          "packer_headroom_gb": 4.002,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 61.8,
+        "write_tok_s": 6.09
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 6.751937278022524,
+  "end_CST": "2026-11-09T21:04:16.009145-06:00"
+}

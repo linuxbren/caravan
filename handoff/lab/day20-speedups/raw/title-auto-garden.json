@@ -1,0 +1,96 @@
+{
+  "label": "title-auto-garden",
+  "start_CST": "2026-11-09T21:21:02.306662-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 64,
+  "lookup": null,
+  "request_sha256": "340f14e4196a711d4e4049253e8c8b74d12b8cc3e9b90be2340fbb5acf245203",
+  "http": 200,
+  "aux_header": "title-sidecar",
+  "response": {
+    "id": "chatcmpl-6f477deb34e4",
+    "object": "chat.completion",
+    "created": 1794280862,
+    "model": "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "{\"title\": \"Plan garden irrigation for hot weather\"}"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 88,
+      "completion_tokens": 8,
+      "total_tokens": 96,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.034,
+        "ttft_s": 0.042,
+        "total_s": 0.073,
+        "peak_gb": 0.58,
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": false,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": null,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": null,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 3.876,
+          "need_gb": 0.002,
+          "prompt_tokens": 88,
+          "budget_tokens": 315389,
+          "bytes_per_token": 12288.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 5.626,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 3.876,
+          "packer_available_gb": null,
+          "packer_headroom_gb": null,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 2588.2,
+        "write_tok_s": 225.81
+      }
+    },
+    "caravan_aux": {
+      "route": "title-sidecar",
+      "model": "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+      "compact_prompt": true
+    }
+  },
+  "ok": true,
+  "wall_s": 0.11008288100128993,
+  "end_CST": "2026-11-09T21:21:02.416802-06:00"
+}

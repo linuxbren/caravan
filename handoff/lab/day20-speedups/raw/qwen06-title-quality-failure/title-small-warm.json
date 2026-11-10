@@ -1,0 +1,91 @@
+{
+  "label": "title-small-warm",
+  "start_CST": "2026-11-09T21:14:46.165436-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 64,
+  "lookup": null,
+  "request_sha256": "bdae3d7fb01cb5e7ab2d6630113f826c39cc25f64cf8013526e05f1dd2a3af78",
+  "http": 200,
+  "aux_header": null,
+  "response": {
+    "id": "chatcmpl-313b65b117a3",
+    "object": "chat.completion",
+    "created": 1794280486,
+    "model": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "{\"title\": \"Fix login button on mobile\"}"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 247,
+      "completion_tokens": 10,
+      "total_tokens": 257,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.084,
+        "ttft_s": 0.092,
+        "total_s": 0.14,
+        "peak_gb": 0.75,
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": false,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": null,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": null,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 3.035,
+          "need_gb": 0.036,
+          "prompt_tokens": 247,
+          "budget_tokens": 26398,
+          "bytes_per_token": 114688.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 4.785,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 3.035,
+          "packer_available_gb": null,
+          "packer_headroom_gb": null,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 2940.5,
+        "write_tok_s": 187.5
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 0.1612845979980193,
+  "end_CST": "2026-11-09T21:14:46.326780-06:00"
+}

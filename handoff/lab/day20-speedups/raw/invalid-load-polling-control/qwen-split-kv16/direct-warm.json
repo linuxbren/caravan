@@ -1,0 +1,14 @@
+{
+  "label": "qwen-split-kv16",
+  "route": "direct",
+  "cache_label": "warm",
+  "start_CST": "2026-11-09T21:04:26.849137-06:00",
+  "tools": 0,
+  "max_tokens": 512,
+  "reasoning_effort": "medium",
+  "request_sha256": "a444d52d763daae5aeec71f3472189b7b371bd75ad04353a421032a80e28e68d",
+  "ok": false,
+  "error": "HTTP Error 409: Conflict",
+  "wall_s": 0.006466437014751136,
+  "end_CST": "2026-11-09T21:04:26.855731-06:00"
+}

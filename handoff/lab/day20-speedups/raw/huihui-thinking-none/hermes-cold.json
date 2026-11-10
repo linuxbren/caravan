@@ -1,0 +1,88 @@
+{
+  "label": "huihui-thinking-none",
+  "route": "hermes",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:02:28.039824-06:00",
+  "tools": 19,
+  "max_tokens": 512,
+  "reasoning_effort": "none",
+  "request_sha256": "97faf28149b1a772978418ca71d073befd158afde0381a9b54070e58f64661fa",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 37.31864166504238,
+  "first_wire_token_s": 27.197109977016225,
+  "first_visible_s": 27.19711065501906,
+  "usage": {
+    "prompt_tokens": 11326,
+    "completion_tokens": 64,
+    "total_tokens": 11390,
+    "prompt_tokens_details": {
+      "cached_tokens": 11287
+    },
+    "caravan": {
+      "how": "agent-prefix-hit-memory",
+      "prefill_s": 1.485,
+      "ttft_s": 1.781,
+      "total_s": 11.901,
+      "peak_gb": 13.18,
+      "split": {
+        "calls": 74,
+        "mb_out": 0.11,
+        "mb_in": 1.07,
+        "wait_s": 4.357,
+        "front_s": 4.303,
+        "net_s": 0.055
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 24,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 4.676,
+        "need_gb": 1.94,
+        "prompt_tokens": 11326,
+        "budget_tokens": 28027,
+        "bytes_per_token": 163840.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 6.984,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 5.234,
+        "packer_available_gb": 6.426,
+        "packer_headroom_gb": 4.676,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 26.3,
+      "write_tok_s": 6.23
+    }
+  },
+  "answer": "1. `systemctl status <service>` returns \"active (running)\" with recent start time.\n2. `curl http://localhost:<port>/health` returns 200 OK or expected JSON.\n3. `ps aux | grep <process>` shows the service PID alive with correct command line.",
+  "reasoning_chars": 0,
+  "end_CST": "2026-11-09T21:03:05.358566-06:00"
+}

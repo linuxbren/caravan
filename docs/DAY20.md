@@ -469,3 +469,186 @@ later, the model is back and answering.” Corrected typing/recovery stills
 visually inspected, single-line bottom captions intact, no cropped text.
 Parent must obtain X Engagement review before showing Brenden. No external
 post/message or service restart performed by this executor.
+
+## Expanded Day 20 comparison and speedup trials — Nov 9, CST
+
+### Scope, provenance and interpretation
+
+No cloud agents, release/tag, video, reboot or Hermes configuration changes in
+this phase. Model loads used the normal guarded web API, never bypassed memory
+guards or fetched weights. Main model was restored to **Huihui 27B, EXO2 first
+24 layers / EXO1 40 layers, KV16**, with all currently configured Hermes tools.
+Experiments intentionally switched models; only the proxy was restarted for
+proxy changes. The web was not restarted.
+
+The historical **207.87 s prefill → 1.17–1.76 s, 13,182 cached tokens** belongs
+to the earlier actual Hermes run with 21 configured tools and fixes
+`367cbc9` / `6efecbf` / `ad07c13`. Main and title sessions were isolated; exact
+pre-user checkpoints were captured during prefill, cloned with recurrent
+snapshots on every stage and saved durably. This avoids unsafe arbitrary
+recurrent rewinds and title/main checkpoint collisions. Cold compute did not
+magically get faster; retained system/tool state removed repeated compute.
+
+The old capture directory was no longer present. For the expanded matrix we
+froze the **current offline Hermes CLI inspection prefix**, from the home cwd:
+**19/19 currently configured tools**, system 13,108 characters, tool JSON 34,487
+bytes; frozen-prefix SHA256
+`e0218dd991e351fb3ee4b6ab240bcdc47e146c371dea458c2b6abd230b690575`.
+Current native shared prefixes are **11,287 tokens on Huihui** and **11,196 on
+Qwen3**. Do not relabel these as the historical 13,182-token run. Hermes itself
+had been reinstalled/changed and its configured default model was now Opus;
+we did not change that setting or make an Opus request. These are **inference-only
+full-prefix replays through :18090**, not measured Hermes CLI/tool execution.
+
+Both routes use the same realistic user task: three brief local-service
+recovery checks, under 45 visible words, no executed tools. Short/direct uses
+:18190/v1/chat/completions; full/system+tools uses :18090. Temperature 0,
+medium reasoning. Successful baseline rows below finish `stop`, not truncation.
+Huihui full rows used a 256-token cap and stopped naturally; corrected short
+and Qwen rows use 512. Warm full requests add a small user suffix; Huihui's
+corrected short warm request repeats exactly. Cached counts, not labels, are
+authoritative. Output lengths differ, so reply wall-time differences are not a
+pure measurement of Hermes wrapper overhead or equal-length generation.
+**Native/wire TTFT includes reasoning tokens**; first visible answer is separate.
+Raw times carry CST offsets. All table times are seconds.
+
+### Phase A: baseline matrix, KV16 / serial / speculation off
+
+| Model / placement | Route | Cache | Prompt / cached | Generated | TTFT native / wire (s) | First visible answer (s) | Write tok/s | Full wall (s) |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| Huihui 27B 24/40 | direct | cold | 54 / 0 | 275 | 1.275 / 1.795 | 36.712 | 6.62 | 42.748 |
+| Huihui 27B 24/40 | direct | warm | 54 / 53 | 275 | 0.298 / 0.925 | 35.754 | 6.63 | 41.785 |
+| Huihui 27B 24/40 | hermes | cold | 11,322 / 0 | 226 | 177.438 / 177.684 | 195.202 | 6.30 | 213.413 |
+| Huihui 27B 24/40 | hermes | warm | 11,326 / 11,287 | 183 | 1.436 / 3.090 | 19.019 | 6.30 | 32.043 |
+| Qwen3 30B-A3B 24/24 | direct | cold | 52 / 0 | 174 | 0.387 / 0.548 | 3.766 | 44.94 | 4.308 |
+| Qwen3 30B-A3B 24/24 | direct | warm | 56 / 47 | 181 | 0.127 / 0.246 | 3.919 | 44.87 | 4.170 |
+| Qwen3 30B-A3B 24/24 | hermes | cold | 11,229 / 0 | 238 | 36.269 / 36.366 | 43.898 | 29.20 | 44.449 |
+| Qwen3 30B-A3B 24/24 | hermes | warm | 11,233 / 11,196 | 415 | 0.569 / 1.097 | 14.623 | 29.20 | 15.241 |
+
+Single-Mini attempts were actually submitted, but did not launch a worker:
+- **Huihui EXO1:** HTTP400, required complete model files missing; no download
+  started. Its EXO1 folder has only the split subset (missing shard 1), so this
+  is a missing-files failure, **not a measured OOM**. Inventory fit estimate
+  also exceeded the approximately 16.4 GB safe capacity (~19.1 GB need).
+- **Qwen3 EXO1:** HTTP400, insufficient free memory with 1.75 GB headroom.
+  Complete local weights exist (~17.17 GB), but estimated load need ~20.3 GB
+  exceeds safe capacity. **No single-Mini TTFT/write/reply result and no OOM
+  were measured.** Do not invent a speed comparison for these cells.
+
+### Phase B: before/after and decisions
+
+| Change | Before | After / result | Kept? |
+|---|---|---|---|
+| Explicit prefix prewarm after load, genuinely unseen real user suffix | TTFT 1.762; request wall 1.864 | Dummy prefix request cost .668; real TTFT 1.699, wall 1.972; both real requests reuse 11,287 tokens | **No automatic warm-up**: negligible/no end-to-end benefit over existing durable prefix recovery; could contend with real work |
+| Automatic title sidecar, real incoming Hermes title schema | Main cold title walls 6.752 / 6.458 / 6.445 | Same incoming Caravan/garden/Rust requests .213 / .110 / .114 through :18090, validated JSON and relevant titles | **Yes, local opt-in**; median 6.458 → .114 s (~57×), titles only; no main-chat speed claim |
+| Explicit thinking none, short checks | Short cold 42.748 s / 275 generated with medium | 9.68 s / 54 generated, same write speed (~6.5 tok/s); full-prefix warm ~32.04 →16.40 s with shorter output | Existing request-level `reasoning_effort:none` works; **main stays medium**. No automatic general tool-turn suppression: safety/quality not established |
+| Adaptive n-gram lookup, paired warm copy task, 3 each | Median 44.26 tok/s, 1.295 s wall | 70.69 tok/s, .858 s wall; 43/50 proposed tokens accepted = **86%**; 8 copied lines equal after outer whitespace | Keep existing **opt-in** lookup plus true token acceptance readout; **not default** |
+| Lookup on realistic full-prefix Qwen task | 29.34 tok/s | 28.48 tok/s; 0/3 proposals accepted, different output lengths (238 vs344 generated) | **Off** for general/Huihui work; copy benchmark is not a Hermes-wide win |
+| Qwen KV8 vs KV16, full-prefix cold | Prefill 36.200, write29.20, lead peak10.26 GB | Prefill49.151, write22.68, peak11.98 GB; warm write also22.68 vs29.20 | **KV16 retained**; observed compute/peak allocation regressed this workload. Short write42.11 vs44.94; warm wall12.005 vs15.241 is not a win because output238 vs415 tokens |
+
+#### Sidecar implementation, negative trials and operation
+
+Generic proxy settings (no fixed number of Minis): `CARAVAN_AUX_MODEL` unset
+means **disabled by default**; loopback `CARAVAN_AUX_PORT=8196`, bounded per-I/O
+`CARAVAN_AUX_TIMEOUT_S=2` (.05–10 allowed), `CARAVAN_AUX_COMPACT_PROMPT=1`
+(default for an opted-in sidecar; 0 forwards original title instructions).
+Only nonstreaming, <=128-token, no-tool, exactly system+user requests with
+Hermes's `session_title` schema and exact title marker qualify. General
+summaries/compaction/agent state are **not** guessed or redirected.
+
+The opted-in sidecar uses concise equivalent **title-only** instructions,
+preserving the user message and original language rule. It never edits main
+system prompts, tools or thinking. Strict JSON titles, or short one-line quoted/
+`Title:` titles in compact mode, are normalized to the required JSON object.
+Newlines, code/Markdown, malformed JSON, length failures, missing topic overlap,
+non-stop finish, unhealthy/slow service or memory errors all fall back to the
+unchanged main request. Topic overlap is conservative, not a proof of semantic
+correctness; broader title quality testing is still warranted.
+
+Negative trials were retained, not hidden: Qwen3-0.6B returned the unrelated
+few-shot title “Fix login button on mobile” for Caravan and was **rejected**.
+Qwen2.5-0.5B with the original long prompt got Caravan right but garden prefixed
+its JSON with `Good:` and Rust emitted truncated code; those are invalid and
+would fall back. Compact equivalent title instructions plus narrow formatting
+normalization produced relevant valid titles on all three measured requests:
+“Review Caravan after reboot and improve Hermes speed”, “Plan garden irrigation
+for hot weather”, “Learn Rust borrow checker lifetime errors”. This is a
+three-case pilot, not comprehensive quality certification.
+
+EXO1 now has `com.caravan.v3.aux`, local already-installed
+`~/.caravan/mlx-models/drafts/Qwen2.5-0.5B-Instruct-4bit`, port8196. Startup wrapper
+`tools/aux_worker.py` waits up to10min for primary health and known free RAM
+>=soft MLX budget +**1.75 GB reserve**. Defaults are conservative2 GB; this small
+worker was measured within an explicit **.9 GB** budget, .25 GB cache pool,
+256 MiB session-cache budget, no persistence, no learn/draft, no wired-limit
+changes. Actual measured peak **.58 GB**. The default2 GB and initial1 GB
+admission waits were recorded: available RAM was ~2.74–2.91 GB, not enough for
+3.75 GB / briefly2.75 GB thresholds. No main context/tools were reduced to fit
+it. Limits are MLX soft caps, not hard OS reservations; the main model's normal
+memory guard remains authoritative. No automatic sidecar eviction/lifecycle
+integration for future larger main models is claimed.
+
+Only the idle proxy was booted out and bootstrapped to pick up explicit local
+aux environment settings; its pre-aux plist is backed up under
+`~/.caravan/logs/day20-proxy-before-aux.plist`. Aux log:
+`~/.caravan/logs/day20-aux.log`. One rapid aux bootout/bootstrap got transient
+launchd EIO; after confirming the old job was gone, retrying the same bootstrap
+succeeded. No root workaround or primary restart was used.
+
+Live fallback was tested by stopping only the auxiliary service: :18090 returned
+a correct Huihui Rust title in **2.305 s**, no auxiliary header, then aux was
+restarted. This fallback was a cached main title (261/262 tokens), not a new
+cold title benchmark. The temporary Omarchy :18196 measurement tunnel was
+stopped; production18090/18190 supervised tunnels remain.
+
+#### Other requested fixes
+
+- `f0a389e`: GET8090 `/v1/models` aggregates live MLX/llama discovery and
+  canonicalizes MLX names; a dead GGUF upstream no longer turns a live MLX list
+  into502. Live18090 GET returns200 with the loaded Huihui HF model id.
+- `f0a389e` / `82fa186`: dynamic TB SSH proxy helper resolves the peer's current
+  en2 IPv4 through the lead, rather than retaining stale link-local IPv6.
+  Initial discovery consumed SSH stdin; explicit DEVNULL fixed packet corruption.
+  Omarchy `exo2-via-exo1` now successfully reports EXO2's hostname. Host-key policy
+  was retained; old alias block is in raw evidence. No fixed two-node assumption
+  was added to application inference code; physical benchmarks here are N=2 only.
+- `6112ae6`: conservative auxiliary-route prototype and token-level PL telemetry;
+  `03cd47b`: RAM/primary-health startup guard; `49379aa`: topic/timeout safety;
+  `59e78f6`: measured compact-title prompt and strict output normalization.
+
+### Honest controls, evidence, verification and final state
+
+Raw results and reusable helpers: `handoff/lab/day20-speedups/` (`matrix.csv`,
+`matrix.md`, `raw/`, `bin/`). Omarchy originals: `~/day20-speedups/`.
+Private frozen instructions and request bodies stay only in its chmod700
+`private/` folder; **not committed**. Capturing again may change the prefix;
+use the retained hash to distinguish datasets. No endpoint/tool was invoked by
+Hermes during offline inspection, and no model-emitted tool call was executed.
+
+Failed controls are kept separately:
+- Initial short Huihui cold cap256 ended `length`; its supposed warm request
+  had changed prompt/random web session and0 cached. Both are excluded from
+  the successful short baseline table; corrected persistent-session512-token
+  requests both ended `stop`.
+- Initial model-load poll accepted the previous model's stale `ready` before
+  asynchronous switch progress. Resulting incomplete/error streams and busy
+  load rejections are in `raw/invalid-load-polling-control/`, **excluded**.
+  Controller now requires matching model, changed lead PID, requested KV bits,
+  healthy lead and intended counts. Streams without usage/finish are failures.
+- Initial “reload on-demand” prewarm comparison reused the exact future user
+  task from durable session state; this is not an unseen first-chat control.
+  Corrected `prewarm-unseen-*` calls have distinct never-before-used suffixes,
+  share only11,287 system/tool tokens and intentionally generate1 token. They
+  measure TTFT only, not complete-answer time.
+
+Final regression: **792 unit tests passed in43.596 s**, plus compile/whitespace
+checks. Existing N-stage cache tests include1/2/3/5 fake stages, not unmeasured
+hardware claims. Both Minis pull commits `--ff-only`; no scp or cloud agent.
+
+Final real full-prefix :18090 reply: **19 tools, medium reasoning**,11,310 prompt /
+11,287 cached, native TTFT **.999 s**, write **6.22 tok/s**, wall **11.872 s**,
+`stop`: “I'm online and ready to help.” Huihui24/40 KV16 ready, lead PID12425.
+Aux health200, GETmodels200, Thunderbolt SSH works. Main guess-ahead/lookup/
+self-tuning remain off for these controlled settings. Existing boot auto-restore
+still saves Huihui, not the temporary Qwen model. No new reboot was performed;
+auxiliary boot ordering has not been reboot-tested. No Day20 tag or video made.

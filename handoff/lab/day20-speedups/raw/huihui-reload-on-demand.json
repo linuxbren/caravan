@@ -1,0 +1,99 @@
+{
+  "label": "huihui-reload-on-demand",
+  "start_CST": "2026-11-09T21:09:26.691705-06:00",
+  "tools": 19,
+  "reasoning_effort": "medium",
+  "max_tokens": 512,
+  "lookup": null,
+  "http": 200,
+  "response": {
+    "id": "chatcmpl-0a602736add0",
+    "object": "chat.completion",
+    "created": 1794280166,
+    "model": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "Three checks for local AI service recovery:\n\n1. **Process check**: `pgrep -f \"service-name\"` or `ps aux | grep service` confirms the process is running.\n\n2. **Port check**: `ss -tlnp | grep :port` or `netstat -tlnp | grep :port` verifies the service is listening on its expected port.\n\n3. **Health endpoint**: `curl -s http://localhost:port/health` (or `/status`, `/ready`) returns a successful response with expected status code.",
+          "reasoning_content": "The user is asking for three brief checks to confirm a local AI service recovered after reboot. They want a concise answer under 45 words and explicitly said not to run tools.\n\nLet me think about what checks would be relevant for a local AI service:\n\n1. Process check - verify the service process is running\n2. Port check - verify the service is listening on its expected port\n3. Health endpoint - make a request to the service's health/status endpoint\n\nI need to keep this under 45 words total.\n",
+          "reasoning": "The user is asking for three brief checks to confirm a local AI service recovered after reboot. They want a concise answer under 45 words and explicitly said not to run tools.\n\nLet me think about what checks would be relevant for a local AI service:\n\n1. Process check - verify the service process is running\n2. Port check - verify the service is listening on its expected port\n3. Health endpoint - make a request to the service's health/status endpoint\n\nI need to keep this under 45 words total.\n"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 11322,
+      "completion_tokens": 226,
+      "total_tokens": 11548,
+      "prompt_tokens_details": {
+        "cached_tokens": 11321
+      },
+      "caravan": {
+        "how": "hit-memory",
+        "prefill_s": 0.024,
+        "ttft_s": 0.402,
+        "total_s": 36.064,
+        "peak_gb": 10.06,
+        "split": {
+          "calls": 230,
+          "mb_out": 0.07,
+          "mb_in": 2.35,
+          "wait_s": 13.119,
+          "front_s": 12.955,
+          "net_s": 0.164
+        },
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": true,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": true,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": 24,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 4.817,
+          "need_gb": 1.939,
+          "prompt_tokens": 11322,
+          "budget_tokens": 28890,
+          "bytes_per_token": 163840.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 7.227,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 5.477,
+          "packer_available_gb": 6.567,
+          "packer_headroom_gb": 4.817,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 41.7,
+        "write_tok_s": 6.31
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 36.30965935299173,
+  "end_CST": "2026-11-09T21:10:03.001390-06:00"
+}

@@ -1,0 +1,91 @@
+{
+  "label": "title-qwen25-cold",
+  "start_CST": "2026-11-09T21:16:55.204097-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 64,
+  "lookup": null,
+  "request_sha256": "bdae3d7fb01cb5e7ab2d6630113f826c39cc25f64cf8013526e05f1dd2a3af78",
+  "http": 200,
+  "aux_header": null,
+  "response": {
+    "id": "chatcmpl-022fd5cd8dd9",
+    "object": "chat.completion",
+    "created": 1794280615,
+    "model": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "{\"title\": \"Rebooted, Caravan Performance Improvements\"}"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 243,
+      "completion_tokens": 14,
+      "total_tokens": 257,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.071,
+        "ttft_s": 0.158,
+        "total_s": 0.214,
+        "peak_gb": 0.57,
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": false,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": null,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": null,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 3.202,
+          "need_gb": 0.004,
+          "prompt_tokens": 243,
+          "budget_tokens": 260477,
+          "bytes_per_token": 12288.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 4.952,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 3.202,
+          "packer_available_gb": null,
+          "packer_headroom_gb": null,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 3422.5,
+        "write_tok_s": 232.14
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 0.2652392820455134,
+  "end_CST": "2026-11-09T21:16:55.469387-06:00"
+}

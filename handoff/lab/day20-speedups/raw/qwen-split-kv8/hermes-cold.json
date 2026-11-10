@@ -1,0 +1,88 @@
+{
+  "label": "qwen-split-kv8",
+  "route": "hermes",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:07:54.024553-06:00",
+  "tools": 19,
+  "max_tokens": 512,
+  "reasoning_effort": "medium",
+  "request_sha256": "17066f05c5434bf0234f9929c417bc82e293b2644e954b2079f7df62ae28a7a0",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 66.0673451150069,
+  "first_wire_token_s": 49.487920532003045,
+  "first_visible_s": 64.29180284397444,
+  "usage": {
+    "prompt_tokens": 11229,
+    "completion_tokens": 378,
+    "total_tokens": 11607,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "caravan": {
+      "how": "cold",
+      "prefill_s": 49.151,
+      "ttft_s": 49.355,
+      "total_s": 65.976,
+      "peak_gb": 11.98,
+      "split": {
+        "calls": 395,
+        "mb_out": 0.19,
+        "mb_in": 47.57,
+        "wait_s": 33.475,
+        "front_s": 33.21,
+        "net_s": 0.265
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 8,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 24,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 2.39,
+        "need_gb": 0.332,
+        "prompt_tokens": 11229,
+        "budget_tokens": 84039,
+        "bytes_per_token": 28262.4,
+        "error": null,
+        "ok": true,
+        "available_gb": 8.01,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 6.26,
+        "packer_available_gb": 4.14,
+        "packer_headroom_gb": 2.39,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 228.5,
+      "write_tok_s": 22.68
+    }
+  },
+  "answer": "1. Check service status via 'systemctl is-active ai-service'.  \n2. Test API endpoint with 'curl http://localhost:port/health'.  \n3. Review logs for startup confirmation.",
+  "reasoning_chars": 1470,
+  "end_CST": "2026-11-09T21:09:00.092029-06:00"
+}

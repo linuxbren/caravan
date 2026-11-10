@@ -1,0 +1,88 @@
+{
+  "label": "huihui-split-kv16",
+  "route": "direct",
+  "cache_label": "warm",
+  "start_CST": "2026-11-09T20:55:08.289341-06:00",
+  "tools": 0,
+  "max_tokens": 256,
+  "reasoning_effort": "medium",
+  "request_sha256": "9b176871302f0e3e392a74c4d1c1b4f599d636eb555aeae4c1e7adf924fc20dd",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 29.20081156102242,
+  "first_wire_token_s": 1.8730037730420008,
+  "first_visible_s": 20.417443870042916,
+  "usage": {
+    "prompt_tokens": 58,
+    "completion_tokens": 184,
+    "total_tokens": 242,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "caravan": {
+      "how": "cold",
+      "prefill_s": 0.994,
+      "ttft_s": 1.274,
+      "total_s": 29.052,
+      "peak_gb": 10.09,
+      "split": {
+        "calls": 190,
+        "mb_out": 0.02,
+        "mb_in": 2.5,
+        "wait_s": 10.562,
+        "front_s": 10.435,
+        "net_s": 0.128
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 24,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 2.764,
+        "need_gb": 0.051,
+        "prompt_tokens": 58,
+        "budget_tokens": 16611,
+        "bytes_per_token": 163840.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 7.179,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 5.429,
+        "packer_available_gb": 4.514,
+        "packer_headroom_gb": 2.764,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 58.4,
+      "write_tok_s": 6.59
+    }
+  },
+  "answer": "- Check if the service is running (e.g., via system status or process list)\n2. Check if the service responds to a simple request (e.g., ping or health endpoint)\n3. Check if the service can perform a basic task (e.g., run a small inference or query)",
+  "reasoning_chars": 513,
+  "end_CST": "2026-11-09T20:55:37.490202-06:00"
+}

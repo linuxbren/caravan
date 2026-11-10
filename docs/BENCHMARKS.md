@@ -1455,3 +1455,20 @@ Historical Day 10 write-up cited ~37.2 vs ~67.8; do not round these live
 figures toward those. Clip: 5.000 s, `/workspace/caravan-selftune-5s.mp4`.
 Huihui 24/40 restored after the shoot.
 
+
+## Day20 expanded short vs full-Hermes-prefix matrix (Nov9 CST)
+
+Current offline prefix:19/19 tools, not the historical21-tool/13,182-token dataset. Inference-only replay, no tool execution or CLI overhead. Native TTFT includes reasoning; successful rows all stop. Different output lengths prevent interpreting wall differences as pure Hermes overhead. Full provenance, invalid controls, settings and all before/after trials: [DAY20.md](DAY20.md#expanded-day-20-comparison-and-speedup-trials--nov-9-cst). Raw: `handoff/lab/day20-speedups/`.
+
+| Model / placement | Route | Cache | Prompt / cached | Generated | TTFT native / wire (s) | First visible answer (s) | Write tok/s | Full wall (s) |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| Huihui 27B 24/40 | direct | cold | 54 / 0 | 275 | 1.275 / 1.795 | 36.712 | 6.62 | 42.748 |
+| Huihui 27B 24/40 | direct | warm | 54 / 53 | 275 | 0.298 / 0.925 | 35.754 | 6.63 | 41.785 |
+| Huihui 27B 24/40 | hermes | cold | 11,322 / 0 | 226 | 177.438 / 177.684 | 195.202 | 6.30 | 213.413 |
+| Huihui 27B 24/40 | hermes | warm | 11,326 / 11,287 | 183 | 1.436 / 3.090 | 19.019 | 6.30 | 32.043 |
+| Qwen3 30B-A3B 24/24 | direct | cold | 52 / 0 | 174 | 0.387 / 0.548 | 3.766 | 44.94 | 4.308 |
+| Qwen3 30B-A3B 24/24 | direct | warm | 56 / 47 | 181 | 0.127 / 0.246 | 3.919 | 44.87 | 4.170 |
+| Qwen3 30B-A3B 24/24 | hermes | cold | 11,229 / 0 | 238 | 36.269 / 36.366 | 43.898 | 29.20 | 44.449 |
+| Qwen3 30B-A3B 24/24 | hermes | warm | 11,233 / 11,196 | 415 | 0.569 / 1.097 | 14.623 | 29.20 | 15.241 |
+
+Single EXO1: Huihui blocked by missing complete files; Qwen blocked by memory headroom, neither ran/OOMed. Title sidecar median6.458→.114s (three pilot cases, not main inference); warm paired copy lookup44.26→70.69tok/s,86% token acceptance, general task29.34→28.48 (keep opt-in). Qwen KV8 full-prefix prefill36.200→49.151s, write29.20→22.68 (KV16 retained). Unseen-question prewarm TTFT1.762→1.699s plus .668s dummy work, no end-to-end gain (not enabled). Explicit reasoning-none reduced short output275→54 generated and wall42.748→9.68s; main remains medium. Final full-power Huihui24/40 KV16,19tools, TTFT.999s/write6.22/wall11.872s/stop.792tests43.596s.

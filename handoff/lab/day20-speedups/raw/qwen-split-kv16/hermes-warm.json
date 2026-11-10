@@ -1,0 +1,88 @@
+{
+  "label": "qwen-split-kv16",
+  "route": "hermes",
+  "cache_label": "warm",
+  "start_CST": "2026-11-09T21:06:48.711406-06:00",
+  "tools": 19,
+  "max_tokens": 512,
+  "reasoning_effort": "medium",
+  "request_sha256": "eb5b562b512f5b9b6f46dc176f4640fca19890bdac3327a0d59f07b9ae7fdd22",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 15.241482137003914,
+  "first_wire_token_s": 1.0971749119926244,
+  "first_visible_s": 14.62320551800076,
+  "usage": {
+    "prompt_tokens": 11233,
+    "completion_tokens": 415,
+    "total_tokens": 11648,
+    "prompt_tokens_details": {
+      "cached_tokens": 11196
+    },
+    "caravan": {
+      "how": "agent-prefix-hit-memory",
+      "prefill_s": 0.504,
+      "ttft_s": 0.569,
+      "total_s": 14.745,
+      "peak_gb": 10.45,
+      "split": {
+        "calls": 424,
+        "mb_out": 0.14,
+        "mb_in": 1.89,
+        "wait_s": 7.19,
+        "front_s": 6.938,
+        "net_s": 0.251
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 24,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 1.801,
+        "need_gb": 0.577,
+        "prompt_tokens": 11233,
+        "budget_tokens": 36124,
+        "bytes_per_token": 49152.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 5.623,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 3.873,
+        "packer_available_gb": 3.551,
+        "packer_headroom_gb": 1.801,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 73.4,
+      "write_tok_s": 29.2
+    }
+  },
+  "answer": "Check service status via system manager, review logs for errors, and test API endpoint response.",
+  "reasoning_chars": 1724,
+  "end_CST": "2026-11-09T21:07:03.952955-06:00"
+}

@@ -1,0 +1,88 @@
+{
+  "label": "huihui-thinking-none",
+  "route": "hermes",
+  "cache_label": "warm",
+  "start_CST": "2026-11-09T21:03:05.359277-06:00",
+  "tools": 19,
+  "max_tokens": 512,
+  "reasoning_effort": "none",
+  "request_sha256": "4b674698b6bd5df89ab9f6149f16b7b4908d510a9ebf7a0d124a47d10203876e",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 16.40028230799362,
+  "first_wire_token_s": 1.92618168896297,
+  "first_visible_s": 1.9261822439730167,
+  "usage": {
+    "prompt_tokens": 11330,
+    "completion_tokens": 91,
+    "total_tokens": 11421,
+    "prompt_tokens_details": {
+      "cached_tokens": 11287
+    },
+    "caravan": {
+      "how": "agent-prefix-hit-memory",
+      "prefill_s": 1.158,
+      "ttft_s": 1.452,
+      "total_s": 15.881,
+      "peak_gb": 13.18,
+      "split": {
+        "calls": 100,
+        "mb_out": 0.11,
+        "mb_in": 1.39,
+        "wait_s": 5.786,
+        "front_s": 5.711,
+        "net_s": 0.075
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 24,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 3.844,
+        "need_gb": 1.94,
+        "prompt_tokens": 11330,
+        "budget_tokens": 22952,
+        "bytes_per_token": 163840.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 6.637,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 4.887,
+        "packer_available_gb": 5.594,
+        "packer_headroom_gb": 3.844,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 37.1,
+      "write_tok_s": 6.24
+    }
+  },
+  "answer": "1. Run `systemctl status <service>` to confirm the service is active and running.\n2. Execute `curl http://localhost:<port>/health` to verify the service responds to requests.\n3. Run a quick inference command (like `python -c \"import requests; print(requests.post('http://localhost:<port>/predict', json={'input': 'test'}).json())\"`) to ensure the model actually processes data.",
+  "reasoning_chars": 0,
+  "end_CST": "2026-11-09T21:03:21.759625-06:00"
+}

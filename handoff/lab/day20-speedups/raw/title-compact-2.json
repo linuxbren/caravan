@@ -1,0 +1,91 @@
+{
+  "label": "title-compact-2",
+  "start_CST": "2026-11-09T21:19:27.988486-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 64,
+  "lookup": null,
+  "request_sha256": "58c14ec47eb25e9ad4ccf67be5810e2d27e59dd2ab51dcb7fff4363967cae550",
+  "http": 200,
+  "aux_header": null,
+  "response": {
+    "id": "chatcmpl-41d3b5642ac5",
+    "object": "chat.completion",
+    "created": 1794280767,
+    "model": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "Title: Plan garden irrigation for hot weather"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 88,
+      "completion_tokens": 8,
+      "total_tokens": 96,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.031,
+        "ttft_s": 0.039,
+        "total_s": 0.07,
+        "peak_gb": 0.58,
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": false,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": null,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": null,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 3.924,
+          "need_gb": 0.002,
+          "prompt_tokens": 88,
+          "budget_tokens": 319243,
+          "bytes_per_token": 12288.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 5.674,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 3.924,
+          "packer_available_gb": null,
+          "packer_headroom_gb": null,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 2838.7,
+        "write_tok_s": 225.81
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 0.10413873998913914,
+  "end_CST": "2026-11-09T21:19:28.092670-06:00"
+}

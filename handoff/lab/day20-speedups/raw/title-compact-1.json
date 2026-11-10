@@ -1,0 +1,91 @@
+{
+  "label": "title-compact-1",
+  "start_CST": "2026-11-09T21:19:27.806239-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 64,
+  "lookup": null,
+  "request_sha256": "f4a452654572078d6c4e617cd49c8137f6359da984c04fc8a53e0d25ad2433b2",
+  "http": 200,
+  "aux_header": null,
+  "response": {
+    "id": "chatcmpl-08e09acc79bf",
+    "object": "chat.completion",
+    "created": 1794280767,
+    "model": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "\"Review Caravan after reboot and improve Hermes speed\""
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 91,
+      "completion_tokens": 11,
+      "total_tokens": 102,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.041,
+        "ttft_s": 0.049,
+        "total_s": 0.091,
+        "peak_gb": 0.58,
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": false,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": null,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": null,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 4.096,
+          "need_gb": 0.002,
+          "prompt_tokens": 91,
+          "budget_tokens": 333285,
+          "bytes_per_token": 12288.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 5.846,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 4.096,
+          "packer_available_gb": null,
+          "packer_headroom_gb": null,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 2219.5,
+        "write_tok_s": 238.1
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 0.1294263579766266,
+  "end_CST": "2026-11-09T21:19:27.935718-06:00"
+}

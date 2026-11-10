@@ -1,0 +1,99 @@
+{
+  "label": "qwen-agent-lookup-off",
+  "start_CST": "2026-11-09T21:07:06.950506-06:00",
+  "tools": 19,
+  "reasoning_effort": "medium",
+  "max_tokens": 512,
+  "lookup": "off",
+  "http": 200,
+  "response": {
+    "id": "chatcmpl-452b77f251e2",
+    "object": "chat.completion",
+    "created": 1794280026,
+    "model": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "Check logs for startup messages. Confirm service process is running. Test API endpoint.",
+          "reasoning_content": "\nOkay, the user is asking for three brief checks to confirm a local AI service has recovered after a reboot. They don't want any tools run, just the checks. Let me think.\n\nFirst, I need to recall common ways to verify a service is up. Maybe check the status with a command like systemctl status, but the user said not to run tools. So I should avoid specific commands. Instead, suggest checking logs for errors, verifying the service is running via a process check, and testing the service's API endpoint. But keep it concise.\n\nWait, the user said \"Do not run tools.\" So the answer should be three steps without any commands. Maybe: 1. Check system logs for service startup messages. 2. Verify the service process is active. 3. Test the service's API endpoint. But need to make sure each check is a brief phrase. Let me count the words. \"Check logs for startup messages. Confirm service process is running. Test API endpoint.\" That's three checks, under 45 words. Yeah, that should work.\n",
+          "reasoning": "\nOkay, the user is asking for three brief checks to confirm a local AI service has recovered after a reboot. They don't want any tools run, just the checks. Let me think.\n\nFirst, I need to recall common ways to verify a service is up. Maybe check the status with a command like systemctl status, but the user said not to run tools. So I should avoid specific commands. Instead, suggest checking logs for errors, verifying the service is running via a process check, and testing the service's API endpoint. But keep it concise.\n\nWait, the user said \"Do not run tools.\" So the answer should be three steps without any commands. Maybe: 1. Check system logs for service startup messages. 2. Verify the service process is active. 3. Test the service's API endpoint. But need to make sure each check is a brief phrase. Let me count the words. \"Check logs for startup messages. Confirm service process is running. Test API endpoint.\" That's three checks, under 45 words. Yeah, that should work.\n"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 11229,
+      "completion_tokens": 238,
+      "total_tokens": 11467,
+      "prompt_tokens_details": {
+        "cached_tokens": 11228
+      },
+      "caravan": {
+        "how": "hit-memory",
+        "prefill_s": 0.004,
+        "ttft_s": 0.071,
+        "total_s": 8.15,
+        "peak_gb": 10.85,
+        "split": {
+          "calls": 242,
+          "mb_out": 0.07,
+          "mb_in": 1.0,
+          "wait_s": 3.952,
+          "front_s": 3.811,
+          "net_s": 0.141
+        },
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": true,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": true,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": 24,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 3.268,
+          "need_gb": 0.577,
+          "prompt_tokens": 11229,
+          "budget_tokens": 65969,
+          "bytes_per_token": 49152.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 6.538,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 4.788,
+          "packer_available_gb": 5.018,
+          "packer_headroom_gb": 3.268,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 250.0,
+        "write_tok_s": 29.34
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 8.21991344098933,
+  "end_CST": "2026-11-09T21:07:15.170438-06:00"
+}

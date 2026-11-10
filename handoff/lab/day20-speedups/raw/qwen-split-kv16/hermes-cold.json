@@ -1,0 +1,88 @@
+{
+  "label": "qwen-split-kv16",
+  "route": "hermes",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:06:04.261148-06:00",
+  "tools": 19,
+  "max_tokens": 512,
+  "reasoning_effort": "medium",
+  "request_sha256": "17066f05c5434bf0234f9929c417bc82e293b2644e954b2079f7df62ae28a7a0",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 44.448789418966044,
+  "first_wire_token_s": 36.36554581596283,
+  "first_visible_s": 43.89764520700555,
+  "usage": {
+    "prompt_tokens": 11229,
+    "completion_tokens": 238,
+    "total_tokens": 11467,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "caravan": {
+      "how": "cold",
+      "prefill_s": 36.2,
+      "ttft_s": 36.269,
+      "total_s": 44.386,
+      "peak_gb": 10.26,
+      "split": {
+        "calls": 255,
+        "mb_out": 0.18,
+        "mb_in": 46.99,
+        "wait_s": 22.491,
+        "front_s": 22.317,
+        "net_s": 0.174
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 24,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 1.911,
+        "need_gb": 0.577,
+        "prompt_tokens": 11229,
+        "budget_tokens": 38358,
+        "bytes_per_token": 49152.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 7.587,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 5.837,
+        "packer_available_gb": 3.661,
+        "packer_headroom_gb": 1.911,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 310.2,
+      "write_tok_s": 29.2
+    }
+  },
+  "answer": "Check logs for startup messages. Confirm service process is running. Test API endpoint.",
+  "reasoning_chars": 988,
+  "end_CST": "2026-11-09T21:06:48.710042-06:00"
+}

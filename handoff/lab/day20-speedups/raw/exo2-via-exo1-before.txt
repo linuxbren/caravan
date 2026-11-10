@@ -1,0 +1,9 @@
+Host exo2-via-exo1
+    # EXO2 link-local IPv6, scoped to EXO1 Thunderbolt en2 (not Wi-Fi).
+    HostName fe80::8c3:dd7:5d56:b1ed%%en2
+    User brenden
+    HostKeyAlias exo2
+    ProxyJump exo1-lan
+    StrictHostKeyChecking yes
+    ConnectTimeout 8
+

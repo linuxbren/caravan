@@ -1,0 +1,9 @@
+model,route,cache,prompt_tokens,cached_tokens,generated_tokens,native_ttft_s,wire_ttft_s,first_visible_s,write_tok_s,wall_s,finish,source
+Huihui 27B 24/40,direct,cold,54,0,275,1.275,1.794986137014348,36.712348266039044,6.62,42.74759892601287,stop,huihui-direct-session-corrected/direct-cold.json
+Huihui 27B 24/40,direct,warm,54,53,275,0.298,0.9245724380016327,35.753587599960156,6.63,41.78514421998989,stop,huihui-direct-session-corrected/direct-warm.json
+Huihui 27B 24/40,hermes,cold,11322,0,226,177.438,177.6842092529987,195.2022555489675,6.3,213.41256485198392,stop,huihui-split-kv16/hermes-cold.json
+Huihui 27B 24/40,hermes,warm,11326,11287,183,1.436,3.0895830090157688,19.019100379024167,6.3,32.04298953898251,stop,huihui-split-kv16/hermes-warm.json
+Qwen3 30B-A3B 24/24,direct,cold,52,0,174,0.387,0.5483438759692945,3.7664989439654164,44.94,4.307858925021719,stop,qwen-split-kv16/direct-cold.json
+Qwen3 30B-A3B 24/24,direct,warm,56,47,181,0.127,0.24609597900416702,3.9190032050246373,44.87,4.169573360995855,stop,qwen-split-kv16/direct-warm.json
+Qwen3 30B-A3B 24/24,hermes,cold,11229,0,238,36.269,36.36554581596283,43.89764520700555,29.2,44.448789418966044,stop,qwen-split-kv16/hermes-cold.json
+Qwen3 30B-A3B 24/24,hermes,warm,11233,11196,415,0.569,1.0971749119926244,14.62320551800076,29.2,15.241482137003914,stop,qwen-split-kv16/hermes-warm.json

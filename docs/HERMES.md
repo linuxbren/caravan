@@ -103,3 +103,37 @@ Restore ready **19:13:39 CST**; first Hermes-path reply through `:18090`/`:8090`
 See DAY20.md self-tune clip section for measured **41.53 → 69.70** tok/s and
 clip path `/workspace/caravan-selftune-5s.mp4`.
 
+
+## Day20 opt-in auxiliary titles and comparison evidence (Nov9 CST)
+
+See [expanded Day20 results](DAY20.md#expanded-day-20-comparison-and-speedup-trials--nov-9-cst)
+and `handoff/lab/day20-speedups/`. Current offline prefix is19 configured tools,
+11,287 cached tokens on Huihui; historical actual Hermes13,182/21-tool results
+above remain a different dataset. No Hermes provider/config change was made;
+its current default was Opus, so new matrix timings are explicit local replay,
+not a claim that the current Hermes CLI was switched to Caravan.
+
+EXO1 proxy opts in with CARAVAN_AUX_MODEL=mlx-community/Qwen2.5-0.5B-Instruct-4bit,
+CARAVAN_AUX_PORT=8196, CARAVAN_AUX_TIMEOUT_S=2,
+CARAVAN_AUX_COMPACT_PROMPT=1. Unset model disables routing globally by default.
+Only exact no-tool nonstream session_title jobs qualify; summaries/compaction
+and ordinary main chats stay on the requested model with full tools/reasoning.
+Compact equivalent title instructions preserve user/language; narrow formatting
+normalization produces JSON, with length/topic/code/finish/health gates and
+unchanged-main fallback on failure. Titles pilot median6.458→.114s; not a main
+model generation speedup or broad quality certification.
+
+com.caravan.v3.aux runs tools/aux_worker.py with installed local Qwen2.5 weights,
+loopback8196, explicit .9GB soft MLX budget (.58GB observed peak),.25GB cache pool,
+no persistence or global wired-limit changes. Waits for primary8194 health and
+available RAM >=budget+1.75GB (unknown memory fails closed), bounded10min per
+startup; launchd retries later. Default launcher budget2GB is conservative.
+This is not an OS reservation or automatic eviction scheme; larger future
+main placements still need guarded capacity checks. Aux boot behavior not yet
+reboot-tested. Service/profile log paths and negative model trials are inDAY20.
+
+Missing-sidecar fallback was verified live: valid Huihui title2.305s from cached
+main state, then aux restarted. No model unload, Hermes tool removal or global
+thinking-off. Main final full19-tool medium request stopped successfully in
+11.872s, native TTFT.999s,6.22tok/s. Main Huihui remains24/40 KV16.
+GET8090 /v1/models now discovers the live MLX model even with dead GGUF upstream.

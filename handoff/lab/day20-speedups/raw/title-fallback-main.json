@@ -1,0 +1,99 @@
+{
+  "label": "title-fallback-main",
+  "start_CST": "2026-11-09T21:21:02.852962-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 64,
+  "lookup": null,
+  "request_sha256": "b90e43a77c9de8976b075d3c223c7698b3f785291dd7921d01b9ff2ece4e94ce",
+  "http": 200,
+  "aux_header": null,
+  "response": {
+    "id": "chatcmpl-0b92e175c828",
+    "object": "chat.completion",
+    "created": 1794280862,
+    "model": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "{\"title\": \"Explain Rust borrow checker lifetime errors\"}"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 262,
+      "completion_tokens": 12,
+      "total_tokens": 274,
+      "prompt_tokens_details": {
+        "cached_tokens": 261
+      },
+      "caravan": {
+        "how": "hit-memory",
+        "prefill_s": 0.03,
+        "ttft_s": 0.316,
+        "total_s": 2.14,
+        "peak_gb": 11.87,
+        "split": {
+          "calls": 16,
+          "mb_out": 0.0,
+          "mb_in": 0.14,
+          "wait_s": 0.775,
+          "front_s": 0.761,
+          "net_s": 0.014
+        },
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": true,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": true,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": 24,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 3.513,
+          "need_gb": 0.053,
+          "prompt_tokens": 262,
+          "budget_tokens": 21379,
+          "bytes_per_token": 163840.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 6.092,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 4.342,
+          "packer_available_gb": 5.263,
+          "packer_headroom_gb": 3.513,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 33.3,
+        "write_tok_s": 6.03
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 2.305400841985829,
+  "end_CST": "2026-11-09T21:21:05.158411-06:00"
+}

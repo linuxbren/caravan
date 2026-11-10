@@ -1,0 +1,99 @@
+{
+  "label": "prewarm-unseen-baseline",
+  "start_CST": "2026-11-09T21:12:14.749191-06:00",
+  "tools": 19,
+  "reasoning_effort": "medium",
+  "max_tokens": 1,
+  "lookup": null,
+  "http": 200,
+  "response": {
+    "id": "chatcmpl-9bd85785ec80",
+    "object": "chat.completion",
+    "created": 1794280334,
+    "model": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "length",
+        "message": {
+          "role": "assistant",
+          "content": null,
+          "reasoning_content": "The",
+          "reasoning": "The"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 11331,
+      "completion_tokens": 1,
+      "total_tokens": 11332,
+      "prompt_tokens_details": {
+        "cached_tokens": 11287
+      },
+      "caravan": {
+        "how": "agent-prefix-hit-memory",
+        "prefill_s": 1.466,
+        "ttft_s": 1.762,
+        "total_s": 1.784,
+        "peak_gb": 10.85,
+        "split": {
+          "calls": 9,
+          "mb_out": 0.1,
+          "mb_in": 0.46,
+          "wait_s": 0.675,
+          "front_s": 0.666,
+          "net_s": 0.009
+        },
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": true,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": true,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": 24,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 4.045,
+          "need_gb": 1.857,
+          "prompt_tokens": 11331,
+          "budget_tokens": 24685,
+          "bytes_per_token": 163840.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 7.577,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 5.827,
+          "packer_available_gb": 5.795,
+          "packer_headroom_gb": 4.045,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 30.0,
+        "write_tok_s": 0.0
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 1.8635143740102649,
+  "end_CST": "2026-11-09T21:12:16.612723-06:00"
+}

@@ -1,0 +1,9 @@
+aux wait: primary_ready=True, available_gb=2.911453184, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.9052928, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.784681984, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.752946176, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.745819136, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.754330624, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.747072512, budget_gb=2.0, reserve_gb=1.75
+aux wait: primary_ready=True, available_gb=2.735202304, budget_gb=2.0, reserve_gb=1.75
+

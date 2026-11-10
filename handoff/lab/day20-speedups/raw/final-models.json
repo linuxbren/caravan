@@ -1,0 +1,10 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+      "object": "model",
+      "owned_by": "caravan"
+    }
+  ]
+}

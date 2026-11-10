@@ -1,0 +1,8 @@
+{
+  "source": "current Hermes offline inspection builder from home cwd; all configured tools retained",
+  "tools": 19,
+  "system_chars": 13108,
+  "tool_json_bytes": 34487,
+  "sha256": "e0218dd991e351fb3ee4b6ab240bcdc47e146c371dea458c2b6abd230b690575",
+  "note": "Historical caravan-bench capture not found; this is current prefix, not old 13182-token capture."
+}

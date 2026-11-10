@@ -1,0 +1,19 @@
+{
+  "label": "qwen-split-kv16",
+  "route": "direct",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:04:18.325417-06:00",
+  "tools": 0,
+  "max_tokens": 512,
+  "reasoning_effort": "medium",
+  "request_sha256": "cdd09f6abe725409a382061b4ce6b331375a9bc7239c072067c5f43c883569b6",
+  "http": 200,
+  "ok": true,
+  "wall_s": 8.523319475993048,
+  "first_wire_token_s": 1.7691435599699616,
+  "first_visible_s": null,
+  "usage": null,
+  "answer": "",
+  "reasoning_chars": 189,
+  "end_CST": "2026-11-09T21:04:26.848792-06:00"
+}

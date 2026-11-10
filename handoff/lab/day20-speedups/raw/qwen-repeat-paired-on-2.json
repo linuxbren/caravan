@@ -1,0 +1,127 @@
+{
+  "label": "qwen-repeat-paired-on-2",
+  "start_CST": "2026-11-09T21:11:56.014242-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 128,
+  "lookup": "adaptive",
+  "http": 200,
+  "response": {
+    "id": "chatcmpl-e2e1530ac6fe",
+    "object": "chat.completion",
+    "created": 1794280315,
+    "model": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "red green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 96,
+      "completion_tokens": 56,
+      "total_tokens": 152,
+      "prompt_tokens_details": {
+        "cached_tokens": 95
+      },
+      "caravan": {
+        "how": "hit-memory",
+        "prefill_s": 0.002,
+        "ttft_s": 0.05,
+        "total_s": 0.828,
+        "peak_gb": 8.64,
+        "split": {
+          "calls": 18,
+          "mb_out": 0.0,
+          "mb_in": 0.26,
+          "wait_s": 0.4,
+          "front_s": 0.389,
+          "net_s": 0.011
+        },
+        "speculate": {
+          "k": 4,
+          "from_draft": 43,
+          "accepted_frac": 0.768,
+          "verify_rounds": 13,
+          "prompt_lookup_n": 3,
+          "draft_model": false,
+          "draft_s": 0.0003,
+          "verify_s": 0.8239,
+          "pl_hits": 13,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 0,
+            "prompt_lookup": 13,
+            "none": 0
+          },
+          "adaptive_pl": {
+            "ngram_n": 3,
+            "overlap": 0.839,
+            "force_on": true,
+            "recent_accept_rate": 1.0,
+            "recent_n": 4,
+            "probes": 0,
+            "proposed_tokens": 50,
+            "accepted_tokens": 43,
+            "token_acceptance_rate": 0.86
+          },
+          "shutoff": null
+        },
+        "active": {
+          "guess_ahead": true,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": true,
+            "adaptive": true,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": true,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": true,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": 24,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null,
+          "guess_ahead_from_draft": 43
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 2.615,
+          "need_gb": 0.011,
+          "prompt_tokens": 96,
+          "budget_tokens": 53082,
+          "bytes_per_token": 49152.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 8.488,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 6.738,
+          "packer_available_gb": 4.365,
+          "packer_headroom_gb": 2.615,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 500.0,
+        "write_tok_s": 70.69
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 0.8584142030449584,
+  "end_CST": "2026-11-09T21:11:56.872674-06:00"
+}

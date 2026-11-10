@@ -1,0 +1,13 @@
+{
+  "label": "qwen-agent-lookup-off",
+  "start_CST": "2026-11-09T21:04:27.064366-06:00",
+  "tools": 19,
+  "reasoning_effort": "medium",
+  "max_tokens": 512,
+  "lookup": "off",
+  "ok": false,
+  "error": "HTTP Error 502: Bad Gateway",
+  "error_body": "mlx_lm.server upstream unreachable\n",
+  "wall_s": 0.014695807010866702,
+  "end_CST": "2026-11-09T21:04:27.079079-06:00"
+}

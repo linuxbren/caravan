@@ -1,0 +1,14 @@
+{
+  "label": "qwen-split-kv16",
+  "route": "hermes",
+  "cache_label": "warm",
+  "start_CST": "2026-11-09T21:04:26.868161-06:00",
+  "tools": 19,
+  "max_tokens": 512,
+  "reasoning_effort": "medium",
+  "request_sha256": "eb5b562b512f5b9b6f46dc176f4640fca19890bdac3327a0d59f07b9ae7fdd22",
+  "ok": false,
+  "error": "HTTP Error 502: Bad Gateway",
+  "wall_s": 0.010616941028274596,
+  "end_CST": "2026-11-09T21:04:26.878913-06:00"
+}

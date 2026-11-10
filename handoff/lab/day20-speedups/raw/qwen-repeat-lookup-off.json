@@ -1,0 +1,97 @@
+{
+  "label": "qwen-repeat-lookup-off",
+  "start_CST": "2026-11-09T21:07:04.009399-06:00",
+  "tools": 0,
+  "reasoning_effort": "none",
+  "max_tokens": 128,
+  "lookup": "off",
+  "http": 200,
+  "response": {
+    "id": "chatcmpl-af2c3a565d72",
+    "object": "chat.completion",
+    "created": 1794280024,
+    "model": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "red green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple\nred green blue yellow orange purple"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 96,
+      "completion_tokens": 55,
+      "total_tokens": 151,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "caravan": {
+        "how": "cold",
+        "prefill_s": 0.325,
+        "ttft_s": 0.367,
+        "total_s": 1.606,
+        "peak_gb": 10.85,
+        "split": {
+          "calls": 61,
+          "mb_out": 0.01,
+          "mb_in": 0.63,
+          "wait_s": 0.783,
+          "front_s": 0.747,
+          "net_s": 0.036
+        },
+        "active": {
+          "guess_ahead": false,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": false,
+            "adaptive": false,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": true,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": true,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": 24,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 1.683,
+          "need_gb": 0.011,
+          "prompt_tokens": 96,
+          "budget_tokens": 34114,
+          "bytes_per_token": 49152.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 5.381,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 3.631,
+          "packer_available_gb": 3.433,
+          "packer_headroom_gb": 1.683,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 295.4,
+        "write_tok_s": 43.58
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 1.9510088770184666,
+  "end_CST": "2026-11-09T21:07:05.960431-06:00"
+}

@@ -1,0 +1,356 @@
+{
+  "old_lead_pid": 10738,
+  "start_CST": "2026-11-09T21:05:46.589621-06:00",
+  "request": {
+    "model_id": "qwen3-30b-a3b-4bit",
+    "engine": "mlx",
+    "placement": {
+      "mode": "split",
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ]
+    },
+    "node_ids": [
+      "exo2",
+      "exo1"
+    ],
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "kv_bits": "16"
+    },
+    "balance": true,
+    "counts": [
+      24,
+      24
+    ]
+  },
+  "http": 200,
+  "body": {
+    "status": "ready",
+    "model_id": "qwen3-30b-a3b-4bit",
+    "model_name": "Qwen3 30B-A3B 4-bit",
+    "progress": [
+      {
+        "t": 1794279872.251,
+        "msg": "EXO2: 24 layers ready"
+      },
+      {
+        "t": 1794279873.271,
+        "msg": "lead: 21:04:32 [mlx-worker] fuse kernels: off"
+      },
+      {
+        "t": 1794279873.271,
+        "msg": "lead: 21:04:33 [mlx-worker] model_type remap: qwen3_5_text \u2192 qwen3_5"
+      },
+      {
+        "t": 1794279873.271,
+        "msg": "lead: 21:04:33 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)"
+      },
+      {
+        "t": 1794279876.302,
+        "msg": "lead: 21:04:36 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.99.64:5560"
+      },
+      {
+        "t": 1794279876.302,
+        "msg": "lead: 21:04:36 [mlx-worker] split speculate: --no-split-draft; auto-pair off"
+      },
+      {
+        "t": 1794279877.313,
+        "msg": "lead: 21:04:36 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)"
+      },
+      {
+        "t": 1794279877.313,
+        "msg": "lead: 21:04:36 [mlx-worker] mlx cache_limit 1.5 GB"
+      },
+      {
+        "t": 1794279877.313,
+        "msg": "lead: 21:04:36 [mlx-worker] warm-up 0.13s"
+      },
+      {
+        "t": 1794279877.313,
+        "msg": "lead: 21:04:36 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 3.5s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on "
+      },
+      {
+        "t": 1794279877.313,
+        "msg": "lead: 21:04:36 [mlx-worker] active settings: {\"fuse_kernels\": \"off\", \"guess_ahead\": false, \"guess_ahead_loaded\": false, \"guess_ahead_mode\": \"helper\", \"keepalive\": tru"
+      },
+      {
+        "t": 1794279877.313,
+        "msg": "lead: 21:04:36 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)"
+      },
+      {
+        "t": 1794279877.313,
+        "msg": "lead: 21:04:36 [mlx-worker] listening on http://127.0.0.1:8194"
+      },
+      {
+        "t": 1794279877.317,
+        "msg": "lead health ok"
+      },
+      {
+        "t": 1794279877.32,
+        "msg": "Balance loaded; send a reply to measure real speed"
+      }
+    ],
+    "error": null,
+    "lead_pid": 10738,
+    "packer_pid": null,
+    "lead_url": "http://127.0.0.1:8194",
+    "split": true,
+    "lpm_ok": true,
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "fuse_kernels": "auto",
+      "kv_bits": "16",
+      "keepalive": "auto"
+    },
+    "page_settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "fuse_kernels": "auto",
+      "kv_bits": "16",
+      "keepalive": "auto"
+    },
+    "from_file": {},
+    "config_errors": [],
+    "balance": {
+      "counts": [
+        24,
+        24
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "lead_pid": 10738,
+      "model_id": "qwen3-30b-a3b-4bit",
+      "model_name": "Qwen3 30B-A3B 4-bit",
+      "model_path": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit"
+    }
+  },
+  "final_status": {
+    "tuning": {
+      "trial": {
+        "name": "fuse_kernels",
+        "label": "fused kernels",
+        "value": "on",
+        "remaining": 3
+      },
+      "reload_wanted": [],
+      "known": true,
+      "replies_learned": 52,
+      "winner": {
+        "guess_ahead": false,
+        "packer_layers": 24,
+        "pipeline_chats": 2
+      }
+    },
+    "optimize": {
+      "running": false,
+      "mode": null,
+      "phase": "idle",
+      "eta_s": null
+    },
+    "worker": {
+      "status": "ready",
+      "model_id": "qwen3-30b-a3b-4bit",
+      "model_name": "Qwen3 30B-A3B 4-bit",
+      "progress": [
+        {
+          "t": 1794279952.319,
+          "msg": "EXO2: 24 layers ready"
+        },
+        {
+          "t": 1794279953.335,
+          "msg": "lead: 21:05:52 [mlx-worker] fuse kernels: off"
+        },
+        {
+          "t": 1794279953.335,
+          "msg": "lead: 21:05:53 [mlx-worker] model_type remap: qwen3_5_text \u2192 qwen3_5"
+        },
+        {
+          "t": 1794279953.335,
+          "msg": "lead: 21:05:53 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)"
+        },
+        {
+          "t": 1794279955.35,
+          "msg": "lead: 21:05:54 [mlx-worker] split lead: lead: layers 24-47 of 48 here, packer 1: layers 0-23 of 48 at 169.254.99.64:5560"
+        },
+        {
+          "t": 1794279955.35,
+          "msg": "lead: 21:05:54 [mlx-worker] split speculate: --no-split-draft; auto-pair off"
+        },
+        {
+          "t": 1794279955.35,
+          "msg": "lead: 21:05:54 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)"
+        },
+        {
+          "t": 1794279955.35,
+          "msg": "lead: 21:05:54 [mlx-worker] mlx cache_limit 1.5 GB"
+        },
+        {
+          "t": 1794279955.35,
+          "msg": "lead: 21:05:54 [mlx-worker] warm-up 0.14s"
+        },
+        {
+          "t": 1794279955.35,
+          "msg": "lead: 21:05:54 [mlx-worker] loaded mlx-community--Qwen3-30B-A3B-4bit (qwen3_moe) in 1.7s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on "
+        },
+        {
+          "t": 1794279955.35,
+          "msg": "lead: 21:05:54 [mlx-worker] active settings: {\"fuse_kernels\": \"off\", \"guess_ahead\": false, \"guess_ahead_loaded\": false, \"guess_ahead_mode\": \"helper\", \"keepalive\": tru"
+        },
+        {
+          "t": 1794279955.35,
+          "msg": "lead: 21:05:54 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)"
+        },
+        {
+          "t": 1794279955.35,
+          "msg": "lead: 21:05:54 [mlx-worker] listening on http://127.0.0.1:8194"
+        },
+        {
+          "t": 1794279955.354,
+          "msg": "lead health ok"
+        },
+        {
+          "t": 1794279955.357,
+          "msg": "Balance loaded; send a reply to measure real speed"
+        }
+      ],
+      "error": null,
+      "lead_pid": 11236,
+      "packer_pid": null,
+      "lead_url": "http://127.0.0.1:8194",
+      "split": true,
+      "lpm_ok": true,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "page_settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "from_file": {},
+      "config_errors": [],
+      "balance": {
+        "counts": [
+          24,
+          24
+        ],
+        "node_ids": [
+          "exo2",
+          "exo1"
+        ],
+        "lead_pid": 11236,
+        "model_id": "qwen3-30b-a3b-4bit",
+        "model_name": "Qwen3 30B-A3B 4-bit",
+        "model_path": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit"
+      }
+    },
+    "restore": {
+      "phase": "saved",
+      "message": "Last successful model saved for next login",
+      "enabled": true,
+      "last_model": "qwen3-30b-a3b-4bit",
+      "saved_at": 1794279955.3567302
+    },
+    "lead_healthy": true,
+    "split": {
+      "lead": {
+        "stage": "head 24-47 of 48",
+        "name": "lead: layers 24-47 of 48",
+        "weights_gb": 8.41,
+        "active_gb": 8.59,
+        "peak_gb": 8.64
+      },
+      "packers": [
+        {
+          "name": "packer 1: layers 0-23 of 48",
+          "stage": "front 0-23 of 48",
+          "weights_gb": 8.41,
+          "active_gb": 8.59,
+          "peak_gb": 8.64,
+          "sessions": 0,
+          "session_gb": 0.0,
+          "mem_total_gb": 25.769803776,
+          "mem_available_gb": 3.764207616
+        }
+      ],
+      "head": {
+        "stage": "head 24-47 of 48",
+        "name": "lead: layers 24-47 of 48",
+        "weights_gb": 8.41,
+        "active_gb": 8.59,
+        "peak_gb": 8.64
+      },
+      "front": {
+        "name": "packer 1: layers 0-23 of 48",
+        "stage": "front 0-23 of 48",
+        "weights_gb": 8.41,
+        "active_gb": 8.59,
+        "peak_gb": 8.64,
+        "sessions": 0,
+        "session_gb": 0.0,
+        "mem_total_gb": 25.769803776,
+        "mem_available_gb": 3.764207616
+      },
+      "peer": "169.254.99.64:5560"
+    },
+    "active": {
+      "guess_ahead": false,
+      "guess_ahead_loaded": false,
+      "native_mtp_available": false,
+      "guess_ahead_mode": "helper",
+      "prompt_lookup": {
+        "enabled": false,
+        "adaptive": false,
+        "overlap_on": 0.5
+      },
+      "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+      "two_chats_available": true,
+      "self_tune": false,
+      "shared_start": false,
+      "pipeline_chats": 1,
+      "fuse_kernels": "off",
+      "kv_bits": 16,
+      "keepalive": true,
+      "pinned": [],
+      "sweep_paused": false,
+      "packer_layers": 24,
+      "n_layers": null,
+      "reload_auto": [],
+      "reload_trial": null
+    },
+    "uptime_s": 3519.5,
+    "ports": {
+      "web": 8190,
+      "lead": 8194,
+      "packer": "169.254.99.64:5560"
+    }
+  },
+  "end_CST": "2026-11-09T21:05:55.724968-06:00"
+}

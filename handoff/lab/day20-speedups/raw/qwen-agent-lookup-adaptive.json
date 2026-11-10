@@ -1,0 +1,129 @@
+{
+  "label": "qwen-agent-lookup-adaptive",
+  "start_CST": "2026-11-09T21:07:15.224494-06:00",
+  "tools": 19,
+  "reasoning_effort": "medium",
+  "max_tokens": 512,
+  "lookup": "adaptive",
+  "http": 200,
+  "response": {
+    "id": "chatcmpl-60eadc0ea187",
+    "object": "chat.completion",
+    "created": 1794280035,
+    "model": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "Confirm service status, check logs, and test API.",
+          "reasoning_content": "\nOkay, the user is asking for three brief checks to confirm a local AI service has recovered after a reboot. They don't want any tools run, just the checks. Let me think.\n\nFirst, I need to recall common ways to verify a service is up. Maybe check the status with a command like systemctl status, but the user said not to run tools. So I should avoid specific commands. Instead, suggest checking logs for errors, verifying the service is running via a process check, and testing the service's API endpoint. But keep it concise.\n\nWait, the user said \"Do not run tools.\" So the answer should be three steps without executing any commands. So, check the service status via a command (but without using the tool), maybe look for running processes, check logs, and test the service's functionality. But how to phrase it without tool calls?\n\n1. Confirm service status via system manager (e.g., 'systemctl is-active ai-service').\n2. Check logs for errors using 'journalctl' or equivalent.\n3. Test API endpoint with a simple request.\n\nBut the user said no tools, so maybe just the steps without specific commands. Make sure each check is a brief action. Keep under 45 words. Let me count: \"Check service status, review logs for errors, and test API functionality.\" That's 13 words. Maybe add more details. \"Verify service is active, check logs for errors, and test API endpoint.\" That's 11 words. Maybe \"Confirm service status, check logs, and test API.\" Exactly 45 words. That should work.\n",
+          "reasoning": "\nOkay, the user is asking for three brief checks to confirm a local AI service has recovered after a reboot. They don't want any tools run, just the checks. Let me think.\n\nFirst, I need to recall common ways to verify a service is up. Maybe check the status with a command like systemctl status, but the user said not to run tools. So I should avoid specific commands. Instead, suggest checking logs for errors, verifying the service is running via a process check, and testing the service's API endpoint. But keep it concise.\n\nWait, the user said \"Do not run tools.\" So the answer should be three steps without executing any commands. So, check the service status via a command (but without using the tool), maybe look for running processes, check logs, and test the service's functionality. But how to phrase it without tool calls?\n\n1. Confirm service status via system manager (e.g., 'systemctl is-active ai-service').\n2. Check logs for errors using 'journalctl' or equivalent.\n3. Test API endpoint with a simple request.\n\nBut the user said no tools, so maybe just the steps without specific commands. Make sure each check is a brief action. Keep under 45 words. Let me count: \"Check service status, review logs for errors, and test API functionality.\" That's 13 words. Maybe add more details. \"Verify service is active, check logs for errors, and test API endpoint.\" That's 11 words. Maybe \"Confirm service status, check logs, and test API.\" Exactly 45 words. That should work.\n"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 11229,
+      "completion_tokens": 344,
+      "total_tokens": 11573,
+      "prompt_tokens_details": {
+        "cached_tokens": 11228
+      },
+      "caravan": {
+        "how": "hit-memory",
+        "prefill_s": 0.005,
+        "ttft_s": 0.105,
+        "total_s": 12.149,
+        "peak_gb": 10.85,
+        "split": {
+          "calls": 347,
+          "mb_out": 0.08,
+          "mb_in": 1.45,
+          "wait_s": 5.757,
+          "front_s": 5.552,
+          "net_s": 0.205
+        },
+        "speculate": {
+          "k": 4,
+          "from_draft": 0,
+          "accepted_frac": 0.0,
+          "verify_rounds": 344,
+          "prompt_lookup_n": 3,
+          "draft_model": false,
+          "draft_s": 0.3055,
+          "verify_s": 11.8246,
+          "pl_hits": 1,
+          "pl_misses": 0,
+          "sources": {
+            "draft_model": 0,
+            "prompt_lookup": 1,
+            "none": 343
+          },
+          "adaptive_pl": {
+            "ngram_n": 3,
+            "overlap": 0.387,
+            "force_on": false,
+            "recent_accept_rate": 0.0,
+            "recent_n": 1,
+            "probes": 1,
+            "proposed_tokens": 3,
+            "accepted_tokens": 0,
+            "token_acceptance_rate": 0.0
+          },
+          "shutoff": null
+        },
+        "active": {
+          "guess_ahead": true,
+          "guess_ahead_loaded": false,
+          "native_mtp_available": false,
+          "guess_ahead_mode": "helper",
+          "prompt_lookup": {
+            "enabled": true,
+            "adaptive": true,
+            "overlap_on": 0.5
+          },
+          "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+          "two_chats_available": true,
+          "self_tune": false,
+          "shared_start": false,
+          "pipeline_chats": 1,
+          "fuse_kernels": "off",
+          "kv_bits": 16,
+          "keepalive": true,
+          "pinned": [],
+          "sweep_paused": false,
+          "packer_layers": 24,
+          "n_layers": null,
+          "reload_auto": [],
+          "reload_trial": null,
+          "guess_ahead_from_draft": 0
+        },
+        "memory_guard": {
+          "trimmed_turns": 0,
+          "headroom_gb": 2.709,
+          "need_gb": 0.577,
+          "prompt_tokens": 11229,
+          "budget_tokens": 54605,
+          "bytes_per_token": 49152.0,
+          "error": null,
+          "ok": true,
+          "available_gb": 5.91,
+          "safety_gb": 1.75,
+          "local_headroom_gb": 4.16,
+          "packer_available_gb": 4.459,
+          "packer_headroom_gb": 2.709,
+          "recalled_snippets": 0,
+          "recalled": [],
+          "archived_total": 0,
+          "archive_note": false
+        },
+        "read_tok_s": 200.0,
+        "write_tok_s": 28.48
+      }
+    }
+  },
+  "ok": true,
+  "wall_s": 12.520837082003709,
+  "end_CST": "2026-11-09T21:07:27.745351-06:00"
+}

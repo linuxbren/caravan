@@ -1,0 +1,34 @@
+{
+  "start_CST": "2026-11-09T21:04:28.419489-06:00",
+  "request": {
+    "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+    "engine": "mlx",
+    "placement": {
+      "mode": "split",
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ]
+    },
+    "node_ids": [
+      "exo2",
+      "exo1"
+    ],
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "kv_bits": "16"
+    },
+    "balance": true,
+    "counts": [
+      24,
+      40
+    ]
+  },
+  "error": "HTTP Error 400: Bad Request",
+  "error_body": "{\"error\": \"a model switch is already in progress\"}",
+  "end_CST": "2026-11-09T21:04:29.490543-06:00"
+}
