@@ -95,3 +95,11 @@ Later main turns kept the same 13,182-token prefix (prefill 1.21–3.85 s depend
 on new tokens). Titles stayed cold/short (~4.3 s prefill, 0 reasoning). See the
 full per-request table in [DAY20.md](DAY20.md).
 
+## Self-tune clip pause (2026-11-09 evening CT)
+Brenden approved a short Huihui unload to film the Day 10 self-tune climb.
+Exact Balance state (Huihui 24/40 EXO2/EXO1) was restored afterward.
+Restore ready **19:13:39 CST**; first Hermes-path reply through `:18090`/`:8090`
+**19:13:54–19:14:00 CST**. Follow-up reply confirmed visible `hermes-ok` content.
+See DAY20.md self-tune clip section for measured **41.53 → 69.70** tok/s and
+clip path `/workspace/caravan-selftune-5s.mp4`.
+

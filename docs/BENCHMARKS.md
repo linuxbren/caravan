@@ -1441,3 +1441,17 @@ session `90716b1a257d8461`. Prefix restored from disk in 0.05 s before turn 1.
 Pre-fix comparable full request: 13,192 / 0 cached, **207.87 s** prefill.
 Full narrative and cancelled-retry notes: [DAY20.md](DAY20.md).
 
+## Day 10 self-tune re-capture (2026-11-09 evening CT)
+
+Qwen3-30B-A3B-4bit split 24/24 EXO2/EXO1. Concurrent aggregate via lead
+`:8194` (not web FIFO). Clip on-screen values (2 d.p.):
+
+| pipeline_chats | mean aggregate tok/s | clip shows |
+|---:|---:|---:|
+| 1 | 41.53362073990969 | **41.53** |
+| 2 | 69.70341284830742 | **69.70** |
+
+Historical Day 10 write-up cited ~37.2 vs ~67.8; do not round these live
+figures toward those. Clip: 5.000 s, `/workspace/caravan-selftune-5s.mp4`.
+Huihui 24/40 restored after the shoot.
+

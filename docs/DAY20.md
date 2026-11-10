@@ -179,10 +179,64 @@ with **13,182** cached tokens. Output rate is unchanged (~6.1 tok/s). Longer
 totals on turns 2–4 are generation length and hidden reasoning, not a cold
 13k-token reread.
 
+## Self-tune clip (approved pause of Huihui)
+
+Brenden approved pausing Huihui briefly to capture a ~5s Caravan web UI
+self-tune clip (`Go ahead and pause it now`). Exact pre-pause Huihui state
+was saved first:
+
+- model: `mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit`
+  (`huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit`)
+- Balance split **24/40**, stage order **EXO2 → EXO1**
+- settings: `self_tune=off`, `pipeline_chats=1`, guess-ahead/prompt-lookup off
+
+Demo load (Day 10 story): `mlx-community/Qwen3-30B-A3B-4bit` split **24/24**
+EXO2/EXO1. The historical Day 10 trap is `pipeline_chats` **1 vs 2** on that
+spanned Qwen3 (~37.2 vs ~67.8 aggregate in the original write-up). For this
+clip the bad setting was seeded on purpose and measured live on EXO1
+`127.0.0.1:8194` (two concurrent chats; web FIFO alone serializes):
+
+| Setting | Mean aggregate tok/s | Pair samples | Approx write tok/s each |
+|---|---:|---|---:|
+| `pipeline_chats=1` (bad) | **41.53362073990969** | 41.451, 41.532, 41.505, 41.589, 41.592 | ~45.3 |
+| `pipeline_chats=2` (fixed) | **69.70341284830742** | 68.263, 70.254, 70.170, 70.126 | ~39.2 |
+
+Clip numbers shown on screen (two decimals, not rounded toward 37/68):
+**41.53 → 69.70** tok/s across two concurrent chats. Payoff climbs inside
+the first ~3 s; total length **5.000 s**. No narration, no slides, no dates.
+Optional one-line caption: `self-tuner lifts pipeline_chats 1 → 2`.
+
+- File: `/workspace/caravan-selftune-5s.mp4` (also
+  `~/day19-video/selftune/clip/caravan-selftune-5s.mp4` on Omarchy)
+- Size: 408,054 bytes
+- Raw UI captures + probe JSON under `~/day19-video/selftune/`
+- EXO1 evidence: `~/.caravan/day20-hermes/` (pre-pause backups) and
+  `~/day19-video/selftune/numbers.json`
+
+Temporary EXO1-only demo patch to `proxy/web_pipeline.py` (Balance had
+hardcoded `--no-learn` / `pipeline_chats=1`) was reverted from
+`web_pipeline.py.bak-selftune` before restore. Not committed.
+
+### Huihui restore + Hermes check
+
+| Event | America/Chicago |
+|---|---|
+| Huihui ready again (24/40 EXO2/EXO1) | **2026-11-09 19:13:39 CST** |
+| First :8090/:18090 reply start | **2026-11-09 19:13:54 CST** |
+| First reply end | **2026-11-09 19:14:00 CST** (~6 s wall) |
+
+First reply returned a valid chat completion (finish `length` at
+`max_tokens=32` while still in hidden reasoning). Immediate follow-up with
+`max_tokens=128` finished `stop` with visible content containing `hermes-ok`
+(ttft 0.301 s, total 11.926 s, `hit-memory`, split true). Status after restore:
+`ready`, counts `[24, 40]`, `node_ids: ["exo2","exo1"]`, `pipeline_chats=1`,
+`self_tune=off`. Hermes tunnel path Omarchy `:18090` → EXO1 `:8090` → lead
+`:8194` works.
+
 ## Deferred (still open)
 
 - Restore-last-model reboot test (Day 19 closeout deferred; no reboots while Hermes is in use).
-- Live switch / unload / KEEP-web-restart checks (deferred to avoid interrupting Hermes).
+- Live switch / unload / KEEP-web-restart checks (partially exercised for the approved self-tune clip; reboot-proof still deferred).
 - `:8090` launchd login/reboot recovery: LaunchAgent installed and live-migrated; not reboot-proved.
 - Balance clearer UI mockup → code (one-line explanation, per-Mini memory bars, Auto default with Adjust revealing the slider, live preview, Apply / Back to auto, jargon behind details).
 - Day 19 video + date-free X draft (draft only; Brenden posts).
