@@ -76,11 +76,20 @@ and Next item 5.
 guess-ahead with an acceptance-rate readout, measured on the Huihui 27B
 split and Hermes-style chats, plus any other speed ideas worth trying.
 See [the n-gram note](#n-gram-guess-ahead-with-an-acceptance-rate-readout-scheduled-day-23-agreed-2026-11-09).
+Also try (ideas from X, Nov 10): llama.cpp multi-token prediction (MTP)
+on the GGUF path (reported working with a 27B Q4 on a 32 GB Mac mini), and
+TensorFold (open source; claims ~18% faster cold prompts on Qwen 27B MLX
+8-bit with identical output). Measure both on our Minis before believing them.
 
 **Day 24 — cleanup, repeated runs, per-model profiles.** Explicit
 approved per-file cleanup UI (protect the current plan and running
 services). Repeated performance samples before broader speed claims.
 Per-model config saving (profiles); see Next item 6.
+Benchmark method to copy (from MacPaw's Elix comparison): call every
+engine through its own OpenAI-style server, time it with an outside tool
+(guidellm), use the same model, record median speed at prompt lengths from
+128 to 32K tokens, and report end-to-end as prompt read plus 256 generated
+tokens. Use this to compare the GGUF and MLX paths fairly.
 
 **Day 25 — TUI and packaging.** A terminal UI, then packaging so someone
 else can install it easily (scrub personal paths as part of that). The
