@@ -55,11 +55,15 @@ class AdaptivePLGate:
     _recent: list = field(default_factory=list)
     _request_overlap: float = 0.0
     _probes: int = 0
+    _proposed_tokens: int = 0
+    _accepted_tokens: int = 0
 
     def begin_request(self, prompt: Sequence[int]) -> None:
         # Per-request state only — do not carry warm/quality probes across chats.
         self._recent = []
         self._probes = 0
+        self._proposed_tokens = 0
+        self._accepted_tokens = 0
         self._request_overlap = prompt_tail_overlap(prompt, self.overlap_window)
         self._force_on = self._request_overlap >= self.overlap_on
 
@@ -110,6 +114,8 @@ class AdaptivePLGate:
     def observe_pl_round(self, proposed: int, accepted: int) -> None:
         if proposed <= 0:
             return
+        self._proposed_tokens += proposed
+        self._accepted_tokens += max(0,min(accepted,proposed))
         good = accepted >= max(1, (proposed + 1) // 2)
         self._recent.append(bool(good))
         if len(self._recent) > self.window:
@@ -124,4 +130,8 @@ class AdaptivePLGate:
             "recent_accept_rate": None if rate is None else round(rate, 3),
             "recent_n": len(self._recent),
             "probes": self._probes,
+            "proposed_tokens": self._proposed_tokens,
+            "accepted_tokens": self._accepted_tokens,
+            "token_acceptance_rate": (round(self._accepted_tokens/self._proposed_tokens,4)
+                                      if self._proposed_tokens else None),
         }

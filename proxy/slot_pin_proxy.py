@@ -993,6 +993,17 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 data = None
             if isinstance(data, dict):
                 backend = ROUTER.for_model(data.get("model"))
+                if backend.name == "mlx":
+                    import aux_routing
+                    auxiliary=aux_routing.try_title(data)
+                    if auxiliary is not None:
+                        body=json.dumps(auxiliary).encode()
+                        self.send_response(200)
+                        self.send_header("Content-Type","application/json")
+                        self.send_header("Content-Length",str(len(body)))
+                        self.send_header("X-Caravan-Aux","title-sidecar")
+                        self.end_headers();self.wfile.write(body)
+                        return
             if isinstance(data, dict) and backend.supports_slots:
                 slot, fingerprint, slot_note = prepare_completion(data)
                 data["id_slot"] = slot

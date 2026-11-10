@@ -120,3 +120,13 @@ class AdaptivePLGate(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TokenAcceptanceReadout(unittest.TestCase):
+    def test_token_rate_is_not_round_success_fraction_and_resets_per_request(self):
+        from adaptive_pl import AdaptivePLGate
+        g=AdaptivePLGate();g.begin_request([1,2,3,4,5,6])
+        g.observe_pl_round(4,3);g.observe_pl_round(8,1)
+        s=g.snapshot();self.assertEqual(s["proposed_tokens"],12);self.assertEqual(s["accepted_tokens"],4);self.assertAlmostEqual(s["token_acceptance_rate"],.3333)
+        self.assertNotEqual(s["recent_accept_rate"],s["token_acceptance_rate"])
+        g.begin_request([1,2,3]);self.assertEqual(g.snapshot()["accepted_tokens"],0);self.assertIsNone(g.snapshot()["token_acceptance_rate"])
