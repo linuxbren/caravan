@@ -1,0 +1,80 @@
+{
+  "label": "orvena-single",
+  "route": "hermes",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:50:43.362823-06:00",
+  "tools": 19,
+  "max_tokens": 1024,
+  "reasoning_effort": "medium",
+  "request_sha256": "1994eaf036c99537ae593f1952f7bbdbc2544b6ebe55a9acacfa22c4deb47165",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 33.10416102403542,
+  "first_wire_token_s": 28.761563647014555,
+  "first_visible_s": 31.446640930022113,
+  "usage": {
+    "prompt_tokens": 11435,
+    "completion_tokens": 148,
+    "total_tokens": 11583,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "caravan": {
+      "how": "cold",
+      "prefill_s": 28.591,
+      "ttft_s": 28.638,
+      "total_s": 32.981,
+      "peak_gb": 4.78,
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": false,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": null,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": null,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 14.494,
+        "need_gb": 1.633,
+        "prompt_tokens": 11435,
+        "budget_tokens": 109554,
+        "bytes_per_token": 131072.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 16.244,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 14.494,
+        "packer_available_gb": null,
+        "packer_headroom_gb": null,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 400.0,
+      "write_tok_s": 33.85
+    }
+  },
+  "answer": "1. Run `systemctl status <service-name>` to confirm the service is active and running.\n2. Test the service endpoint with `curl <url>` to verify it responds.\n3. Check system logs with `journalctl -xe` for any error messages.",
+  "reasoning_chars": 385,
+  "end_CST": "2026-11-09T21:51:16.467064-06:00"
+}

@@ -1,0 +1,16 @@
+{
+  "astrea": {
+    "id": "mlx-community/Astrea-R8-Chat-9B-OptiQ-4bit",
+    "family": "Qwen3.5-9B finetune",
+    "precision": "OptiQ mixed 4/8-bit text; bf16 vision sidecar",
+    "text_weights_GB": 7.100589056,
+    "vision_GB": 0.912058029,
+    "source": "https://huggingface.co/mlx-community/Astrea-R8-Chat-9B-OptiQ-4bit/raw/main/README.md"
+  },
+  "orvena": {
+    "id": "Orvena/Orvena-4B-MLX-4bit",
+    "family": "Qwen3.5-4B finetune",
+    "precision": "4-bit, group64",
+    "source": "https://huggingface.co/Orvena/Orvena-4B-MLX-4bit"
+  }
+}

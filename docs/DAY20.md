@@ -652,3 +652,201 @@ Aux health200, GETmodels200, Thunderbolt SSH works. Main guess-ahead/lookup/
 self-tuning remain off for these controlled settings. Existing boot auto-restore
 still saves Huihui, not the temporary Qwen model. No new reboot was performed;
 auxiliary boot ordering has not been reboot-tested. No Day20 tag or video made.
+
+## Resumed single-Mini versus split comparison — Nov 9, CST
+
+### Same-family selection, inputs and interpretation
+
+Completed the requested **Qwen3.5-family** comparison, not a Qwen3 fallback:
+- Huihui Qwen3.5-27B Claude4.6 Opus abliterated4bit, full weights16.05GB.
+- `mlx-community/Astrea-R8-Chat-9B-OptiQ-4bit`, a Qwen3.5-9B fine-tune.
+  Its “4bit” label is **mixed4/8-bit text**,7.10GB, plus a .91GB bf16 vision
+  sidecar. It is NOT uniform4-bit. Model-card source:
+  https://huggingface.co/mlx-community/Astrea-R8-Chat-9B-OptiQ-4bit/raw/main/README.md
+- `Orvena/Orvena-4B-MLX-4bit`, Qwen3.5-4B fine-tune,4-bit/group64,3.03GB.
+  Both smaller models were already downloaded on EXO2; no HF weights downloaded.
+
+Actual frozen Day20 Hermes prefix/user task reused:19/19 configured tools,
+temperature0, medium reasoning, KV16, serial pipeline1, learn/draft/lookup off.
+Single is EXO1; smaller split models are EXO2→EXO1,16/16 layers. Both physical
+Minis are24GiB (25.77 decimalGB). The auxiliary title worker was stopped for
+all measurements, then restored. No other models were deleted or forced through
+an admission failure. No reboot/cloud agent/Hermes config change/release/video.
+
+Each new-model pair has **identical request SHA256, generated-token count and
+visible output** for each corresponding route/cache condition; see
+`paired-input-output-proof.json`. All admitted successful rows are untrimmed
+and finish `stop`. Short warm repeats exactly; full warm adds the same “Use
+plain language.” suffix on both placements and reuses the system/tool checkpoint.
+Every new-pair cold row has0 cached tokens; warm short has53, warm full11,400.
+Tokenization differs from Huihui's11,287-token prefix, not tool removal.
+Smaller-model cap1024 rather than earlier512 avoids censored results; all actual
+outputs are below512 tokens (largest505), so no larger-cap speedup is claimed.
+Huihui single cap512; split reference full cap256 ended naturally, not truncated.
+
+**TTFT includes reasoning**, not necessarily the first visible answer. Wall is
+full completion time only when a visible response exists. This is inference-only
+replay, not Hermes CLI/tool execution. The Huihui two-Mini reference is the
+earlier same-evening, same frozen-prefix run, explicitly preserved with original
+timestamps, not represented as a new cold run. Other pairs are fresh measurements.
+
+### Short / direct route
+
+| Model | Placement | TTFT cold / warm s | Write cold / warm tok/s | Wall cold / warm s |
+|---|---|---:|---:|---:|
+| Huihui Qwen3.5-27B 4-bit | 1× EXO1 | 1.403 / 0.295 | 6.730 / 6.750 | 42.169 / 40.884 |
+| Huihui Qwen3.5-27B 4-bit | 2× 24/40 | 1.275 / 0.298 | 6.620 / 6.630 | 42.748 / 41.785 |
+| Astrea Qwen3.5-9B OptiQ mixed4/8 | 1× EXO1 | 0.387 / 0.107 | 16.090 / 16.050 | 3.192 / 2.865 † |
+| Astrea Qwen3.5-9B OptiQ mixed4/8 | 2× 16/16 | 0.401 / 0.108 | 15.510 / 15.520 | 3.308 / 2.971 † |
+| Orvena Qwen3.5-4B 4-bit | 1× EXO1 | 0.220 / 0.054 | 38.680 / 39.070 | 13.323 / 12.993 |
+| Orvena Qwen3.5-4B 4-bit | 2× 16/16 | 0.217 / 0.051 | 36.200 / 36.180 | 14.216 / 14.036 |
+
+† Astrea medium short generations reached EOS with45 tokens entirely classified
+as reasoning: **no visible answer**, so these walls are generation/EOS times,
+not successful completed-chat times. The same model with the full Hermes prefix
+does produce visible answers. Supplemental short comparison explicitly disables
+thinking for this nonthinking-chat fine-tune; main Hermes/Huihui stays medium:
+
+| Astrea short, explicit none | Cold TTFT / write / wall | Warm TTFT / write / wall |
+|---|---:|---:|
+| 1× EXO1 | 0.394 / 16.04 / 3.334 | 0.104 / 16.04 / 2.988 |
+| 2×16/16 | 0.399 / 15.44 / 3.450 | 0.109 / 15.48 / 3.108 |
+
+The supplemental requests match across placements and both return the same
+visible219-character reply,47 tokens. They are clearly separate from medium
+results; no hidden promotion of reasoning text to an answer was implemented.
+
+### Full Hermes-prefix route
+
+| Model | Placement | TTFT cold / warm s | Write cold / warm tok/s | Wall cold / warm s |
+|---|---|---:|---:|---:|
+| Huihui Qwen3.5-27B 4-bit | 1× EXO1 | N/A / N/A | N/A / N/A | N/A (Metal OOM; failed after123.562s) |
+| Huihui Qwen3.5-27B 4-bit | 2× 24/40 | 177.438 / 1.436 | 6.300 / 6.300 | 213.413 / 32.043 |
+| Astrea Qwen3.5-9B OptiQ mixed4/8 | 1× EXO1 | 50.443 / 0.447 | 15.410 / 15.400 | 60.763 / 10.193 |
+| Astrea Qwen3.5-9B OptiQ mixed4/8 | 2× 16/16 | 50.669 / 0.449 | 14.930 / 14.890 | 61.318 / 10.800 |
+| Orvena Qwen3.5-4B 4-bit | 1× EXO1 | 28.638 / 0.259 | 33.850 / 33.880 | 33.104 / 5.083 |
+| Orvena Qwen3.5-4B 4-bit | 2× 16/16 | 28.770 / 0.266 | 31.650 / 31.700 | 33.513 / 5.566 |
+
+For valid small-model comparisons, the generated counts also match: Astrea
+159 cold/149 warm; Orvena148 cold/160 warm. This avoids mistaking a shorter
+answer for a placement speedup. Each condition is one observation, not a
+statistically repeated performance study.
+
+### Huihui single: complete weights, real OOM, stricter guard fix
+
+EXO1 had171.204GB disk free before transfer,154.492GB afterward. Copied missing
+Huihui shard1 (**5,343,269,992B**) over host-key-checked Thunderbolt SSH/rsync,
+plus the already-present smaller model copies; all three indexed Huihui shards
+are now present on EXO1. Total initial transfer ~16.7GB took51.2s. No scp/repo
+copy, no deleted model, no guard override. EXO2 had~194GB free before transfers.
+
+The stock normal load API **admitted Huihui single (HTTP200)** despite the
+conservative catalog badge estimating19.09GB need versus~16GB displayed capacity.
+Short54-token requests worked (6.73–6.75tok/s). The full11,322-token Hermes request
+then failed **before first token** after123.562s. This was **a real Metal GPU OOM,
+not a guard rejection or generic timeout**: lead log21:39:37 CST records
+`kIOGPUCommandBufferCallbackErrorOutOfMemory`. Warm full was not attempted after
+this failure. The Mini remained SSH-responsive; normal Stop released the model.
+Do not infer that fitting~16GB of weights means the full prefilling workload fits.
+
+This exposed a guard bug: standalone Qwen3.5 read decoder depth only from the
+outer config, missing `text_config.num_hidden_layers`, then fell back to1 layer.
+It advertised4096B/token instead of the intended conservative262144B/token
+(64× undercount). **1976b7b** reads nested decoder depth consistently with nested
+KV dimensions. Split already uses actual stage ranges and was not changed.
+No safety was weakened; all subsequent smaller-model workers used the fix.
+Regression: **794 tests passed in44.103s**. The original Huihui short guard
+budgets1.66M/466k tokens are invalid and must not be advertised as context limits.
+The performance samples themselves are real, untrimmed short replies.
+
+No attempt was made to force the failed full-single workload past safety,
+increase Metal limits or repeat the OOM. A smaller prefill batch could be a
+future separate experiment, not a result in this table. Qwen3-30B-A3B4bit's
+no-title-sidecar admission attempt was rejected while Huihui was resident;
+it is NOT proof of intrinsic isolated-model failure. With suitable Qwen3.5
+models already available, no Qwen3 fallback or new3-bit download was pursued.
+
+### Memory and context: measured budget, not an invented maximum
+
+All three config files specify architectural `max_position_embeddings=262144`.
+That is not a promise that this hardware can hold that context. Below are the
+actual conservative RAM-guard **input budgets**, already reserving1024 output
+tokens on the new small-model runs and1.75GB RAM; they vary with live memory:
+
+| Model / placement | Guard headroom cold →warm GB | Guard prompt budget cold →warm | Successfully tested full prompt |
+|---|---:|---:|---:|
+| Huihui / single | old metadata invalid; see below | not trustworthy before fix | 54-token short succeeds;11,322-token full OOM |
+| Huihui Qwen3.5-27B 4-bit / 2× 24/40 | 2.676 →4.618 | 16,073 →27,927 | 11,322 / 11,326 |
+| Astrea Qwen3.5-9B OptiQ mixed4/8 / 1× EXO1 | 11.649 →9.833 | 87,849 →73,999 | 11,435 / 11,439 |
+| Astrea Qwen3.5-9B OptiQ mixed4/8 / 2× 16/16 | 5.427 →3.784 | 81,792 →56,714 | 11,435 / 11,439 |
+| Orvena Qwen3.5-4B 4-bit / 1× EXO1 | 14.494 →12.736 | 109,554 →96,143 | 11,435 / 11,439 |
+| Orvena Qwen3.5-4B 4-bit / 2× 16/16 | 7.150 →5.282 | 108,070 →79,574 | 11,435 / 11,439 |
+
+These are dynamic guard ceilings, **not validated maximum-context sweeps**.
+Only the shown~11.4k full prompts were capacity-tested successfully. Hybrids
+are conservatively estimated as full KV on every decoder layer. The lead uses
+all reclaimable inactive pages while peer telemetry counts half; the tighter
+packer can therefore make split's advertised budget lower, not automatically
+double it. No guard was relaxed to improve these numbers. Huihui single's
+11.3k full OOM shows why its pre-fix optimistic limits must not be trusted.
+
+### Preserved negative controls and operational repairs
+
+- An old45,088,768B unopened EXO1 Orvena `.incomplete` marker blocked validation
+  despite complete copied weights. `lsof` found no opener; moved it to
+  `~/.caravan/day20-single/quarantine/orvena-old-model.safetensors.incomplete`,
+  **not deleted**.
+- EXO2 Orvena's root was a symlink to `~/.caravan/day17/Orvena-target`. Normal
+  split preflight returned409: storage readiness unknown through that link.
+  Preserved the link at
+  `~/.caravan/day20-single/quarantine/orvena-original-root-link`, left its
+  original target untouched, and made a full independent physical copy from
+  EXO1 over Thunderbolt. Normal16/16 admission then passed; no forced split.
+- Initial Orvena :18090 full call got502 because proxy's explicit MLX prefix
+  allowlist did not include `Orvena/`; direct :18190 worked. Added that namespace
+  via the existing `--mlx-prefixes` configuration and reloaded **only idle proxy**.
+  Current list `mlx-community/,huihui-,Orvena/`; no Hermes config edit. A rapid
+  bootstrap got launchd EIO; after confirming the old job exited, the same
+  bootstrap succeeded without root or another route.
+- Original harness treated an intentional single-load400 as exit0, allowing
+  two “Astrea” samples to run on still-loaded Huihui. Entire mislabeled control
+  is retained under `invalid-model-identity-control/`, **excluded**. Controller
+  now fails every non200 and requires model/changedPID/placement/KV/health match.
+  Normal Stop before each load releases prior GPU allocations; this is not a
+  memory override. Active bad client was canceled and owned harness stopped.
+- Full single-Huihui Metal failure, namespace502 and storage409 are preserved
+  separately, not silently converted to successful timings. The safe controller
+  restored Huihui24/40 on both interrupted passes before continuation.
+- First independent monitor used system Python3.9, which could not import
+  union annotations and returned synthetic24/12GB fallback. Those samples are
+  **discarded**. Native-venv real-vm-stat monitor produced226 valid samples,
+  zero SSH errors,21:37:13–21:56:38 CST. Minimum reported available1.100GB;
+  reported swap used1111.94–1312.00M, not runaway growth or a system hang.
+  The watcher was stopped after final verification.
+
+### Conclusion and final state
+
+For **one active dense-model chat on these two M4s**, splitting does not deliver
+2× speed. Astrea full decode15.41→14.93tok/s (~3% slower split); Orvena
+33.85→31.65 (~6.5% slower), with essentially unchanged cold TTFT. Even Huihui
+short decode is slightly faster single6.73 versus6.62. Fit-on-one models usually
+benefit from avoiding the extra serial hop; repeated measurements would be
+needed to distinguish very small timing differences confidently.
+
+Splitting's demonstrated win is **capacity / per-process GPU working memory**:
+Huihui full Hermes succeeds split, but OOMed single under the tested defaults.
+Do not infer a doubled usable context: current live peer-limited guard budgets
+above did not increase. Multi-chat pipelining or >2 physical Minis was not tested
+here and could have a different aggregate-throughput result.
+
+Final normal load restored **Huihui EXO2→EXO1 24/40, KV16**, saved as auto-restore.
+Real :18090 full19-tool, medium-reasoning reply finished `stop`: “I'm online and
+ready to help.” **.405s native TTFT,6.21tok/s,11.372s wall**,11,309/11,310 prompt
+tokens reused (existing exact session restored, not a fresh-prefix speed claim).
+Title sidecar restored and health200. No model deletions, release, tag or video.
+Existing untracked backups remained untouched. Final docs/evidence commit is
+recorded in Git; both Minis are synced by `git pull --ff-only`.
+
+Raw provenance/scripts: `handoff/lab/day20-single/`; Omarchy originals
+`~/day20-single/`. Frozen private system/tool requests remain uncommitted in
+`~/day20-speedups/private/` (new private path is only a symlink to that dataset).

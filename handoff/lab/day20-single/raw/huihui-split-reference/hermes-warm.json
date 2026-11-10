@@ -1,0 +1,88 @@
+{
+  "label": "huihui-split-kv16",
+  "route": "hermes",
+  "cache_label": "warm",
+  "start_CST": "2026-11-09T20:59:10.905278-06:00",
+  "tools": 19,
+  "max_tokens": 256,
+  "reasoning_effort": "medium",
+  "request_sha256": "2c3fb407e75b365bd988da2939b36ea9a632d785fd77ad708a0f9ce2e20970a3",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 32.04298953898251,
+  "first_wire_token_s": 3.0895830090157688,
+  "first_visible_s": 19.019100379024167,
+  "usage": {
+    "prompt_tokens": 11326,
+    "completion_tokens": 183,
+    "total_tokens": 11509,
+    "prompt_tokens_details": {
+      "cached_tokens": 11287
+    },
+    "caravan": {
+      "how": "agent-prefix-hit-memory",
+      "prefill_s": 1.143,
+      "ttft_s": 1.436,
+      "total_s": 30.315,
+      "peak_gb": 13.18,
+      "split": {
+        "calls": 192,
+        "mb_out": 0.12,
+        "mb_in": 2.3,
+        "wait_s": 11.03,
+        "front_s": 10.891,
+        "net_s": 0.139
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 24,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 4.618,
+        "need_gb": 1.898,
+        "prompt_tokens": 11326,
+        "budget_tokens": 27927,
+        "bytes_per_token": 163840.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 6.419,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 4.669,
+        "packer_available_gb": 6.368,
+        "packer_headroom_gb": 4.618,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 34.1,
+      "write_tok_s": 6.3
+    }
+  },
+  "answer": "Three checks for local AI service recovery:\n\n1. Verify the process is running with `ps aux | grep <service-name>`\n\n2. Confirm the port is listening with `netstat -tlnp | grep <port>`\n\n3. Send a test request with `curl http://localhost:<port>/health` or the service's API endpoint\n\nIf all three succeed, the service recovered successfully.",
+  "reasoning_chars": 391,
+  "end_CST": "2026-11-09T20:59:42.948334-06:00"
+}

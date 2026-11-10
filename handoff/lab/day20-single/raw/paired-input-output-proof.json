@@ -1,0 +1,74 @@
+[
+  {
+    "model": "astrea",
+    "route": "direct",
+    "cache": "cold",
+    "same_request_sha256": "97262331c01a128a56e2896ca55270c3e9ff056b759feccdb75068f8071cab8c",
+    "same_visible_output": true,
+    "same_generated_tokens": 45,
+    "visible_reply_present": false
+  },
+  {
+    "model": "astrea",
+    "route": "direct",
+    "cache": "warm",
+    "same_request_sha256": "97262331c01a128a56e2896ca55270c3e9ff056b759feccdb75068f8071cab8c",
+    "same_visible_output": true,
+    "same_generated_tokens": 45,
+    "visible_reply_present": false
+  },
+  {
+    "model": "astrea",
+    "route": "hermes",
+    "cache": "cold",
+    "same_request_sha256": "5444b7bfa38970f1e044f6b74ee6dcfad6765f90f3a2b612c5891744b0921669",
+    "same_visible_output": true,
+    "same_generated_tokens": 159,
+    "visible_reply_present": true
+  },
+  {
+    "model": "astrea",
+    "route": "hermes",
+    "cache": "warm",
+    "same_request_sha256": "6adc7b9cd8f72b19826cb57602b34a43eccb07fd06e4e00d0760acfcb284a918",
+    "same_visible_output": true,
+    "same_generated_tokens": 149,
+    "visible_reply_present": true
+  },
+  {
+    "model": "orvena",
+    "route": "direct",
+    "cache": "cold",
+    "same_request_sha256": "f66831549e3ffe7fc459fda80a660f580a4ca9ad63aebbc3ddad5db94d1eabcc",
+    "same_visible_output": true,
+    "same_generated_tokens": 505,
+    "visible_reply_present": true
+  },
+  {
+    "model": "orvena",
+    "route": "direct",
+    "cache": "warm",
+    "same_request_sha256": "f66831549e3ffe7fc459fda80a660f580a4ca9ad63aebbc3ddad5db94d1eabcc",
+    "same_visible_output": true,
+    "same_generated_tokens": 505,
+    "visible_reply_present": true
+  },
+  {
+    "model": "orvena",
+    "route": "hermes",
+    "cache": "cold",
+    "same_request_sha256": "1994eaf036c99537ae593f1952f7bbdbc2544b6ebe55a9acacfa22c4deb47165",
+    "same_visible_output": true,
+    "same_generated_tokens": 148,
+    "visible_reply_present": true
+  },
+  {
+    "model": "orvena",
+    "route": "hermes",
+    "cache": "warm",
+    "same_request_sha256": "5eb64921b6958a37c3fe9e14b323964392a8d13d299cf5d79d68ffabd1f5b8e2",
+    "same_visible_output": true,
+    "same_generated_tokens": 160,
+    "visible_reply_present": true
+  }
+]

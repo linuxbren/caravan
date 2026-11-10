@@ -1,0 +1,244 @@
+{
+  "at_CST": "2026-11-09T21:43:40.771840-06:00",
+  "response": {
+    "status": "idle",
+    "model_id": null,
+    "model_name": null,
+    "progress": [
+      {
+        "t": 1794281576.795,
+        "msg": "switching to Huihui Qwen3.5 27B Claude 4.6 Opus abliterated 4bit (single)"
+      },
+      {
+        "t": 1794281576.795,
+        "msg": "settings: self_tune=off, guess_ahead=off, prompt_lookup=off, shared_start=off, pipeline_chats=1, fuse_kernels=auto, kv_bits=16, keepalive=auto -> --no-split-draft --no-learn --no-split-shared-prefix-cache --split-pipeline-chats 1"
+      },
+      {
+        "t": 1794281580.228,
+        "msg": "starting single-Mini worker on EXO1 (/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit)"
+      },
+      {
+        "t": 1794281581.248,
+        "msg": "lead: 21:33:00 [mlx-worker] fuse kernels: off"
+      },
+      {
+        "t": 1794281581.248,
+        "msg": "lead: 21:33:00 [mlx-worker] model_type remap: qwen3_5_text \u2192 qwen3_5"
+      },
+      {
+        "t": 1794281586.28,
+        "msg": "lead: [transformers] The tokenizer you are loading from '/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit' with a"
+      },
+      {
+        "t": 1794281590.321,
+        "msg": "lead: 21:33:09 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)"
+      },
+      {
+        "t": 1794281590.321,
+        "msg": "lead: 21:33:09 [mlx-worker] mlx cache_limit 1.5 GB"
+      },
+      {
+        "t": 1794281591.332,
+        "msg": "lead: 21:33:10 [mlx-worker] warm-up 0.55s"
+      },
+      {
+        "t": 1794281591.332,
+        "msg": "lead: 21:33:10 [mlx-worker] loaded mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit (qwen3_5) in 9.5s; sessions<= 4, bytes<= 2147483648, prefill ste"
+      },
+      {
+        "t": 1794281591.332,
+        "msg": "lead: 21:33:10 [mlx-worker] active settings: {\"fuse_kernels\": \"off\", \"guess_ahead\": false, \"guess_ahead_loaded\": false, \"guess_ahead_mode\": \"helper\", \"keepalive\": nul"
+      },
+      {
+        "t": 1794281591.332,
+        "msg": "lead: 21:33:10 [mlx-worker] listening on http://127.0.0.1:8194"
+      },
+      {
+        "t": 1794281591.337,
+        "msg": "lead health ok"
+      },
+      {
+        "t": 1794281591.34,
+        "msg": "ready"
+      },
+      {
+        "t": 1794282122.251,
+        "msg": "stopping workers (ui)"
+      },
+      {
+        "t": 1794282130.287,
+        "msg": "idle"
+      },
+      {
+        "t": 1794282220.738,
+        "msg": "stopping workers (ui)"
+      },
+      {
+        "t": 1794282220.745,
+        "msg": "idle"
+      }
+    ],
+    "error": null,
+    "lead_pid": null,
+    "packer_pid": null,
+    "lead_url": "http://127.0.0.1:8194",
+    "split": false,
+    "lpm_ok": true,
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "fuse_kernels": "auto",
+      "kv_bits": "16",
+      "keepalive": "auto"
+    },
+    "page_settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "fuse_kernels": "auto",
+      "kv_bits": "16",
+      "keepalive": "auto"
+    },
+    "from_file": {},
+    "config_errors": [],
+    "balance": null
+  },
+  "final": {
+    "tuning": null,
+    "optimize": {
+      "running": false,
+      "mode": null,
+      "phase": "idle",
+      "eta_s": null
+    },
+    "worker": {
+      "status": "idle",
+      "model_id": null,
+      "model_name": null,
+      "progress": [
+        {
+          "t": 1794281576.795,
+          "msg": "switching to Huihui Qwen3.5 27B Claude 4.6 Opus abliterated 4bit (single)"
+        },
+        {
+          "t": 1794281576.795,
+          "msg": "settings: self_tune=off, guess_ahead=off, prompt_lookup=off, shared_start=off, pipeline_chats=1, fuse_kernels=auto, kv_bits=16, keepalive=auto -> --no-split-draft --no-learn --no-split-shared-prefix-cache --split-pipeline-chats 1"
+        },
+        {
+          "t": 1794281580.228,
+          "msg": "starting single-Mini worker on EXO1 (/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit)"
+        },
+        {
+          "t": 1794281581.248,
+          "msg": "lead: 21:33:00 [mlx-worker] fuse kernels: off"
+        },
+        {
+          "t": 1794281581.248,
+          "msg": "lead: 21:33:00 [mlx-worker] model_type remap: qwen3_5_text \u2192 qwen3_5"
+        },
+        {
+          "t": 1794281586.28,
+          "msg": "lead: [transformers] The tokenizer you are loading from '/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit' with a"
+        },
+        {
+          "t": 1794281590.321,
+          "msg": "lead: 21:33:09 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)"
+        },
+        {
+          "t": 1794281590.321,
+          "msg": "lead: 21:33:09 [mlx-worker] mlx cache_limit 1.5 GB"
+        },
+        {
+          "t": 1794281591.332,
+          "msg": "lead: 21:33:10 [mlx-worker] warm-up 0.55s"
+        },
+        {
+          "t": 1794281591.332,
+          "msg": "lead: 21:33:10 [mlx-worker] loaded mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit (qwen3_5) in 9.5s; sessions<= 4, bytes<= 2147483648, prefill ste"
+        },
+        {
+          "t": 1794281591.332,
+          "msg": "lead: 21:33:10 [mlx-worker] active settings: {\"fuse_kernels\": \"off\", \"guess_ahead\": false, \"guess_ahead_loaded\": false, \"guess_ahead_mode\": \"helper\", \"keepalive\": nul"
+        },
+        {
+          "t": 1794281591.332,
+          "msg": "lead: 21:33:10 [mlx-worker] listening on http://127.0.0.1:8194"
+        },
+        {
+          "t": 1794281591.337,
+          "msg": "lead health ok"
+        },
+        {
+          "t": 1794281591.34,
+          "msg": "ready"
+        },
+        {
+          "t": 1794282122.251,
+          "msg": "stopping workers (ui)"
+        },
+        {
+          "t": 1794282130.287,
+          "msg": "idle"
+        },
+        {
+          "t": 1794282220.738,
+          "msg": "stopping workers (ui)"
+        },
+        {
+          "t": 1794282220.745,
+          "msg": "idle"
+        }
+      ],
+      "error": null,
+      "lead_pid": null,
+      "packer_pid": null,
+      "lead_url": "http://127.0.0.1:8194",
+      "split": false,
+      "lpm_ok": true,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "page_settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "from_file": {},
+      "config_errors": [],
+      "balance": null
+    },
+    "restore": {
+      "phase": "empty",
+      "message": "Models unloaded; next login will restore nothing",
+      "enabled": true,
+      "last_model": null,
+      "saved_at": 1794281591.34003
+    },
+    "lead_healthy": false,
+    "split": null,
+    "active": null,
+    "uptime_s": 5784.6,
+    "ports": {
+      "web": 8190,
+      "lead": 8194,
+      "packer": "169.254.103.191:5560"
+    }
+  }
+}

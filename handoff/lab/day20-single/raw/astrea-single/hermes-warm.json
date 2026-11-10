@@ -1,0 +1,80 @@
+{
+  "label": "astrea-single",
+  "route": "hermes",
+  "cache_label": "warm",
+  "start_CST": "2026-11-09T21:44:56.109065-06:00",
+  "tools": 19,
+  "max_tokens": 1024,
+  "reasoning_effort": "medium",
+  "request_sha256": "6adc7b9cd8f72b19826cb57602b34a43eccb07fd06e4e00d0760acfcb284a918",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 10.192981603031512,
+  "first_wire_token_s": 0.5854195569991134,
+  "first_visible_s": 6.954476626007818,
+  "usage": {
+    "prompt_tokens": 11439,
+    "completion_tokens": 149,
+    "total_tokens": 11588,
+    "prompt_tokens_details": {
+      "cached_tokens": 11400
+    },
+    "caravan": {
+      "how": "agent-prefix-hit-memory",
+      "prefill_s": 0.341,
+      "ttft_s": 0.447,
+      "total_s": 10.055,
+      "peak_gb": 9.51,
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": false,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": null,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": null,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 9.833,
+        "need_gb": 1.634,
+        "prompt_tokens": 11439,
+        "budget_tokens": 73999,
+        "bytes_per_token": 131072.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 11.583,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 9.833,
+        "packer_available_gb": null,
+        "packer_headroom_gb": null,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 114.4,
+      "write_tok_s": 15.4
+    }
+  },
+  "answer": "1. Check service status with systemctl or equivalent.\n2. Review logs for errors or startup failures.\n3. Test a basic API endpoint or health check.\n\nThese three checks confirm whether the service is running, error-free, and responding.",
+  "reasoning_chars": 388,
+  "end_CST": "2026-11-09T21:45:06.302148-06:00"
+}

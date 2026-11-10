@@ -1,0 +1,1226 @@
+{
+  "models": [
+    {
+      "id": "astrea-r8-chat-9b-optiq-4bit",
+      "split_counts": null,
+      "pipeline_nodes": null,
+      "name": "Astrea R8 Chat 9B OptiQ 4bit",
+      "hf": "mlx-community/Astrea-R8-Chat-9B-OptiQ-4bit",
+      "packer_layers": 24,
+      "notes": "",
+      "source": "hf-mlx",
+      "native_mtp_available": false,
+      "warnings": [],
+      "model_type": "qwen3_5",
+      "tie_word_embeddings": false,
+      "split_check": null,
+      "split_note": "",
+      "lead_path": "/Users/brenden/.caravan/mlx-models/mlx-community--Astrea-R8-Chat-9B-OptiQ-4bit",
+      "packer_path": "/Users/brenden/.caravan/mlx-models/mlx-community--Astrea-R8-Chat-9B-OptiQ-4bit",
+      "available_lead": true,
+      "usable": true,
+      "disabled": false,
+      "disabled_reason": "",
+      "weights_gb": 7.100589056,
+      "fit": {
+        "color": "green",
+        "nodes_needed": 1,
+        "fits_on": [
+          1,
+          2
+        ],
+        "need_gb_1": 9.42,
+        "need_gb_split": 5.58,
+        "weights_gb": 7.1,
+        "kv_gb_1": 0.57,
+        "reason": "Fits on 1 Mini (~9 GB RAM; capacity ~16 GB)",
+        "limit": "ram",
+        "capacity_gb": [
+          16.35,
+          16.3
+        ],
+        "capacity_labels": [
+          "EXO2",
+          "EXO1"
+        ],
+        "online_nodes": 2,
+        "runtime_stages": 2,
+        "disk_ok": true,
+        "disk_reason": null
+      },
+      "nodes": {
+        "EXO1": null,
+        "EXO2": {
+          "path": "/Users/brenden/.caravan/mlx-models/mlx-community--Astrea-R8-Chat-9B-OptiQ-4bit",
+          "folder": "mlx-community--Astrea-R8-Chat-9B-OptiQ-4bit",
+          "weights_gb": 8.01,
+          "full_weights_gb": 7.100589056,
+          "stage_counts": null,
+          "stage_ok": null,
+          "storage": {
+            "files": {
+              "tokenizer_config.json": 1161,
+              "caravan-split-sizes.json": 213,
+              "model-00001-of-00002.safetensors": 5349381654,
+              "config.json": 55528,
+              "tokenizer.json": 19989325,
+              "generation_config.json": 177,
+              "chat_template.jinja": 7759,
+              "model-00002-of-00002.safetensors": 1751328472,
+              "model.safetensors.index.json": 115912,
+              "video_preprocessor_config.json": 385,
+              "optiq_vision.safetensors": 912058029,
+              "preprocessor_config.json": 390,
+              "optiq/metadata.json": 26730,
+              ".cache/huggingface/CACHEDIR.TAG": 191,
+              ".cache/huggingface/.gitignore": 1,
+              ".cache/huggingface/trees/c78c980f45a874be65fc2c852e77a8f7dd19fe48.json": 2355,
+              ".cache/huggingface/download/model.safetensors.index.json.lock": 0,
+              ".cache/huggingface/download/model.safetensors.index.json.metadata": 101,
+              ".cache/huggingface/download/tokenizer.json.lock": 0,
+              ".cache/huggingface/download/tokenizer_config.json.metadata": 101,
+              ".cache/huggingface/download/chat_template.jinja.metadata": 100,
+              ".cache/huggingface/download/preprocessor_config.json.metadata": 100,
+              ".cache/huggingface/download/model-00001-of-00002.safetensors.metadata": 124,
+              ".cache/huggingface/download/tokenizer_config.json.lock": 0,
+              ".cache/huggingface/download/model-00001-of-00002.safetensors.lock": 0,
+              ".cache/huggingface/download/video_preprocessor_config.json.metadata": 101,
+              ".cache/huggingface/download/config.json.metadata": 99,
+              ".cache/huggingface/download/config.json.lock": 0,
+              ".cache/huggingface/download/video_preprocessor_config.json.lock": 0,
+              ".cache/huggingface/download/generation_config.json.lock": 0,
+              ".cache/huggingface/download/tokenizer.json.metadata": 125,
+              ".cache/huggingface/download/generation_config.json.metadata": 100,
+              ".cache/huggingface/download/optiq_vision.safetensors.lock": 0,
+              ".cache/huggingface/download/model-00002-of-00002.safetensors.metadata": 124,
+              ".cache/huggingface/download/preprocessor_config.json.lock": 0,
+              ".cache/huggingface/download/chat_template.jinja.lock": 0,
+              ".cache/huggingface/download/model-00002-of-00002.safetensors.lock": 0,
+              ".cache/huggingface/download/optiq_vision.safetensors.metadata": 124,
+              ".cache/huggingface/download/optiq/metadata.json.lock": 0,
+              ".cache/huggingface/download/optiq/metadata.json.metadata": 101
+            },
+            "on_disk_bytes": 8032969582,
+            "allocated_bytes": 8033062912,
+            "links": [],
+            "invalid_shards": []
+          },
+          "invalid_shards": [],
+          "kind": "full",
+          "ok": true,
+          "full_ok": true,
+          "has_config": true,
+          "has_index": true,
+          "has_tokenizer": true,
+          "lead_ok": true,
+          "packer_ok": true,
+          "reason": "",
+          "n_layers": 32,
+          "incomplete_n": 0,
+          "missing_n": 0,
+          "placement": null,
+          "native_mtp_available": false,
+          "warnings": [],
+          "model_type": "qwen3_5",
+          "tie_word_embeddings": false,
+          "shards_present": [
+            "model-00001-of-00002.safetensors",
+            "model-00002-of-00002.safetensors",
+            "optiq_vision.safetensors"
+          ]
+        }
+      },
+      "need_split": false,
+      "run_mode": "single",
+      "placement": {
+        "mode": "one",
+        "k": 1,
+        "node_ids": [
+          "exo2"
+        ],
+        "node_labels": [
+          "EXO2"
+        ],
+        "full_copy": true,
+        "inferred": true
+      },
+      "architecture": {
+        "supported": true,
+        "model_type": null,
+        "effective": null,
+        "remapped": false,
+        "reason": ""
+      },
+      "held_on": [
+        "EXO2"
+      ]
+    },
+    {
+      "id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "split_counts": null,
+      "pipeline_nodes": null,
+      "name": "Huihui Qwen3.5 27B Claude 4.6 Opus abliterated 4bit",
+      "hf": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+      "packer_layers": 24,
+      "notes": "",
+      "source": "hf-mlx",
+      "native_mtp_available": false,
+      "warnings": [],
+      "model_type": "qwen3_5",
+      "tie_word_embeddings": false,
+      "split_check": {
+        "ok": true,
+        "counts": [
+          24,
+          40
+        ],
+        "free": [
+          9.03,
+          4.97
+        ],
+        "low": [],
+        "balanced": [
+          32,
+          32
+        ],
+        "balanced_free": [
+          7.02,
+          6.97
+        ],
+        "balanced_ok": true,
+        "margin_gb": 1.75,
+        "better": false,
+        "note": ""
+      },
+      "split_note": "",
+      "lead_path": "/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+      "packer_path": "/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+      "available_lead": true,
+      "usable": true,
+      "disabled": false,
+      "disabled_reason": "",
+      "weights_gb": 16.054266848,
+      "fit": {
+        "color": "yellow",
+        "nodes_needed": 2,
+        "fits_on": [
+          2
+        ],
+        "need_gb_1": 19.09,
+        "need_gb_split": 10.42,
+        "weights_gb": 16.05,
+        "kv_gb_1": 1.28,
+        "reason": "Fits on 2 Minis, about 10 GB RAM each (capacity ~16 GB)",
+        "limit": "ram",
+        "capacity_gb": [
+          16.35,
+          16.3
+        ],
+        "capacity_labels": [
+          "EXO2",
+          "EXO1"
+        ],
+        "online_nodes": 2,
+        "runtime_stages": 2,
+        "disk_ok": true,
+        "disk_reason": null
+      },
+      "nodes": {
+        "EXO1": {
+          "path": "/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+          "folder": "mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+          "weights_gb": 10.71,
+          "full_weights_gb": 16.054266848,
+          "stage_counts": null,
+          "stage_ok": null,
+          "storage": {
+            "files": {
+              "model-00002-of-00003.safetensors": 5354186935,
+              "tokenizer_config.json": 1166,
+              "caravan-split-sizes.json": 245,
+              "config.json": 4653,
+              "model-00003-of-00003.safetensors": 5357088982,
+              "tokenizer.json": 19989343,
+              "processor_config.json": 1300,
+              "chat_template.jinja": 4047,
+              "caravan-placement.json": 267,
+              "model.safetensors.index.json": 218281,
+              ".cache/huggingface/CACHEDIR.TAG": 191,
+              ".cache/huggingface/.gitignore": 1,
+              ".cache/huggingface/trees/75bfb86c7d8e55a8b9aba658b03729abc7680922.json": 2030,
+              ".cache/huggingface/download/model.safetensors.index.json.lock": 0,
+              ".cache/huggingface/download/model.safetensors.index.json.metadata": 100,
+              ".cache/huggingface/download/tokenizer.json.lock": 0,
+              ".cache/huggingface/download/tokenizer_config.json.metadata": 101,
+              ".cache/huggingface/download/chat_template.jinja.metadata": 100,
+              ".cache/huggingface/download/processor_config.json.lock": 0,
+              ".cache/huggingface/download/tokenizer_config.json.lock": 0,
+              ".cache/huggingface/download/config.json.metadata": 100,
+              ".cache/huggingface/download/config.json.lock": 0,
+              ".cache/huggingface/download/processor_config.json.metadata": 101,
+              ".cache/huggingface/download/tokenizer.json.metadata": 124,
+              ".cache/huggingface/download/chat_template.jinja.lock": 0
+            },
+            "on_disk_bytes": 10731498067,
+            "allocated_bytes": 10731560960,
+            "links": [],
+            "invalid_shards": []
+          },
+          "invalid_shards": [],
+          "kind": "split-lead",
+          "ok": true,
+          "full_ok": false,
+          "has_config": true,
+          "has_index": true,
+          "has_tokenizer": true,
+          "lead_ok": true,
+          "packer_ok": false,
+          "reason": "lead shards ok; packer would need 1 more",
+          "n_layers": 64,
+          "incomplete_n": 0,
+          "missing_n": 1,
+          "placement": {
+            "mode": "split",
+            "k": 2,
+            "node_ids": [
+              "exo2",
+              "exo1"
+            ],
+            "node_labels": [
+              "EXO2",
+              "EXO1"
+            ],
+            "repo_id": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+            "full_copy": false,
+            "packer_layers": 24,
+            "n_stages": 2
+          },
+          "native_mtp_available": false,
+          "warnings": [],
+          "model_type": "qwen3_5",
+          "tie_word_embeddings": false,
+          "shards_present": [
+            "model-00002-of-00003.safetensors",
+            "model-00003-of-00003.safetensors"
+          ]
+        },
+        "EXO2": {
+          "path": "/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+          "folder": "mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+          "weights_gb": 10.7,
+          "full_weights_gb": 16.054266848,
+          "stage_counts": null,
+          "stage_ok": null,
+          "storage": {
+            "files": {
+              "model-00002-of-00003.safetensors": 5354186935,
+              "tokenizer_config.json": 1166,
+              "caravan-split-sizes.json": 245,
+              "config.json": 4653,
+              "tokenizer.json": 19989343,
+              "processor_config.json": 1300,
+              "chat_template.jinja": 4047,
+              "caravan-placement.json": 398,
+              "model.safetensors.index.json": 218281,
+              "model-00001-of-00003.safetensors": 5343269992,
+              ".cache/huggingface/CACHEDIR.TAG": 191,
+              ".cache/huggingface/.gitignore": 1,
+              ".cache/huggingface/trees/75bfb86c7d8e55a8b9aba658b03729abc7680922.json": 2030,
+              ".cache/huggingface/download/model.safetensors.index.json.lock": 0,
+              ".cache/huggingface/download/model.safetensors.index.json.metadata": 101,
+              ".cache/huggingface/download/tokenizer.json.lock": 0,
+              ".cache/huggingface/download/tokenizer_config.json.metadata": 100,
+              ".cache/huggingface/download/chat_template.jinja.metadata": 99,
+              ".cache/huggingface/download/processor_config.json.lock": 0,
+              ".cache/huggingface/download/tokenizer_config.json.lock": 0,
+              ".cache/huggingface/download/config.json.metadata": 100,
+              ".cache/huggingface/download/config.json.lock": 0,
+              ".cache/huggingface/download/processor_config.json.metadata": 101,
+              ".cache/huggingface/download/tokenizer.json.metadata": 124,
+              ".cache/huggingface/download/chat_template.jinja.lock": 0
+            },
+            "on_disk_bytes": 10717679207,
+            "allocated_bytes": 10717741056,
+            "links": [],
+            "invalid_shards": []
+          },
+          "invalid_shards": [],
+          "kind": "split-packer",
+          "ok": true,
+          "full_ok": false,
+          "has_config": true,
+          "has_index": true,
+          "has_tokenizer": true,
+          "lead_ok": false,
+          "packer_ok": true,
+          "reason": "packer shards ok; lead would need 1 more",
+          "n_layers": 64,
+          "incomplete_n": 0,
+          "missing_n": 1,
+          "placement": {
+            "id": "split:2",
+            "mode": "split",
+            "k": 2,
+            "node_ids": [
+              "exo2",
+              "exo1"
+            ],
+            "node_labels": [
+              "EXO2",
+              "EXO1"
+            ],
+            "label": "Split across 2 Minis (EXO2, EXO1)",
+            "enabled": true,
+            "reason": "",
+            "full_copy": false,
+            "default_candidate": false,
+            "repo_id": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+            "packer_layers": 24,
+            "n_stages": 2
+          },
+          "native_mtp_available": false,
+          "warnings": [],
+          "model_type": "qwen3_5",
+          "tie_word_embeddings": false,
+          "shards_present": [
+            "model-00001-of-00003.safetensors",
+            "model-00002-of-00003.safetensors"
+          ]
+        }
+      },
+      "need_split": true,
+      "run_mode": "split",
+      "placement": {
+        "mode": "split",
+        "k": 2,
+        "node_ids": [
+          "exo2",
+          "exo1"
+        ],
+        "node_labels": [
+          "EXO2",
+          "EXO1"
+        ],
+        "repo_id": "mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+        "full_copy": false,
+        "packer_layers": 24,
+        "n_stages": 2
+      },
+      "architecture": {
+        "supported": true,
+        "model_type": "qwen3_5",
+        "effective": "qwen3_5",
+        "remapped": false,
+        "reason": ""
+      },
+      "held_on": [
+        "EXO1",
+        "EXO2"
+      ]
+    },
+    {
+      "id": "llama-3-2-8x4b-moe-v2-dark-champion-instruct-uncensored-abliterated-21b-mlx",
+      "split_counts": null,
+      "pipeline_nodes": null,
+      "name": "Llama 3.2 8X4B MOE V2 Dark Champion Instruct uncensored abliterated 21B MLX",
+      "hf": "mlx-community/Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX",
+      "packer_layers": 16,
+      "notes": "",
+      "source": "hf-mlx",
+      "native_mtp_available": false,
+      "warnings": [
+        "This model's files don't quite match its settings (it ships an extra output table it won't use). Caravan handles this: it still runs, but when split, every Mini needs the first file of the model."
+      ],
+      "model_type": "mixtral",
+      "tie_word_embeddings": true,
+      "split_check": {
+        "ok": true,
+        "counts": [
+          16,
+          16
+        ],
+        "free": [
+          3.28,
+          3.23
+        ],
+        "low": [],
+        "balanced": [
+          16,
+          16
+        ],
+        "balanced_free": [
+          3.28,
+          3.23
+        ],
+        "balanced_ok": true,
+        "margin_gb": 1.75,
+        "better": false,
+        "note": ""
+      },
+      "split_note": "",
+      "lead_path": "/Users/brenden/.caravan/mlx-models/mlx-community--Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX",
+      "packer_path": "/Users/brenden/.caravan/mlx-models/mlx-community--Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX",
+      "available_lead": true,
+      "usable": true,
+      "disabled": false,
+      "disabled_reason": "",
+      "weights_gb": 23.537430528,
+      "fit": {
+        "color": "yellow",
+        "nodes_needed": 2,
+        "fits_on": [
+          2
+        ],
+        "need_gb_1": 27.17,
+        "need_gb_split": 14.46,
+        "weights_gb": 23.54,
+        "kv_gb_1": 1.88,
+        "reason": "Fits on 2 Minis, about 14 GB RAM each (capacity ~16 GB)",
+        "limit": "ram",
+        "capacity_gb": [
+          16.35,
+          16.3
+        ],
+        "capacity_labels": [
+          "EXO2",
+          "EXO1"
+        ],
+        "online_nodes": 2,
+        "runtime_stages": 2,
+        "disk_ok": true,
+        "disk_reason": null
+      },
+      "nodes": {
+        "EXO1": {
+          "path": "/Users/brenden/.caravan/mlx-models/mlx-community--Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX",
+          "folder": "mlx-community--Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX",
+          "weights_gb": 18.33,
+          "full_weights_gb": 23.537430528,
+          "stage_counts": null,
+          "stage_ok": null,
+          "storage": {
+            "files": {
+              "model-00003-of-00005.safetensors": 5181402342,
+              "tokenizer_config.json": 50661,
+              "special_tokens_map.json": 446,
+              "caravan-split-sizes.json": 369,
+              "config.json": 1308,
+              "tokenizer.json": 17210084,
+              "chat_template.jinja": 3827,
+              "caravan-placement.json": 290,
+              "model-00001-of-00005.safetensors": 5171644799,
+              "model-00004-of-00005.safetensors": 5181402404,
+              "model.safetensors.index.json": 79282,
+              "model-00005-of-00005.safetensors": 2793315715,
+              ".cache/huggingface/CACHEDIR.TAG": 191,
+              ".cache/huggingface/.gitignore": 1,
+              ".cache/huggingface/trees/aefb1a709da1bb8f59bc0779bd731b83f03ed574.json": 2672,
+              ".cache/huggingface/download/model-00004-of-00005.safetensors.metadata": 125,
+              ".cache/huggingface/download/model.safetensors.index.json.lock": 0,
+              ".cache/huggingface/download/model.safetensors.index.json.metadata": 100,
+              ".cache/huggingface/download/tokenizer.json.lock": 0,
+              ".cache/huggingface/download/tokenizer_config.json.metadata": 100,
+              ".cache/huggingface/download/model-00005-of-00005.safetensors.lock": 0,
+              ".cache/huggingface/download/chat_template.jinja.metadata": 101,
+              ".cache/huggingface/download/special_tokens_map.json.metadata": 100,
+              ".cache/huggingface/download/tokenizer_config.json.lock": 0,
+              ".cache/huggingface/download/special_tokens_map.json.lock": 0,
+              ".cache/huggingface/download/model-00005-of-00005.safetensors.metadata": 125,
+              ".cache/huggingface/download/config.json.metadata": 100,
+              ".cache/huggingface/download/config.json.lock": 0,
+              ".cache/huggingface/download/tokenizer.json.metadata": 123,
+              ".cache/huggingface/download/model-00004-of-00005.safetensors.lock": 0,
+              ".cache/huggingface/download/chat_template.jinja.lock": 0
+            },
+            "on_disk_bytes": 18345115265,
+            "allocated_bytes": 18345181184,
+            "links": [],
+            "invalid_shards": []
+          },
+          "invalid_shards": [],
+          "kind": "split-lead",
+          "ok": true,
+          "full_ok": false,
+          "has_config": true,
+          "has_index": true,
+          "has_tokenizer": true,
+          "lead_ok": true,
+          "packer_ok": false,
+          "reason": "lead shards ok; packer would need 1 more",
+          "n_layers": 32,
+          "incomplete_n": 0,
+          "missing_n": 1,
+          "placement": {
+            "mode": "split",
+            "k": 2,
+            "node_ids": [
+              "exo2",
+              "exo1"
+            ],
+            "node_labels": [
+              "EXO2",
+              "EXO1"
+            ],
+            "repo_id": "mlx-community/Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX",
+            "full_copy": false,
+            "packer_layers": 16,
+            "n_stages": 2
+          },
+          "native_mtp_available": false,
+          "warnings": [
+            "This model's files don't quite match its settings (it ships an extra output table it won't use). Caravan handles this: it still runs, but when split, every Mini needs the first file of the model."
+          ],
+          "model_type": "mixtral",
+          "tie_word_embeddings": true,
+          "shards_present": [
+            "model-00001-of-00005.safetensors",
+            "model-00003-of-00005.safetensors",
+            "model-00004-of-00005.safetensors",
+            "model-00005-of-00005.safetensors"
+          ]
+        },
+        "EXO2": {
+          "path": "/Users/brenden/.caravan/mlx-models/mlx-community--Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX",
+          "folder": "mlx-community--Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX",
+          "weights_gb": 20.74,
+          "full_weights_gb": 23.537430528,
+          "stage_counts": null,
+          "stage_ok": null,
+          "storage": {
+            "files": {
+              "model-00003-of-00005.safetensors": 5181402342,
+              "tokenizer_config.json": 50661,
+              "special_tokens_map.json": 446,
+              "caravan-split-sizes.json": 369,
+              "config.json": 1308,
+              "model-00002-of-00005.safetensors": 5209768001,
+              "tokenizer.json": 17210084,
+              "chat_template.jinja": 3827,
+              "caravan-placement.json": 421,
+              "model-00001-of-00005.safetensors": 5171644799,
+              "model-00004-of-00005.safetensors": 5181402404,
+              "model.safetensors.index.json": 79282,
+              ".cache/huggingface/CACHEDIR.TAG": 191,
+              ".cache/huggingface/.gitignore": 1,
+              ".cache/huggingface/trees/aefb1a709da1bb8f59bc0779bd731b83f03ed574.json": 2672,
+              ".cache/huggingface/download/model-00004-of-00005.safetensors.metadata": 124,
+              ".cache/huggingface/download/model.safetensors.index.json.lock": 0,
+              ".cache/huggingface/download/model.safetensors.index.json.metadata": 100,
+              ".cache/huggingface/download/tokenizer.json.lock": 0,
+              ".cache/huggingface/download/model-00002-of-00005.safetensors.lock": 0,
+              ".cache/huggingface/download/model-00003-of-00005.safetensors.metadata": 124,
+              ".cache/huggingface/download/tokenizer_config.json.metadata": 100,
+              ".cache/huggingface/download/chat_template.jinja.metadata": 100,
+              ".cache/huggingface/download/special_tokens_map.json.metadata": 100,
+              ".cache/huggingface/download/tokenizer_config.json.lock": 0,
+              ".cache/huggingface/download/special_tokens_map.json.lock": 0,
+              ".cache/huggingface/download/config.json.metadata": 101,
+              ".cache/huggingface/download/config.json.lock": 0,
+              ".cache/huggingface/download/model-00002-of-00005.safetensors.metadata": 125,
+              ".cache/huggingface/download/tokenizer.json.metadata": 125,
+              ".cache/huggingface/download/model-00001-of-00005.safetensors.metadata": 124,
+              ".cache/huggingface/download/model-00001-of-00005.safetensors.lock": 0,
+              ".cache/huggingface/download/model-00004-of-00005.safetensors.lock": 0,
+              ".cache/huggingface/download/chat_template.jinja.lock": 0,
+              ".cache/huggingface/download/model-00003-of-00005.safetensors.lock": 0
+            },
+            "on_disk_bytes": 20761567931,
+            "allocated_bytes": 20761645056,
+            "links": [],
+            "invalid_shards": []
+          },
+          "invalid_shards": [],
+          "kind": "split-packer",
+          "ok": true,
+          "full_ok": false,
+          "has_config": true,
+          "has_index": true,
+          "has_tokenizer": true,
+          "lead_ok": false,
+          "packer_ok": true,
+          "reason": "packer shards ok; lead would need 1 more",
+          "n_layers": 32,
+          "incomplete_n": 0,
+          "missing_n": 1,
+          "placement": {
+            "id": "split:2",
+            "mode": "split",
+            "k": 2,
+            "node_ids": [
+              "exo2",
+              "exo1"
+            ],
+            "node_labels": [
+              "EXO2",
+              "EXO1"
+            ],
+            "label": "Split across 2 Minis (EXO2, EXO1)",
+            "enabled": true,
+            "reason": "",
+            "full_copy": false,
+            "default_candidate": true,
+            "repo_id": "mlx-community/Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX",
+            "packer_layers": 16,
+            "n_stages": 2
+          },
+          "native_mtp_available": false,
+          "warnings": [
+            "This model's files don't quite match its settings (it ships an extra output table it won't use). Caravan handles this: it still runs, but when split, every Mini needs the first file of the model."
+          ],
+          "model_type": "mixtral",
+          "tie_word_embeddings": true,
+          "shards_present": [
+            "model-00001-of-00005.safetensors",
+            "model-00002-of-00005.safetensors",
+            "model-00003-of-00005.safetensors",
+            "model-00004-of-00005.safetensors"
+          ]
+        }
+      },
+      "need_split": true,
+      "run_mode": "split",
+      "placement": {
+        "mode": "split",
+        "k": 2,
+        "node_ids": [
+          "exo2",
+          "exo1"
+        ],
+        "node_labels": [
+          "EXO2",
+          "EXO1"
+        ],
+        "repo_id": "mlx-community/Llama-3.2-8X4B-MOE-V2-Dark-Champion-Instruct-uncensored-abliterated-21B-MLX",
+        "full_copy": false,
+        "packer_layers": 16,
+        "n_stages": 2
+      },
+      "architecture": {
+        "supported": true,
+        "model_type": "mixtral",
+        "effective": "mixtral",
+        "remapped": false,
+        "reason": ""
+      },
+      "held_on": [
+        "EXO1",
+        "EXO2"
+      ]
+    },
+    {
+      "id": "orvena-4b-mlx-4bit",
+      "split_counts": null,
+      "pipeline_nodes": null,
+      "name": "Orvena 4B MLX 4bit",
+      "hf": "Orvena/Orvena-4B-MLX-4bit",
+      "packer_layers": 24,
+      "notes": "",
+      "source": "hf-mlx",
+      "native_mtp_available": true,
+      "warnings": [],
+      "model_type": "qwen3_5",
+      "tie_word_embeddings": true,
+      "split_check": null,
+      "split_note": "",
+      "lead_path": "/Users/brenden/.caravan/mlx-models/Orvena--Orvena-4B-MLX-4bit",
+      "packer_path": "/Users/brenden/.caravan/mlx-models/Orvena--Orvena-4B-MLX-4bit",
+      "available_lead": true,
+      "usable": true,
+      "disabled": false,
+      "disabled_reason": "",
+      "weights_gb": 3.034147328,
+      "fit": {
+        "color": "green",
+        "nodes_needed": 1,
+        "fits_on": [
+          1,
+          2
+        ],
+        "need_gb_1": 5.08,
+        "need_gb_split": 3.42,
+        "weights_gb": 3.03,
+        "kv_gb_1": 0.3,
+        "reason": "Fits on 1 Mini (~5 GB RAM; capacity ~16 GB)",
+        "limit": "ram",
+        "capacity_gb": [
+          16.35,
+          16.3
+        ],
+        "capacity_labels": [
+          "EXO2",
+          "EXO1"
+        ],
+        "online_nodes": 2,
+        "runtime_stages": 2,
+        "disk_ok": true,
+        "disk_reason": null
+      },
+      "nodes": {
+        "EXO1": {
+          "path": "/Users/brenden/.caravan/mlx-models/Orvena--Orvena-4B-MLX-4bit",
+          "folder": "Orvena--Orvena-4B-MLX-4bit",
+          "weights_gb": null,
+          "full_weights_gb": 3.034147328,
+          "stage_counts": null,
+          "stage_ok": null,
+          "storage": {
+            "files": {
+              "tokenizer_config.json": 1139,
+              "config.json": 3366,
+              "tokenizer.json": 19989343,
+              "processor_config.json": 1300,
+              "generation_config.json": 62,
+              "chat_template.jinja": 7761,
+              "vocab.json": 6722759,
+              "model.safetensors.index.json": 97048,
+              "video_preprocessor_config.json": 385,
+              "preprocessor_config.json": 390,
+              ".cache/huggingface/CACHEDIR.TAG": 191,
+              ".cache/huggingface/.gitignore": 1,
+              ".cache/huggingface/trees/980f96d5ddf856f441d2c83c8aa4ef1a5130a764.json": 1995,
+              ".cache/huggingface/download/model.safetensors.index.json.lock": 0,
+              ".cache/huggingface/download/model.safetensors.index.json.metadata": 101,
+              ".cache/huggingface/download/vocab.json.lock": 0,
+              ".cache/huggingface/download/tokenizer.json.lock": 0,
+              ".cache/huggingface/download/tokenizer_config.json.metadata": 100,
+              ".cache/huggingface/download/chat_template.jinja.metadata": 100,
+              ".cache/huggingface/download/preprocessor_config.json.metadata": 100,
+              ".cache/huggingface/download/processor_config.json.lock": 0,
+              ".cache/huggingface/download/tokenizer_config.json.lock": 0,
+              ".cache/huggingface/download/video_preprocessor_config.json.metadata": 101,
+              ".cache/huggingface/download/config.json.metadata": 100,
+              ".cache/huggingface/download/config.json.lock": 0,
+              ".cache/huggingface/download/processor_config.json.metadata": 100,
+              ".cache/huggingface/download/model.safetensors.incomplete": 45088768,
+              ".cache/huggingface/download/video_preprocessor_config.json.lock": 0,
+              ".cache/huggingface/download/generation_config.json.lock": 0,
+              ".cache/huggingface/download/tokenizer.json.metadata": 124,
+              ".cache/huggingface/download/generation_config.json.metadata": 101,
+              ".cache/huggingface/download/vocab.json.metadata": 100,
+              ".cache/huggingface/download/preprocessor_config.json.lock": 0,
+              ".cache/huggingface/download/chat_template.jinja.lock": 0
+            },
+            "on_disk_bytes": 71915535,
+            "allocated_bytes": 71991296,
+            "links": [],
+            "invalid_shards": []
+          },
+          "invalid_shards": [],
+          "kind": "partial",
+          "ok": false,
+          "full_ok": false,
+          "has_config": true,
+          "has_index": true,
+          "has_tokenizer": true,
+          "lead_ok": false,
+          "packer_ok": false,
+          "reason": "1 incomplete download file(s)",
+          "n_layers": 32,
+          "incomplete_n": 1,
+          "missing_n": 1,
+          "placement": null,
+          "native_mtp_available": false,
+          "warnings": [],
+          "model_type": "qwen3_5",
+          "tie_word_embeddings": true,
+          "shards_present": []
+        },
+        "EXO2": {
+          "path": "/Users/brenden/.caravan/mlx-models/Orvena--Orvena-4B-MLX-4bit",
+          "folder": "Orvena--Orvena-4B-MLX-4bit",
+          "weights_gb": 3.03,
+          "full_weights_gb": 3.034147328,
+          "stage_counts": null,
+          "stage_ok": null,
+          "storage": {
+            "files": null,
+            "on_disk_bytes": null,
+            "allocated_bytes": null,
+            "links": [
+              "/Users/brenden/.caravan/mlx-models/Orvena--Orvena-4B-MLX-4bit"
+            ],
+            "invalid_shards": []
+          },
+          "invalid_shards": [],
+          "kind": "full",
+          "ok": true,
+          "full_ok": true,
+          "has_config": true,
+          "has_index": true,
+          "has_tokenizer": true,
+          "lead_ok": true,
+          "packer_ok": true,
+          "reason": "",
+          "n_layers": 32,
+          "incomplete_n": 0,
+          "missing_n": 0,
+          "placement": {
+            "mode": "one",
+            "k": 1,
+            "node_ids": [
+              "exo2"
+            ],
+            "label": "1 Mini \u00b7 EXO2"
+          },
+          "native_mtp_available": true,
+          "warnings": [],
+          "model_type": "qwen3_5",
+          "tie_word_embeddings": true,
+          "shards_present": [
+            "model.safetensors"
+          ]
+        }
+      },
+      "need_split": false,
+      "run_mode": "single",
+      "placement": {
+        "mode": "one",
+        "k": 1,
+        "node_ids": [
+          "exo2"
+        ],
+        "label": "1 Mini \u00b7 EXO2"
+      },
+      "architecture": {
+        "supported": true,
+        "model_type": "qwen3_5",
+        "effective": "qwen3_5",
+        "remapped": false,
+        "reason": ""
+      },
+      "held_on": [
+        "EXO1",
+        "EXO2"
+      ]
+    },
+    {
+      "id": "qwen3-30b-a3b-4bit",
+      "split_counts": null,
+      "pipeline_nodes": null,
+      "name": "Qwen3 30B-A3B 4-bit",
+      "hf": "mlx-community/Qwen3-30B-A3B-4bit",
+      "packer_layers": 24,
+      "notes": "Day 12 scoreboard workhorse",
+      "source": "hf-mlx",
+      "native_mtp_available": false,
+      "warnings": [],
+      "model_type": "qwen3_moe",
+      "tie_word_embeddings": false,
+      "split_check": null,
+      "split_note": "",
+      "lead_path": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+      "packer_path": "/Users/brenden/.caravan/mlx-models/mlx-community--Qwen3-30B-A3B-4bit",
+      "available_lead": true,
+      "usable": true,
+      "disabled": false,
+      "disabled_reason": "",
+      "weights_gb": 17.174622208,
+      "fit": {
+        "color": "yellow",
+        "nodes_needed": 2,
+        "fits_on": [
+          2
+        ],
+        "need_gb_1": 20.3,
+        "need_gb_split": 11.02,
+        "weights_gb": 17.17,
+        "kv_gb_1": 1.37,
+        "reason": "Fits on 2 Minis, about 11 GB RAM each (capacity ~16 GB)",
+        "limit": "ram",
+        "capacity_gb": [
+          16.35,
+          16.3
+        ],
+        "capacity_labels": [
+          "EXO2",
+          "EXO1"
+        ],
+        "online_nodes": 2,
+        "runtime_stages": 2,
+        "disk_ok": true,
+        "disk_reason": null
+      },
+      "nodes": {
+        "EXO1": {
+          "path": "/Users/brenden/.exo/models/mlx-community--Qwen3-30B-A3B-4bit",
+          "folder": "mlx-community--Qwen3-30B-A3B-4bit",
+          "weights_gb": 17.17,
+          "full_weights_gb": 17.174622208,
+          "stage_counts": null,
+          "stage_ok": null,
+          "storage": {
+            "files": {
+              "model-00004-of-00004.safetensors": 1215804259,
+              "model-00001-of-00004.safetensors": 5319507366,
+              "added_tokens.json": 707,
+              "tokenizer_config.json": 9706,
+              "special_tokens_map.json": 613,
+              "config.json": 1190,
+              "tokenizer.json": 11422654,
+              "README.md": 897,
+              "merges.txt": 1671853,
+              "model-00003-of-00004.safetensors": 5274790383,
+              "caravan-placement.json": 76,
+              ".gitattributes": 1570,
+              "vocab.json": 2776833,
+              "model.safetensors.index.json": 119557,
+              "model-00002-of-00004.safetensors": 5364678660
+            },
+            "on_disk_bytes": 17190786324,
+            "allocated_bytes": 17190825984,
+            "links": [],
+            "invalid_shards": []
+          },
+          "invalid_shards": [],
+          "kind": "full",
+          "ok": true,
+          "full_ok": true,
+          "has_config": true,
+          "has_index": true,
+          "has_tokenizer": true,
+          "lead_ok": true,
+          "packer_ok": true,
+          "reason": "",
+          "n_layers": 48,
+          "incomplete_n": 0,
+          "missing_n": 0,
+          "placement": {
+            "mode": "one",
+            "k": 1,
+            "node_ids": [
+              "exo1"
+            ],
+            "label": "1 Mini \u00b7 EXO1"
+          },
+          "native_mtp_available": false,
+          "warnings": [],
+          "model_type": "qwen3_moe",
+          "tie_word_embeddings": false,
+          "shards_present": [
+            "model-00001-of-00004.safetensors",
+            "model-00002-of-00004.safetensors",
+            "model-00003-of-00004.safetensors",
+            "model-00004-of-00004.safetensors"
+          ]
+        },
+        "EXO2": {
+          "path": "/Users/brenden/.caravan/mlx-models/mlx-community--Qwen3-30B-A3B-4bit",
+          "folder": "mlx-community--Qwen3-30B-A3B-4bit",
+          "weights_gb": 17.17,
+          "full_weights_gb": 17.174622208,
+          "stage_counts": null,
+          "stage_ok": null,
+          "storage": {
+            "files": {
+              "model-00004-of-00004.safetensors": 1215804259,
+              "model-00001-of-00004.safetensors": 5319507366,
+              "added_tokens.json": 707,
+              "tokenizer_config.json": 9706,
+              "special_tokens_map.json": 613,
+              "config.json": 1190,
+              "tokenizer.json": 11422654,
+              "README.md": 897,
+              "merges.txt": 1671853,
+              "model-00003-of-00004.safetensors": 5274790383,
+              ".gitattributes": 1570,
+              "vocab.json": 2776833,
+              "model.safetensors.index.json": 119557,
+              "model-00002-of-00004.safetensors": 5364678660
+            },
+            "on_disk_bytes": 17190786248,
+            "allocated_bytes": 17190821888,
+            "links": [],
+            "invalid_shards": []
+          },
+          "invalid_shards": [],
+          "kind": "full",
+          "ok": true,
+          "full_ok": true,
+          "has_config": true,
+          "has_index": true,
+          "has_tokenizer": true,
+          "lead_ok": true,
+          "packer_ok": true,
+          "reason": "",
+          "n_layers": 48,
+          "incomplete_n": 0,
+          "missing_n": 0,
+          "placement": null,
+          "native_mtp_available": false,
+          "warnings": [],
+          "model_type": "qwen3_moe",
+          "tie_word_embeddings": false,
+          "shards_present": [
+            "model-00001-of-00004.safetensors",
+            "model-00002-of-00004.safetensors",
+            "model-00003-of-00004.safetensors",
+            "model-00004-of-00004.safetensors"
+          ]
+        }
+      },
+      "need_split": false,
+      "run_mode": "single",
+      "placement": {
+        "mode": "one",
+        "k": 1,
+        "node_ids": [
+          "exo1"
+        ],
+        "label": "1 Mini \u00b7 EXO1"
+      },
+      "architecture": {
+        "supported": true,
+        "model_type": "qwen3_moe",
+        "effective": "qwen3_moe",
+        "remapped": false,
+        "reason": ""
+      },
+      "held_on": [
+        "EXO1",
+        "EXO2"
+      ]
+    },
+    {
+      "id": "gguf/qwen2.5-3b-instruct-q4_0",
+      "name": "qwen2.5-3b-instruct-q4_0 (GGUF)",
+      "hf": "gguf/qwen2.5-3b-instruct-q4_0",
+      "source": "gguf",
+      "backend": "llama",
+      "lead_path": "/Users/brenden/.caravan/models/Qwen--Qwen2.5-3B-Instruct-GGUF/qwen2.5-3b-instruct-q4_0.gguf",
+      "size_gb": 2.0,
+      "usable": true,
+      "available_lead": true,
+      "disabled_reason": "",
+      "placement_options": [
+        {
+          "id": "one:exo1",
+          "mode": "one",
+          "node_ids": [
+            "exo1"
+          ],
+          "node_labels": [
+            "EXO1"
+          ],
+          "label": "One Mini \u00b7 EXO1",
+          "enabled": true,
+          "fits": true,
+          "reason": ""
+        },
+        {
+          "id": "split:exo1,exo2",
+          "mode": "split",
+          "node_ids": [
+            "exo1",
+            "exo2"
+          ],
+          "node_labels": [
+            "EXO1",
+            "EXO2"
+          ],
+          "label": "Split across 2 Minis \u00b7 EXO1 + EXO2",
+          "enabled": true,
+          "fits": true,
+          "reason": ""
+        }
+      ],
+      "default_placement": "one:exo1",
+      "current": false
+    },
+    {
+      "id": "gguf/Qwen3-30B-A3B-Q4_K_S",
+      "name": "Qwen3-30B-A3B-Q4_K_S (GGUF)",
+      "hf": "gguf/Qwen3-30B-A3B-Q4_K_S",
+      "source": "gguf",
+      "backend": "llama",
+      "lead_path": "/Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf",
+      "size_gb": 17.46,
+      "usable": true,
+      "available_lead": true,
+      "disabled_reason": "",
+      "placement_options": [
+        {
+          "id": "one:exo1",
+          "mode": "one",
+          "node_ids": [
+            "exo1"
+          ],
+          "node_labels": [
+            "EXO1"
+          ],
+          "label": "One Mini \u00b7 EXO1",
+          "enabled": true,
+          "fits": true,
+          "reason": ""
+        },
+        {
+          "id": "split:exo1,exo2",
+          "mode": "split",
+          "node_ids": [
+            "exo1",
+            "exo2"
+          ],
+          "node_labels": [
+            "EXO1",
+            "EXO2"
+          ],
+          "label": "Split across 2 Minis \u00b7 EXO1 + EXO2",
+          "enabled": true,
+          "fits": true,
+          "reason": ""
+        }
+      ],
+      "default_placement": "one:exo1",
+      "current": false
+    },
+    {
+      "id": "gguf/gemma-4-26B_q4_0-it",
+      "name": "gemma-4-26B_q4_0-it (GGUF)",
+      "hf": "gguf/gemma-4-26B_q4_0-it",
+      "source": "gguf",
+      "backend": "llama",
+      "lead_path": "/Users/brenden/.caravan/models/gemma-4-26B_q4_0-it.gguf",
+      "size_gb": 14.44,
+      "usable": true,
+      "available_lead": true,
+      "disabled_reason": "",
+      "placement_options": [
+        {
+          "id": "one:exo1",
+          "mode": "one",
+          "node_ids": [
+            "exo1"
+          ],
+          "node_labels": [
+            "EXO1"
+          ],
+          "label": "One Mini \u00b7 EXO1",
+          "enabled": true,
+          "fits": true,
+          "reason": ""
+        },
+        {
+          "id": "split:exo1,exo2",
+          "mode": "split",
+          "node_ids": [
+            "exo1",
+            "exo2"
+          ],
+          "node_labels": [
+            "EXO1",
+            "EXO2"
+          ],
+          "label": "Split across 2 Minis \u00b7 EXO1 + EXO2",
+          "enabled": true,
+          "fits": true,
+          "reason": ""
+        }
+      ],
+      "default_placement": "one:exo1",
+      "current": false
+    }
+  ],
+  "caravan_version": "9242f21",
+  "current": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+  "source": "disk",
+  "max_split_stages": 2
+}

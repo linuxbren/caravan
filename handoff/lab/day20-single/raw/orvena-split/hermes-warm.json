@@ -1,0 +1,88 @@
+{
+  "label": "orvena-split",
+  "route": "hermes",
+  "cache_label": "warm",
+  "start_CST": "2026-11-09T21:55:08.500153-06:00",
+  "tools": 19,
+  "max_tokens": 1024,
+  "reasoning_effort": "medium",
+  "request_sha256": "5eb64921b6958a37c3fe9e14b323964392a8d13d299cf5d79d68ffabd1f5b8e2",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 5.566108290979173,
+  "first_wire_token_s": 0.5495606589829549,
+  "first_visible_s": 3.6828920270199887,
+  "usage": {
+    "prompt_tokens": 11439,
+    "completion_tokens": 160,
+    "total_tokens": 11599,
+    "prompt_tokens_details": {
+      "cached_tokens": 11400
+    },
+    "caravan": {
+      "how": "agent-prefix-hit-memory",
+      "prefill_s": 0.217,
+      "ttft_s": 0.266,
+      "total_s": 5.281,
+      "peak_gb": 3.22,
+      "split": {
+        "calls": 169,
+        "mb_out": 0.12,
+        "mb_in": 1.04,
+        "wait_s": 2.435,
+        "front_s": 2.335,
+        "net_s": 0.1
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 16,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 5.282,
+        "need_gb": 0.817,
+        "prompt_tokens": 11439,
+        "budget_tokens": 79574,
+        "bytes_per_token": 65536.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 15.826,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 14.076,
+        "packer_available_gb": 7.032,
+        "packer_headroom_gb": 5.282,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 179.7,
+      "write_tok_s": 31.7
+    }
+  },
+  "answer": "1. Run `systemctl status <service-name>` to confirm the service is active and running.\n2. Test the service endpoint with `curl <url>` to verify it responds.\n3. Check the service logs with `journalctl -u <service-name>` for any error messages.",
+  "reasoning_chars": 417,
+  "end_CST": "2026-11-09T21:55:14.066337-06:00"
+}

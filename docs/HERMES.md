@@ -137,3 +137,16 @@ main state, then aux restarted. No model unload, Hermes tool removal or global
 thinking-off. Main final full19-tool medium request stopped successfully in
 11.872s, native TTFT.999s,6.22tok/s. Main Huihui remains24/40 KV16.
 GET8090 /v1/models now discovers the live MLX model even with dead GGUF upstream.
+
+## Follow-up single-versus-split replay
+
+See DAY20.md's resumed Qwen3.5-family comparison and handoff/lab/day20-single/.
+Exact same19-tool replay payloads compared across actual placements; no Hermes
+configuration changed. Orvena/ was added to the proxy's existing explicit MLX
+prefix allowlist (otherwise it fell through to dead GGUF upstream). Sidecar
+was unloaded during measurements, restored after main Huihui24/40 KV16.
+Huihui full single GPU OOMed under stock admission;1976b7b fixes a nested decoder
+layer-count underestimation in single-worker KV budgets, not a relaxed guard.
+Astrea short medium emitted EOS-only reasoning; supplemental explicit-none short
+results are separate. Full-prefix Astrea/Orvena produced valid matching replies.
+Final19-tool medium Huihui reply: .405s native TTFT,6.21tok/s,11.372s wall,stop.

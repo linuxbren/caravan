@@ -1,0 +1,14 @@
+{
+  "label": "orvena-single",
+  "route": "hermes",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:47:10.472325-06:00",
+  "tools": 19,
+  "max_tokens": 1024,
+  "reasoning_effort": "medium",
+  "request_sha256": "1994eaf036c99537ae593f1952f7bbdbc2544b6ebe55a9acacfa22c4deb47165",
+  "ok": false,
+  "error": "HTTP Error 502: Bad Gateway",
+  "wall_s": 0.01587885699700564,
+  "end_CST": "2026-11-09T21:47:10.488348-06:00"
+}

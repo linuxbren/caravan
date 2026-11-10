@@ -1,0 +1,80 @@
+{
+  "label": "orvena-single",
+  "route": "direct",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:46:44.153488-06:00",
+  "tools": 0,
+  "max_tokens": 1024,
+  "reasoning_effort": "medium",
+  "request_sha256": "f66831549e3ffe7fc459fda80a660f580a4ca9ad63aebbc3ddad5db94d1eabcc",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 13.32268403301714,
+  "first_wire_token_s": 0.36593441799050197,
+  "first_visible_s": 12.759929833002388,
+  "usage": {
+    "prompt_tokens": 54,
+    "completion_tokens": 505,
+    "total_tokens": 559,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "caravan": {
+      "how": "cold",
+      "prefill_s": 0.178,
+      "ttft_s": 0.22,
+      "total_s": 13.25,
+      "peak_gb": 2.61,
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": false,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": null,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": null,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 16.175,
+        "need_gb": 0.141,
+        "prompt_tokens": 54,
+        "budget_tokens": 122383,
+        "bytes_per_token": 131072.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 17.925,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 16.175,
+        "packer_available_gb": null,
+        "packer_headroom_gb": null,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 303.4,
+      "write_tok_s": 38.68
+    }
+  },
+  "answer": "Verify the service status is active. Test the API endpoint for connectivity. Check system logs for successful startup or error messages.",
+  "reasoning_chars": 1675,
+  "end_CST": "2026-11-09T21:46:57.476221-06:00"
+}

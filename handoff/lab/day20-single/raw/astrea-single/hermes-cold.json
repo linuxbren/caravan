@@ -1,0 +1,80 @@
+{
+  "label": "astrea-single",
+  "route": "hermes",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:43:55.344974-06:00",
+  "tools": 19,
+  "max_tokens": 1024,
+  "reasoning_effort": "medium",
+  "request_sha256": "5444b7bfa38970f1e044f6b74ee6dcfad6765f90f3a2b612c5891744b0921669",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 60.762652208970394,
+  "first_wire_token_s": 50.50502348894952,
+  "first_visible_s": 56.946769601956476,
+  "usage": {
+    "prompt_tokens": 11435,
+    "completion_tokens": 159,
+    "total_tokens": 11594,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "caravan": {
+      "how": "cold",
+      "prefill_s": 50.339,
+      "ttft_s": 50.443,
+      "total_s": 60.699,
+      "peak_gb": 9.51,
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": false,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": null,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": null,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 11.649,
+        "need_gb": 1.633,
+        "prompt_tokens": 11435,
+        "budget_tokens": 87849,
+        "bytes_per_token": 131072.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 13.399,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 11.649,
+        "packer_available_gb": null,
+        "packer_headroom_gb": null,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 227.2,
+      "write_tok_s": 15.41
+    }
+  },
+  "answer": "1. Check service status: `systemctl status <service>` or `docker ps`\n2. Review logs for errors: `journalctl -u <service>` or `docker logs <container>`\n3. Test endpoint with curl: `curl http://localhost:<port>/health`",
+  "reasoning_chars": 391,
+  "end_CST": "2026-11-09T21:44:56.107705-06:00"
+}

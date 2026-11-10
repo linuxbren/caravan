@@ -1,0 +1,297 @@
+{
+  "old_lead_pid": null,
+  "start_CST": "2026-11-09T21:50:35.047411-06:00",
+  "request": {
+    "model_id": "orvena-4b-mlx-4bit",
+    "engine": "mlx",
+    "placement": {
+      "mode": "one",
+      "node_ids": [
+        "exo1"
+      ]
+    },
+    "node_ids": [
+      "exo1"
+    ],
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "kv_bits": "16"
+    }
+  },
+  "http": 200,
+  "body": {
+    "status": "idle",
+    "model_id": null,
+    "model_name": null,
+    "progress": [
+      {
+        "t": 1794282435.983,
+        "msg": "EXO2: 24 layers ready"
+      },
+      {
+        "t": 1794282436.996,
+        "msg": "lead: 21:47:16 [mlx-worker] fuse kernels: off"
+      },
+      {
+        "t": 1794282436.996,
+        "msg": "lead: 21:47:16 [mlx-worker] model_type remap: qwen3_5_text \u2192 qwen3_5"
+      },
+      {
+        "t": 1794282436.996,
+        "msg": "lead: 21:47:16 [mlx-worker] lead GPU keepalive on (warms Metal while waiting for packer 1)"
+      },
+      {
+        "t": 1794282440.026,
+        "msg": "lead: [transformers] The tokenizer you are loading from '/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit' with a"
+      },
+      {
+        "t": 1794282441.037,
+        "msg": "lead: 21:47:20 [mlx-worker] split lead: lead: layers 24-63 of 64 here, packer 1: layers 0-23 of 64 at 169.254.99.64:5560"
+      },
+      {
+        "t": 1794282441.037,
+        "msg": "lead: 21:47:20 [mlx-worker] split speculate: --no-split-draft; auto-pair off"
+      },
+      {
+        "t": 1794282441.037,
+        "msg": "lead: 21:47:20 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)"
+      },
+      {
+        "t": 1794282441.037,
+        "msg": "lead: 21:47:20 [mlx-worker] mlx cache_limit 1.5 GB"
+      },
+      {
+        "t": 1794282442.047,
+        "msg": "lead: 21:47:21 [mlx-worker] warm-up 0.52s"
+      },
+      {
+        "t": 1794282442.047,
+        "msg": "lead: 21:47:21 [mlx-worker] loaded mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit (qwen3_5) in 4.5s; sessions<= 4, bytes<= 2147483648, prefill ste"
+      },
+      {
+        "t": 1794282442.047,
+        "msg": "lead: 21:47:21 [mlx-worker] active settings: {\"fuse_kernels\": \"off\", \"guess_ahead\": false, \"guess_ahead_loaded\": false, \"guess_ahead_mode\": \"helper\", \"keepalive\": tru"
+      },
+      {
+        "t": 1794282442.047,
+        "msg": "lead: 21:47:21 [mlx-worker] split pipeline chats=1 (serial _run; guess-ahead/PL enabled)"
+      },
+      {
+        "t": 1794282442.047,
+        "msg": "lead: 21:47:21 [mlx-worker] listening on http://127.0.0.1:8194"
+      },
+      {
+        "t": 1794282442.051,
+        "msg": "lead health ok"
+      },
+      {
+        "t": 1794282442.054,
+        "msg": "Balance loaded; send a reply to measure real speed"
+      },
+      {
+        "t": 1794282633.544,
+        "msg": "stopping workers (ui)"
+      },
+      {
+        "t": 1794282634.908,
+        "msg": "idle"
+      }
+    ],
+    "error": null,
+    "lead_pid": null,
+    "packer_pid": null,
+    "lead_url": "http://127.0.0.1:8194",
+    "split": true,
+    "lpm_ok": true,
+    "settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "fuse_kernels": "auto",
+      "kv_bits": "16",
+      "keepalive": "auto"
+    },
+    "page_settings": {
+      "self_tune": "off",
+      "guess_ahead": "off",
+      "prompt_lookup": "off",
+      "shared_start": "off",
+      "pipeline_chats": "1",
+      "fuse_kernels": "auto",
+      "kv_bits": "16",
+      "keepalive": "auto"
+    },
+    "from_file": {},
+    "config_errors": [],
+    "balance": {
+      "counts": [
+        24,
+        40
+      ],
+      "node_ids": [
+        "exo2",
+        "exo1"
+      ],
+      "lead_pid": 18781,
+      "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+      "model_name": "Huihui Qwen3.5 27B Claude 4.6 Opus abliterated 4bit",
+      "model_path": "/Users/brenden/.caravan/mlx-models/mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit"
+    }
+  },
+  "final_status": {
+    "tuning": {
+      "trial": null,
+      "reload_wanted": [],
+      "known": true,
+      "replies_learned": 0,
+      "winner": {
+        "fuse_kernels": "off",
+        "keepalive": true,
+        "kv_bits": 16
+      }
+    },
+    "optimize": {
+      "running": false,
+      "mode": null,
+      "phase": "idle",
+      "eta_s": null
+    },
+    "worker": {
+      "status": "ready",
+      "model_id": "orvena-4b-mlx-4bit",
+      "model_name": "Orvena 4B MLX 4bit",
+      "progress": [
+        {
+          "t": 1794282637.217,
+          "msg": "switching to Orvena 4B MLX 4bit (single)"
+        },
+        {
+          "t": 1794282637.218,
+          "msg": "settings: self_tune=off, guess_ahead=off, prompt_lookup=off, shared_start=off, pipeline_chats=1, fuse_kernels=auto, kv_bits=16, keepalive=auto -> --no-split-draft --no-learn --no-split-shared-prefix-cache --split-pipeline-chats 1"
+        },
+        {
+          "t": 1794282638.736,
+          "msg": "starting single-Mini worker on EXO1 (/Users/brenden/.caravan/mlx-models/Orvena--Orvena-4B-MLX-4bit)"
+        },
+        {
+          "t": 1794282639.744,
+          "msg": "lead: 21:50:38 [mlx-worker] fuse kernels: off"
+        },
+        {
+          "t": 1794282639.744,
+          "msg": "lead: 21:50:39 [mlx-worker] model_type remap: qwen3_5_text \u2192 qwen3_5"
+        },
+        {
+          "t": 1794282641.765,
+          "msg": "lead: 21:50:41 [mlx-worker] wired limit 0 -> 19069665280 bytes (held for process lifetime)"
+        },
+        {
+          "t": 1794282641.765,
+          "msg": "lead: 21:50:41 [mlx-worker] mlx cache_limit 1.5 GB"
+        },
+        {
+          "t": 1794282641.765,
+          "msg": "lead: 21:50:41 [mlx-worker] warm-up 0.09s"
+        },
+        {
+          "t": 1794282641.765,
+          "msg": "lead: 21:50:41 [mlx-worker] loaded Orvena--Orvena-4B-MLX-4bit (qwen3_5) in 1.5s; sessions<= 4, bytes<= 2147483648, prefill step 2048, kv bits 16, persist=on /Users/br"
+        },
+        {
+          "t": 1794282641.765,
+          "msg": "lead: 21:50:41 [mlx-worker] active settings: {\"fuse_kernels\": \"off\", \"guess_ahead\": false, \"guess_ahead_loaded\": false, \"guess_ahead_mode\": \"helper\", \"keepalive\": nul"
+        },
+        {
+          "t": 1794282641.765,
+          "msg": "lead: 21:50:41 [mlx-worker] listening on http://127.0.0.1:8194"
+        },
+        {
+          "t": 1794282641.768,
+          "msg": "lead health ok"
+        },
+        {
+          "t": 1794282641.771,
+          "msg": "ready"
+        }
+      ],
+      "error": null,
+      "lead_pid": 19615,
+      "packer_pid": null,
+      "lead_url": "http://127.0.0.1:8194",
+      "split": false,
+      "lpm_ok": true,
+      "settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "page_settings": {
+        "self_tune": "off",
+        "guess_ahead": "off",
+        "prompt_lookup": "off",
+        "shared_start": "off",
+        "pipeline_chats": "1",
+        "fuse_kernels": "auto",
+        "kv_bits": "16",
+        "keepalive": "auto"
+      },
+      "from_file": {},
+      "config_errors": [],
+      "balance": null
+    },
+    "restore": {
+      "phase": "saved",
+      "message": "Last successful model saved for next login",
+      "enabled": true,
+      "last_model": "orvena-4b-mlx-4bit",
+      "saved_at": 1794282641.7709599
+    },
+    "lead_healthy": true,
+    "split": {
+      "split": false
+    },
+    "active": {
+      "guess_ahead": false,
+      "guess_ahead_loaded": false,
+      "native_mtp_available": false,
+      "guess_ahead_mode": "helper",
+      "prompt_lookup": {
+        "enabled": false,
+        "adaptive": false,
+        "overlap_on": 0.5
+      },
+      "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+      "two_chats_available": false,
+      "self_tune": false,
+      "shared_start": false,
+      "pipeline_chats": 1,
+      "fuse_kernels": "off",
+      "kv_bits": 16,
+      "keepalive": null,
+      "pinned": [],
+      "sweep_paused": false,
+      "packer_layers": null,
+      "n_layers": null,
+      "reload_auto": [],
+      "reload_trial": null
+    },
+    "uptime_s": 6207.0,
+    "ports": {
+      "web": 8190,
+      "lead": 8194,
+      "packer": "169.254.103.191:5560"
+    }
+  },
+  "end_CST": "2026-11-09T21:50:43.298493-06:00"
+}

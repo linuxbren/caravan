@@ -1,0 +1,10 @@
+{
+  "disk_before_EXO1_free_bytes": 171204190208,
+  "disk_after_initial_copy_EXO1_free_bytes": 154491854848,
+  "transferred": "Missing Huihui shard1 5,343,269,992B + full existing Astrea and Orvena copies EXO2\u2192EXO1, verified-host-key Thunderbolt rsync; no HF weights downloaded",
+  "preserved_EXO1_partial": "~/.caravan/day20-single/quarantine/orvena-old-model.safetensors.incomplete (45,088,768B; lsof no opener)",
+  "preserved_EXO2_root_link": "~/.caravan/day20-single/quarantine/orvena-original-root-link -> ~/.caravan/day17/Orvena-target; original target untouched; standard root now physical full copy from EXO1",
+  "namespace_config": "Existing --mlx-prefixes extended to mlx-community/,huihui-,Orvena/; idle proxy alone reloaded; no Hermes configuration change",
+  "guard_commit": "1976b7b",
+  "tests": "794 passed in44.103s"
+}

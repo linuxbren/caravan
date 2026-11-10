@@ -1,0 +1,88 @@
+{
+  "label": "astrea-split-none",
+  "route": "direct",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:55:38.572191-06:00",
+  "tools": 0,
+  "max_tokens": 512,
+  "reasoning_effort": "none",
+  "request_sha256": "45e27598ad801fd7d885b7c4f24cb2bc413c952799c71abd46746cb63f0f46ef",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 3.449733356013894,
+  "first_wire_token_s": 0.7215886490303092,
+  "first_visible_s": 0.7215897050336935,
+  "usage": {
+    "prompt_tokens": 56,
+    "completion_tokens": 47,
+    "total_tokens": 103,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "caravan": {
+      "how": "cold",
+      "prefill_s": 0.297,
+      "ttft_s": 0.399,
+      "total_s": 3.379,
+      "peak_gb": 3.61,
+      "split": {
+        "calls": 53,
+        "mb_out": 0.01,
+        "mb_in": 0.86,
+        "wait_s": 1.538,
+        "front_s": 1.502,
+        "net_s": 0.036
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 16,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 4.834,
+        "need_gb": 0.037,
+        "prompt_tokens": 56,
+        "budget_tokens": 73249,
+        "bytes_per_token": 65536.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 14.699,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 12.949,
+        "packer_available_gb": 6.584,
+        "packer_headroom_gb": 4.834,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 188.6,
+      "write_tok_s": 15.44
+    }
+  },
+  "answer": "1. Check if the service is running by looking at its process or service status.  \n2. Verify the service logs for any errors or warnings after the reboot.  \n3. Test a basic input to ensure the service responds correctly.",
+  "reasoning_chars": 0,
+  "end_CST": "2026-11-09T21:55:42.021972-06:00"
+}

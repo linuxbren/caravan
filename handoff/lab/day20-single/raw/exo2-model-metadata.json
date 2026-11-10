@@ -1,0 +1,48 @@
+{
+  "disk": {
+    "total": 494384795648,
+    "used": 304438923264,
+    "free": 189945872384
+  },
+  "models": [
+    {
+      "folder": "mlx-community--Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit",
+      "root_is_link": false,
+      "model_type": "qwen3_5",
+      "decoder_layers": 64,
+      "max_position_embeddings": 262144,
+      "kv_heads": 4,
+      "head_dim": 256,
+      "root_shard_bytes": {
+        "model-00002-of-00003.safetensors": 5354186935,
+        "model-00001-of-00003.safetensors": 5343269992
+      }
+    },
+    {
+      "folder": "mlx-community--Astrea-R8-Chat-9B-OptiQ-4bit",
+      "root_is_link": false,
+      "model_type": "qwen3_5",
+      "decoder_layers": 32,
+      "max_position_embeddings": 262144,
+      "kv_heads": 4,
+      "head_dim": 256,
+      "root_shard_bytes": {
+        "model-00001-of-00002.safetensors": 5349381654,
+        "model-00002-of-00002.safetensors": 1751328472,
+        "optiq_vision.safetensors": 912058029
+      }
+    },
+    {
+      "folder": "Orvena--Orvena-4B-MLX-4bit",
+      "root_is_link": false,
+      "model_type": "qwen3_5",
+      "decoder_layers": 32,
+      "max_position_embeddings": 262144,
+      "kv_heads": 4,
+      "head_dim": 256,
+      "root_shard_bytes": {
+        "model.safetensors": 3034300629
+      }
+    }
+  ]
+}

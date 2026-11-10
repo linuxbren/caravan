@@ -1,0 +1,19 @@
+{
+  "label": "huihui-single",
+  "route": "hermes",
+  "cache_label": "cold",
+  "start_CST": "2026-11-09T21:37:34.101132-06:00",
+  "tools": 19,
+  "max_tokens": 512,
+  "reasoning_effort": "medium",
+  "request_sha256": "b545cb17ffa6f53888ec78fc88631fe3f3ce2d8c871cccb5f0d2f5c7aab154ff",
+  "http": 200,
+  "ok": false,
+  "wall_s": 123.56172777799657,
+  "first_wire_token_s": null,
+  "first_visible_s": null,
+  "usage": null,
+  "answer": "",
+  "reasoning_chars": 0,
+  "end_CST": "2026-11-09T21:39:37.662960-06:00"
+}

@@ -1,0 +1,10 @@
+{
+  "first_CST": "2026-11-09T21:37:13.622927-06:00",
+  "last_CST": "2026-11-09T21:56:38.498074-06:00",
+  "real_samples": 226,
+  "errors": 0,
+  "min_available_GB": 1.099841536,
+  "swap_used_M_min": 1111.94,
+  "swap_used_M_max": 1312.0,
+  "discarded_monitor": "memory-watch.jsonl used synthetic 24/12 fallback because system Python3.9 could not import union annotations; never use its memory figures"
+}

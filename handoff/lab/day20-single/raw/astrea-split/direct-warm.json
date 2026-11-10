@@ -1,0 +1,88 @@
+{
+  "label": "astrea-split",
+  "route": "direct",
+  "cache_label": "warm",
+  "start_CST": "2026-11-09T21:45:18.676665-06:00",
+  "tools": 0,
+  "max_tokens": 1024,
+  "reasoning_effort": "medium",
+  "request_sha256": "97262331c01a128a56e2896ca55270c3e9ff056b759feccdb75068f8071cab8c",
+  "http": 200,
+  "finish_reason": "stop",
+  "ok": true,
+  "wall_s": 2.9705109469941817,
+  "first_wire_token_s": 0.3833675100468099,
+  "first_visible_s": null,
+  "usage": {
+    "prompt_tokens": 54,
+    "completion_tokens": 45,
+    "total_tokens": 99,
+    "prompt_tokens_details": {
+      "cached_tokens": 53
+    },
+    "caravan": {
+      "how": "hit-memory",
+      "prefill_s": 0.009,
+      "ttft_s": 0.108,
+      "total_s": 2.943,
+      "peak_gb": 3.61,
+      "split": {
+        "calls": 49,
+        "mb_out": 0.0,
+        "mb_in": 0.39,
+        "wait_s": 1.321,
+        "front_s": 1.29,
+        "net_s": 0.031
+      },
+      "active": {
+        "guess_ahead": false,
+        "guess_ahead_loaded": false,
+        "native_mtp_available": false,
+        "guess_ahead_mode": "helper",
+        "prompt_lookup": {
+          "enabled": false,
+          "adaptive": false,
+          "overlap_on": 0.5
+        },
+        "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower",
+        "two_chats_available": true,
+        "self_tune": false,
+        "shared_start": false,
+        "pipeline_chats": 1,
+        "fuse_kernels": "off",
+        "kv_bits": 16,
+        "keepalive": true,
+        "pinned": [],
+        "sweep_paused": false,
+        "packer_layers": 16,
+        "n_layers": null,
+        "reload_auto": [],
+        "reload_trial": null
+      },
+      "memory_guard": {
+        "trimmed_turns": 0,
+        "headroom_gb": 5.441,
+        "need_gb": 0.071,
+        "prompt_tokens": 54,
+        "budget_tokens": 81996,
+        "bytes_per_token": 65536.0,
+        "error": null,
+        "ok": true,
+        "available_gb": 16.841,
+        "safety_gb": 1.75,
+        "local_headroom_gb": 15.091,
+        "packer_available_gb": 7.191,
+        "packer_headroom_gb": 5.441,
+        "recalled_snippets": 0,
+        "recalled": [],
+        "archived_total": 0,
+        "archive_note": false
+      },
+      "read_tok_s": 111.1,
+      "write_tok_s": 15.52
+    }
+  },
+  "answer": "",
+  "reasoning_chars": 211,
+  "end_CST": "2026-11-09T21:45:21.647223-06:00"
+}

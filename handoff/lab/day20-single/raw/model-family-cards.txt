@@ -1,0 +1,46 @@
+MODEL mlx-community--Astrea-R8-Chat-9B-OptiQ-4bit
+no local model card
+MODEL Orvena--Orvena-4B-MLX-4bit
+---
+library_name: mlx
+license: apache-2.0
+license_link: https://huggingface.co/Orvena/Orvena-4B-MLX-4bit/blob/main/LICENSE
+pipeline_tag: image-text-to-text
+base_model:
+- Orvena/Orvena-4B
+tags:
+- mlx
+- tool-use
+- function-calling
+- on-device
+- iphone
+- multilingual
+---
+
+# Orvena 4B, MLX 4-bit
+
+This is the 4-bit [MLX](https://github.com/ml-explore/mlx) build of [Orvena 4B](https://huggingface.co/Orvena/Orvena-4B),
+the model [Orvena](https://orvena.app) downloads and runs on the iPhone. Orvena 4B is trained for tool use on a phone
+in 30 languages.
+
+The weights are 4-bit with a group size of 64 (about 4.5 bits per weight including scales), and the vision encoder is
+included, 3.1 GB in total. The multi-token prediction head is only in the bf16 repository, since Orvena doesn't use it
+on the phone.
+
+On the Orvena bench of 547 phone tasks in 30 languages, run with this exact build, Orvena 4B passes 440 (80.4%)
+against 345 (63.1%) for its base model. On an iPhone 17 Pro Max the median task takes 15.1 seconds, against 37.0
+seconds for the base model with thinking on auto. The [main model card](https://huggingface.co/Orvena/Orvena-4B) has
+the full results, and the
+[technical report](https://huggingface.co/Orvena/Orvena-4B/blob/main/Orvena-4B-technical-report.pdf) covers the data,
+training and evaluation.
+
+## Using it
+
+Orvena loads it with mlx-swift-lm's `VLMModelFactory`, so the folder works as is in Swift apps built on
+[mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm). The chat template answers without thinking unless
+`enable_thinking` is set to true, which matches how the model was trained. Orvena samples with temperature 0.7 and
+top-p 0.8, the values in `generation_config.json`.
+
+## License
+
+Apache-2.0, like Qwen3.5-4B. Built with Qwen. `NOTICE` lists what was changed.
