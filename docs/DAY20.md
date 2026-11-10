@@ -259,23 +259,52 @@ Re-cut only — no unload, no re-record, Huihui left loaded. Source: Omarchy
 - Stats only in the closing “For the nerds” line.
 - X videos go to review before Brenden (standing rule).
 
+## Restore-last-model reboot test — 2026-11-09 19:46–19:55 CST (America/Chicago)
 
-## Restore-last-model reboot test (still deferred)
+Ran this evening: Brenden rebooted **both Minis at once**. Result: **partial fail**.
 
-Approved to run during the Day 19 v3 shoot, but **not executed**: neither Mini
-accepts passwordless `sudo reboot`. Huihui 24/40 EXO2/EXO1 stayed loaded.
-A real path-switchover (Tailscale down on EXO2, LAN/Thunderbolt fallback,
-Tailscale restored) did run; see DAY19.md video v3.
+launchd brought `com.caravan.v3.web` (`:8190`) and `com.caravan.v3.proxy`
+(`:8090`) back on their own. Restore-last-model started at **19:47:05.163 CST**
+and blocked at **19:47:06.735 CST**:
+
+> Could not restore last model: live free memory is unknown for exo2. Check Minis/files/memory, then press Load. No automatic retry or download.
+
+No retry during the five-minute no-touch window after SSH returned (EXO2 LAN
+**19:46:40**, EXO1 LAN **19:47:04**, both Tailscale SSH up by **19:47:11**).
+EXO2 memory was known again by **19:53:14**. A manual Load at **19:54:24**
+made the same Huihui **24/40 EXO2/EXO1** split ready at **19:54:38** (12.1 s).
+
+First Hermes-path reply through Omarchy `:18090` at **19:55:03** (stream, wall
+TTFT **0.487 s**, wall total **2.917 s**). Follow-up official timings
+**19:55:16–19:55:26**: `ttft_s=0.314`, `total_s=9.844`, `hit-memory`,
+read **34.5** tok/s, write **6.61** tok/s. `:8090` `GET /v1/models` remains
+502 (llama upstream) even when MLX chat works — same as before the reboot.
+`exo2-via-exo1` stayed down; `exo2` and `exo2-lan` were fine.
+
+Full table, poller paths, and tunnel note: `docs/DAY19.md` (reboot test + video v4).
+Watchers stopped **19:55:50 CST**. Huihui 24/40 left loaded for Hermes.
+
+## Day 19 video v4
+
+`/workspace/caravan-day19-v4.mp4` (Omarchy `~/day19-video/caravan-day19-v4.mp4`),
+**32.000 s**. Big type, complete wrapped fruits answer, simple switchover
+status from the real fallback log, honest reboot beat (computers/web came
+back on their own; the model needed a Load). Captions in
+`handoff/lab/videos/day19_captions_v4.txt`. X videos still go to review
+before Brenden.
 
 ## Deferred (still open)
 
-- Restore-last-model reboot test (Day 19 closeout deferred; no reboots while Hermes is in use).
-- Live switch / unload / KEEP-web-restart checks (self-tune pause + path-switchover done; restore-last-model reboot still deferred — sudo password needed).
-- `:8090` launchd login/reboot recovery: LaunchAgent installed and live-migrated; not reboot-proved.
+- Restore-last-model **retry** after "live free memory is unknown" (the
+  2026-11-09 dual-Mini reboot proved services come back, but the model
+  restore blocked with no retry).
+- Live switch / unload / KEEP-web-restart checks beyond the self-tune pause
+  and path-switchover already done.
+- `exo2-via-exo1` jump path was still down after this reboot; direct and LAN
+  paths were not.
 - Balance clearer UI mockup → code (one-line explanation, per-Mini memory bars, Auto default with Adjust revealing the slider, live preview, Apply / Back to auto, jargon behind details).
-- Day 19 video v2 at `/workspace/caravan-day19-v2.mp4` (~56.8 s, no test counts; human captions). X drafts under Omarchy `~/Pictures/x-posts/day19/` — review before Brenden posts.
+- Day 19 video v4 at `/workspace/caravan-day19-v4.mp4` (32.000 s). X drafts under Omarchy `~/Pictures/x-posts/day19/` — review before Brenden posts.
 - Day 20 tagged release and main fast-forward (not cut yet).
-
 
 
 ## Both-Mini reboot follow-up — Nov 9, 2026 CST

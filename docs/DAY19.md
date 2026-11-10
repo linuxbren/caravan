@@ -1613,6 +1613,120 @@ Generator: `handoff/lab/videos/make_day19_video_v3.py`. Captions:
 before Brenden.
 
 
+## Restore-last-model reboot test — 2026-11-09 19:46–19:55 CST (America/Chicago)
+
+Brenden rebooted **both Minis at once**. Result: **partial fail**. launchd brought
+the web UI (`com.caravan.v3.web` on `:8190`) and the `:8090` proxy
+(`com.caravan.v3.proxy`) back on their own. Restore-last-model **did run**, then
+**blocked** and **did not retry**. Huihui was not loaded again until a manual
+Load after the five-minute no-touch window. After that Load, the same
+**24/40 EXO2 then EXO1** split was ready and a Hermes-path reply through
+Omarchy `:18090` succeeded.
+
+All times below are America/Chicago (CST), from the 1-second reachability
+poller (`~/day19-video/reboot-watch/logs/reachability.log` on Omarchy), EXO1
+`who -b` / web uptime, and worker progress timestamps.
+
+### Timeline
+
+| Event | Time (CST) |
+|---|---|
+| Both Minis, `who -b` boot stamp (minute resolution) | 19:46 |
+| EXO2 SSH down on every path (`exo2`, `exo2-lan`, `exo2-via-exo1`) | **19:46:18** |
+| EXO1 web vanished from the Omarchy `:18190` tunnel; EXO2 ping down | **19:46:24** |
+| EXO1 SSH down on every path | **19:46:30** |
+| EXO2 LAN SSH back | **19:46:40** (22 s after EXO2 SSH down) |
+| EXO2 Tailscale SSH (`exo2`) back | **19:46:53** (35 s) |
+| EXO1 LAN SSH back; EXO1 ping back | **19:47:04** (34 s after EXO1 SSH down) |
+| EXO1 Tailscale SSH (`exo1`) back | **19:47:11** (41 s) |
+| EXO1 web `:8190` actually listening (launchd) | **~19:47:05** (uptime back-calc at 19:52:36 was 331.1 s) |
+| Auto-restore started (last model Huihui) | **19:47:05.163** |
+| Auto-restore blocked | **19:47:06.735** |
+| Five-minute no-touch after both SSH were up ended; still blocked, no model | **19:52:11** |
+| Omarchy `:18190` web tunnel restarted (it is not a KeepAlive unit; it died with the reboot, so the poller kept reporting web down even while `:8190` was up) | **19:54:12** |
+| Manual `POST /api/models/load` (same 24/40 EXO2/EXO1 split) | **19:54:24** |
+| Huihui ready again, counts `[24, 40]`, `node_ids: ["exo2","exo1"]` | **19:54:38** (12.1 s load) |
+| First Hermes-path reply through `:18090` (stream, HTTP 200) | start **19:55:03**, wall TTFT **0.487 s**, wall total **2.917 s** |
+| Follow-up non-stream reply with official Caravan timings | **19:55:16–19:55:26**, `ttft_s=0.314`, `total_s=9.844`, `how=hit-memory`, read **34.5** tok/s, write **6.61** tok/s |
+
+### What failed
+
+Exact worker / restore message:
+
+> Could not restore last model: live free memory is unknown for exo2. Check Minis/files/memory, then press Load. No automatic retry or download.
+
+`restore.phase` stayed `blocked`. The attempt happened about one second after
+the web process came up, while EXO2 was already SSH-reachable, but live RAM
+for exo2 was not known yet. The code path does not retry. During the whole
+five-minute no-touch window the model stayed unloaded.
+
+By **19:53:14** `/api/nodes` showed both Minis online with known memory
+(EXO2 `available_gb` 16.7, `free_gb` 17.6). A normal Load then succeeded.
+
+### What still worked after the fix
+
+- Same Huihui model, same **24/40** split, same order **EXO2 then EXO1**.
+- Thunderbolt packer peer `169.254.195.205:5560`.
+- `:8090` was listening from login (launchd). `GET /v1/models` on `:8090`
+  still returns **502** `llama-server upstream unreachable` even when the MLX
+  lead is healthy — the same before the reboot (the poller's `:8090` / `:18090`
+  "health" was 502 while Huihui was ready at 19:45). Chat completions with the
+  Huihui model id through the Hermes tunnel **do** work.
+- First Hermes-path stream at 19:55:03 produced reasoning tokens (the probe
+  used `max_tokens=16`). The 19:55:16 non-stream follow-up (`max_tokens=64`)
+  finished `length` with visible content starting
+  `The instruction is to "Say only: hermes-ok"...` — same shape as the earlier
+  Day 20 Hermes check.
+- Watchers (poller + 2 fps headless 1280×720 capture) were stopped at **19:55:50**
+  after that confirmation. Frames and the reachability log remain under
+  Omarchy `~/day19-video/reboot-watch/`.
+- `exo2-via-exo1` stayed down for the whole watch and was still timing out
+  after the test. Direct `exo2` and `exo2-lan` were fine.
+
+No further model unload was done. Huihui 24/40 EXO2/EXO1 was still ready
+after the v4 chat probe below.
+
+## Day 19 video v4
+
+`/workspace/caravan-day19-v4.mp4` (also Omarchy `~/day19-video/caravan-day19-v4.mp4`).
+**32.000 s**, 1280×720, silent, H.264, SHA256
+`545c6fd72f1114b40148c6e9675aeffd572251af26cb8ac92006dcd592a040c3`.
+
+Phone-readable type. Full question and a complete wrapped answer with no raw
+`**` markdown. Typing ~1 s; first reply words already on screen at 2.0 s.
+Switchover is a big status view drawn from the real 19:34:46–19:35:16 CST
+fallback log (`Main connection: off` / `Backup connection: on, switched by itself`).
+End cards are 2 s each. Reboot beat uses the real "Caravan unreachable"
+capture plus an honest status view: computers and the web service came back
+on their own; automatic model restore was blocked; a Load brought the same
+split back. The clip does **not** claim the model came back by itself.
+
+The on-screen question is the same live v3 question, “Name three fruits that
+are usually red.” The complete answer is a real post-restore Hermes-path
+reply to that question at **19:58:19–19:58:37 CST** (`thinking` off, like the
+v3 UI), markdown stripped for display:
+
+> Here are three fruits that are usually red:
+> 1. Apples (specifically varieties like Red Delicious or Fuji)
+> 2. Strawberries
+> 3. Cherries
+
+Captions (`handoff/lab/videos/day19_captions_v4.txt`):
+
+```
+  0.0s  Ask a simple question. Watch it answer live.
+  2.2s  The words show up as they're written.
+ 12.0s  If the main path drops, another way in is ready.
+ 16.0s  It switched on its own. Everything stayed reachable.
+ 20.0s  Pull the plug, the computers come back on their own.
+ 24.0s  The model needed a Load. Then the same split was ready.
+ 28.0s  Two Macs. One model. Built in the open.
+ 30.0s  For the nerds: Huihui 24/40 on EXO2 then EXO1.
+```
+
+Generator: `handoff/lab/videos/make_day19_v4.py`. X videos still go to review
+before Brenden.
+
 
 ## Both-Mini reboot follow-up — Nov 9, 2026 CST
 
