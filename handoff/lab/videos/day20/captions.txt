@@ -1,0 +1,14 @@
+000.0–002.0  Hermes adds tools. We cut the wait, not the tools.
+002.0–005.0  A tiny chat title was wiping the saved setup.
+005.0–008.0  Keep the setup. Read only what is new.
+008.0–011.0  A tiny helper now handles chat titles.
+011.0–013.0  Early warm-up added work, not a faster answer.
+013.0–016.0  Guessing ahead helped copying, not everyday chat.
+016.0–018.0  Smaller chat memory was slower, so it stayed off.
+018.0–021.0  Less thinking sped up short replies, with a tradeoff.
+021.0–024.0  One Mac ran out of room. Sharing the model worked.
+024.0–027.0  Smaller models were faster without the extra hop.
+027.0–030.0  About a minute later, it comes back without a click.
+030.0–033.0  The tools stayed. The wasted work did not.
+033.0–035.0  Less waiting. Same tools. Built in the open.
+035.0–037.0  For the nerds: prefill 207.87→1.17s · titles 6.458→.114s · reboot 64.7s

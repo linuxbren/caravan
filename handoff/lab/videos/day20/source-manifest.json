@@ -1,0 +1,198 @@
+{
+  "capture": "Real Caravan web UI at Omarchy localhost:18190,1280\u00d7720. Read-only drawers; one brief chat. No Apply/Load/Unload.",
+  "crops": [
+    {
+      "file": "brand.jpg",
+      "source": "answer.png",
+      "source_sha256": "c721d538472408eff387eca721a3a3be34d16489dc8ac7c1e05f64166638f30c",
+      "crop_ltrb": [
+        200,
+        25,
+        1067,
+        126
+      ]
+    },
+    {
+      "file": "chat-000.jpg",
+      "source": "chat-000.png",
+      "source_sha256": "118d6dc965c8416f039ec7c15743eb4e12b5b2d9434cf145d774589787605c51",
+      "crop_ltrb": [
+        220,
+        277,
+        650,
+        344
+      ]
+    },
+    {
+      "file": "chat-001.jpg",
+      "source": "chat-001.png",
+      "source_sha256": "118d6dc965c8416f039ec7c15743eb4e12b5b2d9434cf145d774589787605c51",
+      "crop_ltrb": [
+        220,
+        277,
+        650,
+        344
+      ]
+    },
+    {
+      "file": "chat-002.jpg",
+      "source": "chat-002.png",
+      "source_sha256": "3536896f66b85093b3bd463cec219a9ff7aa1f6f5b19419ae928ac1c0b9b8abf",
+      "crop_ltrb": [
+        220,
+        277,
+        650,
+        344
+      ]
+    },
+    {
+      "file": "chat-003.jpg",
+      "source": "chat-003.png",
+      "source_sha256": "3536896f66b85093b3bd463cec219a9ff7aa1f6f5b19419ae928ac1c0b9b8abf",
+      "crop_ltrb": [
+        220,
+        277,
+        650,
+        344
+      ]
+    },
+    {
+      "file": "chat-004.jpg",
+      "source": "chat-004.png",
+      "source_sha256": "118d6dc965c8416f039ec7c15743eb4e12b5b2d9434cf145d774589787605c51",
+      "crop_ltrb": [
+        220,
+        277,
+        650,
+        344
+      ]
+    },
+    {
+      "file": "chat-005.jpg",
+      "source": "chat-005.png",
+      "source_sha256": "c721d538472408eff387eca721a3a3be34d16489dc8ac7c1e05f64166638f30c",
+      "crop_ltrb": [
+        220,
+        277,
+        650,
+        344
+      ]
+    },
+    {
+      "file": "chat-006.jpg",
+      "source": "chat-006.png",
+      "source_sha256": "c99d2d7c7933fa136b99c292508a01e2dced40f1a171efb80af35204f20141ae",
+      "crop_ltrb": [
+        220,
+        277,
+        650,
+        344
+      ]
+    },
+    {
+      "file": "chat-007.jpg",
+      "source": "chat-007.png",
+      "source_sha256": "c99d2d7c7933fa136b99c292508a01e2dced40f1a171efb80af35204f20141ae",
+      "crop_ltrb": [
+        220,
+        277,
+        650,
+        344
+      ]
+    },
+    {
+      "file": "chat-008.jpg",
+      "source": "chat-008.png",
+      "source_sha256": "c721d538472408eff387eca721a3a3be34d16489dc8ac7c1e05f64166638f30c",
+      "crop_ltrb": [
+        220,
+        277,
+        650,
+        344
+      ]
+    },
+    {
+      "file": "answer.jpg",
+      "source": "answer.png",
+      "source_sha256": "c721d538472408eff387eca721a3a3be34d16489dc8ac7c1e05f64166638f30c",
+      "crop_ltrb": [
+        220,
+        277,
+        650,
+        344
+      ]
+    },
+    {
+      "file": "composer.jpg",
+      "source": "answer.png",
+      "source_sha256": "c721d538472408eff387eca721a3a3be34d16489dc8ac7c1e05f64166638f30c",
+      "crop_ltrb": [
+        219,
+        523,
+        1065,
+        595
+      ]
+    },
+    {
+      "file": "lookup.jpg",
+      "source": "lookup.png",
+      "source_sha256": "fdc63bcef4949464395197e0b6b6f5652f0a5ece519d5b16c6407acabcb8b5e7",
+      "crop_ltrb": [
+        860,
+        345,
+        1258,
+        410
+      ]
+    },
+    {
+      "file": "memory.jpg",
+      "source": "memory.png",
+      "source_sha256": "2b3c8459bbf00836e2e1e5b92826233726f0c1bdc608ec9256edb3aa5f0b77c6",
+      "crop_ltrb": [
+        860,
+        345,
+        1258,
+        410
+      ]
+    },
+    {
+      "file": "thinking.jpg",
+      "source": "answer.png",
+      "source_sha256": "c721d538472408eff387eca721a3a3be34d16489dc8ac7c1e05f64166638f30c",
+      "crop_ltrb": [
+        928,
+        291,
+        1060,
+        326
+      ]
+    },
+    {
+      "file": "lead.jpg",
+      "source": "topology-ready.png",
+      "source_sha256": "447eea7ce677b71446c387215e5fd7f339621fd7a29f1008a224c4722bd33317",
+      "crop_ltrb": [
+        16,
+        68,
+        422,
+        156
+      ]
+    },
+    {
+      "file": "packer.jpg",
+      "source": "topology-ready.png",
+      "source_sha256": "447eea7ce677b71446c387215e5fd7f339621fd7a29f1008a224c4722bd33317",
+      "crop_ltrb": [
+        16,
+        370,
+        422,
+        457
+      ]
+    },
+    {
+      "file": "reboot-unreachable.jpg",
+      "source": "day19_v5_unreachable.png; original reboot-watch2 frame f000044",
+      "source_sha256": "a5ffb50f323ab25cedb0e2563e00a04d128175e46a541398468bb5b8933e03f9"
+    }
+  ],
+  "historical_source": "docs/DAY20.md and docs/BENCHMARKS.md; editorial summary, not a new before/after live run."
+}

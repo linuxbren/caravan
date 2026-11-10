@@ -1,0 +1,42 @@
+{
+  "source": "Omarchy real UI capture; relative timing only",
+  "capture": [
+    {
+      "name": "chat-000.png",
+      "elapsed_s": 0.097
+    },
+    {
+      "name": "chat-001.png",
+      "elapsed_s": 0.313
+    },
+    {
+      "name": "chat-002.png",
+      "elapsed_s": 0.564
+    },
+    {
+      "name": "chat-003.png",
+      "elapsed_s": 0.813
+    },
+    {
+      "name": "chat-004.png",
+      "elapsed_s": 1.065
+    },
+    {
+      "name": "chat-005.png",
+      "elapsed_s": 1.33
+    },
+    {
+      "name": "chat-006.png",
+      "elapsed_s": 1.583
+    },
+    {
+      "name": "chat-007.png",
+      "elapsed_s": 1.816
+    },
+    {
+      "name": "chat-008.png",
+      "elapsed_s": 2.067
+    }
+  ],
+  "prompt": "Say hello in one short sentence."
+}

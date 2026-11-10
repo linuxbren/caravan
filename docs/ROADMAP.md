@@ -4,7 +4,7 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-11-09 CST: Day 20 Hermes cache fix live; real Hermes speeds recorded. Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
+*Last updated 2026-11-09 CST: Day20 wrapped; paired Qwen3.5-family matrix and reboot evidence recorded. Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -18,19 +18,25 @@ deprecated flag aliases.
 - [x] Day 19 released (`day19-2026-11-08`, tag 7267325, docs bf2c3b7); main fast-forwarded; 738 tests.
 - [x] Same Huihui 27B restored through Balance, EXO2/EXO1 24/40; correct web and proxy replies, about 0.8 s first token and 5.4 tok/s writing (short smoke only).
 - [x] Remote access: LAN + Thunderbolt SSH fallbacks, `caravan-ssh`, Tailscale guards (8ff3852).
-- [ ] **Restore-last-model reboot test: pending, deferred** (sudo password still required). `:8090` launchd login/reboot recovery not reboot-proved. Path-switchover now demonstrated.
+- [x] Publication-time deferral closed under Day20: first reboot failed; retry-enabled restore plus supervised tunnels recovered unattended on reboot2 in64.735s. See DAY20.md; no new Day19 claim.
 - [x] Self-tune 5s clip v2 (41.53→69.70; interpolated mid frames; Huihui left loaded for re-cut).
 - [x] Day 19 video v3 (`/workspace/caravan-day19-v3.mp4`, 31.6 s, live chat + real path fallback) + X draft (review before Brenden).
-- [ ] **Restore-last-model reboot test: still deferred** (sudo password required; not run in the v3 window).
+- [x] Historical v3-window deferral superseded by the Day20 reboot2 evidence (not a claim that v3 already proved it).
 - [ ] Balance clearer UI (mockup approved to draft: one-line explanation, per-Mini memory bars, Auto default + Adjust slider, live preview, Apply / Back to auto, jargon behind details).
 
 ## Day 20 checkpoint
 
 - [x] Hermes full-tool prefix cache fix (367cbc9, 6efecbf, ad07c13); 767 tests.
-- [x] `com.caravan.v3.proxy` LaunchAgent on EXO1 (loopback :8090 → :8194, RunAtLoad/KeepAlive); login/reboot recovery still deferred.
+- [x] `com.caravan.v3.proxy` LaunchAgent on EXO1 (loopback :8090 → :8194, RunAtLoad/KeepAlive); main-model recovery now reboot-proved; newer aux startup still unproved.
 - [x] Diagnostic full-tool Hermes: cold 223.57 s visible; warm follow-ups 9–12 s with 13,182 cached; write ~6.1 tok/s.
 - [x] Brenden real Hermes use (~18:42–18:48 CT): first main turn 10.26 s total / 1.17 s prefill / 13,182 cached after 0.05 s disk restore; later mains kept the prefix.
-- [ ] Day 20 tagged release (not cut yet).
+- [x] Day20 release `day20-2026-11-09`; main fast-forwarded, both Mini copies ff-only synced.
+- [x] Full experiment walkthrough: cache isolation/reuse, opt-in tiny titles, rejected warm-up/KV8, opt-in n-gram lookup, request-level thinking option.
+- [x] Same-family single versus split: Huihui full-single GPU OOM, split succeeds; Astrea/Orvena dense decode3–6.5% slower split. Raw matching-pair evidence retained.
+- [x] Correct nested Qwen3.5 single-worker memory guard (1976b7b); no forced unsafe load or model deletion.
+- [x] Day20 video + local X drafts (Brenden posts; tone review still available).
+- [ ] Physical reboot check of the newly added auxiliary title worker's RAM/primary-health startup gate.
+- [ ] Repeated performance samples, max-context sweep and >2-Mini physical measurements before broader speed/capacity claims.
 - [ ] Balance clearer mockup → implementation (after Day 19 video/X).
 
 

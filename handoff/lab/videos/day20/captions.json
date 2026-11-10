@@ -1,0 +1,86 @@
+[
+  {
+    "start_s": 0,
+    "end_s": 2,
+    "caption": "Hermes adds tools. We cut the wait, not the tools.",
+    "view": "chat"
+  },
+  {
+    "start_s": 2,
+    "end_s": 5,
+    "caption": "A tiny chat title was wiping the saved setup.",
+    "view": "chat"
+  },
+  {
+    "start_s": 5,
+    "end_s": 8,
+    "caption": "Keep the setup. Read only what is new.",
+    "view": "chat"
+  },
+  {
+    "start_s": 8,
+    "end_s": 11,
+    "caption": "A tiny helper now handles chat titles.",
+    "view": "chat"
+  },
+  {
+    "start_s": 11,
+    "end_s": 13,
+    "caption": "Early warm-up added work, not a faster answer.",
+    "view": "chat"
+  },
+  {
+    "start_s": 13,
+    "end_s": 16,
+    "caption": "Guessing ahead helped copying, not everyday chat.",
+    "view": "lookup"
+  },
+  {
+    "start_s": 16,
+    "end_s": 18,
+    "caption": "Smaller chat memory was slower, so it stayed off.",
+    "view": "memory"
+  },
+  {
+    "start_s": 18,
+    "end_s": 21,
+    "caption": "Less thinking sped up short replies, with a tradeoff.",
+    "view": "thinking"
+  },
+  {
+    "start_s": 21,
+    "end_s": 24,
+    "caption": "One Mac ran out of room. Sharing the model worked.",
+    "view": "oom"
+  },
+  {
+    "start_s": 24,
+    "end_s": 27,
+    "caption": "Smaller models were faster without the extra hop.",
+    "view": "nodes"
+  },
+  {
+    "start_s": 27,
+    "end_s": 30,
+    "caption": "About a minute later, it comes back without a click.",
+    "view": "reboot"
+  },
+  {
+    "start_s": 30,
+    "end_s": 33,
+    "caption": "The tools stayed. The wasted work did not.",
+    "view": "nodes"
+  },
+  {
+    "start_s": 33,
+    "end_s": 35,
+    "caption": "Less waiting. Same tools. Built in the open.",
+    "view": "end"
+  },
+  {
+    "start_s": 35,
+    "end_s": 37,
+    "caption": "For the nerds: prefill 207.87→1.17s · titles 6.458→.114s · reboot 64.7s",
+    "view": "nerds"
+  }
+]

@@ -13,13 +13,19 @@ warm, saves it to disk so it survives restarts, and serves MLX models
 through the same entry point. Since v3 it can also split one MLX model
 across two Macs.
 
-> **Status: early, experimental.** `main` is v2.1. v3 (one MLX model
-> split across two Macs) is on the `caravan-v3-mlx-split` branch, waiting
-> for review. Caravan runs one personal assistant on a pair of Mac minis
-> (M4, 24 GB each). It isn't packaged, and it hasn't been tested on other
-> setups. The launchd plists still contain machine-specific paths. See
-> [docs/CHANGELOG.md](docs/CHANGELOG.md) for what changed in each version
-> and [docs/ROADMAP.md](docs/ROADMAP.md) for what's next.
+> **Status: experimental Day20 release.** `main` and
+> `caravan-v3-mlx-split` contain the Day20 checkpoint
+> (`day20-2026-11-09`). The Mac installer generates user-specific service plans;
+> inference is physically measured on two M4 Mac minis,24GiB each, not certified
+> on arbitrary hardware. [Install](INSTALL.md) ·
+> [Day20 walkthrough](docs/DAY20-RELEASE.md) ·
+> [Measurements and caveats](docs/DAY20.md) · [Roadmap](docs/ROADMAP.md).
+>
+> Hermes now keeps its shared setup instead of rereading it after a title;
+> optional tiny title routing removes another pause. No Hermes tools removed.
+> Small models were slightly faster on one Mini; splitting made the big
+> Hermes workload fit. Main-model reboot recovery is proven; the newer
+> auxiliary title worker's startup order still awaits a reboot check.
 
 ## Names: lead, packers, string
 

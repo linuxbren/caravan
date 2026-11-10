@@ -850,3 +850,18 @@ recorded in Git; both Minis are synced by `git pull --ff-only`.
 Raw provenance/scripts: `handoff/lab/day20-single/`; Omarchy originals
 `~/day20-single/`. Frozen private system/tool requests remain uncommitted in
 `~/day20-speedups/private/` (new private path is only a symlink to that dataset).
+
+## Day20 wrap and release
+
+Brenden approved release, main fast-forward, video and local X drafts. Tonight's
+unreleased recovery work belongs to Day20; Day19 is already posted. The plain
+experiment-by-experiment story and caveats are in [DAY20-RELEASE.md](DAY20-RELEASE.md).
+Historical “not tagged/video pending” statements above describe their phase,
+not the final wrap state. Measurements are not relabeled: prefilling is not a
+visible answer, n-gram copy improvement was~60%, not2×, and helper boot ordering
+was not physically reboot-proved. No extra reboot or main worker restart for
+the wrap. Final tag: `day20-2026-11-09` on `caravan-v3-mlx-split`; main receives
+the identical checkpoint by fast-forward. Public drafts and video sources are
+under `handoff/lab/videos/day20/`; no private prefix or model weights included.
+
+Fresh pre-release regression on box:794 tests passed in43.223s; no failures or skips. Video37.000s, real UI crops plus explicitly labeled historical summaries; no new model-load experiments or reboots. Film source/caption manifest: `handoff/lab/videos/day20/`.

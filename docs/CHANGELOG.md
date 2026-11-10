@@ -3,6 +3,15 @@
 
 ## Unreleased
 
+### Day20 — day20-2026-11-09
+- Hermes main/title cache isolation and durable exact system/tool prefix reuse; full toolset retained.
+- Opt-in tiny title helper with narrow routing, strict fallback and guarded startup.
+- Measured negative trials: automatic prefix prewarm not enabled, KV8 not retained; lookup and thinking-off remain explicit options.
+- Honest Qwen3.5-family single/split matrix: full Huihui single GPU OOM, split succeeds; smaller models slightly faster single. Nested decoder memory guard corrected.
+- Bounded restore retry and reconnecting Omarchy tunnels; unattended main model recovery proven at64.735s. New auxiliary startup still awaits physical reboot verification.
+- Day20 experiment walkthrough, film sources and unsent X drafts. Full notes: [DAY20-RELEASE.md](DAY20-RELEASE.md).
+
+
 ### Day 18 (Nov 7, evening CT) — overview: [DAY18.md](DAY18.md)
 - Day 18 (Nov 7): Dark Champion 21B split verified coherent after 07249e7 at 16/16 (14.2 tok/s write, 0.47 s first token, 387 tokens). 24/8 failed with HTTP 507 (EXO2 1.51–1.71 GB free vs 1.75 GB margin). Split Stage rope-scaling notes now logged (flushed stderr instead of print). Per-reply timing line in lead.log (read/cached, read tok/s, write tok/s, first token, total). 486 tests OK.
 - Download finished + nothing loaded: asks **Load now / Not now** (all four themes); no silent auto-load.
