@@ -6,4 +6,3 @@ Host exo2-via-exo1
     ProxyJump exo1-lan
     StrictHostKeyChecking yes
     ConnectTimeout 8
-

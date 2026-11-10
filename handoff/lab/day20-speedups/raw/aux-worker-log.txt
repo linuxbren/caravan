@@ -92,4 +92,3 @@ aux wait: primary_ready=True, available_gb=2.739109888, budget_gb=1.0, reserve_g
 21:21:06 [mlx-worker] loaded Qwen2.5-0.5B-Instruct-4bit (qwen2) in 0.4s; sessions<= 2, bytes<= 268435456, prefill step 2048, kv bits 16, persist=off
 21:21:06 [mlx-worker] active settings: {"fuse_kernels": "off", "guess_ahead": false, "guess_ahead_loaded": false, "guess_ahead_mode": "helper", "keepalive": null, "kv_bits": 16, "multi_token_verify": "experimental \u00b7 split draft blocks; Qwen N2 tested, helper slower", "n_layers": null, "native_mtp_available": false, "packer_layers": null, "pinned": [], "pipeline_chats": 1, "prompt_lookup": {"adaptive": false, "enabled": false, "overlap_on": 0.5}, "reload_auto": [], "reload_trial": null, "self_tune": false, "shared_start": false, "sweep_paused": false, "two_chats_available": false}
 21:21:06 [mlx-worker] listening on http://127.0.0.1:8196
-
