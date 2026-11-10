@@ -696,3 +696,17 @@ above). Two Minis do not prove physical N-Mini scaling, arbitrary
 bridges/cables, automatic path application, or MLX transport authentication.
 These limits are not hidden by a verified SSH link or by a successful aux
 recovery. EXO2 was not physically rebooted in this check.
+
+### Published release / downloaded-package verification
+
+- Published17:26:20 CST: https://github.com/linuxbren/caravan/releases/tag/day21-2026-11-10
+- Immutable annotated tag `day21-2026-11-10` points to `b6c9394`. Later
+  documentation-only verification does not move the tag.
+- Assets: `caravan-day21.tar.gz`18,273,897B, SHA256
+  `26821c51c552518f284c3046e23ad8eba6d21a0623c10e210566841e2f0f91b4`;
+  ZIP19,352,327B, SHA256
+  `e704ca32827a25a8cdbfc48e6d392a853eb379bdbea944b9cfd27ce46706c66b`.
+- Downloaded the published assets, matched those digests, confirmed
+  INSTALL.md, and reran the full stdlib suite in a fresh extract: **907
+  tests passed in44.187s**, zero failures/skips. This is not a clean-Mac
+  install claim. Video is handled separately and is not part of this tag.

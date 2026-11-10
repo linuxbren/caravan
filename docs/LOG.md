@@ -2970,3 +2970,10 @@ Omarchy `~/day21-checks/reboot/`.
 Release-gate regression: **907 passed in45.871s**, zero failures/skips.
 Docs and release notes finalized for tag `day21-2026-11-10`. Video is
 handled separately.
+
+Published https://github.com/linuxbren/caravan/releases/tag/day21-2026-11-10
+at17:26:20 CST, tag `b6c9394`. Assets: tar.gz18,273,897B SHA256
+`26821c51c552518f284c3046e23ad8eba6d21a0623c10e210566841e2f0f91b4`;
+ZIP19,352,327B SHA256
+`e704ca32827a25a8cdbfc48e6d392a853eb379bdbea944b9cfd27ce46706c66b`.
+Fresh downloaded extract: **907 passed in44.187s**, zero failures/skips.
