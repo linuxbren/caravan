@@ -1357,3 +1357,18 @@ Same Huihui Qwen3.5-27B Claude 4.6 Opus abliterated 4-bit, EXO2/EXO1 24/40, no m
 | Loopback proxy :8090 -> MLX :8194 | 23 / 6 | 0.798 s | 44.3 | 5.41 | 1.723 s |
 
 Both answers correct; tiny cold correctness smoke tests, not sustained performance claims. Proxy manually started with saved-chat cleanup off; no public bind. Remote-access 8ff3852: 5/5 real paths, 16/16 mocked guard and 3/3 fallback cases. **Restore-last-model reboot test: pending, deferred to the next dev day.** No reboot, model switch, video or X draft in this closeout. Full evidence and limits: DAY19.md.
+
+## Day 20: Hermes cache diagnosis (2026-11-09)
+
+Huihui Qwen3.5-27B Opus abliterated 4-bit, EXO2/EXO1 24/40, no draft,
+serial split, 16-bit KV. Native log before fix: 13,192 prompt / 0 cached,
+prefill 207.87 s (63.5 tok/s), model TTFT 208.17 s, total 217.45 s,
+58 generated at 6.14 tok/s. Auxiliary title reused the same fingerprint,
+diverged at token 4 and destroyed the main checkpoint; it took another
+44.96 s (254 prompt, 271 generated, mostly reasoning).
+
+A fresh cold prefill still costs time. Cached follow-up/visible-answer results
+are recorded in DAY20.md after live testing; do not confuse model first token
+with first visible answer or FIFO queue delay. Full-tool wire captures have
+21 tools, stable system/tool bytes across resumed turns (55,848 / 55,990
+request bytes); capture responses were mocked and are NOT benchmarks.

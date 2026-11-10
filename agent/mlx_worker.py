@@ -1353,8 +1353,7 @@ class Engine:
             self.store.sessions[dst_key] = dst
         else:
             dst.cache = new_cache
-        dst.tokens = list(src.tokens)
-        dst.snaps = None
+        self.store.checkpoint(dst, src.tokens)
         dst.dirty = True
         return dst
 
@@ -1401,6 +1400,73 @@ class Engine:
         except Exception as e:
             log(f"shared-prefix seed failed: {type(e).__name__}: {e}")
             return self.s_prepare(key, prompt)
+
+    def _agent_prefix_key(self, prompt, body):
+        n = int(body.get("_caravan_agent_prefix") or 0)
+        if not 1024 <= n < len(prompt):
+            return None, 0
+        return "agent_" + shared_prefix.prefix_key(prompt, n), n
+
+    def _prepare_agent_prefix(self, key, prompt, body):
+        """Reuse an exact pre-user checkpoint, including recurrent state.
+
+        No arbitrary rewind of hybrid/recurrent layers. The prefix is captured
+        DURING prefill; each stage keeps its own copy and disk file. Existing
+        per-conversation LCP reuse takes precedence when it is longer.
+        """
+        key = key if valid_key(key) else ANON
+        s, reused, how = self._prepare_with_shared_prefix(key, prompt)
+        reserved, n = self._agent_prefix_key(prompt, body)
+        if reserved is None or reused >= n or key == reserved:
+            return s, reused, how
+        try:
+            owner = self.split or self.store
+            owner.restore(reserved)  # digest-paired restore across the entire chain
+            src = self.store.sessions.get(reserved)
+            if src is None or src.tokens != list(prompt[:n]):
+                return self.s_prepare(key, prompt)
+            if self.client is not None:
+                fr = self.client.call("clone_to", src=reserved, dst=key)[0]
+                if fr.get("error") or fr.get("n") != n:
+                    raise RuntimeError(f"prefix clone refused: {fr}")
+            self._clone_lead_session(reserved, key)
+            s, reused, how = self.s_prepare(key, prompt)
+            log(f"agent-prefix hit {n} tokens -> {key}")
+            return s, reused, "agent-prefix-" + how
+        except Exception as e:
+            log(f"agent-prefix seed rejected ({type(e).__name__}: {e}); cold")
+            (self.split or self.store).drop([key])
+            return self.s_prepare(key, prompt)
+
+    def _store_agent_prefix(self, key, prompt, body, session):
+        key = session.key
+        reserved, n = self._agent_prefix_key(prompt, body)
+        if reserved is None or len(session.tokens) != n:
+            return
+        if reserved in self.store.sessions:
+            return
+        try:
+            if self.client is not None:
+                fr = self.client.call("clone_to", src=key, dst=reserved)[0]
+                if fr.get("error") or fr.get("n") != n:
+                    raise RuntimeError(f"prefix checkpoint refused: {fr}")
+            self._clone_lead_session(key, reserved)
+            result = (self.split or self.store).save(reserved)
+            log(f"agent-prefix stored {n} tokens ({result})")
+        except Exception as e:
+            log(f"agent-prefix store skipped ({type(e).__name__}: {e})")
+            (self.split or self.store).drop([reserved])
+
+    def _prefill_chunks(self, prompt, start, body):
+        """Split a normal prefill chunk at the exact reusable boundary."""
+        _, boundary = self._agent_prefix_key(prompt, body)
+        end = len(prompt) - 1
+        while start < end:
+            stop = min(start + self.prefill_step, end)
+            if start < boundary < stop:
+                stop = boundary
+            yield start, stop, stop == boundary
+            start = stop
 
     def _can_trim_session(self, session, drop: int) -> bool:
         """True if every layer can drop `drop` tokens (sliding-window may refuse)."""
@@ -1820,6 +1886,24 @@ class Engine:
         if isinstance(toks, dict):
             toks = toks["input_ids"]
         toks = list(toks)
+        body.pop("_caravan_agent_prefix", None)  # never trust a caller's boundary
+        if body.get("tools"):
+            # Preserve actual template order (including tools); never reorder
+            # schemas or strip changing prompt content to manufacture a hit.
+            first = next((i for i, m in enumerate(msgs)
+                          if m.get("role") not in ("system", "developer")), None)
+            if first is not None and msgs[first].get("role") == "user":
+                probe = msgs[:first] + [{"role": "user", "content": "\x00Caravan-prefix-boundary"}]
+                try:
+                    other = self.tokenizer.apply_chat_template(
+                        probe, add_generation_prompt=True, tokenize=True, **kw)
+                    if isinstance(other, dict):
+                        other = other["input_ids"]
+                    n = common_prefix(toks, list(other))
+                    if 1024 <= n < len(toks) - 1:
+                        body["_caravan_agent_prefix"] = n
+                except Exception:
+                    pass  # exotic template: ordinary session caching remains safe
         if prefill_close:
             # Template has no thinking switch but the model thinks in tags:
             # open and close an empty think block so it answers straight away.
@@ -2361,21 +2445,23 @@ class Engine:
             self.client.reset_stats()
         if self.client is not None and hasattr(self.model, "session_key"):
             self.model.session_key = key
-        s, n_reused, how = self._prepare_with_shared_prefix(key, prompt)
+        s, n_reused, how = self._prepare_agent_prefix(key, prompt, body)
         completed = False
         n_gen = 0
         try:
             rest = prompt[n_reused:]
             with request_wiring(self.wired_mode, G, self.model, self.stream):
                 with mx.stream(self.stream):
-                    todo = rest[:-1]
-                    for i in range(0, len(todo), self.prefill_step):
+                    for begin, end, boundary in self._prefill_chunks(prompt, n_reused, body):
                         if cancel.is_set():
                             raise KeyboardInterrupt("cancelled")
-                        chunk = mx.array(todo[i:i + self.prefill_step])
+                        chunk = mx.array(prompt[begin:end])
                         self.model(chunk[None], cache=s.cache)
                         mx.eval([c.state for c in s.cache])
                         mx.clear_cache()
+                        if boundary:
+                            self.s_checkpoint(s, prompt[:end])
+                            self._store_agent_prefix(key, prompt, body, s)
             self.s_checkpoint(s, prompt[:-1])
             if n_reused == 0:
                 self._maybe_store_shared_prefix(key, prompt, s)
@@ -2638,20 +2724,22 @@ class Engine:
             pass
         if hasattr(self.model, "session_key"):
             self.model.session_key = key
-        s, n_reused, how = self.s_prepare(key, prompt)
+        s, n_reused, how = self._prepare_agent_prefix(key, prompt, body)
         t0 = time.time()
         try:
             rest = prompt[n_reused:]
             with request_wiring(self.wired_mode, self.G, self.model, self.stream):
                 with mx.stream(self.stream):
-                    todo = rest[:-1]
-                    for i in range(0, len(todo), self.prefill_step):
+                    for begin, end, boundary in self._prefill_chunks(prompt, n_reused, body):
                         if cancel.is_set():
                             raise KeyboardInterrupt("cancelled")
-                        chunk = mx.array(todo[i:i + self.prefill_step])
+                        chunk = mx.array(prompt[begin:end])
                         self.model(chunk[None], cache=s.cache)
                         mx.eval([c.state for c in s.cache])
                         mx.clear_cache()
+                        if boundary:
+                            self.s_checkpoint(s, prompt[:end])
+                            self._store_agent_prefix(key, prompt, body, s)
             self.s_checkpoint(s, prompt[:-1])
         except BaseException as e:
             try:

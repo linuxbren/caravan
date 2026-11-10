@@ -147,3 +147,13 @@ Tonight's case: Dark Champion 21B 8-bit (32 layers, ~0.71 GB/layer) on two 24 GB
 - Live testing also found/fixed an unnecessary single-Mini baseline reload and
   post-restart load-entry/recovery-release bugs. Final code passes 407 tests on
   box/EXO1/EXO2 (EXO1: one existing Node-only test skips), plus 24/24 theme parity.
+
+## Day 20 — full-tool Hermes cache reuse (2026-11-09)
+
+- Isolate MLX auxiliary prompts from the main conversation cache.
+- Capture exact system/tool KV and recurrent-state checkpoints during prefill;
+  reuse across chats and disk restores with stage-local files and N-stage
+  digest checks, without reducing Hermes tools or changing the selected model.
+- Add managed loopback OpenAI proxy launchd auto-start (`--kind proxy`).
+- 761 tests pass (23 new). Evidence, setup and live validation: docs/HERMES.md
+  and docs/DAY20.md. Reboot testing remains deferred.

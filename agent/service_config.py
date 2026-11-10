@@ -38,18 +38,20 @@ def make_plan(*, kind, name=None, repo=ROOT, python=None, home=None, host="127.0
               listen=None, upstream=None, peer=None):
     home = Path(home or Path.home()).expanduser().resolve()
     repo = Path(repo).expanduser().resolve()
-    name = name or ("web" if kind == "web" else "worker")
+    name = name or kind
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", name):
         raise ValueError("service name must use 1-64 letters, numbers, _ or -")
-    if kind not in ("web", "worker"):
-        raise ValueError("choose web or worker")
+    if kind not in ("web", "worker", "proxy"):
+        raise ValueError("choose web, worker or proxy")
+    if kind == "proxy" and host != "127.0.0.1":
+        raise ValueError("proxy is loopback-only; use an SSH tunnel for remote clients")
     # A venv's Python is commonly a symlink to Homebrew/system Python. Resolving
     # that symlink changes sys.prefix and silently loses all venv dependencies.
     py = os.path.abspath(os.path.expanduser(str(python or home/".caravan/venvs/mlx/bin/python")))
     plan = {"managed_by": OWNER, "schema": 1, "kind": kind, "name": name,
             "label": f"com.caravan.v3.{name}", "repo": str(repo), "python": py,
-            "home": str(home), "host": str(host), "port": port(web_port if kind == "web" else lead_port)}
-    if kind == "web":
+            "home": str(home), "host": str(host), "port": port(web_port if kind in ("web", "proxy") else lead_port)}
+    if kind in ("web", "proxy"):
         if model or counts or stage_index is not None or listen or upstream or peer:
             raise ValueError("web service does not load a model; install a separate worker plan")
         plan["lead_port"] = port(lead_port)
@@ -118,10 +120,14 @@ def render(plan, *, staged=None):
         cmd = [plan["python"], str(Path(plan["repo"])/"proxy/web_server.py"),
                "--host", plan["host"], "--port", str(plan["port"]),
                "--lead-port", str(plan["lead_port"]), "--repo", plan["repo"]]
+    elif plan["kind"] == "proxy":
+        cmd = [plan["python"], str(Path(plan["repo"])/"proxy/slot_pin_proxy.py"),
+               "--mlx-host", "127.0.0.1", "--mlx-port", str(plan["lead_port"]),
+               "--mlx-prefixes", "mlx-community/,huihui-"]
     else:
         cmd = [plan["python"], str(Path(plan["repo"])/"agent/caravan_agent.py"),
                "--service-config", str(p["config"]), "--apply"]
-    return {"Label": plan["label"], "ProgramArguments": cmd,
+    result = {"Label": plan["label"], "ProgramArguments": cmd,
             "WorkingDirectory": plan["repo"], "RunAtLoad": True, "KeepAlive": True,
             "ThrottleInterval": 15, "ExitTimeOut": 30, "ProcessType": "Interactive",
             "AbandonProcessGroup": plan["kind"] == "web",
@@ -129,6 +135,10 @@ def render(plan, *, staged=None):
             "EnvironmentVariables": {"HOME": plan["home"], "PYTHONUNBUFFERED": "1",
                                      "CARAVAN_WEB_KEEP_WORKERS": "1",
                                      "PATH": str(Path(plan["python"]).parent)+":/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"}}
+    if plan["kind"] == "proxy":
+        result["EnvironmentVariables"]["CARAVAN_PROXY_PORT"] = str(plan["port"])
+        result["EnvironmentVariables"]["CARAVAN_SLOT_CLEANUP"] = "off"
+    return result
 
 
 def load(path):

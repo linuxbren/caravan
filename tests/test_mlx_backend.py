@@ -261,7 +261,7 @@ class ProxyRoutingTest(ProxyTestBase):
         self.mlx.worker = True
         r, data = self.post({"model": "mlx-community/Qwen3-30B-A3B-4bit", "messages": self.msgs("z" * 200)})
         self.assertEqual(r.status, 200)
-        fp = self.spp.session_fingerprint({"messages": self.msgs("z" * 200)})
+        fp = self.spp.mlx_session_fingerprint({"model": "mlx-community/Qwen3-30B-A3B-4bit", "messages": self.msgs("z" * 200)})
         self.assertTrue(fp)
         comp = [h for p, h in zip(self.mlx.paths, self.mlx.headers) if p.startswith("/v1/")]
         hdr = {k.lower(): v for k, v in comp[-1].items()}

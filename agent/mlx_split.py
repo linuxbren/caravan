@@ -635,10 +635,9 @@ class FrontState:
                 st.sessions[dst_k] = dst
             else:
                 dst.cache = new_cache
-            dst.tokens = list(src.tokens)
-            dst.snaps = None
+            st.checkpoint(dst, src.tokens)
             dst.dirty = True
-            return {"n": len(dst.tokens), "key": dst_k}, b""
+            return {"n": len(dst.tokens), "key": dst_k, "digest": tokens_digest(dst.tokens)}, b""
         if op == "trim_to":
             # Day 13: trim a named session to exactly n tokens (lead/packer lockstep
             # for shared-prefix store). Refuses when sliding-window layers can't trim.
@@ -726,6 +725,11 @@ class ChainState:
                 self.local.store.drop([h.get("key")])
                 self.upstream.call("drop", keys=[h.get("key")])
                 return {"result": "rejected", "digest": None}, b""
+        if op == "clone_to" and (lh.get("n") != rh.get("n") or lh.get("digest") != rh.get("digest")):
+            key = h.get("dst")
+            self.local.store.drop([key])
+            self.upstream.call("drop", keys=[key])
+            raise FrontError("prefix clone differs between stages")
         if op == "prepare" and lh.get("n") != rh.get("n"):
             self.local.handle({"op": "reset"}, b"")
             self.upstream.call("reset")

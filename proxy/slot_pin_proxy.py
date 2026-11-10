@@ -550,6 +550,25 @@ def session_fingerprint(body: dict) -> "str | None":
 # it. The extra round trip on every request bought nothing.
 
 
+def mlx_session_fingerprint(body: dict):
+    """Keep auxiliary (e.g. Hermes title) calls out of a chat's KV cache.
+
+    The first user message alone is identical in a title request and its chat.
+    Namespace by the actual template inputs, not growing conversation history.
+    Never log prompt text. llama.cpp keeps its existing slot identity.
+    """
+    base = session_fingerprint(body)
+    if base is None or not isinstance(body.get("messages"), list):
+        return base
+    scope = {"session": base, "model": body.get("model"),
+             "system": [m for m in body["messages"] if m.get("role") in ("system", "developer")],
+             "tools": body.get("tools") or [],
+             "template": body.get("chat_template_kwargs") or {},
+             "thinking": body.get("thinking")}
+    return hashlib.sha256(json.dumps(scope, sort_keys=True, ensure_ascii=False,
+                                     separators=(",", ":")).encode()).hexdigest()[:16]
+
+
 # --- Disk-persisted slot cache (issue #4) ---------------------------------
 # Requires llama-server to be started with --slot-save-path (see
 # ../launchd/com.caravan.llama-server.plist). Saves a slot's actual KV
@@ -956,7 +975,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 # <fp>.safetensors and loaded back after a restart. A plain
                 # mlx_lm.server ignores the header and 404s the cache calls
                 # ("mlx-noop").
-                mlx_fingerprint = session_fingerprint(data)
+                mlx_fingerprint = mlx_session_fingerprint(data)
                 restore = backend.restore(mlx_fingerprint) if mlx_fingerprint else "ephemeral"
                 warm = "warm" if mlx_fingerprint and mlx_sessions.seen(mlx_fingerprint) else "cold"
                 how = ("per-session MLX prompt cache" if restore != "mlx-noop"

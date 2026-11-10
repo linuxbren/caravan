@@ -47,10 +47,10 @@ def gui_ready(run=run_launchctl):
 
 def validate_files(plan):
     root = Path(plan["repo"])
-    script = root/("proxy/web_server.py" if plan["kind"] == "web" else "agent/caravan_agent.py")
+    script = root/({"web": "proxy/web_server.py", "proxy": "proxy/slot_pin_proxy.py"}.get(plan["kind"], "agent/caravan_agent.py"))
     if not script.is_file() or not Path(plan["python"]).is_file():
         raise ValueError("Repository or Python is missing; run scripts/install.sh first")
-    if plan["kind"] == "web":
+    if plan["kind"] in ("web", "proxy"):
         return
     d = Path(plan["model"])
     from mlx_split import check_local_shards, safetensors_expected_size
@@ -241,7 +241,7 @@ def control(action,plan,*,dry_run=False,run=run_launchctl):
 def parser():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("action",choices=("install","uninstall","status","restart"))
-    ap.add_argument("--kind",choices=("web","worker"),default="web")
+    ap.add_argument("--kind",choices=("web","worker","proxy"),default="web")
     ap.add_argument("--name")
     ap.add_argument("--repo",default=str(ROOT))
     ap.add_argument("--python")
@@ -265,7 +265,7 @@ def main(argv=None):
     try:
         if args.action == "install":
             p = SC.make_plan(kind=args.kind,name=args.name,repo=args.repo,python=args.python,host=args.host,
-                             web_port=args.port if args.port is not None else 8190,
+                             web_port=args.port if args.port is not None else (8090 if args.kind == "proxy" else 8190),
                              lead_port=(args.port if args.port is not None else args.lead_port) if args.kind == "worker" else args.lead_port,
                              model=args.model,counts=args.counts,stage_index=args.stage_index,
                              listen=args.listen,upstream=args.upstream,peer=args.peer)
