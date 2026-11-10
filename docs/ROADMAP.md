@@ -19,8 +19,8 @@ deprecated flag aliases.
 - [x] Same Huihui 27B restored through Balance, EXO2/EXO1 24/40; correct web and proxy replies, about 0.8 s first token and 5.4 tok/s writing (short smoke only).
 - [x] Remote access: LAN + Thunderbolt SSH fallbacks, `caravan-ssh`, Tailscale guards (8ff3852).
 - [ ] **Restore-last-model reboot test: pending, deferred.** Also deferred: switch/unload live checks; `:8090` launchd login/reboot recovery (config installed, not reboot-proved).
-- [x] Self-tune 5s clip (41.53→69.70 tok/s; Huihui restored 19:13:39 CST).
-- [x] Day 19 video (`/workspace/caravan-day19.mp4`, 54.2 s) + X draft (draft-only; Brenden posts).
+- [x] Self-tune 5s clip v2 (41.53→69.70; interpolated mid frames; Huihui left loaded for re-cut).
+- [x] Day 19 video v2 (`/workspace/caravan-day19-v2.mp4`, ~56.8 s, no test counts) + X draft (review before Brenden).
 - [ ] Balance clearer UI (mockup approved to draft: one-line explanation, per-Mini memory bars, Auto default + Adjust slider, live preview, Apply / Back to auto, jargon behind details).
 
 ## Day 20 checkpoint

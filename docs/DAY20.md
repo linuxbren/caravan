@@ -233,12 +233,38 @@ First reply returned a valid chat completion (finish `length` at
 `self_tune=off`. Hermes tunnel path Omarchy `:18090` → EXO1 `:8090` → lead
 `:8194` works.
 
+
+## Self-tune clip v2 (re-cut from existing assets)
+
+Re-cut only — no unload, no re-record, Huihui left loaded. Source: Omarchy
+`~/day19-video/selftune/raw/01-start.png` UI still + live means in
+`numbers.json`. Readout is a **re-rendered overlay**; endpoints **41.53** and
+**69.70** are the real measured means; **in-between frames are interpolated**
+(hold 41.53 for 1.0 s, ease to 69.70 by 3.0 s, hold through 5.0 s).
+
+- File: `/workspace/caravan-selftune-5s-v2.mp4` (Omarchy
+  `~/day19-video/selftune/clip/caravan-selftune-5s-v2.mp4`)
+- Length: **5.000 s**
+- No ghost number (single draw per frame; mid-frame pixel-identical to a
+  fresh `55.62` redraw). No model name, no jargon caption.
+- Unit line: `tokens a second · two chats at once`
+- Checked frames: 0.2 s → **41.53**; 0.9 s → **41.53**; 2.0 s → **55.62**;
+  3.2 s → **69.70**; 4.8 s → **69.70**
+
+## Day 19 video v2
+
+- File: `/workspace/caravan-day19-v2.mp4` (~**56.8 s**)
+- No test counts. Captions are plain, benefit-led; jargon left out.
+- Test card replaced with real Topology footage (Huihui live 24/40).
+- Stats only in the closing “For the nerds” line.
+- X videos go to review before Brenden (standing rule).
+
 ## Deferred (still open)
 
 - Restore-last-model reboot test (Day 19 closeout deferred; no reboots while Hermes is in use).
 - Live switch / unload / KEEP-web-restart checks (partially exercised for the approved self-tune clip; reboot-proof still deferred).
 - `:8090` launchd login/reboot recovery: LaunchAgent installed and live-migrated; not reboot-proved.
 - Balance clearer UI mockup → code (one-line explanation, per-Mini memory bars, Auto default with Adjust revealing the slider, live preview, Apply / Back to auto, jargon behind details).
-- Day 19 video + date-free X draft: video at `/workspace/caravan-day19.mp4` (54.2 s); X drafts under Omarchy `~/Pictures/x-posts/day19/` (Brenden posts).
+- Day 19 video v2 at `/workspace/caravan-day19-v2.mp4` (~56.8 s, no test counts; human captions). X drafts under Omarchy `~/Pictures/x-posts/day19/` — review before Brenden posts.
 - Day 20 tagged release and main fast-forward (not cut yet).
 

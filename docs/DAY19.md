@@ -1568,3 +1568,10 @@ X draft only (Brenden posts): Omarchy
 Related self-tune short: `/workspace/caravan-selftune-5s.mp4` (**5.000 s**,
 on-screen **41.53 → 69.70** tok/s). Huihui restored afterward; see DAY20.md.
 
+## Day 19 video v2
+
+`/workspace/caravan-day19-v2.mp4` (~56.8 s). Real UI only; no test counts.
+Captions are plain and benefit-led (no launchd / pipeline / shard jargon).
+Closing “For the nerds” line only: Huihui 24/40 on EXO2 then EXO1.
+Generator: `handoff/lab/videos/make_day19_video_v2.py`. Captions:
+`handoff/lab/videos/day19_captions_v2.txt`. X draft still review-before-Brenden.

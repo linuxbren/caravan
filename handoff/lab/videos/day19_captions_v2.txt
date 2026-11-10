@@ -1,0 +1,15 @@
+   0.0s  Two Macs. One model. Built in the open.
+   3.6s  Your big model is ready on both machines.
+   7.4s  See how much free memory each Mac still has.
+  11.6s  It splits the work so neither Mac runs out of room.
+  15.6s  It picks a split that actually fits.
+  19.4s  Each Mac keeps what it needs on its own disk.
+  23.4s  No hauling giant files back and forth.
+  27.0s  Pull the plug and it comes back on its own.
+  31.0s  The last model you used returns the way you left it.
+  34.8s  If the main path drops, another way in is ready.
+  38.8s  Remote access stays watched without needing admin.
+  42.4s  Right now Huihui is live across both Minis.
+  46.6s  Your chat agent can talk to it over the local link.
+  50.4s  Next: watch it learn a faster setting on screen.
+  53.8s  For the nerds: Huihui 24/40 on EXO2 then EXO1.
