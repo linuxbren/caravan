@@ -239,6 +239,6 @@ First reply returned a valid chat completion (finish `length` at
 - Live switch / unload / KEEP-web-restart checks (partially exercised for the approved self-tune clip; reboot-proof still deferred).
 - `:8090` launchd login/reboot recovery: LaunchAgent installed and live-migrated; not reboot-proved.
 - Balance clearer UI mockup → code (one-line explanation, per-Mini memory bars, Auto default with Adjust revealing the slider, live preview, Apply / Back to auto, jargon behind details).
-- Day 19 video + date-free X draft (draft only; Brenden posts).
+- Day 19 video + date-free X draft: video at `/workspace/caravan-day19.mp4` (54.2 s); X drafts under Omarchy `~/Pictures/x-posts/day19/` (Brenden posts).
 - Day 20 tagged release and main fast-forward (not cut yet).
 

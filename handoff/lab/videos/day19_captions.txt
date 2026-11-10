@@ -1,0 +1,14 @@
+   0.0s  Two Mac minis. One model. Built in the open.
+   3.6s  Huihui is ready across both Minis.
+   7.4s  Topology: live memory on every Mini.
+  11.6s  Balance: 24 layers here, 40 on the lead.
+  15.6s  Auto picks a split from real free RAM.
+  19.4s  Each Mini keeps its own files.
+  23.4s  No lead-to-packer weight ferry.
+  27.0s  Install got quieter: one launchd path.
+  31.0s  Last successful model comes back as you left it.
+  34.8s  Remote access: Thunderbolt and LAN SSH backups.
+  39.0s  Tailscale guards run on a timer. Non-root.
+  42.8s  738 tests passed. Day 19 release is out.
+  47.0s  Hermes chats through the local proxy.
+  50.8s  Next: self-tune climbs you can see.

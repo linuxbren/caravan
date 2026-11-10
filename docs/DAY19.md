@@ -1547,3 +1547,24 @@ Closeout full box suite: **738 tests passed in 42.600 s**, zero failures/skips. 
 - Downloaded the published tar.gz to fresh `/workspace/day19-release/verify/`; SHA256 matched, extracted INSTALL.md checked. Full extracted suite: **738 tests passed in 42.081 s**, zero failures/skips; log `/workspace/day19-release-package-tests.log`. Original full suite: **738 passed in 42.600 s**. No failed suite in this closeout; earlier failures remain documented above.
 - Both Minis clean tracked trees pulled ff-only to release commit, existing untracked HTML backups preserved. Docs-only changes: no service restart, no reboots. Same Huihui 24/40 model left selected for Hermes.
 - This follow-up documentation records publication without moving the release tag/assets. Restore-last-model reboot test remains **pending, deferred to the next dev day**; no Day 19 video or X draft.
+
+## Day 19 video + X draft
+
+Real UI tour (Huihui stayed loaded; read-only Chromium screencast via Omarchy
+tunnel `:18190` → EXO1 `:8190`):
+
+- File: `/workspace/caravan-day19.mp4` (also staged under Omarchy
+  `~/day19-video/` after copy)
+- Length: **54.2 s**, 1280×720 H.264, silent, 14 single-line bottom captions
+- No dates or times on screen (generator asserts this)
+- Captions: `handoff/lab/videos/day19_captions.txt` (and `/workspace/d19v/day19_captions.txt`)
+- Generator: `handoff/lab/videos/make_day19_video.py`
+- Footage: home (Huihui ready), Models, Topology/Balance 24/40 EXO2/EXO1,
+  Settings, plus cards for remote-access hardening and 738-test release
+
+X draft only (Brenden posts): Omarchy
+`~/Pictures/x-posts/day19/draft.md` and `draft-long.md`. Date-free.
+
+Related self-tune short: `/workspace/caravan-selftune-5s.mp4` (**5.000 s**,
+on-screen **41.53 → 69.70** tok/s). Huihui restored afterward; see DAY20.md.
+
