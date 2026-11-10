@@ -1,3 +1,23 @@
+## 2026-11-09: Plan for Days 21–25 (agreed)
+
+Brenden agreed this order, to be followed unless a rabbit hole catches
+our eye:
+
+- Day 21: small loose ends (Balance clearer UI: mockup then build;
+  physical reboot check of the aux title worker; live switch/unload
+  checks) plus automatic/dynamic Thunderbolt discovery/routing.
+- Day 22: GGUF splitting (each Mini keeps only its share; the packer
+  loads its own tensors).
+- Day 23: guess-ahead (n-gram) speedups with an acceptance-rate
+  readout, plus other speed ideas.
+- Day 24: safe file cleanup UI, repeated speed runs, and per-model
+  config saving (profiles).
+- Day 25: TUI and packaging (the Omarchy plugin and Terminal Delight
+  follow the TUI).
+
+Recorded in docs/ROADMAP.md under "Plan: Day 21–25 (agreed 2026-11-09)"
+and in the Obsidian note `Plan - Days 21-25.md`. Docs only; no restart.
+
 ## 2026-11-01: Day 9 ROADMAP #13(a) auto-pick (split + pipeline)
 
 - Helpers `choose_packer_layers` / `choose_pipeline_chats` in `mlx_split.py`;

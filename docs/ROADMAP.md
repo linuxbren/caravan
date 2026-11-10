@@ -4,7 +4,7 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-11-09 CST: Day20 wrapped; paired Qwen3.5-family matrix and reboot evidence recorded. Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
+*Last updated 2026-11-09 CST: Day 21–25 plan agreed. Day20 wrapped; paired Qwen3.5-family matrix and reboot evidence recorded. Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -22,7 +22,7 @@ deprecated flag aliases.
 - [x] Self-tune 5s clip v2 (41.53→69.70; interpolated mid frames; Huihui left loaded for re-cut).
 - [x] Day 19 video v3 (`/workspace/caravan-day19-v3.mp4`, 31.6 s, live chat + real path fallback) + X draft (review before Brenden).
 - [x] Historical v3-window deferral superseded by the Day20 reboot2 evidence (not a claim that v3 already proved it).
-- [ ] Balance clearer UI (mockup approved to draft: one-line explanation, per-Mini memory bars, Auto default + Adjust slider, live preview, Apply / Back to auto, jargon behind details).
+- [ ] Balance clearer UI (Day 21; mockup approved to draft: one-line explanation, per-Mini memory bars, Auto default + Adjust slider, live preview, Apply / Back to auto, jargon behind details).
 
 ## Day 20 checkpoint
 
@@ -35,9 +35,50 @@ deprecated flag aliases.
 - [x] Same-family single versus split: Huihui full-single GPU OOM, split succeeds; Astrea/Orvena dense decode3–6.5% slower split. Raw matching-pair evidence retained.
 - [x] Correct nested Qwen3.5 single-worker memory guard (1976b7b); no forced unsafe load or model deletion.
 - [x] Day20 video + local X drafts (Brenden posts; tone review still available).
-- [ ] Physical reboot check of the newly added auxiliary title worker's RAM/primary-health startup gate.
-- [ ] Repeated performance samples, max-context sweep and >2-Mini physical measurements before broader speed/capacity claims.
-- [ ] Balance clearer mockup → implementation (after Day 19 video/X).
+- [ ] Physical reboot check of the newly added auxiliary title worker's RAM/primary-health startup gate (Day 21).
+- [ ] Repeated performance samples (Day 24), max-context sweep and >2-Mini physical measurements before broader speed/capacity claims.
+- [ ] Balance clearer mockup → implementation (Day 21; after Day 19 video/X).
+
+
+## Plan: Day 21–25 (agreed 2026-11-09)
+
+Brenden agreed this order on 2026-11-09. Follow it unless a rabbit hole
+catches our eye.
+
+**Day 21 — loose ends + Thunderbolt discovery.** Balance clearer UI
+(mockup first, then build): one-line explanation, per-Mini memory bars,
+Auto default + Adjust slider, live preview, Apply / Back to auto, jargon
+behind details. Physical reboot check of the auxiliary title worker's
+RAM/primary-health startup gate (Brenden issues the reboot). Live checks
+of switching and unloading models from the UI. Automatic/dynamic
+Thunderbolt discovery and routing, so a string of three or more Minis can
+find and use the cabling without hand-set `peer` / `listen` /
+`upstream_peer`.
+
+**Day 22 — GGUF splitting.** Finish the firm rule for GGUF: each Mini
+keeps only its share on its own disk, and the packer loads its own
+tensors (small ones included) so the lead sends no weights. This needs
+llama.cpp loader/protocol work, not a fake partial GGUF. See [Firm
+rules](#each-packer-keeps-its-share-of-the-model-on-its-own-disk-gguf-and-mlx)
+and Next item 5.
+
+**Day 23 — guess-ahead and other speed ideas.** N-gram (prompt-lookup)
+guess-ahead with an acceptance-rate readout, measured on the Huihui 27B
+split and Hermes-style chats, plus any other speed ideas worth trying.
+See [the n-gram note](#n-gram-guess-ahead-with-an-acceptance-rate-readout-scheduled-day-23-agreed-2026-11-09).
+
+**Day 24 — cleanup, repeated runs, per-model profiles.** Explicit
+approved per-file cleanup UI (protect the current plan and running
+services). Repeated performance samples before broader speed claims.
+Per-model config saving (profiles); see Next item 6.
+
+**Day 25 — TUI and packaging.** A terminal UI, then packaging so someone
+else can install it easily (scrub personal paths as part of that). The
+Omarchy plugin and Terminal Delight console follow the TUI.
+
+Not in this five-day span, still open: three physical Minis,
+separate-account / FileVault-on checks, merge of this branch into
+`main`, fused kernels (parked).
 
 
 ## Day 19 order (2026-11-08)
@@ -63,7 +104,7 @@ experimental checkpoints and authorized two-Mini live checks; strict GGUF indepe
 - [x] Live picker bridge: saved 11/11/10 placement, normal picker reload, own
   stage roots and web-restart adoption. N-stage Optimize remains blocked; no
   silent promotion of untested concurrency/speculation (pinned off here).
-- [ ] Automatic multi-link Thunderbolt discovery/routing. Explicit `peer`,
+- [ ] Automatic multi-link Thunderbolt discovery/routing (Day 21). Explicit `peer`,
   `listen` and `upstream_peer` allow the chain to use different links; a triangle
   of cables is not automatically configured. Use a trusted private link only.
 
@@ -100,7 +141,7 @@ experimental checkpoints and authorized two-Mini live checks; strict GGUF indepe
   not a fake partial GGUF. Multi-file GGUF support and very large manifests
   remain follow-ups. Short real GGUF cold/warm/restart checks are recorded in
   BENCHMARKS; they are not controlled cold-cache or sustained benchmarks.
-- [ ] Explicit approved per-file cleanup UI, shared-plan/current-service protection,
+- [ ] Explicit approved per-file cleanup UI (Day 24), shared-plan/current-service protection,
   optional RPC cache relocation/caps. Live owned transfer stop/resume/restart
   adoption and retained-file previews passed; multi-shard MLX runtime savings
   and stricter loader independence still need work.
@@ -139,7 +180,7 @@ Open tasks for this rule:
   Settings, SSH-tunnelled rpc-server. Also done Nov 6–7: GGUF downloads from the
   picker (lead only, shared job system), re-attach after a web restart, CLI on
   SSH tunnels (gate removed), tensor-split from live free RAM, watchdog cleanup.
-- [ ] **GGUF stage 2** (Next, item 5): the packer loads its tensors from
+- [ ] **GGUF stage 2** (Day 22; Next, item 5): the packer loads its tensors from
   its own copy of the file, small tensors included, so the lead sends no
   weights at all.
 - [ ] **GGUF, until then: show cache misses.** Log, at each load, how much
@@ -239,6 +280,8 @@ Open tasks for this rule:
 
 ## Next, in order
 
+> **Plan for Days 21–25 (agreed 2026-11-09):** see [Plan: Day 21–25](#plan-day-21-25-agreed-2026-11-09). Follow that order unless a rabbit hole catches our eye.
+
 > **Priority rule (Brenden, Days 15–17, Nov 3–6 2026):** performance first, flash second. Days15–16 shipped web UI, picker/placement, N-node Topology, self-tuning controls and four themes. Day17 measured matching-target MTP (#16), adaptive prompt lookup, two-chat scheduling, then approved split block verification. Orvena EXO2 native MTP36.95→54.13 Write tok/s,98.21% proposals accepted; incompatible with Qwen30B. Qwen copy PL50.11→72.37 but mixed50.24→47.31, so default stays off. Approved split: baseline aggregate N1/N2 **41.54/70.49tok/s**; helper N1/N2 **52.11/49.77tok/s** (N2 helper slower, experimental). Fixed socket-owner race exposed by live N2 tests; all failures retained. Final Qwen singleEXO1 ready, all Auto, pre-existing KV4 trial applied (benchmarks KV16). [Raw results/reasoning](DAY17-BENCHMARKS.md). Next: improve N2 draft overlap before promoting it, remaining settings/node polish and Terminal Delight; fused kernels/tensor parallel parked.
 
 1. ~~**Publish the rebased llama.cpp branch.**~~ **Done (2026-10-31).**
@@ -320,13 +363,13 @@ Open tasks for this rule:
    --cache` and the packer plist already uses it.* What's left: the lead
    still needs the full GGUF on its own disk and reads all of it, and
    tensors of 10 MiB or less are sent every time (see Firm rules).
-5. **Split download (GGUF), stage 2: packer loads its own tensors.** A fork
+5. **Split download (GGUF), stage 2: packer loads its own tensors (Day 22).** A fork
    patch so the packer loads its assigned tensors from its own disk instead
    of the lead pushing them. Each packer fetches only its tensors' byte
    ranges (HTTP Range requests using the tensor offsets in the GGUF
    header), or uses `gguf-split` shards. Then the lead no longer needs the
    packer's part on disk either.
-6. **Per-model profiles.** Today Qwen3 needs hand-tuned worker settings
+6. **Per-model profiles (Day 24).** Today Qwen3 needs hand-tuned worker settings
    (sessions in memory, cache budget, chunk size, cache quantization, when
    to save). The plan:
    - Compute a starting profile from the model's size and config against
@@ -351,7 +394,7 @@ Open tasks for this rule:
     cache. Then consider preloading recently used sessions at startup.
 11. **Re-measure the two-Mac split** with the v1+ settings (flash
     attention over RPC, automatic KV, larger `ubatch`).
-12. **Packaging.** Day 19 implements an idempotent Mac installer and generated
+12. **Packaging (Day 25).** Day 19 implements an idempotent Mac installer and generated
     per-user LaunchAgents (no machine-specific paths). The web job runs the UI;
     worker jobs run through the agent and can start an explicit N-stage split.
     Isolated-HOME install and permanent production login/reboot passed on Nov 8.
@@ -435,7 +478,7 @@ Open tasks for this rule:
     endpoint on the proxy (for example `GET /caravan/status`, JSON) and a
     screen that reads it. Shape left open: web page, Terminal Delight
     Workbench items, or both. *Flash second — after performance work.*
-15. **Console via Terminal Delight (Parker's app).** Switch models, chat and
+15. **Console via Terminal Delight (Parker's app) (Day 25).** Switch models, chat and
     change options from Parker Brown's terminal. Integration guide for
     Parker: `docs/INTEGRATING.md`. Shape left open; see "Terminal Delight as
     Caravan's console" below for the options.
@@ -467,9 +510,11 @@ Open tasks for this rule:
 
 ## Possible future directions (not scheduled)
 
-Ideas worth writing down. None is planned or started.
+Ideas worth writing down. N-gram guess-ahead is scheduled for Day 23, and
+the TUI / Terminal Delight / packaging work for Day 25; see
+[Plan: Day 21–25](#plan-day-21-25-agreed-2026-11-09). The rest is not scheduled.
 
-### N-gram guess-ahead with an acceptance-rate readout (approved for a future dev day, 2026-11-09)
+### N-gram guess-ahead with an acceptance-rate readout (scheduled Day 23, agreed 2026-11-09)
 
 Brenden approved this after reading pavelsimo's speculative-decoding post
 (https://x.com/pavelsimo/status/2118829929626587156).
