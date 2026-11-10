@@ -1422,3 +1422,22 @@ Persistence after eviction/restart and missing-stage fail-closed behavior are
 unit-tested; real files and successful saves are verified. No extra live
 worker restart or machine reboot was done just to demonstrate disk restore.
 A different/changed system block must be read once to seed its own checkpoint.
+
+## Hermes real-use speed (Brenden, 2026-11-09 ~18:42–18:48 CT)
+
+Live Hermes Agent session after the Day 20 cache fix. Same Huihui 27B 4-bit,
+EXO2/EXO1 24/40, full configured toolset. Source: EXO1 `~/.caravan/web-ui/lead.log`
+session `90716b1a257d8461`. Prefix restored from disk in 0.05 s before turn 1.
+
+| CT | Kind | Prompt / cached | Prefill s | First token s | Write tok/s | Generated | Total s |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 18:42:30 | Main 1 | 13,192 / 13,182 | 1.17 | 1.47 | 6.14 | 55 | 10.26 |
+| 18:42:36 | Title | 258 / 0 | 4.27 | 4.55 | 5.57 | 7 | 5.63 |
+| 18:43:52 | Main 2 | 13,242 / 13,182 | 1.21 | 1.51 | 6.21 | 269 | 44.64 |
+| 18:43:59 | Title | 284 / 0 | 4.29 | 4.57 | 6.08 | 13 | 6.55 |
+| 18:45:04 | Main 3 | 13,291 / 13,182 | 2.24 | 2.54 | 6.19 | 154 | 27.24 |
+| 18:46:03 | Main 4 | 13,381 / 13,182 | 3.85 | 4.15 | 6.23 | 260 | 45.73 |
+
+Pre-fix comparable full request: 13,192 / 0 cached, **207.87 s** prefill.
+Full narrative and cancelled-retry notes: [DAY20.md](DAY20.md).
+

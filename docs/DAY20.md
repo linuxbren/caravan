@@ -140,3 +140,51 @@ Evidence stays private on Omarchy under `~/.hermes/caravan-bench/`:
 responses were mocked only for byte-stability diagnosis; all timings in this
 table came from real Caravan inference. Deployment evidence on EXO1 is under
 `~/.caravan/day20-hermes/`; live worker log `~/.caravan/web-ui/lead.log`.
+
+## Hermes real-use speed (Brenden, 2026-11-09 ~18:42–18:48 CT)
+
+After the cache fix and diagnostic bench above, Brenden used Hermes Agent
+normally (full configured toolset, same Huihui EXO2/EXO1 24/40 split). Source:
+EXO1 `~/.caravan/web-ui/lead.log` session `90716b1a257d8461`. Proxy
+`~/.caravan/logs/proxy.log` shows the matching warm/cold turns. No model
+reload or service restart for this measurement.
+
+Disk restore of the shared system/tool prefix happened first:
+`restored agent_p13182_4d50f8b37ae3529f from disk: 13182 tokens in 0.05s`,
+then `agent-prefix hit 13182 tokens`.
+
+| CT | Kind | Prompt | Cached | Prefill s | First token s | Write tok/s | Generated | Total s |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| 18:42:30 | Main turn 1 | 13,192 | 13,182 | 1.17 | 1.47 | 6.14 | 55 (42 reason + 11 answer) | 10.26 |
+| 18:42:36 | Title | 258 | 0 | 4.27 | 4.55 | 5.57 | 7 (0 reason) | 5.63 |
+| 18:43:52 | Main turn 2 | 13,242 | 13,182 | 1.21 | 1.51 | 6.21 | 269 (111 reason + 25 answer) | 44.64 |
+| 18:43:59 | Title | 284 | 0 | 4.29 | 4.57 | 6.08 | 13 (0 reason) | 6.55 |
+| 18:45:04 | Main turn 3 | 13,291 | 13,182 | 2.24 | 2.54 | 6.19 | 154 (81 reason + 71 answer) | 27.24 |
+| 18:46:03 | Main turn 4 | 13,381 | 13,182 | 3.85 | 4.15 | 6.23 | 260 (97 reason + 0 answer) | 45.73 |
+
+Main turns 2–4 hit `agent-prefix-hit-memory` after the usual one-token
+template-tail divergence (same mechanism as the diagnostic follow-ups). Title
+calls stayed on separate fingerprints and kept `reasoning_effort:none`
+(0 hidden reasoning). Writing stayed ~6.1–6.2 tok/s.
+
+After turn 4, three exact-append retries reused **13,380 / 13,381** cached
+tokens (`hit-memory`, prefill **0.02 s**, first token **0.32 s**, write
+**6.24 tok/s**, total ~41.8 s each, 97 reason + 0 answer). Client cancelled at
+18:48:41 (`generation stopped … cancelled`; rewound). Those retries are
+recorded for completeness; they are not separate user prompts.
+
+Compared with the pre-fix full request (13,192 / 0 cached, **207.87 s**
+prefill): the first real Hermes turn after disk restore prefilled in **1.17 s**
+with **13,182** cached tokens. Output rate is unchanged (~6.1 tok/s). Longer
+totals on turns 2–4 are generation length and hidden reasoning, not a cold
+13k-token reread.
+
+## Deferred (still open)
+
+- Restore-last-model reboot test (Day 19 closeout deferred; no reboots while Hermes is in use).
+- Live switch / unload / KEEP-web-restart checks (deferred to avoid interrupting Hermes).
+- `:8090` launchd login/reboot recovery: LaunchAgent installed and live-migrated; not reboot-proved.
+- Balance clearer UI mockup → code (one-line explanation, per-Mini memory bars, Auto default with Adjust revealing the slider, live preview, Apply / Back to auto, jargon behind details).
+- Day 19 video + date-free X draft (draft only; Brenden posts).
+- Day 20 tagged release and main fast-forward (not cut yet).
+

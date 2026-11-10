@@ -86,3 +86,12 @@ EXO1 now runs the proxy as `com.caravan.v3.proxy` (RunAtLoad/KeepAlive),
 127.0.0.1:8090 -> 127.0.0.1:8194. Huihui was reloaded through normal web
 Balance in 14.61 s, no web restart or machine reboot. Hermes user config,
 tools and its tunnel service were not changed by the cache fix.
+
+## Hermes real-use speed
+Brenden's live Hermes chat after the fix (2026-11-09 ~18:42–18:48 CT, America/Chicago):
+first main turn reused **13,182** cached tokens after a **0.05 s** disk restore,
+prefill **1.17 s**, first token **1.47 s**, write **6.14 tok/s**, total **10.26 s**.
+Later main turns kept the same 13,182-token prefix (prefill 1.21–3.85 s depending
+on new tokens). Titles stayed cold/short (~4.3 s prefill, 0 reasoning). See the
+full per-request table in [DAY20.md](DAY20.md).
+
