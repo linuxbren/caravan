@@ -18,9 +18,10 @@ deprecated flag aliases.
 - [x] Day 19 released (`day19-2026-11-08`, tag 7267325, docs bf2c3b7); main fast-forwarded; 738 tests.
 - [x] Same Huihui 27B restored through Balance, EXO2/EXO1 24/40; correct web and proxy replies, about 0.8 s first token and 5.4 tok/s writing (short smoke only).
 - [x] Remote access: LAN + Thunderbolt SSH fallbacks, `caravan-ssh`, Tailscale guards (8ff3852).
-- [ ] **Restore-last-model reboot test: pending, deferred.** Also deferred: switch/unload live checks; `:8090` launchd login/reboot recovery (config installed, not reboot-proved).
+- [ ] **Restore-last-model reboot test: pending, deferred** (sudo password still required). `:8090` launchd login/reboot recovery not reboot-proved. Path-switchover now demonstrated.
 - [x] Self-tune 5s clip v2 (41.53→69.70; interpolated mid frames; Huihui left loaded for re-cut).
-- [x] Day 19 video v2 (`/workspace/caravan-day19-v2.mp4`, ~56.8 s, no test counts) + X draft (review before Brenden).
+- [x] Day 19 video v3 (`/workspace/caravan-day19-v3.mp4`, 31.6 s, live chat + real path fallback) + X draft (review before Brenden).
+- [ ] **Restore-last-model reboot test: still deferred** (sudo password required; not run in the v3 window).
 - [ ] Balance clearer UI (mockup approved to draft: one-line explanation, per-Mini memory bars, Auto default + Adjust slider, live preview, Apply / Back to auto, jargon behind details).
 
 ## Day 20 checkpoint

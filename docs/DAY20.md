@@ -259,10 +259,18 @@ Re-cut only — no unload, no re-record, Huihui left loaded. Source: Omarchy
 - Stats only in the closing “For the nerds” line.
 - X videos go to review before Brenden (standing rule).
 
+
+## Restore-last-model reboot test (still deferred)
+
+Approved to run during the Day 19 v3 shoot, but **not executed**: neither Mini
+accepts passwordless `sudo reboot`. Huihui 24/40 EXO2/EXO1 stayed loaded.
+A real path-switchover (Tailscale down on EXO2, LAN/Thunderbolt fallback,
+Tailscale restored) did run; see DAY19.md video v3.
+
 ## Deferred (still open)
 
 - Restore-last-model reboot test (Day 19 closeout deferred; no reboots while Hermes is in use).
-- Live switch / unload / KEEP-web-restart checks (partially exercised for the approved self-tune clip; reboot-proof still deferred).
+- Live switch / unload / KEEP-web-restart checks (self-tune pause + path-switchover done; restore-last-model reboot still deferred — sudo password needed).
 - `:8090` launchd login/reboot recovery: LaunchAgent installed and live-migrated; not reboot-proved.
 - Balance clearer UI mockup → code (one-line explanation, per-Mini memory bars, Auto default with Adjust revealing the slider, live preview, Apply / Back to auto, jargon behind details).
 - Day 19 video v2 at `/workspace/caravan-day19-v2.mp4` (~56.8 s, no test counts; human captions). X drafts under Omarchy `~/Pictures/x-posts/day19/` — review before Brenden posts.

@@ -1575,3 +1575,40 @@ Captions are plain and benefit-led (no launchd / pipeline / shard jargon).
 Closing “For the nerds” line only: Huihui 24/40 on EXO2 then EXO1.
 Generator: `handoff/lab/videos/make_day19_video_v2.py`. Captions:
 `handoff/lab/videos/day19_captions_v2.txt`. X draft still review-before-Brenden.
+
+## Day 19 video v3
+
+`/workspace/caravan-day19-v3.mp4` (also Omarchy `~/day19-video/caravan-day19-v3.mp4`).
+**31.6 s**, 1280×720, silent, human benefit-led captions, no dates, no test counts.
+
+Real motion in the first 3 s: a live chat on the Caravan web UI (headless
+Chromium viewport 1280×720 via Omarchy `:18190` → EXO1 `:8190`). Question:
+“Name three fruits that are usually red.” The reply streamed live (Apples…).
+Tight crops hide the model name, feature pills, MODELS list, and Settings
+“in our tests” copy.
+
+Path switchover is a real demo (2026-11-09 **19:34:46–19:35:16 CST**,
+America/Chicago). LAN and Thunderbolt paths were confirmed up first. Tailscale
+was taken down on EXO2 via the LAN path; `exo2` became unavailable;
+`caravan-ssh` fell through to `exo2-lan` (`reached_via_fallback`). Tailscale
+was brought back with `tailscale up`; final paths all OK (`exo2`, `exo2-lan`,
+`exo2-via-exo1`). Huihui was not unloaded for this demo. Terminal footage is
+the real log with timestamps stripped so the clip stays date-free.
+
+**Reboot / pull-the-plug test: not run.** `sudo reboot` on EXO1/EXO2 requires
+an admin password this session could not supply (`sudo: a password is required`;
+`reboot: Operation not permitted`). Restore-last-model and `:8090` launchd
+recovery remain deferred. Prefs already saved for Huihui 24/40 EXO2/EXO1.
+
+Window capture: v3 chat is a **headless page-viewport** screencast at exactly
+1280×720 (not a Hyprland-tiled window). A temporary `hyprctl keyword windowrulev2`
+attempt failed (non-legacy parser) and did not change running rules. Headed
+v3 tries earlier were **1265×720** and could look cut off on the desktop.
+**Day 19 v2 / earlier self-tune UI stills were already 1280×720 headless** and
+were not clipped the same way; what Brenden saw was the on-desktop headed
+window, not the v2 file.
+
+Generator: `handoff/lab/videos/make_day19_video_v3.py`. Captions:
+`handoff/lab/videos/day19_captions_v3.txt`. X videos still go to review
+before Brenden.
+
