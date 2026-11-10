@@ -1538,3 +1538,12 @@ Evidence: Omarchy `/home/brenden/day19-lastmodel-20261108/day19-pre-wrap-status.
 Release tag is **day19-2026-11-08** (development-day date; publication Nov 9 CST). Source packages exclude models, dependencies, compiled runtimes and exported video media. Install instructions: INSTALL.md and docs/SERVICES.md. Separate-account/FileVault-on install, three physical Minis, strict GGUF file independence, N-stage Optimize and sustained GUI/performance checks remain open. Historical results above are checkpoints, not evidence that the deferred reboot test passed.
 
 Closeout full box suite: **738 tests passed in 42.600 s**, zero failures/skips. Log `/workspace/day19-release-tests.log`. `git diff --check` passed. Obsidian updated on Omarchy: `~/Documents/obsidian/Projects/Caravan/Day 19 Wrap-up.md` and `Day 18 Wrap-up.md` (existing v25 video metadata recovered, not new media work).
+
+### Published release and package verification — 2026-11-09 CST
+
+- Release: https://github.com/linuxbren/caravan/releases/tag/day19-2026-11-08
+- Immutable annotated tag `day19-2026-11-08` targets **7267325a33d2c1a0990322773b33621ccad36beb**. Development branch pushed; main fast-forwarded from 1ccdb15 to the same commit, no rewrite. Working branch remains `caravan-v3-mlx-split`.
+- Published clean-tree ZIP **18,826,133 B**, SHA256 `adf9247eefd99b684ca37e198908773a5cb0c3315ced4202b507330b8185a93c`; tar.gz **17,942,822 B**, SHA256 `92e31ed10d622f56b9ef0727112849426228e2e667253b36fca82660e4ee4446`. ZIP integrity passed, INSTALL.md and SERVICES.md present.
+- Downloaded the published tar.gz to fresh `/workspace/day19-release/verify/`; SHA256 matched, extracted INSTALL.md checked. Full extracted suite: **738 tests passed in 42.081 s**, zero failures/skips; log `/workspace/day19-release-package-tests.log`. Original full suite: **738 passed in 42.600 s**. No failed suite in this closeout; earlier failures remain documented above.
+- Both Minis clean tracked trees pulled ff-only to release commit, existing untracked HTML backups preserved. Docs-only changes: no service restart, no reboots. Same Huihui 24/40 model left selected for Hermes.
+- This follow-up documentation records publication without moving the release tag/assets. Restore-last-model reboot test remains **pending, deferred to the next dev day**; no Day 19 video or X draft.
