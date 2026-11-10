@@ -43,6 +43,19 @@ N-Mini algorithm fixtures are not physical3+ Mini scaling evidence. Cable
 unplug/replug, mixed bridges and reboot/address changes were not tested here.
 Concrete preview IPs do not replace reboot-safe tb:// configuration.
 
+## Final pre-reboot checkpoint
+
+- 907 tests passing (+60 since Apply-feedback checkpoint; +113 since initial
+  Day21),85 Thunderbolt-targeted. Exact full run45.084s.
+- Real en2 forward identity verified (SSH hello158.980ms /
+  TCP0.279ms). Reverse TCP reachable0.712ms but SSH identity
+  remains UNVERIFIED; no keys enrolled or weaker route/login attempted.
+- Opt-in preview matches the existing configured and observed two-Mini peer;
+  NOTHING applied. No apply route. Verification expires within30s.
+- Screenshot: `/workspace/day21-tb-verified.png`; evidence under
+  `handoff/lab/day21/thunderbolt-verified/`. Huihui24/40 KV16 loaded/saved,
+  unchanged PID39479; full19-tool Hermes request HTTP200/stop, visible content.
+
 ## Required before tagging
 
 Run the exact observer/reboot recipe in [DAY21](../DAY21.md#auxiliary-title-worker-physical-reboot-check--brenden-runs-this).

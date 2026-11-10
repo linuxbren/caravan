@@ -1,0 +1,59 @@
+{
+  "preview_only": true,
+  "apply_supported": false,
+  "automatic_routing": false,
+  "fail_closed": true,
+  "validation_id": "cc232d57c5fb4e6f840378c3533209f1",
+  "expires_at": 1794292004.491773,
+  "order": [
+    "exo2",
+    "exo1"
+  ],
+  "nodes": [
+    {
+      "id": "exo2",
+      "role": "packer",
+      "peer": "169.254.99.64:5560",
+      "listen": "169.254.99.64:5560",
+      "upstream_peer": null,
+      "interface": "en2"
+    },
+    {
+      "id": "exo1",
+      "role": "lead",
+      "peer": "169.254.99.64:5560",
+      "listen": null,
+      "upstream_peer": null
+    }
+  ],
+  "required_edges": [
+    {
+      "source": "exo1",
+      "target": "exo2",
+      "address": "169.254.99.64",
+      "source_address": "169.254.65.20",
+      "source_interface": "en2",
+      "target_interface": "en2",
+      "evidence": "trusted inventory + source route",
+      "status": "verified",
+      "reason": "Existing host key + nonce + hostname + bound endpoints verified",
+      "usable_for_routing": false,
+      "identity_verified": true,
+      "reachable": true,
+      "latency_ms": 158.98,
+      "tcp_connect_ms": 0.279,
+      "checked_at": 1794291974.491773,
+      "method": "interface-bound TCP22 + strict SSH nonce hello",
+      "latency_kind": "authenticated SSH hello wall time; not ping RTT or MLX throughput",
+      "identity_alias": "100.90.134.95",
+      "port": 22,
+      "peer_hostname": "prf-hays-exo02.local",
+      "elapsed_ms": 229.727,
+      "transport_bound": true,
+      "bound_ifindex": 11
+    }
+  ],
+  "matches_current_config": true,
+  "matches_live": null,
+  "warning": "Preview only. No apply endpoint. Preserve ports/order; no Wi-Fi/Tailscale fallback. SSH validation does not prove MLX ports or guarantee runtime interface pinning. Future apply needs explicit consent, fresh identity checks and strictly bound worker transports."
+}

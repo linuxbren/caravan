@@ -1,0 +1,85 @@
+{
+  "before": {
+    "pid": 39479,
+    "status": "ready",
+    "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+    "counts": [
+      24,
+      40
+    ],
+    "order": [
+      "exo2",
+      "exo1"
+    ],
+    "kv_bits": 16,
+    "healthy": true,
+    "peer": "169.254.99.64:5560"
+  },
+  "errors": [],
+  "mutations": [],
+  "requests": [
+    {
+      "url": "http://127.0.0.1:18190/api/thunderbolt/validate",
+      "method": "POST",
+      "body": "{}"
+    },
+    {
+      "url": "http://127.0.0.1:18190/api/thunderbolt/plan",
+      "method": "POST",
+      "body": "{\"opt_in\":true,\"validation_id\":\"cc232d57c5fb4e6f840378c3533209f1\"}"
+    }
+  ],
+  "validation_wall_s": 0.849,
+  "validation_http": 200,
+  "edge_results": [
+    {
+      "source": "exo1",
+      "target": "exo2",
+      "status": "verified",
+      "address": "169.254.99.64",
+      "source_address": "169.254.65.20",
+      "source_interface": "en2",
+      "target_interface": "en2",
+      "latency_ms": 158.98,
+      "tcp_connect_ms": 0.279,
+      "transport_bound": true,
+      "bound_ifindex": 11,
+      "reason": "Existing host key + nonce + hostname + bound endpoints verified"
+    },
+    {
+      "source": "exo2",
+      "target": "exo1",
+      "status": "unverified",
+      "address": "169.254.65.20",
+      "source_address": "169.254.99.64",
+      "source_interface": "en2",
+      "target_interface": "en2",
+      "latency_ms": null,
+      "tcp_connect_ms": 0.712,
+      "transport_bound": true,
+      "bound_ifindex": 11,
+      "reason": "Existing SSH trust or noninteractive login unavailable; no enrollment/fallback"
+    }
+  ],
+  "plan_http": 200,
+  "matches_live_endpoint": true,
+  "ui_readout": "Read-only · bounded link validation · expires within 30 seconds · automatic routing off.EXO1: en2 169.254.65.20 (thunderbolt)EXO2: en2 169.254.99.64 (thunderbolt)exo1 → exo2: en2 169.254.65.20 → en2 169.254.99.64Verified · 158.98 ms SSH hello · 0.279 ms TCP connectExisting host key + nonce + hostname + bound endpoints verifiedexo2 → exo1: en2 169.254.99.64 → en2 169.254.65.20Unverified · TCP reachable · 0.712 ms connectExisting SSH trust or noninteractive login unavailable; no enrollment/fallbackVerified means existing SSH host key, nonce, hostname and TCP22 over a kernel-bound private TB interface; not MLX health/throughput or direct cable adjacency. No routing changes.",
+  "ui_plan": "Preview only · nothing appliedMatches current configured peer/listen endpoints (resolved from trusted inventory).exo2: peer 169.254.99.64:5560 · listen 169.254.99.64:5560 · upstream noneexo1: peer 169.254.99.64:5560 · listen unchanged · upstream nonePreview only. No apply endpoint. Preserve ports/order; no Wi-Fi/Tailscale fallback. SSH validation does not prove MLX ports or guarantee runtime interface pinning. Future apply needs explicit consent, fresh identity checks and strictly bound worker transports.Plan details{\n  \"preview_only\": true,\n  \"apply_supported\": false,\n  \"automatic_routing\": false,\n  \"fail_closed\": true,\n  \"validation_id\": \"cc232d57c5fb4e6f840378c3533209f1\",\n  \"expires_at\": 1794292004.491773,\n  \"order\": [\n    \"exo2\",\n    \"exo1\"\n  ],\n  \"nodes\": [\n    {\n      \"id\": \"exo2\",\n      \"role\": \"packer\",\n      \"peer\": \"169.254.99.64:5560\",\n      \"listen\": \"169.254.99.64:5560\",\n      \"upstream_peer\": null,\n      \"interface\": \"en2\"\n    },\n    {\n      \"id\": \"exo1\",\n      \"role\": \"lead\",\n      \"peer\": \"169.254.99.64:5560\",\n      \"listen\": null,\n      \"upstream_peer\": null\n    }\n  ],\n  \"required_edges\": [\n    {\n      \"source\": \"exo1\",\n      \"target\": \"exo2\",\n      \"address\": \"169.254.99.64\",\n      \"source_address\": \"169.254.65.20\",\n      \"source_interface\": \"en2\",\n      \"target_interface\": \"en2\",\n      \"evidence\": \"trusted inventory + source route\",\n      \"status\": \"verified\",\n      \"reason\": \"Existing host key + nonce + hostname + bound endpoints verified\",\n      \"usable_for_routing\": false,\n      \"identity_verified\": true,\n      \"reachable\": true,\n      \"latency_ms\": 158.98,\n      \"tcp_connect_ms\": 0.279,\n      \"checked_at\": 1794291974.491773,\n      \"method\": \"interface-bound TCP22 + strict SSH nonce hello\",\n      \"latency_kind\": \"authenticated SSH hello wall time; not ping RTT or MLX throughput\",\n      \"identity_alias\": \"100.90.134.95\",\n      \"port\": 22,\n      \"peer_hostname\": \"prf-hays-exo02.local\",\n      \"elapsed_ms\": 229.727,\n      \"transport_bound\": true,\n      \"bound_ifindex\": 11\n    }\n  ],\n  \"matches_current_config\": true,\n  \"matches_live\": null,\n  \"warning\": \"Preview only. No apply endpoint. Preserve ports/order; no Wi-Fi/Tailscale fallback. SSH validation does not prove MLX ports or guarantee runtime interface pinning. Future apply needs explicit consent, fresh identity checks and strictly bound worker transports.\"\n}",
+  "after": {
+    "pid": 39479,
+    "status": "ready",
+    "model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+    "counts": [
+      24,
+      40
+    ],
+    "order": [
+      "exo2",
+      "exo1"
+    ],
+    "kv_bits": 16,
+    "healthy": true,
+    "peer": "169.254.99.64:5560"
+  },
+  "ok": true
+}

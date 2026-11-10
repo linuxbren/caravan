@@ -1,0 +1,122 @@
+{
+  "observed_at": 1794291974.24815,
+  "read_only": true,
+  "nodes": [
+    {
+      "id": "exo1",
+      "label": "EXO1",
+      "interfaces": [
+        {
+          "interface": "en2",
+          "kind": "thunderbolt",
+          "members": [],
+          "addresses": [
+            "169.254.65.20"
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "address": "169.254.99.64",
+          "interface": "en2"
+        }
+      ],
+      "hostname": "prf-hays-exo01-2.local",
+      "username": "brenden",
+      "offline": false
+    },
+    {
+      "id": "exo2",
+      "label": "EXO2",
+      "interfaces": [
+        {
+          "interface": "en2",
+          "kind": "thunderbolt",
+          "members": [],
+          "addresses": [
+            "169.254.99.64"
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "address": "169.254.65.20",
+          "interface": "en2"
+        }
+      ],
+      "hostname": "prf-hays-exo02.local",
+      "username": "brenden",
+      "offline": false
+    }
+  ],
+  "graph": {
+    "node_ids": [
+      "exo1",
+      "exo2"
+    ],
+    "edges": [
+      {
+        "source": "exo1",
+        "target": "exo2",
+        "address": "169.254.99.64",
+        "source_address": "169.254.65.20",
+        "source_interface": "en2",
+        "target_interface": "en2",
+        "evidence": "trusted inventory + source route",
+        "status": "verified",
+        "reason": "Existing host key + nonce + hostname + bound endpoints verified",
+        "usable_for_routing": false,
+        "identity_verified": true,
+        "reachable": true,
+        "latency_ms": 158.98,
+        "tcp_connect_ms": 0.279,
+        "checked_at": 1794291974.491773,
+        "method": "interface-bound TCP22 + strict SSH nonce hello",
+        "latency_kind": "authenticated SSH hello wall time; not ping RTT or MLX throughput",
+        "identity_alias": "100.90.134.95",
+        "port": 22,
+        "peer_hostname": "prf-hays-exo02.local",
+        "elapsed_ms": 229.727,
+        "transport_bound": true,
+        "bound_ifindex": 11
+      },
+      {
+        "source": "exo2",
+        "target": "exo1",
+        "address": "169.254.65.20",
+        "source_address": "169.254.99.64",
+        "source_interface": "en2",
+        "target_interface": "en2",
+        "evidence": "trusted inventory + source route",
+        "status": "unverified",
+        "reason": "Existing SSH trust or noninteractive login unavailable; no enrollment/fallback",
+        "usable_for_routing": false,
+        "identity_verified": false,
+        "reachable": true,
+        "latency_ms": null,
+        "tcp_connect_ms": 0.712,
+        "checked_at": 1794291974.5901508,
+        "method": "interface-bound TCP22 + strict SSH nonce hello",
+        "latency_kind": "authenticated SSH hello wall time; not ping RTT or MLX throughput",
+        "identity_alias": "prf-hays-exo01-2.local",
+        "port": 22,
+        "transport_bound": true,
+        "bound_ifindex": 11
+      }
+    ],
+    "directed": true,
+    "automatic_routing": false,
+    "ambiguous_addresses": [],
+    "warning": "Verified means existing SSH host key, nonce, hostname and TCP22 over a kernel-bound private TB interface; not MLX health/throughput or direct cable adjacency. No routing changes.",
+    "validation_counts": {
+      "verified": 1,
+      "unverified": 1,
+      "failed": 0
+    }
+  },
+  "scope": "Explicit bounded trusted-link validation only. No scans, enrollment, model/socket interruption or automatic routes.",
+  "validated_at": 1794291974.616032,
+  "validation_id": "cc232d57c5fb4e6f840378c3533209f1",
+  "validation_ttl_s": 30,
+  "cache_ttl_s": 30
+}

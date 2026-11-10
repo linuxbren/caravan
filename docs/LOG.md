@@ -2931,3 +2931,15 @@ expire. Opt-in N-Mini plan preserves order/ports, requires successor AND lead
 reachability, rejects stale/ambiguous/missing evidence, and has NO apply route.
 Day21 release notes prepared as a draft; tag remains gated on Brenden's
 November10,5–6pm CST physical auxiliary-worker reboot check.
+
+Final deployed TB proof (2026-11-10 00:26:14 CST):1 verified /1 unverified /0 failed.
+EXO1→EXO2 en2: TCP0.279ms, authenticated SSH hello158.980ms;
+reverse TCP0.712ms reachable but existing SSH trust/login unavailable;
+no enrollment or fallback. Explicit plan matches current en2 peer/listen,
+preview only, no apply endpoint; worker39479 remains Huihui24/40 KV16 loaded
+and saved. Final18090 full19-tool check HTTP200/stop, visible content,
+11.196s cached-prefix wall.907 tests (+60 over847),85 TB-targeted.
+Screenshot `/workspace/day21-tb-verified.png`; evidence under
+`handoff/lab/day21/thunderbolt-verified/`. Code commits c2c7ec6/efdf8ba/609908e;
+ff-only sync, keep-workers web-only backend restarts, no routes/model reload/reboot/tag.
+Day21 draft release notes await Nov10,5–6pm CST physical aux reboot evidence.

@@ -4,7 +4,7 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-11-09 CST: Day 21–25 plan agreed. Day20 wrapped; paired Qwen3.5-family matrix and reboot evidence recorded. Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
+*Last updated 2026-11-10 CST: Day 21–25 plan agreed. Day20 wrapped; paired Qwen3.5-family matrix and reboot evidence recorded. Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -47,7 +47,7 @@ deprecated flag aliases.
 - [x] N-Mini Thunderbolt discovery/routing design and two-Mini read-only route check documented; no automatic routing code deployed.
 - [x] Exact auxiliary reboot observer/check steps prepared; Brenden issues reboot.
 - [x] Trusted read-only Thunderbolt inventory/candidate graph and explicit UI/API inspection implemented; live2-Mini,2-directed-edge readout passed. No automatic route changes.
-- [x] Explicit interface-pinned TCP22/SSH identity, reachability and latency validation; per-edge verified/unverified/failed states; expiring opt-in N-Mini peer/listen/upstream preview. Live2-Mini confirmation follows deployment; no apply endpoint or automatic route changes.
+- [x] Explicit interface-pinned TCP22/SSH identity, reachability and latency validation; per-edge verified/unverified/failed states; expiring opt-in N-Mini peer/listen/upstream preview. Live2-Mini proof: forward en2 verified; reverse TCP reachable but SSH identity unverified.907 tests; no apply endpoint or automatic route changes.
 - [ ] MLX transport authentication, production path application and physical auxiliary reboot proof remain pending; SSH link validation is not model-protocol proof.
 
 ## Plan: Day 21–25 (agreed 2026-11-09)
@@ -236,7 +236,7 @@ Open tasks for this rule:
    - The shard cache, which turned out to be native (`rpc-server --cache`).
 3. **The self-organizing agent.**
    - mDNS and Tailscale discovery, lead and packer roles.
-   - Automatic Thunderbolt > Tailscale > LAN path choice.
+   - Thunderbolt-only verified path choice; any private Ethernet/overlay fallback must be separately opted in and explicit, never silent.
    - Supervision.
    - The root cause of the launchd networking failures: the Local
      Network permission.

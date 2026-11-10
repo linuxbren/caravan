@@ -1,5 +1,15 @@
 # Day 21 — clearer Balance, loose ends and Thunderbolt discovery
 
+## Current checkpoint — November10 CST (historical phases follow)
+
+- Balance UI shipped, including explicit reload/chat locking; Huihui24/40 KV16
+  remains loaded and saved, lead PID39479 unchanged by Thunderbolt work.
+- Bound TCP22/SSH forward link verified; reverse TCP reachable but identity
+  unverified. Opt-in N-Mini plan preview matches current en2 endpoints; no apply.
+- 907 tests passing. Screenshot: `/workspace/day21-tb-verified.png`.
+- [Day21 release notes](release-notes/day21.md) are DRAFT/UNTAGGED, held for
+  Brenden's November10,5–6pm CST physical auxiliary reboot check.
+
 ## Phase 1 approval checkpoint
 
 Brenden approved this development order: Day21 loose ends + dynamic Thunderbolt;
@@ -569,3 +579,65 @@ Final UI-complete regression: **907 passing**, up60 from847 (+113 from794);
 Final hardening: management inventory/source-orchestration SSH also explicitly
 disables UpdateHostKeys, not just the interface-bound hello. Existing known
 hosts remain the trust anchors; discovery may not accept/rotate trust entries.
+
+
+## Final live trusted-link readout — 2026-11-10 00:26:14 CST
+
+Final code: `c2c7ec6` (validation/preview), `efdf8ba` (reachability clarity),
+`609908e` (disable SSH host-key updates on management paths too). Both Minis
+ff-only synced. Backend deployments restarted only EXO1 web with asserted
+keep-workers/AbandonProcessGroup policy; the static UI update needed no restart.
+No model, packer, proxy or auxiliary job was restarted by this Thunderbolt work.
+
+Omarchy18190 actual UI: click Validate links, then opt in and Preview plan.
+Bound validation request completed in **0.849s**. Each source
+used en2, private169.254 addresses, and kernel-confirmed **ifindex11**.
+
+| Direction (en2 → en2) | Identity/status | TCP reachability | TCP connect | Authenticated SSH hello |
+|---|---|---|---:|---:|
+| EXO1 .65.20 → EXO2 .99.64 | **verified** | yes |0.279ms|158.980ms|
+| EXO2 .99.64 → EXO1 .65.20 | **unverified** | yes |0.712ms|not established|
+
+Addresses above abbreviate169.254.65.20 /169.254.99.64. Counts:1 verified,
+1 unverified,0 failed. Reverse existing SSH trust or noninteractive login was
+unavailable; it was NOT converted into a trusted identity, retried on another
+network, or fixed by adding/copying keys. TCP reachability alone is not identity.
+The UI explicitly shows the distinction and its known connect latency.
+No live fault/cable interruption was manufactured to produce a failed edge;
+failure and timeout states are covered by fixtures.
+
+The required current TCP connection is EXO1→EXO2, so the two-Mini preview needs
+that verified direction, not the unused reverse SSH login. Middle-Mini paths
+must independently verify every required successor/lead direction. The preview
+returned HTTP200, explicit opt-in/current validation ID, order EXO2→EXO1,
+EXO2 peer/listen **169.254.99.64:5560**, no upstream, and the lead's effective
+peer unchanged. It matches configured reboot-safe en2 URI resolution AND the
+live status peer, but **nothing was applied**. API `matches_live` remains null
+rather than pretending an apply happened. No apply endpoint exists.
+
+Verification expires within30s. API/UI downgrade expired proof; the server
+rejects stale plan requests and the UI rejects expiry-in-flight. Reopen/refresh
+the UI and click Validate links for a new readout; there is no automatic probe
+or persistent verified badge. Screenshot (final capture, visually checked):
+**`/workspace/day21-tb-verified.png`**.
+
+Final inference check after the final backend/UI deploy: :18090 actual19-tool,
+medium-effort request **HTTP200 / finish stop / visible response**;
+**11.196s wall**, TTFT**0.315s**, write**6.23tok/s**.
+Cached prefix11309/11310 tokens; this is a functional check, NOT cold-prefill
+performance or actual tool execution. Private request bodies were not copied.
+Afterward loaded AND saved Huihui remained **24/40 KV16**, lead **39479**,
+EXO2→EXO1 and existing peer unchanged. No model reload occurred in this step.
+
+Exact final regression: **907 passing /45.084s**, up60 from847,
+up113 from the Day21 baseline794. 85 targeted Thunderbolt cases cover old and
+new paths; Node syntax, Python compilation and whitespace checks passed.
+Nonprivate API/UI/plan/model/full-tool evidence and guarded capture script:
+`handoff/lab/day21/thunderbolt-verified/`.
+
+Release notes prepared in `docs/release-notes/day21.md`, explicitly DRAFT.
+No tag/release/reboot issued or scheduled. Brenden runs the existing physical
+auxiliary reboot recipe around **November10,5–6pm CST**; only that evidence
+can close the remaining release gate. Two Minis do not prove physical N-Mini
+scaling, arbitrary bridges/cables, automatic path application, or MLX transport
+authentication. These limits are not hidden by a verified SSH link.

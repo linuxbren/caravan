@@ -1558,3 +1558,26 @@ write**;11,310 prompt tokens,11,309 cached. This cached-prefix check proves the
 full-tool-shaped route still responds, not cold-prefill speed or actual tool
 execution. Model remained Huihui24/40 KV16, lead PID39479. No routes changed.
 Evidence: `handoff/lab/day21/apply-feedback/`; private request bodies omitted.
+
+
+## Day21 bound-link verification smoke check — 2026-11-10 00:26:14 CST
+
+Two actual M4 Minis, no route/model change; a single final validation request
+completed in0.849s, not a bandwidth or inference benchmark.
+
+| Source → target | Interface / binding | TCP connect | SSH authenticated hello | Result |
+|---|---|---:|---:|---|
+| EXO1→EXO2 |en2 / IP_BOUND_IF11|0.279ms|158.980ms|verified existing host identity + nonce + endpoints|
+| EXO2→EXO1 |en2 / IP_BOUND_IF11|0.712ms|not established|TCP reachable, SSH trust/login unverified; no fallback|
+
+SSH wall time includes process/authentication/remote-command overhead; TCP
+connect is reported separately. Neither is ping RTT, MLX-port health, bandwidth,
+actual model transport authentication/pinning, or physical N-Mini scaling proof.
+This is a one-shot functional sample, not repeated latency statistics.
+
+Post-deploy18090 full19-tool/medium smoke: HTTP200, visible response/finishstop,
+**11.196s wall /0.315s TTFT /6.23tok/s write**;
+11309 of11310 prompt tokens cached. No cold-speed or actual tool-execution claim.
+Model unchanged Huihui24/40 KV16, PID39479; saved preference verified.
+Exact regression **907 tests /45.084s**, +60 from847 (+113 from794).
+Evidence: `handoff/lab/day21/thunderbolt-verified/`; private request body omitted.
