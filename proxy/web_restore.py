@@ -1,7 +1,8 @@
 """Web-owned last-successful-model intent. No workers, downloads or commands stored.
 
-Boot restore POSTs the same guarded load endpoint as the UI, exactly once. A
-failed restore leaves the intent available for a later explicit Load/retry.
+Boot restore uses the same guarded load endpoint as the UI. Transient offline /
+unknown-memory preflight failures retry for up to ten minutes; permanent safety
+failures still stop immediately. User controls cancel all pending retries.
 """
 from __future__ import annotations
 import copy
@@ -160,10 +161,13 @@ def validate_placement(app, entry, body):
 
 
 class Controller:
-    def __init__(self, app, *, store=None):
+    def __init__(self, app, *, store=None, retry_timeout=600, clock=time.monotonic, wait=None):
         self.app=app;self.mgr=app.mgr
         self.store=store or Store(self.mgr.state_dir/"last-model.json")
         self.lock=threading.RLock();self.token=None;self.cancelled=False;self.started=False
+        self._cancel_event=threading.Event()
+        self.retry_timeout=retry_timeout;self._clock=clock
+        self._wait=wait or self._cancel_event.wait
         self.state={"phase":"idle","message":"","enabled":os.environ.get("CARAVAN_WEB_RESTORE_LAST","1").lower() not in ("0","false","no")}
         self.mgr.on_load_success=self.record
         self.mgr.on_user_stop=self.clear
@@ -183,7 +187,7 @@ class Controller:
             self.note("save_error","Model loaded, but last-model preference could not be saved: "+str(e))
             self.mgr._note(self.state["message"])
     def cancel(self):
-        with self.lock:self.token=None;self.cancelled=True;self.state.update(phase="cancelled",message="Automatic restore cancelled by model controls")
+        with self.lock:self.token=None;self.cancelled=True;self._cancel_event.set();self.state.update(phase="cancelled",message="Automatic restore cancelled by model controls")
     def clear(self):
         self.cancel()
         with self.lock:
@@ -202,10 +206,10 @@ class Controller:
         if background:
             self.thread=threading.Thread(target=self.run,daemon=True,name="caravan-restore-last");self.thread.start()
         else:self.run()
-    def http(self,path,body=None):
+    def http(self,path,body=None,*,timeout=180):
         req=Request(self.base_url+path,data=None if body is None else json.dumps(body).encode(),headers={"Content-Type":"application/json"})
         try:
-            with urlopen(req,timeout=180) as r:return json.load(r)
+            with urlopen(req,timeout=timeout) as r:return json.load(r)
         except HTTPError as e:
             try:msg=json.loads(e.read()).get("error") or str(e)
             except Exception:msg=str(e)
@@ -225,7 +229,35 @@ class Controller:
             self.mgr._note(self.state["message"])
             healthy=getattr(self.mgr,"lead_healthy",None)
             if callable(healthy) and healthy():raise ValueError("An unadopted worker already owns the lead port; it was not stopped")
-            self.http("/api/models/load",dict(request,_restore_token=token))
+            # Retry only failures known to occur before a worker is launched.
+            # Never retry ambiguous HTTP timeouts, missing files or RAM shortfalls.
+            retry_deadline=self._clock()+self.retry_timeout
+            delay=2.0;attempt=0
+            while True:
+                with self.lock:
+                    if self.cancelled or self.token!=token:return
+                remaining=retry_deadline-self._clock()
+                if remaining<=0:raise ValueError("Peer readiness timed out after ten minutes")
+                attempt+=1
+                try:
+                    self.http("/api/models/load",dict(request,_restore_token=token),timeout=min(180,remaining))
+                    break
+                except ValueError as e:
+                    why=str(e).lower()
+                    transient=(why.startswith("live free memory is unknown for ") or
+                               (why.startswith("mini ") and (" is unavailable" in why or why.endswith(" unavailable"))))
+                    if not transient:raise
+                    remaining=retry_deadline-self._clock()
+                    if remaining<=0:raise ValueError("Peer readiness timed out: "+str(e)) from None
+                    pause=min(delay,remaining)
+                    with self.lock:
+                        if self.cancelled or self.token!=token:return
+                        self.state.update(phase="preparing",attempt=attempt,retry_in_s=pause,
+                            message=f"Waiting for Minis (attempt {attempt}); retry in {pause:g}s: {e}")
+                    self.mgr._note(self.state["message"])
+                    self._wait(pause)
+                    delay=min(delay*2,30)
+            with self.lock:self.state.pop("retry_in_s",None)
             deadline=time.monotonic()+1200
             while time.monotonic()<deadline:
                 with self.lock:

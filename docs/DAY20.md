@@ -307,66 +307,46 @@ before Brenden.
 - Day 20 tagged release and main fast-forward (not cut yet).
 
 
-## Both-Mini reboot follow-up — Nov 9, 2026 CST
+## Reboot follow-up correction and readiness fix — Nov 9, 2026 CST
 
-**Missed the five-minute recovery target; eventual automatic model restore observed.**
-No manual model load, restart, network change, or second reboot was performed by
-the follow-up executor. Both-Mini reboot was issued by Brenden. Do not describe
-this as a fast/unqualified reboot recovery pass. Recovery delay remains unresolved.
+**Automatic restore FAILED.** At 19:47:05 CST the web's initial restore POST
+returned 400: `live free memory is unknown for exo2`; the previous controller
+blocked permanently, with no automatic retry. A different executor manually
+loaded Huihui at 19:54:24; ready about 19:54:38. The follow-up executor's earlier
+“eventual automatic restore” inference was wrong and is superseded here.
 
-Watcher sample timestamps (CST; each row is stamped before sequential probes,
-so allow several seconds of sampling skew):
+Omarchy's unmanaged :18190 SSH tunnel also died in the reboot and was manually
+restarted at 19:54:12. Thus tunnel HTTP failure did not establish local-web
+failure. Launchd web and proxy had started at 19:47:04. SSH milestones from the
+watcher: EXO2 down 19:46:18, both down 19:46:30; EXO2 primary back 19:46:53,
+EXO1 primary back 19:47:11 (row timestamps precede sequential probes).
 
-| Milestone | Time CST |
-| --- | --- |
-| EXO2 first SSH-down row | 19:46:18 |
-| Web tunnel first down row | 19:46:24 |
-| Both SSH-down row | 19:46:30 |
-| EXO2 LAN SSH back | 19:46:40 |
-| EXO2 primary SSH back | 19:46:53 |
-| EXO1 LAN SSH / proxy listener back | 19:47:04 |
-| Both primary SSH aliases back | 19:47:11 |
-| Web tunnel first HTTP 200, idle | 19:54:10 |
-| Saved Huihui request starting packer | 19:54:26 |
-| Packer ready (worker progress timestamp) | 19:54:30.326 |
-| Watcher first ready 24/40 row | 19:54:35 |
-| Lead health / load complete (worker progress) | 19:54:37.398 / .402 |
-| Proxy chat via Hermes tunnel HTTP 200 | 19:58:19–19:58:29 |
-| Completed assistant content via Hermes tunnel | 19:58:35–19:58:56 |
+The verified synthetic Hermes-style POST via :18090 at 19:58:35–56 CST completed
+with `Caravan is back online.` HTTP 200, 21.350 s wall; worker 18.656 s,
+TTFT .805 s, prefill .525 s, write 6.55 tok/s. This was not an actual Hermes
+application/full-tool-prefix benchmark. GET `/v1/models` 502 predates reboot:
+that discovery GET goes to the absent default llama backend; model-bearing MLX
+chat POSTs route correctly. No proxy discovery change is included in this fix.
+Thunderbolt inference uses EXO2 169.254.195.205 via EXO1 en2; the stale IPv6
+`exo2-via-exo1` SSH alias does not indicate failed inference transport.
 
-Huihui model: `mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit`,
-EXO2 first 24 layers, EXO1 last 40; pipeline_chats=1, self_tune=false.
-Status records durable `~/.caravan/web-ui/last-model.json`, saved at
-19:54:37.401 CST, and healthy worker PID 4356 on :8194. EXO1 launchd web PID
-683 and proxy PID 669 both began at 19:47:04 CST; neither was restarted here.
+Fix: restore readiness preflight retries offline/unknown-free-memory errors
+with 2, 4, 8, 16, then up to 30 s backoff, bounded to ten minutes. Each attempt
+reuses the same saved model, exact N-Mini placement/counts/settings and guarded
+UI load endpoint. Missing files, insufficient known free RAM, busy unadopted
+workers and ambiguous transport timeouts still fail closed without retries or
+downloads. User Stop/switch cancels backoff immediately and invalidates the
+restore token; unload retains its durable null intent. Existing ready workers
+are adopted without reload on a KEEP_WORKERS web restart.
 
-**The apparent :8090/:18090 failure was a misleading probe, not proof of a broken
-MLX route.** Watcher GET `/v1/models` returns 502 from the default llama upstream,
-including BEFORE reboot at 19:45:20. Proxy routes model-bearing chat POSTs by
-model prefix; launchd has `--mlx-host 127.0.0.1 --mlx-port 8194
---mlx-prefixes mlx-community/,huihui-`. `/caravan/proxy/status` returned HTTP 200.
-The first chat had max_tokens=64 and exhausted its reasoning budget (HTTP 200,
-10.379 s wall, TTFT 0.811 s, no assistant content); it is NOT counted as a
-completed user-visible answer. The next request finished with content
-`Caravan is back online.` (HTTP 200, 21.350 s wall; worker total 18.656 s,
-TTFT 0.805 s, prefill 0.525 s, write 6.55 tok/s). This was a synthetic
-Hermes-style API request through Omarchy localhost:18090, not an actual Hermes
-application turn or a full-tool 13k-prefix performance benchmark.
+Omarchy tunnels are managed by systemd user services with Restart=always,
+ExitOnForwardFailure, SSH server keepalives and five-second restart delay.
+Fresh reboot-watch2 probes distinguish local web, local MLX, packer, tunnels,
+process/reconnect state and model-bearing proxy chat. A second Brenden-issued
+reboot is REQUIRED to prove the fix. No reboot is issued by this executor.
+First-run evidence remains in `~/day19-video/reboot-watch/logs/` and frames/.
 
-Thunderbolt model transport is working: EXO1 route to fresh EXO2 address
-169.254.195.205 uses en2, and split inference succeeded. The failed
-`exo2-via-exo1` SSH alias instead names stale IPv6
-`fe80::8c3:dd7:5d56:b1ed%en2`; do not equate it with failed model transport.
-It was not edited here.
-
-No root-cause code fix was needed to make the current model/proxy serve, and no
-fix commit exists. The approximately eight-minute observed recovery and any
-local-web-versus-tunnel contribution need a separate instrumented retest; the
-existing watcher cannot distinguish them. A second reboot is not needed to
-prove an applied fix (none applied), but is needed to establish repeatable
-recovery and diagnose/improve the five-minute-target miss. Brenden must issue it.
-No v4 video was made; do not use a fast “comes back on its own” claim yet.
-
-Evidence remains on Omarchy in `~/day19-video/reboot-watch/logs/`
-(`reachability.log`, `post-reboot-hermes-reply.txt`,
-`post-reboot-hermes-content.txt`, `exo1-diagnostic.txt`) and `frames/`.
+Deployment detail: the existing `hermes-caravan-tunnel.service` already had
+Restart=always and recovered at 19:47:05 CST (3 restarts); left untouched.
+Added/enabled `caravan-web-tunnel.service` for :18190, replacing only the
+verified unmanaged web SSH process. No model/network/security settings changed.

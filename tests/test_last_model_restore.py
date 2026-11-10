@@ -60,11 +60,37 @@ class ControllerTest(unittest.TestCase):
         self.c.record(dict(id="q",split_counts=[4,8],pipeline_nodes=[NODES[1],NODES[0]]),dict(status="ready",split=True,settings={}))
         self.assertEqual(self.c.store.read()["model_id"],"q")
     def test_missing_peer_or_files_or_memory_stops_once_keeps_intent(self):
-        for why in ["Mini n2 unavailable","Missing shard","Not enough free memory"]:
+        for why in ["Missing shard","Not enough free memory"]:
             c=R.Controller(self.app);c.store.write(request())
             with mock.patch.object(c,"http",side_effect=ValueError(why)) as http,mock.patch.object(self.mgr,"lead_healthy",return_value=False):
                 c.start("http://unused",background=False);c.start("http://unused",background=False);self.assertEqual(http.call_count,1)
             self.assertEqual(c.snapshot()["phase"],"blocked");self.assertIn(why,self.mgr.snapshot()["error"]);self.assertEqual(c.store.read()["model_id"],"q")
+    def test_transient_peer_readiness_retries_with_backoff_then_restores(self):
+        now=[0];delays=[]
+        def wait(seconds):delays.append(seconds);now[0]+=seconds
+        c=R.Controller(self.app,clock=lambda:now[0],wait=wait);c.store.write(request())
+        attempts=[]
+        def post(path,body,**kwargs):
+            attempts.append(copy.deepcopy(body))
+            if len(attempts)==1:raise ValueError("live free memory is unknown for n2")
+            if len(attempts)==2:raise ValueError("Mini n2 is unavailable; bring it online and press Load")
+            self.mgr._set(status="ready")
+        with mock.patch.object(c,"http",side_effect=post),mock.patch.object(self.mgr,"lead_healthy",return_value=False):c.start("http://unused",background=False)
+        self.assertEqual(c.snapshot()["phase"],"restored");self.assertEqual(delays,[2,4])
+        self.assertEqual(attempts[0],attempts[2]);self.assertEqual(c.store.read()["counts"],[4,8])
+    def test_peer_retry_budget_is_bounded_and_intent_preserved(self):
+        now=[0]
+        c=R.Controller(self.app,retry_timeout=5,clock=lambda:now[0],wait=lambda s:now.__setitem__(0,now[0]+s));c.store.write(request())
+        with mock.patch.object(c,"http",side_effect=ValueError("Live free memory is unknown for n2")) as http,mock.patch.object(self.mgr,"lead_healthy",return_value=False):c.start("http://unused",background=False)
+        self.assertEqual(now[0],5);self.assertEqual(http.call_count,2);self.assertEqual(c.snapshot()["phase"],"blocked");self.assertIsNone(c.token);self.assertEqual(c.store.read()["model_id"],"q")
+    def test_user_stop_during_backoff_cancels_without_another_post(self):
+        c=R.Controller(self.app);c.store.write(request());c._wait=lambda seconds:c.clear()
+        with mock.patch.object(c,"http",side_effect=ValueError("Live free memory is unknown for n2")) as http,mock.patch.object(self.mgr,"lead_healthy",return_value=False):c.start("http://unused",background=False)
+        self.assertEqual(http.call_count,1);self.assertEqual(c.snapshot()["phase"],"empty");self.assertIsNone(c.store.read());self.assertIsNone(c.token)
+    def test_ambiguous_transport_timeout_is_not_retried(self):
+        c=R.Controller(self.app);c.store.write(request())
+        with mock.patch.object(c,"http",side_effect=TimeoutError("timed out")) as http,mock.patch.object(self.mgr,"lead_healthy",return_value=False):c.start("http://unused",background=False)
+        self.assertEqual(http.call_count,1);self.assertEqual(c.snapshot()["phase"],"blocked")
     def test_malformed_saved_json_is_clear_ui_error(self):
         self.c.store.path.write_text("not json")
         with mock.patch.object(self.c,"http") as http:self.c.start("http://unused",background=False);http.assert_not_called()
@@ -168,6 +194,15 @@ class SharedHTTPTest(unittest.TestCase):
         with urlopen(Request(self.url+path,data=json.dumps(body).encode(),headers={"Content-Type":"application/json"}),timeout=5) as r:return json.load(r)
     def test_restore_uses_same_guarded_http_balance_load_path(self):
         self.app.restore.store.write(request());self.app.restore.start(self.url,background=False);self.assertEqual(self.app.restore.snapshot()["phase"],"restored");got=self.app.restore.store.read();self.assertEqual(got["counts"],[4,8]);self.assertEqual(got["settings"]["kv_bits"],"8")
+    def test_http_unknown_peer_memory_retries_same_guarded_load(self):
+        attempts=[]
+        def balance(body,fresh=False):
+            attempts.append(copy.deepcopy(body))
+            if len(attempts)==1:raise ValueError("live free memory is unknown for n2")
+            return dict(ready=True,entry=self.entry(body["model_id"]))
+        self.app.balance=balance;self.app.restore._wait=lambda seconds:None
+        self.app.restore.store.write(request());self.app.restore.start(self.url,background=False)
+        self.assertEqual(len(attempts),2);self.assertEqual(attempts[0],attempts[1]);self.assertEqual(self.app.restore.snapshot()["phase"],"restored")
     def test_manual_switch_stays_unlocked_and_replaces_last_model(self):
         self.app.restore.store.write(request());self.post("/api/models/load",dict(model_id="small",balance=True,counts=[4,8],node_ids=["n2","n1"]));self.mgr._switch_thread.join(2);self.assertEqual(self.app.restore.store.read()["model_id"],"small");self.assertNotIn("managed_service",self.mgr.snapshot())
     def test_plain_ui_split_load_uses_n_node_planner_not_legacy_ip_defaults(self):
