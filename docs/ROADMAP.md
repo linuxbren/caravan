@@ -462,6 +462,17 @@ Open tasks for this rule:
 
 Ideas worth writing down. None is planned or started.
 
+### N-gram guess-ahead with an acceptance-rate readout (approved for a future dev day, 2026-11-09)
+
+Brenden approved this after reading pavelsimo's speculative-decoding post
+(https://x.com/pavelsimo/status/2118829929626587156).
+
+- Add an n-gram (prompt-lookup) guesser to guess-ahead. It drafts the next tokens from text already in the context, so it needs no draft model and uses almost no memory.
+- It should help most with agent chats like Hermes, which repeat a lot of earlier text, tool output and code.
+- On a split, every token pays a hop between Minis. Checking 3-4 guessed tokens in one pass spreads that cost, so measure it on the Huihui 27B 24/40 split. Baseline is about 6.2 tok/s writing.
+- Show the guess acceptance rate (accepted / proposed) in the UI and the docs next to tok/s.
+- For draft-model guessing, stay in the same family and pick a draft at least 10x smaller.
+
 ### Terminal Delight as Caravan's console
 
 [Terminal Delight](https://github.com/parker-brown-family/terminal-delight)
@@ -754,6 +765,10 @@ list above point to it.
 | Qwen3.6 35B (hybrid attention) doesn't reuse the chat | Its linear-attention layers can't be rewound, and the template drops the reasoning from earlier replies, so every turn diverges and re-reads the whole chat (11 s at 4k, 53 s at 16k), also after a restart. Same on one Mac. | With per-model profiles: keep the reasoning in the history for hybrid models, or snapshot at the end of the user turn. |
 | Split download: resume and clean-up of interrupted downloads | Resume continues partial files since Day 18 (HTTP Range). Clean-up still open; stale `.incomplete` files from killed downloads stay on disk (nothing deleted). | When split download is wired into the agent. |
 | v3 bench hits the worker directly | The proxy path was only smoke-tested (turn 1 cold, turn 2 reused, backend=mlx). | With the next proxy benchmark pass. |
+
+### Omarchy plugin for Caravan (parked until the TUI exists, 2026-11-09)
+
+Brenden parked this. The idea is a small Omarchy plugin (launcher, status, TUI, or one-click Hermes-to-Caravan setup), listed in the Omarchy Plugin Marketplace the way OmaSizer is (https://plugins.omarchy.org/plugin.html?id=omasizer). Revisit after the TUI.
 
 ## Known limits
 
