@@ -1520,3 +1520,21 @@ has no Caravan packer listener. The Day 19 restoration/reboot test remains
 pending. Both Mini repos have an existing untracked HTML backup; no pull or
 cleanup was attempted. Box regression: **738 tests passed in 43.514 s**.
 Full inventory, installation paths, rollback/manual steps and limitations: [REMOTE-ACCESS.md](REMOTE-ACCESS.md).
+
+## Day 19 closeout — 2026-11-09 CST (no reboots)
+
+Brenden approved wrapping up without reboots so he can use Hermes. **Restore-last-model reboot test: pending, deferred to the next dev day.** Live model-switch/replay/unload semantics remain unverified; no such extra test or web restart was run. No Day 19 video or X draft now.
+
+- EXO2 `~/cv3` clean tracked tree pulled ff-only from e0928ad to 8ff3852; EXO2 `~/dev/caravan` never touched. Existing untracked HTML backups left alone on both Minis.
+- Web status, lead process arguments and saved intent all identified the same **mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit** (not plain Qwen). Kept that model and ordered EXO2/EXO1 **24/40** split.
+- Initial saved-request reload safely returned HTTP 409: stale lead retained memory and preview showed insufficient EXO1 headroom (9.1 GB capacity vs 11.33 GB estimate). No guard bypass. Normal UI Stop removed only the stale owned stages (8.353 s), then normal Balance load restored the **same Huihui** model in **11.583 s**, with refreshed Thunderbolt peer 169.254.155.4:5560 and durable last-model intent. No weights downloaded, no machine reboot, no web restart.
+- Web `/v1/chat/completions`: “Two plus two equals four.” 6 output tokens / 26 prompt; TTFT **0.799 s**, read **50.0 tok/s**, write **5.40 tok/s**, native total **1.725 s** (HTTP wall 1.7523 s), peak 9.51 GB.
+- Proxy :8090 was not running (connection refused). Started only the existing stdlib proxy on **127.0.0.1:8090**, MLX target **127.0.0.1:8194**, prefixes `mlx-community/,huihui-`, with `CARAVAN_SLOT_CLEANUP=off` (no deletion). Log `~/.caravan/logs/day19-proxy.log`. This is a manual background process, not a new auto-start service; Hermes should use its SSH tunnel, not a public bind.
+- Proxy chat: “Three plus three equals six.” 6 output / 23 prompt tokens; TTFT **0.798 s**, read **44.3 tok/s**, write **5.41 tok/s**, native total **1.723 s**, peak 9.62 GB. These are tiny correctness smoke tests, not sustained benchmarks. No further model load for release work.
+- Remote access commit **8ff3852**: LAN and Thunderbolt SSH fallbacks plus two-minute non-root Tailscale recovery guards; 5/5 real SSH paths, 16/16 mocked guard and 3/3 fallback-order cases. Guards cannot guarantee recovery before login or from power/hardware/auth failures; see REMOTE-ACCESS.md.
+
+Evidence: Omarchy `/home/brenden/day19-lastmodel-20261108/day19-pre-wrap-status.json`, `day19-wrap-stale-stop.json`, `day19-wrap-huihui-load.json`, `day19-wrap-web-chat.json`; native API records on EXO1 `~/.caravan/day19-lastmodel-20261108/`. Initial rejected load retained in `day19-wrap-huihui-load-output.log` only until the successful harness run replaced that output; the 409 details above preserve its result.
+
+Release tag is **day19-2026-11-08** (development-day date; publication Nov 9 CST). Source packages exclude models, dependencies, compiled runtimes and exported video media. Install instructions: INSTALL.md and docs/SERVICES.md. Separate-account/FileVault-on install, three physical Minis, strict GGUF file independence, N-stage Optimize and sustained GUI/performance checks remain open. Historical results above are checkpoints, not evidence that the deferred reboot test passed.
+
+Closeout full box suite: **738 tests passed in 42.600 s**, zero failures/skips. Log `/workspace/day19-release-tests.log`. `git diff --check` passed. Obsidian updated on Omarchy: `~/Documents/obsidian/Projects/Caravan/Day 19 Wrap-up.md` and `Day 18 Wrap-up.md` (existing v25 video metadata recovered, not new media work).

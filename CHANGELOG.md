@@ -1,3 +1,10 @@
+### Day 19 release — day19-2026-11-08 (published 2026-11-09 CST)
+- Balance controls and arbitrary-stage MLX planning/transport; installer and native launchd services; per-stage pinned/checksummed own-file fetch. Strict GGUF independence remains partial; N-stage Optimize and three physical Minis remain unverified.
+- Web restores the last successfully loaded model and exact split; explicit Unload saves no model. Fixed model jobs removed from default setup. **Restore-last-model reboot test: pending, deferred to the next dev day.** Earlier fixed-model reboot success does not validate the revised design.
+- Full suite: **738 tests passed in 42.600 s**, no failures/skips.
+- Remote access hardening 8ff3852: LAN/TB fallbacks and non-root Tailscale recovery guards (5/5 routes, 16/16 mocked guard cases, 3/3 fallback cases).
+- Preserved Huihui Qwen3.5-27B Claude 4.6 Opus abliterated 4-bit, restored EXO2/EXO1 24/40; web/proxy correct short replies, ~0.8 s first token and 5.4 tok/s writing. No reboot or web restart; no video/X draft now. Install: INSTALL.md, docs/SERVICES.md. Details and remaining limits: docs/DAY19.md.
+
 ### Day 19 last-model auto-start design — 2026-11-08 (not a release)
 - Replaces the normal fixed-model service mode with web-owned last-successful-model restore: atomic model/engine/placement/counts/settings persistence, explicit unload tombstone and one-shot normal UI-path replay. Failed loads keep the previous successful selection; missing Minis/files/memory give a clear idle warning, no auto-download/retry/crash loop.
 - UI model switching and Balance remain unlocked. KEEP_WORKERS adopts existing owned local/pipeline/GGUF workers; remote single-Mini worker/tunnel adoption verifies identities and refuses reused PIDs. Normal split UI loads resolve explicit per-node Thunderbolt interfaces through the shared N-node planner.

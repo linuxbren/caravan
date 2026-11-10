@@ -4,7 +4,7 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-11-08: Day 19 authorized live checks and fixes; development branch only, no release. Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
+*Last updated 2026-11-09 CST: Day 19 no-reboot release closeout (`day19-2026-11-08`). Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -12,6 +12,13 @@ other Macs, numbered in layer order (Packer 1 runs the first layers), and
 the whole group is the **string**. The old words "head", "front" and
 "tail" survive only in older log entries, internal code names and
 deprecated flag aliases.
+
+## Day 19 final checkpoint
+
+- [x] Remote access recovery (8ff3852): LAN/TB SSH fallbacks and non-root Tailscale guards; 5/5 real routes tested. Not a pre-login/power/auth guarantee.
+- [x] Same Huihui 27B restored through Balance, EXO2/EXO1 24/40; correct web and proxy replies, about 0.8 s first token and 5.4 tok/s writing (short smoke only).
+- [ ] **Restore-last-model reboot test: pending, deferred to the next dev day.** No reboots in the Nov 9 closeout; switch/replay/unload live checks also deferred to avoid disturbing Hermes.
+- [ ] Day 19 video and X draft deferred; no work on either now.
 
 ## Day 19 order (2026-11-08)
 

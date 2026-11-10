@@ -1346,3 +1346,14 @@ recovery checklist and raw artifact locations in [DAY19.md](DAY19.md).
 Box final validation: **738 tests, 44.459 s**. Native model switching to Orvena,
 future-request replay and empty-selection restart remain deferred in this mode;
 unit/shared-HTTP coverage is not presented as a native reboot result.
+
+## Day 19 no-reboot closeout — 2026-11-09 CST
+
+Same Huihui Qwen3.5-27B Claude 4.6 Opus abliterated 4-bit, EXO2/EXO1 24/40, no model substitution. Normal Balance reload 11.583 s after normal Stop of the stale owned lead; initial reload safely rejected for insufficient estimated headroom.
+
+| Surface | Prompt / output tokens | TTFT | Read tok/s | Write tok/s | Native total |
+|---|---:|---:|---:|---:|---:|
+| Web :8190 | 26 / 6 | 0.799 s | 50.0 | 5.40 | 1.725 s |
+| Loopback proxy :8090 -> MLX :8194 | 23 / 6 | 0.798 s | 44.3 | 5.41 | 1.723 s |
+
+Both answers correct; tiny cold correctness smoke tests, not sustained performance claims. Proxy manually started with saved-chat cleanup off; no public bind. Remote-access 8ff3852: 5/5 real paths, 16/16 mocked guard and 3/3 fallback cases. **Restore-last-model reboot test: pending, deferred to the next dev day.** No reboot, model switch, video or X draft in this closeout. Full evidence and limits: DAY19.md.
