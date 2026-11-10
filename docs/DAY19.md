@@ -1847,3 +1847,25 @@ Raw evidence on Omarchy: `~/day19-video/reboot-watch2/logs/` contains
 `automatic-recovery-chat18090.json`, and `stopped.txt`. Frames remain in
 `~/day19-video/reboot-watch2/frames/`. The capture log's raw ISO timestamps
 are UTC; the timeline above is converted to America/Chicago CST.
+
+
+### Day 19 video v5 — verified automatic-recovery beat
+
+Output `/workspace/caravan-day19-v5.mp4`, copied to Omarchy
+`~/day19-video/caravan-day19-v5.mp4`: 32.000 s, 1280×720, 24 fps.
+Build: `handoff/lab/videos/make_day19_v5.py`; captions beside it. Only the
+20–28 s reboot beat is replaced; all other footage comes directly from v4,
+including its two 2-second end cards. At 24 s the caption is now
+“About a minute later, the model is back and answering.” Status summary:
+“Automatic restore: done” / “Same split ready: about a minute later”.
+
+The real unreachable capture is reboot-watch2 frame f000044. Reloaded UI
+captures still show STARTING before asynchronous hydration, so they are not
+misrepresented as ready-model proof: the recovered status is explicitly a
+readable native-log summary. Actual measurement is64.735 s from first failed
+EXO1 probe to fully loaded. On-screen numeric facts remain Huihui27B4-bit,
+split24/40, EXO2 then EXO1; no new speed/test-count/date overlay. Captions
+single-line, checked within1280px; preview stills manually inspected.
+
+Send v5 and its real numbers to X Engagement for review before showing it to
+Brenden. No post/send performed by this executor.
