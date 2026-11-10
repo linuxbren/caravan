@@ -350,3 +350,79 @@ Deployment detail: the existing `hermes-caravan-tunnel.service` already had
 Restart=always and recovered at 19:47:05 CST (3 restarts); left untouched.
 Added/enabled `caravan-web-tunnel.service` for :18190, replacing only the
 verified unmanaged web SSH process. No model/network/security settings changed.
+
+
+## Both-Mini reboot #2 — unattended restore PASS, Nov 9, 2026 CST
+
+Brenden rebooted both Minis after the READY baseline on **9242f21**. The
+executor observed only: **no manual Load, service restart, network edit, or
+reboot command** during recovery. Saved Huihui 24/40 returned automatically.
+The previous failed first reboot remains a failure; this separate run is the
+first proven successful web-owned last-model both-Mini restore in this session.
+
+### Native evidence timeline (all CST)
+
+| Milestone | Timestamp | Evidence / qualification |
+| --- | --- | --- |
+| First EXO1 proxy-over-SSH probe failure | 20:06:44.009 | `exo1-chat8090.jsonl`; last baseline green before shutdown |
+| Both Omarchy tunnels down / systemd auto-restart | 20:06:45.517 | `tunnels.jsonl` |
+| EXO1 local-status SSH probe down | 20:06:47.506 | `exo1-local.jsonl` |
+| EXO2 SSH probe down | 20:06:51.506 | `exo2-packer.jsonl` |
+| EXO1 kernel boot time | 20:07:01 | native `sysctl kern.boottime` |
+| EXO2 kernel boot time | 20:07:05 | native `sysctl kern.boottime` |
+| EXO1 LAN SSH back | 20:07:15.226 | `lan-paths.jsonl` |
+| EXO1 launchd web / proxy processes started | 20:07:15 | native `ps lstart`, PIDs 661 / 647; launchctl snapshots retained |
+| Both supervised tunnel processes successfully restarted | 20:07:19 | systemd `ExecMainStartTimestamp`; PIDs 1616346 / 1616347 |
+| EXO2 LAN SSH back | 20:07:20.369 | `lan-paths.jsonl` |
+| EXO1 primary SSH / local :8190 HTTP 200 | 20:07:21.301 | worker idle, restore preparing; :8194 not ready yet |
+| Both Omarchy tunnel endpoints HTTP 200 | 20:07:23.546 | :18190 status / :18090 proxy-status, NOT model-readiness proof |
+| EXO2 primary SSH back | 20:07:24.646 | :5560 not yet listening |
+| Automatic restore starting packer | 20:07:38.178 | local status; packer process start 20:07:38, PID 1151 |
+| EXO2 packer port listening | 20:07:42.831 | local lsof; no extra client connected to single-head protocol |
+| EXO2 24-layer packer ready | 20:07:42.709 | worker progress timestamp |
+| Saved 24/40 split fully loaded / healthy | 20:07:48.742–.744 | native worker progress; durable intent saved .744 |
+| First model-bearing :8090 chat probe HTTP 200 | 20:07:50.302 | 1 output token; route/inference check, not complete human reply |
+| First full :18090 MLX chat request sent | 20:07:51.664 | synthetic Hermes-style request, not an actual Hermes app turn |
+| Full :18090 assistant reply complete, HTTP 200 | 20:08:03.913 | `Caravan recovered automatically.` / finish_reason=stop |
+| Watchers stopped | 20:08:42.774 | all three watcher process trees stopped; tunnels/services left running |
+
+The model was loaded about **64.7 s after the first observed EXO1 transport
+failure** (or 57.2 s after the first EXO2 SSH-down sample). These are sampled
+observations, not exact power-off times: probe timestamps mark completion,
+SSH/connect timeouts can add seconds, and the LAN watcher started while both
+were already down at 20:06:54.197. It cannot supply earlier LAN-down times.
+
+### What recovered and what this run does not prove
+
+- Exact model: `mlx-community/Huihui-Qwen3.5-27B-Claude-4.6-Opus-abliterated-4bit`;
+  EXO2 front 24 / EXO1 head 40, pipeline_chats=1, self_tune=false. Lead PID 1375.
+  Thunderbolt peer refreshed automatically to **169.254.99.64:5560**.
+- Restore phase was preparing by 20:07:21 and **restored** by the first ready
+  samples at 20:07:49.572 (tunnel) / 20:07:49.941 (local). Native load completion
+  was 20:07:48.744. Post-boot web audit contains a single successful
+  `POST /api/models/load` HTTP 200, no 400, with no manual control call.
+- **No retry/backoff phase was observed in this physical reboot.** Initial
+  guarded preparation waited for inventory and succeeded once peers were up.
+  This run proves unattended recovery on the retry-enabled build and both
+  supervised tunnels; the specific transient 400→backoff→200 branch is covered
+  by focused unit/guarded HTTP tests, not independently forced on hardware here.
+- Both tunnel services retried automatically three times during this reboot:
+  web NRestarts 0→3, Hermes 3→6. Their final process start was 20:07:19; actual
+  HTTP reachability was proven separately at 20:07:23.546. No manual SSH tunnel
+  was launched during recovery. The systemd services remain enabled/running.
+- Full :18090 reply: **12.249 s wall**, worker **12.201 s**, **TTFT 0.815 s**,
+  prefill **0.530 s**, **6.50 write tok/s**, 26 prompt / 75 completion tokens,
+  cold cache. No full-tool 13k-prefix Hermes performance claim is inferred.
+- During that full reply, 1.5-second web-status probes and a 6-second concurrent
+  synthetic chat probe timed out briefly, then recovered without intervention
+  by 20:08:04–05. The completed user-visible reply did not fail. These strict
+  probe deadlines should not be misreported as a second reboot/service outage.
+- No further reboot is required to establish this run's pass. No video made.
+
+Raw evidence on Omarchy: `~/day19-video/reboot-watch2/logs/` contains
+`exo1-local.jsonl`, `exo2-packer.jsonl`, `exo1-chat8090.jsonl`,
+`lan-paths.jsonl`, `tunnels.jsonl`, per-host `*-service-starts.jsonl`,
+`*-launchd-*.txt`, `final-status.json`, `restore-request-audit.txt`,
+`automatic-recovery-chat18090.json`, and `stopped.txt`. Frames remain in
+`~/day19-video/reboot-watch2/frames/`. The capture log's raw ISO timestamps
+are UTC; the timeline above is converted to America/Chicago CST.
