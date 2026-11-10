@@ -155,5 +155,11 @@ Tonight's case: Dark Champion 21B 8-bit (32 layers, ~0.71 GB/layer) on two 24 GB
   reuse across chats and disk restores with stage-local files and N-stage
   digest checks, without reducing Hermes tools or changing the selected model.
 - Add managed loopback OpenAI proxy launchd auto-start (`--kind proxy`).
-- 764 tests pass (26 new). Evidence, setup and live validation: docs/HERMES.md
+- 767 tests pass (29 new). Evidence, setup and live validation: docs/HERMES.md
   and docs/DAY20.md. Reboot testing remains deferred.
+
+  Live validation: same Huihui 24/40, 21 tools. Three full-tool follow-ups
+  reused 13,182 tokens; prefill 1.17–1.76 s versus ~208 s cold, first visible
+  Hermes text 11.57/9.23/9.78 s. A new chat also reused the prefix. Dense
+  decode stays ~6.1 tok/s; cold/changed prompts are not instant. Proxy is now
+  launchd-managed on EXO1. No reboot/web restart. Full methodology in DAY20.md.

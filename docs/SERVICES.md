@@ -317,3 +317,26 @@ See [REMOTE-ACCESS.md](REMOTE-ACCESS.md) for verified LAN SSH aliases, the
 Tailscale-independent EXO2 Thunderbolt jump, per-user Tailscale guards,
 manual recovery limits and the current model-restoration status. These are
 access safeguards, not Caravan model/service restarts.
+
+## OpenAI proxy for Hermes and other clients (Day 20)
+
+The lead may also run the separately owned `com.caravan.v3.proxy` LaunchAgent.
+It does not pin a model, load weights or interfere with web-owned switching.
+It starts at user login, uses KeepAlive, and listens only on loopback 8090;
+MLX requests go to the normal lead worker on 8194. Remote clients use SSH
+forwarding, not a public bind. Install/status/restart use the same ownership,
+port-collision and no-sudo protections as web/worker plans:
+
+```sh
+~/.caravan/venvs/mlx/bin/python tools/caravan_service.py install \
+  --kind proxy --name proxy --port 8090 --lead-port 8194
+~/.caravan/venvs/mlx/bin/python tools/caravan_service.py status --name proxy
+```
+
+A pre-existing manual proxy must finish its requests and be stopped explicitly
+before install; the installer never kills an unowned listener. Logs are in
+`~/.caravan/logs/proxy.log`. Cache cleanup is off (no automatic deletions).
+The lead installer still installs the web service by itself; add this plan
+when an OpenAI client needs it. EXO1's plan was installed live without reboot
+or web restart; its login/reboot behavior is launchd configuration, not a
+claim of a completed reboot test. See [HERMES.md](HERMES.md).

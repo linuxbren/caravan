@@ -157,6 +157,36 @@ class PrefixReuse(unittest.TestCase):
     def test_disk_three(self):self.run_case(3,disk=True)
     def test_missing_stage_refuses_prefix(self):self.run_case(3,disk=True,missing=True)
 
+    def test_one_token_tail_divergence_reuses_exact_checkpoint(self):
+        with tempfile.TemporaryDirectory() as root:
+            e,p=self.setup_engine(root,1)
+            prompt=list(range(1600));body={'_caravan_agent_prefix':1400}
+            self.prefill(e,'chat_a',prompt,body)
+            changed=prompt[:1598]+[99999,3]
+            n,how=self.prefill(e,'chat_a',changed,body)
+            self.assertEqual(n,1400);self.assertIn('agent-prefix',how)
+
+    def test_changed_prefix_is_cold_not_stale(self):
+        with tempfile.TemporaryDirectory() as root:
+            e,p=self.setup_engine(root,1)
+            prompt=list(range(1600));body={'_caravan_agent_prefix':1400}
+            self.prefill(e,'chat_a',prompt,body)
+            changed=[99999]+prompt[1:]
+            n,how=self.prefill(e,'chat_b',changed,body)
+            self.assertEqual(n,0)
+
+    def test_three_stage_wrapped_recurrent_state(self):
+        with tempfile.TemporaryDirectory() as root:
+            e,p=self.setup_engine(root,3)
+            try:
+                for st in p.stores:st.ops=FakeOps(('KVCache','RotatingKVCache'))
+                prompt=list(range(1600));body={'_caravan_agent_prefix':1400}
+                self.prefill(e,'chat_a',prompt,body)
+                self.assertEqual(self.prefill(e,'chat_b',prompt[:1400]+[4,5,6],body)[0],1400)
+                for st in p.stores:
+                    self.assertEqual(st.sessions['chat_b'].cache[1].offset,1402)
+            finally:p.close()
+
     def test_clone_failure_drops_partial_state(self):
         with tempfile.TemporaryDirectory() as root:
             e,p=self.setup_engine(root,2)

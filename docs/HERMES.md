@@ -72,3 +72,17 @@ Hermes title calls explicitly send `reasoning_effort: none`; the MLX worker
 now honors that as thinking off unless `thinking` is explicitly supplied.
 Main Hermes `medium` reasoning remains unchanged. Previously the ignored
 opt-out let short titles consume hundreds of hidden reasoning tokens.
+
+## Verified result
+Full configured toolset retained (21 tools), same Huihui 24/40 model.
+Full-tool cold first visible text: 223.57 s. Three resumed replies: **11.57,
+9.23 and 9.78 s**, each reusing **13,182 tokens** (prefill 1.17–1.76 s).
+An independent new chat reused the same prefix (0.683 s prefill, 13.55 s
+visible including unchanged medium reasoning). Output remains ~6.1 tok/s.
+A changed system/tool block still needs one cold read. See DAY20.md for exact
+methodology, per-request token counts, title overhead and persistence caveats.
+
+EXO1 now runs the proxy as `com.caravan.v3.proxy` (RunAtLoad/KeepAlive),
+127.0.0.1:8090 -> 127.0.0.1:8194. Huihui was reloaded through normal web
+Balance in 14.61 s, no web restart or machine reboot. Hermes user config,
+tools and its tunnel service were not changed by the cache fix.
