@@ -4,7 +4,7 @@ What's built, what's next and in what order, and what's still limited.
 Numbers are from [BENCHMARKS.md](BENCHMARKS.md) (one Mac mini M4 24 GB
 unless noted). "4k" and "16k" are chat lengths in tokens.
 
-*Last updated 2026-11-10 CST: Day 21–25 plan agreed. Day20 wrapped; paired Qwen3.5-family matrix and reboot evidence recorded. Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
+*Last updated 2026-11-10 CST: Day 21 released (`day21-2026-11-10`). Aux title-worker reboot check passed on EXO1; EXO2 did not reboot in that check. Per-version changes: [CHANGELOG.md](../CHANGELOG.md).*
 
 **Names.** In a split, the **lead** is the Mac you talk to (it serves the
 API, runs the last layers and picks each token), the **packers** are the
@@ -27,7 +27,7 @@ deprecated flag aliases.
 ## Day 20 checkpoint
 
 - [x] Hermes full-tool prefix cache fix (367cbc9, 6efecbf, ad07c13); 767 tests.
-- [x] `com.caravan.v3.proxy` LaunchAgent on EXO1 (loopback :8090 → :8194, RunAtLoad/KeepAlive); main-model recovery now reboot-proved; newer aux startup still unproved.
+- [x] `com.caravan.v3.proxy` LaunchAgent on EXO1 (loopback :8090 → :8194, RunAtLoad/KeepAlive); main-model recovery reboot-proved in Day20; aux title-worker RAM/primary-health gate reboot-proved on EXO1 in Day21 (EXO2 was not physically rebooted in that check).
 - [x] Diagnostic full-tool Hermes: cold 223.57 s visible; warm follow-ups 9–12 s with 13,182 cached; write ~6.1 tok/s.
 - [x] Brenden real Hermes use (~18:42–18:48 CT): first main turn 10.26 s total / 1.17 s prefill / 13,182 cached after 0.05 s disk restore; later mains kept the prefix.
 - [x] Day20 release `day20-2026-11-09`; main fast-forwarded, both Mini copies ff-only synced.
@@ -35,7 +35,7 @@ deprecated flag aliases.
 - [x] Same-family single versus split: Huihui full-single GPU OOM, split succeeds; Astrea/Orvena dense decode3–6.5% slower split. Raw matching-pair evidence retained.
 - [x] Correct nested Qwen3.5 single-worker memory guard (1976b7b); no forced unsafe load or model deletion.
 - [x] Day20 video + local X drafts (Brenden posts; tone review still available).
-- [ ] Physical reboot check of the newly added auxiliary title worker's RAM/primary-health startup gate (Day 21).
+- [x] Physical reboot check of the newly added auxiliary title worker's RAM/primary-health startup gate (Day 21; EXO1 passed November10,17:17–17:20 CST; EXO2 did not reboot).
 - [ ] Repeated performance samples (Day 24), max-context sweep and >2-Mini physical measurements before broader speed/capacity claims.
 - [x] Balance clearer mockup → approved real implementation and live preview verification (Day21).
 
@@ -45,10 +45,10 @@ deprecated flag aliases.
 - [x] Balance mockup approved and real Auto-first N-Mini overview implemented (`d56977d`); live default/Adjust screenshots passed. Priority follow-up `5b122f7`/`5cd7a3e`: black/gray no-op-aware Apply, explicit reload/chat locking and three live state screenshots verified; Huihui restored/saved24/40 KV16.847 tests passing.
 - [x] Two-Mini API switch/unload and Huihui24/40 KV16 restore;9.173s switch,1.782s unload,9.016s restore. See [DAY21.md](DAY21.md).
 - [x] N-Mini Thunderbolt discovery/routing design and two-Mini read-only route check documented; no automatic routing code deployed.
-- [x] Exact auxiliary reboot observer/check steps prepared; Brenden issues reboot.
+- [x] Exact auxiliary reboot observer/check steps prepared; Brenden issued the reboots November10,17:17 CST; EXO1 aux/main recovered, EXO2 did not reboot.
 - [x] Trusted read-only Thunderbolt inventory/candidate graph and explicit UI/API inspection implemented; live2-Mini,2-directed-edge readout passed. No automatic route changes.
 - [x] Explicit interface-pinned TCP22/SSH identity, reachability and latency validation; per-edge verified/unverified/failed states; expiring opt-in N-Mini peer/listen/upstream preview. Live2-Mini proof: forward en2 verified; reverse TCP reachable but SSH identity unverified.907 tests; no apply endpoint or automatic route changes.
-- [ ] MLX transport authentication, production path application and physical auxiliary reboot proof remain pending; SSH link validation is not model-protocol proof.
+- [ ] MLX transport authentication and production path application remain pending; SSH link validation is not model-protocol proof. Physical auxiliary reboot proof on EXO1 is recorded in [DAY21.md](DAY21.md).
 
 ## Plan: Day 21–25 (agreed 2026-11-09)
 

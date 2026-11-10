@@ -1581,3 +1581,21 @@ Post-deploy18090 full19-tool/medium smoke: HTTP200, visible response/finishstop,
 Model unchanged Huihui24/40 KV16, PID39479; saved preference verified.
 Exact regression **907 tests /45.084s**, +60 from847 (+113 from794).
 Evidence: `handoff/lab/day21/thunderbolt-verified/`; private request body omitted.
+
+
+## Day21 auxiliary reboot recovery — 2026-11-10 17:17–17:20 CST
+
+Not a repeated speed claim. Physical EXO1 reboot with auto-login; EXO2 did
+not reboot. Huihui24/40 KV16 restore from kern.boottime17:17:30.876 CST to
+lead listening **37.3s** (worker load4.9s). Aux title worker health200 at
+**~47.1s**, after the documented primary-ready/RAM gate.
+
+Post-recovery :18090 title: HTTP200, `title-sidecar`, **0.135s wall** /
+0.041s TTFT. Full19-tool medium Hermes replay: HTTP200, finish stop, visible
+response, **11.504s wall / 0.421s TTFT / 6.2tok/s write**,11310 prompt
+tokens (11309 cached). This is a functional recovery check, not cold-prefill
+performance or actual tool execution. Saved preference remained Huihui24/40
+KV16, EXO2→EXO1; new lead PID1036. Evidence: Omarchy `~/day21-checks/reboot/`;
+interpretation in [DAY21.md](DAY21.md). Private request bodies omitted.
+Release-gate suite **907 tests / 45.871s**.
+

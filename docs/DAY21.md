@@ -2,13 +2,17 @@
 
 ## Current checkpoint — November10 CST (historical phases follow)
 
-- Balance UI shipped, including explicit reload/chat locking; Huihui24/40 KV16
-  remains loaded and saved, lead PID39479 unchanged by Thunderbolt work.
+- Balance UI shipped, including explicit reload/chat locking.
 - Bound TCP22/SSH forward link verified; reverse TCP reachable but identity
   unverified. Opt-in N-Mini plan preview matches current en2 endpoints; no apply.
-- 907 tests passing. Screenshot: `/workspace/day21-tb-verified.png`.
-- [Day21 release notes](release-notes/day21.md) are DRAFT/UNTAGGED, held for
-  Brenden's November10,5–6pm CST physical auxiliary reboot check.
+- Physical auxiliary title-worker reboot check **passed** on November10,
+  17:17–17:20 CST. EXO1 auto-login recovered Huihui24/40 KV16 (lead PID1036)
+  in37.3s from boot; aux health200 at17:18:18 CST (~47.1s). EXO2 itself did
+  not reboot; its packer was relaunched at17:17:59 as part of automatic restore.
+- 907 tests passing (release gate45.871s). Screenshot:
+  `/workspace/day21-tb-verified.png`.
+- [Day21 release notes](release-notes/day21.md) finalized for tag
+  `day21-2026-11-10`.
 
 ## Phase 1 approval checkpoint
 
@@ -190,10 +194,11 @@ Minis. Two Minis cannot prove automatic N-Mini topology discovery.
 
 ## Auxiliary title-worker physical reboot check — Brenden runs this
 
-**Not run in phase1.** Main restore was already reboot-proved in Day20; the
-new aux primary/RAM gate still needs physical reboot evidence. LaunchAgents
-require desktop login after startup; FileVault may require local unlock.
-Do not call a manual service restart or a no-reboot health check reboot proof.
+**Passed November10,17:17–17:20 CST.** Results are recorded in the section
+immediately after this recipe. The recipe is kept as the exact method used.
+LaunchAgents require desktop login after startup; FileVault may require local
+unlock. Do not call a manual service restart or a no-reboot health check
+reboot proof.
 
 1. Stop active chats. On Omarchy, confirm the intended saved restore state:
 
@@ -279,6 +284,56 @@ ordering alone is evidence of readiness, not a precise admission timestamp.
 Record reboot request→main-ready and request→aux-ready separately, including
 any manual unlock/login. Finally confirm the saved Huihui24/40 KV16 state
 again. No automatic reboot has been scheduled or executed.
+
+### Results — November10,17:17–17:20 CST
+
+Brenden issued the two documented reboot commands from Omarchy around17:17
+CST, EXO2 first and EXO1 immediately after. Both Minis auto-login; no manual
+unlock or login was required. **EXO2 did not actually reboot** (kern.boottime
+remains November9,20:07:05 CST, uptime21h+). The likely cause is that
+`exo2-via-exo1` depends on EXO1, which was then restarted promptly, so the
+EXO2 shutdown may not have completed. This check is therefore an EXO1
+physical reboot plus automatic packer relaunch on a still-running EXO2, not a
+dual-machine cold start. Day20 already proved two-Mini main-model restore.
+
+EXO1 kern.boottime: **2026-11-10T17:17:30.876098-06:00**. Auto-login brought
+launchd web, proxy and the aux wrapper up at17:17:45. The aux process entered
+the primary-health/RAM wait (this-boot log only):
+
+```
+aux wait: primary_ready=False, available_gb=16.06852608, budget_gb=0.9, reserve_gb=1.75
+aux wait: primary_ready=False, available_gb=14.165614592, budget_gb=0.9, reserve_gb=1.75
+aux wait: primary_ready=False, available_gb=4.697939968, budget_gb=0.9, reserve_gb=1.75
+```
+
+Available RAM fell as the main model loaded. The EXO2 packer worker started
+at17:17:59; the EXO1 lead worker started at17:18:02 and **loaded Huihui
+24/40 KV16 in4.9s**, listening on :8194 at **17:18:08**. last-model.json was
+rewritten at17:18:08.206645 (37.3s after boot). Aux was then admitted
+(4.70GB available vs 0.9GB budget +1.75GB reserve), loaded
+Qwen2.5-0.5B-Instruct-4bit in0.4s, and listened on :8196 at **17:18:18**
+(~47.1s after boot). launchd `com.caravan.v3.aux` runs=1, last exit never,
+health HTTP200 `{"status":"ok","worker":"caravan","split":false}`.
+
+The continuous observer was started at17:18:42, after recovery had already
+finished, because the reboot commands were issued before the observer could
+be launched. Boot-to-ready timings therefore come from this-boot logs
+(`lead.log`, `day20-aux.log`, process start times, file mtimes and
+kern.boottime), not from a pre-reboot observer. From17:18:42 onward the
+observer showed status `ready`, Huihui, counts`[24,40]`, KV16, restore
+phase `restored`, lead healthy, and aux health200.
+
+Post-recovery checks, no services restarted:
+
+| Check | Result |
+|---|---|
+| Title through :18090 | **PASS** HTTP200, `X-Caravan-Aux: title-sidecar`, finish `stop`, wall **0.135s** (native total0.083s, TTFT0.041s). Body `{"title":"Review Caravan after reboot and improve Hermes speed"}` — test-prompt content, as in earlier Day21 title checks, not a claim that the title model observed the reboot. A main-model fallback did **not** occur (sidecar header present; model Qwen2.5-0.5B-Instruct-4bit). |
+| Full19-tool medium Hermes replay through :18090 | **PASS** HTTP200, finish `stop`, visible answer “I'm online and ready to help.”,19 tools, reasoning `medium`, wall **11.504s**, native total11.231s, TTFT**0.421s**, write**6.2tok/s**,11310 prompt tokens (11309 cached). Functional check, not cold-prefill or actual tool execution. |
+| Saved preference after probes | Huihui, counts`[24,40]`, node order EXO2→EXO1, KV16, restore enabled/saved; aux still running PID682, health200. New lead PID **1036**. |
+
+Raw evidence stays on Omarchy at `~/day21-checks/reboot/` (timeline, this-boot
+logs, title headers/body, probe JSON, observer from17:18:42, final status).
+Private request bodies were not copied into the repo.
 
 
 ## Approved Balance implementation — Nov 9, 2026 CST
@@ -635,9 +690,9 @@ new paths; Node syntax, Python compilation and whitespace checks passed.
 Nonprivate API/UI/plan/model/full-tool evidence and guarded capture script:
 `handoff/lab/day21/thunderbolt-verified/`.
 
-Release notes prepared in `docs/release-notes/day21.md`, explicitly DRAFT.
-No tag/release/reboot issued or scheduled. Brenden runs the existing physical
-auxiliary reboot recipe around **November10,5–6pm CST**; only that evidence
-can close the remaining release gate. Two Minis do not prove physical N-Mini
-scaling, arbitrary bridges/cables, automatic path application, or MLX transport
-authentication. These limits are not hidden by a verified SSH link.
+Release notes in `docs/release-notes/day21.md` are finalized for tag
+`day21-2026-11-10` after the auxiliary reboot check passed (see results
+above). Two Minis do not prove physical N-Mini scaling, arbitrary
+bridges/cables, automatic path application, or MLX transport authentication.
+These limits are not hidden by a verified SSH link or by a successful aux
+recovery. EXO2 was not physically rebooted in this check.

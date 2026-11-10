@@ -2943,3 +2943,30 @@ Screenshot `/workspace/day21-tb-verified.png`; evidence under
 `handoff/lab/day21/thunderbolt-verified/`. Code commits c2c7ec6/efdf8ba/609908e;
 ff-only sync, keep-workers web-only backend restarts, no routes/model reload/reboot/tag.
 Day21 draft release notes await Nov10,5–6pm CST physical aux reboot evidence.
+
+### Day21 auxiliary reboot check and release (November10,17:17–17:20 CST)
+
+Brenden issued the documented EXO2-then-EXO1 reboot commands from Omarchy
+around17:17 CST. EXO1 auto-logged in (kern.boottime17:17:30.876 CST). EXO2
+did not reboot (kern.boottime still November9,20:07:05 CST); the EXO2 packer
+was relaunched at17:17:59 during automatic restore. This is not a two-Mini
+cold start; Day20 already proved that path.
+
+EXO1 launchd web/proxy/aux started17:17:45. Aux waited on primary health and
+RAM (16.07→14.17→4.70GB available; budget0.9GB + reserve1.75GB). Lead loaded
+Huihui24/40 KV16 in4.9s and listened at17:18:08 (37.3s after boot, new PID
+1036, preference saved). Aux admitted, loaded Qwen2.5-0.5B in0.4s, listened
+at17:18:18 (~47.1s), health200, launchd runs=1/never exited. The observer
+started at17:18:42 after recovery, so boot-to-ready times come from this-boot
+logs, not a pre-reboot observer.
+
+Title through18090: HTTP200, `X-Caravan-Aux: title-sidecar`, finish stop,
+0.135s wall. Full19-tool medium Hermes replay: HTTP200, finish stop, visible
+“I'm online and ready to help.”,11.504s wall,0.421s TTFT,6.2tok/s,11310
+prompt tokens (11309 cached). Saved Huihui24/40 KV16, EXO2→EXO1, confirmed
+afterward. No services were restarted during the check. Evidence:
+Omarchy `~/day21-checks/reboot/`.
+
+Release-gate regression: **907 passed in45.871s**, zero failures/skips.
+Docs and release notes finalized for tag `day21-2026-11-10`. Video is
+handled separately.
