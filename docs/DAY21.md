@@ -269,3 +269,30 @@ ordering alone is evidence of readiness, not a precise admission timestamp.
 Record reboot request→main-ready and request→aux-ready separately, including
 any manual unlock/login. Finally confirm the saved Huihui24/40 KV16 state
 again. No automatic reboot has been scheduled or executed.
+
+
+## Approved Balance implementation — Nov 9, 2026 CST
+
+Brenden approved the mockup as shown. Built the real Topology Balance section:
+Auto preview on opening Topology, one memory card per participating Mini,
+Adjust reveals N−1 adjacent MLX layer sliders (or N GGUF proportion fields),
+one-line preview, Apply, and Back to auto. Technical file/stage/source/fetch
+controls remain behind Details; nothing is downloaded or reloaded by preview,
+Adjust, or Back to auto. Bars are explicitly within usable model budgets.
+
+The existing guarded Balance preview and explicit reload endpoints remain the
+source of truth. Unknown/unsafe memory, failed requests, pending input and stale
+responses keep Apply disabled. Source/model changes invalidate old plans. Apply
+submits the exact previewed counts/node IDs, invalidates the plan immediately,
+and cannot double-submit. File fetching/cancellation and post-reload measured
+speed remain available. DOM text construction, not HTML injection, displays
+peer labels, paths and errors. Themes inherit the existing UI variables.
+
+Added production-JS contract coverage for 1/2/3/7-Mini boundaries, constant layer
+totals, safe memory bars, malformed plans, Auto/Adjust/Back transitions, stale
+responses, invalid GGUF shares, exact Apply payload and duplicate/unsafe Apply
+blocking. Baseline794 tests; added14 Balance cases; full regression808 tests passed in43.534s. Deployment uses ff-only pulls
+and only the existing web LaunchAgent (already configured
+CARAVAN_WEB_KEEP_WORKERS=1 and AbandonProcessGroup=true). Live verification
+will not press Apply, Load or Unload; Huihui24/40 KV16 must retain its PID and
+saved preference. No physical reboot is authorized by this implementation step.

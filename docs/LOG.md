@@ -2854,3 +2854,12 @@ Final19-tool medium-reasoning prefix replay succeeded through18090 in11.350s
 remains Huihui24/40 KV16. No reboot/service restart or production code changes.
 N-Mini Thunderbolt discovery design, trusted-link/security constraints and exact
 Brenden-run aux reboot checks: DAY21.md. Stop at approval checkpoint.
+
+
+### Day21 approved Balance implementation
+
+Replaced the real Balance overview with the approved Auto-first memory-bar
+design. Adjust reveals N-aware controls; existing preview/reload/file APIs are
+unchanged. Added14 production-JS helper/DOM contract cases, including stale
+response and unsafe/duplicate-Apply prevention. Deployment/live proof follows
+with web-only restart and existing model workers preserved. See DAY21.md.
