@@ -865,3 +865,13 @@ the identical checkpoint by fast-forward. Public drafts and video sources are
 under `handoff/lab/videos/day20/`; no private prefix or model weights included.
 
 Fresh pre-release regression on box:794 tests passed in43.223s; no failures or skips. Video37.000s, real UI crops plus explicitly labeled historical summaries; no new model-load experiments or reboots. Film source/caption manifest: `handoff/lab/videos/day20/`.
+
+### Published release / downloaded-package verification
+
+- Published22:16:40 CST: https://github.com/linuxbren/caravan/releases/tag/day20-2026-11-09
+- Immutable annotated tag points to `fdb894e`; working branch and main were fast-forwarded to that checkpoint. Later documentation-only verification does not move the tag.
+- Assets: `caravan-day20.tar.gz`18,184,498B, SHA256 `d1c98a8d3a18705c36a32fa453194198b7ab8bdb16a5d96c30d82ecb30c11e15`; ZIP19,225,830B, SHA256 `5a9b3b027e49b3946b03167cd81736a1abf2d8a635c3d00595384596530c7387`.
+- Downloaded the published tar asset, verified its digest/INSTALL.md, extracted into a fresh box directory, ran full stdlib suite there: Ran 794 tests in 44.277s; OK. Zero failures/skips; no clean-Mac install claim. Initial verifier invocation used a not-yet-created working directory and did not run; corrected to create/extract from the existing parent, then this complete verification passed.
+- Video: `/workspace/caravan-day20.mp4`, Omarchy `~/day20-video/caravan-day20.mp4`,37.000s,1280×720/24fps,637,255B, SHA256 `0f67a9d41441b7b1bccedcefa1cf12d8e7acf535804cdcf2fdabf947bc32c76d`.
+- Final wrap full-prefix19-tool, medium-reasoning reply ended22:17:03.636 CST: “I'm online and ready to help.” .314s native TTFT,6.24tok/s,11.255s wall,finish stop. Huihui EXO2→EXO1 24/40 KV16 ready and saved; no service restarts or model unloads for wrap. This is warm verification, not a new cold performance claim.
+- Both draft files copied to `~/Pictures/x-posts/day20/`; nothing sent to X. X engagement tone/audience proofread remains for the parent to route; it was not available in this executor's tool surface.
