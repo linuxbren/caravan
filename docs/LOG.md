@@ -2919,3 +2919,15 @@ including real JS→Python settings validation that caught and fixed a harmless
 pre-switch rejection. Hermes18090 full19-tool medium request HTTP200/stop,
 visible content,11.402s cached-prefix wall. DAY21/BENCHMARKS have scope/details.
 Further Thunderbolt validation paused for this requested report; no routes/tag/reboot.
+
+
+### Day21 Thunderbolt link validation / preview (November10 CST)
+
+Added explicit bounded TCP22/strict-SSH nonce probes from each candidate's
+actual source. Kernel IP_BOUND_IF prevents a silent alternate-network path;
+no MLX packer hello, worker change, host enrollment or route mutation.
+Per-edge verified/unverified/failed states include precise latency scope and
+expire. Opt-in N-Mini plan preserves order/ports, requires successor AND lead
+reachability, rejects stale/ambiguous/missing evidence, and has NO apply route.
+Day21 release notes prepared as a draft; tag remains gated on Brenden's
+November10,5–6pm CST physical auxiliary-worker reboot check.

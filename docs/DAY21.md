@@ -475,3 +475,86 @@ Nonprivate evidence and the guarded one-shot live-check script:
 paused at this checkpoint, pending reporting this priority feedback correction.
 No discovery probes/routing changes, reboot, release tag or worker-service
 restart was made; only the explicitly requested Balance model reload occurred.
+
+
+## Explicit Thunderbolt data-plane validation and suggested plan — November10 CST
+
+### Safety and verification scope
+
+Passive GET `/api/thunderbolt` remains probe-free. Explicit POST
+`/api/thunderbolt/validate` refreshes the configured trusted inventory and probes
+each candidate from its actual source Mini. Results are `verified`, `unverified`
+or `failed`, with authenticated-hello latency and TCP-connect latency when known.
+No request can supply hosts, interfaces, addresses or a replacement graph.
+
+The probe uses **existing system SSH TCP22**, not MLX5560: the current MLX
+packer serves a single persistent head connection, so an extra hello there
+could queue behind or interfere with the running model. The SSH transport
+opens one socket bound to the observed private source IP AND Darwin
+`IP_BOUND_IF`; the kernel must confirm the interface index before connect.
+It never falls back to an unbound socket, Wi-Fi, Tailscale or another interface.
+Hardware TB and proven TB-only bridges are accepted; mixed/unknown bridges,
+public/wildcard addresses and unscoped IPv6 remain rejected.
+
+A strict SSH handshake checks the peer's **existing configured host-key alias**
+(or trusted local-node hostname on reverse probes), then a tiny read-only
+command echoes a fresh nonce, hostname and SSH_CONNECTION. Source/destination
+IP endpoints must match; trusted hardware/interface and source route are
+rechecked before AND after the hello. Unknown existing host trust or unavailable
+noninteractive login is **unverified**, not an invitation to enroll a key. A
+changed key, identity/nonce/endpoint mismatch, route drift or deadline is failed.
+Caravan never opens credential/key files; system SSH uses existing authentication.
+No trust file is changed.
+
+The data socket is constrained by a6-second forwarding deadline and256KiB
+budget, plus the SSH parent's8-second process deadline. Source inventory/route
+checks have5-second command deadlines; remote orchestration is bounded42s.
+At most4 edge probes run concurrently, at most64 per inspection, with existing
+pipeline-required edges first. Excess edges are explicitly unverified, not
+guessed. Explicit validation is single-flight/cached30s; there is no background
+probe service. Expired verification becomes unverified in API/UI; planning
+checks every required edge's timestamp independently.
+
+**Verified here means authenticated host identity/reachability on TCP22 over
+a kernel-pinned private TB interface.** SSH hello wall time includes handshake
+and command overhead; TCP-connect time is reported separately. This is not
+ping RTT, MLX protocol health/authentication, bandwidth, exact cable adjacency,
+or evidence that existing model transports themselves are interface-pinned.
+The existing raw MLX transport is unchanged and remains trusted-private-only.
+
+### Opt-in suggested plan, never an apply
+
+Check the UI opt-in and explicitly request **Preview plan**, POST
+`/api/thunderbolt/plan` with `opt_in:true` and the current validation ID. No
+probes happen during planning. Missing/stale IDs, changed config, expired edges,
+unknown/offline Minis or missing links fail closed; the server never tries
+an alternate network or silently picks/reorders a different model pipeline.
+
+The N-Mini algorithm preserves configured packer order followed by the lead
+and preserves existing peer ports. Each packer's SINGLE selected address must
+be verified from both its successor and the lead, because existing startup
+preflights all packers from the lead. A chain with no lead-to-packer path is
+therefore rejected, not falsely advertised as currently loadable. Multiple
+valid addresses prefer the explicit current address; otherwise ambiguity is
+a hard failure. `peer`, private-address `listen`, and previous-stage
+`upstream_peer` are shown, together with required directed evidence. Existing
+`tb://en2` / `ssh+tb://trusted/en2` configuration is compared using only this
+trusted inventory, without resolving over another network or rewriting it.
+
+The result is **preview_only=true, apply_supported=false**. There is NO apply
+endpoint; even an identical plan is not applied. `matches_current_config` means
+resolved configured endpoints, NOT verified live application (`matches_live`
+is deliberately null). Concrete preview addresses are observations, not a
+replacement for reboot-safe interface URIs. Future apply must be a separate
+explicit action, revalidate freshness/identity/memory/files before touching a
+worker, pin all runtime connections and fail without network fallback.
+
+Fixtures cover multi-Mini plans, the lead's additional reachability requirement,
+strict binding/deadlines/byte limits, trust/nonce/route mismatch, stale evidence,
+probe budgets, API target injection, no apply route, opt-in and UI expiry races.
+Physical proof remains limited to the two existing Minis; no third-Mini, cable
+unplug, bridge or address-change/reboot experiment is claimed.
+
+Pre-deploy exact-code regression: **906 tests passing** (+59 versus the Apply
+checkpoint847; +112 versus Day21 baseline794). Thunderbolt-targeted86 cases
+include the pre-existing25. Syntax/compilation/whitespace checks passed.

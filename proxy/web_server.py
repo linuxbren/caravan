@@ -60,6 +60,8 @@ class App:
         self.started = time.time()
         self._shutdown = threading.Event()
         self.httpd = None
+        import thunderbolt_discovery
+        self.thunderbolt_discovery = thunderbolt_discovery.Controller()
         self._inflight = 0
         self._inflight_lock = threading.Lock()
         self._nodes_lock = threading.Lock()
@@ -843,6 +845,8 @@ def make_handler(app: App):
             # (Bad request syntax) and the UI looks "stuck".
             path = self.path.split("?", 1)[0]
             body = self._body()
+            if path in ("/api/thunderbolt/validate", "/api/thunderbolt/plan"):
+                return self._api_thunderbolt(path, body)
             if path in ("/api/balance", "/api/files/preview") :
                 try:
                     out = app.balance(body)
@@ -1742,6 +1746,25 @@ def make_handler(app: App):
                 "nodes": [{"id": r["id"], "label": r["label"], "role": r["role"]} for r in runners],
             })
 
+
+        def _api_thunderbolt(self, path, body):
+            """Trusted read-only validation / explicit plan preview. No apply route."""
+            import thunderbolt_discovery
+            preview=path=="/api/thunderbolt/plan"
+            allowed={"opt_in","validation_id"} if preview else set()
+            if not isinstance(body,dict) or set(body)-allowed:
+                return self._json(400,{"error":"Only server-configured graph/identities are accepted","preview_only":True,"read_only":True})
+            if not hasattr(app,"thunderbolt_discovery"):
+                app.thunderbolt_discovery=thunderbolt_discovery.Controller()
+            try:
+                nodes=app.configured_nodes()
+                if preview:
+                    data=app.thunderbolt_discovery.plan(nodes,opt_in=body.get("opt_in"),validation_id=body.get("validation_id"))
+                else:
+                    data=app.thunderbolt_discovery.validate(nodes)
+                return self._json(200,data)
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError) as error:
+                return self._json(409 if preview else 503,{"error":str(error),"preview_only":True,"read_only":True,"fallback":False})
 
         def _api_load(self, body=None):
             body = body or {}

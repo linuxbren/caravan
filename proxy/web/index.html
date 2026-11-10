@@ -1013,6 +1013,13 @@
 
   #thunderboltPanel { border-top: 1px solid var(--line); font-size: .7rem; line-height: 1.6; overflow-wrap: anywhere; }
   #thunderboltPanel .help { color: var(--muted); }
+  #thunderboltPanel .tb-status { font-weight: 600; color: var(--muted); }
+  #thunderboltPanel .tb-status.verified { color: var(--accent2); }
+  #thunderboltPanel .tb-status.failed { color: var(--rose); }
+  #thunderboltPanel .tb-edge { border-left: 2px solid var(--line); padding-left: 10px; margin: 12px 0; }
+  #thunderboltPanel .tb-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  #thunderboltPanel pre { white-space: pre-wrap; font-size: .65rem; }
+  #thunderboltPanel label { display: block; margin: 12px 0; }
   /* Day21 Balance: plain overview; expert file/stage controls remain available. */
   #balancePanel { margin: 16px 0; padding: 18px 12px; border-top: 1px solid var(--line); }
   #balancePanel .balance-heading, #balancePanel .balance-mode-row,
@@ -1193,8 +1200,13 @@
   <section class="drawer-section" id="thunderboltPanel" aria-label="Thunderbolt discovery">
     <h3>Thunderbolt links</h3>
     <p class="help">Inspect trusted Minis and candidate cable routes. This never changes the running connection.</p>
-    <button type="button" class="ghost" id="thunderboltInspect">Inspect links</button>
+    <div class="tb-actions"><button type="button" class="ghost" id="thunderboltInspect">Inspect links</button>
+    <button type="button" class="ghost" id="thunderboltValidate">Validate links</button></div>
+    <p class="help">Validation uses a short authenticated SSH hello on TCP22, pinned to each private Thunderbolt interface. It never probes or restarts the model workers.</p>
     <div id="thunderboltReadout" aria-live="polite">Not inspected. Automatic routing is off.</div>
+    <label><input type="checkbox" id="thunderboltOptIn"> Preview a suggested N-Mini peer plan — never apply</label>
+    <button type="button" class="ghost" id="thunderboltPreview" disabled>Preview plan</button>
+    <div id="thunderboltPlan" aria-live="polite"></div>
   </section>
   <div class="topo-disk">
     <div class="picker-section">On disk · all Minis</div>

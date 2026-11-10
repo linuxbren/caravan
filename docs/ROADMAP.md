@@ -47,7 +47,8 @@ deprecated flag aliases.
 - [x] N-Mini Thunderbolt discovery/routing design and two-Mini read-only route check documented; no automatic routing code deployed.
 - [x] Exact auxiliary reboot observer/check steps prepared; Brenden issues reboot.
 - [x] Trusted read-only Thunderbolt inventory/candidate graph and explicit UI/API inspection implemented; live2-Mini,2-directed-edge readout passed. No automatic route changes.
-- [ ] Verified data-service identity/reachability, automatic route selection and physical aux reboot proof remain pending.
+- [x] Explicit interface-pinned TCP22/SSH identity, reachability and latency validation; per-edge verified/unverified/failed states; expiring opt-in N-Mini peer/listen/upstream preview. Live2-Mini confirmation follows deployment; no apply endpoint or automatic route changes.
+- [ ] MLX transport authentication, production path application and physical auxiliary reboot proof remain pending; SSH link validation is not model-protocol proof.
 
 ## Plan: Day 21–25 (agreed 2026-11-09)
 
@@ -113,7 +114,7 @@ experimental checkpoints and authorized two-Mini live checks; strict GGUF indepe
 - [x] Live picker bridge: saved 11/11/10 placement, normal picker reload, own
   stage roots and web-restart adoption. N-stage Optimize remains blocked; no
   silent promotion of untested concurrency/speculation (pinned off here).
-- [ ] Automatic multi-link Thunderbolt discovery/routing (Day 21). Explicit `peer`,
+- [ ] Automatic multi-link Thunderbolt route application remains deferred. Day21 adds trusted discovery, explicit bound link validation and fail-closed preview only. Explicit `peer`,
   `listen` and `upstream_peer` allow the chain to use different links; a triangle
   of cables is not automatically configured. Use a trusted private link only.
 
