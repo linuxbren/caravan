@@ -1,0 +1,10 @@
+{
+  "graph_text": "Read-only · automatic routing off · results cached for 30 seconds.EXO1: en2 169.254.65.20 (thunderbolt)EXO2: en2 169.254.99.64 (thunderbolt)exo1 → exo2: en2 → 169.254.99.64 · candidate onlyexo2 → exo1: en2 → 169.254.65.20 · candidate onlyCandidate routes only. Data-service identity/reachability and adjacency are not verified.",
+  "errors": [],
+  "mutations": [],
+  "initial_boundary": 28,
+  "moved_preview": "Preview: 29 / 35 layers · ≥5.9 GB free per Mini.",
+  "default_preview": "Preview: Auto · ≥6.1 GB free per Mini.",
+  "mode": "Auto · recommended",
+  "model": "Huihui Qwen3.5 27B Claude 4.6 Opus abliterated 4bit · 2 Minis · memory estimates, not speed"
+}

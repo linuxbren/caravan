@@ -336,7 +336,7 @@ hardware, mixed bridges and ambiguous addresses across Minis are excluded.
 Scoped IPv6 is deferred rather than incorrectly stripping its scope.
 Malformed inventories/offline peers fail closed with diagnostics.
 
-No new sockets/probes, data handshakes, benchmark transfers, route or macOS
+No data-plane sockets/probes, data handshakes, benchmark transfers, route or macOS
 network changes, peer/listen rewrites, model changes or automatic routing.
 Trusted SSH confirms inventory provenance, **not** authenticated raw MLX data
 service identity, cable adjacency or transfer speed. Those checks and actual
@@ -359,3 +359,44 @@ Final full box regression: **834 passed in44.216s**, baseline794 (**+40**):
 15 Balance JS/helper/DOM contracts,23 discovery Python cases,2 discovery JS
 readout contracts. Node syntax, Python compilation and git diff checks passed.
 No physical reboot, live GGUF load or production model reload for this work.
+
+
+## Phase2 live closeout — Nov 9, 23:29–23:30 CST
+
+Both Minis ff-only synced to `010ee54` (`d56977d` approved Balance, `1570c3e`
+GGUF presentation compatibility, `010ee54` passive discovery/refinements).
+Only web restarted for the new API; this phase used two web-only restarts
+(one per feature deployment), zero worker/proxy/aux restarts and zero reboots.
+Huihui lead PID30460 remained unchanged across both; saved24/40 KV16 preference
+checked directly. No Apply/Load/Unload or file-fetch request from the browser.
+
+The live discovery API found2 trusted Mini inventories and2 directed
+**candidate** edges, EXO1/en2→EXO2/en2 and the reverse. Both nodes report active
+private link-local addresses. No ambiguous addresses; graph automatic_routing
+isfalse and every edge usable_for_routing isfalse. The UI readout was clicked
+and its two arrow directions verified. This proves passive collection and
+source-route observations only, not transport identity or physical N>2 routing.
+
+Final screenshots from the deployed UI through Omarchy18190:
+- `/workspace/day21-balance-live.png` — default Auto, technical details closed.
+- `/workspace/day21-balance-live-adjust.png` — Adjust open, compact one-line result.
+- `/workspace/day21-balance-live-thunderbolt.png` — passive directed-link readout.
+
+Omarchy originals are `~/day21-balance-live/default.png`, `adjust.png`,
+`thunderbolt.png`. Browser verified slider28/36→29/35 preview followed by
+Back to auto; zero JS errors or mutation requests. Applied split remained24/40.
+
+Final18090 full-prefix replay retained19 tools and medium reasoning:
+HTTP200, **11.167s wall**, **0.318s native TTFT**, **6.24tok/s**,
+11310 prompt tokens, warm hit-memory checkpoint, finish stop; visible answer
+“I'm online and ready to help.” GET/v1/models also200. These are operational
+smoke checks, not a new cold/performance or end-to-end tool-execution claim.
+
+Retained source, JSON snapshots, saved-preference proof, browser checks and
+full-tool result: `handoff/lab/day21/live/`. Private request bodies were not
+copied. Obsidian Day21 note mirrors this runbook/design/results. Pending:
+physical auxiliary reboot proof (Brenden), data-service identity/reachability
+validation, supervised cable-loss tests and opt-in automatic route planning.
+
+Exact shipped application revision `010ee54` rechecked after final UI wording:
+**834 tests passed in44.103s**, zero failures; summary in live/regression.json.

@@ -2886,3 +2886,16 @@ discovery/readout tests. Corrected GGUF capacity-field compatibility via a
 regression case, without changing its API or performing a live GGUF load.
 Compact result wording fits the actual sidebar; large-N details stay in
 per-boundary controls. Automatic routing remains off.
+
+
+Phase2 live closeout (Nov9,23:29–23:30 CST):010ee54 deployed ff-only on
+both Minis; same Huihui PID30460,24/40 KV16 and saved preference. Two web-only
+restarts total across feature deployments; no worker/proxy/aux restart or
+reboot. Real Balance default/Adjust and Thunderbolt readout PNGs captured.
+Browser preview/Back and explicit discovery readout passed, zero JS errors or
+model/file mutations. Live graph:2 nodes,2 directed candidate en2 edges, no
+automatic routes. Final19-tool medium-prefix replay200,11.167s wall,0.318s
+native TTFT,6.24tok/s, warm checkpoint, finish stop; models endpoint200.
+Evidence under handoff/lab/day21/live; remaining safety gates in DAY21.md.
+
+Exact shipped010ee54 regression: 834 passed in44.103s, zero failures; final evidence/docs only after this.

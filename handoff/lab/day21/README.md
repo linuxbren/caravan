@@ -18,3 +18,18 @@ Both PNGs inspected; all raw JSON parsed; observer code syntax checked.
 No application test suite was run: production application code is unchanged.
 Obsidian copy: ~/Documents/obsidian/Projects/Caravan/Day 21.md on Omarchy.
 No physical reboot, routing implementation or release in this checkpoint.
+
+
+## Approved implementation and deployed UI
+
+`live/` retains phase2 worker-preservation, saved preference, directed candidate
+graph and real browser checks (default, Adjust, slider preview, Back to auto,
+explicit Inspect links). No Apply/Load/Unload or file-fetch requests.
+Same Huihui PID30460 across both web-only restarts. Production worker/proxy/aux
+processes were not restarted; no reboot. Graph is passive and never load-ready.
+
+Final box screenshot paths: /workspace/day21-balance-live.png,
+/workspace/day21-balance-live-adjust.png,
+/workspace/day21-balance-live-thunderbolt.png.
+Final full19-tool medium-prefix reply11.167s wall, warm checkpoint; this is a
+continuity smoke, not a cold benchmark or tool execution. Requests stay private.

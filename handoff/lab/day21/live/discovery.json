@@ -1,0 +1,84 @@
+{
+  "observed_at": 1794288548.11368,
+  "read_only": true,
+  "nodes": [
+    {
+      "id": "exo1",
+      "label": "EXO1",
+      "interfaces": [
+        {
+          "interface": "en2",
+          "kind": "thunderbolt",
+          "members": [],
+          "addresses": [
+            "169.254.65.20"
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "address": "169.254.99.64",
+          "interface": "en2"
+        }
+      ],
+      "hostname": "prf-hays-exo01-2.local",
+      "offline": false
+    },
+    {
+      "id": "exo2",
+      "label": "EXO2",
+      "interfaces": [
+        {
+          "interface": "en2",
+          "kind": "thunderbolt",
+          "members": [],
+          "addresses": [
+            "169.254.99.64"
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "address": "169.254.65.20",
+          "interface": "en2"
+        }
+      ],
+      "hostname": "prf-hays-exo02.local",
+      "offline": false
+    }
+  ],
+  "graph": {
+    "node_ids": [
+      "exo1",
+      "exo2"
+    ],
+    "edges": [
+      {
+        "source": "exo1",
+        "target": "exo2",
+        "address": "169.254.99.64",
+        "source_interface": "en2",
+        "target_interface": "en2",
+        "evidence": "trusted inventory + source route",
+        "status": "candidate",
+        "usable_for_routing": false
+      },
+      {
+        "source": "exo2",
+        "target": "exo1",
+        "address": "169.254.65.20",
+        "source_interface": "en2",
+        "target_interface": "en2",
+        "evidence": "trusted inventory + source route",
+        "status": "candidate",
+        "usable_for_routing": false
+      }
+    ],
+    "directed": true,
+    "automatic_routing": false,
+    "ambiguous_addresses": [],
+    "warning": "Candidate routes only. Data-service identity/reachability and adjacency are not verified."
+  },
+  "scope": "Configured trusted Minis only; no scanning, probes, route changes or automatic loads.",
+  "cache_ttl_s": 30
+}

@@ -1533,3 +1533,13 @@ Hermes-prefix replay through18090: **11.350s** wall, **0.383s** native TTFT,
 not cold-performance or end-to-end Hermes tool execution benchmarks.
 Details and raw evidence: [DAY21.md](DAY21.md#live-model-switchunload-verification--nov-9-23022304-cst),
 `handoff/lab/day21/raw/`. No physical reboot was performed.
+
+
+Day21 phase2 deployment smoke (Nov9,2026 CST): after two **web-only**
+restarts, same Huihui worker PID30460 and24/40 KV16; no model reloads. Final
+19-tool medium-prefix replay via18090 **11.167s** wall, **0.318s** native
+TTFT, **6.24tok/s**,11310 prompt tokens, warm checkpoint, finish stop. This
+is service-continuity verification, not repeated/cold speed evidence or a
+Hermes tool-execution test. Passive Thunderbolt graph observed2 directed
+candidate en2 routes; **no network speed benchmark or routing change**.
+Raw proof: `handoff/lab/day21/live/`; interpretation in DAY21.md.
