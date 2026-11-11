@@ -428,3 +428,17 @@ class SshUninstallMarkersTests(unittest.TestCase):
             prompt=confirm.call_args.args[0]
             self.assertIn('GB total',prompt);self.assertIn('Remove paired Macs first',prompt);self.assertIn('models, settings',prompt)
             run.assert_not_called();self.assertIn('Cancelled',result)
+
+
+class StartupIdentityHardeningTests(unittest.TestCase):
+    def test_shell_mentioning_worker_is_not_owned(self):
+        import caravan_uninstall as U
+        import plistlib
+        with tempfile.TemporaryDirectory() as d:
+            home=Path(d);path=home/'com.caravan.v3.web.plist'
+            path.write_bytes(plistlib.dumps(dict(Label=path.stem,WorkingDirectory=str(ROOT),ProgramArguments=['/bin/echo',str(ROOT/'proxy/web_server.py')])))
+            self.assertIsNone(U.owned_plist(path,home))
+
+    def test_generated_plist_has_installation_marker(self):
+        plan=SC.make_plan(kind='web',repo=str(ROOT),python=sys.executable)
+        self.assertEqual(SC.render(plan)['Comment'],'Caravan managed service v3')

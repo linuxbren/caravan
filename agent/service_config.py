@@ -127,7 +127,7 @@ def render(plan, *, staged=None):
     else:
         cmd = [plan["python"], str(Path(plan["repo"])/"agent/caravan_agent.py"),
                "--service-config", str(p["config"]), "--apply"]
-    result = {"Label": plan["label"], "ProgramArguments": cmd,
+    result = {"Label": plan["label"], "Comment": "Caravan managed service v3", "ProgramArguments": cmd,
             "WorkingDirectory": plan["repo"], "RunAtLoad": True, "KeepAlive": True,
             "ThrottleInterval": 15, "ExitTimeOut": 30, "ProcessType": "Interactive",
             "AbandonProcessGroup": plan["kind"] == "web",

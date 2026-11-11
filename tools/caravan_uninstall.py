@@ -28,7 +28,8 @@ def owned_plist(path, home):
         repo = Path(p.get('WorkingDirectory') or '/invalid')
         known = {str(repo / name) for name in SCRIPTS}
         # Legacy installer files have no Comment; verify repository + command.
-        if not (repo / 'agent/config.py').is_file() or not any(a in known for a in args):
+        if (not (repo / 'agent/config.py').is_file() or len(args) < 2
+                or not Path(args[0]).name.startswith('python') or args[1] not in known):
             return None
         if p.get('EnvironmentVariables', {}).get('HOME', str(home)) != str(home):
             return None
