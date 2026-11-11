@@ -242,6 +242,17 @@ class WebShareTests(unittest.TestCase):
         from urllib.request import Request
         with self.assertRaises(ValueError):D.SourceRedirect().redirect_request(Request('https://huggingface.co/test'),None,302,'',{},'http://example.test/file')
 
+    def test_same_model_shard_reload_is_busy_before_thread_starts(self):
+        import web_workers
+        m=web_workers.WorkerManager(state_dir=self.home/'state')
+        model='gguf-shards/test/model/model.gguf'
+        m._set(status='ready',model_id=model,lead_pid=123)
+        entry=dict(id=model,source='gguf',sharded=True,lead_path=str(self.home/'model.cvgg'))
+        with patch.object(m,'_deny_managed_service'),patch.object(web_workers.threading,'Thread') as thread:
+            out=m.switch(model,entry=entry)
+            self.assertEqual(out['status'],'starting_lead')
+            self.assertEqual(out['model_id'],model)
+            thread.return_value.start.assert_called_once()
     def test_saved_restore_uses_shard_model_and_exact_stage_order(self):
         import web_restore
         from types import SimpleNamespace

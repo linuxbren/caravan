@@ -229,6 +229,11 @@ class WorkerManager:
 
         self._load_cancel = threading.Event()
         self._set(retryable=False, retry_kind=None)
+        if entry.get("sharded"):
+            # A same-ID Balance reload must not expose the old ready state
+            # while its verified new placement is still being preflighted.
+            self._set(status="starting_lead")
+            self._note("Checking each Mac's own GGUF pieces before switching")
         def run():
             try:
                 self._check_load_cancel()
