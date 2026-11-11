@@ -3091,3 +3091,23 @@ production restart, GGUF deletion/move/overwrite, post, or release. Web/picker
 integration, source-free peer Range downloads, additional architectures and
 physical3+Mini checks remain. [Day22 detail](DAY22.md) and
 [raw evidence](../bench/results/day22/live.json).
+
+
+## Public documentation naming pass — November 10, 18:28 CST
+
+- Current guides use development node, 1st node/first Mac/lead, and 2nd
+  node/second Mac/helper. The docs index and this log explain historical names.
+- Added public/developer entry guides, generalized paths/SSH examples, replaced
+  lab-only remote/security instructions, and moved detailed earlier guide
+  experiments into clearly labeled history snapshots. No local link targets
+  were missing in the current guides/snapshots checked.
+- Cleaned visible startup/errors and legacy CLI examples, not operational
+  inventory IDs, labels, SSH defaults, remote paths or API/config keys.
+  Remaining compatibility boundaries are recorded in DEVELOPMENT.md.
+- Saved public naming/personal-context review in the required daily checklist;
+  current guides have regression tests against private names/paths, hardware
+  memory-size advice and paused integration references.
+- Rebased only unpushed documentation work onto the concurrent Day22 commits;
+  the worker's source changes/results were not edited. No service restart.
+- Full suite: 974 passed in 47.005 s. A fresh documented source-package extract
+  also passed the full suite; final package verification is recorded separately.
