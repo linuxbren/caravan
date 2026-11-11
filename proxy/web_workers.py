@@ -1,4 +1,4 @@
-"""Start / stop the lead (local) and packer (SSH to EXO2) for the web UI.
+"""Start / stop the lead Mac and a configured SSH helper for the web UI.
 
 Only touches Caravan's own test workers (mlx_worker.py on ports we own).
 Never touches launchd, Talaria Hub, exo, or Hermes. Progress is parsed from
@@ -340,12 +340,12 @@ class WorkerManager:
         if run_mode == "split":
             packer_path = self._resolve_packer_path(entry)
             self._set(status="starting_packer", packer_pid=None)
-            self._note(f"starting packer on EXO2 ({packer_path})")
+            self._note(f"starting helper on the 2nd node ({packer_path})")
             packer_pid = self._start_packer(entry, packer_path)
             self._set(packer_pid=packer_pid)
             self._wait_packer_ready(timeout=300)
             self._set(status="starting_lead")
-            self._note(f"starting lead on EXO1 ({entry['lead_path']})")
+            self._note(f"starting lead on the 1st node ({entry['lead_path']})")
             lead_pid = self._start_lead(entry, split=True)
         else:
             self._set(status="starting_lead", packer_pid=None)
@@ -358,7 +358,7 @@ class WorkerManager:
                 )
                 lead_pid = self._start_remote_single(entry, node)
             else:
-                self._note(f"starting single-Mini worker on EXO1 ({entry['lead_path']})")
+                self._note(f"starting model worker on the lead Mac ({entry['lead_path']})")
                 lead_pid = self._start_lead(entry, split=False)
         self._set(lead_pid=lead_pid)
         self._wait_lead_ready(timeout=600)
@@ -489,13 +489,13 @@ class WorkerManager:
         self._set(status="starting_lead", packer_pid=None)
         seeded = bool(meta.get("seed"))
         if not rpc:
-            self._note("starting llama-server on EXO1 (one Mini)")
+            self._note("starting llama-server on the lead Mac (one Mini)")
         elif meta.get("file_mode") == "balance-verified-peer-cache":
             self._note("starting llama-server using verified peer-only tensor caches; small tensors and cache misses still cross RPC")
         elif seeded:
-            self._note("starting llama-server on EXO1; peers with their own copy load from disk, others get their share over the link")
+            self._note("starting llama-server on the lead Mac; peers with their own copy load from disk, others get their share over the link")
         else:
-            self._note("starting llama-server on EXO1, peers get their share over the link (first load copies it, later loads use the peer cache)")
+            self._note("starting llama-server on the lead Mac, peers get their share over the link (first load copies it, later loads use the peer cache)")
         log_path = self._lead_log()
         log_path.write_text("")
         lf = open(log_path, "ab", buffering=0)
@@ -741,11 +741,11 @@ class WorkerManager:
                 except Exception as e:
                     problems.append(f"can't reach {label} to check model: {e}")
         elif not lead:
-            problems.append("model folder not found on this Mini (EXO1)")
+            problems.append("model folder not found on this Mac (lead)")
         else:
             lp = Path(lead).expanduser()
             if not lp.is_dir():
-                problems.append(f"model folder missing on EXO1: {lead}")
+                problems.append(f"model folder missing on the lead Mac: {lead}")
             elif not (lp / "config.json").is_file():
                 problems.append(f"config.json missing in {lead}")
             else:
@@ -769,8 +769,8 @@ class WorkerManager:
                 self._assert_packer_unmanaged()
             except FileNotFoundError as e:
                 problems.append(
-                    "model isn't on the packer Mini (EXO2). "
-                    "For a one-Mini download, load after placing on EXO1 only — "
+                    "model is not on the helper Mac. "
+                    "For a one-Mac download, place it on the lead Mac before loading — "
                     "or re-download as a split / copy-to-all. "
                     f"({e})"
                 )
@@ -987,7 +987,7 @@ class WorkerManager:
             raise RuntimeError("could not stop tracked packer: " + (r.stderr or ""))
 
     def _resolve_packer_path(self, entry: dict) -> str:
-        # Ask EXO2 which candidate exists.
+        # Ask the configured helper which candidate exists.
         cands = entry.get("packer_path_candidates") or [entry.get("packer_path")]
         cands = [c for c in cands if c]
         if not cands:
@@ -1045,7 +1045,7 @@ class WorkerManager:
         except Exception:
             nodes = []
         if not nodes:
-            # Fallback: packer SSH target as exo2
+            # Compatibility fallback: recognize the legacy helper inventory ID.
             if any(x in ("exo2", "packer") for x in ids + labels):
                 return {
                     "id": "exo2", "label": "EXO2", "role": "packer",
@@ -1060,7 +1060,7 @@ class WorkerManager:
                 if self._node_is_local(n) or (n.get("role") == "lead"):
                     return None
                 return n
-        # Match exo2 / packer aliases against non-lead nodes
+        # Match legacy helper role aliases against non-lead nodes
         if any(x in ("exo2", "packer") for x in ids + labels):
             for n in nodes:
                 if n.get("role") != "lead" and not self._node_is_local(n):
@@ -1169,7 +1169,7 @@ class WorkerManager:
 
     def _start_packer(self, entry: dict, packer_path: str) -> Optional[int]:
         k = int(entry["packer_layers"])
-        # Prefer EXO2's own clone of the repo (~/cv3).
+        # Prefer the configured helper's own source checkout.
         remote = (
             "mkdir -p ~/.caravan/web-ui; "
             "LPM=$(pmset -g 2>/dev/null | awk '/lowpowermode/{print $2}'); "

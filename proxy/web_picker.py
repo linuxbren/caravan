@@ -976,7 +976,7 @@ def _dir_size_gb(path: Path) -> float:
 
 
 def list_installed(*, packer_sizes: Optional[dict] = None) -> list:
-    """Models on this Mini's disk. packer_sizes maps repo_folder -> gb on EXO2."""
+    """Models on this Mini's disk. packer_sizes maps repo_folder -> gb on the helper Mac."""
     packer_sizes = packer_sizes or {}
     found = {}
     for root in MLX_MODEL_ROOTS:
@@ -1703,7 +1703,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             continue
                         try:
                             # Remote runners save on their own Mini; writing locally left
-                            # placement-only folders on EXO1 and none next to the weights.
+                            # placement-only folders on the lead and none next to the actual weights.
                             if callable(r.get("save_placement")):
                                 r["save_placement"](blob)
                             else:

@@ -35,7 +35,7 @@ and serves the API (`--split-role packer|lead`). See
 
 ## Why Caravan has its own MLX server
 
-Version 1 used plain `mlx_lm.server` (0.32.2). Measured on one 24 GB Mac
+Version 1 used plain `mlx_lm.server` (0.32.2). Measured on one Mac
 mini, it had three problems:
 
 - **Gemma 4 and GPT-OSS reused nothing between messages.**
@@ -110,7 +110,7 @@ never left half-written.
 
 **Memory.**
 
-**Memory guard.** (UI / archive details also in [MODEL_PICKER.md](MODEL_PICKER.md).) Before each generate the lead estimates KV for prompt+max_tokens against reclaimable RAM minus `--memory-safety-gb` (and the packer's available RAM in a split). Oldest non-system turns are trimmed when needed and archived under `--memory-dir` (default `~/.caravan/memory/<YYYY-MM-DD>/<session>.md`) on EXO1 only; BM25 recall injects a short system note (~400–600 tok) from that archive. `caravan.meta.memory_guard` reports trimmed/recalled counts for the UI.
+**Memory guard.** (UI / archive details also in [MODEL_PICKER.md](MODEL_PICKER.md).) Before each generate the lead estimates KV for prompt+max_tokens against reclaimable RAM minus `--memory-safety-gb` (and the packer's available RAM in a split). Oldest non-system turns are trimmed when needed and archived under `--memory-dir` (default `~/.caravan/memory/<YYYY-MM-DD>/<session>.md`) on 1st node only; BM25 recall injects a short system note (~400–600 tok) from that archive. `caravan.meta.memory_guard` reports trimmed/recalled counts for the UI.
 
 - At most `--prompt-cache-size` (4) sessions stay in memory, and
   `--prompt-cache-bytes` (2 GiB) for all of them.
@@ -129,7 +129,7 @@ stream, so requests never overlap on the GPU. The proxy's FIFO gate
 already sends them one at a time.
 
 **Wired limit.** At startup the worker raises Metal's wired limit to the
-recommended working set (about 19.07 GB on an M4 24 GB) and holds it for
+recommended working set (reported by Metal for the current Mac) and holds it for
 the life of the process, as `mlx_lm.server` does. The log says `wired
 limit 0 -> 19069665280 bytes (held for process lifetime)`. Options are
 `--wired-limit startup|per-request|off`.
@@ -171,7 +171,7 @@ limit 0 -> 19069665280 bytes (held for process lifetime)`. Options are
 
 ## Results
 
-Single Mac mini M4 24 GB, through the proxy. Full tables are in
+Single Mac mini, through the proxy; see the benchmark log for exact hardware. Full tables are in
 [BENCHMARKS.md](BENCHMARKS.md).
 
 | | v1 (`mlx_lm.server`) | v2/v2.1 (Caravan worker) |
@@ -185,7 +185,7 @@ Single Mac mini M4 24 GB, through the proxy. Full tables are in
 
 - **One model per worker.** On one Mac, or split across two with v3
   ([MLX-SPLIT.md](MLX-SPLIT.md); slower, and started by hand for now).
-- **Qwen3 30B at 16k doesn't fit** on one 24 GB Mac with a plain f16 cache,
+- **Qwen3 30B at 16k doesn't fit** on the tested single Mac with a plain f16 cache,
   not even with `--kv-bits 8`. Use 4k–8k chats, the GGUF build of the
   model, or the v3 split across two Macs (about 10.5 GB per Mac).
 - **Gemma 4 reads short prompts about 8% slower** than with plain

@@ -25,21 +25,21 @@ thinking = "off"      # on / off: default for the Thinking button
 # memory_recall_tokens = 500
 
 # ---- Web UI string (Models picker + Topology) -----------------------------
-# Omit this whole block to keep the default EXO1 (local lead) + EXO2 (SSH).
+# Omit this whole block to keep the default 1st node (local lead) + 2nd node (SSH).
 # Empty host = node does not exist. Offline hosts are shown offline and
 # skipped by fit. Runtime split is still 2-stage (MAX_SPLIT_STAGES).
 
-# [web.nodes.exo1]
-# label = "EXO1"
+# [web.nodes.first]
+# label = "1st node"
 # host = "local"
 # role = "lead"
 # order = 0
 
-# [web.nodes.exo2]
-# label = "EXO2"
-# host = "exo2"
-# ssh = "exo2"
-# repo = "~/cv3"
+# [web.nodes.second]
+# label = "2nd node"
+# host = "helper-mac"
+# ssh = "helper-mac"
+# repo = "~/.caravan/src/caravan"
 # peer = "169.254.x.y:5560"
 # role = "packer"
 # order = 1

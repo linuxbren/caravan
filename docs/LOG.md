@@ -1,5 +1,12 @@
 ## 2026-11-09: Plan for Days 21–25 (agreed)
 
+> Historical naming: the development node was called `Omarchy`; the 1st node
+> (first Mac/lead) was `EXO1`; the 2nd node (second Mac/helper) was `EXO2`.
+> These are names from the original test environment, not operating-system or
+> hardware requirements. Older commands, paths and addresses are preserved as
+> evidence; use the [current guides](README.md) for your own setup.
+
+
 Brenden agreed this order, to be followed unless a rabbit hole catches
 our eye:
 

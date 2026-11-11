@@ -145,7 +145,7 @@ side thread while this Mac waits for the peer, so the next half does
 not pay ~5 ms of cool-down after the idle. Disable with
 `--no-split-keepalive` or `CARAVAN_MLX_SPLIT_KEEPALIVE=0`. Measured
 
-`--split-pipeline-chats N` (default **auto**, env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`) overlaps Packer 1's half for chat B with the lead's half for chat A when N≥2. Omit the flag to auto-pick from free memory (capped at 2 on 24 GB Minis; pass `1` to force the old single-chat path). Two chats ≈1.6× wall aggregate writing; a fair `(n_gen, t0)` packer pick keeps a third chat's wait before the first word ~0.6 s (was ~4 s). See [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31nov-1-mlx).
+`--split-pipeline-chats N` (default **auto**, env `CARAVAN_MLX_SPLIT_PIPELINE_CHATS`) overlaps Packer 1's half for chat B with the lead's half for chat A when N≥2. Omit the flag to auto-pick from free memory (based on available memory; pass `1` to force the old single-chat path). Two chats ≈1.6× wall aggregate writing; a fair `(n_gen, t0)` packer pick keeps a third chat's wait before the first word ~0.6 s (was ~4 s). See [BENCHMARKS.md](BENCHMARKS.md#idea-1-several-chats-at-once-oct-31nov-1-mlx).
 Oct 31: writing +28–50% vs off, reading and quality unchanged
 ([BENCHMARKS.md](BENCHMARKS.md#gpu-keepalive-while-waiting-on-the-peer-oct-31-mlx)).
 
@@ -168,13 +168,13 @@ cost (calls, MB each way, time waiting on the packer, network time).
 
 ## Results in short
 
-Measured Oct 31 on two Mac minis M4 24 GB, side by side with v2.1 on one
+Measured Oct 31 on two Mac minis (exact hardware in BENCHMARKS.md), side by side with v2.1 on one
 Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oct-31-mlx).
 
 - Memory per Mac roughly halves (Qwen3 30B 19.04 → 10.49 GB, Gemma 4 26B
   17.14 → 9.28 GB, GPT-OSS 20B 13.41 → 7.05 GB), so Qwen3 30B now holds a
   16k chat on MLX.
-- Writing is 28–42% slower and reading 16–25% slower (first run; EXO2
+- Writing is 28–42% slower and reading 16–25% slower (first run; 2nd node
   was in Low Power Mode). Rerun with it off: writing 30.4 / 27.7 / 26.6
   tok/s (27–40% slower than one Mac), reading within about 6% of one Mac
   ([BENCHMARKS.md](BENCHMARKS.md#v3-rerun-with-low-power-mode-off-oct-31-mlx-v31)). Each half costs
@@ -192,7 +192,7 @@ Mac. Full tables: [BENCHMARKS.md](BENCHMARKS.md#v21-vs-v3-one-mac-vs-two-macs-oc
 - The 8-bit versions, which don't fit on one Mac, all run split with a 16k
   chat and pass 3/3: Qwen3 30B 8-bit (20.6 tok/s, 18.12 GB per Mac), Gemma
   4 26B 8-bit (18.1 tok/s, 15.58 GB), GPT-OSS 20B 8-bit (19.8 tok/s,
-  12.13 GB). GPT-OSS 120B doesn't fit across two 24 GB Macs, even at 2-bit
+  12.13 GB). GPT-OSS 120B did not fit across the two tested Macs, even at 2-bit
   (parked; see [ROADMAP.md](ROADMAP.md#deferred--parked)).
 
 ## How the weights get to each Mac

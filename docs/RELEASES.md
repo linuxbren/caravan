@@ -28,8 +28,10 @@ gh release create "$TAG" --target "$COMMIT" --title "Day ${DAY} (DATE)" --notes-
    INSTALL.md exists and rerun the full test command there. Record counts,
    duration, failures and skips in the day log. If verification fails, disclose
    it immediately; do not silently replace an existing release asset/tag.
-7. Pull with `git pull --ff-only` on EXO1 `~/dev/caravan-v3` and EXO2 `~/cv3`.
-   Check tracked changes first. Never use scp or touch EXO2 `~/dev/caravan`.
+7. Pull with `git pull --ff-only` in the intended checkout on the 1st node
+   (first Mac/lead) and every helper, including the 2nd node. Use your saved
+   deployment inventory for actual paths; never assume a historical lab path.
+   Check tracked changes first. Never copy source over SSH or reset local work.
    Docs-only updates need no service restart. Preserve unrelated local files.
 8. Record the release URL, tag, commit, asset sizes and verification in the repo
    day log and Obsidian diary. A later documentation-only commit may record the
@@ -56,10 +58,16 @@ passing the stdlib suite proves a clean Mac installation or hardware speed.
 - [ ] Push branch, fast-forward main; never move existing tags or replace old
   release assets with newer code. Prepare follow-up artifacts for the next
   authorized release, or a clearly named correction release.
-- [ ] ff-only pull EXO1 `~/dev/caravan-v3`, EXO2 `~/cv3`, and Omarchy's checkout
-  if present. Never scp or touch EXO2 `~/dev/caravan`. Restart only if necessary;
-  web must keep workers. Verify health without changing the current model.
-- [ ] Update Omarchy Obsidian day/package note with commit, package checks,
-  commands, remaining acceptance gates and any service changes (or none).
-- [ ] X Engagement first gets real results and a post/video brief; build from
-  that plan, vary each day's look, then get final review. No posting by this bot.
+- [ ] ff-only pull each intended Mac checkout using its verified actual path,
+  then update the development node's checkout if present. Never copy over local
+  work. Restart only if necessary; web must keep workers. Verify current health.
+- [ ] Update project/deployment notes on the development node with commit,
+  package checks, commands, remaining gates and any service changes (or none).
+- [ ] Apply the public naming rule daily: development node, 1st node (first
+  Mac/lead), 2nd node (second Mac/helper). Explain any example SSH alias once.
+  Review with a new reader's eyes: no personal usernames, actual home paths,
+  private addresses, unexplained nicknames, or hardware memory-size advice.
+  Do not rename compatibility keys/runtime inventory as a documentation change.
+  Current guides link history instead of requiring readers to know the build log.
+- [ ] Obtain the designated reviewer’s video brief before recording and final
+  approval before publication. Do not mix media publishing with installation.

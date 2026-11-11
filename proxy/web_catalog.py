@@ -15,7 +15,7 @@ from typing import Optional
 
 import model_inventory as inv
 
-# Thunderbolt address of EXO2 as seen from EXO1 (Packer 1 listen target).
+# Legacy compatibility endpoint; configure an explicit trusted helper inventory.
 DEFAULT_PACKER_PEER = os.environ.get("CARAVAN_WEB_PACKER_PEER", "169.254.103.191:5560")
 DEFAULT_PACKER_SSH = os.environ.get("CARAVAN_WEB_PACKER_SSH", "brenden@169.254.103.191")
 

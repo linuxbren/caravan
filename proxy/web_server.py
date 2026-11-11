@@ -196,7 +196,7 @@ class App:
         return out
 
     def configured_nodes(self) -> list:
-        """Node list from ~/.caravan/config.toml [web.nodes.*] (defaults EXO1/EXO2)."""
+        """Node list from ~/.caravan/config.toml [web.nodes.*] (legacy fallback inventory if absent)."""
         return web_nodes.nodes_from_config()
 
     def _ssh_fn(self):
@@ -1507,7 +1507,7 @@ def make_handler(app: App):
                 except Exception as e:
                     return self._json(400, {'error': str(e)})
             # Day 18 split safety: default the split point to a balanced one from each
-            # Mini's RAM (24/8 on two 24 GB Minis left EXO2 under the margin → 507).
+            # Mac's memory (an uneven split can leave a helper under its safety margin).
             balance_note = ""
             if (mode == "split" and not pk_explicit and not gguf_file and not helper
                     and n_layers_dl and weights and len(target_nodes) >= 2):
@@ -1784,7 +1784,7 @@ def make_handler(app: App):
             mid = body.get("model_id") or body.get("id")
             if not mid:
                 return self._json(400, {"error": "model_id required"})
-            # Prefer N-node disk inventory (EXO2-only placements etc.) over the
+            # Prefer N-node disk inventory (helper-only placements, for example) over the
             # local-only catalog.get_model fallback.
             entry = None
             mid_l = str(mid).lower()
@@ -2110,7 +2110,7 @@ def main(argv=None):
     httpd.daemon_threads = True
     app.httpd = httpd
     print(f"[caravan-web] listening on http://{args.host}:{args.port}", flush=True)
-    print(f"[caravan-web] open http://<EXO1-tailscale-or-LAN>:{args.port}/", flush=True)
+    print(f"[caravan-web] open http://<this-mac-address>:{args.port}/", flush=True)
     print(f"[caravan-web] lead worker port {args.lead_port}; packer {args.packer_peer}", flush=True)
     app.restore.start(f"http://127.0.0.1:{httpd.server_port}")
     try:

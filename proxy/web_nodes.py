@@ -1,7 +1,8 @@
 """Configured Minis / string nodes for the web UI (Topology + picker).
 
 Reads optional [web.nodes.<id>] tables from ~/.caravan/config.toml.
-Missing section → Brenden's default 2-Mini string (EXO1 local lead, EXO2 SSH).
+Missing section retains the legacy two-Mac inventory. New installs create
+an explicit local node; other deployments should configure their own inventory.
 A node with no host is omitted. Offline configured nodes are marked offline
 and skipped by fit.
 """

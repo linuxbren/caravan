@@ -1,35 +1,30 @@
-# Security
+# Security and trusted connections
 
-## llama.cpp rpc-server (GGUF split) — Day 17, Nov 6 2026
+Caravan is experimental software for Macs you control on a trusted network.
+There is no browser login or multi-user access policy. Do not expose the UI,
+model workers or RPC service directly to the public internet.
 
-`ggml-rpc-server` has no authentication; llama.cpp says never expose it to an
-open network. Found in a check: `agent/supervisor.py` started it with
-`-H 0.0.0.0` on 50052. llama-server (8080) and MLX workers already bound
-127.0.0.1.
+- The easy install binds the browser service to localhost. Use an SSH tunnel
+  for access from your development node; see [remote access](REMOTE-ACCESS.md).
+- Trust each helper's SSH identity yourself. Never disable host-key checking
+  or add a key from an unverified source. Setup does not establish SSH trust.
+- GGUF RPC should listen on loopback and travel through an SSH tunnel. Check
+  the actual listener and attempt a connection from outside the intended host
+  before assuming a deployment is private. A historical successful check is
+  not proof of your current listener settings.
+- Read-only Thunderbolt verification checks SSH identity/reachability; it does
+  not authenticate the raw MLX model transport. Keep that transport on a
+  private trusted link. Authenticated model transport remains open work.
+- Keep FileVault, Gatekeeper and other Mac protections enabled. Do not remove
+  quarantine flags or grant broad privileges to avoid a warning. Setup uses
+  your normal account and does not change login/security settings.
+- Local model chats stay on your Macs. Model downloads contact publishers;
+  optional cloud features send data to the provider you choose.
+- Do not put credentials, private chat text, real addresses or keys in issues,
+  screenshots or release artifacts. Use the provided token settings rather
+  than committing secrets. Inspect logs before sharing them.
 
-**Web UI split (what runs today).** On every peer Mini rpc-server binds
-**127.0.0.1:50052 only**. The lead reaches it through an SSH local forward
-(`ssh -N -L 127.0.0.1:5006i:127.0.0.1:50052 <peer>`, BatchMode, aes128-gcm).
-So the allowlist is SSH itself: only machines holding Caravan's key — the
-topology Minis — can talk to it, and the traffic is encrypted. No open port,
-no sudo, no pf, works for any number of Minis.
-
-Verified Nov 6, 11:30 PM CT, with the split loaded and serving:
-- EXO2 `lsof`: `ggml-rpc-server … TCP 127.0.0.1:50052 (LISTEN)` — nothing else.
-- From Omarchy (not a peer) to EXO2's LAN 192.168.1.38:50052 and Tailscale
-  100.90.134.95:50052: **Connection refused**.
-- From EXO1 to EXO2's Thunderbolt 169.254.103.191:50052 and LAN: refused.
-- Split still ran: 34.7 tok/s write (DAY17-BENCHMARKS.md).
-
-**CLI agent (`caravan_agent.py`, `agent/gguf_split_cli.py`).** Same design as
-the web UI, one mechanism: the packer runs rpc-server on `127.0.0.1:50052`
-only (`supervisor.build_tail_command`), and the lead opens SSH tunnels
-`127.0.0.1:5006i → peer 127.0.0.1:50052` (`CARAVAN_RPC_SSH_USER`). The old
-`agent/rpc_gate.py` allowlist gate was removed (Nov 6, afcf070): SSH keys are
-the allowlist, and nothing listens on a network address. Live CLI split
-Nov 6 ~23:40 CT: ready 13.0 s, Write 34.30 / 34.49 / 34.66 tok/s, split
-20.0:16.1 from free RAM; Stop left 0 processes on both Minis. Non-peer checks
-re-run after: EXO1 → EXO2 Thunderbolt/LAN :50052 refused; Omarchy → EXO2
-LAN/Tailscale/Thunderbolt :50052 refused; EXO2 `lsof` shows 127.0.0.1 only.
-
-Not changed: llama.cpp stays at b10819 on both Minis (matched upgrade later).
+Historical loopback/tunnel checks are retained in
+[the security lab record](history/SECURITY-LAB.md). The
+[package status](PACKAGING.md) explains signatures, checksum trust and remaining
+clean-install acceptance gates.

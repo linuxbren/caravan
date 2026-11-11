@@ -12,7 +12,7 @@ workers; Unload in the page first to free model memory. Settings/models are kept
 Login restore uses the last successful load, retries temporary node/memory/link
 readiness for up to ten minutes, and fails visibly rather than looping forever.
 The Day 21 follow-up (`51d697a`) and both-Mini reboot at 17:44 CST passed: main
-ready 39.110 s after EXO1 boot, aux health at about 45.8 s. This was on existing
+ready 39.110 s after 1st node boot, aux health at about 45.8 s. This was on existing
 FileVault-off auto-login accounts, **not** a fresh-account/FileVault-on proof.
 The published Day 21 tag is immutable and predates the follow-up fix.
 
@@ -25,7 +25,7 @@ Historical Day 19 implementation notes. Native three-stage startup/recovery, iso
 installation/idempotence and permanent two-Mini Qwen login/reboot recovery passed
 on Nov 8 after the recorded fixes **in the earlier fixed-model mode**. The
 revised web-owned mode loaded/saved Qwen24/40 and answered correctly, but its
-EXO2 reboot test lost SSH for the full360s monitor. That historical gap is now
+2nd node reboot test lost SSH for the full360s monitor. That historical gap is now
 closed by the Day20/Day21 restore checks summarized above.
 Both existing accounts had automatic login
 enabled and FileVault off already. A separate clean Mac/account and FileVault-on
@@ -42,7 +42,7 @@ restarted separately with KEEP_WORKERS without reloading models.
 
 ## Default: restore the last model, owned by the web
 
-**Preferred normal mode (Brenden's Nov 8 design): install the web LaunchAgent,
+**Preferred normal mode (web-owned model restore): install the web LaunchAgent,
 not a model-specific worker job.** Every successful load saves the actual model,
 MLX/GGUF engine, placement/ordered Minis, Balance counts or GGUF shares and
 settings in `~/.caravan/web-ui/last-model.json`. It is atomically replaced before
@@ -67,7 +67,7 @@ Thunderbolt data IPs, configure an explicit packer e.g.:
 role = "packer"
 host = "USER@STABLE_CONTROL_HOST"
 ssh = "USER@STABLE_CONTROL_HOST"
-repo = "~/cv3" # choose that Mini's actual clone
+repo = "~/.caravan/src/caravan" # choose that Mini's actual clone
 peer = "ssh+tb://USER@STABLE_CONTROL_HOST/en2:5560"
 listen = "tb://en2:5560"
 ```
@@ -79,9 +79,8 @@ Remote MLX stages are web-owned via existing SSH/ownership commands; no permanen
 fixed-model worker LaunchAgent is needed, for any number of Minis.
 
 For old fixed-model installations, explicitly uninstall just the model worker
-jobs (keep web). The lab migration removes only `day19-qwen-lead` on EXO1 and
-`day19-qwen-packer` on EXO2. This stops those owned model workers; run it at a
-safe time. It keeps models, cache and logs. Then load once through the web so the
+jobs (keep web). Inspect `status` and uninstall each old owned model job by its actual name.
+This stops only that selected job; do it at a safe time. It keeps models, cache and logs. Then load once through the web so the
 successful placement becomes the saved selection. Do not hand-create a saved
 record from a partial running process or fabricate a successful load.
 
@@ -299,7 +298,7 @@ python3 tools/caravan_service.py install --kind worker --name lead \
 ```
 
 Remove `--dry-run` to install/start only after validating each local plan. Any
-number of packers is supported; no “EXO2” host or common clone path is embedded
+number of packers is supported; no “2nd node” host or common clone path is embedded
 in these jobs. Add more count entries, stage indices and upstream links.
 Middle/lead agents check upstream protocol/ranges before spawning; missing peers
 are retried every 15 s without downloading, killing another worker or giving up
@@ -336,7 +335,7 @@ implemented; the operator still chooses the trusted hosts/interfaces/routes.
 ## Independent remote-access recovery
 
 See [REMOTE-ACCESS.md](REMOTE-ACCESS.md) for verified LAN SSH aliases, the
-Tailscale-independent EXO2 Thunderbolt jump, per-user Tailscale guards,
+Tailscale-independent 2nd node Thunderbolt jump, per-user Tailscale guards,
 manual recovery limits and the current model-restoration status. These are
 access safeguards, not Caravan model/service restarts.
 
@@ -359,6 +358,6 @@ A pre-existing manual proxy must finish its requests and be stopped explicitly
 before install; the installer never kills an unowned listener. Logs are in
 `~/.caravan/logs/proxy.log`. Cache cleanup is off (no automatic deletions).
 The lead installer still installs the web service by itself; add this plan
-when an OpenAI client needs it. EXO1's plan was installed live without reboot
+when an OpenAI client needs it. 1st node's plan was installed live without reboot
 or web restart. Its subsequent Day21 login/reboot recovery passed on the
 existing lab accounts; see the historical measurements in [DAY21.md](DAY21.md).

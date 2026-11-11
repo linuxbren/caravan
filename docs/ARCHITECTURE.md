@@ -204,7 +204,7 @@ and q8_0 (half the KV memory) when not.
   the measured Metal buffers.
 - **GPU limit** is Metal's `recommendedMaxWorkingSetSize`, asked once and
   cached in `~/.caravan/agent/gpu_limit.json`. That's 18,186.25 MiB on an
-  M4 24 GB.
+  a tested Apple Silicon Mac (exact hardware is recorded in BENCHMARKS.md).
 
 Anything it can't estimate falls back to q8_0. The decision and every
 term are logged. Measured: f16 for Gemma 4 and GPT-OSS, q8_0 for Qwen3
@@ -322,7 +322,7 @@ Flag names in this repo were checked against `caravan-patches`.
 
 1. **Prove the split** (2026-09-05). llama.cpp built with `GGML_RPC=ON
    GGML_METAL=ON` on both Macs, `rpc-server` on one, `llama-server --rpc`
-   on the other. A 16 GB model split across both worked.
+   on the other. The tested model worked when split across both; see the measured configuration in BENCHMARKS.md.
 2. **Make it usable day to day** (Sep 6–8). The proxy (slot pinning, FIFO,
    cancel on disconnect, disk saves), launchd, the Thunderbolt cable
    (14–22× faster cold loads), and the shard cache, which turned out to be

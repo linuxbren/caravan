@@ -119,6 +119,10 @@ than replacing them. No automatic migration of custom services is claimed.
 
 ## Add Minis
 
+The first Mac is the **1st node** (lead); the next is the **2nd node** (helper).
+Your **development node** is the computer used to manage the project; it need
+not be a Mac or use a particular operating system. See [names and placeholders](docs/README.md).
+
 Run this on **each extra Mac**:
 
 ```sh

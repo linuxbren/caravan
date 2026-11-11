@@ -53,7 +53,7 @@ Every section is optional:
     "model_dirs": ["~/.exo/models", "~/.caravan/models/mlx"],
     "cache_dir": "~/.caravan/mlx/prompt-cache",
     "server": "caravan", "python": "~/.caravan/venvs/mlx/bin/python", "extra_args": [],
-    "split": { "packer": "169.254.x.y:5560", "packer_layers": 24 }
+    "split": { "packer": "YOUR_HELPER_ADDRESS:5560", "packer_layers": 24 }
   },
   "slot_cleanup": {
     "mode": "archive", "max_age_days": 30, "interval_hours": 6,
@@ -93,7 +93,7 @@ all read these.
 | `--batch-size` | `CARAVAN_BATCH_SIZE` | `batch_size` | `2048` | Logical batch. |
 | `--ubatch-size` | `CARAVAN_UBATCH_SIZE` | `ubatch_size` | `512` | Physical batch. Larger reads long prompts faster but costs compute memory. |
 | `--swa-full` | `CARAVAN_SWA_FULL` | `swa_full` | off | Full-size cache for sliding-window layers. Uses much more memory; not needed on the rebased llama.cpp. |
-| `--rpc` (render tool only) | `CARAVAN_RPC_ADDR` | `rpc` | `169.254.104.38:50052` | Comma-separated `host:port` list, or `auto` to discover. The running agent always discovers. This default is a link-local address that can change, so prefer `auto`. |
+| `--rpc` (render tool only) | `CARAVAN_RPC_ADDR` | `rpc` | `legacy address; configure `auto` or your own endpoint` | Comma-separated `host:port` list, or `auto` to discover. The running agent always discovers. This default is a link-local address that can change, so prefer `auto`. |
 
 Always passed, not configurable: `--slot-save-path
 ~/.caravan/llama-server/slots/`, `--no-kv-unified`, `--port 8080`, and
@@ -379,35 +379,37 @@ Example: [`docs/config.example.toml`](config.example.toml).
 
 ## Web UI nodes (`~/.caravan/config.toml`)
 
-The Models picker and Topology read the string from optional
-`[web.nodes.<id>]` tables. **A missing `[web.nodes]` section keeps Brenden's
-default two-Mini setup** (EXO1 = local lead, EXO2 = SSH packer), so existing
-labels do not change.
+The Models picker and Topology read your `[web.nodes.<id>]` tables. IDs are
+names you choose, not reserved hostnames. The easy installer creates a local
+entry. A source-only launch without this section retains legacy two-Mac defaults
+bound to the original test setup; **set an explicit inventory outside that setup**.
+`lead-mac`, `helper-mac` and `helper3-mac` below are example SSH aliases that you
+must replace/configure yourself. See [node names and placeholders](README.md).
 
 ```toml
-# Optional — omit entirely for EXO1 + EXO2 defaults.
+# Example inventory: adapt every remote name/address/path to your own Macs.
 
-[web.nodes.exo1]
-label = "EXO1"
+[web.nodes.first]
+label = "1st node"
 host = "local"          # local | localhost | 127.0.0.1 → gather on this Mac
 role = "lead"           # lead | packer (head/front aliases accepted)
 order = 0
 
-[web.nodes.exo2]
-label = "EXO2"
-host = "exo2"           # SSH target (or Tailscale name)
-ssh = "exo2"            # optional; defaults to host when not local
-repo = "~/cv3"          # remote checkout with proxy/node_stats.py
-peer = "169.254.x.y:5560"
+[web.nodes.second]
+label = "2nd node"
+host = "helper-mac"           # SSH target (or Tailscale name)
+ssh = "helper-mac"            # optional; defaults to host when not local
+repo = "~/.caravan/src/caravan"          # remote checkout with proxy/node_stats.py
+peer = "YOUR_HELPER_ADDRESS:5560"
 role = "packer"
 order = 1
 
 # Third Mini example (N-stage Balance path; older picker/Optimize remains two-stage):
-# [web.nodes.exo3]
+# [web.nodes.third]
 # label = "EXO3"
-# host = "exo3"
-# ssh = "exo3"
-# repo = "~/cv3"
+# host = "helper3-mac"
+# ssh = "helper3-mac"
+# repo = "~/.caravan/src/caravan"
 # role = "packer"
 # order = 2
 ```
@@ -417,7 +419,7 @@ order = 1
 | `label` | the table id | UI label (chips, progress, disk rows) |
 | `host` | (required) | `local` / localhost, or SSH hostname. **Empty host → node does not exist** (skipped). |
 | `ssh` | `host` when remote | SSH destination for gather / fetch / delete |
-| `repo` / `remote_repo` | `~/cv3` | Path to Caravan checkout on that Mac |
+| `repo` / `remote_repo` | legacy fallback path; set explicitly | Path to Caravan on that Mac (easy install: `~/.caravan/src/caravan`) |
 | `peer` | — | Packer listen `HOST:PORT` (informational / link) |
 | `role` | first = lead, else packer | `lead` or `packer` |
 | `order` | declaration order | Packer ordering |
