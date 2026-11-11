@@ -43,8 +43,8 @@ def main(argv=None):
                 script.write(data); script.flush()
                 cmd = ["bash", script.name, "--update", "--role", role, "--no-start"]
                 if role == "lead":
-                    plan = service.stored("web", Path.home())
-                    cmd += ["--port", str(plan["port"])]
+                    plan = service.stored(args.name, Path.home())
+                    cmd += ["--port", str(plan["port"]), "--name", args.name]
                 result = subprocess.run(cmd)
             if result.returncode == 0: print("Updated; run caravan start when ready. Old source backup kept; models/settings unchanged.")
             return result.returncode

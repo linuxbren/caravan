@@ -6,17 +6,19 @@ set -euo pipefail
 main() {
 say() { printf '[Caravan] %s\n' "$*"; }
 fail() { say "$*" >&2; exit 1; }
-ROLE=lead; CHECK=0; UPDATE=0; START=1; PORT=8190
+ROLE=lead; CHECK=0; UPDATE=0; START=1; PORT=8190; NAME=web
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --help|-h) say 'Usage: install [--role lead|worker] [--check] [--update] [--no-start] [--port PORT]'; exit 0 ;;
+    --help|-h) say 'Usage: install [--role lead|worker] [--check] [--update] [--no-start] [--port PORT] [--name NAME]'; exit 0 ;;
     --check) CHECK=1; shift ;;
     --update) UPDATE=1; shift ;;
     --no-start) START=0; shift ;;
-    --role|--port) [ "$#" -ge 2 ] || fail "$1 needs a value"; case "$1" in --role) ROLE=$2 ;; --port) PORT=$2 ;; esac; shift 2 ;;
+    --role|--port|--name) [ "$#" -ge 2 ] || fail "$1 needs a value"; case "$1" in --role) ROLE=$2 ;; --port) PORT=$2 ;; --name) NAME=$2 ;; esac; shift 2 ;;
     *) fail "Unknown option: $1. Use --help." ;;
   esac
 done
+case "$NAME" in ''|*[!A-Za-z0-9_-]*) fail 'Service name must use letters, numbers, _ or -.' ;; esac
+[ "${#NAME}" -le 64 ] || fail 'Service name is too long.'
 [ "$ROLE" = lead ] || [ "$ROLE" = worker ] || fail 'Choose lead or worker.'
 case "$PORT" in ''|*[!0-9]*|??????*) fail 'Port must be 1–65535.' ;; esac
 [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ] || fail 'Port must be 1–65535.'
@@ -38,7 +40,7 @@ if [ "$CHECK" = 1 ]; then
   exit 0
 fi
 ROOT="$HOME/.caravan"; REPO="$ROOT/src/caravan"; TMP=""
-if [ "$ROLE" = lead ] && [ -e "$ROOT/services/web.json" ] && [ ! -f "$REPO/.caravan-package" ]; then
+if [ "$ROLE" = lead ] && [ -e "$ROOT/services/$NAME.json" ] && [ ! -f "$REPO/.caravan-package" ]; then
   fail 'An existing custom web service is installed. Keep it; follow the source-install update instructions in INSTALL.md. Nothing was changed.'
 fi
 trap 'code=$?; [ -z "$TMP" ] || rm -rf "$TMP"; if [ "$code" != 0 ]; then say "Setup stopped. Existing models/settings were kept. Check your internet connection and the error above, then retry." >&2; fi' EXIT
@@ -59,7 +61,7 @@ if [ -e "$REPO" ]; then
     [ "$UPDATE" = 1 ] || fail 'Caravan is already installed. Run ~/.caravan/bin/caravan update to change versions.'
     [ -f "$REPO/.caravan-package-files" ] || fail 'Package integrity list missing; existing code kept.'
     (cd "$REPO" && shasum -a 256 -c .caravan-package-files >/dev/null) || fail 'Installed source has edits. Keep them; use a separate source checkout. No files replaced.'
-    if launchctl print "gui/$(id -u)/com.caravan.v3.web" >/dev/null 2>&1; then fail 'Stop the web first with caravan stop, then run caravan update. Models are left running.'; fi
+    if launchctl print "gui/$(id -u)/com.caravan.v3.$NAME" >/dev/null 2>&1; then fail 'Stop the web first with caravan stop, then run caravan update. Models are left running.'; fi
   fi
 fi
 if [ ! -f "$REPO/.caravan-package" ] || [ "$(< "$REPO/.caravan-package")" != "$REF" ]; then
@@ -91,7 +93,7 @@ say 'Preparing private Python 3.12. Nothing changes the Mac system Python.'
 "$UV" python install 3.12.11
 PYTHON=$("$UV" python find --managed-python 3.12.11)
 ARGS=(--role "$ROLE" --repo "$REPO" --use-existing --python "$PYTHON")
-[ "$ROLE" != lead ] || ARGS+=(--port "$PORT")
+[ "$ROLE" != lead ] || ARGS+=(--port "$PORT" --name "$NAME")
 [ "$START" = 1 ] || ARGS+=(--no-start)
 bash "$REPO/scripts/install.sh" "${ARGS[@]}"
 say 'Next time: ~/.caravan/bin/caravan status (or doctor, start, stop, update, uninstall, add-mini).'

@@ -50,6 +50,10 @@ this follow-up's artifacts are prepared for a later authorized release.
 - Bundled/pinned optional GGUF runtime; independent per-Mac GGUF loading is Day22.
 - Physical inference on 3+ Macs. N-stage planning/socket tests are not that proof.
 
+Advanced isolated tests can use `--name UNIQUE_NAME --port UNUSED_PORT --no-start`
+and `caravan start/stop/uninstall --name UNIQUE_NAME`. Never register a test
+under a production service label, even with a temporary HOME.
+
 ## Verification record
 
 See the follow-up record in DAY21.md. Portable script/unit tests and isolated
