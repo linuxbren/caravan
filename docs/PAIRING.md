@@ -98,6 +98,33 @@ Macs that change address are found again through their saved Bonjour name or
 stable tailnet address; addresses, cabling and physical N-Mac inference still
 need real deployment verification.
 
+## Native acceptance: Day 22 follow-up
+
+The real curl installer passed on the second Mac under a private sibling HOME,
+using managed Python 3.12.11 and `--no-start` / a unique service name. The source
+checksum and installed marker were verified. No login service or browser was
+started for that isolated install.
+
+`tools/pairing_smoke.py` then paired physical Macs over Bonjour through the same
+private UI APIs: helper-page code obtained, code submitted, PAKE exchange,
+automatic host pin and config, an actual dedicated-key SSH command, and removal
+on both sides. A separate unprivileged sshd, test host key, scratch HOME and
+random ports kept production SSH/config untouched. Production Remote Login on
+TCP 22 was already reachable on both Macs; no toggle, sudo or Full Disk Access
+request was needed. This availability check is not a privileged macOS settings
+read; the dedicated-key command is the authentication proof.
+
+All 44 pairing/harness tests also passed natively on the first Mac. The full
+portable suite passed 1,107 tests. Huihui remained ready on its saved split,
+answered before/after, and kept the same worker PID. Only the first Mac's web
+service was restarted, with worker preservation already set. Test servers were
+stopped and their pairing keys removed; private scratch installations remain
+for inspection. See [DAY22](DAY22.md) for the complete evidence and boundaries.
+
+Not tested here: a fresh macOS account, FileVault unlock/login, native Safari
+rendering or clicking the System Settings switch (it was already on). The UI
+API test is not a claim of manual browser click-through or a security audit.
+
 ## Acceptance evidence
 
 See the task's test record in [PACKAGING](PACKAGING.md). Protocol/config tests

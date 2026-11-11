@@ -63,22 +63,25 @@ Mac setup are recorded separately from live reboot/inference evidence.
 
 ## Pairing/trim follow-up verification
 
-- Portable suite (with `requirements-test.txt`): **1,101 tests passed**, including
-  39 new protocol/config/removal/local-management tests. Full output is retained
-  on the development box; this is not a native macOS acceptance result.
-- Real HTTP add/remove smoke between two scratch homes on the Linux box passed;
-  no production SSH files/config were used. SSH verification is mocked in those
-  protocol tests; `ssh -G` checks the actual generated strict OpenSSH settings.
-- All four new pinned dependencies were downloaded successfully as binary
-  wheels for managed Apple Silicon Python 3.12 (no compiler/CLT fallback).
-- Read-only checks of the existing Macs confirmed current checkouts; the second
-  Mac does not yet have the new PAKE dependency. No restart, trust/config edit,
-  model action or reboot was performed by this task.
-- Pending: isolated protocol and real SSH/native browser/Remote Login tests on
-  macOS, fresh-account/FileVault test, security review, pushed-channel bootstrap
-  verification and updating the package pin after the reviewed code is pushed.
-  Do not call the new pairing feature live-proven until those are recorded.
+- Full portable suite: **1,107 passed**. The 39 protocol/config/removal tests plus
+  five scratch-harness safety tests also passed natively on the first Mac.
+- Actual pushed curl install passed on the second Mac in a private sibling
+  HOME: verified source, uv/private Python 3.12.11, locked binary dependencies,
+  local config and unique unstarted login plan. `--no-start` deliberately avoids
+  the live login service and browser. This is not a fresh-account test.
+- Real Bonjour discovery and UI-API pairing between physical Macs passed with
+  separate scratch HOME/ports/sshd: one-use code, PAKE, dedicated-key SSH command,
+  host pin/config, and removal verified on both sides. Production Remote Login
+  was already reachable; no OS permission was changed.
+- All new dependencies have Apple Silicon Python 3.12 binary wheels. The first
+  Mac's web runtime received those dependencies and only its web was restarted
+  with workers kept. Huihui stayed loaded/saved and answered before and after.
+- Remaining: fresh-account/FileVault and native browser/Settings click-through,
+  independent security review, signing/notarization and broader N-Mac proof.
+  See [PAIRING](PAIRING.md) and [DAY22](DAY22.md) for exact test boundaries.
 
-The C++ experiment was parked with Git renames and resume instructions. Other
-cleanup is an [approval-only inventory](CLUTTER.md), not a deletion plan already
-executed. No release or tag was changed for this follow-up.
+The source channel now includes Day 22 and pairing. C++ was parked under
+`docs/history/cpp/`; **`runtime/gguf-shards/` stays live and unchanged**. The owner
+chose to keep every other [clutter candidate](CLUTTER.md). No release or tag was
+changed. Private scratch installations are retained for inspection, with their
+test servers stopped and paired trust removed.

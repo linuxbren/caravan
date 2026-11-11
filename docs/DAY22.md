@@ -470,3 +470,61 @@ The usual full-file picker path cannot use this Qwen original now that it is
 gone. The verified experimental catalog path works; full picker/lifecycle
 integration is still pending. The recorded immutable source remains available
 if a full original is needed again.
+
+
+## Pairing and Mac package follow-up — 2026-11-10 (CST)
+
+Rebased pairing onto finished Day 22 `7ae37b8`, retaining its full own-part
+picker/runtime instructions. Only `cpp/` moved to `docs/history/cpp/`;
+**`runtime/gguf-shards/` is live and unchanged**. All other clutter is kept.
+
+### Actual Mac proof
+
+- The actual pushed curl installer passed on the second Mac in a private
+  sibling HOME, with --no-start, a unique service name and spare browser
+  address. It verified the source checksum, installed uv/private Python
+  3.12.11 and locked binary dependencies, and wrote local config/unstarted
+  login plan. No model download, service start or browser opening.
+- At **8:36 PM CST**, `tools/pairing_smoke.py` found the second Mac using
+  Bonjour and exercised the private UI APIs: code obtained from helper-page
+  state, code entered on the first Mac, PAKE/key exchange, automatic host pin
+  and node config. A real dedicated-key OpenSSH command returned
+  `CARAVAN_DEDICATED_KEY_OK` using only isolated SSH config, not personal keys.
+- The helper used an unprivileged scratch sshd, generated test host key,
+  private authorized_keys and random ports. Neither production SSH key store
+  was edited. System SSH on TCP 22 was already reachable on both Macs; no
+  sudo/systemsetup, Full Disk Access or Settings toggle was needed/changed.
+- Remove succeeded through the UI API. Lead node/SSH config, host pin and
+  dedicated private key were removed; helper marked key and peer record were
+  removed. Both sides verified cleanup; scratch servers were stopped. Private
+  scratch installations remain for inspection, not registered/running jobs.
+- **1,107 portable tests passed. All 44 pairing/harness safety tests also
+  passed natively on the first Mac.** A shell-created .rustup cache initially
+  tripped the conservative scratch allowlist; the narrow correction has five
+  safety tests and still refuses real HOME/production state/unrelated files.
+
+### Production stayed intact
+
+Only the first Mac's web restarted after installing its pairing dependencies.
+Its existing LaunchAgent already had `CARAVAN_WEB_KEEP_WORKERS=1`. Huihui kept
+worker **PID 35524**, the **24/40** split and the saved restore request. Visible
+non-thinking probes returned `PAIRING_BEFORE_OK` and `PAIRING_AFTER_OK`
+(**8:43 PM CST**). Both Macs' authorized_keys, SSH config/known_hosts, Caravan
+config and last-model record had identical before/after byte digests. No
+worker/proxy/aux restart, reboot, model reload or production pairing occurred.
+The development node's dirty checkout was untouched.
+
+Branch/main fast-forward publication, ff-only Mini pulls and the checksummed
+`packaging-version` source pin bring this into the development curl channel,
+not a release/tag. The page reports Remote Login availability and distinguishes
+code-managed connections from existing Topology entries.
+
+### Remaining gates
+
+An isolated HOME is not a fresh macOS account or FileVault test. UI APIs were
+exercised; native Safari rendering and manually clicking the Settings switch
+were not (Remote Login was already on). Independent security review remains
+required: Python SPAKE2 is not constant-time and paired SSH grants account-level
+command authority, not a sandbox. A future signed consumer app needs Apple
+Developer ID/notarization. No signing key, password or pairing code belongs in
+these logs. See [PAIRING](PAIRING.md) for protocol/security scope.

@@ -176,7 +176,8 @@ three or more. Older Optimize paths remain two-stage. See [MLX-SPLIT](docs/MLX-S
   `~/.caravan/runtimes/gguf-shards/`, separate from existing runtimes. A missing
   prerequisite stops safely: install it, then Resume. Homebrew tools are found
   even when a login service has a short PATH. This is not bundled in the
-  published Day 21 package, and no Day 22 installer channel has been released.
+  old Day 21 release. The current development installer includes this source,
+  but not a prebuilt optional model runtime.
   Single-file qwen2/llama GGUF sources with HTTP Range support are supported.
   Other layouts stop rather than quietly sending weights between Macs. The
   advanced **full-file fallback** must be selected explicitly; it retains the

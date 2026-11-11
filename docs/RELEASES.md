@@ -79,3 +79,21 @@ passing the stdlib suite proves a clean Mac installation or hardware speed.
 - Keep Remote Login guidance honest: native System Settings permission, no automatic sudo, no request for Full Disk Access, no manual SSH/TOML in the everyday guide.
 - Keep C++ paused under `docs/history/cpp/`; do not package its binaries. Review the [clutter inventory](CLUTTER.md) with the owner before moving/removing anything else.
 - Preserve the public naming checklist above (development node, first/second Mac), no hardware memory-size recommendations and no paused integrations in everyday docs.
+
+
+### Native pairing proof without touching a live model
+
+- Use tools/pairing_smoke.py only with a fresh .caravan-pairing-smoke-* sibling
+  HOME. It refuses actual HOME/production state. Keep helper sshd, host key and
+  ports separate. Never tee its offer output: pipe the short-lived test code
+  over existing SSH into client stdin. Record results, not codes/capabilities.
+- Prove actual dedicated-key auth and both-side removal, not just ssh -G.
+  Stop scratch servers; retain private evidence/installations deliberately.
+  Never kill processes by name or edit existing SSH entries.
+- Before/after, check visible chat, exact model/split, same worker PID and saved
+  restore request. Fingerprint public trust/config without reading private
+  identities. Restart only web if needed, with CARAVAN_WEB_KEEP_WORKERS=1.
+- Advance/check the source pin; run real curl under isolated HOME with no-start
+  and unique name. Separate this from fresh-user/FileVault/browser acceptance.
+- Keep all CLUTTER entries unless the owner changes the keep-all decision.
+  Never park runtime/gguf-shards with the unrelated C++ experiment.

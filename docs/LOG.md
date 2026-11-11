@@ -3207,3 +3207,22 @@ Full suite: **1,063 passing** in 47.815 s. User README/INSTALL, Day 22 detail an
 Obsidian notes updated. Remaining validation: additional architectures/layouts,
 3+ physical nodes, longer performance runs, and publishing a future package.
 [Details](DAY22.md) · [source/range/hash/counter/API evidence](../bench/results/day22/app/).
+
+
+## Day 22 follow-up: Mac pairing and paused C++ (2026-11-10 CST)
+
+Real physical Macs passed Bonjour discovery, code from helper UI API, lead UI
+submission, actual dedicated-key SSH/host pin/config and removal on both sides,
+inside private sibling homes with separate sshd/host key/ports. Production
+Remote Login was already reachable; no OS permission or production key/config
+changed. The actual pushed curl installer passed with private Python 3.12.11
+and --no-start. Full portable suite: 1,107 passed; 44 pairing/safety tests also
+passed natively. Only the first Mac's web restarted, keeping workers. Huihui
+stayed loaded/saved at 24/40 with the same worker PID and successful chat before
+and after. Production public-key/config/restore byte digests matched.
+
+Only cpp moved to docs/history/cpp. runtime/gguf-shards stays live and unchanged;
+all other clutter is kept. No release/tag or development-node checkout changed.
+See [Day 22 follow-up](DAY22.md#pairing-and-mac-package-follow-up--2026-11-10-cst)
+and [PAIRING](PAIRING.md) for evidence and remaining native-browser,
+fresh-account/FileVault and independent security-review gates.

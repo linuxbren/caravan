@@ -14,6 +14,7 @@ async function post(action,body={}){
 function text(tag,content,parent){const n=document.createElement(tag);n.textContent=content;parent.append(n);return n;}
 async function state(){
   const r=await fetch('/api/pairing/state',{cache:'no-store'});const s=await r.json();if(!r.ok)throw Error(s.error);token=s.token;
+  el('loginStatus').textContent=s.remote_login?'Remote Login is reachable on this Mac. Make sure this account is allowed in the setting.':'Turn on Remote Login for this account, then return here.';
   el('mycode').textContent=s.code||'No code is showing';
   el('expiry').textContent=s.code?'One use only. Expires in '+Math.ceil(s.expires_in/60)+' minutes.':'Click Show a new code when you are ready.';
   el('connected').replaceChildren();

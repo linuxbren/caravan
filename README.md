@@ -74,8 +74,8 @@ model is passed over the cable; the cable still carries chat activations.
 The first download prepares an isolated optional native backend (Apple build
 tools and CMake required). Unsupported sources stop with a clear error; the
 old full-file download is an explicit advanced fallback, never automatic.
-This work is not yet a Day 22 release or an update to the published installer
-channel. N-stage planning is tested; physical inference has been verified on
+The development installer channel now includes this source and short-code
+pairing. This is not a signed app or a Day 22 release. N-stage planning is tested; physical inference has been verified on
 two Macs. Thunderbolt inventory/link checks remain read-only. The separate
 [short-code pairing flow](docs/PAIRING.md) establishes trust and saves node configuration.
 
