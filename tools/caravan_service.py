@@ -117,7 +117,7 @@ def backup_old_service(plan, run=run_launchctl):
     scripts = {'web': 'proxy/web_server.py', 'worker': 'agent/caravan_agent.py', 'proxy': 'proxy/slot_pin_proxy.py'}
     suffix = scripts.get(plan['kind'])
     if (old.get('Label') != plan['label'] or not suffix or len(args) < 2
-            or not Path(args[0]).name.startswith('python') or not str(args[1]).endswith('/' + suffix)):
+            or not Path(args[0]).name.lower().startswith('python') or not str(args[1]).endswith('/' + suffix)):
         raise ValueError("The existing startup file could not be verified as Caravan. Keep it and inspect it manually.")
     if paths['config'].exists():
         prior = SC.load(paths['config'])

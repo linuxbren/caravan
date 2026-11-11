@@ -29,7 +29,7 @@ def owned_plist(path, home):
         known = {str(repo / name) for name in SCRIPTS}
         # Legacy installer files have no Comment; verify repository + command.
         if (not (repo / 'agent/config.py').is_file() or len(args) < 2
-                or not Path(args[0]).name.startswith('python') or args[1] not in known):
+                or not Path(args[0]).name.lower().startswith('python') or args[1] not in known):
             return None
         if p.get('EnvironmentVariables', {}).get('HOME', str(home)) != str(home):
             return None
@@ -70,7 +70,7 @@ def workers(home, repos, *, listing=None, inspect=command_of):
         try:
             pid, command = line.strip().split(None, 1)
             args = shlex.split(command)
-            if args and Path(args[0]).name.startswith('python') and any(a in scripts for a in args[1:]):
+            if args and Path(args[0]).name.lower().startswith('python') and any(a in scripts for a in args[1:]):
                 found[int(pid)] = command
         except ValueError:
             continue
