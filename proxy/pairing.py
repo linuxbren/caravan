@@ -21,23 +21,14 @@ import sys
 import threading
 import time
 
-from pairing_store import Store, atomic, read_json, valid_id, public_key
+from pairing_store import Store, atomic, read_json, valid_id, public_key, NETWORKS, private
 
 ROOT = Path(__file__).resolve().parents[1]
 PORT = 8197
 TTL = 300
 MAX_ATTEMPTS = 5
 MAX_BODY = 16384
-NETWORKS = tuple(ipaddress.ip_network(x) for x in ('127.0.0.0/8','10.0.0.0/8','172.16.0.0/12','192.168.0.0/16','169.254.0.0/16','100.64.0.0/10','::1/128','fe80::/10','fc00::/7'))
 SETTINGS_URL = 'x-apple.systempreferences:com.apple.preferences.sharing?Services_RemoteLogin'
-
-
-def private(value):
-    try:
-        addr = ipaddress.ip_address(str(value).split('%')[0])
-        if getattr(addr,'ipv4_mapped',None): addr = addr.ipv4_mapped
-        return any(addr.version == net.version and addr in net for net in NETWORKS)
-    except ValueError: return False
 
 
 def addresses(host):
@@ -47,22 +38,27 @@ def addresses(host):
     # All results must be private. Connect to an already-validated literal, so a
     # second DNS lookup cannot turn this into a public-network request.
     if not ips or not all(private(ip) for ip in ips): raise ValueError('Pairing is limited to your local network, cable or private tailnet.')
-    return ips
+    return sorted(ips,key=lambda ip:(0 if ipaddress.ip_address(ip.split("%")[0]).version==4 else 1,ip))
 
 
 def request(endpoint, path, body=None, *, timeout=5):
     host,port = endpoint
-    ip = addresses(host)[0]
-    conn = http.client.HTTPConnection(ip, int(port), timeout=timeout)
-    data = None if body is None else json.dumps(body).encode()
-    try:
-        conn.request('GET' if body is None else 'POST',path,body=data,headers={'Content-Type':'application/json','Connection':'close'})
-        result = conn.getresponse(); raw = result.read(MAX_BODY+1)
-        if len(raw)>MAX_BODY: raise ValueError('Pairing reply was too large.')
-        value = json.loads(raw)
-        if result.status != 200: raise ValueError(value.get('error','The other Mac could not finish pairing.'))
-        return value
-    finally: conn.close()
+    ips=addresses(host)[:16]
+    data=None if body is None else json.dumps(body).encode()
+    last=None
+    for ip in ips:
+        conn=http.client.HTTPConnection(ip,int(port),timeout=timeout)
+        try:
+            conn.request('GET' if body is None else 'POST',path,body=data,headers={'Content-Type':'application/json','Connection':'close'})
+            result=conn.getresponse();raw=result.read(MAX_BODY+1)
+            if len(raw)>MAX_BODY:raise ValueError('Pairing reply was too large.')
+            value=json.loads(raw)
+            if not isinstance(value,dict):raise ValueError('Invalid pairing reply.')
+            if result.status!=200:raise ValueError(value.get('error','The other Mac could not finish pairing.'))
+            return value
+        except (OSError,http.client.HTTPException) as error:last=error
+        finally:conn.close()
+    raise OSError('That Mac is not reachable at its private addresses.') from last
 
 
 def b64(value): return base64.b64encode(value).decode('ascii')

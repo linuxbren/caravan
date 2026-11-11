@@ -62,8 +62,8 @@ Mac setup are recorded separately from live reboot/inference evidence.
 
 ## Pairing/trim follow-up verification
 
-- Portable suite (with `requirements-test.txt`): **1,095 tests passed**, including
-  35 new protocol/config/removal/local-management tests. Full output is retained
+- Portable suite (with `requirements-test.txt`): **1,099 tests passed**, including
+  39 new protocol/config/removal/local-management tests. Full output is retained
   on the development box; this is not a native macOS acceptance result.
 - Real HTTP add/remove smoke between two scratch homes on the Linux box passed;
   no production SSH files/config were used. SSH verification is mocked in those

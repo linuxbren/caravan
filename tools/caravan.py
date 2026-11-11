@@ -61,6 +61,7 @@ def main(argv=None):
             from caravan_pairing import launch_file
             return subprocess.run(["open", str(launch_file(plan["port"], next_home=True))]).returncode
         if args.action == "uninstall":
+            print("Remove connected Macs in Add Macs first, with both online. Uninstall alone does not revoke their access.")
             print("Removing only this service. Models, settings, runtime, source and command are kept. No model deletion is offered.")
             return service.main(["uninstall", "--name", args.name])
         service.check_platform(); service.gui_ready()

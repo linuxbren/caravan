@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,16 @@ import time
 
 LOCK = threading.RLock()
 ID = re.compile(r'^[a-f0-9]{32}$')
+PRIVATE_CIDRS=('127.0.0.0/8','10.0.0.0/8','172.16.0.0/12','192.168.0.0/16','169.254.0.0/16','100.64.0.0/10','::1/128','fe80::/10','fc00::/7')
+NETWORKS=tuple(ipaddress.ip_network(x) for x in PRIVATE_CIDRS)
+
+
+def private(value):
+    try:
+        addr=ipaddress.ip_address(str(value).split('%')[0])
+        if getattr(addr,'ipv4_mapped',None):addr=addr.ipv4_mapped
+        return any(addr.version==net.version and addr in net for net in NETWORKS)
+    except ValueError:return False
 
 
 def valid_id(value):
@@ -56,6 +67,7 @@ def atomic(path, data, *, backup=True, mode=0o600):
 
 
 def read_json(path, default=None):
+    if Path(path).is_symlink(): raise ValueError("Linked pairing state was kept unchanged; review it before continuing.")
     try: return json.loads(Path(path).read_text())
     except FileNotFoundError: return default
 
@@ -78,6 +90,7 @@ class Store:
         import fcntl
         with LOCK:
             self.private_dir(self.root)
+            if (self.root/'lock').is_symlink(): raise ValueError('Linked pairing lock was kept unchanged.')
             with (self.root/'lock').open('a') as file:
                 os.chmod(file.name, 0o600); fcntl.flock(file, fcntl.LOCK_EX)
                 try:
@@ -106,6 +119,9 @@ class Store:
         if not path.exists():
             subprocess.run(['ssh-keygen','-q','-t','ed25519','-N','','-C','caravan-pair-'+peer,'-f',str(path)], check=True, capture_output=True)
             path.chmod(0o600)
+        if not path.with_suffix('.pub').exists():
+            derived=subprocess.run(['ssh-keygen','-y','-f',str(path)],check=True,capture_output=True,text=True)
+            atomic(path.with_suffix('.pub'),public_key(derived.stdout)+'\n',backup=False)
         return path, public_key(path.with_suffix('.pub').read_text())
 
     @staticmethod
@@ -119,7 +135,7 @@ class Store:
         lines = [line for line in old.splitlines(keepends=True) if not line.rstrip().endswith(marker)]
         # Per-pair identity; private-network sources only; no PTY/agent/X11/user rc,
         # both forwarding directions are limited to the model HTTP loopback port.
-        networks = '127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,100.64.0.0/10,::1,fe80::/10,fc00::/7'
+        networks = ','.join(PRIVATE_CIDRS)
         options = f'restrict,port-forwarding,permitopen="127.0.0.1:8194",permitlisten="127.0.0.1:8194",from="{networks}"'
         text = ''.join(lines)
         if text and not text.endswith('\n'): text += '\n'
@@ -205,6 +221,7 @@ class Store:
         except ImportError: import tomli as tomllib
         valid_id(peer); alias='caravan-'+peer
         if not re.fullmatch(r'[A-Za-z0-9_.:%-]+',endpoint): raise ValueError('Invalid private endpoint.')
+        if not private(endpoint) and not endpoint.endswith('.local'): raise ValueError('Use a private address or the Mac’s local Bonjour name.')
         user=metadata['user'];repo=metadata['repo']
         if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',user): raise ValueError('Unsupported Mac account name.')
         if not isinstance(repo,str) or not repo.startswith('/') or any(x in repo for x in '\r\n\x00'): raise ValueError('Invalid source path.')
@@ -225,7 +242,7 @@ class Store:
         order=max([int(n.get('order',0)) for n in nodes.values()]+[0])+1
         label=str(metadata.get('name') or 'Mac '+str(order+1))[:80]
         iface=metadata.get('tb_interface');data_host=metadata.get('data_host') or endpoint
-        if not isinstance(data_host,str) or not re.fullmatch(r'[A-Za-z0-9_.:%-]+',data_host): raise ValueError('Invalid data endpoint.')
+        if not isinstance(data_host,str) or not private(data_host): raise ValueError('The model connection must stay on your private network or cable.')
         if iface and isinstance(iface,str) and re.fullmatch(r'en\d+',iface):
             data='ssh+tb://'+alias+'/'+iface+':5560';listen='tb://'+iface+':5560'
         else:

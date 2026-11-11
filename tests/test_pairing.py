@@ -192,6 +192,23 @@ class StorageTests(Scratch):
         secret=json.loads((page.parent/'control.json').read_text())['capability']
         self.assertNotIn(secret,str(page));self.assertIn('#pair='+secret,page.read_text());self.assertEqual(page.stat().st_mode&0o777,0o600)
 
+    def test_public_model_endpoint_refused_before_any_write(self):
+        store=Store(self.root/'home')
+        with self.assertRaises(ValueError):self.enroll(store,data_host='8.8.8.8')
+        self.assertFalse(store.config.exists());self.assertFalse((store.home/'.ssh/config').exists())
+    def test_interrupted_own_key_generation_repairs_missing_public_half(self):
+        store=Store(self.root/'home');store.identity();peer=secrets.token_hex(16)
+        path,key=store.make_key(peer);path.with_suffix('.pub').unlink()
+        repaired,public=store.make_key(peer)
+        self.assertEqual(repaired,path);self.assertEqual(public,key)
+    def test_linked_state_is_not_read(self):
+        store=Store(self.root/'home');store.identity();other=self.root/'other.json';other.write_text('{"secret":"not read"}')
+        linked=store.root/'linked.json';linked.symlink_to(other)
+        with self.assertRaises(ValueError):P.read_json(linked)
+    def test_dual_stack_prefers_supported_ipv4_path(self):
+        with mock.patch('pairing.socket.getaddrinfo',return_value=[(None,None,None,None,('fd00::2',0,0,0)),(None,None,None,None,('192.168.1.2',0))]):
+            self.assertEqual(P.addresses('helper.local')[0],'192.168.1.2')
+
 class ManagementTests(Scratch):
     def handler(self,*,path='/api/pairing/state',origin=None,host='127.0.0.1:8190',source='127.0.0.1',cookie=None,method='GET',body=None):
         headers={'Host':host}
