@@ -1,0 +1,299 @@
+...........................................[web] "POST /api/optimize/start HTTP/1.1" 200 -
+[web] "GET /api/optimize HTTP/1.1" 200 -
+[web] "POST /api/optimize/gguf/start HTTP/1.1" 200 -
+..........................................[web] "POST /api/models/load HTTP/1.1" 200 -
+.[web] "POST /api/models/load HTTP/1.1" 409 -
+.[web] "POST /api/models/load HTTP/1.1" 200 -
+........[web] "POST /api/balance HTTP/1.1" 400 -
+.[web] "POST /api/balance HTTP/1.1" 400 -
+.[web] "POST /api/optimize/start HTTP/1.1" 409 -
+.[web] "POST /api/balance HTTP/1.1" 400 -
+.[web] "POST /api/balance HTTP/1.1" 200 -
+.[web] "POST /api/models/load HTTP/1.1" 200 -
+.[web] "POST /api/models/load HTTP/1.1" 409 -
+.[web] "POST /api/models/load HTTP/1.1" 409 -
+..............19:00:00 [mlx-worker] saved 0123456789abcdef: 2 tokens, 0 MB in 0.00s
+19:00:00 [mlx-worker] saved 0123456789abcdef: 2 tokens, 0 MB in 0.00s
+19:00:00 [mlx-worker] saved 0123456789abcdef: 2 tokens, 0 MB in 0.00s
+19:00:00 [mlx-worker] saved 0123456789abcdef: 2 tokens, 0 MB in 0.00s
+19:00:00 [mlx-worker] restored 0123456789abcdef from disk: 2 tokens in 0.00s
+19:00:00 [mlx-worker] restored 0123456789abcdef from disk: 2 tokens in 0.00s
+19:00:00 [mlx-worker] restored 0123456789abcdef from disk: 2 tokens in 0.00s
+19:00:00 [mlx-worker] restored 0123456789abcdef from disk: 2 tokens in 0.00s
+..19:00:00 [mlx-worker] saved 0123456789abcdef: 2 tokens, 0 MB in 0.00s
+19:00:00 [mlx-worker] saved 0123456789abcdef: 2 tokens, 0 MB in 0.00s
+19:00:00 [mlx-worker] saved 0123456789abcdef: 2 tokens, 0 MB in 0.00s
+19:00:00 [mlx-worker] saved 0123456789abcdef: 2 tokens, 0 MB in 0.00s
+19:00:00 [mlx-worker] restored 0123456789abcdef from disk: 2 tokens in 0.00s
+19:00:00 [mlx-worker] restored 0123456789abcdef from disk: 2 tokens in 0.00s
+19:00:00 [mlx-worker] restored 0123456789abcdef from disk: 2 tokens in 0.00s
+....19:00:00 [mlx-worker] saved 0123456789abcdef: 2 tokens, 0 MB in 0.00s
+19:00:00 [mlx-worker] restored 0123456789abcdef from disk: 2 tokens in 0.00s
+.........................................[web] "POST /api/files/preview HTTP/1.1" 200 -
+[web] "POST /api/files/fetch HTTP/1.1" 200 -
+...........................[web] "POST /api/picker/download HTTP/1.1" 200 -
+.......[web] "POST /api/picker/download HTTP/1.1" 200 -
+.......................................................................................19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:02 [mlx-worker] saved agent_p1400_a2ce9ed105c845f4: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+.19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:02 [mlx-worker] agent-prefix seed rejected (RuntimeError: prefix clone refused: {'error': 'missing stage'}); cold
+.19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:02 [mlx-worker] restored agent_p1400_e299c4bda59e3f0b from disk: 1400 tokens in 0.00s
+19:00:02 [mlx-worker] agent-prefix hit 1400 tokens -> chat_b
+.19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:02 [mlx-worker] restored agent_p1400_e299c4bda59e3f0b from disk: 1400 tokens in 0.00s
+19:00:02 [mlx-worker] restored agent_p1400_e299c4bda59e3f0b from disk: 1400 tokens in 0.00s
+19:00:02 [mlx-worker] restored agent_p1400_e299c4bda59e3f0b from disk: 1400 tokens in 0.00s
+19:00:02 [mlx-worker] agent-prefix hit 1400 tokens -> chat_b
+.19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:02 [mlx-worker] agent-prefix hit 1400 tokens -> chat_b
+.19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:02 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:03 [mlx-worker] restored agent_p1400_e299c4bda59e3f0b from disk: 1400 tokens in 0.00s
+19:00:03 [mlx-worker] restored agent_p1400_e299c4bda59e3f0b from disk: 1400 tokens in 0.00s
+19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+.19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:03 [mlx-worker] session chat_a: prompt diverges at token 1598 of 1599 cached and sliding-window layers can't rewind -- re-reading from scratch
+19:00:03 [mlx-worker] agent-prefix hit 1400 tokens -> chat_a
+.19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:03 [mlx-worker] agent-prefix hit 1400 tokens -> chat_b
+.19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:03 [mlx-worker] agent-prefix hit 1400 tokens -> chat_b
+.19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:03 [mlx-worker] agent-prefix hit 1400 tokens -> chat_b
+.19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] saved agent_p1400_e299c4bda59e3f0b: 1400 tokens, 0 MB in 0.00s
+19:00:03 [mlx-worker] agent-prefix stored 1400 tokens (saved)
+19:00:03 [mlx-worker] agent-prefix hit 1400 tokens -> chat_b
+........................................................................................................................................................................................................................................................./usr/lib/python3.13/unittest/mock.py:2247: ResourceWarning: unclosed file <_io.FileIO name='/tmp/tmpdcdtu8kl/lead.log' mode='ab' closefd=True>
+  def __init__(self, name, parent):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+...................................................[web] "POST /api/models/load HTTP/1.1" 200 -
+[web] "POST /api/models/load HTTP/1.1" 200 -
+.[web] "POST /api/models/load HTTP/1.1" 400 -
+[web] "POST /api/models/load HTTP/1.1" 200 -
+.[web] "POST /api/models/load HTTP/1.1" 400 -
+[web] "POST /api/models/load HTTP/1.1" 400 -
+.[web] "POST /api/models/load HTTP/1.1" 200 -
+.[web] "POST /api/models/load HTTP/1.1" 200 -
+.[web] "POST /api/models/load HTTP/1.1" 200 -
+.[web] "POST /api/models/load HTTP/1.1" 409 -
+.[web] "POST /api/models/stop HTTP/1.1" 200 -
+........[caravan] KV cache -ctk q8_0 -ctv q8_0 (q8_0 fallback: can't estimate ([Errno 2] No such file or directory: '/m.gguf'))
+...[caravan] KV cache -ctk q8_0 -ctv q8_0 (q8_0 fallback: can't estimate ([Errno 2] No such file or directory: '/home/box/path/to/model.gguf'))
+..........................................................................19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+..19:00:29 [mlx-worker] saved aaaaaaaaaaaaaaaa: 19 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] evicted 1 session(s) from memory: aaaaaaaaaaaaaaaa
+19:00:29 [mlx-worker] saved aaaaaaaaaaaaaaaa: 19 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] restored aaaaaaaaaaaaaaaa from disk: 19 tokens in 0.00s
+19:00:29 [mlx-worker] saved bbbbbbbbbbbbbbbb: 19 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] evicted 1 session(s) from memory: bbbbbbbbbbbbbbbb
+19:00:29 [mlx-worker] saved bbbbbbbbbbbbbbbb: 19 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] restored aaaaaaaaaaaaaaaa from disk: 19 tokens in 0.00s
+.19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 51 tokens in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 51 tokens in 0.00s
+/usr/lib/python3.13/threading.py:998: ResourceWarning: unclosed <socket.socket fd=28, family=1, type=1, proto=0>
+  del self._target, self._args, self._kwargs
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] saved 0123456789abcdef: 58 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] saved 0123456789abcdef: 58 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 58 tokens in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 51 tokens in 0.00s
+..19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 51 tokens in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 51 tokens in 0.00s
+.19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 51 tokens in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 51 tokens in 0.00s
+.19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] saved 0123456789abcdef: 51 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 51 tokens in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 51 tokens in 0.00s
+.............usage: python3 -m unittest [-h] --model MODEL [--host HOST] [--port PORT]
+                           [--prompt-cache-size PROMPT_CACHE_SIZE]
+                           [--prompt-cache-bytes PROMPT_CACHE_BYTES]
+                           [--prefill-step-size PREFILL_STEP_SIZE]
+                           [--max-tokens MAX_TOKENS] [--cache-dir CACHE_DIR]
+                           [--no-persist] [--kv-bits {4,8}]
+                           [--kv-group-size KV_GROUP_SIZE]
+                           [--wired-limit {startup,per-request,off}]
+                           [--cache-limit-gb CACHE_LIMIT_GB]
+                           [--memory-limit-gb MEMORY_LIMIT_GB]
+                           [--memory-safety-gb MEMORY_SAFETY_GB]
+                           [--memory-dir MEMORY_DIR]
+                           [--memory-recall-tokens MEMORY_RECALL_TOKENS]
+                           [--memory-recall-all]
+                           [--split-role {none,lead,packer,head,front}]
+                           [--split-counts SPLIT_COUNTS]
+                           [--split-stage-index SPLIT_STAGE_INDEX]
+                           [--split-upstream SPLIT_UPSTREAM]
+                           [--split-peer SPLIT_PEER]
+                           [--split-listen SPLIT_LISTEN]
+                           [--split-packer-layers K]
+                           [--split-keepalive | --no-split-keepalive]
+                           [--split-pipeline-chats N] [--native-mtp]
+                           [--split-draft-model DIR] [--no-split-draft]
+                           [--split-draft-auto-download]
+                           [--split-draft-skip-first-load]
+                           [--split-speculate-k K] [--split-prompt-lookup N]
+                           [--split-prompt-lookup-adaptive]
+                           [--split-shared-prefix-cache]
+                           [--no-split-shared-prefix-cache]
+                           [--pin-guess-ahead] [--no-learn]
+                           [--learn-reload-auto NAMES] [--tuned-settings PATH]
+                           [--fuse-kernels MODE]
+python3 -m unittest: error: argument --kv-bits: invalid choice: '3' (choose from 4, 8)
+........19:00:29 [mlx-worker] saved aaaa: 39 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] evicted 1 session(s) from memory: aaaa
+.19:00:29 [mlx-worker] session 0123456789abcdef: prompt diverges at token 39 of 39 cached and sliding-window layers can't rewind -- re-reading from scratch
+....19:00:29 [mlx-worker] saved aaaa: 39 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] evicted 1 session(s) from memory: aaaa
+19:00:29 [mlx-worker] restored aaaa from disk: 39 tokens in 0.00s
+..19:00:29 [mlx-worker] saved 0123456789abcdef: 39 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] ignoring 0123456789abcdef.safetensors: model differs -- starting cold
+19:00:29 [mlx-worker] ignoring 0123456789abcdef.safetensors: model differs -- starting cold
+19:00:29 [mlx-worker] ignoring 0123456789abcdef.safetensors: cache layout differs -- starting cold
+19:00:29 [mlx-worker] ignoring 0123456789abcdef.safetensors: kv_bits differs -- starting cold
+19:00:29 [mlx-worker] could not read 0123456789abcdef.safetensors (JSONDecodeError('Expecting value: line 1 column 1 (char 0)')) -- starting cold
+..19:00:29 [mlx-worker] saved 0123456789abcdef: 39 tokens, 0 MB in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 39 tokens in 0.00s
+19:00:29 [mlx-worker] restored 0123456789abcdef from disk: 39 tokens in 0.00s
+...19:00:29 [mlx-worker] session 0123456789abcdef: prompt diverges at token 40 of 43 cached and sliding-window layers can't rewind -- re-reading from scratch
+.usage: python3 -m unittest [-h] --model MODEL [--host HOST] [--port PORT]
+                           [--prompt-cache-size PROMPT_CACHE_SIZE]
+                           [--prompt-cache-bytes PROMPT_CACHE_BYTES]
+                           [--prefill-step-size PREFILL_STEP_SIZE]
+                           [--max-tokens MAX_TOKENS] [--cache-dir CACHE_DIR]
+                           [--no-persist] [--kv-bits {4,8}]
+                           [--kv-group-size KV_GROUP_SIZE]
+                           [--wired-limit {startup,per-request,off}]
+                           [--cache-limit-gb CACHE_LIMIT_GB]
+                           [--memory-limit-gb MEMORY_LIMIT_GB]
+                           [--memory-safety-gb MEMORY_SAFETY_GB]
+                           [--memory-dir MEMORY_DIR]
+                           [--memory-recall-tokens MEMORY_RECALL_TOKENS]
+                           [--memory-recall-all]
+                           [--split-role {none,lead,packer,head,front}]
+                           [--split-counts SPLIT_COUNTS]
+                           [--split-stage-index SPLIT_STAGE_INDEX]
+                           [--split-upstream SPLIT_UPSTREAM]
+                           [--split-peer SPLIT_PEER]
+                           [--split-listen SPLIT_LISTEN]
+                           [--split-packer-layers K]
+                           [--split-keepalive | --no-split-keepalive]
+                           [--split-pipeline-chats N] [--native-mtp]
+                           [--split-draft-model DIR] [--no-split-draft]
+                           [--split-draft-auto-download]
+                           [--split-draft-skip-first-load]
+                           [--split-speculate-k K] [--split-prompt-lookup N]
+                           [--split-prompt-lookup-adaptive]
+                           [--split-shared-prefix-cache]
+                           [--no-split-shared-prefix-cache]
+                           [--pin-guess-ahead] [--no-learn]
+                           [--learn-reload-auto NAMES] [--tuned-settings PATH]
+                           [--fuse-kernels MODE]
+python3 -m unittest: error: argument --wired-limit: invalid choice: 'bogus' (choose from startup, per-request, off)
+...................................................................................................................[slot-pin-proxy] POST /v1/chat/completions -- client gone, cancelling upstream (was streaming)
+....----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 39712)
+Traceback (most recent call last):
+  File "/usr/lib/python3.13/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/socketserver.py", line 766, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/http/server.py", line 436, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/http/server.py", line 424, in handle_one_request
+    method()
+    ~~~~~~^^
+  File "/workspace/caravan/tests/test_proxy_perf.py", line 92, in do_POST
+    self.wfile.write(b"0\r\n\r\n")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+    ~~~~~~~~~~~~~~~~~~^^^
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+.............................................................................................................................[web] "POST /api/chat HTTP/1.1" 409 -
+[web] "GET /api/status HTTP/1.1" 200 -
+.[web] "POST /api/models/stop HTTP/1.1" 200 -
+[web] "GET /api/status HTTP/1.1" 200 -
+.[web] "POST /api/models/stop HTTP/1.1" 502 -
+[web] "GET /api/status HTTP/1.1" 200 -
+....................[web] "POST /api/chat HTTP/1.1" 409 -
+.[web] "GET / HTTP/1.1" 200 -
+.[web] "GET /api/journey HTTP/1.1" 200 -
+.[web] "POST /api/models/load HTTP/1.1" 400 -
+.[web] "GET /api/models HTTP/1.1" 200 -
+.[web] "GET /api/status HTTP/1.1" 200 -
+.[web] "POST /api/time HTTP/1.1" 200 -
+.[web] "POST /api/chat HTTP/1.1" 409 -
+.[web] "GET / HTTP/1.1" 200 -
+.[web] "GET /api/journey HTTP/1.1" 200 -
+.[web] "POST /api/models/load HTTP/1.1" 400 -
+.[web] "GET /api/models HTTP/1.1" 200 -
+.[web] "GET / HTTP/1.1" 200 -
+.[web] "GET /api/settings HTTP/1.1" 200 -
+.[web] "GET /api/status HTTP/1.1" 200 -
+.[web] "POST /api/time HTTP/1.1" 200 -
+..............
+----------------------------------------------------------------------
+Ran 1023 tests in 46.125s
+
+OK
+[Caravan] future-lead installed, not started. It starts at user login.
+[Caravan] Log: /tmp/tmpnzar756_/.caravan/logs/future-lead.log
+[Caravan] Staged for next user login; current workers and web control were not adopted or restarted.
+[Caravan] future-lead installed, not started. It starts at user login.
+[Caravan] Log: /tmp/tmpn3tl8i3s/.caravan/logs/future-lead.log
+[Caravan] Staged for next user login; current workers and web control were not adopted or restarted.
+[Caravan] future-lead installed, not started. It starts at user login.
+[Caravan] Log: /tmp/tmp1p9nlvvg/.caravan/logs/future-lead.log
+[Caravan] Staged for next user login; current workers and web control were not adopted or restarted.
+[Caravan] future-lead installed, not started. It starts at user login.
+[Caravan] Log: /tmp/tmpoflz9_yy/.caravan/logs/future-lead.log
+[Caravan] Staged for next user login; current workers and web control were not adopted or restarted.
+[Caravan] future-lead installed, not started. It starts at user login.
+[Caravan] Log: /tmp/tmp699aqwln/.caravan/logs/future-lead.log
+[Caravan] Staged for next user login; current workers and web control were not adopted or restarted.
+[Caravan] Uninstalled only future-lead. Models, caches, logs, dependencies and repository are kept.
+nothing running (no state file)

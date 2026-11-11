@@ -1,0 +1,9 @@
+python3 -m unittest discover -s tests
+
+Ran 1023 tests in 46.125s
+
+OK
+
+49 new removal-guard tests; previous 35 shard tests retained.
+Full output: full-regression.txt (final repeat after evidence/docs updates).
+Earlier final-code run: 1023 tests in 45.977s, OK.

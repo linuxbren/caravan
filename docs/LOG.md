@@ -3116,3 +3116,39 @@ Final public-guide package `841ac0c`: **PASS**, Ran 974 tests in 46.095s; zero f
 Seven modified runtime source files retain identical Python AST structure after
 normalizing text constants: only help, docstrings, comments and status wording
 changed. Runtime inventory, endpoints, paths and compatibility keys are kept.
+
+
+### Day22 approved Qwen-original cleanup (November 10, 2026, CST)
+
+Brenden explicitly authorized removing only the tested Qwen2.5-3B-Instruct
+Q4_0 originals after all safety gates passed. Added `gguf_original_guard.py`:
+exact-model/hash/path allowlist, all-piece SHA256/size checks, fresh native
+load and exact known-good chat, protected ready/saved Huihui selection,
+no-open-file check, immutable public recovery source, both-Mini dry-run batch,
+expiry/file-identity rechecks and durable before/after audit journals. No
+wildcard, recursive, force or other-model cleanup. **1,023 tests pass**, with
+49 new guard tests; the earlier 35 shard tests remain.
+
+Both dry runs passed before either removal, then both commit-time gates passed.
+At 18:50:43/18:50:45 CST, removed only the lead/peer original at
+`~/.caravan/models/Qwen--Qwen2.5-3B-Instruct-GGUF/qwen2.5-3b-instruct-q4_0.gguf`.
+Each was **1,997,879,712 logical / 1,997,881,344 allocated bytes**. Observed
+available-space gains were **1,998,016,512 / 1,998,479,360 bytes**; unrelated
+filesystem activity explains the small difference from the removed files.
+About 2 GB recovered per Mini. Other GGUFs, all pieces and MLX models untouched.
+
+Recovery source: `Qwen/Qwen2.5-3B-Instruct-GGUF`, same filename, immutable
+revision `7dabda4d13d513e3e842b20f0d435c732f172cbe`; original SHA256
+`670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a`.
+Fresh new processes with both originals gone: load **2.941s**, all 435 tensors
+from their owning Mini; direct 128-token reply **42.57 tok/s**, **0.132s TTFT**,
+cache 0, exactly the baseline output SHA256. New required trees remain
+1,005,304,514 / 998,777,538 bytes. No redownload/full-file fallback.
+
+Future picker rule: get/cut share, verify, fresh-load/chat check, record recovery
+source and ensure original is unused, show all-Mini dry run, then drop original;
+otherwise keep it. Not broad automatic cleanup today; picker integration still
+pending. Experiment roles/tunnel stopped; Huihui PID 1055, 24/40 KV16, saved
+restore unchanged and direct production chat still answered. No Hermes test,
+reboot, production restart, post or release. Development-node experiments.md
+and Day15 screenshots untouched. [Full evidence and policy](DAY22.md#approved-cleanup--the-tested-qwen-original-only).

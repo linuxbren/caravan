@@ -1,0 +1,35 @@
+{
+  "production": {
+    "checked_epoch": 1794358750.843043,
+    "status": "ready",
+    "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+    "restore_model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+    "lead_pid": 1055,
+    "balance": [
+      24,
+      40
+    ],
+    "kv_bits": 16,
+    "chat_content": "OK",
+    "chat_usage": {
+      "prompt_tokens": 19,
+      "completion_tokens": 1
+    }
+  },
+  "minis": {
+    "exo1": {
+      "stopped_pids": {
+        "18419": "",
+        "17823": ""
+      },
+      "original_absent": true
+    },
+    "exo2": {
+      "stopped_pids": {
+        "21492": ""
+      },
+      "original_absent": true
+    }
+  },
+  "health_probe_note": "The supported top-level thinking=false produced OK. An earlier content assertion used only chat_template_kwargs and a short token limit; it was not used as model correctness or performance evidence."
+}

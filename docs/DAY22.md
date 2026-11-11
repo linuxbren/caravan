@@ -6,8 +6,12 @@
 
 Each Mini loaded only its assigned tensor pieces, including the small tensors
 that the older RPC-cache path still sent over the link. The lead did not open
-the original full GGUF to load the prototype. All existing GGUFs were kept,
-unchanged. Huihui stayed loaded throughout; no production service was restarted.
+the original full GGUF to load the prototype. All existing GGUFs were kept
+unchanged during the first proof. After Brenden's later, model-specific
+approval, only the tested Qwen originals were safely removed; see the
+[approved cleanup](#approved-cleanup--the-tested-qwen-original-only) below.
+Every other GGUF was left alone. Huihui stayed loaded throughout; no
+production service was restarted.
 No reboot, release, or post was made.
 
 This is a storage-independence result, **not a speedup claim**. The new path
@@ -48,8 +52,8 @@ Caravan does not silently switch existing web loads to it.
 
 Model: the already-downloaded **Qwen2.5-3B-Instruct Q4_0**,
 `Qwen--Qwen2.5-3B-Instruct-GGUF/qwen2.5-3b-instruct-q4_0.gguf`.
-Its original file is **1,997,879,712 bytes** on each Mini; both copies still
-hash to `670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a`.
+At that first test, its original was **1,997,879,712 bytes** on each Mini;
+both copies hashed to `670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a`.
 
 The plan used `1,1` shares, local Metal first and one RPC peer. The experiment
 ran alongside the existing MLX split, on separate ports: native chat `18224`,
@@ -58,19 +62,20 @@ Thunderbolt IPv4 link and retained the already-configured peer's host-key
 identity with strict checking; no new host key was accepted. None of the
 existing tunnels was changed.
 
-### Disk: separate required footprint from actual retained files
+### Initial proof disk: before the later approved cleanup
 
 | Model-specific measurement (bytes) | EXO1 / lead | EXO2 / peer |
 |---|---:|---:|
 | Original full GGUF, before | 1,997,879,712 | 1,997,879,712 |
 | Weight pieces actually loaded | 999,225,344 | 992,698,368 |
 | New shard tree, including catalog/manifests | 1,005,304,514 | 998,777,538 |
-| Actual originals + new shard tree, after | **3,003,184,226** | **2,996,657,250** |
+| Originals + new shard tree, after the first test | **3,003,184,226** | **2,996,657,250** |
 | New shard tree, filesystem-allocated bytes | 1,005,432,832 | 998,895,616 |
 
 The runtime now needs roughly half the model's weight data per Mini, but
 **disk usage increased for this test because the originals were deliberately
-retained**. No disk space was reclaimed. These figures exclude unrelated
+retained**. No disk space was reclaimed in that first test. The later approved
+cleanup is recorded below. These figures exclude unrelated
 models/caches, runtime build files, and logs; they are not whole-disk usage.
 
 Native callback evidence records all **435 tensors**: 229 local and 206
@@ -129,7 +134,7 @@ its setup and existing tunnels were left alone.
 - [All tensor offsets, sizes, SHA256s, native keys, and owners](../bench/results/day22/tensors.json)
 - Mini detailed logs and PID records: `~/.caravan/day22-live/`.
 - Shards retained on both Minis: `~/.caravan/day22-shards/qwen2.5-3b-1-1/`.
-- **974 tests passed** (`python3 -m unittest discover -s tests`, 45.676 s).
+- Initial prototype: **974 tests passed** (`python3 -m unittest discover -s tests`, 45.676 s).
   Includes 35 new tests for arbitrary Mini counts, ownership, bounded native
   hashing, read-only sources, exclusive output creation, corruption, links,
   missing/extra pieces, pinned runtime guards, and loopback launch arguments.
@@ -203,5 +208,134 @@ older full-lead/RPC-cache path until the follow-up integration is finished.
    add native loader/protocol regression coverage, source mutation/failure
    cases, and clear progress reporting. Keep this experimental until then.
 
-No Day 22 release has been cut. The package source pin and any release/main
-advance should be coordinated after the final Day 22 changes are collected.
+No Day 22 release has been cut. Main synchronization is separate from a
+release; no release or package-channel change is part of this cleanup.
+
+
+## Approved cleanup — the tested Qwen original only
+
+Brenden then approved removing the full original **only when it was safe and
+no longer needed**. That approval covered the tested Qwen2.5-3B-Instruct Q4_0
+original on each Mini, not other GGUFs or any MLX model.
+
+`agent/gguf_original_guard.py` makes removal a separate, dry-run-first step.
+It does not search for things to delete. It can remove only the approved file
+name, parent model folder, original SHA256 and size. There is no broad cleanup
+or force option. A failure keeps the original and reports the reason.
+
+### Every safety check passed on both Minis
+
+Before either original was removed, both Minis completed a passing dry run:
+
+- Every local piece existed and matched its saved size and SHA256. The
+  catalog and routing table also matched their checksums.
+- A new native process loaded only the pieces, and all 435 expected tensors
+  were accounted for on the correct Mini. Its normal chat reply exactly
+  matched the previously known-good 128-token answer; no prompt cache was used.
+- Production was still the ready Huihui MLX 24/40 split at KV16, and Huihui
+  was still the saved restore choice. No process had either original open.
+- Each original was a regular, singly linked file with the approved SHA256.
+  Symlinks, other models, changed files and stale proof are refused.
+- The recovery source was recorded and its public, pinned repository metadata
+  checked again on each Mini. Repository: `Qwen/Qwen2.5-3B-Instruct-GGUF`,
+  file: `qwen2.5-3b-instruct-q4_0.gguf`, revision:
+  `7dabda4d13d513e3e842b20f0d435c732f172cbe`. Original SHA256:
+  `670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a`.
+- The dry run listed exactly one path and its bytes on each Mini. Both passing
+  receipts were committed before either removal. Each commit operation then
+  rechecked its local gates and file identity, and saved a durable audit intent
+  before removing the single named file. No wildcard or folder deletion occurs.
+
+Live proof expires after five minutes; all-Mini dry runs expire after two.
+The old proof cannot authorize another later cleanup. The two host operations
+are not a distributed atomic filesystem transaction: if a new failure occurs
+between them, stop and report the partial outcome rather than bypass a check.
+For this actual run, **both commit-time checks passed and both removals passed**.
+
+### Files removed and space recovered
+
+Removed at **6:50:43 PM CST** on the lead and **6:50:45 PM CST** on the peer,
+November 10, 2026. The exact path on each was:
+
+```text
+/Users/brenden/.caravan/models/Qwen--Qwen2.5-3B-Instruct-GGUF/qwen2.5-3b-instruct-q4_0.gguf
+```
+
+| Measurement | Lead Mini | Peer Mini |
+|---|---:|---:|
+| Original logical bytes removed | 1,997,879,712 | 1,997,879,712 |
+| Original allocated file bytes removed | **1,997,881,344** | **1,997,881,344** |
+| Observed filesystem available-space increase | 1,998,016,512 | 1,998,479,360 |
+| Model shard-tree logical bytes remaining | 1,005,304,514 | 998,777,538 |
+| Model shard-tree allocated bytes remaining | 1,005,432,832 | 998,895,616 |
+
+About **2.00 GB was recovered per Mini** by removing the originals. The
+filesystem counters include small amounts of unrelated concurrent activity;
+the extra difference must not be attributed to this model. The exact removed
+file sizes/allocation and before/after available-space counters are all logged.
+Compared with the original-only model footprint before Day 22, the retained
+logical footprint is now about half on each Mini (1.005 GB / 0.999 GB rather
+than 1.998 GB each). Cleanup freed the full original on top of those shares;
+it did not make the remaining pieces free.
+
+The files were actually removed, not moved to a hidden backup or Trash. No
+other GGUF, piece, MLX model, or development-node lab edit was removed or moved.
+
+### Fresh proof with both originals gone
+
+Both original paths were confirmed absent. The experiment's lead and peer
+were stopped and **new processes** started from the same verified pieces,
+so the test could not rely on weights left in the previous processes.
+
+- New load reached ready in **2.941 s**.
+- All **435 tensors** again loaded from the owning Mini's pieces.
+- A fresh 55-input/128-output-token chat completed at **42.57 tok/s**, with
+  **0.132 s TTFT** and zero cached prompt tokens.
+- Its exact output SHA256 was
+  `b9c24870c82af3fee514b65739bed72b46c61903fec4a8ba49417534e5c5f2c7`,
+  identical to the known-good baseline and the pre-removal proof.
+- Both originals were still absent afterward. Nothing re-downloaded them.
+
+The experiment processes and their dedicated tunnel were then stopped.
+Huihui stayed loaded, with the same lead PID1055 and saved restore selection;
+a direct production chat still answered. No production restart, reboot,
+Hermes test, post, or release was involved.
+
+The full suite now passes **1,023 tests**, including **49 new removal-guard
+tests** (and the previous 35 shard tests). Source failures, corrupt/missing
+pieces, stale/mismatched live replies, open files, symlinks/hardlinks, loaded
+or saved selection changes, missing/failed peer receipts, changed file identity,
+and audit-write failure are covered. An audit failure after an unlink is
+reported explicitly as already removed, never falsely as “nothing removed.”
+
+Evidence: [fresh before proof](../bench/results/day22/removal/live-before.json),
+[both passing dry runs](../bench/results/day22/removal/batch.json),
+[removal journals and fresh after proof](../bench/results/day22/removal/results.json),
+[recovery source](../bench/results/day22/removal/source.json), and
+[full regression result](../bench/results/day22/removal/regression.txt), and
+[final direct Huihui reply and stopped experiment roles](../bench/results/day22/removal/production-final.json).
+Per-Mini durable journals are at `~/.caravan/day22-removal/removal-audit.jsonl`.
+
+### Future picker default, in plain words
+
+1. Get or cut each Mac's share into a new folder.
+2. Check every piece. Keep the full original until those checks pass.
+3. Start the model afresh using only the pieces, and check a normal chat answer
+   against a known-good answer.
+4. Make sure the full original is not in use or selected for startup, and save
+   exactly where it came from so it can be downloaded again.
+5. Show exactly what will be removed and how much space it uses. Every Mini
+   must pass before cleanup starts.
+6. Only then drop the full original. If any check fails, keep it and say why.
+
+The steady state should be **one verified share per Mac, not a full model
+copy on every Mac**. This is the required design for the later picker path,
+not an automatic cleanup switch enabled today. That integration must coordinate
+model-selection/download jobs so they cannot begin using an original during
+cleanup. The current command is deliberately restricted to this one approved
+Qwen model; it cannot clean other models merely because they look similar.
+
+The usual full-file picker path cannot use this Qwen original now that it is
+gone. The verified experimental catalog path works; full picker/lifecycle
+integration is still pending. The recorded immutable source remains available
+if a full original is needed again.
