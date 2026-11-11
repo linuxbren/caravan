@@ -116,6 +116,9 @@ class App:
         entry = next((m for m in self.list_loadable_models() if m.get("id") == mid or m.get("hf") == mid), None)
         if not entry:
             raise ValueError("Balance needs an installed model")
+        if entry.get('sharded'):
+            import web_gguf_shares
+            return web_gguf_shares.preview(self,body,entry,fresh=fresh)
         if entry.get("source") == "gguf":
             import web_gguf_files
             return web_gguf_files.preview(self, entry, body, fresh=fresh)
@@ -681,7 +684,7 @@ class App:
         for g in gguf_split.scan_local():
             place = gguf_split.placement_options(g["size_gb"], nodes)
             out.append({
-                "id": g["id"], "name": g["name"] + " (GGUF)", "hf": g["id"],
+                "id": g["id"], "name": g["name"] + " (GGUF full-file fallback)", "hf": g["id"],
                 "source": "gguf", "backend": "llama", "lead_path": g["path"],
                 "size_gb": g["size_gb"], "usable": bool(place["default_id"]),
                 "available_lead": True,
@@ -689,8 +692,10 @@ class App:
                 "placement_options": place["options"],
                 "default_placement": place["default_id"],
                 "current": g["id"] == current,
+                "note": "Explicit full-file fallback: peer weights may cross the link",
             })
-        return out
+        import web_gguf_shares
+        return out + web_gguf_shares.entries(nodes,current)
 
 
 
@@ -937,6 +942,11 @@ def make_handler(app: App):
                 if body["action"] == "decline":
                     return self._json(200, {"ok": True})
                 return self._api_picker_download({"repo_id": p["draft"]["hf_repo"], "helper_id": p["id"]})
+            if path == "/api/picker/gguf/import":
+                try:
+                    import web_gguf_shares
+                    return self._json(200,web_gguf_shares.import_existing(app,body))
+                except (ValueError,OSError,KeyError,RuntimeError) as e:return self._json(400,error_payload(e))
             if path == "/api/picker/download":
                 return self._api_picker_download(body=body)
             if path == "/api/picker/download/resume":
@@ -949,7 +959,7 @@ def make_handler(app: App):
                 if not req:
                     req = {"repo_id": old.get("repo_id"), "placement": old.get("placement")}
                 req["resume_of"] = old.get("id")
-                if req.get('file_fetch'):
+                if req.get('file_fetch') and req.get('source')!='gguf':
                     try:
                         import web_files
                         return self._json(200, {"job": web_files.start(app, app.balance(req, fresh=True))})
@@ -1405,6 +1415,13 @@ def make_handler(app: App):
                 if not lead:
                     return self._json(400, {"error": "No lead configured"})
                 body = dict(body, placement_id=None)
+                if body.get('full_file_fallback') is not True:
+                    try:
+                        import web_gguf_shares,web_files
+                        plan=web_gguf_shares.preview(app,dict(body,repo_id=repo,gguf_file=gguf_file),fresh=True)
+                        if not plan['safe']:return self._json(409,{'error':'This split does not fit safely on every selected node','balance':{k:v for k,v in plan.items() if k not in ('manifest','entry','file_requests')}})
+                        return self._json(200,{'job':web_files.start(app,plan),'note':'Each Mac downloads only its part; no full copy or cable weight transfer'})
+                    except (ValueError,OSError,KeyError,RuntimeError) as e:return self._json(400,error_payload(e))
             import web_helpers
             helper = web_helpers.pairing(body.get("helper_id")) if body.get("helper_id") else None
             if body.get("helper_id") and (not helper or repo != helper["draft"]["hf_repo"]):
@@ -1811,6 +1828,9 @@ def make_handler(app: App):
                 if not opt.get("enabled"):
                     return self._json(400, {"error": opt.get("reason") or "placement doesn't fit"})
                 entry["placement"] = {"mode": opt["mode"], "node_ids": opt["node_ids"]}
+            if entry and entry.get('sharded'):
+                dep=entry['gguf_deployment']
+                body=dict(body,balance=True,node_ids=body.get('node_ids') or dep['node_ids'],counts=body.get('counts') or dep['shares'])
             if body.get("balance"):
                 if app._inflight:
                     return self._json(409, {"error": "Wait for the current reply before reloading"})

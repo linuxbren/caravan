@@ -411,6 +411,9 @@ class WorkerManager:
 
     def _load_gguf_inner(self, entry: dict, settings: dict) -> None:
         import gguf_split as G
+        if entry.get('sharded'):
+            import web_gguf_shares
+            return web_gguf_shares.load(self,entry,settings)
         place = entry.get("placement") or {}
         nodes = self._gguf_nodes(place)
         peers = [n for n in nodes if not self._node_is_local(n)]
@@ -544,6 +547,7 @@ class WorkerManager:
                            "and cache misses / small tensors may cross the link")
 
     def _check_cancel(self):
+        self._check_load_cancel()
         if getattr(self, "_gguf_cancel", False):
             raise RuntimeError("load stopped")
 
@@ -626,12 +630,13 @@ class WorkerManager:
         for t in meta.get("tunnels") or []:
             if G.is_tunnel_cmd(G.pid_cmdline(t.get("pid"))):
                 continue
-            tun = self._open_tunnel(t["ssh"], t["port"])  # tunnel died with the old server
+            tun = (subprocess.Popen(t['args'],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,start_new_session=True) if t.get('args') else self._open_tunnel(t["ssh"], t["port"]))  # only the recorded route
             t["pid"] = tun.pid
             G.wait_port(t["port"], proc=tun, timeout=10)
             self._note(f"reopened tunnel 127.0.0.1:{t['port']} to {t.get('id')}")
         self._write_gguf_meta(meta)
         gb = meta.get("gguf") or {}
+        if meta.get('entry'):self._loaded_entry=meta['entry']
         self._set(status="ready", model_id=meta.get("id"), model_name=meta.get("name"),
                   lead_pid=pid, split=gb.get("mode") == "split", backend="llama", gguf=gb,
                   error=None, error_detail=None)
@@ -677,6 +682,10 @@ class WorkerManager:
                 except (OSError, ValueError):
                     pass
         for p in meta.get("peers") or []:
+            if p.get('sharded'):
+                import web_gguf_shares
+                web_gguf_shares.stop_peer(self,p)
+                continue
             target = p.get("ssh")
             if not target:
                 continue

@@ -190,13 +190,18 @@ print(json.dumps({'exit':e.read_text() if e.exists() else None,'alive':alive,'pi
             prog(100, 'verified complete')
         def save(blob, node=node, request=request):
             # GGUF caches have their own manifest and do not change MLX placement.
+            if request.get('format') == 'gguf-shards':
+                if request['stage_index']==0:
+                    import web_gguf_shares
+                    web_gguf_shares.finalize(app,plan)
+                return
             if request.get('format') == 'gguf': return
             code = "from pathlib import Path; import json,sys; p=Path(sys.argv[1]).expanduser()/'caravan-placement.json'; p.write_text(sys.argv[2])"
             r = shell(app, node, 'python3 -c '+shlex.quote(code)+' '+rp(request['dest'])+' '+shlex.quote(json.dumps(blob)))
             if r.returncode: raise RuntimeError('could not save stage placement')
         def measure(node=node, request=request, token=token):
             # This counts bytes on this Mini, not network traffic or another node's files.
-            if request.get('format') == 'gguf':
+            if request.get('format') in ('gguf','gguf-shards'):
                 r = shell(app, node, command(app,node,['--status-plan','~/.caravan/transfers/'+token+'.json']))
                 if r.returncode: return {'have_bytes':0,'source':'starting'}
                 current=json.loads(r.stdout.strip().splitlines()[-1])
@@ -210,8 +215,8 @@ print(json.dumps({'exit':e.read_text() if e.exists() else None,'alive':alive,'pi
                         'measure': measure, 'total_bytes': stage.get('required_bytes'), 'save_placement': save})
     if not runners: raise ValueError('no peer files to fetch')
     job = web_picker.start_download(repo, runners=runners, placement=placement, note='Own files only; retained files are never deleted')
-    web_picker._job_set(job['id'], file_mode=True, file_transfers=transfers,
-                        request={'file_fetch': True, 'model_id': plan['model_id'], 'counts': plan['counts'], 'node_ids': plan['node_ids'], 'repo_id': repo, 'gguf_file': requests[0].get('filename')})
+    web_picker._job_set(job['id'], file_mode=True, file_transfers=transfers, load_id=plan['model_id'],
+                        request={'file_fetch': True, 'model_id': plan['model_id'], 'counts': plan['counts'], 'node_ids': plan['node_ids'], 'repo_id': repo, 'gguf_file': requests[0].get('filename'), 'source': 'gguf' if requests[0].get('format')=='gguf-shards' else None, 'revision':requests[0].get('revision')})
     return web_picker.get_job(job['id'])
 
 

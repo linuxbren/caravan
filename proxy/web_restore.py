@@ -154,7 +154,11 @@ def validate_placement(app, entry, body):
     else:
         path=Path(entry["lead_path"]).expanduser()
         if not path.is_file():raise ValueError("Saved GGUF file is missing; no download was started")
-        weights=path.stat().st_size/1e9;shares=body.get("counts") or [1]*len(ids)
+        weights=(entry['gguf_deployment']['source']['source_bytes'] if entry.get('sharded') else path.stat().st_size)/1e9;shares=body.get("counts") or entry.get('gguf_shares') or [1]*len(ids)
+        if entry.get('sharded'):
+            import gguf_share_download as D
+            dep=entry['gguf_deployment']
+            if ids!=dep['node_ids'] or D.shares(shares)!=dep['shares']:raise ValueError('Saved own-part plan differs from the installed plan; use Balance, no automatic download was started')
         if len(shares)!=len(ids):raise ValueError("Saved GGUF shares do not match the Minis")
         out.update(placement={"mode":"split" if len(ids)>1 else "one","node_ids":ids},gguf_shares=shares)
         if body.get("gguf_tune"):out["tune_override"]=body["gguf_tune"]

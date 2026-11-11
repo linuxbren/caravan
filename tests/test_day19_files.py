@@ -457,13 +457,13 @@ class PickerConfiguredRoots(unittest.TestCase):
 
 
 class GgufUi(unittest.TestCase):
-    def test_picker_downloads_complete_gguf_only_on_lead(self):
+    def test_explicit_fallback_downloads_complete_gguf_only_on_lead(self):
         _,_,nodes=model(3);nodes[-1]['host']='local'
         app=types.SimpleNamespace(configured_nodes=lambda:nodes,nodes=lambda:{'nodes':nodes},mgr=types.SimpleNamespace(repo='/box/repo'))
         server=ThreadingHTTPServer(('127.0.0.1',0),WS.make_handler(app));thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
         try:
             with mock.patch.object(WP,'_fetch_repo_blobs',return_value={'gguf_files':[{'rfilename':'model.gguf','size':1000}]}),mock.patch.object(WP,'start_download',return_value={'id':'job'}) as start,mock.patch.object(WP,'_job_set'):
-                body=dict(repo_id='org/gguf',source='gguf',gguf_file='model.gguf',weights_gb=1,packer_layers=1)
+                body=dict(repo_id='org/gguf',source='gguf',gguf_file='model.gguf',weights_gb=1,packer_layers=1,full_file_fallback=True)
                 request=Request('http://127.0.0.1:'+str(server.server_port)+'/api/picker/download',data=json.dumps(body).encode(),headers={'Content-Type':'application/json'})
                 with urlopen(request) as r:out=json.load(r)
                 self.assertEqual(out['stages'],1)

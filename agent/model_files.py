@@ -206,11 +206,18 @@ def main(argv=None):
     elif a.inspect_json:
         out = inspect(json.loads(a.inspect_json)['path'])
     elif a.status_plan:
-        from gguf_files import status
-        out = status(json.loads(Path(a.status_plan).expanduser().read_text()))
+        r=json.loads(Path(a.status_plan).expanduser().read_text())
+        if r.get('format')=='gguf-shards':
+            from gguf_share_download import status
+        else:
+            from gguf_files import status
+        out=status(r)
     else:
         r = json.loads(Path(a.fetch_plan).expanduser().read_text()) if a.fetch_plan else json.loads(a.fetch_json)
-        if r.get('format') == 'gguf':
+        if r.get('format') == 'gguf-shards':
+            from gguf_share_download import fetch
+            out=fetch(r)
+        elif r.get('format') == 'gguf':
             from gguf_files import fetch_plan
             out = fetch_plan(r)
         else:

@@ -1181,7 +1181,7 @@
       <label>Model to inspect (including incomplete downloads)
         <select id="balanceModel" class="drawer-control"><option value="">Use Settings model</option></select>
       </label>
-      <details><summary>GGUF original source (needed for peer tensor fetch)</summary>
+      <details><summary>GGUF source (already saved for own-part models)</summary>
         <label>Hugging Face repository <input id="balanceRepo" placeholder="owner/repository"></label>
         <label>GGUF filename <input id="balanceFile" placeholder="model-Q4_K_M.gguf"></label>
         <p>Must match the installed lead file. The first verification hashes that file; no weights are downloaded by a preview.</p>
@@ -1223,7 +1223,7 @@
     <div class="picker-src" id="pickerSrc">
       <button type="button" data-src="all" class="on">All</button>
       <button type="button" data-src="hf-mlx">HF / MLX</button>
-      <button type="button" data-src="gguf">Ollama (GGUF)</button>
+      <button type="button" data-src="gguf">GGUF</button>
       <button type="button" data-src="cloud">Cloud</button>
     </div>
     <div class="picker-search">
@@ -1240,6 +1240,10 @@
         <option value="50">≤ 50 GB</option>
       </select>
     </div>
+    <details class="help"><summary>GGUF download options</summary>
+      <p>Each Mac downloads only its part straight from the source. No full copy or cable weight transfer.</p>
+      <label><input type="checkbox" id="ggufFullFallback"> Use the old full-file fallback instead (complete file on the 1st node; weights may cross the cable)</label>
+    </details>
     <div class="picker-status" id="pickerStatus">Open to search Hugging Face…</div>
     <div class="picker-job" id="pickerJob" hidden></div>
     <div id="pickerList"></div>
@@ -1255,7 +1259,7 @@
     </div>
     <div class="toolbar">
       <select class="drawer-control" id="modelSelect" aria-label="Model"></select>
-      <select class="drawer-control" id="placeSelect" aria-label="Where it runs" title="Where this GGUF runs. Split shares the model across Minis with llama.cpp RPC; only EXO1 needs the file." hidden></select>
+      <select class="drawer-control" id="placeSelect" aria-label="Where it runs" title="Where this GGUF runs. Each Mac keeps only its part; missing parts never fall back to cable weight transfer." hidden></select>
       <button class="primary drawer-control" id="btnLoad">Load model</button>
       <button class="ghost drawer-control" id="btnStop" title="Unload">Unload</button>
     </div>
@@ -1688,6 +1692,7 @@
       opt.dataset.mtp = String(!!m.native_mtp_available);
       const usable = m.usable !== false && (m.available_lead || m.usable);
       let label = (usable ? "● " : "○ ") + m.name;
+      if (m.sharded) label += " — each Mac keeps only its part";
       if (!usable && m.disabled_reason) label += " — " + m.disabled_reason;
       const warns = m.warnings || [];
       if (warns.length || m.split_note) label += " ⚠";
@@ -2852,14 +2857,15 @@
         return;
       }
       if (q.source === "gguf") {
-        // Only the lead needs a GGUF: llama.cpp sends each Mini its share at load.
-        // Where it runs (one Mini / split) is chosen at load time in Settings.
+        // Plan first; every Mac downloads only its own ranges from the source.
         if (!q.gguf_file) { alert("Pick one quant file for this GGUF repo."); return; }
         if (q.fit && q.fit.color === "red" && !confirm(`Won't fit (~${q.weights_gb} GB). ${q.fit.reason || ""}\nDownload anyway?`)) return;
-        $("pickerStatus").textContent = `Downloading ${q.gguf_file} to the lead Mini…`;
+        const fullFallback = $("ggufFullFallback").checked;
+        if (fullFallback && !confirm("Use the old full-file fallback? It downloads a complete original to the 1st node and may send weights across the cable.")) return;
+        $("pickerStatus").textContent = fullFallback ? "Downloading the explicit full-file fallback…" : "Planning the split; each Mac will download only its part…";
         try {
           const data = await api("/api/picker/download", { method: "POST",
-            body: JSON.stringify({ repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0 }) });
+            body: JSON.stringify({ repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0, full_file_fallback: fullFallback }) });
           state.job = data.job; showJob(); pollJob(data.job.id, q);
         } catch (e) { $("pickerStatus").textContent = "Download failed: " + (e.error || e.message || e); }
         return;
