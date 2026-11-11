@@ -955,3 +955,10 @@ rollback, automatic trusted peer setup, bundled optional GGUF runtime, and a
 signed/notarized app/pkg/updater. Apple Developer ID and secure signing setup
 require Brenden. Day25 still contains TUI and these remaining consumer-package
 gates. Do not call the current installer “fireproof” or fully finished yet.
+
+
+Final archive verification initially found one stale test fixture: its plist
+comparison still substituted the removed personal home path, so 958/959 passed
+and `test_repo_plist_matches_build_head_command` failed. Updated that fixture to
+substitute the explicit `YOUR_MAC_USER` template home, retaining the complete
+functional argv comparison. No runtime behavior was changed for this correction.

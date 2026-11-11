@@ -100,9 +100,9 @@ class LlamaSettingsTest(unittest.TestCase):
     def _plist_args_for_home(self, home: Path):
         repo_plist = plistlib.loads((REPO / "launchd" / "com.caravan.llama-server.plist").read_bytes())
         args = repo_plist["ProgramArguments"]
-        # The committed plist is written for /Users/brenden; compare
-        # against a command built for that home.
-        return [a.replace("/Users/brenden", str(home)) for a in args]
+        # The legacy example uses an explicit placeholder, never a real user.
+        # Substitute only the template home; all functional flags still match.
+        return [a.replace("/Users/YOUR_MAC_USER", str(home)) for a in args]
 
     def test_repo_plist_matches_build_head_command(self):
         home = Path.home()
