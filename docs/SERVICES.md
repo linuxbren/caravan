@@ -101,41 +101,32 @@ your mind, `uninstall --name NAME` removes only that owned definition and keeps
 models/cache/logs. A manual `restart` still refuses an occupied endpoint rather
 than killing an existing worker.
 
-## One-command setup
+## Source/developer installer
 
-Requires **macOS 14+, Apple Silicon, native Python 3.10+ and Git**. The installer
-checks these and explains missing prerequisites; it does not install Homebrew,
-Python, Xcode, llama.cpp or models, and never asks for a password/token.
+For the ordinary one-command Mac install, use [INSTALL](../INSTALL.md). Its
+bootstrap supplies Python and needs no Git, Homebrew or developer tools.
 
-On a **new lead Mini**:
+The **source installer below** instead requires macOS 14+, Apple Silicon,
+native Python 3.10+ and a reviewed checkout (Git if cloning). It does not install
+Python, Xcode, llama.cpp or models, and does not ask for a password/token.
+Source installs use `requirements-mac.txt`; easy packages use the exact-version
+binary-wheel lock. Both check imports before creating services.
 
-```sh
-(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/scripts/install.sh | bash -s -- --role lead)
-```
+Every fresh browser install creates a single-local-Mac config only if none
+exists, then installs its own web LaunchAgent. `--role worker` without a fixed
+model also gets that page, so the Mac can display a pairing code. It does not
+start or download a model. Connect Macs through **Add Macs** rather than manual
+SSH/config editing; see [the simple steps](../INSTALL.md#add-minis).
 
-This is a moving development branch. Review the script before running it; a
-published release tag should be used for a reproducible release installation.
-The script defaults to `~/.caravan/src/caravan`, creates/reuses
-`~/.caravan/venvs/mlx`, installs `requirements-mac.txt` (`mlx-lm==0.32.2` plus
-Hugging Face Hub; transitive dependencies are not fully locked), checks imports,
-creates a **single-local-node** web config only if none exists, and installs the
-web LaunchAgent. Open `http://127.0.0.1:8190/` and choose/download a fitting model
-in Models. No model is loaded merely by installing the web service.
-
-On each **new worker Mini**, use the same command with `--role worker`. Without
-`--model`, it only prepares the source/environment and explains the next step;
-there is no imaginary default model or automatic multi-gigabyte download.
-
-From an existing checkout:
+From an existing, reviewed checkout:
 
 ```sh
-# Preview only: portable, no writes/network/package installs/launchctl changes.
-bash scripts/install.sh --dry-run --repo "$HOME/.caravan/src/caravan"
-
-# Actual install. Point at the intended clone; do not create another lab copy.
-bash scripts/install.sh --repo "$PWD" --role lead
-# Worker-only environment:
-bash scripts/install.sh --repo "$PWD" --role worker
+# Preview only: no writes/network/package installs/launchctl changes.
+bash scripts/install.sh --dry-run --repo "$PWD"
+# Actual browser install (use the intended native Python).
+bash scripts/install.sh --repo "$PWD" --python /absolute/path/to/python3
+# An extra Mac also gets its browser/pairing page.
+bash scripts/install.sh --repo "$PWD" --role worker --python /absolute/path/to/python3
 ```
 
 Options:

@@ -47,7 +47,8 @@ this follow-up's artifacts are prepared for a later authorized release.
   inventories/checks configured trusted peers; it cannot apply a plan.
 - Signed/notarized app or package and updater. The publisher needs an Apple Developer
   membership/Developer ID and a secure signing workflow; do not share keys here.
-- Bundled/pinned optional GGUF runtime; independent per-Mac GGUF loading is Day22.
+- Bundled/pinned optional GGUF runtime. Day 22 implements own-share loading;
+  see [file placement](FILES.md) for current runtime requirements and proof.
 - Physical inference on 3+ Macs. N-stage planning/socket tests are not that proof.
 
 Advanced isolated tests can use `--name UNIQUE_NAME --port UNUSED_PORT --no-start`

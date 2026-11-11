@@ -52,7 +52,7 @@ Need help? Run `~/.caravan/bin/caravan doctor`, read [installation help](INSTALL
 
 ## For developers / details
 
-Current code includes Day 21 Balance controls, read-only Thunderbolt checks, and the post-release readiness-retry fix. The immutable Day 21 tag does **not** contain that later fix. See [Day 21 evidence](docs/DAY21.md), [package status](docs/PACKAGING.md), [configuration](docs/CONFIGURATION.md), and [roadmap](docs/ROADMAP.md).
+Current code includes Day 21 Balance controls, read-only Thunderbolt checks, the post-release readiness-retry fix, Day 22 per-Mac model-share work, and the experimental Add Macs flow. The immutable Day 21 tag does **not** contain that later fix. See [Day 21 evidence](docs/DAY21.md), [package status](docs/PACKAGING.md), [configuration](docs/CONFIGURATION.md), and [roadmap](docs/ROADMAP.md).
 
 The browser service binds to this Mac only by default. There is no built-in login: never expose it to the public internet. Model downloads contact their publishers; optional cloud features send data to the provider you choose. Local chat itself does not require a cloud AI provider.
 
