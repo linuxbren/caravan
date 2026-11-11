@@ -3111,3 +3111,8 @@ physical3+Mini checks remain. [Day22 detail](DAY22.md) and
   the worker's source changes/results were not edited. No service restart.
 - Full suite: 974 passed in 47.005 s. A fresh documented source-package extract
   also passed the full suite; final package verification is recorded separately.
+
+Final public-guide package `841ac0c`: **PASS**, Ran 974 tests in 46.095s; zero failures.
+Seven modified runtime source files retain identical Python AST structure after
+normalizing text constants: only help, docstrings, comments and status wording
+changed. Runtime inventory, endpoints, paths and compatibility keys are kept.
