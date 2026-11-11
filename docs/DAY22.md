@@ -129,7 +129,7 @@ its setup and existing tunnels were left alone.
 - [All tensor offsets, sizes, SHA256s, native keys, and owners](../bench/results/day22/tensors.json)
 - Mini detailed logs and PID records: `~/.caravan/day22-live/`.
 - Shards retained on both Minis: `~/.caravan/day22-shards/qwen2.5-3b-1-1/`.
-- **968 tests passed** (`python3 -m unittest discover -s tests`, 45.335 s).
+- **974 tests passed** (`python3 -m unittest discover -s tests`, 45.676 s).
   Includes 35 new tests for arbitrary Mini counts, ownership, bounded native
   hashing, read-only sources, exclusive output creation, corruption, links,
   missing/extra pieces, pinned runtime guards, and loopback launch arguments.

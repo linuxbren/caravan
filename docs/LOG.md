@@ -3084,7 +3084,7 @@ Fresh empty-cache negative test (no files deleted) exited1 in1.176s on
 `output_norm.weight`, with no full-file/weight-send fallback. Setup failures
 and RPC-session retry are retained, excluded from successful comparisons.
 
-Full suite **968 passed** (35 new shard tests). Experimental test processes
+Full combined suite **974 passed** (35 new shard tests). Experimental test processes
 and tunnel stopped; production Huihui PID1055, EXO2-first24/40 KV16, saved
 restore model unchanged, direct `/api/chat` still answered. No reboot,
 production restart, GGUF deletion/move/overwrite, post, or release. Web/picker
