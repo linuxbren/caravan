@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Historical template only. Replace placeholders manually; prefer tools/caravan_service.py. -->
 <plist version="1.0">
   <dict>
     <key>Label</key>
@@ -10,9 +11,9 @@
 
     <key>ProgramArguments</key>
     <array>
-      <string>/Users/brenden/dev/llama.cpp/build/bin/llama-server</string>
+      <string>/Users/YOUR_MAC_USER/dev/llama.cpp/build/bin/llama-server</string>
       <string>-m</string>
-      <string>/Users/brenden/.ollama/models/blobs/sha256-71b5c9c9abbc2a9e7c13550b6f9fe1f062650117a24490b15a310cbd7de03f8b</string>
+      <string>/Users/YOUR_MAC_USER/path/to/model.gguf</string>
       <string>--rpc</string>
       <string>169.254.104.38:50052</string>
       <string>--device</string>
@@ -24,7 +25,7 @@
       <string>-c</string>
       <string>262144</string>
       <string>--slot-save-path</string>
-      <string>/Users/brenden/.caravan/llama-server/slots/</string>
+      <string>/Users/YOUR_MAC_USER/.caravan/llama-server/slots/</string>
       <string>--parallel</string>
       <string>4</string>
       <string>--no-kv-unified</string>
@@ -45,7 +46,7 @@
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/brenden/dev/llama.cpp</string>
+    <string>/Users/YOUR_MAC_USER/dev/llama.cpp</string>
 
     <key>RunAtLoad</key>
     <true/>
@@ -59,8 +60,8 @@
     <key>StandardInPath</key>
     <string>/dev/null</string>
     <key>StandardOutPath</key>
-    <string>/Users/brenden/Library/Logs/caravan/llama-server.log</string>
+    <string>/Users/YOUR_MAC_USER/Library/Logs/caravan/llama-server.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/brenden/Library/Logs/caravan/llama-server.log</string>
+    <string>/Users/YOUR_MAC_USER/Library/Logs/caravan/llama-server.log</string>
   </dict>
 </plist>

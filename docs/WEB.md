@@ -36,8 +36,8 @@ python3 proxy/web_server.py --host 0.0.0.0 --port 8190
 
 Then open one of:
 
-- Tailscale: `http://100.68.62.20:8190/` (EXO1)
-- LAN / `.local`: `http://prf-hays-exo01-2.local:8190/`
+- Tailscale: `http://YOUR_PRIVATE_MAC_ADDRESS:8190/` (EXO1)
+- LAN / `.local`: `http://YOUR_MAC_NAME.local:8190/`
 
 The page is reachable on your home network and Tailscale only (same posture
 as the agent `/health` endpoint). There is no login.
@@ -107,7 +107,7 @@ When a model has a ⚠, the line under the picker has a **Report this model** li
 ## Safety
 
 - The installer binds localhost. An explicit `0.0.0.0` bind allows private LAN access; never port-forward it to the public internet.
-- Only starts/stops `mlx_worker.py` on the Day 12/13 test ports. Never touches `main`, tags, Talaria Hub, exo, or Hermes.
+- Only starts/stops `mlx_worker.py` on the Day 12/13 test ports. Only owned worker processes are controlled; unrelated applications are left alone.
 
 ## Day 15 bugfixes (send state + Gemma stall)
 
@@ -165,7 +165,7 @@ ignored (the two-chat path always used the helper). It's honored now.
 
 ### How to test it yourself
 
-1. Open http://100.68.62.20:8190/ and refresh. Load a model with everything on **Auto**.
+1. Open http://YOUR_PRIVATE_MAC_ADDRESS:8190/ and refresh. Load a model with everything on **Auto**.
 2. Send the same short message twice (e.g. "Name one planet."). Note *To first word*,
    *Write* tok/s, and the `ran with:` line under each reply.
 3. Set one option (say Guess-ahead **Off**), click **Apply & restart**, wait for *ready*.

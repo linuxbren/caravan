@@ -38,7 +38,7 @@ def checks(home=None, port=8190):
     except OSError:
         add("OK", f"Port {port} is available (or the web service is stopped).")
     add("INFO", "Login is required after reboot. FileVault must be unlocked first; setup does not change security or auto-login.")
-    add("INFO", "Models, GGUF runtime, SSH trust and optional Hermes/title helper are separate setup steps. See INSTALL.md.")
+    add("INFO", "Models, optional runtimes and trusted Mac connections are separate setup steps. See INSTALL.md.")
     add("INFO", "No network checks performed. Downloads require GitHub, PyPI and model-host access; check Wi-Fi/firewall if setup fails.")
     return rows
 

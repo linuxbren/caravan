@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Historical template only. Replace placeholders manually; prefer tools/caravan_service.py. -->
 <plist version="1.0">
   <dict>
     <key>Label</key>
@@ -11,7 +12,7 @@
     <key>ProgramArguments</key>
     <array>
       <string>/opt/homebrew/bin/python3</string>
-      <string>/Users/brenden/dev/caravan/proxy/slot_pin_proxy.py</string>
+      <string>/Users/YOUR_MAC_USER/.caravan/src/caravan/proxy/slot_pin_proxy.py</string>
     </array>
 
     <key>EnvironmentVariables</key>
@@ -27,7 +28,7 @@
     </dict>
 
     <key>WorkingDirectory</key>
-    <string>/Users/brenden/dev/caravan/proxy</string>
+    <string>/Users/YOUR_MAC_USER/.caravan/src/caravan/proxy</string>
 
     <key>RunAtLoad</key>
     <true/>
@@ -41,8 +42,8 @@
     <key>StandardInPath</key>
     <string>/dev/null</string>
     <key>StandardOutPath</key>
-    <string>/Users/brenden/Library/Logs/caravan/slot-pin-proxy.log</string>
+    <string>/Users/YOUR_MAC_USER/Library/Logs/caravan/slot-pin-proxy.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/brenden/Library/Logs/caravan/slot-pin-proxy.log</string>
+    <string>/Users/YOUR_MAC_USER/Library/Logs/caravan/slot-pin-proxy.log</string>
   </dict>
 </plist>

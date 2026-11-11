@@ -42,7 +42,7 @@ passing the stdlib suite proves a clean Mac installation or hardware speed.
 
 - [ ] Update README in everyday Mac language; INSTALL requirements, first run,
   add-Mac, update, uninstall and troubleshooting match today's code.
-- [ ] Review CONFIGURATION, SERVICES, WEB, HERMES, FILES, CHANGELOG and ROADMAP;
+- [ ] Review CONFIGURATION, SERVICES, WEB, FILES, CHANGELOG and ROADMAP;
   distinguish immutable tag contents from later fixes. No stale “unverified”
   claims after actual proof; no unearned clean-Mac claims.
 - [ ] Run installer/bootstrap tests and full suite; record failures/skips.

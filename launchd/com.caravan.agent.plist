@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Historical template only. Replace placeholders manually; prefer tools/caravan_service.py. -->
 <plist version="1.0">
   <dict>
     <key>Label</key>
@@ -18,12 +19,12 @@
     <array>
       <string>/opt/homebrew/bin/python3</string>
       <string>-u</string>
-      <string>/Users/brenden/dev/caravan/agent/caravan_agent.py</string>
+      <string>/Users/YOUR_MAC_USER/.caravan/src/caravan/agent/caravan_agent.py</string>
       <string>--apply</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/brenden/dev/caravan/agent</string>
+    <string>/Users/YOUR_MAC_USER/.caravan/src/caravan/agent</string>
 
     <key>RunAtLoad</key>
     <true/>
@@ -37,8 +38,8 @@
     <key>StandardInPath</key>
     <string>/dev/null</string>
     <key>StandardOutPath</key>
-    <string>/Users/brenden/Library/Logs/caravan/agent.log</string>
+    <string>/Users/YOUR_MAC_USER/Library/Logs/caravan/agent.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/brenden/Library/Logs/caravan/agent.log</string>
+    <string>/Users/YOUR_MAC_USER/Library/Logs/caravan/agent.log</string>
   </dict>
 </plist>

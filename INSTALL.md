@@ -1,6 +1,7 @@
 # Install Caravan on a Mac
 
-Start with the [simple guide](README.md). This page covers checks, extra Macs and recovery.
+One Mac? The easy-install steps below are all you need. Extra-Mac setup and
+recovery details follow; you can skip them for now.
 Caravan is experimental, not a signed or notarized Apple app. Do not turn off
 Gatekeeper, FileVault or SIP to install it. No administrator password is needed
 for the normal one-Mac setup.
@@ -15,7 +16,8 @@ The installer rejects Intel/Rosetta, old macOS, root/sudo and low disk/memory.
 A non-admin user can install in their own home folder. Managed Macs may need
 an administrator to permit downloads or Remote Login for extra Macs.
 
-Open Terminal, paste this, press Return:
+Press **Command–Space**, type **Terminal**, and press Return. Paste this into
+Terminal, then press **Return**:
 
 ```sh
 (set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install | bash)
@@ -162,10 +164,8 @@ interface endpoints and trusted-host details, see [SERVICES](docs/SERVICES.md).
 - **Balance:** Auto chooses a split. Adjust shows a preview; Apply reloads the
   model. A reload banner shows each Mac's progress and locks chat until ready.
   Apply is black when usable, grey when reloading or no change is needed.
-- **Hermes:** separate installation/configuration; the easy package does not
-  install Hermes or change its tools. Use the loopback proxy and [HERMES](docs/HERMES.md).
 - **Tiny title helper:** optional and not downloaded by setup. It waits for
-  the primary model and spare memory; proxy routing is opt-in. See [HERMES](docs/HERMES.md).
+  the primary model and spare memory. It is not part of the normal package.
 - **Adaptive lookup:** opt-in speed experiment, not a default or speed promise.
 - **GGUF:** optional patched llama.cpp runtime must be built separately.
   Install Apple build tools and CMake, then build `caravan-patches` from

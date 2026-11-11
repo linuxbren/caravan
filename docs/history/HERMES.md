@@ -1,8 +1,10 @@
-# Hermes Agent with Caravan
+# Historical Hermes integration — not in the current plan
 
-## Current installation boundary (Day 21)
+## Historical installation boundary (Day 21)
 
-Caravan's simple Mac installer does **not** install Hermes, create its tunnel,
+Brenden paused Hermes work on November 10. This file is retained only as a
+development record, not a user setup guide. Caravan's simple Mac installer
+does **not** install Hermes, create its tunnel,
 change its tools, download the optional tiny title model or install its aux job.
 The existing Omarchy/EXO1 recipe below is a lab example, not a Mac prerequisite.
 Keep the full toolset enabled (current reboot replay: 19 tools).
@@ -13,7 +15,7 @@ Qwen2.5-0.5B worker waits for primary health plus spare memory; a successful
 routed title has `X-Caravan-Aux: title-sidecar`. Check primary, aux health and a
 full-tool chat after setup; a tiny chat alone does not prove full-tool behavior.
 Day 21 both-Mini reboot restored main and aux without manual loads; see
-[DAY21](DAY21.md). FileVault-on/fresh-account startup is still untested.
+[DAY21](../DAY21.md). FileVault-on/fresh-account startup is still untested.
 
 ## Setup (Omarchy -> EXO1)
 Hermes Agent v0.23.0 stable, installed user-only with the official installer
@@ -45,7 +47,7 @@ The model remains split inside Caravan; Hermes itself does not shard it.
 The web UI stays on 8190 and its lead worker on 8194. Keep 8090 loopback-only.
 
 ## Cache fix
-See [DAY20.md](DAY20.md) for evidence and measured results. The first large
+See [DAY20.md](../DAY20.md) for evidence and measured results. The first large
 prompt must still be read once. Follow-ups keep the conversation checkpoint;
 new chats sharing exactly the same system/tool tokens can seed from a saved
 pre-user checkpoint, even after worker restarts. Every split stage stores its
@@ -108,7 +110,7 @@ first main turn reused **13,182** cached tokens after a **0.05 s** disk restore,
 prefill **1.17 s**, first token **1.47 s**, write **6.14 tok/s**, total **10.26 s**.
 Later main turns kept the same 13,182-token prefix (prefill 1.21–3.85 s depending
 on new tokens). Titles stayed cold/short (~4.3 s prefill, 0 reasoning). See the
-full per-request table in [DAY20.md](DAY20.md).
+full per-request table in [DAY20.md](../DAY20.md).
 
 ## Self-tune clip pause (2026-11-09 evening CT)
 Brenden approved a short Huihui unload to film the Day 10 self-tune climb.

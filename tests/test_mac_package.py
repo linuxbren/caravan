@@ -52,6 +52,12 @@ class BootstrapTests(unittest.TestCase):
         self.assertNotIn('xattr ', text)
         self.assertNotIn('git clone', text)
 
+    def test_current_user_guides_leave_paused_hermes_out(self):
+        for file in ('README.md', 'INSTALL.md', 'docs/CONFIGURATION.md',
+                     'docs/SERVICES.md', 'docs/WEB.md', 'docs/FILES.md', 'docs/PACKAGING.md',
+                     'tools/caravan_doctor.py', 'install', 'scripts/install.sh'):
+            self.assertNotIn('hermes', (ROOT/file).read_text().lower(), file)
+
     def test_readme_is_plain_mac_guide(self):
         text = (ROOT/"README.md").read_text()
         top = text.split('## For developers / details')[0]

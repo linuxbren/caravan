@@ -96,7 +96,7 @@ also differ. Nothing here removes Hermes's tools.
 
 Full raw paired matrix, failed controls and source scripts:
 [DAY20.md](DAY20.md), [BENCHMARKS.md](BENCHMARKS.md),
-[HERMES.md](HERMES.md), `handoff/lab/day20-speedups/`,
+[HERMES.md](history/HERMES.md), `handoff/lab/day20-speedups/`,
 `handoff/lab/day20-single/`. Reboot chronology/logs remain in DAY20.md and
 Omarchy `~/day19-video/reboot-watch2/`. Private Hermes instructions/tools stay
 uncommitted. Historical Day19 film work remains an audit trail; the new reboot

@@ -2,6 +2,17 @@
 
 ## Current package layout
 
+| Package file | Purpose |
+|---|---|
+| `install` | Mac bootstrap: preflight, verified source/runtime, browser |
+| `packaging-version` | Channel's exact source commit and archive SHA-256 |
+| `requirements-mac.lock` | Exact versions for easy-package Python wheels |
+| `scripts/install.sh` | Source/environment and owned login-service installation |
+| `tools/caravan.py` | User command and safe single-service controls |
+| `tools/caravan_doctor.py` | Read-only checks and human-readable fixes |
+| `scripts/package.sh` | Committed-tree source archive and checksum |
+
+
 The simple Mac package keeps its source at `~/.caravan/src/caravan`, Python and
 uv under `~/.caravan/runtime`, the MLX environment under `~/.caravan/venvs/mlx`,
 and its command at `~/.caravan/bin/caravan`. Models are downloaded separately.

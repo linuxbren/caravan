@@ -56,5 +56,5 @@ under a production service label, even with a temporary HOME.
 
 ## Verification record
 
-See the follow-up record in DAY21.md. Portable script/unit tests and isolated
+See the [follow-up record in DAY21.md](DAY21.md). Portable script/unit tests and isolated
 Mac setup are recorded separately from live reboot/inference evidence.

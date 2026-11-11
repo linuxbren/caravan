@@ -880,3 +880,78 @@ Post-restore probes, nothing restarted:
 Tag `day21-2026-11-10` stays on `b6c9394`. Release notes body records
 the earlier code fix as **fixed after release in `51d697a`**, and this
 reboot as the physical two-Mini confirmation.
+
+
+## Mac installation/documentation follow-up — November 10, 18:00–18:16 CST
+
+Brenden brought easy Mac packaging and installation documentation forward from
+Day25, and required docs/packages to be maintained daily. README now addresses
+an everyday Mac owner, with a simple-install link immediately after the
+one-line description. No hardware memory-size examples are given in current
+user guides; Caravan checks fit and more Macs pool memory. Hermes is paused and
+removed from active user guides; its old integration record lives under
+`docs/history/`. No existing integration service was stopped or reconfigured.
+
+Implemented: no-Git/no-Homebrew bootstrap, Apple Silicon/macOS/root/disk/memory
+preflight, dedicated checksum-verified uv and private Python, exact dependency
+versions with binary wheels only, safe per-user command, read-only doctor,
+source update backups, owned-service uninstall retaining data, source archive
+builder/SHA-256, and the daily docs/package/systems checklist in RELEASES.md.
+Legacy launchd examples now use explicit placeholders instead of personal paths;
+the package uses generated user-specific plans, not these old templates.
+README, INSTALL, CONFIGURATION, SERVICES, WEB, FILES, CHANGELOG and ROADMAP are
+current. Automatic trusted multi-Mac onboarding is explicitly not claimed.
+
+### Verification and failures retained
+
+- Portable full suite: **932 passed in 45.115 s**; first prepared source extract:
+  **932 passed in 45.897 s**; cache-safe pinned package (`fc52adf`) fresh extract:
+  **932 passed in 45.938 s**. This includes new bootstrap failure/doctor/control
+  coverage. A subsequent docs-only guard also checks paused integrations stay
+  out of active guides. Latest shared-tree suite: **959 passed in 46.561 s**;
+  this includes concurrent experimental Day22 source at `5f88547`, whose strict
+  GGUF loader is not installed as a bundled runtime or enabled by default.
+- Initial targeted run found a **test-only** false match: “ports” matched the
+  tail of “reports”. Fixed to word boundaries; no installer logic hidden.
+- EXO1 real isolated HOME containing spaces, PATH restricted to Apple tools:
+  bootstrap preflight, fresh private Python/venv, package install and repeat,
+  pip check/imports, doctor and spare-port 18290 browser/API **passed**.
+  Log: Omarchy `~/terminals/325566.txt` (18:06–18:07 CST). This used `--no-start`
+  and a manually owned spare-port process; no production label was started.
+- Early named-service smoke received a stale GitHub raw bootstrap; a subsequent
+  channel fetch also returned older `b2a1432` source, exposing the old custom-name
+  updater limitation. Failures were safe (no production job affected). Added
+  unique test service names and cache-busting channel/update reads, then verified
+  the selected source SHA rather than assuming a push was instantly visible.
+- EXO1 isolated named service `package-smoke-6564`, spare port 18291: native
+  launchd start → UI → stop → start → stop **passed**. After the stale-source
+  observation, a real `b2a1432` → `fc52adf` source update preserved its backup,
+  installed the exact lock with wheels only, passed pip check/imports, started
+  the isolated launchd UI, stopped it, ran CLI repeat update, and uninstalled
+  only that named job. Config, source/runtime and command retained. **PASS**.
+  Logs: Omarchy `~/terminals/325567.txt` (initial safe failure) and
+  `~/terminals/325568.txt` (successful correction, 18:12 CST).
+- EXO2 exact published curl path, fresh isolated HOME with spaces and Apple-only
+  PATH: worker preparation selected `fc52adf`, installed the exact locked wheels,
+  passed pip check/imports/doctor, and showed add-Mac instructions. **PASS**;
+  no model or service started. Omarchy `~/terminals/325572.txt`, 18:13–18:15 CST.
+  Its doctor informational text was then updated to omit the paused integration.
+- Test homes retained on EXO1/EXO2 for inspection; no models were downloaded/loaded.
+  Existing web, main model, aux and proxy were not restarted or reloaded.
+  Isolated HOME is not a separate macOS account. Automatic browser `open` was
+  not invoked during the isolated no-start tests.
+
+### Distribution and remaining gates
+
+Prepared checksummed source archives under box `/workspace/caravan-packages/`.
+These are **not signed Apple applications**. Existing Day21 tag/assets remain
+unchanged; follow-up artifacts are prepared for a later authorized release.
+The bootstrap channel pins an exact source archive plus SHA-256, not a floating
+Git clone. GitHub raw branch responses can lag pushes; verify the selected SHA.
+
+Still needed: fresh macOS account/non-admin and FileVault-on proof, supported
+macOS wheel matrix, hash-locked offline artifacts, transactional dependency
+rollback, automatic trusted peer setup, bundled optional GGUF runtime, and a
+signed/notarized app/pkg/updater. Apple Developer ID and secure signing setup
+require Brenden. Day25 still contains TUI and these remaining consumer-package
+gates. Do not call the current installer “fireproof” or fully finished yet.

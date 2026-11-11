@@ -87,7 +87,7 @@ and Next item 5.
 
 **Day 23 — guess-ahead and other speed ideas.** N-gram (prompt-lookup)
 guess-ahead with an acceptance-rate readout, measured on the Huihui 27B
-split and Hermes-style chats, plus any other speed ideas worth trying.
+split and assistant-style chats, plus any other speed ideas worth trying.
 See [the n-gram note](#n-gram-guess-ahead-with-an-acceptance-rate-readout-scheduled-day-23-agreed-2026-11-09).
 Also try (ideas from X, Nov 10): llama.cpp multi-token prediction (MTP)
 on the GGUF path (reported working with a 27B Q4 on a 32 GB Mac mini), and

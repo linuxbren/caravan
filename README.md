@@ -59,7 +59,7 @@ The browser service binds to this Mac only by default. There is no built-in logi
 ### Technical documentation
 
 [Configuration](docs/CONFIGURATION.md) · [Services](docs/SERVICES.md) ·
-[Web UI](docs/WEB.md) · [Hermes](docs/HERMES.md) ·
+[Web UI](docs/WEB.md) ·
 [Architecture](docs/ARCHITECTURE.md) · [MLX split](docs/MLX-SPLIT.md) ·
 [File placement](docs/FILES.md) · [Measurements](docs/BENCHMARKS.md) ·
 [Changelog](CHANGELOG.md) · [Daily releases](docs/RELEASES.md).

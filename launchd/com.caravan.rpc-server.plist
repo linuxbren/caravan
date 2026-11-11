@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Historical template only. Replace placeholders manually; prefer tools/caravan_service.py. -->
 <plist version="1.0">
   <dict>
     <key>Label</key>
@@ -10,7 +11,7 @@
 
     <key>ProgramArguments</key>
     <array>
-      <string>/Users/brenden/dev/llama.cpp/build/bin/ggml-rpc-server</string>
+      <string>/Users/YOUR_MAC_USER/dev/llama.cpp/build/bin/ggml-rpc-server</string>
       <string>-H</string>
       <string>0.0.0.0</string>
       <string>-p</string>
@@ -19,7 +20,7 @@
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/brenden/dev/llama.cpp</string>
+    <string>/Users/YOUR_MAC_USER/dev/llama.cpp</string>
 
     <key>RunAtLoad</key>
     <true/>
@@ -33,8 +34,8 @@
     <key>StandardInPath</key>
     <string>/dev/null</string>
     <key>StandardOutPath</key>
-    <string>/Users/brenden/Library/Logs/caravan/rpc-server.log</string>
+    <string>/Users/YOUR_MAC_USER/Library/Logs/caravan/rpc-server.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/brenden/Library/Logs/caravan/rpc-server.log</string>
+    <string>/Users/YOUR_MAC_USER/Library/Logs/caravan/rpc-server.log</string>
   </dict>
 </plist>

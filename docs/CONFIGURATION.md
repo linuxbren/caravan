@@ -13,7 +13,7 @@ is saved in `~/.caravan/web-ui/last-model.json`; Unload saves “restore nothing
 Login restore retries temporary readiness failures for up to ten minutes.
 Thunderbolt inventory/link checks are opt-in and read-only, expire after 30 s,
 and do not apply a route. Optional title routing and adaptive lookup remain
-opt-in; see [HERMES](HERMES.md) and [DAY20](DAY20.md).
+opt-in experiments documented in [DAY20](DAY20.md), not package prerequisites.
 
 Every setting has a default, so Caravan runs with no configuration at all.
 Where a setting can be given more than one way, the order is:

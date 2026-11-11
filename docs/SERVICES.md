@@ -340,7 +340,7 @@ Tailscale-independent EXO2 Thunderbolt jump, per-user Tailscale guards,
 manual recovery limits and the current model-restoration status. These are
 access safeguards, not Caravan model/service restarts.
 
-## OpenAI proxy for Hermes and other clients (Day 20)
+## Optional OpenAI-compatible client proxy
 
 The lead may also run the separately owned `com.caravan.v3.proxy` LaunchAgent.
 It does not pin a model, load weights or interfere with web-owned switching.
@@ -361,4 +361,4 @@ before install; the installer never kills an unowned listener. Logs are in
 The lead installer still installs the web service by itself; add this plan
 when an OpenAI client needs it. EXO1's plan was installed live without reboot
 or web restart. Its subsequent Day21 login/reboot recovery passed on the
-existing lab accounts; see [DAY21.md](DAY21.md) and [HERMES.md](HERMES.md).
+existing lab accounts; see the historical measurements in [DAY21.md](DAY21.md).
