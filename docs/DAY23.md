@@ -77,8 +77,10 @@ Mac verification; do not mistake archive/symbol checks for native proof.
 
 ## Verification and delivery
 
-Portable regression suite: **1,153 tests** on the box and separately in the
-development-node worktree (results recorded after execution). Includes
+Portable regression suite: **1,153 tests passed on the box**. The development
+node was inspected without editing its dirty checkout, but the source transfer
+failed twice with a temporarily-unreachable error. Its separate worktree/test
+run and Obsidian note update are therefore pending. Coverage includes
 checksum rejection, archive safety, runtime reuse, multipart completeness,
 placement/fallback, catalog/load IDs, MLX discovery, service backups, status,
 PATH idempotence, discovery fallback, UI structure/JavaScript parsing and
