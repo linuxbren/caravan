@@ -35,10 +35,12 @@ def addresses(host):
     if not isinstance(host,str) or not host or len(host)>253 or any(c in host for c in '/\\@\r\n\x00'): raise ValueError('Invalid Mac address.')
     rows = socket.getaddrinfo(host,None,type=socket.SOCK_STREAM)
     ips = list(dict.fromkeys(row[4][0] for row in rows))
-    # All results must be private. Connect to an already-validated literal, so a
-    # second DNS lookup cannot turn this into a public-network request.
-    if not ips or not all(private(ip) for ip in ips): raise ValueError('Pairing is limited to your local network, cable or private tailnet.')
+    # Ignore public DNS results; connect only to validated literals, never a
+    # second DNS lookup. Dual-stack home Macs may also advertise global IPv6.
+    ips=[ip for ip in ips if private(ip)]
+    if not ips: raise ValueError('Pairing is limited to your local network, cable or private tailnet.')
     return sorted(ips,key=lambda ip:(0 if ipaddress.ip_address(ip.split("%")[0]).version==4 else 1,ip))
+
 
 
 def request(endpoint, path, body=None, *, timeout=5):

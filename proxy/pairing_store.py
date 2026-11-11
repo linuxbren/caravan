@@ -260,7 +260,7 @@ class Store:
             text=str(path)
             if any(c in text for c in '\r\n\x00'): raise ValueError('Invalid SSH path.')
             return '"'+text.replace('\\','\\\\').replace('"','\\"')+'"'
-        ssh='\n'.join([f'Host {alias}',f'    HostName {endpoint}',f'    Port {ssh_port}',f'    User {user}',
+        ssh='\n'.join([f'Host {alias}',f'    HostName {endpoint}','    AddressFamily inet',f'    Port {ssh_port}',f'    User {user}',
                        f'    IdentityFile {quote(key_path)}','    IdentitiesOnly yes','    IdentityAgent none',
                        f'    HostKeyAlias {alias}',f'    UserKnownHostsFile {quote(known)}','    GlobalKnownHostsFile /dev/null',
                        '    HostKeyAlgorithms ssh-ed25519','    StrictHostKeyChecking yes','    CheckHostIP no',

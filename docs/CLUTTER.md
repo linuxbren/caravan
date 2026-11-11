@@ -1,6 +1,7 @@
-# Cleanup candidates — approval needed
+# Cleanup inventory — keep everything for now
 
-Only the C++ experiment has been parked, at `docs/history/cpp/`. Nothing listed
+The owner chose to **keep all listed clutter for now**. This is an inventory,
+not approval to archive or delete anything. Only the C++ experiment has been parked, at `docs/history/cpp/`. Nothing listed
 below has been moved or removed. Sizes are **tracked working-tree bytes**, not
 Git history size, model storage, or guaranteed space savings. Deleting a tracked
 file does not shrink old Git history; no history rewrite is proposed.

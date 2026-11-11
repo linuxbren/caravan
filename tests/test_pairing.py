@@ -129,9 +129,9 @@ class ProtocolTests(Scratch):
     def test_private_address_policy(self):
         for ip in ('127.0.0.1','10.1.2.3','169.254.1.2','100.64.0.4','fd00::1','::ffff:192.168.1.1'):self.assertTrue(P.private(ip),ip)
         for ip in ('8.8.8.8','0.0.0.0','100.128.0.1','2001:4860:4860::8888','bad'):self.assertFalse(P.private(ip),ip)
-    def test_dns_rebinding_policy_all_addresses_must_be_private(self):
+    def test_dns_rebinding_policy_uses_only_validated_private_literals(self):
         with mock.patch('pairing.socket.getaddrinfo',return_value=[(None,None,None,None,('10.0.0.2',0)),(None,None,None,None,('8.8.8.8',0))]):
-            with self.assertRaises(ValueError):P.addresses('helper.local')
+            self.assertEqual(P.addresses('helper.local'),['10.0.0.2'])
 
 class StorageTests(Scratch):
     def enroll(self,store,peer=None,**meta):
