@@ -60,7 +60,7 @@ def main(argv=None):
             plan = service.stored(args.name, Path.home())
             service.assert_owned(plan, require=True)
             from caravan_pairing import launch_file
-            print("On the new Mac, run the same install command. In its Add Macs page, turn on Remote Login and show a code. Here, choose Add this Mac and enter that code. No manual SSH or settings-file edits.")
+            print("On the new Mac, run the same install command. In Topology → Add a Mac on the new Mac, turn on Remote Login and show a code. Here, choose Add this Mac and enter that code. No manual SSH or settings-file edits.")
             return subprocess.run(["open", str(launch_file(plan["port"]))]).returncode
         if args.action == "update":
             if not (ROOT / ".caravan-package").exists():

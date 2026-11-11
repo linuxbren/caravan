@@ -39,9 +39,9 @@ def main(argv=None):
         if fresh:
             from pairing import prepare_offer,display_code
             offer=prepare_offer(store)
-            print('To add this Mac: on your first Mac choose Add Macs, then enter '+display_code(offer)+'.')
-            print('Keep this one-use code private. It expires in five minutes. Open Add Macs on this Mac to show a new one.')
-        else: print('To connect Macs, open Add Macs in Caravan. Existing connections are unchanged.')
+            print('To add this Mac: on your first Mac choose Topology → Add a Mac, then enter '+display_code(offer)+'.')
+            print('Keep this one-use code private. It expires in five minutes. Open Topology → Add a Mac on the new Mac to show a new one.')
+        else: print('To connect Macs, open Topology → Add a Mac in Caravan. Existing connections are unchanged.')
     else: print(launch_file(args.port,next_home=args.home_page))
     return 0
 

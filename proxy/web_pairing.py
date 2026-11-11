@@ -92,7 +92,7 @@ def dispatch(handler,app):
     except Exception: authenticated=False
     is_session=path=='/api/pairing/session' and handler.command=='POST'
     if path.startswith('/api/pairing/') and not authenticated and not is_session:
-        respond(handler,403,{'error':'Open Add Macs from this account: run ~/.caravan/bin/caravan add-mini in Terminal.'});return True
+        respond(handler,403,{'error':'Open Topology → Add a Mac from this account: run caravan add-mini in Terminal.'});return True
     if handler.command=='GET':
         files={'/pairing':('pairing.html','text/html; charset=utf-8'),'/pairing.js':('pairing.js','text/javascript; charset=utf-8'),'/pairing.css':('pairing.css','text/css; charset=utf-8')}
         if path in files:
@@ -113,7 +113,7 @@ def dispatch(handler,app):
         if not isinstance(body,dict): raise ValueError('Invalid pairing request.')
         if is_session:
             if not secrets.compare_digest(str(body.get('capability','')),manager.capability):
-                respond(handler,403,{'error':'Open Add Macs from the Caravan command for this account.'});return True
+                respond(handler,403,{'error':'Open Topology → Add a Mac from the Caravan command for this account.'});return True
             respond(handler,200,{'connected':True},cookie=cookie_name+'='+manager.capability+'; HttpOnly; SameSite=Strict; Path=/')
             return True
         if path=='/api/pairing/code':
