@@ -2,6 +2,8 @@
 
 Run a big AI model across your Macs at home. Your chats run on your own Macs, not a cloud AI service.
 
+**For the simple version:** see [How to install Caravan](INSTALL.md) — a few easy steps, no tech know-how needed.
+
 ## What you need
 
 - A Mac with an **Apple Silicon chip** (M1 or newer), running **macOS 14 or newer**. Intel Macs are not supported.

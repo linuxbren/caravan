@@ -88,8 +88,8 @@ if [ ! -x "$UV" ]; then
 fi
 export UV_PYTHON_INSTALL_DIR="$ROOT/runtime/python" UV_PYTHON_BIN_DIR="$ROOT/runtime/bin" UV_CACHE_DIR="$ROOT/runtime/cache"
 say 'Preparing private Python 3.12. Nothing changes the Mac system Python.'
-"$UV" python install 3.12
-PYTHON=$("$UV" python find --managed-python 3.12)
+"$UV" python install 3.12.11
+PYTHON=$("$UV" python find --managed-python 3.12.11)
 ARGS=(--role "$ROLE" --repo "$REPO" --use-existing --python "$PYTHON")
 [ "$ROLE" != lead ] || ARGS+=(--port "$PORT")
 [ "$START" = 1 ] || ARGS+=(--no-start)

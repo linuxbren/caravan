@@ -127,8 +127,15 @@ else
     "$VENV/bin/python" -c 'import sys,platform;sys.exit(sys.version_info < (3,10) or platform.machine() != "arm64")' || fail 'Existing venv is incompatible; choose a compatible environment manually. It was not removed.'
   fi
 fi
-say 'Installing the tested MLX-LM dependency version; this may use the internet.'
-run "$VENV/bin/python" -m pip install -r "$REPO/requirements-mac.txt"
+say 'Installing tested dependencies; this may use the internet.'
+if [ -f "$REPO/.caravan-package" ]; then
+  [ -f "$REPO/requirements-mac.lock" ] || fail 'Package dependency lock is missing. Download a current package.'
+  "$PYTHON" -c 'import sys;sys.exit(sys.version_info[:2] != (3,12))' || fail 'The easy package needs its managed Python 3.12. Rerun the Mac bootstrap.'
+  run "$VENV/bin/python" -m pip install --only-binary=:all: -r "$REPO/requirements-mac.lock"
+else
+  # Developer source installs retain the documented Python 3.10+ path.
+  run "$VENV/bin/python" -m pip install -r "$REPO/requirements-mac.txt"
+fi
 run "$VENV/bin/python" -m pip check
 run "$VENV/bin/python" -c 'import mlx.core, mlx_lm, huggingface_hub;print("MLX imports OK")'
 # Only a fresh lead gets a single-local-node config. Never replace existing settings.

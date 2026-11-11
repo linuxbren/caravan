@@ -38,9 +38,9 @@ What happens:
 7. In Models, download a small model that fits, Load, and chat. No model ships
    with Caravan. Some downloads require a publisher agreement/token.
 
-Setup uses wheels where available; dependencies are not yet completely locked.
-If a dependency unexpectedly asks for compiler tools, stop and report it rather
-than installing arbitrary developer tools. Interrupted setup can be rerun;
+The easy package uses an exact-version dependency lock and binary wheels only.
+If a required wheel is unavailable, setup stops rather than compiling or asking
+for developer tools. Source/developer installs retain requirements-mac.txt. Interrupted setup can be rerun;
 existing models/settings are not removed. Checks happen before service changes.
 
 For checks without downloading or installing anything:

@@ -6,7 +6,7 @@
   preinstalled Python, Homebrew, Git or Xcode required by the bootstrap.
 - Development channel selects a SHA-pinned source tarball and SHA-256. uv
   0.8.22's Apple Silicon archive is checksum-verified; it installs private Python
-  3.12. System Python and shell profiles are untouched.
+  3.12.11. System Python and shell profiles are untouched.
 - Per-user web service and local-only browser, no bundled models or credentials.
 - Safe start/stop/status/open/doctor/update/uninstall/add-mini command. Uninstall
   retains source/runtime/models/settings; stop does not kill model workers.
@@ -25,8 +25,9 @@ maintenance without removing the model/network setup. Keep both on the plan.
 
 The current channel follows development and trusts the repository's HTTPS
 bootstrap/manifest. The source archive itself is pinned and checksummed. This
-is not independent signature verification. Dependencies include a pinned
-mlx-lm but are **not fully locked**. uv's managed Python is a third-party CPython
+is not independent signature verification. Easy-package dependencies use `requirements-mac.lock` with exact versions and
+binary wheels only (not a hash-locked offline bundle). Developer/source installs
+retain `requirements-mac.txt`. uv's managed Python is a third-party CPython
 build; it is not an Apple Python distribution. See Astral's
 [Python documentation](https://docs.astral.sh/uv/concepts/python-versions/).
 
@@ -39,7 +40,7 @@ this follow-up's artifacts are prepared for a later authorized release.
 - Entire bootstrap on a fresh macOS user with no developer tooling; non-admin
   account and FileVault-on unlock/login behavior. An isolated HOME is **not** a
   new macOS user or proof of all clean-machine cases.
-- Fully locked dependencies/wheel availability across supported macOS versions,
+- Hash-locked dependency artifacts/wheel availability across supported macOS versions,
   offline download-failure tests, and transactional update/rollback (source
   backups exist; environment rollback is manual).
 - Automatic trusted multi-Mac pairing and UI onboarding. Day 21 discovery only

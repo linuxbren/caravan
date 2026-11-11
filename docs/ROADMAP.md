@@ -21,8 +21,8 @@ no-prerequisites SHA-pinned bootstrap, private Python, doctor and safe service
 commands are implemented. See [PACKAGING](PACKAGING.md) for verified checks and
 remaining gates. Do not label this a signed/finished consumer installer yet.
 
-Day 25 retains TUI, automatic trusted multi-Mac onboarding, complete dependency
-locking/transactional updates, fresh-account/FileVault checks, and signed,
+Day 25 retains TUI, automatic trusted multi-Mac onboarding, hash-locked dependency
+artifacts/transactional updates, fresh-account/FileVault checks, and signed,
 notarized app/package distribution (Apple Developer ID needed). No Homebrew tap
 has been published. The immutable Day 21 tag is not moved for this follow-up.
 
