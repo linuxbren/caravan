@@ -1,6 +1,6 @@
 ### Day 21 release — day21-2026-11-10 (published 2026-11-10 CST)
 
-## Day 23 — clean-install fixes (pending native acceptance)
+## Day 23 — clean-install fixes (published; pending native acceptance)
 
 - Supply a checksum-pinned official llama.cpp b12283 engine on every Mac install/update.
 - Download complete multi-part GGUF sets, select whole-file/split behavior automatically,

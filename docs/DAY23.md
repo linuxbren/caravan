@@ -92,7 +92,12 @@ SSH, synchronization, installation, restart or removal was performed.
 
 The package is built with `scripts/package.sh` from the committed tree under
 `/workspace/caravan-packages`; its adjacent `.sha256` file records the digest.
-The install channel/pin is not changed without explicit publication approval.
+Publication is approved: the install channel and main advance together to the
+release metadata commit. `packaging-version` selects the immutable source
+commit immediately before that metadata-only commit and its codeload SHA256;
+a commit cannot contain its own hash. The local source-package artifact is
+built again from the final release tip. Linux fetch/check-only verification
+is not native Mac acceptance.
 
 ### Live Mac acceptance still required
 

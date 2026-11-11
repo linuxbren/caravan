@@ -6,10 +6,12 @@
   preinstalled Python, Homebrew, Git or Xcode required by the bootstrap.
 - Development channel selects a SHA-pinned source tarball and SHA-256. uv
   0.8.22's Apple Silicon archive is checksum-verified; it installs private Python
-  3.12.11. System Python and shell profiles are untouched.
+  3.12.11. System Python is untouched; a marked, idempotent PATH block
+  is added to the login profile and removed on uninstall.
 - Per-user web service and local-only browser, no bundled models or credentials.
 - Safe start/stop/status/open/doctor/update/uninstall/add-mini command. Uninstall
-  retains source/runtime/models/settings; stop does not kill model workers.
+  removes all owned local jobs/workers/data and marked PATH/SSH entries after
+  confirmation; stop does not kill model workers.
 - Immutable committed-tree source archive builder and checksum. These are
   **source packages**, not compiled, signed or notarized application bundles.
 - Current documentation and required daily release checklist.
@@ -33,7 +35,10 @@ build; it is not an Apple Python distribution. See Astral's
 
 `bash scripts/package.sh REF OUTPUT_DIRECTORY` produces an archive plus SHA-256
 from the committed tree. Keep existing Day 21 release assets/tag unchanged;
-this follow-up's artifacts are prepared for a later authorized release.
+Day 23 publication is approved. The channel manifest pins an immutable
+source revision and codeload SHA256; the final metadata commit advances the
+channel and main together without rewriting history. Local package SHA256
+is separate from the codeload SHA256 used by the bootstrap.
 
 ## Remaining acceptance gates (do not call “fireproof” yet)
 

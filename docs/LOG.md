@@ -1,3 +1,10 @@
+## 2026-11-11: Day 23 publication
+
+- All 1,155 portable tests passed on `1a5f7ab`; the final release tip is tested again before publication.
+- Publish clean-install-fixes, fast-forward the install channel and main, and pin the immutable source archive and checksum.
+- Rebuild the final-tip source package; verify the public bootstrap/manifest and archive checksum in an isolated HOME on Linux.
+- Native Mac acceptance remains outstanding. No access to the 1st node or 2nd node; the development node's dirty checkout is untouched.
+
 ## 2026-11-09: Plan for Days 21–25 (agreed)
 
 > Historical naming: the development node was called `Omarchy`; the 1st node
