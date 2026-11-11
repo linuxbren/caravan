@@ -93,7 +93,7 @@ all read these.
 | `--batch-size` | `CARAVAN_BATCH_SIZE` | `batch_size` | `2048` | Logical batch. |
 | `--ubatch-size` | `CARAVAN_UBATCH_SIZE` | `ubatch_size` | `512` | Physical batch. Larger reads long prompts faster but costs compute memory. |
 | `--swa-full` | `CARAVAN_SWA_FULL` | `swa_full` | off | Full-size cache for sliding-window layers. Uses much more memory; not needed on the rebased llama.cpp. |
-| `--rpc` (render tool only) | `CARAVAN_RPC_ADDR` | `rpc` | `legacy address; configure `auto` or your own endpoint` | Comma-separated `host:port` list, or `auto` to discover. The running agent always discovers. This default is a link-local address that can change, so prefer `auto`. |
+| `--rpc` (render tool only) | `CARAVAN_RPC_ADDR` | `rpc` | legacy address; configure `auto` or your own endpoint | Comma-separated `host:port` list, or `auto` to discover. The running agent always discovers. This default is a link-local address that can change, so prefer `auto`. |
 
 Always passed, not configurable: `--slot-save-path
 ~/.caravan/llama-server/slots/`, `--no-kv-unified`, `--port 8080`, and

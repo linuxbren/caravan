@@ -11,25 +11,18 @@ workers; Unload in the page first to free model memory. Settings/models are kept
 
 Login restore uses the last successful load, retries temporary node/memory/link
 readiness for up to ten minutes, and fails visibly rather than looping forever.
-The Day 21 follow-up (`51d697a`) and both-Mini reboot at 17:44 CST passed: main
-ready 39.110 s after 1st node boot, aux health at about 45.8 s. This was on existing
-FileVault-off auto-login accounts, **not** a fresh-account/FileVault-on proof.
-The published Day 21 tag is immutable and predates the follow-up fix.
+Login recovery was checked in the original test environment; see
+[Day 21 evidence](DAY21.md). That does not prove fresh-account or FileVault-on
+behavior on every Mac. Published release tags can predate later fixes; the
+[package status](PACKAGING.md) distinguishes the current development channel.
 
 No service starts before login. FileVault must be unlocked by its owner; setup
 does not change auto-login, security settings or SSH trust. Default new installs
 bind only to localhost. Optional proxy and aux title helper are separate setup,
 not automatic package contents. See [PACKAGING](PACKAGING.md) for current gates.
 
-Historical Day 19 implementation notes. Native three-stage startup/recovery, isolated-HOME
-installation/idempotence and permanent two-Mini Qwen login/reboot recovery passed
-on Nov 8 after the recorded fixes **in the earlier fixed-model mode**. The
-revised web-owned mode loaded/saved Qwen24/40 and answered correctly, but its
-2nd node reboot test lost SSH for the full360s monitor. That historical gap is now
-closed by the Day20/Day21 restore checks summarized above.
-Both existing accounts had automatic login
-enabled and FileVault off already. A separate clean Mac/account and FileVault-on
-behavior remain untested. See [DAY19.md](DAY19.md).
+Earlier fixed-model setup/reboot experiments are preserved in
+[Day 19 history](DAY19.md), not requirements for a new installation.
 Everything below runs as the logged-in user: no sudo, no LaunchDaemons, no
 pre-login boot service, and no automatic changes to macOS privacy settings.
 
