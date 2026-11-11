@@ -387,9 +387,9 @@ class FullUninstallTests(unittest.TestCase):
     def test_only_exact_repo_worker_paths_owned_not_name_sweeps(self):
         import caravan_uninstall as U
         with tempfile.TemporaryDirectory() as d:
-            rows=f'101 python3 {ROOT}/agent/mlx_worker.py --port 8194\n102 python3 /other/agent/mlx_worker.py --port 8194\n103 /bin/sh -c python3 {ROOT}/agent/mlx_worker.py'
+            rows=f'101 python3 {ROOT}/agent/mlx_worker.py --port 8194\n102 python3 /other/agent/mlx_worker.py --port 8194\n103 /bin/sh -c python3 {ROOT}/agent/mlx_worker.py\n104 /Library/Frameworks/Python.framework/Python {ROOT}/agent/mlx_worker.py --port 8194'
             found=U.workers(Path(d),{ROOT},listing=rows,inspect=lambda p:'')
-            self.assertEqual(set(found),{101})
+            self.assertEqual(set(found),{101,104})
 
     def test_no_remote_commands_in_uninstaller(self):
         text=(ROOT/'tools/caravan_uninstall.py').read_text()
