@@ -3,7 +3,7 @@
 Notes live under memory_dir (default ~/.caravan/memory) as
 <YYYY-MM-DD>/<session>.md. Trimmed turns are appended, never discarded.
 Before each reply we search the session's archive (optionally all) and
-inject top snippets. Notes live only on the lead Mini (EXO1).
+inject top snippets. Notes live only on the lead Mac (1st node).
 """
 from __future__ import annotations
 

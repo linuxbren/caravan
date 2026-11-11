@@ -2,7 +2,7 @@
 """Split a GGUF across Minis from the command line -- same mechanism as the web UI.
 
     python3 agent/gguf_split_cli.py start --model ~/.caravan/models/X.gguf \
-        --peer EXO2=brenden@169.254.103.191 [--peer EXO3=...] [--port 8080]
+        --peer second=YOUR_MAC_USER@YOUR_HELPER_ADDRESS [--peer third=...] [--port 8080]
     python3 agent/gguf_split_cli.py status
     python3 agent/gguf_split_cli.py stop
 
@@ -10,7 +10,7 @@ Each peer: ggml-rpc-server on its own 127.0.0.1 (started over SSH, PID
 recorded on the peer). Lead: one SSH tunnel per peer and llama-server
 --rpc 127.0.0.1:<tunnel>,... on 127.0.0.1:<port>. No network listener for
 rpc-server anywhere (docs/SECURITY.md). Without --peer, peers come from the
-web UI's node list (~/.caravan/config.toml [web.nodes.*], default EXO2).
+web UI's node list (~/.caravan/config.toml [web.nodes.*], legacy default inventory if omitted).
 Everything started is recorded in ~/.caravan/cli-gguf.json; stop kills only
 those PIDs after checking their command lines.
 """

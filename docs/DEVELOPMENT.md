@@ -59,3 +59,11 @@ rely on them. Use an explicit `[web.nodes.*]` inventory with your own trusted
 names, endpoints and repository paths. The easy installer creates a local-only
 entry and does not install the old remote defaults. Changing those fallbacks
 safely is a separate migration, not a find-and-replace of documentation.
+
+Several older remote gather, download, discovery, adoption and cleanup paths
+also retain a legacy helper source-path fallback. In particular, the worker
+manager has older direct launch/cleanup commands as well as inventory-aware
+paths. Those behavioral assumptions are intentionally unchanged here and still
+need a separate portability/migration audit before calling arbitrary multi-Mac
+networks turnkey. Explicit inventory is the supported documented starting point;
+it does not erase every legacy fallback in the source.
