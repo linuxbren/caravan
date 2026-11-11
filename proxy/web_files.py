@@ -110,7 +110,7 @@ def _start_locked(app, plan):
     requests = [dict(r) for r in plan['file_requests']]
     # One immutable revision for the WHOLE job, not independently resolved main
     # on each Mini (the source can publish new weights during a long download).
-    if requests and requests[0].get('format') != 'gguf':
+    if requests and requests[0].get('format') not in ('gguf', 'gguf-shards'):
         revisions = {r.get('revision') for r in requests}
         if len(revisions) != 1 or not next(iter(revisions)):
             from huggingface_hub import HfApi
@@ -134,7 +134,7 @@ def _start_locked(app, plan):
     placement = {'mode': 'split', 'node_ids': plan['node_ids'], 'layer_plan': plan['counts'],
                  'split_counts': plan['counts'], 'n_stages': len(plan['counts']),
                  'node_labels': [s['label'] for s in plan['stages']]}
-    if len(plan['counts']) == 2 and requests[0].get('format') != 'gguf':
+    if len(plan['counts']) == 2 and requests[0].get('format') not in ('gguf', 'gguf-shards'):
         placement['packer_layers'] = plan['counts'][0]
     transfers, runners = [], []
     # Include all stages so a completed job saves the exact same placement everywhere.

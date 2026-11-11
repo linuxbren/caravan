@@ -133,6 +133,20 @@ class DownloadTests(unittest.TestCase):
     def test_repeat_fetch_downloads_zero_weights(self):
         r=self.request(self.plan());D.fetch(r,self.opener);self.calls=[];out=D.fetch(r,self.opener)
         self.assertEqual(out['downloaded_bytes'],0);self.assertEqual(self.calls,[])
+    def test_runtime_build_finds_homebrew_under_launchd_path(self):
+        base=self.home/'.caravan/runtimes/gguf-shards'/R.PIN
+        base.mkdir(parents=True);(base/'caravan-shards-version').write_text(R.MARKER)
+        expected=base/'build/bin'
+        with patch.dict(os.environ,PATH='/usr/bin:/bin'),patch.object(R,'current',side_effect=[FileNotFoundError(),FileNotFoundError(),expected]),patch.object(R.shutil,'which',return_value='/opt/homebrew/bin/cmake') as which,patch.object(R.subprocess,'run') as run:
+            self.assertEqual(R.ensure(),expected)
+            for call in which.call_args_list:self.assertIn('/opt/homebrew/bin',call.kwargs['path'].split(os.pathsep))
+            self.assertEqual([c.kwargs['timeout'] for c in run.call_args_list],[300,1800])
+            for call in run.call_args_list:self.assertIn('/opt/homebrew/bin',call.kwargs['env']['PATH'].split(os.pathsep))
+            self.assertEqual(os.environ['PATH'],'/usr/bin:/bin')
+    def test_missing_build_prerequisite_fails_before_source_fetch(self):
+        with patch.object(R,'current',side_effect=FileNotFoundError()),patch.object(R.shutil,'which',side_effect=lambda tool,**kw:'/usr/bin/git' if tool=='git' else None),patch.object(R.subprocess,'run') as run:
+            with self.assertRaisesRegex(FileNotFoundError,'needs cmake'):R.ensure()
+            run.assert_not_called()
     def test_wrong_runtime_marker_refused(self):
         with patch.dict(os.environ,CARAVAN_GGUF_SHARD_BIN=str(self.home/'build/bin')):
             with self.assertRaises(FileNotFoundError):R.current()

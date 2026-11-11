@@ -1,6 +1,7 @@
 """Pinned GGUF own-share backend; isolated first-use build, never production patching."""
 import fcntl
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -28,16 +29,21 @@ def ensure():
         fcntl.flock(f,fcntl.LOCK_EX)
         try:return current()
         except FileNotFoundError:pass
+        env=dict(os.environ)
+        env['PATH']=os.pathsep.join(dict.fromkeys([*env.get('PATH',os.defpath).split(os.pathsep),'/opt/homebrew/bin','/usr/local/bin']))
+        for tool in ('git','cmake'):
+            if not shutil.which(tool,path=env['PATH']):
+                raise FileNotFoundError(f'Own-part GGUF backend needs {tool}; install the developer prerequisites on this Mac, then Resume')
+        print('Preparing own-part GGUF backend on this Mac (no model weights cross the cable)',flush=True)
         src=base/'source.git';dst=base/PIN
         if any(p.is_symlink() for p in (base,src,dst)):raise ValueError('linked runtime folder refused')
         if not dst.exists():
-            if not src.exists():subprocess.run(['git','init','--bare',str(src)],check=True)
-            subprocess.run(['git','-C',str(src),'fetch','--depth=1','https://github.com/ggml-org/llama.cpp.git',PIN],check=True)
+            if not src.exists():subprocess.run(['git','init','--bare',str(src)],check=True,env=env,timeout=300)
+            subprocess.run(['git','-C',str(src),'fetch','--depth=1','https://github.com/ggml-org/llama.cpp.git',PIN],check=True,env=env,timeout=300)
             script=Path(__file__).resolve().parents[1]/'runtime/gguf-shards/apply.py'
-            subprocess.run([sys.executable,str(script),str(src),str(dst)],check=True)
+            subprocess.run([sys.executable,str(script),str(src),str(dst)],check=True,env=env,timeout=300)
         marker=dst/'caravan-shards-version'
         if not marker.is_file() or marker.read_text().strip()!=MARKER:raise ValueError('incomplete isolated runtime; retained for inspection, not patched twice')
-        print('Preparing own-part GGUF backend on this Mac (no model weights cross the cable)',flush=True)
-        subprocess.run(['cmake','-S',str(dst),'-B',str(dst/'build'),'-DGGML_RPC=ON','-DLLAMA_CURL=OFF','-DLLAMA_BUILD_TESTS=OFF'],check=True)
-        subprocess.run(['cmake','--build',str(dst/'build'),'-j','4','--target','llama-server','ggml-rpc-server'],check=True)
+        subprocess.run(['cmake','-S',str(dst),'-B',str(dst/'build'),'-DGGML_RPC=ON','-DLLAMA_CURL=OFF','-DLLAMA_BUILD_TESTS=OFF'],check=True,env=env,timeout=300)
+        subprocess.run(['cmake','--build',str(dst/'build'),'-j','4','--target','llama-server','ggml-rpc-server'],check=True,env=env,timeout=1800)
         return current()

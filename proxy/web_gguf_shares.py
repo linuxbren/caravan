@@ -120,7 +120,8 @@ def preview(app,body,entry=None,fresh=False):
         estimate=st['required_bytes']/1e9+1.3
         headroom=None if free is None else float(free)+float(active)-estimate
         safe=headroom is not None and headroom>=1.75
-        stages.append(dict(st,id=n['id'],label=n.get('label') or n['id'],role=n['role'],range=[0,p['n_layers']],layers=counts[i],estimated_use_gb=estimate,headroom_gb=headroom,safe=safe,metadata_ready=True))
+        layers=[j for j in S.device_layers(p['n_layers'],counts,i,pad=0) if j<p['n_layers']]
+        stages.append(dict(st,id=n['id'],label=n.get('label') or n['id'],role=n['role'],range=[min(layers),max(layers)+1] if layers else [0,0],layers=len(layers),estimated_use_gb=estimate,headroom_gb=headroom,safe=safe,metadata_ready=True))
         requests.append(request)
     safe=all(s['safe'] for s in stages);ready=safe and all(not s['downloads'] for s in stages) and (same or all((s.get('assembled') is True) for s in stages))
     record=dict(model_id=model_id(p),roots=roots,node_ids=ids,shares=counts,plan_id=p['plan_id'],source={k:p[k] for k in ('repo_id','filename','revision','source_sha256','source_bytes')})
@@ -147,7 +148,7 @@ def import_existing(app,body):
     if len(nodes)!=len(m['shares']):raise ValueError('legacy share count differs from nodes')
     for i,c in enumerate(checks):
         if c['stage_index']!=i or c['source_sha256']!=m['source_sha256'] or c['manifest']['tensors']!=m['tensors'] or c['header_sha256']!=checks[0]['header_sha256']:raise ValueError('legacy stage binding differs')
-    p=dict(src,n_layers=m['n_layers'],data_offset=checks[0]['data_offset'],tensors=m['tensors'],shares=m['shares'],node_ids=ids,header_sha256=checks[0]['header_sha256'])
+    p=dict(src,n_layers=m['n_layers'],data_offset=checks[0]['data_offset'],tensors=m['tensors'],shares=D.shares(m['shares']),node_ids=ids,header_sha256=checks[0]['header_sha256'])
     p['plan_id']=hashlib.sha256(json.dumps([p['source_sha256'],p['shares'],ids],sort_keys=True).encode()).hexdigest()[:24]
     for n in nodes:invoke(app,n,'save-plan',dict(root=root,plan=p))
     return save_deployment(p,[root]*len(nodes))
