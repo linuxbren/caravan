@@ -1,0 +1,83 @@
+{
+  "schema": "caravan-gguf-removal-live-v1",
+  "source_sha256": "670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a",
+  "transaction": "79653a42295f4832963d16f951343ca0",
+  "created_ns": 1794358126455147000,
+  "load": {
+    "ok": true,
+    "fresh_process": true,
+    "runtime_pin": "76a67730ffc7d650dffa4db04d96be84a59e7ef3",
+    "started_ns": 1794358084963420000,
+    "ready_ns": 1794358088102919000,
+    "load_s": 3.139478
+  },
+  "chat": {
+    "ok": true,
+    "prompt": "Explain how a rainbow forms, then give a simple experiment a child can try with water and sunlight. Use clear everyday language.",
+    "max_tokens": 128,
+    "temperature": 0,
+    "ttft_s": 0.143173,
+    "wall_s": 3.261988,
+    "usage": {
+      "completion_tokens": 128,
+      "prompt_tokens": 55,
+      "total_tokens": 183,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 55,
+      "prompt_ms": 139.378,
+      "prompt_per_token_ms": 2.5341454545454543,
+      "prompt_per_second": 394.6103402258607,
+      "predicted_n": 128,
+      "predicted_ms": 3119.424,
+      "predicted_per_token_ms": 24.5623937007874,
+      "predicted_per_second": 40.71264438563016
+    },
+    "wall_decode_tok_s": 40.721,
+    "text": "Sure! Let's start with how a rainbow forms.\n\n### How a Rainbow Forms\n\nWhen sunlight hits raindrops in the sky, it gets split into different colors. This is called dispersion. Each color of light has a slightly different speed when it passes through water, so it bends at a slightly different angle. This bending of light is what we see as a rainbow.\n\n### Simple Experiment a Child Can Try\n\nTo help a child understand this, we can do a simple experiment using water, sunlight, and a clear container. Here\u2019s how:\n\n#### Materials Needed:\n- A clear plastic cup or jar\n- Water\n- A sunny day",
+    "endpoint": "http://127.0.0.1:18224",
+    "ct": "2026-11-10T18:48:11.365581-06:00",
+    "started_ns": 1794358088102936000,
+    "finished_ns": 1794358091366088000,
+    "text_sha256": "b9c24870c82af3fee514b65739bed72b46c61903fec4a8ba49417534e5c5f2c7",
+    "completion_tokens": 128,
+    "prompt_tokens": 55,
+    "cache_n": 0
+  },
+  "stages": [
+    {
+      "index": 0,
+      "root": "/Users/brenden/.caravan/day22-shards/qwen2.5-3b-1-1",
+      "manifest_sha256": "f2218b171c16dff2a02fddd2c00064ea04811f4dc5d41cccb622acf7a2c9a826",
+      "catalog_sha256": "9670853b278570d64b7deb43555e5c65d87ad506c9164a146eafb491ce3bd969",
+      "loaded_tensors": 229,
+      "loaded_bytes": 999225344,
+      "loaded_names_sha256": "801bb69402be8dcb8e4ce85cd5bc45a83b238e0000e332dc8390c29e6f319dd5",
+      "pid": 17865,
+      "binary": "/Users/brenden/.caravan/day22-runtime/build/bin/llama-server",
+      "process": {
+        "command": "/Users/brenden/.caravan/day22-runtime/build/bin/llama-server -m /Users/brenden/.caravan/day22-shards/qwen2.5-3b-1-1/model.cvgg --host 127.0.0.1 --port 18224 -c 2048 -ngl 999 -fa on --jinja -np 1 --rpc 127.0.0.1:50072 --device MTL0,RPC0 --tensor-split 1.0,1.0 -lv 4",
+        "started": "Tue Nov 10 18:48:04 2026"
+      }
+    },
+    {
+      "index": 1,
+      "root": "/Users/brenden/.caravan/day22-shards/qwen2.5-3b-1-1",
+      "manifest_sha256": "79ebfc2230a6a9b671da546469f8359e47133117490b2c3f0ed82383593e1c47",
+      "catalog_sha256": "9670853b278570d64b7deb43555e5c65d87ad506c9164a146eafb491ce3bd969",
+      "loaded_tensors": 206,
+      "loaded_bytes": 992698368,
+      "loaded_names_sha256": "3b3d7652e1a6d6e5f26092b3f37e37312b706c797337d1aa8cd690c9e1b73f22",
+      "pid": 20594,
+      "binary": "/Users/brenden/.caravan/day22-runtime/build/bin/ggml-rpc-server",
+      "process": {
+        "command": "/Users/brenden/.caravan/day22-runtime/build/bin/ggml-rpc-server -d MTL0 -H 127.0.0.1 -p 50062 -c",
+        "started": "Tue Nov 10 18:47:38 2026"
+      }
+    }
+  ]
+}
