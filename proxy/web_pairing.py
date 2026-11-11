@@ -37,6 +37,8 @@ def start(app):
         if os.environ.get('CARAVAN_PAIRING_ENABLED')=='0':
             app.pairing_error='Mac pairing is turned off for this instance.';return None
         try:
+            import spake2
+            from cryptography.hazmat.primitives.ciphers.aead import AESGCM
             from pairing import Pairing
             from pairing_store import Store
             import web_settings

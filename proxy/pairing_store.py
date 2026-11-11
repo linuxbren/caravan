@@ -77,7 +77,11 @@ class Store:
         self.home = Path(home or Path.home()).resolve()
         self.root = self.home/'.caravan/pairing'
         self.repo = Path(repo or Path(__file__).resolve().parents[1]).absolute()
-        self.config = Path(config or self.home/'.caravan/config.toml')
+        self.config = Path(config or self.home/'.caravan/config.toml').absolute()
+        # macOS /tmp and /var are system aliases. Canonicalize the parent only,
+        # retaining the leaf so a linked config itself is still refused.
+        if not self.config.is_relative_to(self.home):
+            self.config=self.config.parent.resolve()/self.config.name
 
     def private_dir(self,path):
         path=Path(path)
