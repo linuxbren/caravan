@@ -246,6 +246,14 @@ def build_entries_from_inventories(
             elif role != "lead" and st.get("path") and packer_path is None:
                 packer_path = st["path"]
 
+        # Explicit disk evidence from new inventories excludes metadata-only
+        # starter entries. Older peers without this field retain compatibility.
+        # A genuinely running model is retained through an inventory race.
+        is_current = bool(current_id and (mid == current_id or rid == current_id)
+                          or current_hf and rid == current_hf)
+        if per and all(st.get("downloaded") is False for st in per.values()) and not is_current:
+            continue
+
         # If lead_path missing but local scan has it
         if lead_path is None:
             local = inv.scan_local().get(rid)

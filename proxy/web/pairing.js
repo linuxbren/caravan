@@ -1,7 +1,7 @@
 (function () {
 'use strict';
 let token='';
-let lastPeers=[], lastBusy=false;
+let lastPeers=[], lastBusy=false, activePeerIds=null;
 function paintRemovals(){
   if(!window.openCaravanPairing)return;
   for(const old of document.querySelectorAll('[data-pair-remove]'))old.remove();
@@ -33,6 +33,9 @@ async function state(){
   el('loginStatus').textContent=s.remote_login?'Remote Login is reachable on this Mac. Make sure this account is allowed in the setting.':'Turn on Remote Login for this account, then return here.';
   el('mycode').textContent=s.code||'No code is showing';
   el('expiry').textContent=s.code?'One use only. Expires in '+Math.ceil(s.expires_in/60)+' minutes.':'Click Show a new code when you are ready.';
+  const ids=s.peers.filter(p=>p.direction==='outgoing' && p.state==='active').map(p=>p.id);
+  const added=activePeerIds!==null && ids.some(id=>!activePeerIds.includes(id));
+  activePeerIds=ids;
   lastPeers=s.peers; lastBusy=s.busy;
   el('connected').replaceChildren();
   for(const peer of s.peers){
@@ -45,6 +48,7 @@ async function state(){
     if(!window.openCaravanPairing) el('connected').append(row);
   }
   paintRemovals();
+  if(added)window.dispatchEvent(new CustomEvent('caravan-pairing-complete'));
   return s;
 }
 async function run(button,fn){button.disabled=true;try{await fn();}catch(e){message(e.message);}finally{button.disabled=false;}}
@@ -58,7 +62,7 @@ el('find').onclick=()=>run(el('find'),async()=>{
     if(!peer.accepting)text('p','On the new Mac, click Show a new code, then find Macs again.',row);
     const input=document.createElement('input');input.type='password';input.inputMode='numeric';input.autocomplete='off';input.placeholder='Pairing code';input.maxLength=9;input.setAttribute('aria-label','Code shown on '+peer.name);row.append(input);
     const b=text('button','Add this Mac',row);b.disabled=!peer.accepting||!peer.remote_login;
-    b.onclick=()=>run(b,async()=>{message('Checking the code and saving the connection…');try{await post('add',{id:peer.id,code:input.value});input.value='';message('Mac added. Return to Caravan and choose your next model. Use Balance to check a cable connection before loading.');await state();}finally{input.value='';}});
+    b.onclick=()=>run(b,async()=>{message('Checking the code and saving the connection…');try{await post('add',{id:peer.id,code:input.value});input.value='';message('Mac added. Return to Caravan and choose your next model. Use Balance to check a cable connection before loading.');await state();window.dispatchEvent(new CustomEvent('caravan-pairing-complete'));}finally{input.value='';}});
     el('nearby').append(row);
   }
   message(out.nodes.length?'Enter the code from the Mac you want to add.':'No nearby Macs yet. On the new Mac, check Caravan is open, then try again.');

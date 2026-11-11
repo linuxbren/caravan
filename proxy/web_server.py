@@ -662,7 +662,7 @@ class App:
         snap = self.mgr.snapshot()
         current = snap.get("model_id")
         # Prefer HF id if present on snap
-        current_hf = snap.get("model_hf") or None
+        current_hf = (snap.get("model_hf") or None) if current else None
         live = (self.nodes() or {}).get("nodes") or []
         invs = self.gather_model_inventories()
         rows = catalog.build_entries_from_inventories(
@@ -1359,6 +1359,9 @@ def make_handler(app: App):
             if not online:
                 online = app.configured_nodes()
             weights = float(body.get("weights_gb") or 0)
+            if body.get("source") == "gguf":
+                import gguf_split
+                return self._json(200, gguf_split.placement_options(weights, online))
             fit = web_picker.fit_check(
                 weights_gb=weights,
                 nodes=online,

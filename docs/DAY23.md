@@ -77,10 +77,10 @@ Mac verification; do not mistake archive/symbol checks for native proof.
 
 ## Verification and delivery
 
-Portable regression suite: **1,155 tests passed on the box**. The development
-node was inspected without editing its dirty checkout, but the source transfer
-failed twice with a temporarily-unreachable error. Its separate worktree/test
-run and Obsidian note update are therefore pending. Coverage includes
+Initial portable regression suite: **1,155 tests passed on the box and the
+development node**. The development node uses a separate checkout; its dirty
+main checkout is not edited. Final follow-up counts and publication checks
+are recorded in the delivery report and Obsidian Day 23 note. Coverage includes
 checksum rejection, archive safety, runtime reuse, multipart completeness,
 placement/fallback, catalog/load IDs, MLX discovery, service backups, status,
 PATH idempotence, discovery fallback, UI structure/JavaScript parsing and
@@ -109,3 +109,47 @@ is not native Mac acceptance.
 - New Terminal PATH, doctor/status, and complete uninstall including worker exit,
   marked SSH cleanup, confirmation size, and unrelated watchdog preservation.
 - FileVault unlock/login behavior. Neither Linux suite proves any of these.
+
+## Live clean-install follow-up
+
+- Settings, installed-model lists and Topology refresh after download completion
+  and model load/stop/switch events. A five-second visible-page poll catches
+  changes from another page; it pauses while hidden, prevents overlapping
+  refreshes and preserves the user's selected model. No catalog search is
+  repeated by this poll. The old download callback could not reach Settings
+  because the functions lived in different JavaScript scopes; the shared
+  refresh hook now crosses that boundary explicitly.
+- Metadata/placement-only starter directories are not installed models and are
+  omitted from Settings. Actual partial weight downloads retain their reasons.
+  Existing developer paths and older peer inventories remain compatible. With
+  no config at all, the UI starts with one local Mac, not a lab SSH inventory.
+- The placement step always offers **+ Add a Mac**, prominently when nothing
+  fits. It opens Topology's themed pairing panel, keeps the selected model and
+  quant, then fetches fresh placement options and returns to that choice. A
+  download still requires confirmation; pairing never starts one silently.
+  Oversized GGUF downloads offer the same Add a Mac escape; after pairing
+  they retain the automatic placement recommendation rather than exposing
+  choices the GGUF downloader would ignore.
+- Left and right drawers use about one third of desktop width and full width
+  on narrow screens. Topology widens only while its two-column pairing panel
+  is open; the pairing columns stack on narrow screens.
+- Self-tuning already defaulted to `auto`, which **enables learning**, even
+  without saved winners: the worker sets `_learn_enabled` unless explicitly
+  disabled. The fresh config now records this default and the toggle clearly
+  says **On**, including after status rendering. Other options remain Auto;
+  saved Off choices, per-model pins and the environment opt-out are preserved.
+  This is MLX self-tuning, not a promise of GGUF/llama.cpp auto-tuning or that
+  every optimization is forced on before measurement. The worker's related
+  automatic settings continue to use their existing safe defaults.
+
+Portable tests exercise selection during in-flight refreshes, hidden-tab
+pause/resume, overlap prevention, pairing return with new placement options,
+metadata-only starter exclusion, legacy compatibility, responsive CSS, and
+fresh-config worker learning before saved winners. Live Mac checks still need
+real download/load transitions, pairing/discovery and the resized drawers.
+The update replaces application source and refreshes the existing per-user
+installation, preserving models, settings, explicit user choices and pairing.
+No 1st-node or 2nd-node access is part of publication. To activate an update,
+stop the browser service with `caravan stop`, run `caravan update`, then
+`caravan start` and refresh the page. Model workers remain running until an
+explicit unload/reload; the update does not silently switch a loaded model.

@@ -152,7 +152,7 @@ if { [ "$ROLE" = lead ] || [ "$MODEL" = 0 ]; } && [ ! -e "$CONFIG" ]; then
     say 'Would create a single-local-Mac config (no lab SSH defaults).'
   else
     mkdir -p "$HOME/.caravan"
-    (set -o noclobber; printf '%s\n' '[web.nodes.local]' 'label = "My Mac"' 'role = "lead"' 'host = "local"' > "$CONFIG")
+    (set -o noclobber; printf '%s\n' '[defaults]' 'self_tune = "auto"' '' '[web.nodes.local]' 'label = "My Mac"' 'role = "lead"' 'host = "local"' > "$CONFIG")
     say 'Created the local Mac config. Existing configs are never replaced.'
   fi
 fi

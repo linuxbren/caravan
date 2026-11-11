@@ -2,6 +2,12 @@
 
 ## Day 23 — clean-install fixes (published; pending native acceptance)
 
+- Live-install follow-up: visible-page automatic model-list refresh with selection preservation;
+  hide metadata-only starter models; Add a Mac from placement with return to fresh options;
+  one-third-width desktop drawers and full-width mobile drawers.
+- Clarify the already-enabled self-tuning default as On, record it in fresh config,
+  and preserve existing Off/pinned settings. Worker learning is enabled before saved winners.
+
 - Supply a checksum-pinned official llama.cpp b12283 engine on every Mac install/update.
 - Download complete multi-part GGUF sets, select whole-file/split behavior automatically,
   and show downloaded models and useful load errors in the normal picker.

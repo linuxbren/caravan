@@ -83,6 +83,10 @@ def nodes_from_config(cfg: Optional[dict] = None) -> list:
     """Configured nodes in display order. Host empty → skipped (does not exist)."""
     raw = _raw_web_nodes(cfg)
     if not raw:
+        # No config is a new, single-Mac install, never a lab SSH target.
+        # Existing developer config files retain the historical fallback.
+        if cfg is None and not web_settings.CONFIG_PATH.is_file():
+            return [dict(id="local", label="My Mac", role="lead", host="local")]
         return [dict(n) for n in DEFAULT_NODES]
     out = []
     for nid, tbl in raw.items():

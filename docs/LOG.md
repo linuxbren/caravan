@@ -1,3 +1,11 @@
+## 2026-11-11: Day 23 live clean-install follow-up
+
+- Fix stale Settings/picker/Topology lists with mutation-triggered and five-second visible-page refresh; preserve selections and avoid overlapping requests.
+- Exclude metadata-only starter entries from Settings without breaking actual partial downloads or developer paths. No-config topology is one local Mac.
+- Add pairing from placement and return to the same quant with fresh Mac options; narrow drawers on desktop, full width on small screens.
+- Verify self_tune=auto was already enabled in the worker with no learned winners. Fresh config records it and the UI says On without overriding saved choices.
+- Add portable executable UI/default/inventory regression coverage. Full-suite counts and publication artifacts are recorded in the delivery report and development-node note. No Macs accessed.
+
 ## 2026-11-11: Day 23 publication
 
 - All 1,155 portable tests passed on `1a5f7ab`; the final release tip is tested again before publication.

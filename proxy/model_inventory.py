@@ -99,6 +99,9 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
         "weights_gb": None,
         "n_layers": None,
         "has_config": False,
+        # Metadata/placement alone is not an installed model. Keep genuine
+        # partial downloads visible, but not empty starter directories.
+        "downloaded": False,
         "has_tokenizer": False,
         "has_index": False,
         "lead_ok": False,
@@ -110,6 +113,8 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
     }
     from model_files import inspect as inspect_files
     base['storage'] = inspect_files(d)
+    base['downloaded'] = any('/' not in name and name.endswith('.safetensors') and size > 0
+                             for name, size in (base['storage'].get('files') or {}).items())
     if not d.is_dir():
         base["reason"] = "missing folder"
         return base
@@ -329,6 +334,7 @@ def inventory_payload(*, packer_layers: Optional[int] = None, roots: Optional[li
                 "kind": m.get("kind"),
                 "ok": m.get("ok"),
                 "full_ok": m.get("full_ok"),
+                "downloaded": bool(m.get("downloaded")),
                 "has_config": bool(m.get("has_config")),
                 "has_index": bool(m.get("has_index")),
                 "has_tokenizer": bool(m.get("has_tokenizer")),

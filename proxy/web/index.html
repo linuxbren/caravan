@@ -622,7 +622,7 @@
   }
   .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
   .drawer {
-    position: fixed; top: 0; right: 0; height: 100%; width: min(380px, 33vw);
+    position: fixed; top: 0; right: 0; height: 100%; width: clamp(320px, 33vw, 640px);
     min-width: 280px; background: var(--bg2); border-left: 1px solid var(--line);
     box-shadow: var(--shadow); transform: translateX(100%);
     transition: transform .22s ease; z-index: 50; overflow: auto;
@@ -692,7 +692,7 @@
   /* Topology: non-modal left dock — no backdrop; chat stays usable. */
   #topoBackdrop { display: none !important; pointer-events: none !important; }
   .drawer-left {
-    position: fixed; top: 0; left: 0; height: 100%; width: min(440px, 40vw);
+    position: fixed; top: 0; left: 0; height: 100%; width: clamp(320px, 33vw, 640px);
     min-width: 280px; background: var(--bg2); border-right: 1px solid var(--line);
     box-shadow: var(--shadow); transform: translateX(-100%);
     transition: transform .22s ease; z-index: 30; overflow: auto;
@@ -801,14 +801,14 @@
   /* Wide: dock beside chat — shift wrap so messages are not under the drawer. */
   @media (min-width: 1100px) {
     body.topo-open .wrap {
-      margin-left: min(440px, 40vw);
-      max-width: min(920px, calc(100vw - min(440px, 40vw) - 24px));
+      margin-left: clamp(320px, 33vw, 640px);
+      max-width: min(920px, calc(100vw - clamp(320px, 33vw, 640px) - 24px));
       transition: margin-left .22s ease, max-width .22s ease;
     }
   }
   /* Narrow: overlay left without a click-blocking backdrop; input on the right stays free. */
   @media (max-width: 1099px) {
-    .drawer-left { width: min(360px, 88vw); z-index: 35; }
+    .drawer-left { z-index: 35; }
   }
   .nstat { margin-top: 10px; font-family: var(--mono); font-size: .7rem; color: var(--muted); }
   .nstat .bar { display: grid; grid-template-columns: 4.2em 1fr 8.5em; gap: 8px; align-items: center; margin: 4px 0; }
@@ -973,7 +973,7 @@
   .drawer-section { padding: 12px; margin: 0; min-width: 0; }
   .drawer-section-title { margin: 0 0 12px; font-family: var(--mono); font-weight: 600; line-height: 1.4; }
   #settingsDrawer {
-    width: min(440px, 92vw); min-width: 0;
+    width: clamp(320px, 33vw, 640px); min-width: 0;
     font-family: var(--mono); font-size: .72rem; line-height: 1.5;
   }
   #settingsDrawer .drawer-head { background: var(--bg2); backdrop-filter: blur(14px); padding-bottom: 12px; margin-bottom: 16px; }
@@ -1073,7 +1073,12 @@
 .add-mac-banner { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); width:max-content; max-width:96vw; padding:10px; border:1px solid var(--accent); background:var(--bg2); color:var(--text); z-index:45; font-size:.8rem; }
 @media(max-width:640px) { .pairing-columns { grid-template-columns:1fr; } }
 
-@media(min-width:700px) { #topoDrawer { width:min(880px,94vw); } }
+/* All side drawers share the same width. Only pairing needs more room. */
+@media(min-width:701px) { #topoDrawer.pairing-open { width:min(880px,94vw); } }
+@media(max-width:700px) {
+  .drawer, .drawer-left, #settingsDrawer, #topoDrawer { width:100vw; min-width:0; }
+  .pairing-columns { grid-template-columns:1fr; }
+}
 </style>
 </head>
 <body>
@@ -1581,7 +1586,9 @@
       const b = document.querySelector(`.opt[data-id="${o.id}"] button[data-v="auto"]`);
       if (!b) continue;
       const v = activeValue(o.id, a);
-      b.textContent = v != null ? `Auto (${v})` : "Auto";
+      b.textContent = o.id === "self_tune"
+        ? (state.filePins.self_tune === "off" ? "Off (config)" : "On")
+        : (v != null ? `Auto (${v})` : "Auto");
     }
   }
   function fmtMin(s) {
@@ -1633,7 +1640,7 @@
   // Presentation-only mirror of web_settings.OPTIONS, checked by test_day17_web_labels.
   // Served from disk so copy updates need not interrupt an active remote worker.
   const SETTINGS_HELP_COPY = {
-  "self_tune": "Caravan learns from your chats and remembers the faster settings for each MLX model.",
+  "self_tune": "On by default: Caravan learns from your chats immediately and remembers faster settings for each MLX model. Other Auto settings follow its choices; pinned choices stay yours.",
   "guess_ahead": "A smaller model guesses upcoming words for the main MLX model to check. Needs a matching helper; up to ~33% faster writing one reply on a split model in our tests, but slower with two chats.",
   "prompt_lookup": "Reuse words from your prompt to help the MLX model write repeated text. Up to ~44% faster in our tests on repeated text, but slower on mixed chats; one chat at a time.",
   "shared_start": "Reuse the beginning of repeated system prompts so the model has less to read. MLX models only.",
@@ -1655,7 +1662,7 @@
       <div class="opt${gguf ? " mlxoff" : ""}" data-id="${o.id}" ${gguf ? 'aria-disabled="true" title="MLX only — not used for GGUF"' : ""}>
         <div class="row"><span class="name">${o.label}</span>
           <span class="seg">${o.values.filter(v => v !== "mtp" || $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true").map(v =>
-            `<button type="button" data-v="${v}" class="${state.choice[o.id] === v ? "sel" : ""} ${v === "auto" ? "auto" : ""}">${v === "mtp" ? "Native MTP · test" : v === "adaptive" ? "Adaptive · test" : (VAL_LABEL[v] || v)}</button>`).join("")}</span></div>
+            `<button type="button" data-v="${v}" class="${state.choice[o.id] === v ? "sel" : ""} ${v === "auto" ? "auto" : ""}">${o.id === "self_tune" && v === "auto" ? (state.filePins.self_tune === "off" ? "Off (config)" : "On") : v === "mtp" ? "Native MTP · test" : v === "adaptive" ? "Adaptive · test" : (VAL_LABEL[v] || v)}</button>`).join("")}</span></div>
         <div class="help">${SETTINGS_HELP_COPY[o.id] || o.help}${o.id === "guess_ahead" && $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true" ? " Native MTP uses the model's built-in predictor instead of a separate helper. Up to ~46% faster writing replies in our tests; needs a matching MTP head and one chat at a time." : ""}</div>
         ${state.filePins[o.id] && state.choice[o.id] === "auto"
           ? `<div class="help filepin">config.toml: ${VAL_LABEL[state.filePins[o.id]] || state.filePins[o.id]} (used while this is Auto)</div>` : ""}
@@ -1692,12 +1699,23 @@
     if (state.fileErrors.length) $("optTip").textContent = "config.toml: " + state.fileErrors.join("; ");
   }
 
-  async function refreshModels() {
+  let modelsInflight = null;
+  function refreshModels() {
+    if (!modelsInflight) modelsInflight = updateModelList().finally(() => { modelsInflight = null; });
+    return modelsInflight;
+  }
+  async function updateModelList() {
     const j = await api("/api/models");
     const sel = $("modelSelect");
+    // Read after the request: a user may have changed selection in flight.
+    const previous = sel.value;
     const cur = j.current;
-    sel.innerHTML = "";
     const models = j.models || [];
+    const signature = JSON.stringify([models, j.current]);
+    if (signature === state.modelListSignature) return;
+    state.modelListSignature = signature;
+    state.modelRows = Object.fromEntries(models.map(m => [m.id, m]));
+    sel.innerHTML = "";
     state.caravanVersion = j.caravan_version || "unknown";
     if (!models.length) {
       const opt = document.createElement("option");
@@ -1705,6 +1723,7 @@
       opt.textContent = "No usable models on disk";
       opt.disabled = true;
       sel.appendChild(opt);
+      renderPlace();
       return;
     }
     for (const m of models) {
@@ -1723,11 +1742,14 @@
       if (m.id === cur || m.hf === cur) opt.selected = true;
       sel.appendChild(opt);
     }
-    state.modelRows = Object.fromEntries(models.map(m => [m.id, m]));
+    if (models.some(m => m.id === previous)) sel.value = previous;
+    if (previous !== sel.value && state.opts) loadOpts().catch(() => {});
     sel.onchange = () => { renderPlace(); if (state.opts) renderOpts(); };
     renderPlace();
     if (state.opts) renderOpts();
   }
+
+  window.refreshCaravanModels = refreshModels;
 
   // Prefilled GitHub issue for a model warning. Only public facts: HF repo id,
   // warning text, Caravan version, model_type, tie flag. No paths/hosts/IPs/tokens.
@@ -2315,6 +2337,7 @@
       alert(e.error || e.message || String(e));
     }
     refreshStatus();
+    window.dispatchEvent(new CustomEvent("caravan-models-changed"));
   };
   $("btnApply").onclick = () => $("btnLoad").onclick();
   $("btnOptStart").onclick = async () => {
@@ -2337,6 +2360,7 @@
     resetHistory();
     saveChat();
     refreshStatus();
+    window.dispatchEvent(new CustomEvent("caravan-models-changed"));
   };
   $("btnClear").onclick = () => {
     cancelChat();
@@ -2576,7 +2600,7 @@
   function startNodesPoll() {
     pollNodes();
     clearInterval(nodesTimer);
-    nodesTimer = setInterval(pollNodes, 500);
+    nodesTimer = setInterval(pollNodes, 5000);
   }
   function stopNodesPoll() {
     clearInterval(nodesTimer); nodesTimer = null;
@@ -2593,6 +2617,11 @@
   }
   function closeTopo() {
     stopNodesPoll();
+    if (document.getElementById("topoDrawer").classList.contains("pairing-open")) {
+      document.getElementById("pairingPanel").hidden = true;
+      document.getElementById("topoDrawer").classList.remove("pairing-open");
+      window.dispatchEvent(new CustomEvent("caravan-pairing-closed"));
+    }
     document.body.classList.remove("topo-open");
     document.getElementById("topoDrawer").classList.remove("open");
     document.getElementById("topoDrawer").setAttribute("aria-hidden", "true");
@@ -2607,11 +2636,16 @@
   window.openCaravanPairing = () => {
     openTopo();
     document.getElementById("pairingPanel").hidden = false;
+    document.getElementById("topoDrawer").classList.add("pairing-open");
     if (window.refreshCaravanPairing) window.refreshCaravanPairing();
   };
   document.getElementById("btnAddMac").onclick = window.openCaravanPairing;
   document.getElementById("bannerAddMac").onclick = window.openCaravanPairing;
-  document.getElementById("closePairing").onclick = () => { document.getElementById("pairingPanel").hidden = true; };
+  document.getElementById("closePairing").onclick = () => {
+    document.getElementById("pairingPanel").hidden = true;
+    document.getElementById("topoDrawer").classList.remove("pairing-open");
+    window.dispatchEvent(new CustomEvent("caravan-pairing-closed"));
+  };
   document.getElementById("dismissAddMac").onclick = () => {
     try { localStorage.setItem("caravan-add-mac-dismissed", "1"); } catch (_) {}
     document.getElementById("addMacBanner").hidden = true;
@@ -2622,6 +2656,7 @@
     document.getElementById("addMacBanner").hidden = count !== 1 || dismissed;
   };
   async function refreshMacSuggestion() {
+    if (document.visibilityState !== "visible") return;
     try { const j = await api("/api/nodes"); window.updateAddMacBanner((j.nodes || []).length); } catch (_) {}
   }
   refreshMacSuggestion(); setInterval(refreshMacSuggestion, 10000);
@@ -2634,7 +2669,7 @@
       source: "all", q: "", category: "chat", newer: false,
       fit: new Set(), maxGb: 0,
       groups: [], job: null, searchTimer: null, abort: null, searchSeq: 0,
-      onlineNodes: 2, maxSplitStages: 2, nodeLabels: ["EXO1", "EXO2"],
+      onlineNodes: 1, maxSplitStages: 1, nodeLabels: ["My Mac"],
     };
     const $ = (id) => document.getElementById(id);
     const chipsEl = $("pickerChips");
@@ -2699,12 +2734,13 @@
       search();
     });
 
-    function openPicker() {
+    function openPicker({resume = false} = {}) {
       closeTopo && closeTopo();
       const d = $("pickerDrawer");
       d.classList.add("open"); d.setAttribute("aria-hidden", "false");
       $("btnOpenPicker").classList.add("on");
-      search(); refreshDisk();
+      if (!resume) search();
+      refreshDisk();
       adoptLiveFetches();
     }
     async function adoptLiveFetches() {
@@ -2762,6 +2798,8 @@
       const r = await fetch(path, init);
       const j = await r.json().catch(function(){ return {}; });
       if (!r.ok) throw new Error(j.error || r.statusText);
+      if (/^\/api\/models\/(load|stop)$/.test(path) && init.method === "POST")
+        window.dispatchEvent(new CustomEvent("caravan-models-changed"));
       return j;
     }
 
@@ -2904,7 +2942,13 @@
       if (q.source === "gguf") {
         // Plan first; every Mac downloads only its own ranges from the source.
         if (!q.gguf_file) { alert("Pick one quant file for this GGUF repo."); return; }
-        if (q.fit && q.fit.color === "red" && !confirm(`Won't fit (~${q.weights_gb} GB). ${q.fit.reason || ""}\nDownload anyway?`)) return;
+        if (q.fit && q.fit.color === "red") {
+          try {
+            const place = await api("/api/picker/placement", {method: "POST",
+              body: JSON.stringify({source: "gguf", weights_gb: q.weights_gb || 0, repo_id: q.repo_id})});
+            if (!await choosePlacement(place, q, anchor)) return;
+          } catch (e) { $("pickerStatus").textContent = "Could not check your Macs: " + e.message; return; }
+        }
         $("pickerStatus").textContent = "Preparing your model download…";
         try {
           const data = await api("/api/picker/download", { method: "POST",
@@ -2920,10 +2964,6 @@
       }
       if (!q.weights_gb) {
         if (!confirm(`${q.repo_id} has unknown size (not marked OK). Download anyway?`)) return;
-      } else if (q.fit && q.fit.color === "red") {
-        if (!confirm(`Won't fit (~${q.weights_gb} GB). ${q.fit.reason || ""}\nDownload anyway?`)) return;
-      } else if (q.fit && q.fit.color === "yellow") {
-        if (!confirm(`${q.fit.reason || "Tight fit"}\nDownload anyway?`)) return;
       }
       // Placement choice: 1 Mini / K split / copy-all
       let placeId = null;
@@ -2963,25 +3003,57 @@
       return `Download ${gb} to ${names}`.replace("  ", " ");
     }
     // Step 2 renders right under the chosen quant (no scrolling to the bottom).
-    function choosePlacement(place, q, anchor) {
+    async function choosePlacement(place, q, anchor) {
+      // Freeze the selected quant while pairing; an old search must not remove it.
+      if (state.abort) state.abort.abort();
+      ++state.searchSeq; clearTimeout(state.searchTimer);
+      let keep = null;
+      for (;;) {
+        // GGUF keeps automatic placement: expose only its current recommendation.
+        const view = q.source === "gguf" ? {...place,
+          options: (place.options || []).filter(o => o.id === place.default_id)} : place;
+        const chosen = await placementStep(view, q, anchor, keep);
+        if (!chosen || !chosen.addMac) return chosen;
+        keep = chosen.keep;
+        await new Promise(resolve => {
+          const finish = () => {
+            window.removeEventListener("caravan-pairing-complete", finish);
+            window.removeEventListener("caravan-pairing-closed", finish);
+            resolve();
+          };
+          window.addEventListener("caravan-pairing-complete", finish);
+          window.addEventListener("caravan-pairing-closed", finish);
+          window.openCaravanPairing();
+        });
+        // Hide pairing before opening the picker so closeTopo does not cancel.
+        $("pairingPanel").hidden = true;
+        $("topoDrawer").classList.remove("pairing-open");
+        openPicker({resume: true});
+        try {
+          place = await api("/api/picker/placement", {method: "POST",
+            body: JSON.stringify({weights_gb: q.weights_gb || 0, repo_id: q.repo_id, source: q.source})});
+        } catch (e) {
+          $("pickerStatus").textContent = "Could not refresh Macs: " + e.message;
+          return null; // never silently download against an outdated placement
+        }
+      }
+    }
+    function placementStep(place, q, anchor, keep) {
       return new Promise((resolve) => {
         document.querySelectorAll(".place-step").forEach((n) => n.remove());
         document.querySelectorAll(".p-quant.picked").forEach((n) => n.classList.remove("picked"));
         const el = document.createElement("div");
         el.className = "place-step"; el.id = "placeStep";
-        if (anchor && anchor.parentNode) { anchor.classList.add("picked"); anchor.after(el); }
+        if (anchor && anchor.isConnected) { anchor.classList.add("picked"); anchor.after(el); }
         else { const pj = $("pickerJob"); pj.hidden = false; pj.innerHTML = ""; pj.appendChild(el); }
         const done = (v) => { el.remove(); if (anchor) anchor.classList.remove("picked"); resolve(v); };
         const opts = (place && place.options) || [];
-        const def = (place && place.default_id) || (opts.find(o => o.enabled) || {}).id;
+        const def = (opts.find(o => o.id === keep && o.enabled) || {}).id || (place && place.default_id) || (opts.find(o => o.enabled) || {}).id;
         let html = `<h3>Step 2 · Choose where it lives</h3>
           <div class="step-sub">${escapeHtml(q.repo_id)}${q.weights_gb ? " · " + q.weights_gb + " GB" : ""}</div>`;
-        if (!opts.length) {
-          el.innerHTML = html + `<div class="why">No placement options.</div>
-            <div class="step-actions"><button type="button" class="ghost" id="btnPlaceCancel">Cancel</button></div>`;
-          $("btnPlaceCancel").onclick = () => done(null);
-          return;
-        }
+        const wontFit = !opts.some(o => o.enabled) || (place.fit || {}).color === "red";
+        const addMac = `<button type="button" id="btnPlaceAddMac" class="${wontFit ? "primary" : "ghost"}">+ Add a Mac</button>`;
+        html += `<div class="step-sub">${wontFit ? "This model needs more memory. Add a Mac, then choose again." : "Have another Mac? Add it before choosing."}</div>` + addMac;
         for (const o of opts) {
           const dis = !o.enabled;
           html += `<label class="${dis ? "disabled" : ""}">
@@ -2993,6 +3065,8 @@
             <button type="button" class="primary" id="btnPlaceGo">Download</button>
             <button type="button" class="ghost" id="btnPlaceCancel">Cancel</button></div>`;
         el.innerHTML = html;
+        $("btnPlaceAddMac").onclick = () => done({addMac: true,
+          keep: el.querySelector('input[name=placement]:checked')?.value || null});
         const go = $("btnPlaceGo");
         const sync = () => {
           const sel = el.querySelector('input[name=placement]:checked');
@@ -3109,7 +3183,7 @@
           const j = await api("/api/picker/jobs/" + id);
           state.job = j; showJob();
           if (j.status === "done") {
-            try { if (typeof refreshModels === "function") await refreshModels(); } catch (_) {}
+            window.dispatchEvent(new CustomEvent("caravan-models-changed"));
             let busy = false;
             try { const s = await api("/api/status"); busy = !!(s.worker && s.worker.status === "ready"); } catch (_) {}
             if (busy) {
@@ -3134,7 +3208,7 @@
               }
             }
             refreshDisk();
-            try { if (typeof refreshModels === "function") await refreshModels(); } catch (_) {}
+            window.dispatchEvent(new CustomEvent("caravan-models-changed"));
             return;
           }
           if (j.status === "error" || j.status === "cancelled") {
@@ -3191,12 +3265,12 @@
       if (labelKeys.length) {
         sizeTxt = labelKeys.map((k) => `${k} ${byLabel[k] ?? "—"} GB`).join(" · ");
       } else if (sizes && (sizes.lead != null || sizes.packer != null)) {
-        sizeTxt = `EXO1 ${sizes.lead ?? "—"} GB · EXO2 ${sizes.packer ?? "—"} GB`;
+        sizeTxt = `1st Mac ${sizes.lead ?? "—"} GB · 2nd Mac ${sizes.packer ?? "—"} GB`;
       } else if (sizes) {
         sizeTxt = Object.keys(sizes)
           .filter((k) => k !== "lead" && k !== "packer")
           .map((k) => `${k} ${sizes[k] ?? "—"} GB`).join(" · ")
-          || `EXO1 ${sizes.lead ?? "—"} GB · EXO2 ${sizes.packer ?? "—"} GB`;
+          || `1st Mac ${sizes.lead ?? "—"} GB · 2nd Mac ${sizes.packer ?? "—"} GB`;
       }
       row.innerHTML = `<span style="flex:1"><b>${escapeHtml(label)}</b>${opts.note ? `<div class="p-meta">${escapeHtml(opts.note)}</div>` : ""}</span>
         <span class="p-meta">${escapeHtml(sizeTxt)}</span>`;
@@ -3273,6 +3347,38 @@
 
     window.closePicker = closePicker;
   })();
+
+  // One lightweight disk/list refresh, shared across the Settings IIFE,
+  // picker and Topology. Never redo remote catalog searches in the poll.
+  let listsInflight = null, listsTimer = null, workerListKey = null;
+  async function refreshCaravanLists() {
+    if (document.visibilityState !== "visible") return;
+    if (listsInflight) return listsInflight;
+    listsInflight = Promise.allSettled([
+      window.refreshCaravanModels && window.refreshCaravanModels(),
+      (document.getElementById("pickerDrawer").classList.contains("open") ||
+       document.getElementById("topoDrawer").classList.contains("open")) &&
+        window.refreshDisk && window.refreshDisk(),
+      pollNodes()
+    ]);
+    try { await listsInflight; } finally { listsInflight = null; }
+  }
+  window.refreshCaravanLists = refreshCaravanLists;
+  window.addEventListener("caravan-models-changed", refreshCaravanLists);
+  window.addEventListener("caravan-worker-status", event => {
+    const w = event.detail.worker || {};
+    const key = JSON.stringify([w.model_id, w.model_name, w.status]);
+    if (key !== workerListKey) { workerListKey = key; refreshCaravanLists(); }
+  });
+  window.addEventListener("caravan-pairing-complete", refreshCaravanLists);
+  function scheduleListRefresh() {
+    clearInterval(listsTimer); listsTimer = null;
+    if (document.visibilityState !== "visible") return;
+    refreshCaravanLists();
+    listsTimer = setInterval(refreshCaravanLists, 5000);
+  }
+  document.addEventListener("visibilitychange", scheduleListRefresh);
+  scheduleListRefresh();
 
   document.getElementById("btnCloseTopo").addEventListener("click", closeTopo);
   document.getElementById("btnDiskInTopo").addEventListener("click", () => {
