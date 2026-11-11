@@ -161,6 +161,7 @@ def create(source, root, shares, index):
 def verify(root):
     """Check SHA256 of every local piece, catalog, routing table; reject links/extras."""
     root = Path(root).expanduser()
+    if root.is_symlink(): raise ValueError('linked shard root refused')
     for name in ('manifest.json','weights.tsv','model.cvgg','rpc'):
         if (root/name).is_symlink(): raise ValueError('linked shard artifact refused')
     m = json.loads((root/'manifest.json').read_text())
@@ -199,13 +200,54 @@ def verify(root):
                 source_sha256=m['source_sha256'], root=str(root))
 
 
+def serving_command(root, binary, *, peer=False, port=18224, rpc=None, context=2048):
+    """Verified, fail-closed opt-in launcher; no production worker/service adoption."""
+    result = verify(root)
+    root = Path(root).expanduser().resolve()
+    binary = Path(binary).expanduser().resolve(strict=True)
+    marker = binary.parents[2]/'caravan-shards-version'
+    if not marker.is_file() or marker.read_text().strip() != 'catalog-v1/76a67730ffc7d650dffa4db04d96be84a59e7ef3':
+        raise ValueError('binary is not the isolated pinned Caravan shard runtime')
+    if type(port) is not int or not 1024 <= port <= 65535: raise ValueError('invalid unprivileged port')
+    env = dict(LLAMA_CACHE=str(root),CARAVAN_STRICT_SHARDS='1')
+    if peer:
+        if result['stage_index'] == 0: raise ValueError('peer requires a non-lead stage')
+        args = [str(binary),'-d','MTL0','-H','127.0.0.1','-p',str(port),'-c']
+    else:
+        if result['stage_index'] != 0: raise ValueError('lead requires stage zero')
+        rpc = rpc or []
+        if len(rpc) != result['n_minis']-1: raise ValueError('one loopback SSH tunnel is required per peer')
+        if any(not re.fullmatch(r'127\.0\.0\.1:[0-9]{1,5}',p) or not 1024<=int(p.split(':')[1])<=65535 for p in rpc):
+            raise ValueError('RPC endpoints must be unprivileged loopback SSH tunnels')
+        if type(context) is not int or context < 128: raise ValueError('invalid context length')
+        m = json.loads((root/'manifest.json').read_text())
+        args = [str(binary),'-m',str(root/'model.cvgg'),'--host','127.0.0.1','--port',str(port),
+                '-c',str(context),'-ngl','999','-fa','on','--jinja','-np','1']
+        if rpc:
+            args += ['--rpc',','.join(rpc),'--device',','.join(['MTL0']+[f'RPC{i}' for i in range(len(rpc))]),
+                     '--tensor-split',','.join(map(str,m['shares']))]
+    return args, env
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest='action',required=True)
     p = sub.add_parser('create'); p.add_argument('source'); p.add_argument('root')
     p.add_argument('--shares',required=True); p.add_argument('--index',required=True,type=int)
     p = sub.add_parser('verify'); p.add_argument('root')
+    for role in ('lead','peer'):
+        p = sub.add_parser(role); p.add_argument('root');p.add_argument('--binary',required=True)
+        p.add_argument('--port',type=int,required=True);p.add_argument('--rpc',default='')
+        p.add_argument('--context',type=int,default=2048);p.add_argument('--dry-run',action='store_true')
     a = ap.parse_args()
+    if a.action in ('lead','peer'):
+        args, env = serving_command(a.root,a.binary,peer=a.action=='peer',port=a.port,
+                                    rpc=a.rpc.split(',') if a.rpc else [],context=a.context)
+        if a.dry_run:
+            print(json.dumps(dict(args=args,env=env)),flush=True)
+        else:
+            os.execvpe(args[0],args,dict(os.environ,**env))
+        return
     result = create(a.source,a.root,shares_arg(a.shares),a.index) if a.action=='create' else verify(a.root)
     print(json.dumps(result,sort_keys=True),flush=True)
 

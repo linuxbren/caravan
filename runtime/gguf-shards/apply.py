@@ -79,6 +79,7 @@ static bool caravan_rpc_load_hash(ggml_tensor * tensor, uint64_t hash) {
         return true;
     }''')
     p.write_text(text)
+    (root/'caravan-shards-version').write_text('catalog-v1/'+PIN+'\n')
 
 
 def main():

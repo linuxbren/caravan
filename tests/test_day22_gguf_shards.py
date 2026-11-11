@@ -161,6 +161,46 @@ class Pieces(unittest.TestCase):
         finally: exe.unlink();exe.parent.rmdir()
 
 
+class Launch(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory();self.d=Path(self.tmp.name)
+        self.root=self.d/'shards';self.root.mkdir()
+        (self.root/'manifest.json').write_text(json.dumps(dict(shares=[1,2,1])))
+        work=self.d/'runtime';self.exe=work/'build/bin/llama-server';self.exe.parent.mkdir(parents=True);self.exe.touch()
+        self.marker=work/'caravan-shards-version';self.marker.write_text('catalog-v1/76a67730ffc7d650dffa4db04d96be84a59e7ef3')
+        self.ver=patch.object(s,'verify',return_value=dict(stage_index=0,n_minis=3));self.mock=self.ver.start()
+    def tearDown(self):self.ver.stop();self.tmp.cleanup()
+    def test_n_peer_args_and_verification(self):
+        args,env=s.serving_command(self.root,self.exe,rpc=['127.0.0.1:50072','127.0.0.1:50073'])
+        self.mock.assert_called_once_with(self.root)
+        self.assertIn('MTL0,RPC0,RPC1',args);self.assertIn('1,2,1',args)
+        self.assertIn(str(self.root/'model.cvgg'),args);self.assertEqual(env['CARAVAN_STRICT_SHARDS'],'1')
+        self.assertEqual(env['LLAMA_CACHE'],str(self.root))
+    def test_missing_peer_rejected(self):
+        with self.assertRaises(ValueError):s.serving_command(self.root,self.exe,rpc=['127.0.0.1:50072'])
+    def test_non_loopback_rpc_rejected(self):
+        with self.assertRaises(ValueError):s.serving_command(self.root,self.exe,rpc=['remote:50072','127.0.0.1:50073'])
+    def test_privileged_rpc_port_rejected(self):
+        with self.assertRaises(ValueError):s.serving_command(self.root,self.exe,rpc=['127.0.0.1:22','127.0.0.1:50073'])
+    def test_unmarked_stock_binary_rejected(self):
+        self.marker.unlink()
+        with self.assertRaisesRegex(ValueError,'isolated'):s.serving_command(self.root,self.exe)
+    def test_wrong_version_rejected(self):
+        self.marker.write_text('wrong')
+        with self.assertRaises(ValueError):s.serving_command(self.root,self.exe)
+    def test_peer_cache_env_and_loopback(self):
+        self.mock.return_value=dict(stage_index=2,n_minis=3)
+        args,env=s.serving_command(self.root,self.exe,peer=True,port=50062)
+        self.assertEqual(args[-5:],['-H','127.0.0.1','-p','50062','-c'])
+        self.assertEqual(env['LLAMA_CACHE'],str(self.root))
+    def test_wrong_stage_role_rejected(self):
+        with self.assertRaises(ValueError):s.serving_command(self.root,self.exe,peer=True)
+        self.mock.return_value=dict(stage_index=1,n_minis=3)
+        with self.assertRaises(ValueError):s.serving_command(self.root,self.exe)
+    def test_privileged_listen_port_rejected(self):
+        with self.assertRaises(ValueError):s.serving_command(self.root,self.exe,port=22)
+
+
 class RuntimePatch(unittest.TestCase):
     def test_strict_source_anchors(self):
         path=Path(__file__).resolve().parents[1]/'runtime/gguf-shards/apply.py'
