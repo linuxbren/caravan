@@ -171,12 +171,23 @@ interface endpoints and trusted-host details, see [SERVICES](docs/SERVICES.md).
 - **Tiny title helper:** optional and not downloaded by setup. It waits for
   the primary model and spare memory. It is not part of the normal package.
 - **Adaptive lookup:** opt-in speed experiment, not a default or speed promise.
-- **GGUF:** optional patched llama.cpp runtime must be built separately.
-  Install Apple build tools and CMake, then build `caravan-patches` from
-  https://github.com/linuxbren/llama.cpp with `GGML_RPC=ON`, `GGML_METAL=ON`.
-  Set `CARAVAN_LLAMA_BIN` if not in `~/dev/llama.cpp/build/bin`.
-  Today the lead still holds the complete GGUF; independent per-Mac tensor
-  loading is Day 22 work. The easy package is not a bundled GGUF runtime.
+- **GGUF in the current source branch:** each Mac downloads only its part,
+  directly from the publisher. The picker shows progress for each Mac and
+  verifies the pieces before offering Load. Interrupted downloads can Resume;
+  Balance reuses verified local pieces and fetches only missing ranges. No
+  full copy or weight forwarding over the cable is needed. The cable still
+  carries chat activations and control messages.
+  Install Apple command-line build tools, Git and CMake on every participating
+  Mac first; the first download then builds a pinned native backend in
+  `~/.caravan/runtimes/gguf-shards/`, separate from existing runtimes. A missing
+  prerequisite stops safely: install it, then Resume. Homebrew tools are found
+  even when a login service has a short PATH. This is not bundled in the
+  published Day 21 package, and no Day 22 installer channel has been released.
+  Single-file qwen2/llama GGUF sources with HTTP Range support are supported.
+  Other layouts stop rather than quietly sending weights between Macs. The
+  advanced **full-file fallback** must be selected explicitly; it retains the
+  older full-model-on-the-1st-node behavior and separately built runtime
+  (`CARAVAN_LLAMA_BIN`). See [Day 22](docs/DAY22.md) for evidence and limits.
 
 ## Remove Caravan safely
 

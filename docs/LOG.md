@@ -3152,3 +3152,58 @@ pending. Experiment roles/tunnel stopped; Huihui PID 1055, 24/40 KV16, saved
 restore unchanged and direct production chat still answered. No Hermes test,
 reboot, production restart, post or release. Development-node experiments.md
 and Day15 screenshots untouched. [Full evidence and policy](DAY22.md#approved-cleanup--the-tested-qwen-original-only).
+
+
+### Day 22 — normal picker own-part GGUF and direct source downloads (November 10, 7:46–8:18 PM CST)
+
+Removed the prototype-only catch. The normal picker now says “Split across
+your Macs: each keeps only its part.” GGUF Load/Unload/Switch, Balance, status,
+and saved restore use the usual app lifecycle. Each Mac downloads only its
+part directly from the pinned publisher source, with SHA256/size checks,
+durable resume checkpoints and per-node progress. Planning reads metadata by
+HTTP Range first; jobs fetch each node's tensor ranges independently. No full
+original is downloaded, no weights are forwarded over the cable, and failures
+never silently select the explicit advanced full-file fallback. N-way plans,
+separate hosts, interrupted prefixes and missing-only rebalance are tested.
+
+Live new model: Qwen2.5-3B-Instruct Q5_K_M, full source 2,438,740,384 bytes.
+The 1st/2nd nodes downloaded 1,254,762,912 / 1,189,933,472 HTTP payload bytes
+(own weights plus a small catalog), not a full copy each. Planning added
+11,314,436 metadata bytes per attempt on the 1st node. A first-use Homebrew
+CMake PATH issue was fixed; Resume reused the completed 1st-node share with
+zero extra payload. Materialization times were 457.572 / 303.464 s, with
+verification and initial backend preparation included. All-node Resume took
+342.898 s. The source hash/revision and every requested range are in evidence.
+
+Normal picker Q4_0, with its originals still gone: 10.096 s app switch,
+3.038 s native health wait, 41.456/40.920 tok/s, 0.211/0.209 s TTFT. Both replies
+matched the earlier known-good baseline exactly. New Q5_K_M: 20.014 s app
+switch, 4.045 s native health wait, 35.831/35.820 tok/s, 0.379/0.238 s TTFT.
+Direct ordinary chat only, 55 input/128 output tokens, no Hermes or cache reuse.
+
+Balance 1:1 to 2:1 fetched only 324,132,864 new weight bytes on the 1st node,
+zero on the 2nd; actual payload including new catalogs was 330,088,864 /
+5,956,000 bytes. Verified reload: 18.803 s, 35.576 tok/s, 0.229 s TTFT, exact
+same Q5 reply. A same-ID ready-state race was fixed and regression-tested.
+Saved GGUF order/shares survived a keep-workers web restart with the same
+native process, and chat still matched. Normal Unload returned idle and saved
+request:null, rather than deleting the last-model record itself.
+
+Download-phase Thunderbolt counters grew only 1,171,627 received / 8,514,749
+sent bytes on the 1st node, mirrored on the 2nd. Internet/Wi-Fi received
+1,362,240,572 / 1,304,739,332 bytes. Counters alone do not classify packets;
+combined with own-only Range receipts, verified pieces, absent originals and
+strict no-fallback native loading, they prove no cable weight transfer.
+Activations and logits still cross the cable during chat; no zero-traffic
+claim is made. Previous verified plans remain a hardlinked local cache.
+
+Final: Huihui loaded and saved again, 24/40, 2nd node first, KV16; direct chat
+returned OK. Every retained tree verified. No owned experiment servers,
+tunnels, partial weight files or download processes remained. Other GGUFs,
+the development node's dirty checkout, experiments and Day 15 screenshots were
+untouched. No reboot, post, Hermes change, release or channel advance.
+
+Full suite: **1,063 passing** in 47.815 s. User README/INSTALL, Day 22 detail and
+Obsidian notes updated. Remaining validation: additional architectures/layouts,
+3+ physical nodes, longer performance runs, and publishing a future package.
+[Details](DAY22.md) · [source/range/hash/counter/API evidence](../bench/results/day22/app/).

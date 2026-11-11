@@ -1,0 +1,118 @@
+{
+  "exo1": {
+    "epoch": 1794363477.809066,
+    "verified": [
+      {
+        "ok": true,
+        "stage_index": 0,
+        "n_minis": 2,
+        "tensors": 229,
+        "tensor_bytes": 999225344,
+        "unique_piece_bytes": 999225344,
+        "logical_bytes": 1005387140,
+        "allocated_bytes": 1005518848,
+        "source_bytes": 1997879712,
+        "source_sha256": "670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a",
+        "root": "/Users/brenden/.caravan/day22-shards/qwen2.5-3b-1-1"
+      },
+      {
+        "ok": true,
+        "stage_index": 0,
+        "n_minis": 2,
+        "tensors": 229,
+        "tensor_bytes": 1248806912,
+        "unique_piece_bytes": 1248806912,
+        "logical_bytes": 1255021323,
+        "allocated_bytes": 1264435200,
+        "source_bytes": 2438740384,
+        "source_sha256": "2c63dde5f2c9ab1fd64d47dee2d34dade6ba9ff62442d1d20b5342310c982081",
+        "root": "/Users/brenden/.caravan/gguf-shares/0060c916c812d281b74a/db74eba3c318c155fe229263/stage-0"
+      },
+      {
+        "ok": true,
+        "stage_index": 0,
+        "n_minis": 2,
+        "tensors": 301,
+        "tensor_bytes": 1572939776,
+        "unique_piece_bytes": 1572939776,
+        "logical_bytes": 1579178196,
+        "allocated_bytes": 1588916224,
+        "source_bytes": 2438740384,
+        "source_sha256": "2c63dde5f2c9ab1fd64d47dee2d34dade6ba9ff62442d1d20b5342310c982081",
+        "root": "/Users/brenden/.caravan/gguf-shares/0060c916c812d281b74a/f292cb2f3d359813b8de9d1a/stage-0"
+      }
+    ],
+    "q5_all_retained_plans_unique_allocated_bytes": 1596055552,
+    "q5_all_retained_plans_unique_logical_bytes": 1585392607,
+    "existing_ggufs": [
+      {
+        "path": "/Users/brenden/.caravan/models/gemma-4-26B_q4_0-it.gguf",
+        "bytes": 14439363584
+      },
+      {
+        "path": "/Users/brenden/.caravan/models/Qwen3-30B-A3B-Q4_K_S.gguf",
+        "bytes": 17456009792
+      }
+    ],
+    "owned_transfer_processes": [],
+    "own_native_processes": [],
+    "gguf_process_metadata_exists": false,
+    "private_partial_files": 0
+  },
+  "exo2": {
+    "epoch": 1794363479.605938,
+    "verified": [
+      {
+        "ok": true,
+        "stage_index": 1,
+        "n_minis": 2,
+        "tensors": 206,
+        "tensor_bytes": 992698368,
+        "unique_piece_bytes": 992698368,
+        "logical_bytes": 998860164,
+        "allocated_bytes": 998981632,
+        "source_bytes": 1997879712,
+        "source_sha256": "670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a",
+        "root": "/Users/brenden/.caravan/day22-shards/qwen2.5-3b-1-1"
+      },
+      {
+        "ok": true,
+        "stage_index": 1,
+        "n_minis": 2,
+        "tensors": 206,
+        "tensor_bytes": 1183977472,
+        "unique_piece_bytes": 1183977472,
+        "logical_bytes": 1190189460,
+        "allocated_bytes": 1191727104,
+        "source_bytes": 2438740384,
+        "source_sha256": "2c63dde5f2c9ab1fd64d47dee2d34dade6ba9ff62442d1d20b5342310c982081",
+        "root": "/Users/brenden/.caravan/gguf-shares/0060c916c812d281b74a/db74eba3c318c155fe229263/stage-1"
+      },
+      {
+        "ok": true,
+        "stage_index": 1,
+        "n_minis": 2,
+        "tensors": 134,
+        "tensor_bytes": 859844608,
+        "unique_piece_bytes": 859844608,
+        "logical_bytes": 866029679,
+        "allocated_bytes": 867246080,
+        "source_bytes": 2438740384,
+        "source_sha256": "2c63dde5f2c9ab1fd64d47dee2d34dade6ba9ff62442d1d20b5342310c982081",
+        "root": "/Users/brenden/.caravan/gguf-shares/0060c916c812d281b74a/f292cb2f3d359813b8de9d1a/stage-1"
+      }
+    ],
+    "q5_all_retained_plans_unique_allocated_bytes": 1198460928,
+    "q5_all_retained_plans_unique_logical_bytes": 1196374531,
+    "existing_ggufs": [
+      {
+        "path": "/Users/brenden/.caravan/models/Flint-abliterated-Mix-24G.gguf",
+        "bytes": 23993808416
+      }
+    ],
+    "owned_transfer_processes": [],
+    "own_native_processes": [],
+    "gguf_process_metadata_exists": false,
+    "private_partial_files": 0
+  }
+}

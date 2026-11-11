@@ -2,22 +2,162 @@
 
 ## Status
 
-**A real two-Mini prototype now works. It is not the default web/picker path yet.**
+**Own-part GGUF models are now first-class in the normal app path.**
 
-Each Mini loaded only its assigned tensor pieces, including the small tensors
-that the older RPC-cache path still sent over the link. The lead did not open
-the original full GGUF to load the prototype. All existing GGUFs were kept
-unchanged during the first proof. After Brenden's later, model-specific
-approval, only the tested Qwen originals were safely removed; see the
-[approved cleanup](#approved-cleanup--the-tested-qwen-original-only) below.
-Every other GGUF was left alone. Huihui stayed loaded throughout; no
-production service was restarted.
-No reboot, release, or post was made.
+The picker says **“Split across your Macs: each keeps only its part.”**
+Each Mac downloads only its part directly from the pinned publisher source,
+not a full copy and not weights forwarded over the cable. Load, Unload,
+Switch, Balance, status and saved restore use the normal app lifecycle.
+The cable still carries chat activations and control messages.
 
-This is a storage-independence result, **not a speedup claim**. The new path
-loaded slightly slower in this small check and wrote at about the same speed.
+The earlier prototype and approved-original-removal evidence below is
+historical. Only the tested Qwen Q4_0 originals were removed after explicit
+approval and all safety gates; no other original or MLX model is removed by
+this update. The new default never downloads a full original in the first
+place. A local full-file migration must still use the separate dry-run-first
+removal guard after fresh own-piece load/chat proof; picker download is not
+permission to delete an existing full file.
 
-## What changed
+No Day 22 release or package-channel change has been made. N-way ownership,
+resume and missing-only rebalance are covered by portable tests; real hardware
+proof is on the 1st node and 2nd node. Unsupported layouts fail explicitly,
+with no silent full-file or cable-transfer fallback. This is a disk and
+transfer result, not a speedup promise.
+
+## First-class app and direct-share implementation
+
+- `agent/gguf_share_download.py` plans ownership from HTTP Range metadata
+  reads before fetching any weights. Each node then fetches only its own
+  tensor ranges in parallel from an immutable Hugging Face revision.
+- Strict 206/Content-Range and identity-encoding checks reject full-body
+  responses. Metadata read-ahead is bounded so planning never reads weights.
+  Cross-host redirects strip authentication; HTTPS downgrade is refused.
+- Durable partial checkpoints store prefix SHA256. Resume re-verifies the
+  prefix, and every finished piece is sized and SHA256-checked on disk. The
+  publisher's full-file SHA256 is recorded for recovery; a node holding only
+  its share does **not** pretend to recompute that whole-file hash. HF does
+  not publish tensor hashes: initial piece hashes are established from the
+  pinned HTTPS response, then checked on reuse and before every load.
+- Balance retains verified local pieces and fetches only newly owned ranges.
+  Past plans remain a local cache; there is no unapproved cache/original
+  deletion. Only small catalogs, tensor hashes and receipts travel by SSH.
+- `proxy/web_gguf_shares.py` registers completed all-node deployments in the
+  picker, preflights every node before unloading the old model, and uses
+  owned native processes/tunnels with the existing Load/Unload/Switch/restore
+  machinery. A missing piece is an error, never a weight-transfer fallback.
+- The first download prepares an isolated pinned runtime on each Mac. Apple
+  build tools, Git and CMake are required. Missing tools stop safely and
+  Resume keeps already verified bytes. Existing runtimes are not patched.
+- The normal picker defaults to this path. The advanced full-file fallback
+  is explicit, labelled, and retains the old full-file behavior. Sources
+  currently need a single-file qwen2/llama layout and HTTP Range support.
+
+## Normal picker/API live proof — November 10, 2026, 7:46–8:16 PM CST
+
+New model, absent from both model folders before this test:
+**Qwen2.5-3B-Instruct Q5_K_M**, file
+`qwen2.5-3b-instruct-q5_k_m.gguf`, repository
+`Qwen/Qwen2.5-3B-Instruct-GGUF`, immutable revision
+`7dabda4d13d513e3e842b20f0d435c732f172cbe`.
+Full source: **2,438,740,384 bytes**; publisher SHA256:
+`2c63dde5f2c9ab1fd64d47dee2d34dade6ba9ff62442d1d20b5342310c982081`.
+The normal `/api/picker/download` request used no fallback flag and planned
+shares `[1,1]` before the independent node jobs started.
+
+| Measured source data | 1st node | 2nd node |
+|---|---:|---:|
+| Assigned weight bytes | 1,248,806,912 | 1,183,977,472 |
+| Actual HTTP payload, weights plus own catalog | 1,254,762,912 | 1,189,933,472 |
+| Own-part materialization time | 457.572 s | 303.464 s |
+| Full original downloaded to disk | No | No |
+
+Each catalog is 5,956,000 metadata bytes, not weights. Planning additionally
+read 11,314,436 metadata bytes on the 1st node per attempt. There were two
+planning attempts: the 2nd node initially could not find its already installed
+Homebrew CMake under the login service's short PATH. The fix now discovers
+standard Homebrew tools and checks prerequisites before fetching native
+source. **Resume downloaded zero more bytes on the completed 1st node** and
+finished the 2nd node. Its measured 303.464 s includes first-use native
+preparation, verification and writes, not just network time. Resume API
+planning/start took 32.524 s; the resumed all-node job finished in 342.898 s.
+These are real observed intervals, not a claimed clean first-try parallel
+bandwidth benchmark. Future independent node jobs still run in parallel.
+
+### Fresh process loads and ordinary direct chat
+
+Both rows were selected by their normal picker model IDs, using
+`/api/models/load`, then `/v1/chat/completions` through Caravan's web API.
+No Hermes, special prefill, prompt-cache reuse or external inference endpoint.
+The same 55-input-token rainbow prompt produced 128 output tokens at
+temperature zero, seed 42; native cache count was zero. OS caches were warm.
+
+| Model / active shares | Whole app switch to ready | Native health wait | Native tok/s, two runs | Wall TTFT, two runs |
+|---|---:|---:|---:|---:|
+| Original-free Q4_0 / 1:1 | 10.096 s | 3.038 s | 41.456 / 40.920 | 0.211 / 0.209 s |
+| Newly downloaded Q5_K_M / 1:1 | 20.014 s | 4.045 s | 35.831 / 35.820 | 0.379 / 0.238 s |
+
+The Q4_0 reply exactly matched the earlier known-good baseline SHA256
+`b9c24870c82af3fee514b65739bed72b46c61903fec4a8ba49417534e5c5f2c7`.
+Its full originals remain gone. The Q5_K_M reply SHA256 was
+`78090ec9e6e06b5cd8872759e6ab136df5d90034bd39d793d29436da1a6b78fb`.
+
+### Balance, saved restore and Unload
+
+Normal Balance from `1:1` to `2:1` needed only **324,132,864 new weight bytes**
+on the 1st node and **zero new weight bytes** on the 2nd node. Actual HTTP
+payloads were 330,088,864 and 5,956,000 bytes, including each new catalog.
+Materialization took 85.294 s and 4.174 s; the API job took 102.982 s.
+The subsequent verified `2:1` reload took **18.803 s**, then direct chat gave
+**35.576 tok/s**, **0.229 s TTFT**, and the exact same Q5 reply SHA256.
+
+A real same-ID reload readiness race was fixed: accepting a sharded Balance
+load now marks it busy before asynchronous preflight, so old ready state is
+not mistaken for completion. The regression is in the portable suite.
+Saved GGUF restore records contain the model ID, exact node order and shares.
+Restarting only the web with `CARAVAN_WEB_KEEP_WORKERS=1` adopted the same
+healthy GGUF process and pieces; direct chat still matched the Q5 baseline.
+Normal Unload returned idle and atomically cleared the saved request to null.
+
+### Cable-traffic proof, with its limits stated
+
+For the entire new-model download and Resume interval, physical Thunderbolt
+`en2` counters on the 1st node increased **1,171,627 received / 8,514,749 sent
+bytes**; the 2nd node counters mirrored them. That is 9,686,376 bytes of total
+cable traffic, not a hidden transfer of either gigabyte-sized weight share.
+Internet/Wi-Fi `en1` received **1,362,240,572 / 1,304,739,332 bytes** on the
+1st/2nd nodes respectively, including HTTPS overhead and native build source.
+
+Interface counters alone do not classify packets. The accompanying source
+Range receipts prove that every weight request belonged to that node; planning
+ranges were wholly inside metadata. Both hosts had only their own pieces and
+no full Q5 file. The native catalog callback loads remote weights by verified
+local hash and fails on a miss; it never forwards weight bytes. Together,
+these checks establish direct own-part downloads and no cable weight path.
+During chat the cable is **not idle**: activations and returned logits cross
+it (about 161 MB received and 6–7 MB sent on the 1st node for each switch plus
+two 128-token replies). That traffic is not described as weight transfer.
+
+### Final state and evidence
+
+Huihui was restored through normal Load, **24/40, 2nd node first, KV16**, saved
+as the restore model, and a plain direct chat returned **OK**. The final audit
+found no owned download process, native experiment server, private partial
+weight file or owned GGUF tunnel left running. Other GGUF originals were
+unchanged; no further deletion was performed. Past verified share plans remain
+cached/hardlinked intentionally; they are not all counted as extra physical
+copies, and no automatic cache cleanup is claimed.
+After the Balance check, both retained Q5 plans together used **1,596,055,552 /
+1,198,460,928 allocated bytes** on the 1st/2nd nodes, counting hardlinked data
+once and including catalogs, manifests and resume journals. The active 2:1
+weight shares themselves are 1,572,939,776 / 859,844,608 bytes.
+
+**1,063 tests passed** in 47.815 s. Raw source/range/hash receipts, interface
+counters, model/chat timings, restore records and final verification are in
+[`bench/results/day22/app/`](../bench/results/day22/app/). No reboot, Hermes
+change, post, release or package-channel advance occurred. The development
+node's dirty checkout, experiments and Day 15 screenshots were left alone.
+
+## Original native prototype implementation (historical)
 
 - `agent/gguf_shards.py`: partition every tensor by the exact llama.cpp layer
   assignment, with any number of positive Mini shares. Input/global tensors
@@ -45,8 +185,8 @@ loaded slightly slower in this small check and wrote at about the same speed.
 - `bench/gguf_shards_live.py` measures direct streaming chat. No Hermes, tool
   schema, special prefill, or prompt-cache reuse is involved.
 
-Ordinary `.gguf` loading is unchanged. This is an opt-in native experiment;
-Caravan does not silently switch existing web loads to it.
+At this earlier checkpoint, ordinary `.gguf` loading was unchanged and the
+prototype was opt-in. The normal picker integration above supersedes that limit.
 
 ## Real Mini check — November 10, 2026, 6:20–6:23 PM CST
 
@@ -186,27 +326,18 @@ python3 bench/gguf_shards_live.py --base http://127.0.0.1:18224 \
 ```
 
 Do not use production worker ports or replace production binaries. Stop only
-the experiment processes afterward. The usual web `.gguf` path remains the
-older full-lead/RPC-cache path until the follow-up integration is finished.
+the experiment processes afterward. These are historical standalone prototype
+commands; use the normal picker for the first-class own-part path now.
 
-## Still to do before calling this finished/default
+## Remaining validation limits
 
-1. Wire catalog/shard plans into the picker, agent, recovery, and installer;
-   record all process ownership and handle an interrupted/failed load cleanly.
-2. Extend immutable-source Range downloads to **all** new shard tensors and
-   transfer only catalog/manifest metadata to peers. Today's new CLI builds
-   from an existing local full GGUF; it does not yet give a new peer a
-   source-free/direct-download installation workflow. The live runtime itself
-   does not depend on that original GGUF.
-3. Exercise three or more physical Minis. N-way planning and argument building
-   are tested, but only two physical Minis were available for this check.
-4. Validate additional architectures, tied input/output embeddings, shared
-   global tensors, tensor aliasing, CPU fallback, and very large tensors.
-   Mismatched ownership fails closed rather than silently copying weights.
-   Multi-file source GGUFs are explicitly rejected for now.
-5. Repeat longer, randomized-order cold/warm load and generation comparisons;
-   add native loader/protocol regression coverage, source mutation/failure
-   cases, and clear progress reporting. Keep this experimental until then.
+- Three or more physical nodes: N-way planning and argument building are
+  tested, but only the 1st node and 2nd node are available for live checks.
+- Additional architectures, tied/shared tensors, aliasing, CPU fallback,
+  very large tensors and multi-file GGUF sources. Unsupported ownership or
+  architecture stops explicitly rather than sending missing weights.
+- Longer randomized cold/warm performance comparisons. No speedup is promised.
+- Publishing a Day 22 installer/package is separate work, not done here.
 
 No Day 22 release has been cut. Main synchronization is separate from a
 release; no release or package-channel change is part of this cleanup.

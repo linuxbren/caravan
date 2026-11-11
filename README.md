@@ -66,10 +66,17 @@ The browser service binds to this Mac only by default. There is no built-in logi
 [File placement](docs/FILES.md) · [Measurements](docs/BENCHMARKS.md) ·
 [Changelog](CHANGELOG.md) · [Daily releases](docs/RELEASES.md).
 
-The browser supports local MLX models and optional GGUF through a separately
-built llama.cpp runtime. N-stage MLX planning is implemented; physical inference
-has been verified on two Macs. Older picker/Optimize paths remain two-stage.
-Thunderbolt inventory/link checks are read-only, not automatic peer pairing.
+The current source branch also includes [Day 22 GGUF own-part downloads](docs/DAY22.md):
+**each Mac downloads only its part** directly from the publisher, then loads
+those verified pieces from its own disk. Split models appear in the normal
+model picker, with Load, Unload, Switch, Balance and saved restore. No full
+model is passed over the cable; the cable still carries chat activations.
+The first download prepares an isolated optional native backend (Apple build
+tools and CMake required). Unsupported sources stop with a clear error; the
+old full-file download is an explicit advanced fallback, never automatic.
+This work is not yet a Day 22 release or an update to the published installer
+channel. N-stage planning is tested; physical inference has been verified on
+two Macs. Thunderbolt inventory/link checks are read-only, not automatic peer pairing.
 
 Developers can run the portable suite without models or Macs:
 
