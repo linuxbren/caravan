@@ -54,7 +54,8 @@ Normal app access over a LAN address or tailnet does not grant pairing controls.
   public key to a marked `authorized_keys` entry. Its SSH host public key is
   returned inside the authenticated encrypted reply, then pinned in a private
   per-peer known-hosts file. Host checks are never disabled.
-- An actual strict SSH check must pass before the UI says Connected. A wrong
+- An actual strict SSH check, using an isolated app-owned SSH config (no
+  fallback to personal identity files), must pass before the UI says Connected. A wrong
   code cannot write trust/config. Failed or interrupted enrollment retains a
   cleanup credential when rollback cannot be confirmed; the page shows it.
 - Config and managed SSH blocks are validated before writing, updated through

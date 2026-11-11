@@ -96,8 +96,9 @@ class ProtocolTests(Scratch):
         lead,helper,offer=self.pair();lead.verify_ssh=True
         # Key generation must be real, not mocked by the SSH failure stub.
         lead.store.make_key(helper.id)
-        with mock.patch('pairing.subprocess.run',return_value=SimpleNamespace(returncode=1)):
+        with mock.patch('pairing.subprocess.run',return_value=SimpleNamespace(returncode=1)) as run:
             with self.assertRaises(ValueError):lead.pair(helper.id,offer['code'])
+            self.assertEqual(run.call_args.args[0][2],str(lead.store.root/'ssh'/helper.id))
         self.assertFalse(helper.store.records());self.assertFalse(lead.store.records())
     def test_active_model_prevents_remove(self):
         lead,helper,offer=self.pair();lead.pair(helper.id,offer['code']);lead.active=lambda:True

@@ -274,7 +274,7 @@ class Pairing:
                 result=self.store.enroll(peer,meta,endpoint[0],path,baseline=self.baseline())
                 row.update(result);row['state']='verifying';self.store.save(peer,row)
             if self.verify_ssh:
-                checked=subprocess.run(['ssh','-F',str(self.store.home/'.ssh/config'),result['alias'],'true'],capture_output=True,timeout=10)
+                checked=subprocess.run(['ssh','-F',result['ssh_config'],result['alias'],'true'],capture_output=True,timeout=10)
                 if checked.returncode: raise ValueError('Pairing was checked, but Remote Login could not use this account. Check the allowed account in Remote Login, then try again.')
             row['state']='active';self.store.save(peer,row)
             return {'added':True,**result,'split':'auto'}

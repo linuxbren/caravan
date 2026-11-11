@@ -266,8 +266,9 @@ class Store:
         ssh_path=self.home/'.ssh/config'
         self.private_dir(ssh_path.parent)
         ssh_text=self.block_text(ssh_path,peer,ssh,prepend=True)
-        self._transaction([(known,alias+' '+key+'\n'),(ssh_path,ssh_text),(self.config,config_text)])
-        return {'node_id':ident,'alias':alias,'name':label,'order':order,'peer':data}
+        isolated_ssh=self.root/'ssh'/peer
+        self._transaction([(known,alias+' '+key+'\n'),(isolated_ssh,ssh+'\n'),(ssh_path,ssh_text),(self.config,config_text)])
+        return {'ssh_config':str(isolated_ssh),'node_id':ident,'alias':alias,'name':label,'order':order,'peer':data}
 
     def forget_local(self, peer):
         valid_id(peer)
@@ -280,7 +281,7 @@ class Store:
         except ImportError: import tomli as tomllib
         for path,text in changes:
             if path==self.config: tomllib.loads(text)
-        paths=(self.root/'known_hosts'/peer,self.root/'keys'/peer,(self.root/'keys'/peer).with_suffix('.pub'))
+        paths=(self.root/'known_hosts'/peer,self.root/'ssh'/peer,self.root/'keys'/peer,(self.root/'keys'/peer).with_suffix('.pub'))
         if any(path.is_symlink() for path in paths): raise ValueError('Linked pairing key was kept for review.')
         self._transaction(changes)
         for path in paths:
