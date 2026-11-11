@@ -43,3 +43,9 @@ typer==0.29.0
 typing-inspection==0.4.5
 typing_extensions==4.16.0
 urllib3==2.8.0
+
+# Mac pairing; wheels available for managed Apple Silicon Python.
+spake2==0.9
+cryptography==46.0.3
+cffi==2.0.0
+pycparser==2.23

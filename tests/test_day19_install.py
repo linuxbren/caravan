@@ -453,11 +453,11 @@ class InstallerScriptTest(unittest.TestCase):
             self.assertIn("Open http://127.0.0.1:8197/",result.stdout)
             self.assertNotIn("Open http://127.0.0.1:8190/",result.stdout)
 
-    def test_worker_without_model_is_only_prepared(self):
+    def test_worker_without_model_gets_browser_pairing_service(self):
         with tempfile.TemporaryDirectory() as root:
             result = self.script(root,"--dry-run","--role","worker","--python",sys.executable)
             self.assertEqual(result.returncode,0,result.stderr)
-            self.assertIn("no worker was started",result.stdout)
+            self.assertIn("--kind web",result.stdout)
             self.assertEqual(list(Path(root).iterdir()),[])
 
     def test_existing_nonrepo_folder_is_not_overwritten(self):

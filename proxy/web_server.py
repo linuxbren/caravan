@@ -763,6 +763,9 @@ def make_handler(app: App):
             self.end_headers()
 
         def do_GET(self):
+            import web_pairing
+            if web_pairing.dispatch(self, app):
+                return
             path = self.path.split("?", 1)[0]
             if path in ("/", "/index.html"):
                 return self._serve_file("index.html")
@@ -845,6 +848,9 @@ def make_handler(app: App):
             self.wfile.write(data)
 
         def do_POST(self):
+            import web_pairing
+            if web_pairing.dispatch(self, app):
+                return
             # Always drain Content-Length before any early return. Skipping
             # that on HTTP/1.1 keep-alive leaves the JSON body on the socket;
             # the next request then looks like `{"messages":...}GET /api/...`
@@ -2129,6 +2135,8 @@ def main(argv=None):
     httpd = _Server((args.host, args.port), make_handler(app))
     httpd.daemon_threads = True
     app.httpd = httpd
+    import web_pairing
+    web_pairing.start(app)
     print(f"[caravan-web] listening on http://{args.host}:{args.port}", flush=True)
     print(f"[caravan-web] open http://<this-mac-address>:{args.port}/", flush=True)
     print(f"[caravan-web] lead worker port {args.lead_port}; packer {args.packer_peer}", flush=True)
@@ -2147,6 +2155,8 @@ def main(argv=None):
                 mgr.stop(reason="web-server exit")
             except Exception as e:
                 print(f"[caravan-web] stop warn: {e}", flush=True)
+        if getattr(app, "pairing", None):
+            app.pairing.close()
         httpd.server_close()
     return 0
 

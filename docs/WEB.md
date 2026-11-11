@@ -83,3 +83,13 @@ identities have not been renamed by the public documentation cleanup.
 
 Implementation notes, earlier screenshots, bug investigations and measurements
 are preserved in [the web development record](history/WEB-LAB.md).
+
+
+## Add Macs
+
+**Add Macs** opens a separate, private per-account page. It discovers installed
+Macs, confirms a one-use code, saves SSH/config trust and can remove a connection.
+See [everyday steps](../INSTALL.md#add-minis) and [security scope](PAIRING.md).
+The ordinary remote/LAN app view is not permission to pair Macs; use the page
+on the Mac itself. `caravan add-mini` opens the private browser session if needed.
+Pairing does not apply routes, reload the current model or bypass Remote Login.

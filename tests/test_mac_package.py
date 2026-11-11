@@ -89,12 +89,12 @@ class DoctorTests(unittest.TestCase):
 
 
 class CommandTests(unittest.TestCase):
-    def test_add_mini_only_prints_instructions(self):
-        with mock.patch.object(cli.subprocess, 'run') as run, contextlib.redirect_stdout(io.StringIO()) as out:
-            self.assertEqual(cli.main(['add-mini']), 0)
-            run.assert_not_called()
-            self.assertIn('--role worker', out.getvalue())
-            self.assertIn('read-only', out.getvalue())
+    def test_add_mini_opens_private_handoff_not_manual_ssh(self):
+        with mock.patch.object(cli.service,'stored',return_value={'port':8190}), mock.patch.object(cli.service,'assert_owned'), mock.patch('caravan_pairing.launch_file',return_value=Path('/private/handoff.html')), mock.patch.object(cli.subprocess,'run',return_value=mock.Mock(returncode=0)) as run, contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(cli.main(['add-mini']),0)
+            run.assert_called_once_with(['open','/private/handoff.html'])
+            self.assertIn('Add this Mac',out.getvalue())
+            self.assertNotIn('fingerprint',out.getvalue())
 
     def test_update_refuses_developer_checkout(self):
         with tempfile.TemporaryDirectory() as root, mock.patch.object(cli, 'ROOT', Path(root)), mock.patch.object(cli.urllib.request, 'urlopen') as network, contextlib.redirect_stderr(io.StringIO()):

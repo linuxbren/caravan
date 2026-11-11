@@ -79,3 +79,17 @@ correctness or safety problem needs attention.
 Release tags are immutable checkpoints. Later fixes and the development install
 channel may be newer than a published tag. See [CHANGELOG](../CHANGELOG.md)
 and [daily release procedure](RELEASES.md) for the distinction.
+
+
+## Mac pairing and repository trim follow-up
+
+Implemented: discovery-driven **Add Macs**, short-lived one-use code, encrypted
+key exchange, pinned SSH identity, atomic backed-up node config, N-node order
+suggestion, and authenticated removal with offline retry. The native Remote
+Login switch remains a user/admin permission. It is not automatic OS setup.
+See [PAIRING](PAIRING.md) for security limitations and acceptance evidence.
+
+Still required: independent security review, real fresh-account/FileVault and
+native browser/Settings acceptance, address-change/cable/N-Mac deployment tests.
+C++ is paused under `docs/history/cpp/`; [other clutter](CLUTTER.md) is listed for
+approval only, not deleted or moved.

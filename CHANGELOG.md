@@ -182,3 +182,17 @@ Tonight's case: Dark Champion 21B 8-bit (32 layers, ~0.71 GB/layer) on two 24 GB
   Hermes text 11.57/9.23/9.78 s. A new chat also reused the prefix. Dense
   decode stays ~6.1 tok/s; cold/changed prompts are not instant. Proxy is now
   launchd-managed on EXO1. No reboot/web restart. Full methodology in DAY20.md.
+
+
+## Mac pairing and paused C++ follow-up
+
+- Add Macs page: nearby discovery, code-confirmed encrypted enrollment, dedicated
+  SSH identity/host pin, backed-up node config and suggested N-node order.
+- One-button authenticated removal; offline retries retain cleanup credentials.
+  Native Remote Login remains an explicit Mac permission, not an installer sudo step.
+- Per-account private browser permission plus local Host/Origin/CSRF checks;
+  short-lived, one-use codes and durable guess budget. Experimental: security
+  review and native Mac acceptance remain open; see `docs/PAIRING.md`.
+- Each newly prepared helper gets a browser page. No running model is reloaded
+  by pairing and no existing worker plan is migrated silently.
+- Park C++ sources under `docs/history/cpp/`; inventory other clutter for approval.

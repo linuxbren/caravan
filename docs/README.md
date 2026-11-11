@@ -45,3 +45,5 @@ is required. Never paste an old build-log command into your Mac unchanged.
 [Build log](LOG.md) · [Measured results](BENCHMARKS.md) ·
 [Historical guide/test-environment snapshots](history/README.md).
 History describes what was tested then; it is not a promise about every Mac.
+
+[Adding Macs securely](PAIRING.md) · [Cleanup candidates (approval required)](CLUTTER.md) · [Paused C++ experiment](history/cpp/README.md).

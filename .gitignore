@@ -3,4 +3,4 @@
 models/
 __pycache__/
 *.pyc
-cpp/build/
+docs/history/cpp/build/

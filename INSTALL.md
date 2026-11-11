@@ -71,7 +71,7 @@ without changing your Terminal settings. Advanced users can add
 | `start` | Start the installed web service; never reboot the Mac |
 | `update` | Download/verify the channel's pinned source; requires web stopped; leaves it stopped |
 | `uninstall` | Remove only the web login service; keep source, models, runtime and settings |
-| `add-mini` | Show extra-Mac setup instructions (not automatic pairing) |
+| `add-mini` | Open the Add Macs page with permission for this account |
 
 Use Unload in the page **before stop** to free the model's memory. An Unload
 also saves “restore nothing.” Otherwise the last successful model and its exact
@@ -123,45 +123,39 @@ The first Mac is the **1st node** (lead); the next is the **2nd node** (helper).
 Your **development node** is the computer used to manage the project; it need
 not be a Mac or use a particular operating system. See [names and placeholders](docs/README.md).
 
-Run this on **each extra Mac**:
+1. On **each extra Mac**, run the same Easy install command. Each Mac gets a browser page; no fixed model is started.
+2. On that Mac, click **Add Macs**. Click **Open the right Mac setting**, turn on **Remote Login** for the current account, then return. If the button does not open it, use **System Settings → General → Sharing → Remote Login**. A managed/non-admin Mac may need its administrator. There is no need to give Terminal Full Disk Access.
+3. Click **Show a new code** on the new Mac. On the first Mac, open **Add Macs → Find nearby Macs**. Check its name, click **Add this Mac**, and enter that code. Setup also prints an initial code in Terminal; it expires after five minutes.
+4. Return to Caravan and choose your next model. Caravan suggests the order and works out the fit. Adding a Mac does **not** reload a running model. For a cable setup, use Balance to check the links before loading.
 
-```sh
-(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install | bash -s -- --role worker)
-```
+No hand-written connection settings, manual key copying, or fingerprint check is
+needed. Repeat for additional Macs. The first Mac gets permission to start
+Caravan programs in the new Mac's account: pair only accounts you trust. Never
+forward Remote Login or Caravan to the public internet.
 
-It prepares the software but starts no fixed-model service. On the helper,
-enable **System Settings → General → Sharing → Remote Login** for your user.
-From the lead Mac, establish SSH trust yourself: `ssh YOUR_USER@PEER_ADDRESS`.
-Verify the fingerprint, then set up key-based login so that command works
-without a password prompt. Caravan does not create trust or disable host checks.
-Never paste a private key into an issue or chat.
+**Remove a Mac:** Unload the model, then open **Add Macs → Remove this Mac** on
+the first Mac. Caravan removes its own connection settings and keys; model files
+stay. Offline? It keeps a pending removal and retries when that Mac returns.
+Until confirmed, do not assume its access has been revoked. Bring it back online
+before uninstalling either side. It never removes unrelated SSH keys/settings.
 
-On the lead, add a table to `~/.caravan/config.toml` (keep its existing local
-table and other settings):
+**Can't open Add Macs?** Use `~/.caravan/bin/caravan add-mini` on that Mac. This
+opens a private browser handoff for your account. The page deliberately refuses
+other computers and other local accounts; do not copy its private handoff files.
+Use the page on the first Mac itself, not a public/LAN browser address. VPN
+access to the ordinary app does not grant permission to pair Macs.
 
-```toml
-[web.nodes.mini2]
-label = "Mini 2"
-role = "packer"
-host = "YOUR_USER@PEER_ADDRESS"
-ssh = "YOUR_USER@PEER_ADDRESS"
-repo = "~/.caravan/src/caravan"
-peer = "PEER_PRIVATE_ADDRESS:5560"
-order = 1
-```
+Discovery looks for installed Caravan Macs over the home network/Thunderbolt or
+an existing private tailnet; it does not create a VPN, change routes, or prove
+cable bandwidth. Mac firewall permission may be needed. Automatic trust is a
+separate encrypted short-code protocol, not trust in an advertised name.
+Codes are single-use, expire quickly and allow only a few attempts. Security
+review and a fresh-account test remain release gates; see [pairing details and
+actual test coverage](docs/PAIRING.md). Old manual/source setup is preserved in
+[the developer guide](docs/DEVELOPMENT.md#manual-extra-mac-setup).
 
-Use a unique name and order for every extra Mini. Restart only the browser
-service (`caravan stop`, `caravan start`) after editing the file. Its generated
-service keeps model workers when stopped. Check Topology before loading.
-Balance supports N-stage plans; live inference is measured on two physical
-Macs, not three or more. Some older picker/Optimize paths remain two-stage;
-do not run Optimize on an N-stage Balance load. See [MLX-SPLIT](docs/MLX-SPLIT.md).
-
-**Thunderbolt discovery is read-only.** It inspects trusted configured Macs,
-checks links on request, and can preview a plan. It does not pair unknown Macs,
-install SSH keys, apply routes or replace your config. Checks expire after
-30 seconds. A reachable port does not prove peer identity. For reboot-safe
-interface endpoints and trusted-host details, see [SERVICES](docs/SERVICES.md).
+Balance supports N-stage plans; physical inference is measured on two Macs, not
+three or more. Older Optimize paths remain two-stage. See [MLX-SPLIT](docs/MLX-SPLIT.md).
 
 ## Optional integrations
 
@@ -191,7 +185,8 @@ interface endpoints and trusted-host details, see [SERVICES](docs/SERVICES.md).
 
 ## Remove Caravan safely
 
-Unload in the page, then `~/.caravan/bin/caravan uninstall`. This removes only
+Remove paired Macs first (bring both online and use **Remove this Mac**), then
+Unload in the page and run `~/.caravan/bin/caravan uninstall`. This removes only
 the owned web login job. For optional proxy/worker jobs, inspect `status` then
 use `uninstall --name NAME` for **each** owned job you intend to remove.
 Uninstall retains downloaded models, chat/cache data, source, runtime, settings,

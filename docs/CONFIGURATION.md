@@ -445,3 +445,20 @@ token in this order (first hit wins):
 The Settings field **never echoes** the secret back to the page — only
 `configured` / `source`. `GET/POST /api/hf-token` and the `hf_token` key on
 `GET /api/settings` expose status only.
+
+
+## Paired Macs
+
+Use **Add Macs** rather than hand-editing `[web.nodes.*]` for ordinary installs.
+The page appends a marked node with its host, peer/listen endpoint and suggested
+order, preserving existing settings and keeping backups. A dedicated SSH alias
+pins that Mac's host key. Private control state lives under
+`~/.caravan/pairing/`; do not copy or publish it. Removal deletes only the owned
+blocks/keys and leaves models. [Protocol and recovery](PAIRING.md).
+
+`CARAVAN_PAIRING_PORT` changes the pairing listener for isolated testing;
+`CARAVAN_PAIRING_ENABLED=0` disables it. Tailnet discovery of a non-default
+pairing address is not automatic; keep the default for ordinary installations.
+Custom config files outside the account's home need the manual developer path;
+interactive pairing refuses to edit them rather than create an unrecoverable
+cross-directory transaction.

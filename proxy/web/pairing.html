@@ -1,0 +1,10 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Add Macs · Caravan</title><link rel="stylesheet" href="/pairing.css"><main>
+<a href="/">← Back to Caravan</a><h1>Your Macs, together</h1>
+<p>Install Caravan on the new Mac. Keep both Macs on the same home network or connect them with a Thunderbolt cable.</p>
+<p id="message" role="status">Checking this Mac…</p>
+<section><h2>On the new Mac</h2><p>Turn on <strong>Remote Login</strong> for the account you are using. Caravan needs this Mac permission to work together. Do not open Remote Login to the internet.</p>
+<button id="settings">Open the right Mac setting</button><p>Then show a code here. On your first Mac, click <strong>Add this Mac</strong> and enter this code. Only someone you trust should see it.</p><button id="code">Show a new code</button><p id="mycode" class="code"></p><p id="expiry"></p></section>
+<section><h2>On the first Mac</h2><p>Find the new Mac below. Check its name and use the code shown on that Mac. Caravan saves the connection for you. It will work out what fits when you choose a model.</p><button id="find">Find nearby Macs</button><div id="nearby"></div></section>
+<section><h2>Connected Macs</h2><p>Unload your model before removing a Mac. If that Mac is offline, Caravan will finish removing its connection when it returns. Your model files are kept.</p><div id="connected"></div></section>
+<p class="note">Pairing is new. Use it only on a home network, a cable, or a private tailnet you trust. Adding a Mac gives the first Mac permission to start Caravan programs in this account. <a href="https://github.com/linuxbren/caravan/blob/caravan-v3-mlx-split/docs/PAIRING.md">Details and help</a>.</p>
+</main><script src="/pairing.js"></script></html>

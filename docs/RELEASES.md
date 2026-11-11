@@ -71,3 +71,11 @@ passing the stdlib suite proves a clean Mac installation or hardware speed.
   Current guides link history instead of requiring readers to know the build log.
 - [ ] Obtain the designated reviewer’s video brief before recording and final
   approval before publication. Do not mix media publishing with installation.
+
+
+### Pairing and parked code
+
+- Test install → private browser handoff → Add Macs → wrong/expired code → add → remove (including offline retry) in isolated homes/ports. Never re-pair production Macs just to test a release.
+- Keep Remote Login guidance honest: native System Settings permission, no automatic sudo, no request for Full Disk Access, no manual SSH/TOML in the everyday guide.
+- Keep C++ paused under `docs/history/cpp/`; do not package its binaries. Review the [clutter inventory](CLUTTER.md) with the owner before moving/removing anything else.
+- Preserve the public naming checklist above (development node, first/second Mac), no hardware memory-size recommendations and no paused integrations in everyday docs.

@@ -67,3 +67,31 @@ paths. Those behavioral assumptions are intentionally unchanged here and still
 need a separate portability/migration audit before calling arbitrary multi-Mac
 networks turnkey. Explicit inventory is the supported documented starting point;
 it does not erase every legacy fallback in the source.
+
+
+## Manual extra-Mac setup
+
+For normal installs use **Add Macs** and its one-use code; see [INSTALL](../INSTALL.md#add-minis).
+The following is the manual recovery/source route, not a required user step.
+
+Enable Remote Login on the helper for the intended account. From the lead, run
+`ssh YOUR_USER@PEER_PRIVATE_ADDRESS`, verify its fingerprint through a separate
+trusted channel, and establish key-based login without disabling host checks.
+Keep the lead's existing local node and settings; append a unique node table:
+
+```toml
+[web.nodes.helper]
+label = "Helper Mac"
+role = "packer"
+host = "YOUR_USER@PEER_PRIVATE_ADDRESS"
+ssh = "YOUR_USER@PEER_PRIVATE_ADDRESS"
+repo = "~/.caravan/src/caravan"
+peer = "PEER_PRIVATE_ADDRESS:5560"
+order = 1
+```
+
+Each helper needs a unique name and order. Use its actual installed source path.
+Back up the config before editing. Restart only the browser service with workers
+kept, then inspect Topology. Never copy a private key into chat or an issue.
+New installs get a local browser service even with `--role worker`; supplying a
+fixed `--model` remains the developer-only direct worker setup.

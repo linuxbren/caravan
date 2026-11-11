@@ -181,3 +181,12 @@ References checked Nov 8, 2026: [Hub revision/download API](https://huggingface.
 [Hub model metadata](https://huggingface.co/docs/huggingface_hub/package_reference/hf_api),
 [GGUF reader](https://github.com/ggml-org/llama.cpp/blob/master/gguf-py/gguf/gguf_reader.py),
 [gguf package](https://pypi.org/project/gguf/).
+
+
+## Connection setup and preserved history
+
+[Add Macs](PAIRING.md) stores private connection state under
+`~/.caravan/pairing/`, outside model storage. Removing a connection never deletes
+model files. The old C++ front end is paused under `docs/history/cpp/`; this does
+not pause or remove the separate llama.cpp model runtime. The
+[clutter inventory](CLUTTER.md) lists archival candidates without moving them.

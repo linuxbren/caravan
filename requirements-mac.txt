@@ -4,3 +4,8 @@ huggingface_hub
 
 # GGUF tensor metadata reader (not the llama.cpp runtime):
 gguf==0.19.0
+
+# Short-code Mac pairing (PAKE and authenticated encryption).
+spake2==0.9
+cryptography==46.0.3
+tomli==2.3.0; python_version < "3.11"

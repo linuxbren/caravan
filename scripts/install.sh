@@ -9,7 +9,7 @@ usage() {
     '       [--python PATH] [--check] [--dry-run] [--no-start] [--update] [--use-existing]' \
     'Worker plan: --model PATH [--counts K,K,... --stage-index I --listen HOST:PORT]' \
     '             [--upstream HOST:PORT | --peer HOST:PORT] [--name ID] [--port PORT]' \
-    'Lead installs the web UI; worker without a model only prepares this Mini.'
+    'Each Mac gets its browser page; a fixed-model worker is a developer option.'
 }
 ROLE=lead
 WEB_PORT=8190
@@ -22,6 +22,7 @@ UPDATE=0
 EXISTING=0
 CHECK=0
 MODEL=0
+STAGE=0
 SERVICE_ARGS=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -40,6 +41,7 @@ while [ "$#" -gt 0 ]; do
     --model|--counts|--stage-index|--listen|--upstream|--peer|--name|--port|--host|--lead-port)
       [ "$#" -ge 2 ] || fail "$1 needs a value."
       [ "$1" != --model ] || MODEL=1
+      case "$1" in --counts|--stage-index|--listen|--upstream|--peer) STAGE=1 ;; esac
       [ "$1" != --port ] || WEB_PORT=$2
       SERVICE_ARGS+=("$1" "$2"); shift 2 ;;
     *) fail "Unknown option: $1. Use --help." ;;
@@ -49,7 +51,7 @@ case "$WEB_PORT" in ''|*[!0-9]*|??????*) fail 'Choose a port number from 1 to 65
 [ "$WEB_PORT" -ge 1 ] && [ "$WEB_PORT" -le 65535 ] || fail 'Choose a port number from 1 to 65535.'
 [ "$ROLE" = lead ] || [ "$ROLE" = worker ] || fail 'Choose --role lead or --role worker.'
 [ "$ROLE" != lead ] || [ "$MODEL" = 0 ] || fail 'Install the web UI as lead first; use caravan_service.py for an optional model auto-start plan.'
-if [ "$ROLE" = worker ] && [ "$MODEL" = 0 ] && [ "${#SERVICE_ARGS[@]}" -gt 0 ]; then
+if [ "$ROLE" = worker ] && [ "$MODEL" = 0 ] && [ "$STAGE" = 1 ]; then
   fail 'Worker stage options need an installed --model folder. No worker was configured.'
 fi
 case "$REPO" in /*) ;; *) fail '--repo must be an absolute path (use "$HOME/...", not a literal ~).' ;; esac
@@ -137,16 +139,18 @@ else
   run "$VENV/bin/python" -m pip install -r "$REPO/requirements-mac.txt"
 fi
 run "$VENV/bin/python" -m pip check
-run "$VENV/bin/python" -c 'import mlx.core, mlx_lm, huggingface_hub;print("MLX imports OK")'
-# Only a fresh lead gets a single-local-node config. Never replace existing settings.
+run "$VENV/bin/python" -c 'import mlx.core, mlx_lm, huggingface_hub, spake2, cryptography;print("Mac environment imports OK")'
+# Every fresh browser install gets a single-local-node config. Never replace existing settings.
 CONFIG="$HOME/.caravan/config.toml"
-if [ "$ROLE" = lead ] && [ ! -e "$CONFIG" ]; then
+FRESH_CONFIG=0
+if { [ "$ROLE" = lead ] || [ "$MODEL" = 0 ]; } && [ ! -e "$CONFIG" ]; then
+  FRESH_CONFIG=1
   if [ "$DRY" = 1 ]; then
-    say 'Would create a single-local-Mini config (no lab SSH defaults).'
+    say 'Would create a single-local-Mac config (no lab SSH defaults).'
   else
     mkdir -p "$HOME/.caravan"
-    (set -o noclobber; printf '%s\n' '[web.nodes.local]' 'label = "My Mini"' 'role = "lead"' 'host = "local"' > "$CONFIG")
-    say 'Created the local Mini config. Existing configs are never replaced.'
+    (set -o noclobber; printf '%s\n' '[web.nodes.local]' 'label = "My Mac"' 'role = "lead"' 'host = "local"' > "$CONFIG")
+    say 'Created the local Mac config. Existing configs are never replaced.'
   fi
 fi
 # Stable command location; only publish after successful install/preparation.
@@ -167,10 +171,8 @@ if [ "$ROLE" = lead ]; then
 elif [ "$MODEL" = 1 ]; then
   KIND=worker
 else
-  register_command
-  say 'This Mini is ready. No model was chosen, so no worker was started.'
-  say "Next: $VENV/bin/python $REPO/tools/caravan_service.py install --kind worker --name packer1 --model /path/to/model ..."
-  exit 0
+  KIND=web
+  say "Preparing this Mac’s browser page so it can join your other Macs."
 fi
 SERVICE=("$VENV/bin/python" "$REPO/tools/caravan_service.py" install --kind "$KIND" --repo "$REPO" --python "$VENV/bin/python")
 if [ "$START" = 0 ]; then SERVICE+=(--no-start); fi
@@ -181,5 +183,8 @@ else
   "${SERVICE[@]}" ${SERVICE_ARGS[@]+"${SERVICE_ARGS[@]}"}
 fi
 register_command
-say 'Done. Services start at user login, not before login. Models and SSH setup are not downloaded or configured for you.'
-[ "$ROLE" != lead ] || say "Open http://127.0.0.1:$WEB_PORT/ (local browser). Logs: ~/.caravan/logs/"
+say 'Done. Caravan starts at user login, not before login. Choose a model in the browser.'
+if [ "$KIND" = web ]; then
+  if [ "$FRESH_CONFIG" = 1 ]; then run "$VENV/bin/python" "$REPO/tools/caravan_pairing.py" prepare; fi
+  say "Open http://127.0.0.1:$WEB_PORT/ (local browser). To add a Mac, choose Add Macs. Logs: ~/.caravan/logs/"
+fi

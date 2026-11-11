@@ -1,3 +1,27 @@
+# Paused C++ experiment
+
+**Paused, not part of the Mac installer.** Caravan is focusing on the Python
+browser app and its current multi-Mac runtime. Keeping a second front end in
+step would make installation and support harder. This directory preserves the
+experiment and its history; it is not a replacement for the separate llama.cpp
+runtime still used for optional models.
+
+To resume: review the old assumptions and machine-specific examples below,
+choose a compatible llama.cpp revision, then build from the repository root:
+
+```sh
+cmake -S docs/history/cpp -B docs/history/cpp/build -DLLAMA_CPP_DIR=/path/to/llama.cpp
+cmake --build docs/history/cpp/build
+```
+
+Port the current configuration, trust and discovery rules before considering a
+release. Revalidate on isolated Macs; do not run old hard-coded examples against
+an existing installation. Historical commands below refer to the old `cpp/`
+location; substitute `docs/history/cpp/`. Git retains the original file history
+(`git log --follow -- docs/history/cpp/main.cpp`).
+
+---
+
 # caravan (C++, v0.1)
 
 The start of the unified-binary vision from `docs/ARCHITECTURE.md`: one

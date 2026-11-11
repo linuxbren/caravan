@@ -43,7 +43,7 @@ this follow-up's artifacts are prepared for a later authorized release.
 - Hash-locked dependency artifacts/wheel availability across supported macOS versions,
   offline download-failure tests, and transactional update/rollback (source
   backups exist; environment rollback is manual).
-- Automatic trusted multi-Mac pairing and UI onboarding. Day 21 discovery only
+- Independent security review and native/fresh-account acceptance of the new short-code pairing UI. Day 21 discovery itself only
   inventories/checks configured trusted peers; it cannot apply a plan.
 - Signed/notarized app or package and updater. The publisher needs an Apple Developer
   membership/Developer ID and a secure signing workflow; do not share keys here.
@@ -58,3 +58,26 @@ under a production service label, even with a temporary HOME.
 
 See the [follow-up record in DAY21.md](DAY21.md). Portable script/unit tests and isolated
 Mac setup are recorded separately from live reboot/inference evidence.
+
+
+## Pairing/trim follow-up verification
+
+- Portable suite (with `requirements-test.txt`): **1,095 tests passed**, including
+  35 new protocol/config/removal/local-management tests. Full output is retained
+  on the development box; this is not a native macOS acceptance result.
+- Real HTTP add/remove smoke between two scratch homes on the Linux box passed;
+  no production SSH files/config were used. SSH verification is mocked in those
+  protocol tests; `ssh -G` checks the actual generated strict OpenSSH settings.
+- All four new pinned dependencies were downloaded successfully as binary
+  wheels for managed Apple Silicon Python 3.12 (no compiler/CLT fallback).
+- Read-only checks of the existing Macs confirmed current checkouts; the second
+  Mac does not yet have the new PAKE dependency. No restart, trust/config edit,
+  model action or reboot was performed by this task.
+- Pending: isolated protocol and real SSH/native browser/Remote Login tests on
+  macOS, fresh-account/FileVault test, security review, pushed-channel bootstrap
+  verification and updating the package pin after the reviewed code is pushed.
+  Do not call the new pairing feature live-proven until those are recorded.
+
+The C++ experiment was parked with Git renames and resume instructions. Other
+cleanup is an [approval-only inventory](CLUTTER.md), not a deletion plan already
+executed. No release or tag was changed for this follow-up.

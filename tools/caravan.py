@@ -29,8 +29,11 @@ def main(argv=None):
                 port = 8190
             return doctor(["--port", str(port)])
         if args.action == "add-mini":
-            print("On each extra Apple Silicon Mac, run:\n(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install | bash -s -- --role worker)\nThen enable Remote Login and configure trusted SSH from the lead.\nOpen " + str(ROOT / "INSTALL.md") + " → Add Minis. Discovery is read-only, not automatic pairing.")
-            return 0
+            plan = service.stored(args.name, Path.home())
+            service.assert_owned(plan, require=True)
+            from caravan_pairing import launch_file
+            print("On the new Mac, run the same install command. In its Add Macs page, turn on Remote Login and show a code. Here, choose Add this Mac and enter that code. No manual SSH or settings-file edits.")
+            return subprocess.run(["open", str(launch_file(plan["port"]))]).returncode
         if args.action == "update":
             if not (ROOT / ".caravan-package").exists():
                 raise ValueError("This is a source checkout. Update it with git pull --ff-only, then rerun scripts/install.sh with the same options. No checkout changed.")
@@ -43,7 +46,7 @@ def main(argv=None):
             with tempfile.NamedTemporaryFile(suffix=".sh") as script:
                 script.write(data); script.flush()
                 cmd = ["bash", script.name, "--update", "--role", role, "--no-start"]
-                if role == "lead":
+                if role in ("lead", "worker"):
                     plan = service.stored(args.name, Path.home())
                     cmd += ["--port", str(plan["port"]), "--name", args.name]
                 result = subprocess.run(cmd)
@@ -55,7 +58,8 @@ def main(argv=None):
         service.assert_owned(plan, require=True)
         if args.action == "open":
             if plan["kind"] != "web": raise ValueError("Choose the web service to open the browser")
-            return subprocess.run(["open", f"http://127.0.0.1:{plan['port']}/"]).returncode
+            from caravan_pairing import launch_file
+            return subprocess.run(["open", str(launch_file(plan["port"], next_home=True))]).returncode
         if args.action == "uninstall":
             print("Removing only this service. Models, settings, runtime, source and command are kept. No model deletion is offered.")
             return service.main(["uninstall", "--name", args.name])

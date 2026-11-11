@@ -29,13 +29,13 @@ Caravan starts when you log in. After a reboot, unlock your Mac and log in. It b
 
 ## Add another Mac
 
-On the other Mac, open Terminal and paste:
+1. On the new Mac, run the **same install command** above. Open **Add Macs** in its Caravan page.
+2. Click **Open the right Mac setting** and turn on **Remote Login** for your account. Return to Caravan and click **Show a new code**.
+3. On your first Mac, open **Add Macs**, click **Find nearby Macs**, then **Add this Mac**. Enter the code shown on the new Mac.
 
-```sh
-(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install | bash -s -- --role worker)
-```
+Caravan saves the connection. Repeat for each extra Mac. You do not need to edit settings files or check long fingerprints. Unload your model before using **Remove this Mac**. [Help with adding Macs](INSTALL.md#add-minis).
 
-This prepares it. **Connecting the Macs is not yet automatic.** Follow [Add Macs](INSTALL.md#add-minis) to allow a trusted connection and add it to Caravan. You can add more than one helper. Automatic setup is still on the plan.
+Pairing is new and experimental. Only connect Macs and accounts you trust. Your Mac may ask an administrator to allow Remote Login; Caravan cannot bypass that permission.
 
 ## Stop, remove, or get help
 
@@ -76,10 +76,12 @@ tools and CMake required). Unsupported sources stop with a clear error; the
 old full-file download is an explicit advanced fallback, never automatic.
 This work is not yet a Day 22 release or an update to the published installer
 channel. N-stage planning is tested; physical inference has been verified on
-two Macs. Thunderbolt inventory/link checks are read-only, not automatic peer pairing.
+two Macs. Thunderbolt inventory/link checks remain read-only. The separate
+[short-code pairing flow](docs/PAIRING.md) establishes trust and saves node configuration.
 
 Developers can run the portable suite without models or Macs:
 
 ```sh
+python3 -m pip install -r requirements-test.txt
 PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests
 ```

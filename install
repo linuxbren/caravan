@@ -93,17 +93,20 @@ say 'Preparing private Python 3.12. Nothing changes the Mac system Python.'
 "$UV" python install 3.12.11
 PYTHON=$("$UV" python find --managed-python 3.12.11)
 ARGS=(--role "$ROLE" --repo "$REPO" --use-existing --python "$PYTHON")
-[ "$ROLE" != lead ] || ARGS+=(--port "$PORT" --name "$NAME")
+ARGS+=(--port "$PORT" --name "$NAME")
 [ "$START" = 1 ] || ARGS+=(--no-start)
 bash "$REPO/scripts/install.sh" "${ARGS[@]}"
 say 'Next time: ~/.caravan/bin/caravan status (or doctor, start, stop, update, uninstall, add-mini).'
-if [ "$ROLE" = lead ] && [ "$START" = 1 ]; then
+if [ "$START" = 1 ]; then
   READY=0
   for attempt in {1..30}; do
     if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/" >/dev/null; then READY=1; break; fi
     sleep 1
   done
-  if [ "$READY" = 1 ]; then open "http://127.0.0.1:$PORT/"; else say 'The web page is not ready yet. Run ~/.caravan/bin/caravan doctor and check ~/.caravan/logs/web.log.'; exit 1; fi
+  if [ "$READY" = 1 ]; then
+    HANDOFF=$("$HOME/.caravan/venvs/mlx/bin/python" "$REPO/tools/caravan_pairing.py" launch-file --port "$PORT" --home-page)
+    open "$HANDOFF"
+  else say 'The web page is not ready yet. Run ~/.caravan/bin/caravan doctor and check ~/.caravan/logs/web.log.'; exit 1; fi
 fi
 
 }

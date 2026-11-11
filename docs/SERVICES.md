@@ -354,3 +354,19 @@ The lead installer still installs the web service by itself; add this plan
 when an OpenAI client needs it. 1st node's plan was installed live without reboot
 or web restart. Its subsequent Day21 login/reboot recovery passed on the
 existing lab accounts; see the historical measurements in [DAY21.md](DAY21.md).
+
+
+## Browser-based Mac pairing
+
+Fresh installs now give each Mac its own local browser page, including
+`--role worker` without a fixed model. The web process owns a separate private-
+network pairing listener (default TCP 8197), advertises via Bonjour, and stops
+that listener with the web process. Existing fixed-model worker plans are not
+changed. Only a fresh browser config gets an initial short-lived offer; updates
+do not renew pairing windows. A local user can explicitly show a new code.
+
+Remote Login is a native System Settings permission, never enabled silently.
+Code-confirmed pairing adds dedicated, restricted SSH keys and pinned host keys;
+it never reads an existing private identity. See [PAIRING](PAIRING.md).
+`caravan uninstall` still removes only the requested service: remove connected
+Macs in the page **before** uninstalling so both sides can revoke their keys.

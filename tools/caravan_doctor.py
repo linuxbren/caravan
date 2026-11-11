@@ -28,7 +28,7 @@ def checks(home=None, port=8190):
     add("OK" if os.access(home, os.W_OK) else "ERROR", "Home folder must be writable.")
     py = home / ".caravan/venvs/mlx/bin/python"
     if py.exists():
-        result = subprocess.run([str(py), "-c", "import mlx.core,mlx_lm,huggingface_hub"], capture_output=True, text=True)
+        result = subprocess.run([str(py), "-c", "import mlx.core,mlx_lm,huggingface_hub,spake2,cryptography"], capture_output=True, text=True)
         add("ERROR" if result.returncode else "OK", "MLX environment " + ("needs repair: rerun setup. " + result.stderr.strip()[-300:] if result.returncode else "imports correctly."))
     else:
         add("WARN", "MLX environment not installed yet. The Mac bootstrap supplies Python and MLX.")
@@ -38,6 +38,16 @@ def checks(home=None, port=8190):
     except OSError:
         add("OK", f"Port {port} is available (or the web service is stopped).")
     add("INFO", "Login is required after reboot. FileVault must be unlocked first; setup does not change security or auto-login.")
+    try:
+        with socket.create_connection(("127.0.0.1", 8197), timeout=1):
+            add("INFO", "Mac pairing address is in use (possibly Caravan). If Add Macs fails, check for another instance; do not kill unknown apps.")
+    except OSError:
+        add("INFO", "Mac pairing service is stopped or not installed yet. Start Caravan to use Add Macs.")
+    try:
+        with socket.create_connection(("127.0.0.1", 22), timeout=.5):
+            add("INFO", "Remote Login is reachable. Add Macs verifies its identity with a one-use code.")
+    except OSError:
+        add("INFO", "To add this Mac to another, open Add Macs → Open the right Mac setting and turn on Remote Login for this account.")
     add("INFO", "Models, optional runtimes and trusted Mac connections are separate setup steps. See INSTALL.md.")
     add("INFO", "No network checks performed. Downloads require GitHub, PyPI and model-host access; check Wi-Fi/firewall if setup fails.")
     return rows

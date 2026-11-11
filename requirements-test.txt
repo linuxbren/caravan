@@ -1,0 +1,5 @@
+# Portable tests; no MLX, model downloads or Mac required (Python 3.11+).
+spake2==0.9
+cryptography==46.0.3
+cffi==2.0.0
+pycparser==2.23

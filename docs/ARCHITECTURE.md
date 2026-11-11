@@ -56,7 +56,7 @@ flowchart LR
 | MLX worker | `agent/mlx_worker.py`, launched via `agent/mlx_backend.py` | Caravan's own OpenAI-compatible MLX server with per-session caches. See [MLX.md](MLX.md). |
 | MLX split (v3) | `agent/mlx_split.py`, `agent/mlx_worker.py --split-role`, `agent/mlx_split_fetch.py` | One MLX model across two Macs: Packer 1 runs the first layers, the lead runs the rest and serves the API, over one TCP connection on the Thunderbolt cable. Split download prototype. See [MLX-SPLIT.md](MLX-SPLIT.md). |
 | launchd | `launchd/` | Plists for the agent, the proxy, and a manual per-role setup. The llama-server and MLX plists can be rendered from the agent's own command builders (`render_llama_plist.py`, `render_mlx_plist.py`). |
-| C++ binary | `cpp/` | Experimental: lead or packer in one process, linking llama.cpp. Proven end to end once; not production-ready. |
+| Paused C++ experiment | `docs/history/cpp/` | Parked to focus on the current Python/browser Mac app; not installed or built by the package. |
 
 ## A request, start to finish
 
@@ -363,10 +363,10 @@ Details for every step are in [LOG.md](LOG.md). What's next is in
 
 - **Python today.** No build step, cheap to change. The agent needs
   3.10+. The proxy is stdlib-only and runs on 3.9+.
-- **The unified-binary experiment (`cpp/`).** This links llama.cpp as a
+- **The paused unified-binary experiment (`docs/history/cpp/`).** This links llama.cpp as a
   library (`llama_server()` for the lead,
   `ggml_backend_rpc_start_server()` for the packer) with mDNS and Tailscale
-  discovery ported from Python. See [cpp/README.md](../cpp/README.md).
+  discovery ported from Python. See [resume notes](history/cpp/README.md).
 - **If Caravan is ever packaged for other people**, a compiled agent is
   the likely route.
   - Go: easiest cross-compiling.
