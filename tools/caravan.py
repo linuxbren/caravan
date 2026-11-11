@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Small per-user Mac control command. Never manages unverified jobs."""
 import argparse
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -15,10 +16,37 @@ import caravan_service as service
 import service_config as SC
 
 
+def simple_status(name="web"):
+    try:
+        plan = service.stored(name, Path.home())
+        service.assert_owned(plan, require=True)
+    except (OSError, ValueError, KeyError):
+        print("Caravan is not running: setup is missing or needs repair. Run the install command again.")
+        return 1
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{plan['port']}/api/status", timeout=3) as response:
+            data = json.load(response)
+        if not isinstance(data, dict) or not isinstance(data.get('worker'), dict):
+            raise ValueError("Unexpected status response")
+    except (OSError, ValueError):
+        print("Caravan is not running: its browser service is stopped or not responding. Run caravan start; if that fails, run caravan doctor.")
+        return 1
+    worker = data['worker']
+    if worker.get('error'):
+        problem = ' '.join(str(worker['error']).split())
+        print(f"Caravan is not running: {problem.rstrip('.')}. Open Caravan and load the model again; run caravan doctor if it fails.")
+        return 1
+    print("Caravan is running")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("start", "stop", "status", "doctor", "update", "uninstall", "add-mini", "open"))
     parser.add_argument("--name", default="web", help="one owned service; default web")
+    parser.add_argument("--full", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--everything", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--yes", action="store_true", help="with uninstall: confirm removal of all Caravan data")
     args = parser.parse_args(argv)
     try:
         if args.action == "doctor":
@@ -53,17 +81,17 @@ def main(argv=None):
             if result.returncode == 0: print("Updated; run caravan start when ready. Old source backup kept; models/settings unchanged.")
             return result.returncode
         if args.action == "status":
-            return service.main(["status"])
+            return simple_status(args.name)
+        if args.action == "uninstall":
+            from caravan_uninstall import uninstall
+            print(uninstall(yes=args.yes))
+            return 0
         plan = service.stored(args.name, Path.home())
         service.assert_owned(plan, require=True)
         if args.action == "open":
             if plan["kind"] != "web": raise ValueError("Choose the web service to open the browser")
             from caravan_pairing import launch_file
             return subprocess.run(["open", str(launch_file(plan["port"], next_home=True))]).returncode
-        if args.action == "uninstall":
-            print("Remove connected Macs in Add Macs first, with both online. Uninstall alone does not revoke their access.")
-            print("Removing only this service. Models, settings, runtime, source and command are kept. No model deletion is offered.")
-            return service.main(["uninstall", "--name", args.name])
         service.check_platform(); service.gui_ready()
         target = service.domain() + "/" + plan["label"]
         loaded = service.run_launchctl(["print", target]).returncode == 0

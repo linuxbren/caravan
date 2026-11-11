@@ -32,6 +32,7 @@ while [ "$#" -gt 0 ]; do
     --no-start) START=0; shift ;;
     --update) UPDATE=1; shift ;;
     --use-existing) EXISTING=1; shift ;;
+    --replace-old-services) SERVICE_ARGS+=(--replace-old-services); shift ;;
     --role|--repo|--ref|--python)
       [ "$#" -ge 2 ] || fail "$1 needs a value."
       case "$1" in
@@ -140,6 +141,8 @@ else
 fi
 run "$VENV/bin/python" -m pip check
 run "$VENV/bin/python" -c 'import mlx.core, mlx_lm, huggingface_hub, spake2, cryptography;print("Mac environment imports OK")'
+run "$VENV/bin/python" "$REPO/agent/llama_runtime.py"
+run "$VENV/bin/python" "$REPO/tools/caravan_path.py" install
 # Every fresh browser install gets a single-local-node config. Never replace existing settings.
 CONFIG="$HOME/.caravan/config.toml"
 FRESH_CONFIG=0
@@ -183,6 +186,7 @@ else
   "${SERVICE[@]}" ${SERVICE_ARGS[@]+"${SERVICE_ARGS[@]}"}
 fi
 register_command
+say 'Open a new Terminal window to use caravan (for example: caravan status).'
 say 'Done. Caravan starts at user login, not before login. Choose a model in the browser.'
 if [ "$KIND" = web ]; then
   if [ "$FRESH_CONFIG" = 1 ]; then run "$VENV/bin/python" "$REPO/tools/caravan_pairing.py" prepare; fi

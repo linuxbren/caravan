@@ -3226,3 +3226,13 @@ all other clutter is kept. No release/tag or development-node checkout changed.
 See [Day 22 follow-up](DAY22.md#pairing-and-mac-package-follow-up--2026-11-10-cst)
 and [PAIRING](PAIRING.md) for evidence and remaining native-browser,
 fresh-account/FileVault and independent security-review gates.
+
+
+## Day 23 — clean-install findings and fixes
+
+See [DAY23.md](DAY23.md): private official engine pin, complete multi-part model
+sets, automatic placement/fallback, visible load errors, simple status, startup
+backup/replacement, quiet optional discovery, PATH setup, Topology pairing and
+complete confirmed uninstall. Work and portable verification are isolated on the
+box and a development-node worktree. No 1st node or 2nd node was touched.
+Native acceptance is explicitly pending; tests are not Mac proof.

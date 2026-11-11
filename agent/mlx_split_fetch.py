@@ -342,25 +342,35 @@ def _fetch_gguf(a, d, token):
     """One GGUF file → local_dir. Same progress hook / process name as MLX fetches,
     so the picker's network-byte progress, Stop, Resume and retry all apply.
     Big files go through range_fetch, so a partial .incomplete resumes."""
-    from huggingface_hub import snapshot_download
     sizes = file_sizes(a.repo, token=token)
-    name = a.gguf_file
-    if name not in sizes:
-        raise SystemExit(f"{name} not in {a.repo}")
-    report = {"repo": a.repo, "role": "all", "files": [name], "gguf": True,
-              "my_gb": round(sizes[name] / 1e9, 2), "full_gb": round(sizes[name] / 1e9, 2)}
+    from gguf_sets import members
+    names = members(a.gguf_file, sizes)
+    name = names[0]
+    total = sum(sizes[n] for n in names)
+    report = {"repo": a.repo, "role": "all", "files": names, "gguf": True,
+              "my_gb": round(total / 1e9, 2), "full_gb": round(total / 1e9, 2)}
     print(json.dumps(report), flush=True)
     stop_evt = threading.Event()
     emitter = None
     if not a.dry_run and not a.no_progress:
         emitter = threading.Thread(target=_emit_progress_loop,
-                                   args=(stop_evt, a.repo, d, int(sizes[name]), os.getpid()),
+                                   args=(stop_evt, a.repo, d, int(total), os.getpid()),
                                    daemon=True, name="caravan-fetch-progress")
         emitter.start()
     try:
         if not a.dry_run:
-            _range_fetch_all(a.repo, d, [name], sizes, token)
-            (d / 'caravan-gguf-source.json').write_text(json.dumps({'repo_id': a.repo, 'filename': name}))
+            import hashlib
+            stage = d / '.gguf-downloads' / hashlib.sha256(name.encode()).hexdigest()[:16]
+            stage.mkdir(parents=True, exist_ok=True)
+            _range_fetch_all(a.repo, stage, names, sizes, token)
+            for part in names:
+                if (stage / part).stat().st_size != sizes[part]:
+                    raise ValueError("The model download is incomplete. Press Resume to finish it.")
+            for part in names:
+                target = d / part
+                target.parent.mkdir(parents=True, exist_ok=True)
+                (stage / part).replace(target)
+            (d / 'caravan-gguf-source.json').write_text(json.dumps({'repo_id': a.repo, 'filename': name, 'files': {n: sizes[n] for n in names}}))
             print("FETCHED gguf", report["my_gb"], "GB", flush=True)
     finally:
         stop_evt.set()

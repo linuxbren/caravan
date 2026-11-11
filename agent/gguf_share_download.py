@@ -27,6 +27,10 @@ FORMAT = 'gguf-shards'
 MAX_HEADER = 64 << 20
 
 
+class UnsupportedLayout(ValueError):
+    """Valid model that needs the standard whole-file engine."""
+
+
 def atomic(path, value):
     path = Path(path)
     if path.is_symlink(): raise ValueError('linked metadata refused')
@@ -159,8 +163,8 @@ def parse_header(f, quant_sizes):
     for i in range(nkv):
         f.minimum=nt*24+(nkv-i)*13
         key=string();t=integer('I');meta[key]=val(t,nt*24+(nkv-i-1)*13)
-    if meta.get('general.architecture') not in ('llama','qwen2'):raise ValueError('own-share downloads currently require llama or qwen2 architecture; choose explicit full-file fallback')
-    if meta.get('split.count',1)!=1:raise ValueError('multi-file GGUF source is not yet supported')
+    if meta.get('general.architecture') not in ('llama','qwen2'):raise UnsupportedLayout('This model will download as a complete file.')
+    if meta.get('split.count',1)!=1:raise UnsupportedLayout('This model has several files; all will be downloaded.')
     layers=[v for k,v in meta.items() if k.endswith('.block_count')]
     if len(layers)!=1 or type(layers[0]) is not int or not 0<layers[0]<=4096:raise ValueError('invalid block count')
     tensors=[]
@@ -169,10 +173,10 @@ def parse_header(f, quant_sizes):
         name=string();nd=integer('I')
         if not re.fullmatch('[A-Za-z0-9_.-]+',name) or not 1<=nd<=4:raise ValueError('unsupported tensor directory')
         dims=[integer('Q') for _ in range(nd)];typ=integer('I');off=integer('Q')
-        if typ not in quant_sizes or any(n<=0 for n in dims):raise ValueError('unsupported GGUF tensor type/shape')
+        if typ not in quant_sizes or any(n<=0 for n in dims):raise UnsupportedLayout('This model will download as a complete file.')
         block,size=quant_sizes[typ];n=math.prod(dims)
         if n%block:raise ValueError('tensor is not quant-block aligned')
-        if not name.startswith('blk.') and name not in ('token_embd.weight','output_norm.weight','output_norm.bias','output.weight','output.bias'):raise ValueError('shared/unknown global tensor needs an explicitly supported ownership rule; no cable fallback')
+        if not name.startswith('blk.') and name not in ('token_embd.weight','output_norm.weight','output_norm.bias','output.weight','output.bias'):raise UnsupportedLayout('This model will download as a complete file.')
         tensors.append(dict(name=name,offset=off,size=n//block*size))
     align=meta.get('general.alignment',32)
     if type(align) is not int or align<1 or align>4096 or align&(align-1):raise ValueError('invalid GGUF alignment')

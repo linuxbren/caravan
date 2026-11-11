@@ -186,7 +186,10 @@ class WebShareTests(unittest.TestCase):
         self.W=W;self.tmp=tempfile.TemporaryDirectory();self.home=Path(self.tmp.name)
         self.reg=patch.object(W,'REGISTRY',self.home/'registry');self.reg.start()
         self.nodes=[dict(id='n0',role='lead',label='1st node',host='local'),dict(id='n1',role='packer',label='2nd node',host='trusted-peer')]
-        self.app=SimpleNamespace(configured_nodes=lambda:self.nodes,nodes=lambda:dict(nodes=[dict(n,ram=dict(available_gb=10)) for n in self.nodes]),mgr=SimpleNamespace(repo='/repo',python=sys.executable))
+        self.app=SimpleNamespace(configured_nodes=lambda:self.nodes,nodes=lambda:dict(nodes=[dict(n,ram=dict(available_gb=10,total_gb=16)) for n in self.nodes]),mgr=SimpleNamespace(repo='/repo',python=sys.executable))
+        import web_picker, gguf_runtime
+        self.blobs=patch.object(web_picker,'_fetch_repo_blobs',return_value=dict(gguf_files=[dict(rfilename='model.gguf',size=15_000_000_000)]));self.blobs.start();self.addCleanup(self.blobs.stop)
+        self.runtime=patch.object(gguf_runtime,'current',return_value=Path('/custom/bin'));self.runtime.start();self.addCleanup(self.runtime.stop)
     def tearDown(self):self.reg.stop();self.tmp.cleanup()
     def handler(self):
         import web_server

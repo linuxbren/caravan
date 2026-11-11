@@ -6,12 +6,13 @@ set -euo pipefail
 main() {
 say() { printf '[Caravan] %s\n' "$*"; }
 fail() { say "$*" >&2; exit 1; }
-ROLE=lead; CHECK=0; UPDATE=0; START=1; PORT=8190; NAME=web
+REPLACE=0; ROLE=lead; CHECK=0; UPDATE=0; START=1; PORT=8190; NAME=web
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --help|-h) say 'Usage: install [--role lead|worker] [--check] [--update] [--no-start] [--port PORT] [--name NAME]'; exit 0 ;;
     --check) CHECK=1; shift ;;
     --update) UPDATE=1; shift ;;
+    --replace-old-services) REPLACE=1; shift ;;
     --no-start) START=0; shift ;;
     --role|--port|--name) [ "$#" -ge 2 ] || fail "$1 needs a value"; case "$1" in --role) ROLE=$2 ;; --port) PORT=$2 ;; --name) NAME=$2 ;; esac; shift 2 ;;
     *) fail "Unknown option: $1. Use --help." ;;
@@ -97,8 +98,9 @@ HAS_PAIRING=0
 ARGS=(--role "$ROLE" --repo "$REPO" --use-existing --python "$PYTHON")
 if [ "$ROLE" = lead ] || [ "$HAS_PAIRING" = 1 ]; then ARGS+=(--port "$PORT" --name "$NAME"); fi
 [ "$START" = 1 ] || ARGS+=(--no-start)
+[ "$REPLACE" = 0 ] || ARGS+=(--replace-old-services)
 bash "$REPO/scripts/install.sh" "${ARGS[@]}"
-say 'Next time: ~/.caravan/bin/caravan status (or doctor, start, stop, update, uninstall, add-mini).'
+say 'Open a new Terminal window to use caravan. Next time: caravan status (or doctor, start, stop, update, uninstall, add-mini).'
 if [ "$START" = 1 ] && { [ "$ROLE" = lead ] || [ "$HAS_PAIRING" = 1 ]; }; then
   READY=0
   for attempt in {1..30}; do

@@ -1059,6 +1059,21 @@
   #balancePanel #balanceDetails select, #balancePanel #balanceDetails input { max-width: 100%; }
   #balancePanel #balanceMemory[aria-busy=true] { opacity: .55; }
 
+
+.pairing-columns { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.pairing-columns section { min-width:0; padding:16px; border:1px solid var(--line); background:var(--bg2); border-radius:var(--radius); }
+.pairing-columns h2 { font-size:1rem; margin:0 0 12px; color:var(--accent); }
+.pairing-columns p { font-size:.82rem; line-height:1.5; }
+.pairing-columns button, .mac button { background:var(--bg3); color:var(--text); border:1px solid var(--accent); border-radius:var(--radius); padding:8px 12px; font:inherit; cursor:pointer; }
+.pairing-columns input { max-width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line); padding:8px; font:inherit; }
+.code { font-size:1.5rem; letter-spacing:.15em; color:var(--accent); }
+.mac { padding:12px; border:1px solid var(--line); margin:10px 0; background:var(--bg3); }
+.pairing-panel { padding:16px; border-top:1px solid var(--line); }
+.add-mac-card { min-height:100px; width:100%; border:2px dashed var(--accent); color:var(--accent); background:var(--bg2); font:inherit; cursor:pointer; }
+.add-mac-banner { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); width:max-content; max-width:96vw; padding:10px; border:1px solid var(--accent); background:var(--bg2); color:var(--text); z-index:45; font-size:.8rem; }
+@media(max-width:640px) { .pairing-columns { grid-template-columns:1fr; } }
+
+@media(min-width:700px) { #topoDrawer { width:min(880px,94vw); } }
 </style>
 </head>
 <body>
@@ -1110,7 +1125,6 @@
         <button type="button" class="btn-settings" id="btnOpenSettings">Settings</button>
         <button type="button" class="btn-picker" id="btnOpenPicker">Models</button>
         <button type="button" class="btn-topo" id="btnOpenTopo">Topology</button>
-        <a class="btn ghost sm" href="/pairing">Add Macs</a>
         <button type="button" class="btn-clear" id="btnClear">Clear chat</button>
         <button type="button" class="btn-think" id="btnThink" title="Click to change how much the model thinks before answering">Thinking: off</button>
       </div>
@@ -1161,7 +1175,16 @@
   </div>
   <div class="topo-body" id="topoBody">
     <!-- Cards built from /api/nodes (N Minis from config). -->
+    <button type="button" class="ghost add-mac-card" id="btnAddMac">+ Add a Mac</button>
   </div>
+  <section class="pairing-panel" id="pairingPanel" hidden><h2>Add a Mac</h2><button type="button" class="ghost" id="closePairing">Close setup</button><p>Install Caravan on the new Mac. Keep both Macs on the same home network or connect them with a Thunderbolt cable.</p>
+<p id="message" role="status">Checking this Mac…</p>
+<div class="pairing-columns"><section><h2>On the new Mac</h2><p>Turn on <strong>Remote Login</strong> for the account you are using. Caravan needs this Mac permission to work together. Do not open Remote Login to the internet.</p>
+<p id="loginStatus" role="status"></p>
+<button id="settings">Open the right Mac setting</button><p>Then show a code here. On your first Mac, click <strong>Add this Mac</strong> and enter this code. Only someone you trust should see it.</p><button id="code">Show a new code</button><p id="mycode" class="code"></p><p id="expiry"></p></section>
+<section><h2>On your first Mac</h2><p>Find the new Mac below. Check its name and use the code shown on the new Mac. Caravan saves the connection for you. It will work out what fits when you choose a model.</p><button id="find">Find nearby Macs</button><div id="nearby"></div></section></div>
+<div id="connected" hidden></div></section>
+
   <section class="drawer-section" id="balancePanel" aria-label="Balance">
     <div class="balance-heading"><h3>Balance</h3><span id="balanceMode">Auto · recommended</span></div>
     <p class="balance-intro">Share the model across your Minis, leaving room for other apps.</p>
@@ -1241,10 +1264,6 @@
         <option value="50">≤ 50 GB</option>
       </select>
     </div>
-    <details class="help"><summary>GGUF download options</summary>
-      <p>Each Mac downloads only its part straight from the source. No full copy or cable weight transfer.</p>
-      <label><input type="checkbox" id="ggufFullFallback"> Use the old full-file fallback instead (complete file on the 1st node; weights may cross the cable)</label>
-    </details>
     <div class="picker-status" id="pickerStatus">Open to search Hugging Face…</div>
     <div class="picker-job" id="pickerJob" hidden></div>
     <div id="pickerList"></div>
@@ -1319,6 +1338,7 @@
 
 </div>
 
+<div id="addMacBanner" class="add-mac-banner" hidden role="status">Have another Mac? Add it to run bigger models. <button type="button" class="primary" id="bannerAddMac">Add a Mac</button> <button type="button" class="ghost" id="dismissAddMac" aria-label="Dismiss add a Mac suggestion">×</button></div>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -1694,7 +1714,7 @@
       const usable = m.usable !== false && (m.available_lead || m.usable);
       let label = (usable ? "● " : "○ ") + m.name;
       if (m.sharded) label += " — each Mac keeps only its part";
-      if (!usable && m.disabled_reason) label += " — " + m.disabled_reason;
+      if (!usable) label += " — " + (m.available_lead === false && !m.lead_path ? "not downloaded — open Models to Download" : (m.disabled_reason || "not ready"));
       const warns = m.warnings || [];
       if (warns.length || m.split_note) label += " ⚠";
       opt.textContent = label;
@@ -2429,7 +2449,7 @@
           <span class="led" data-led title="Power / live"></span>
         </div>
       </div>`;
-    body.appendChild(card);
+    body.insertBefore(card, document.getElementById("btnAddMac"));
     return card;
   }
   function syncCards(nodes) {
@@ -2535,6 +2555,8 @@
       const r = await fetch("/api/nodes"); const j = await r.json();
       const nodes = j.nodes || [];
       syncCards(nodes);
+      if (window.updateAddMacBanner) window.updateAddMacBanner(nodes.length);
+      if (window.paintPairingRemovals) window.paintPairingRemovals();
       for (const n of nodes) paintNode(n);
     } catch (e) {
       for (const id of topoOrder) {
@@ -2582,6 +2604,28 @@
     else openTopo();
   }
     document.getElementById("btnOpenTopo").addEventListener("click", toggleTopo);
+  window.openCaravanPairing = () => {
+    openTopo();
+    document.getElementById("pairingPanel").hidden = false;
+    if (window.refreshCaravanPairing) window.refreshCaravanPairing();
+  };
+  document.getElementById("btnAddMac").onclick = window.openCaravanPairing;
+  document.getElementById("bannerAddMac").onclick = window.openCaravanPairing;
+  document.getElementById("closePairing").onclick = () => { document.getElementById("pairingPanel").hidden = true; };
+  document.getElementById("dismissAddMac").onclick = () => {
+    try { localStorage.setItem("caravan-add-mac-dismissed", "1"); } catch (_) {}
+    document.getElementById("addMacBanner").hidden = true;
+  };
+  window.updateAddMacBanner = (count) => {
+    let dismissed = false;
+    try { dismissed = localStorage.getItem("caravan-add-mac-dismissed") === "1"; } catch (_) {}
+    document.getElementById("addMacBanner").hidden = count !== 1 || dismissed;
+  };
+  async function refreshMacSuggestion() {
+    try { const j = await api("/api/nodes"); window.updateAddMacBanner((j.nodes || []).length); } catch (_) {}
+  }
+  refreshMacSuggestion(); setInterval(refreshMacSuggestion, 10000);
+  if (location.hash === "#add-mac") window.openCaravanPairing();
 
   // ---- Model picker (ROADMAP) -----------------------------------------
   (function () {
@@ -2833,7 +2877,7 @@
           const nodes = qfit.nodes_needed == null ? "—" : (qfit.nodes_needed === 0 ? "cloud" : qfit.nodes_needed + "n");
           const size = q.weights_gb != null ? `${q.weights_gb} GB` : "size unknown";
           const conv = q.needs_conversion ? " · needs conversion" : "";
-          btn.innerHTML = `<span class="p-dot ${qfit.color || "gray"}"></span>
+          btn.innerHTML = `Download <span class="p-dot ${qfit.color || "gray"}"></span>
             <span class="q-name">${escapeHtml(q.quant || q.name || q.repo_id)}${conv}</span>
             <span class="q-size">${size}</span>
             <span class="q-nodes">${nodes}</span>`;
@@ -2861,12 +2905,10 @@
         // Plan first; every Mac downloads only its own ranges from the source.
         if (!q.gguf_file) { alert("Pick one quant file for this GGUF repo."); return; }
         if (q.fit && q.fit.color === "red" && !confirm(`Won't fit (~${q.weights_gb} GB). ${q.fit.reason || ""}\nDownload anyway?`)) return;
-        const fullFallback = $("ggufFullFallback").checked;
-        if (fullFallback && !confirm("Use the old full-file fallback? It downloads a complete original to the 1st node and may send weights across the cable.")) return;
-        $("pickerStatus").textContent = fullFallback ? "Downloading the explicit full-file fallback…" : "Planning the split; each Mac will download only its part…";
+        $("pickerStatus").textContent = "Preparing your model download…";
         try {
           const data = await api("/api/picker/download", { method: "POST",
-            body: JSON.stringify({ repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0, full_file_fallback: fullFallback }) });
+            body: JSON.stringify({ repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0 }) });
           state.job = data.job; showJob(); pollJob(data.job.id, q);
         } catch (e) { $("pickerStatus").textContent = "Download failed: " + (e.error || e.message || e); }
         return;
@@ -3045,7 +3087,7 @@
       if (l) l.onclick = async () => {
         l.disabled = true;
         try { await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: j.load_id || j.repo_id }) }); $("pickerStatus").textContent = "Loading " + j.repo_id + "…"; }
-        catch (e) { $("pickerStatus").textContent = "Load failed: " + e.message; l.disabled = false; }
+        catch (e) { $("pickerStatus").textContent = "Could not load: " + String(e.error || e.message || "Please try again.").replace(/\s+/g, " ").trim(); l.disabled = false; }
       };
     }
     function askLoadNow(name) {
@@ -3083,7 +3125,8 @@
                 try {
                   await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: (j && j.load_id) || q.repo_id }) });
                 } catch (e) {
-                  $("pickerStatus").textContent = "Downloaded. Load from Settings: " + e.message;
+                  state.jobLoadable = true; showJob();
+                  $("pickerStatus").textContent = "Could not load: " + String(e.error || e.message || "Please try again.").replace(/\s+/g, " ").trim();
                 }
               } else {
                 state.jobLoadable = true; showJob();
@@ -3254,5 +3297,6 @@
 <script src="/thunderbolt.js"></script>
 <script src="/balance_view.js"></script>
 <script src="/balance.js"></script>
+<script src="/pairing.js"></script>
 </body>
 </html>

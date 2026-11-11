@@ -684,7 +684,7 @@ class App:
         for g in gguf_split.scan_local():
             place = gguf_split.placement_options(g["size_gb"], nodes)
             out.append({
-                "id": g["id"], "name": g["name"] + " (GGUF full-file fallback)", "hf": g["id"],
+                "id": g["id"], "name": g["name"] + " (GGUF)", "hf": g["id"],
                 "source": "gguf", "backend": "llama", "lead_path": g["path"],
                 "size_gb": g["size_gb"], "usable": bool(place["default_id"]),
                 "available_lead": True,
@@ -692,7 +692,7 @@ class App:
                 "placement_options": place["options"],
                 "default_placement": place["default_id"],
                 "current": g["id"] == current,
-                "note": "Explicit full-file fallback: peer weights may cross the link",
+                "note": "Downloaded and ready to load",
             })
         import web_gguf_shares
         return out + web_gguf_shares.entries(nodes,current)
@@ -1421,13 +1421,39 @@ def make_handler(app: App):
                 if not lead:
                     return self._json(400, {"error": "No lead configured"})
                 body = dict(body, placement_id=None)
-                if body.get('full_file_fallback') is not True:
+                # Sizes come from the source, never the browser's per-part estimate.
+                from gguf_sets import members
+                info = web_picker._fetch_repo_blobs(repo)
+                sizes = {f['rfilename']: int(f.get('size') or 0) for f in info.get('gguf_files', [])}
+                try:
+                    parts = members(gguf_file, sizes)
+                except ValueError as e:
+                    return self._json(400, error_payload(e))
+                gguf_file = parts[0]
+                body = dict(body, gguf_file=gguf_file, weights_gb=sum(sizes[n] for n in parts)/1e9)
+                import gguf_split
+                live_nodes = (app.nodes() or {}).get('nodes') or app.configured_nodes()
+                places = gguf_split.placement_options(body['weights_gb'], live_nodes)
+                chosen = next((o for o in places['options'] if o['id'] == places['default_id']), None)
+                if not chosen:
+                    return self._json(400, {'error': 'This model will not fit on your available Macs. Choose a smaller model or add a Mac.'})
+                if chosen['mode'] == 'split' and len(parts) == 1:
                     try:
-                        import web_gguf_shares,web_files
-                        plan=web_gguf_shares.preview(app,dict(body,repo_id=repo,gguf_file=gguf_file),fresh=True)
-                        if not plan['safe']:return self._json(409,{'error':'This split does not fit safely on every selected node','balance':{k:v for k,v in plan.items() if k not in ('manifest','entry','file_requests')}})
-                        return self._json(200,{'job':web_files.start(app,plan),'note':'Each Mac downloads only its part; no full copy or cable weight transfer'})
-                    except (ValueError,OSError,KeyError,RuntimeError) as e:return self._json(400,error_payload(e))
+                        import web_gguf_shares, web_files
+                        plan = web_gguf_shares.preview(app, dict(body, repo_id=repo, node_ids=chosen['node_ids']), fresh=True)
+                        if not plan['safe']:
+                            return self._json(409, {'error': 'There is not enough free memory to load this model safely. Close other apps or choose a smaller model.'})
+                        # The specialized share engine is developer-built, not the
+                        # official release. Clean installs use standard RPC instead.
+                        from gguf_runtime import current
+                        current()
+                        return self._json(200, {'job': web_files.start(app, plan), 'note': 'Downloading this model across your Macs…'})
+                    except web_gguf_shares.D.UnsupportedLayout:
+                        pass
+                    except FileNotFoundError:
+                        pass
+                    except (ValueError, OSError, KeyError, RuntimeError) as e:
+                        return self._json(400, error_payload(e))
             import web_helpers
             helper = web_helpers.pairing(body.get("helper_id")) if body.get("helper_id") else None
             if body.get("helper_id") and (not helper or repo != helper["draft"]["hf_repo"]):
@@ -1439,7 +1465,7 @@ def make_handler(app: App):
                 packer_layers = int(packer_layers) if packer_layers is not None else None
             except (TypeError, ValueError):
                 packer_layers = None
-            if packer_layers is None:
+            if packer_layers is None and not gguf_file:
                 # Same default as the catalog (web_catalog._default_packer_layers), and
                 # it is saved in caravan-placement.json, so download/catalog/load agree.
                 import web_catalog
@@ -1502,7 +1528,7 @@ def make_handler(app: App):
                 ids = [lid]
                 place = {"mode": "one", "full_copy": True, "node_ids": ids, "enabled": True,
                          "label": f"GGUF to {len(ids)} Mini{'s' if len(ids) > 1 else ''} · "
-                                  "complete lead file; peer tensor fetch in Balance"}
+                                  "ready to use"}
             if helper:
                 lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
                 if not lead:
@@ -1561,9 +1587,7 @@ def make_handler(app: App):
 
             if gguf_file:
                 try:
-                    gsz = next((int(g.get("size") or 0) for g in
-                                web_picker._fetch_repo_blobs(repo).get("gguf_files") or []
-                                if g.get("rfilename") == gguf_file), 0)
+                    gsz = sum(sizes[n] for n in parts)
                 except Exception:
                     gsz = int(weights * 1e9)
                 totals = {"lead": gsz, "packer": gsz, "each": gsz, "full": gsz}
@@ -1633,18 +1657,18 @@ def make_handler(app: App):
                     pid_file = f"/tmp/caravan-fetch-{repo_id.replace('/', '--')}.pid"
                     repo_path = (node.get("repo") or "~/cv3").rstrip("/")
                     script = (
-                        "mkdir -p %s; rm -f %s; "
+                        "mkdir -p %s; rm -f %s %s.exit; "
                         "( ~/.caravan/venvs/mlx/bin/python %s/agent/mlx_split_fetch.py "
                         "%s %s --role %s "
-                        % (dest_q, pid_file, repo_path, repo_id, dest_q, role)
+                        % (dest_q, pid_file, pid_file, repo_path, repo_id, dest_q, role)
                     )
                     if gguf_file:
                         script += "--gguf-file %s " % shlex.quote(gguf_file)
                     elif pk and role != "all":
                         script += "--packer-layers %d " % int(pk)
                     script += (
-                        "> /tmp/caravan-fetch-%s.log 2>&1 & echo $! > %s; echo FETCH_STARTED )"
-                        % (node.get("id") or "node", pid_file)
+                        "; echo $? > %s.exit ) > /tmp/caravan-fetch-%s.log 2>&1 & echo $! > %s; echo FETCH_STARTED"
+                        % (pid_file, node.get("id") or "node", pid_file)
                     )
                     prog(1, f"starting {node.get('label') or node.get('id')} fetch ({role})")
                     r = app._ssh_fn()(node, script, timeout=60)
@@ -1674,6 +1698,10 @@ def make_handler(app: App):
                                     repo_id, node.get("id") or node.get("label"), ln[7:])
                         last = st[-1] if st else "DONE"
                         if last == "DONE":
+                            result = app._ssh_fn()(node, "cat %s.exit 2>/dev/null; tail -3 %s" % (pid_file, log_f), timeout=30)
+                            lines = (result.stdout or "").strip().splitlines()
+                            if not lines or lines[0] != "0":
+                                raise RuntimeError("Download did not finish. Press Resume to retry. " + " ".join(lines[1:])[-200:])
                             break
                         _t.sleep(1.5)
                     prog(100, "done")

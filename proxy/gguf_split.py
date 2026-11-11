@@ -18,7 +18,8 @@ import shlex
 from pathlib import Path
 from typing import Optional
 
-LLAMA_BIN = os.environ.get("CARAVAN_LLAMA_BIN", "~/dev/llama.cpp/build/bin")
+from llama_runtime import bin_dir as llama_bin_dir
+LLAMA_BIN = str(llama_bin_dir())
 RPC_PORT = int(os.environ.get("CARAVAN_GGUF_RPC_PORT", "50052"))
 GGUF_CTX = int(os.environ.get("CARAVAN_GGUF_CTX", "8192"))
 GGUF_ROOTS = [Path(p).expanduser() for p in os.environ.get(
@@ -46,11 +47,22 @@ def scan_local(roots=None) -> list:
             continue
         for p in sorted(root.rglob("*.gguf")):
             name = p.name.lower()
+            if any(part.startswith('.') for part in p.relative_to(root).parts):
+                continue
             if "mmproj" in name or ("-of-" in name and "-00001-of-" not in name):
                 continue
             try:
-                size = p.stat().st_size  # follows symlinks
-            except OSError:
+                from gguf_sets import members
+                nearby = {str(f.relative_to(p.parent)): f.stat().st_size for f in p.parent.glob("*.gguf")}
+                parts = members(p.name, nearby)
+                size = sum(nearby[n] for n in parts)
+                # If downloaded here, insist on the exact verified byte counts too.
+                import json
+                receipt = p.parent / 'caravan-gguf-source.json'
+                expected = json.loads(receipt.read_text()).get('files', {}) if receipt.exists() else {}
+                if any(nearby.get(n) != count for n, count in expected.items() if n in parts):
+                    continue
+            except (OSError, ValueError):
                 continue
             if size < 50_000_000:
                 continue
@@ -169,8 +181,12 @@ def rpc_start_command(*, port: int = RPC_PORT, bin_dir: str = LLAMA_BIN) -> str:
     `-d MTL0` gives one RPC device per Mini, so RPC<i> maps to peer i.
     Exit 3 = port busy by something we don't own; 4 = died / not listening.
     """
-    binp = _rpath(bin_dir.rstrip("/") + "/ggml-rpc-server")
+    from llama_runtime import PIN
+    remote = "~/.caravan/runtime/llama/" + PIN["version"] + "/ggml-rpc-server"
+    fallback = _rpath(bin_dir.rstrip("/") + "/ggml-rpc-server")
+    binp = '"$CARAVAN_RPC_BIN"'
     return (
+        f"CARAVAN_RPC_BIN={_rpath(remote)}; [ -x \"$CARAVAN_RPC_BIN\" ] || CARAVAN_RPC_BIN={fallback}; "
         "mkdir -p ~/.caravan/web-ui; "
         + rpc_stop_command() + "; "
         + f"if lsof -nP -iTCP:{int(port)} -sTCP:LISTEN >/dev/null 2>&1; then echo PORT_BUSY; exit 3; fi; "

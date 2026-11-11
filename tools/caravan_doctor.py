@@ -48,7 +48,21 @@ def checks(home=None, port=8190):
             add("INFO", "Remote Login is reachable. Add Macs verifies its identity with a one-use code.")
     except OSError:
         add("INFO", "To add this Mac to another, open Add Macs → Open the right Mac setting and turn on Remote Login for this account.")
-    add("INFO", "Models, optional runtimes and trusted Mac connections are separate setup steps. See INSTALL.md.")
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "agent"))
+    from llama_runtime import ready, location, PIN
+    add("OK" if ready(home) else "ERROR", f"Model engine {PIN['version']}: " + (str(location(home)) if ready(home) else "not installed or incomplete. Rerun setup (or caravan update)."))
+    try:
+        import caravan_service
+        from contextlib import redirect_stdout
+        import io
+        detail = io.StringIO()
+        with redirect_stdout(detail):
+            caravan_service.main(["status"])
+        for line in detail.getvalue().splitlines():
+            add("INFO", line)
+    except (OSError, ValueError):
+        add("INFO", "Service details unavailable; rerun setup.")
+    add("INFO", "Models and trusted Mac connections are separate setup steps. See INSTALL.md.")
     add("INFO", "No network checks performed. Downloads require GitHub, PyPI and model-host access; check Wi-Fi/firewall if setup fails.")
     return rows
 

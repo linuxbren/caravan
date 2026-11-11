@@ -100,11 +100,49 @@ def assert_owned(plan, require=False, *, staged=None):
         else:
             value = plistlib.loads(p[key].read_bytes())
             expected = SC.render(plan, staged=staged)
+        if key == "plist" and isinstance(value, dict) and 'Comment' not in value:
+            expected = {k: v for k, v in expected.items() if k != 'Comment'}
         if value != expected:
-            raise ValueError("Service definition differs. Uninstall the existing owned job before changing its plan; nothing was overwritten")
+            raise ValueError("Old Caravan startup files point to a different installation. Nothing was replaced. Rerun setup with --replace-old-services to back them up and use this installation.")
 
 
-def install(plan, *, start=True, dry_run=False, stage_login=False, run=run_launchctl):
+def backup_old_service(plan, run=run_launchctl):
+    """Explicit opt-in only. Validate identity, preserve bytes, then unload."""
+    paths = SC.paths(plan)
+    plist = paths['plist']
+    if not plist.is_file() or plist.is_symlink() or paths['config'].is_symlink():
+        raise ValueError("Cannot verify the old Caravan startup file; no files changed.")
+    old = plistlib.loads(plist.read_bytes())
+    args = old.get('ProgramArguments') or []
+    scripts = {'web': 'proxy/web_server.py', 'worker': 'agent/caravan_agent.py', 'proxy': 'proxy/slot_pin_proxy.py'}
+    suffix = scripts.get(plan['kind'])
+    if old.get('Label') != plan['label'] or not suffix or not any(str(a).endswith('/' + suffix) for a in args):
+        raise ValueError("The existing startup file could not be verified as Caravan. Keep it and inspect it manually.")
+    if paths['config'].exists():
+        prior = SC.load(paths['config'])
+        if prior['label'] != plan['label'] or prior['home'] != plan['home']:
+            raise ValueError("Old startup settings belong to another service; nothing changed.")
+    import shutil
+    import tempfile
+    folder = Path(plan['home']) / '.caravan/service-backups'
+    folder.mkdir(parents=True, exist_ok=True)
+    backup = Path(tempfile.mkdtemp(prefix='previous-', dir=folder))
+    for key in ('config', 'plist'):
+        if paths[key].exists():
+            shutil.copy2(paths[key], backup / paths[key].name)
+    target = domain() + '/' + plan['label']
+    if run(['print', target]).returncode == 0:
+        result = run(['bootout', target])
+        if result.returncode:
+            raise ValueError(f"Could not stop the old Caravan service; backup kept at {backup}. Nothing replaced.")
+    # Verified files are now backed up; the following install writes new plans.
+    for key in ('config', 'plist'):
+        if paths[key].exists():
+            paths[key].unlink()
+    print(f"[Caravan] Previous startup files saved at {backup}. Models and settings kept.")
+
+
+def install(plan, *, start=True, dry_run=False, stage_login=False, replace_old=False, run=run_launchctl):
     if stage_login and start:
         raise ValueError("--stage-login requires --no-start; it must not take over running workers")
     staged = True if stage_login else None
@@ -116,7 +154,13 @@ def install(plan, *, start=True, dry_run=False, stage_login=False, run=run_launc
                           "files":{k:str(v) for k,v in paths.items()},"start":start},indent=2))
         return
     check_platform()
-    assert_owned(plan, staged=staged)
+    validate_files(plan)
+    try:
+        assert_owned(plan, staged=staged)
+    except ValueError:
+        if not replace_old or stage_login:
+            raise
+        backup_old_service(plan, run)
     validate_files(plan)
     target = domain()+"/"+plan["label"]
     if start:
@@ -256,6 +300,7 @@ def parser():
     ap.add_argument("--peer")
     ap.add_argument("--no-start",action="store_true")
     ap.add_argument("--stage-login",action="store_true",help="with --no-start, stage future-login plans without taking over current workers")
+    ap.add_argument("--replace-old-services", action="store_true", help="back up verified old startup files before replacing them")
     ap.add_argument("--dry-run",action="store_true")
     return ap
 
@@ -269,7 +314,7 @@ def main(argv=None):
                              lead_port=(args.port if args.port is not None else args.lead_port) if args.kind == "worker" else args.lead_port,
                              model=args.model,counts=args.counts,stage_index=args.stage_index,
                              listen=args.listen,upstream=args.upstream,peer=args.peer)
-            install(p,start=not args.no_start,dry_run=args.dry_run,stage_login=args.stage_login)
+            install(p,start=not args.no_start,dry_run=args.dry_run,stage_login=args.stage_login,replace_old=args.replace_old_services)
         else:
             if args.name:
                 plans = [stored(args.name,Path.home())]

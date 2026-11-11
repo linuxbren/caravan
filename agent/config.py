@@ -67,8 +67,9 @@ TARGET_MODEL = resolve_target_model()
 # llama.cpp binaries -- same paths used by the hand-written launchd
 # plists in ../launchd/. Not yet unified with those plists; this agent is
 # meant to eventually replace them (see ARCHITECTURE.md, issue #1).
-LLAMA_SERVER_BIN = Path.home() / "dev" / "llama.cpp" / "build" / "bin" / "llama-server"
-RPC_SERVER_BIN = Path.home() / "dev" / "llama.cpp" / "build" / "bin" / "ggml-rpc-server"
+from llama_runtime import bin_dir as llama_bin_dir
+LLAMA_SERVER_BIN = llama_bin_dir() / "llama-server"
+RPC_SERVER_BIN = llama_bin_dir() / "ggml-rpc-server"
 
 # Ports. RPC_PORT and LLAMA_SERVER_PORT match tonight's proven manual
 # setup. AGENT_PORT is a small HTTP surface each agent exposes for peer

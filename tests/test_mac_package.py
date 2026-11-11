@@ -101,11 +101,11 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(cli.main(['update']), 2)
             network.assert_not_called()
 
-    def test_uninstall_uses_owned_service_only(self):
-        with mock.patch.object(cli.service, 'stored', return_value={}), mock.patch.object(cli.service, 'assert_owned') as owned, mock.patch.object(cli.service, 'main', return_value=0) as control, contextlib.redirect_stdout(io.StringIO()):
+    def test_uninstall_removes_all_owned_services_and_keeps_data(self):
+        with mock.patch('caravan_uninstall.uninstall', return_value='Caravan uninstalled; all Caravan data removed.') as remove, contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(cli.main(['uninstall']), 0)
-            owned.assert_called_once_with({}, require=True)
-            control.assert_called_once_with(['uninstall', '--name', 'web'])
+            remove.assert_called_once_with(yes=False)
+            self.assertEqual(len(out.getvalue().splitlines()),1)
 
     def test_unverified_service_refuses_action(self):
         with mock.patch.object(cli.service, 'stored', side_effect=ValueError('not owned')), mock.patch.object(cli.service, 'run_launchctl') as run, contextlib.redirect_stderr(io.StringIO()):

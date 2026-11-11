@@ -95,3 +95,48 @@ Back up the config before editing. Restart only the browser service with workers
 kept, then inspect Topology. Never copy a private key into chat or an issue.
 New installs get a local browser service even with `--role worker`; supplying a
 fixed `--model` remains the developer-only direct worker setup.
+
+
+## Clean-install runtime and recovery
+
+Every install, including a new paired Mac and `caravan update`, prepares the
+SHA256-pinned official macOS arm64 llama.cpp release in
+`~/.caravan/runtime/llama/<version>`. The source manifest is
+`runtime/llama-release.json`. Keep the shipped dylibs beside the executables.
+The standard engine supports full GGUF sets and RPC. The custom Day 22
+own-share engine remains isolated at its original source revision; the official
+release does not implement Caravan's custom shard format. Clean installs
+use standard full-GGUF RPC when that optional custom engine is unavailable.
+
+For an old verified startup plan, rerun the same installer with
+`--replace-old-services`. It preserves copies in `~/.caravan/service-backups/`
+before unloading the matching job and replacing the files. Unrelated labels,
+commands and linked files are refused. Models and application settings are not
+removed. Do not run this during inference. `caravan doctor` retains detailed
+service information; `caravan status` is deliberately one line.
+
+The installer manages a marked PATH block in `.zprofile` (and `.bash_profile`
+for bash login shells). Open a new Terminal after setup. `caravan uninstall` removes all verified local Caravan jobs, owned local workers,
+its marked PATH/SSH entries, and the entire `~/.caravan` tree, including models,
+settings, keys, source and runtimes. It previews the total bytes and asks once;
+`--yes` skips the prompt. Remove paired Macs first. Unverified startup files and
+the unrelated remote-access watchdog stay untouched. Only exact known repository
+workers and recorded engine/tunnel PIDs are stopped; no remote commands run.
+
+
+For a developer/source installation, keep using the **same repo, role, Python,
+ports and service names**:
+
+```sh
+cd /your/existing/caravan
+# Check/commit your own edits first. Never reset them.
+git pull --ff-only origin caravan-v3-mlx-split
+bash scripts/install.sh --use-existing --repo "$PWD" --python /absolute/path/to/python3
+```
+
+Python must be native Apple Silicon 3.10+. `scripts/install.sh --dry-run`
+previews commands without writing; `--check` runs read-only doctor checks.
+The source installer still needs Git to clone an absent repo; use the easy
+bootstrap if you have no Git/Python. Never point a new installer at a live lab
+checkout with different service plans. It refuses differing owned plans rather
+than replacing them. No automatic migration of custom services is claimed.

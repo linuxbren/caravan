@@ -1,1 +1,148 @@
-:root{color-scheme:light dark;font:17px system-ui,sans-serif}body{margin:0;background:Canvas;color:CanvasText}main{max-width:780px;margin:auto;padding:28px}h1{font-size:2rem}section{border:1px solid #8886;border-radius:14px;padding:20px;margin:24px 0}button,input{font:inherit;padding:10px;margin:5px;border-radius:8px}button{cursor:pointer}.code{font:2.3rem ui-monospace,monospace;letter-spacing:.1em}.note{font-size:.9rem;opacity:.8}.mac{border-top:1px solid #8886;margin-top:14px;padding-top:14px}a{color:LinkText}#message{min-height:1.5em}input{max-width:13ch}button:disabled{opacity:.5;cursor:wait}
+  :root, html[data-theme="amber"] {
+    --bg: #050504;
+    --bg2: #0c0c08;
+    --bg3: #14140c;
+    --line: #3f3a14;
+    --text: #ffe9a0;
+    --muted: #c9a840;
+    --accent: #efc923;
+    --accent2: #ffe45c;
+    --glow: rgba(239,201,35,.42);
+    --amber: var(--accent);
+    --amber2: var(--accent2);
+    --teal: var(--accent);
+    --teal2: var(--accent2);
+    --rose: #ff7b8a;
+    --ok: #d4b020;
+    --warn: #ffd040;
+    --shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+    --radius: 2px;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: var(--mono);
+    --bloom: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent);
+    --scan: rgba(255, 220, 80, 0.035);
+  }
+  html[data-theme="green"] {
+    --bg: #030704;
+    --bg2: #08110a;
+    --bg3: #0e1810;
+    --line: #1e3a24;
+    --text: #b8f5c0;
+    --muted: #5f9a68;
+    --accent: #3ecf5a;
+    --accent2: #7afe8e;
+    --glow: rgba(62,207,90,.45);
+    --amber: var(--accent);
+    --amber2: var(--accent2);
+    --teal: var(--accent);
+    --teal2: var(--accent2);
+    --rose: #ff7b8a;
+    --ok: #5dde8a;
+    --warn: #c9f06e;
+    --shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+    --radius: 2px;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: var(--mono);
+    --bloom: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent);
+    --scan: rgba(120, 255, 150, 0.035);
+  }
+  /* Omarchy desktop — Cross Country palette (viewer system theme) */
+  html[data-theme="omarchy"] {
+    --bg: #0c1018;
+    --bg2: #151b26;
+    --bg3: #202a38;
+    --line: #2b3647;
+    --text: #ddd9ce;
+    --muted: #99a3b1;
+    --accent: #d2a66c;
+    --accent2: #e4c78e;
+    --glow: rgba(210,166,108,.28);
+    --amber: var(--accent);
+    --amber2: var(--accent2);
+    --teal: var(--accent);
+    --teal2: var(--accent2);
+    --rose: #d69289;
+    --ok: #a7b58b;
+    --warn: #d2b57e;
+    --shadow: 0 12px 40px rgba(0,0,0,.45);
+    --radius: 10px;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --sans: "Inter", "SF Pro Text", system-ui, -apple-system, sans-serif;
+    --bloom: none;
+    --scan: transparent;
+  }
+
+  html[data-theme="nebula"] {
+    --bg: rgba(10,12,26,.58);
+    --bg2: rgba(12,14,30,.68);
+    --bg3: rgba(26,26,48,.82);
+    --line: rgba(224,180,130,.22);
+    --text: #f3eee6;
+    --fg: #f3eee6;
+    --muted: #c6c8d8;
+    --accent: #e0893a;
+    --accent2: #7cc4ff;
+    --glow: transparent;
+    --amber: var(--accent);
+    --amber2: #9fd3ff;
+    --teal: var(--accent);
+    --teal2: #9fd3ff;
+    --rose: #fda4af;
+    --ok: #6ee7b7;
+    --warn: #fcd34d;
+    --shadow: 0 12px 40px rgba(0,0,10,.45), 0 1px 0 rgba(255,255,255,.06) inset;
+    --radius: 14px;
+    --statmono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: "Nunito", "Avenir Next", "SF Pro Rounded", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace; /* layout font is shared by every theme */
+    --bloom: none;
+    --scan: transparent;
+  }
+  html[data-theme="meadow"] {
+    --bg: rgba(255,255,255,.55);
+    --bg2: rgba(248,252,246,.70);
+    --bg3: rgba(255,255,255,.84);
+    --line: rgba(28,72,40,.24);
+    --text: #10261a;
+    --fg: #10261a;
+    --muted: #3a5646;
+    --accent: #2e7d32;
+    --accent2: #1d659b;
+    --glow: transparent;
+    --amber: var(--accent);
+    --amber2: #1d5f8f;
+    --teal: var(--accent);
+    --teal2: #1d5f8f;
+    --rose: #b3261e;
+    --ok: #2e7d32;
+    --warn: #8a5a00;
+    --shadow: 0 10px 34px rgba(20,50,30,.16), 0 1px 0 rgba(255,255,255,.6) inset;
+    --radius: 14px;
+    --statmono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: "Nunito", "Avenir Next", "SF Pro Rounded", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace; /* layout font is shared by every theme */
+    --bloom: none;
+    --scan: transparent;
+  }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:var(--mono); }
+main { max-width:1120px; margin:auto; padding:20px; }
+header { display:flex; align-items:center; gap:24px; border-bottom:1px solid var(--line); color:var(--accent); }
+a { color:var(--accent); }
+button { background:var(--bg3); color:var(--text); border:1px solid var(--accent); border-radius:var(--radius); padding:8px 12px; font:inherit; cursor:pointer; }
+button:hover { background:var(--accent); color:var(--bg); }
+button:disabled { opacity:.5; cursor:default; }
+.note, #message { color:var(--muted); line-height:1.5; }
+
+.pairing-columns { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.pairing-columns section { min-width:0; padding:16px; border:1px solid var(--line); background:var(--bg2); border-radius:var(--radius); }
+.pairing-columns h2 { font-size:1rem; margin:0 0 12px; color:var(--accent); }
+.pairing-columns p { font-size:.82rem; line-height:1.5; }
+.pairing-columns button, .mac button { background:var(--bg3); color:var(--text); border:1px solid var(--accent); border-radius:var(--radius); padding:8px 12px; font:inherit; cursor:pointer; }
+.pairing-columns input { max-width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line); padding:8px; font:inherit; }
+.code { font-size:1.5rem; letter-spacing:.15em; color:var(--accent); }
+.mac { padding:12px; border:1px solid var(--line); margin:10px 0; background:var(--bg3); }
+.pairing-panel { padding:16px; border-top:1px solid var(--line); }
+.add-mac-card { min-height:100px; width:100%; border:2px dashed var(--accent); color:var(--accent); background:var(--bg2); font:inherit; cursor:pointer; }
+.add-mac-banner { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); width:max-content; max-width:96vw; padding:10px; border:1px solid var(--accent); background:var(--bg2); color:var(--text); z-index:45; font-size:.8rem; }
+@media(max-width:640px) { .pairing-columns { grid-template-columns:1fr; } }

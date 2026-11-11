@@ -105,7 +105,7 @@ class Commands(unittest.TestCase):
                 with open(os.path.join(d, n), "wb") as f:
                     f.truncate(60_000_000)
             ids = [g["id"] for g in G.scan_local([Path(d)])]
-        self.assertEqual(sorted(ids), ["gguf/a", "gguf/b-00001-of-00003"])
+        self.assertEqual(sorted(ids), ["gguf/a"])  # incomplete split set is not loadable
 
 
 class FreeRam(unittest.TestCase):

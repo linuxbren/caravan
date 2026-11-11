@@ -588,9 +588,10 @@ def _enrich_sizes(rows: list) -> list:
             continue
         rid = r["repo_id"]
         info = blobs.get(rid) or {}
-        gguf_files = info.get("gguf_files") or []
+        from gguf_sets import groups
+        gguf_files = groups(info.get("gguf_files") or [])
         # Multi-file GGUF repo → one row per quant file with its real size.
-        if r.get("source") == "gguf" and len(gguf_files) >= 2:
+        if r.get("source") == "gguf" and len(gguf_files) >= 1:
             for gf in gguf_files:
                 fname = gf["rfilename"]
                 size = int(gf.get("size") or 0)

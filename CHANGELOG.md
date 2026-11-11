@@ -1,5 +1,17 @@
 ### Day 21 release — day21-2026-11-10 (published 2026-11-10 CST)
 
+## Day 23 — clean-install fixes (pending native acceptance)
+
+- Supply a checksum-pinned official llama.cpp b12283 engine on every Mac install/update.
+- Download complete multi-part GGUF sets, select whole-file/split behavior automatically,
+  and show downloaded models and useful load errors in the normal picker.
+- Simple status, detailed doctor, safe backed-up startup-file replacement, quiet discovery,
+  and idempotent Terminal PATH setup.
+- Add-a-Mac flow inside Topology, first-run invitation and themed two-column setup.
+- Complete confirmed uninstall: all owned local jobs/workers/data and marked PATH/SSH entries.
+- Beginner guide wording and portable regression tests. Native acceptance remains required;
+  see [Day 23](docs/DAY23.md). No Minis changed during implementation.
+
 ## Day 21 follow-up — Mac installation and documentation
 
 - Friendly Mac-owner README and current Day 20/21 setup, Balance, restore,
