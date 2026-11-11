@@ -1,5 +1,20 @@
 # Configuration
 
+## Current install defaults (Day 21 follow-up)
+
+The Mac bootstrap creates a **single local Mini** entry on a fresh install.
+It never overwrites an existing config. No personal SSH address is installed.
+Older source-only configurations with no `[web.nodes]` still use lab fallbacks;
+always create an explicit inventory outside the lab. See [INSTALL](../INSTALL.md).
+
+Balance is Auto-first. Adjust previews each Mini's memory; Apply performs a
+validated reload and locks chat until ready. The last successful model/placement
+is saved in `~/.caravan/web-ui/last-model.json`; Unload saves “restore nothing.”
+Login restore retries temporary readiness failures for up to ten minutes.
+Thunderbolt inventory/link checks are opt-in and read-only, expire after 30 s,
+and do not apply a route. Optional title routing and adaptive lookup remain
+opt-in; see [HERMES](HERMES.md) and [DAY20](DAY20.md).
+
 Every setting has a default, so Caravan runs with no configuration at all.
 Where a setting can be given more than one way, the order is:
 
@@ -387,7 +402,7 @@ peer = "169.254.x.y:5560"
 role = "packer"
 order = 1
 
-# Third Mini example (fit/chips see it; load still max 2 stages today):
+# Third Mini example (N-stage Balance path; older picker/Optimize remains two-stage):
 # [web.nodes.exo3]
 # label = "EXO3"
 # host = "exo3"
@@ -409,8 +424,8 @@ order = 1
 
 **Offline vs missing:** a configured host that fails `node_stats` gather is
 marked offline and left out of fit; it still appears in Topology when the
-API returns it. Raise `CARAVAN_MAX_SPLIT_STAGES` (default `2`) only when the
-runtime can actually pipeline that many stages — see ROADMAP “N-stage split”.
+API returns it. N-stage Balance supports an ordered inventory; three or more
+physical GPUs remain unverified. Older picker/Optimize paths remain two-stage.
 
 Also: `CARAVAN_CONFIG_TOML` overrides the path (default
 `~/.caravan/config.toml`).

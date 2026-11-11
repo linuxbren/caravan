@@ -1,5 +1,20 @@
 # Hermes Agent with Caravan
 
+## Current installation boundary (Day 21)
+
+Caravan's simple Mac installer does **not** install Hermes, create its tunnel,
+change its tools, download the optional tiny title model or install its aux job.
+The existing Omarchy/EXO1 recipe below is a lab example, not a Mac prerequisite.
+Keep the full toolset enabled (current reboot replay: 19 tools).
+
+The shared-prefix fix avoids title calls replacing the main chat cache.
+Optional title-sidecar routing and adaptive lookup remain opt-in. The auxiliary
+Qwen2.5-0.5B worker waits for primary health plus spare memory; a successful
+routed title has `X-Caravan-Aux: title-sidecar`. Check primary, aux health and a
+full-tool chat after setup; a tiny chat alone does not prove full-tool behavior.
+Day 21 both-Mini reboot restored main and aux without manual loads; see
+[DAY21](DAY21.md). FileVault-on/fresh-account startup is still untested.
+
 ## Setup (Omarchy -> EXO1)
 Hermes Agent v0.23.0 stable, installed user-only with the official installer
 (`--non-interactive`, no sudo), source `~/.hermes/hermes-agent`, launcher

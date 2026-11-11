@@ -1,4 +1,23 @@
-# Caravan web UI (Day 15)
+# Caravan web UI
+
+## Current everyday path (Day 21)
+
+The [Mac installer](../INSTALL.md) opens the page on the same Mac. Use
+`~/.caravan/bin/caravan open` later. Fresh installs bind only to localhost;
+remote access is a separate trusted-network/tunnel choice, never a public port.
+The lab launch commands below are historical examples, not first-run defaults.
+
+**Balance** starts on Auto, with per-Mini memory bars. Adjust reveals a live
+preview. Apply is black when a changed plan is ready and grey when no change is
+needed or while reloading. A banner shows each Mini's reload steps and chat is
+locked until ready. Changing a split moves memory from one Mac to another; it
+does not create more total memory. Unload disables next-login model restore.
+
+**Thunderbolt checks** inspect configured/trusted Macs only. Inventory and
+candidate graph are read-only; explicitly requested link checks use the selected
+interface and show verified/unverified/failed with 30 s expiry. A preview is not
+an applied route, and a reachable port alone is not verified SSH identity.
+No automatic pairing or model-transport authentication is claimed.
 
 A small browser UI so you can *use* what Days 1–13 built: switch models
 already on the Minis, chat with live streaming, and see honest timestamps
@@ -57,7 +76,7 @@ Env knobs (optional):
 
 - `CARAVAN_WEB_PORT` (default 8190), `CARAVAN_WEB_LEAD_PORT` (8194)
 - `CARAVAN_WEB_PACKER_PEER` (`169.254.103.191:5560`)
-- `CARAVAN_WEB_PACKER_SSH` (`brenden@169.254.103.191`)
+- `CARAVAN_WEB_PACKER_SSH` (legacy lab fallback; configure your own trusted SSH inventory)
 - `CARAVAN_WEB_NO_DRAFT=1` to force `--no-split-draft`
 - `CARAVAN_ALERT_WEBHOOK_URL` (alert_url): opt-in. When set, POST `{model, warnings, mini, caravan_version}` once per model/warning set the first time the picker shows a ⚠. Unset by default = nothing is sent. Never commit a real value.
 - `CARAVAN_ALERT_WEBHOOK_KEY` (alert_key): optional secret sent as `Authorization: Bearer <key>` and `X-Webhook-Key: <key>`. Dedupe file: `~/.caravan/alert-sent.json` (delete it to re-send).
@@ -87,7 +106,7 @@ When a model has a ⚠, the line under the picker has a **Report this model** li
 
 ## Safety
 
-- Binds `0.0.0.0` on purpose so Tailscale/LAN can reach it; do not port-forward it to the public internet.
+- The installer binds localhost. An explicit `0.0.0.0` bind allows private LAN access; never port-forward it to the public internet.
 - Only starts/stops `mlx_worker.py` on the Day 12/13 test ports. Never touches `main`, tags, Talaria Hub, exo, or Hermes.
 
 ## Day 15 bugfixes (send state + Gemma stall)

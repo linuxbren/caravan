@@ -1,4 +1,17 @@
-# Each Mini keeps its own files — Day 19 development
+# Each Mini keeps its own files
+
+## Current package layout
+
+The simple Mac package keeps its source at `~/.caravan/src/caravan`, Python and
+uv under `~/.caravan/runtime`, the MLX environment under `~/.caravan/venvs/mlx`,
+and its command at `~/.caravan/bin/caravan`. Models are downloaded separately.
+Source updates retain the previous source folder. Uninstall removes only a
+selected owned login service and preserves models, settings, caches and source.
+See [INSTALL](../INSTALL.md) for recovery and [PACKAGING](PACKAGING.md) for limits.
+
+MLX shard placement and Balance disk accounting are current through Day 21.
+The GGUF lead still needs the full file; independent per-Mac tensor loading is
+Day 22 work, not a package feature. No installer copies lab models or SSH keys.
 
 Box-side experimental checkpoint; **not yet run on the working Macs**. No new
 inference-speed claim. [Day 19 test record/live checklist](DAY19.md).

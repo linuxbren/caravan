@@ -1,5 +1,16 @@
 # Changelog
 
+## Day 21 follow-up — Mac installation and documentation
+
+- Friendly Mac-owner README and current Day 20/21 setup, Balance, restore,
+  title/Hermes and read-only Thunderbolt guidance.
+- Mac-only no-Git/no-Homebrew bootstrap, checksum-verified source and uv,
+  private Python, read-only doctor, and safe per-user control command.
+- Prepared repeatable checksummed source-package build and daily checklist.
+- Experimental: no signed app/pkg, automatic pairing, fully locked dependencies
+  or fresh-account/FileVault-on certification. Day 21 tag remains unchanged.
+
+
 
 ## Unreleased
 

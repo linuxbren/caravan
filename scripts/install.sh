@@ -6,7 +6,7 @@ trap 'code=$?; say "Setup stopped. Models and existing settings were not removed
 fail() { say "$*" >&2; exit 1; }
 usage() {
   printf '%s\n' 'Usage: bash scripts/install.sh [--role lead|worker] [--repo PATH] [--ref REF]' \
-    '       [--python PATH] [--dry-run] [--no-start] [--update] [--use-existing]' \
+    '       [--python PATH] [--check] [--dry-run] [--no-start] [--update] [--use-existing]' \
     'Worker plan: --model PATH [--counts K,K,... --stage-index I --listen HOST:PORT]' \
     '             [--upstream HOST:PORT | --peer HOST:PORT] [--name ID] [--port PORT]' \
     'Lead installs the web UI; worker without a model only prepares this Mini.'
@@ -20,11 +20,13 @@ DRY=0
 START=1
 UPDATE=0
 EXISTING=0
+CHECK=0
 MODEL=0
 SERVICE_ARGS=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
+    --check) CHECK=1; shift ;;
     --dry-run) DRY=1; shift ;;
     --no-start) START=0; shift ;;
     --update) UPDATE=1; shift ;;
@@ -43,6 +45,8 @@ while [ "$#" -gt 0 ]; do
     *) fail "Unknown option: $1. Use --help." ;;
   esac
 done
+case "$WEB_PORT" in ''|*[!0-9]*|??????*) fail 'Choose a port number from 1 to 65535.' ;; esac
+[ "$WEB_PORT" -ge 1 ] && [ "$WEB_PORT" -le 65535 ] || fail 'Choose a port number from 1 to 65535.'
 [ "$ROLE" = lead ] || [ "$ROLE" = worker ] || fail 'Choose --role lead or --role worker.'
 [ "$ROLE" != lead ] || [ "$MODEL" = 0 ] || fail 'Install the web UI as lead first; use caravan_service.py for an optional model auto-start plan.'
 if [ "$ROLE" = worker ] && [ "$MODEL" = 0 ] && [ "${#SERVICE_ARGS[@]}" -gt 0 ]; then
@@ -67,10 +71,17 @@ if [ -z "$PYTHON" ]; then
     fi
   done
 fi
-[ -n "$PYTHON" ] && [ -x "$PYTHON" ] || fail 'Install native Apple Silicon Python 3.10+ first, or pass --python /absolute/path/python3.'
+[ -n "$PYTHON" ] && [ -x "$PYTHON" ] || fail 'Use the no-prerequisites Mac bootstrap in INSTALL.md, or pass --python /absolute/path/python3 (3.10+).'
 "$PYTHON" -c 'import sys;sys.exit(sys.version_info < (3,10))' || fail 'Python 3.10 or newer is required.'
 if [ "$DRY" = 0 ]; then
   "$PYTHON" -c 'import platform,sys;sys.exit(platform.machine() != "arm64")' || fail 'This Python is running under Rosetta. Choose a native arm64 Python.'
+fi
+if [ "$CHECK" = 1 ]; then
+  exec "$PYTHON" "$(cd "$(dirname "$0")/.." && pwd)/tools/caravan_doctor.py" --port "$WEB_PORT"
+fi
+if [ "$DRY" = 0 ]; then
+  FREE=$(df -Pk "$HOME" | awk 'END {print $4}')
+  [ "$FREE" -ge 8388608 ] || fail 'Free at least 8 GB before installing; models need more.'
 fi
 say "Python: $PYTHON"
 say "Source folder: $REPO ($REF)"
@@ -131,11 +142,25 @@ if [ "$ROLE" = lead ] && [ ! -e "$CONFIG" ]; then
     say 'Created the local Mini config. Existing configs are never replaced.'
   fi
 fi
+# Stable command location; only publish after successful install/preparation.
+register_command() {
+if [ "$DRY" = 0 ]; then
+  mkdir -p "$HOME/.caravan/bin"
+  WRAPPER="$HOME/.caravan/bin/caravan"
+  if [ -e "$WRAPPER" ] && ! /usr/bin/grep -q '^# Caravan managed command$' "$WRAPPER"; then
+    fail 'An unrelated ~/.caravan/bin/caravan exists. Keep it; choose a different command path manually.'
+  fi
+  { printf '%s\n' '#!/bin/bash' '# Caravan managed command'; printf 'exec %q %q "$@"\n' "$VENV/bin/python" "$REPO/tools/caravan.py"; } > "$WRAPPER"
+  chmod 755 "$WRAPPER"
+  if [ -f "$REPO/.caravan-package" ]; then printf '%s\n' "$ROLE" > "$REPO/.caravan-role"; fi
+fi
+}
 if [ "$ROLE" = lead ]; then
   KIND=web
 elif [ "$MODEL" = 1 ]; then
   KIND=worker
 else
+  register_command
   say 'This Mini is ready. No model was chosen, so no worker was started.'
   say "Next: $VENV/bin/python $REPO/tools/caravan_service.py install --kind worker --name packer1 --model /path/to/model ..."
   exit 0
@@ -148,5 +173,6 @@ if [ "$DRY" = 1 ]; then
 else
   "${SERVICE[@]}" ${SERVICE_ARGS[@]+"${SERVICE_ARGS[@]}"}
 fi
+register_command
 say 'Done. Services start at user login, not before login. Models and SSH setup are not downloaded or configured for you.'
 [ "$ROLE" != lead ] || say "Open http://127.0.0.1:$WEB_PORT/ (local browser). Logs: ~/.caravan/logs/"

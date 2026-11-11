@@ -1,11 +1,32 @@
 # Install and auto-start on a Mac
 
-Day 19 development feature. Native three-stage startup/recovery, isolated-HOME
+## Current Mac package and reboot behavior
+
+For everyday setup use [INSTALL](../INSTALL.md), not the historical lab commands
+below. The bootstrap provides private Python, installs a web-only per-user
+LaunchAgent, and opens the page. Worker-only preparation creates no fixed-model
+job. The `~/.caravan/bin/caravan` command supplies start/stop/status/doctor/update/
+uninstall/add-mini/open. Stop/uninstall affect one owned service, not all model
+workers; Unload in the page first to free model memory. Settings/models are kept.
+
+Login restore uses the last successful load, retries temporary node/memory/link
+readiness for up to ten minutes, and fails visibly rather than looping forever.
+The Day 21 follow-up (`51d697a`) and both-Mini reboot at 17:44 CST passed: main
+ready 39.110 s after EXO1 boot, aux health at about 45.8 s. This was on existing
+FileVault-off auto-login accounts, **not** a fresh-account/FileVault-on proof.
+The published Day 21 tag is immutable and predates the follow-up fix.
+
+No service starts before login. FileVault must be unlocked by its owner; setup
+does not change auto-login, security settings or SSH trust. Default new installs
+bind only to localhost. Optional proxy and aux title helper are separate setup,
+not automatic package contents. See [PACKAGING](PACKAGING.md) for current gates.
+
+Historical Day 19 implementation notes. Native three-stage startup/recovery, isolated-HOME
 installation/idempotence and permanent two-Mini Qwen login/reboot recovery passed
 on Nov 8 after the recorded fixes **in the earlier fixed-model mode**. The
 revised web-owned mode loaded/saved Qwen24/40 and answered correctly, but its
-EXO2 reboot test lost SSH for the full360s monitor; EXO1 reboot and native
-restore/switch checks remain blocked. Do not call the new reboot mode validated.
+EXO2 reboot test lost SSH for the full360s monitor. That historical gap is now
+closed by the Day20/Day21 restore checks summarized above.
 Both existing accounts had automatic login
 enabled and FileVault off already. A separate clean Mac/account and FileVault-on
 behavior remain untested. See [DAY19.md](DAY19.md).
@@ -28,11 +49,12 @@ settings in `~/.caravan/web-ui/last-model.json`. It is atomically replaced befor
 ready is advertised. User Stop saves an explicit empty selection; next login
 then loads nothing. A failed load keeps the prior successful choice.
 
-On login/boot, the web makes one normal `/api/models/load` request for that
-selection. It uses current topology, fresh files/free-memory checks and normal
-UI loading. Missing Minis/files, unknown RAM, low headroom or malformed saved
-state leave a readable warning in the idle UI, without a retry/crash loop or
-automatic download. Bring the Mini back/fetch files explicitly, then press Load.
+On login, the web uses the normal load path for that selection, with current
+topology and fresh files/free-memory checks. Temporary Mini/memory/Thunderbolt
+readiness failures retry within a bounded ten-minute window. Permanent invalid
+state or exhausted retries leave a readable warning in the idle UI; there is no
+infinite crash loop or automatic model download. Fix missing files explicitly,
+then press Load.
 Normal model switching and Balance reload stay unlocked and update the selection.
 A user operation cancels a pending auto-restore. A healthy KEEP_WORKERS restart
 adopts owned workers and keeps the selection rather than loading it twice.
@@ -338,5 +360,5 @@ before install; the installer never kills an unowned listener. Logs are in
 `~/.caravan/logs/proxy.log`. Cache cleanup is off (no automatic deletions).
 The lead installer still installs the web service by itself; add this plan
 when an OpenAI client needs it. EXO1's plan was installed live without reboot
-or web restart; its login/reboot behavior is launchd configuration, not a
-claim of a completed reboot test. See [HERMES.md](HERMES.md).
+or web restart. Its subsequent Day21 login/reboot recovery passed on the
+existing lab accounts; see [DAY21.md](DAY21.md) and [HERMES.md](HERMES.md).

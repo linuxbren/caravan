@@ -13,6 +13,19 @@ the whole group is the **string**. The old words "head", "front" and
 "tail" survive only in older log entries, internal code names and
 deprecated flag aliases.
 
+## Packaging brought forward at Brenden's request
+
+Documentation and package maintenance now happen **every development day**, not
+only Day 25. Plain Mac-owner README, current install/recovery instructions,
+no-prerequisites SHA-pinned bootstrap, private Python, doctor and safe service
+commands are implemented. See [PACKAGING](PACKAGING.md) for verified checks and
+remaining gates. Do not label this a signed/finished consumer installer yet.
+
+Day 25 retains TUI, automatic trusted multi-Mac onboarding, complete dependency
+locking/transactional updates, fresh-account/FileVault checks, and signed,
+notarized app/package distribution (Apple Developer ID needed). No Homebrew tap
+has been published. The immutable Day 21 tag is not moved for this follow-up.
+
 ## Day 19 final checkpoint
 
 - [x] Day 19 released (`day19-2026-11-08`, tag 7267325, docs bf2c3b7); main fast-forwarded; 738 tests.
@@ -96,8 +109,8 @@ else can install it easily (scrub personal paths as part of that). The
 Omarchy plugin and Terminal Delight console follow the TUI.
 
 Not in this five-day span, still open: three physical Minis,
-separate-account / FileVault-on checks, merge of this branch into
-`main`, fused kernels (parked).
+separate-account / FileVault-on checks, fused kernels (parked). `main` already
+fast-forward tracks the working branch.
 
 
 ## Day 19 order (2026-11-08)

@@ -1,4 +1,15 @@
 ### Day 21 release — day21-2026-11-10 (published 2026-11-10 CST)
+
+## Day 21 follow-up — Mac installation and documentation
+
+- Friendly Mac-owner README and current Day 20/21 setup, Balance, restore,
+  title/Hermes and read-only Thunderbolt guidance.
+- Mac-only no-Git/no-Homebrew bootstrap, checksum-verified source and uv,
+  private Python, read-only doctor, and safe per-user control command.
+- Prepared repeatable checksummed source-package build and daily checklist.
+- Experimental: no signed app/pkg, automatic pairing, fully locked dependencies
+  or fresh-account/FileVault-on certification. Day 21 tag remains unchanged.
+
 - Clearer Topology Balance (Auto default, per-Mini bars, Adjust sliders, live preview, explicit Apply / Back to auto) with black/gray Apply and locked reload state.
 - Trusted Thunderbolt inventory, bounded interface-pinned TCP22/SSH identity checks, and an opt-in N-Mini plan preview with no apply endpoint. Live two-Mini proof: EXO1→EXO2 verified; reverse TCP reachable but SSH identity unverified.
 - Physical aux title-worker reboot check passed on EXO1: Huihui 24/40 KV16 ready 37.3s after boot, aux health 200 at ~47.1s, title sidecar 0.135s, full 19-tool Hermes replay 11.504s. EXO2 itself did not reboot; its packer was relaunched during restore. Day 20 already proved two-Mini main-model restore.

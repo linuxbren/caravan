@@ -1,200 +1,209 @@
-# Install Caravan
+# Install Caravan on a Mac
 
-Caravan is experimental source software, not a signed Mac app. Release packages
-contain code and these instructions, not models or a bundled Python runtime.
+Start with the [simple guide](README.md). This page covers checks, extra Macs and recovery.
+Caravan is experimental, not a signed or notarized Apple app. Do not turn off
+Gatekeeper, FileVault or SIP to install it. No administrator password is needed
+for the normal one-Mac setup.
 
-## One-command install + auto-start (Day 19 development)
+## Easy install
 
-On a **new Apple Silicon Mac** with macOS 14+, native Python 3.10+ and Git:
+You need an Apple Silicon Mac (M1 or newer), macOS 14+, enough free disk for
+setup and your models, and internet. More memory lets you run bigger models;
+adding Macs pools their memory. Caravan works out what fits for you. Setup
+reserves 8 GB of free disk space before downloading; models need extra.
+The installer rejects Intel/Rosetta, old macOS, root/sudo and low disk/memory.
+A non-admin user can install in their own home folder. Managed Macs may need
+an administrator to permit downloads or Remote Login for extra Macs.
 
-```sh
-(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/scripts/install.sh | bash -s -- --role lead)
-```
-
-Review the script first; this follows a moving development branch and is not yet
-in the Day 18 release package. It sets up a dedicated source copy, the MLX venv,
-tested dependencies and a user-login web service. It never downloads models or
-replaces existing settings. Default UI bind is localhost. On another Mini use
-`--role worker`; without a model plan it prepares the environment but starts no
-worker. Repeats do not restart unchanged jobs or reset dirty checkouts.
-
-From an existing source copy, preview with
-`bash scripts/install.sh --dry-run --repo "$PWD"`, then remove `--dry-run` when
-ready. Explicit per-node single/N-stage model auto-start, install/uninstall/status
-commands and ownership rules: **[SERVICES.md](docs/SERVICES.md)**. Fixed auto-start
-model jobs and UI-controlled model switching are separate modes; do not mix
-controllers. **The normal mode now uses only the web service, which restores
-the last successfully loaded model/placement at login through the normal UI
-load path. Explicit Unload saves “restore nothing.” Model switching and Balance
-remain unlocked.** Fixed model-specific jobs below are advanced legacy opt-in,
-not the default. LaunchAgents start at **user login**, not before login. Native
-dry-runs and temporary three-stage launchd startup/recovery were tested on
-two M4 Minis on Nov 8. A fresh isolated-HOME actual install/repeat later passed;
-**earlier fixed-model** web/lead/packer login/reboot recovery then passed on both
-existing FileVault-off, auto-login accounts after reboot-safe Thunderbolt fixes.
-The revised web-only mode loaded/saved Qwen and answered, but its EXO2 restart
-did not return to SSH within360s; automatic last-model reboot restore remains
-unverified and EXO1 was not rebooted in that attempt. A separate
-macOS account/FileVault-on case remains untested.
-Use the **venv Python path itself**, e.g. `~/.caravan/venvs/mlx/bin/python`, not
-its resolved Homebrew binary. Regenerate plans made before the Day 19 venv-path
-fix; do not hand-edit their JSON. See [live results](docs/DAY19.md).
-
-Nov 8 follow-up: a real fresh isolated HOME/clone/venv install and repeat reached
-a working spare-port UI with the same PID/config, then were cleaned up. This
-was not a separate macOS account. For a future-login migration that must leave
-today's workers alone, use explicit service install **`--no-start --stage-login`**;
-see SERVICES.md. The old lab fixed Qwen jobs have now been uninstalled; only
-EXO1 web is permanent, with model stages web-owned and logs under `~/.caravan`.
-EXO2 is currently unreachable after the new-mode reboot attempt; see DAY19. Installer commands themselves never reboot/log out
-or change login/security settings. Use explicit reboot-safe Thunderbolt endpoints
-and stable trusted SSH inventory hosts as described in SERVICES.md.
-
-The current branch also adds per-Mini selective downloads and disk accounting
-in the Balance view; see [FILES.md](docs/FILES.md). The `gguf` dependency reads
-metadata only: this installer does not build llama.cpp or make a partial GGUF
-usable on the lead.
-
-## Requirements
-
-- Apple Silicon Macs (tested on M4 Mac minis with 24 GB). One Mini works;
-  splitting needs more. Use a trusted LAN or Thunderbolt/USB4 link.
-- Python 3.10+ for the agent and MLX environment. The stdlib web server works
-  on Python 3.9+. Use a current Apple Silicon Python for MLX.
-- Git for cloning (not needed for a release ZIP), and enough disk/RAM for models.
-- For a manual MLX setup, after getting the source below, install on every Mini that will run a worker:
+Open Terminal, paste this, press Return:
 
 ```sh
-python3 -m venv ~/.caravan/venvs/mlx
-# Current development checkout:
-~/.caravan/venvs/mlx/bin/python -m pip install -r requirements-mac.txt
-# Older Day 18 package (no requirements file):
-# ~/.caravan/venvs/mlx/bin/python -m pip install 'mlx-lm==0.32.2' huggingface_hub
+(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install | bash)
 ```
 
-This is the tested mlx-lm version, not a fully locked dependency set. A clean
-Mac installation has not been tested for this release. Model access may require
-accepting the publisher's terms and a Hugging Face token in Settings.
+This follows the development channel. [Read the bootstrap](install) before
+running it. It fetches a specific source commit and checks its SHA-256 before
+extracting it. GitHub supplies the bootstrap and manifest over HTTPS; the
+checksum is an integrity check, **not an Apple signature**. For an immutable
+source package, see [package status](docs/PACKAGING.md).
 
-## Get the source
+What happens:
+1. Check the Mac without changing its security settings.
+2. Download Caravan to `~/.caravan/src/caravan`. No Git or Xcode required.
+3. Install a checksum-verified, pinned uv utility and private Python 3.12 under
+   `~/.caravan/runtime/`. System Python and shell profiles stay untouched.
+4. Create `~/.caravan/venvs/mlx`, install dependencies, and check imports.
+5. Create a one-Mac configuration **only if no configuration exists**.
+6. Install a per-user browser service, starting at login, and open your browser.
+7. In Models, download a small model that fits, Load, and chat. No model ships
+   with Caravan. Some downloads require a publisher agreement/token.
 
-Download `caravan-day18.zip` or `caravan-day18.tar.gz` from
-[Day 18](https://github.com/linuxbren/caravan/releases/tag/day18-2026-11-07).
-Unpack it and open a terminal in the `caravan-day18` directory. Or:
+Setup uses wheels where available; dependencies are not yet completely locked.
+If a dependency unexpectedly asks for compiler tools, stop and report it rather
+than installing arbitrary developer tools. Interrupted setup can be rerun;
+existing models/settings are not removed. Checks happen before service changes.
+
+For checks without downloading or installing anything:
 
 ```sh
-git clone https://github.com/linuxbren/caravan.git ~/.caravan/src/caravan
-cd ~/.caravan/src/caravan
-git checkout day18-2026-11-07
+(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install | bash -s -- --check)
 ```
 
-To follow development rather than this release, use `caravan-v3-mlx-split`.
-Release archives omit `handoff/lab/videos/` (74 MB of media); it stays in Git.
+Use `--port 8290` if another app already uses the default browser address;
+`--no-start` installs without opening/starting it. Services need a logged-in
+Mac desktop session. SSH-only setup without one should use `--no-start`, then
+log in on the Mac and run `~/.caravan/bin/caravan start`.
 
-## First run: one Mini
+## Everyday commands
 
-The defaults point at the author's two-Mini lab. Before loading a model, create
-`~/.caravan/config.toml` (or add this section to your existing file; do not erase
-other settings):
+All commands below start with `~/.caravan/bin/caravan`. This full path works
+without changing your Terminal settings. Advanced users can add
+`~/.caravan/bin` to PATH themselves.
 
-```toml
-[web.nodes.local]
-label = "My Mini"
-role = "lead"
-host = "local"
-```
+| Command | Result |
+|---|---|
+| `open` | Open the browser page |
+| `status` | Show owned Caravan services and log paths |
+| `doctor` | Read-only platform, disk, environment and port checks |
+| `stop` | Stop only the web service until next login/start; model workers stay running |
+| `start` | Start the installed web service; never reboot the Mac |
+| `update` | Download/verify the channel's pinned source; requires web stopped; leaves it stopped |
+| `uninstall` | Remove only the web login service; keep source, models, runtime and settings |
+| `add-mini` | Show extra-Mac setup instructions (not automatic pairing) |
 
-From the source directory:
+Use Unload in the page **before stop** to free the model's memory. An Unload
+also saves “restore nothing.” Otherwise the last successful model and its exact
+split are restored at next login. Day 21's follow-up fix retries temporary
+Mini/memory/link readiness failures for up to ten minutes, then shows a warning.
+It does not silently download missing model files. Both-Mini restore was proven
+on the existing auto-login, FileVault-off lab accounts; a new user/FileVault-on
+installation is still untested. See [DAY21.md](docs/DAY21.md).
+
+## Update or reuse an existing install
+
+For an easy-package installation, Unload if desired, then:
 
 ```sh
-python3 proxy/web_server.py --host 127.0.0.1 --port 8190
+~/.caravan/bin/caravan stop
+~/.caravan/bin/caravan update
+~/.caravan/bin/caravan start
+~/.caravan/bin/caravan open
 ```
 
-Open http://127.0.0.1:8190/. In Models choose an MLX model that fits your Mini,
-download it to the local Mini, then Load and chat. Downloads can be large.
-The UI starts the worker using `~/.caravan/venvs/mlx/bin/python`.
-For another device to reach the UI, bind `--host 0.0.0.0` and use the lead's
-LAN address. There is no login: never expose this port to the public internet.
-See [WEB.md](docs/WEB.md) for controls and troubleshooting.
+Updates do not overwrite a Git checkout or source files with local edits.
+The previous package source is kept in `~/.caravan/src/caravan-backup-*`.
+If setup fails, keep the backup and logs; do not delete models or settings.
+A failed update may leave the new source on disk with the service stopped;
+inspect doctor and rerun setup, or restore the previous source folder while
+stopped. Dependency rollback is not automatic. Do not update during a chat.
+This is not yet a fully transactional, signed application updater.
+
+For a developer/source installation, keep using the **same repo, role, Python,
+ports and service names**:
+
+```sh
+cd /your/existing/caravan
+# Check/commit your own edits first. Never reset them.
+git pull --ff-only origin caravan-v3-mlx-split
+bash scripts/install.sh --use-existing --repo "$PWD" --python /absolute/path/to/python3
+```
+
+Python must be native Apple Silicon 3.10+. `scripts/install.sh --dry-run`
+previews commands without writing; `--check` runs read-only doctor checks.
+The source installer still needs Git to clone an absent repo; use the easy
+bootstrap if you have no Git/Python. Never point a new installer at a live lab
+checkout with different service plans. It refuses differing owned plans rather
+than replacing them. No automatic migration of custom services is claimed.
 
 ## Add Minis
 
-Install the same source and MLX environment on each Mini. Enable macOS Remote
-Login on peers and set up SSH from the lead so it works without an interactive
-prompt. Check `ssh YOUR_USER@PEER_IP` yourself first. Only use trusted peers.
+Run this on **each extra Mac**:
 
-Add a table for each peer to the lead's `~/.caravan/config.toml`, replacing all
-example addresses and the repository path with your own:
+```sh
+(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install | bash -s -- --role worker)
+```
+
+It prepares the software but starts no fixed-model service. On the helper,
+enable **System Settings → General → Sharing → Remote Login** for your user.
+From the lead Mac, establish SSH trust yourself: `ssh YOUR_USER@PEER_ADDRESS`.
+Verify the fingerprint, then set up key-based login so that command works
+without a password prompt. Caravan does not create trust or disable host checks.
+Never paste a private key into an issue or chat.
+
+On the lead, add a table to `~/.caravan/config.toml` (keep its existing local
+table and other settings):
 
 ```toml
 [web.nodes.mini2]
 label = "Mini 2"
 role = "packer"
-host = "YOUR_USER@PEER_IP"
-ssh = "YOUR_USER@PEER_IP"
-repo = "~/cv3"
-peer = "PEER_IP:5560"
+host = "YOUR_USER@PEER_ADDRESS"
+ssh = "YOUR_USER@PEER_ADDRESS"
+repo = "~/.caravan/src/caravan"
+peer = "PEER_PRIVATE_ADDRESS:5560"
 order = 1
 ```
 
-Use a unique table name and order for each extra Mini. Restart the web process
-after changing config. To preserve workers on a later web restart, start the
-web server with `CARAVAN_WEB_KEEP_WORKERS=1` set before its command; that process
-will then keep its workers when it exits. Check Topology before loading. Peers need a reachable
-worker link (MLX TCP 5560); keep it on your private network.
+Use a unique name and order for every extra Mini. Restart only the browser
+service (`caravan stop`, `caravan start`) after editing the file. Its generated
+service keeps model workers when stopped. Check Topology before loading.
+Balance supports N-stage plans; live inference is measured on two physical
+Macs, not three or more. Some older picker/Optimize paths remain two-stage;
+do not run Optimize on an N-stage Balance load. See [MLX-SPLIT](docs/MLX-SPLIT.md).
 
-Topology and GGUF support multiple Minis. The experimental **Topology → Balance**
-path now plans and launches N-stage MLX pipelines, with a live memory/file preview
-and an explicit reload button. Existing picker downloads and Optimize now remain
-two-stage; do not run Optimize on an N-stage Balance load. Extra stage shards can
-be fetched directly on each Mini with `mlx_split_fetch.py --split-counts ...
---stage-index ...`. No files are copied from the lead. Three/four-stage behavior
-is covered by fake-node socket tests; Apple Silicon inference is not yet live
-verified. See [Day 19 setup/testing](docs/DAY19.md) and [MLX-SPLIT.md](docs/MLX-SPLIT.md).
-Some older two-Mini paths still use lab defaults; if a load targets EXO2 instead
-of your configured peer, stop and inspect [WEB.md](docs/WEB.md) rather than
-assuming this release is a turnkey installer for every network.
+**Thunderbolt discovery is read-only.** It inspects trusted configured Macs,
+checks links on request, and can preview a plan. It does not pair unknown Macs,
+install SSH keys, apply routes or replace your config. Checks expire after
+30 seconds. A reachable port does not prove peer identity. For reboot-safe
+interface endpoints and trusted-host details, see [SERVICES](docs/SERVICES.md).
 
-## Optional: GGUF
+## Optional integrations
 
-Install CMake and Apple command-line build tools. On each participating Mini,
-build the project's patched llama.cpp (Homebrew's build lacks RPC):
+- **Balance:** Auto chooses a split. Adjust shows a preview; Apply reloads the
+  model. A reload banner shows each Mac's progress and locks chat until ready.
+  Apply is black when usable, grey when reloading or no change is needed.
+- **Hermes:** separate installation/configuration; the easy package does not
+  install Hermes or change its tools. Use the loopback proxy and [HERMES](docs/HERMES.md).
+- **Tiny title helper:** optional and not downloaded by setup. It waits for
+  the primary model and spare memory; proxy routing is opt-in. See [HERMES](docs/HERMES.md).
+- **Adaptive lookup:** opt-in speed experiment, not a default or speed promise.
+- **GGUF:** optional patched llama.cpp runtime must be built separately.
+  Install Apple build tools and CMake, then build `caravan-patches` from
+  https://github.com/linuxbren/llama.cpp with `GGML_RPC=ON`, `GGML_METAL=ON`.
+  Set `CARAVAN_LLAMA_BIN` if not in `~/dev/llama.cpp/build/bin`.
+  Today the lead still holds the complete GGUF; independent per-Mac tensor
+  loading is Day 22 work. The easy package is not a bundled GGUF runtime.
 
-```sh
-git clone -b caravan-patches https://github.com/linuxbren/llama.cpp ~/dev/llama.cpp
-cd ~/dev/llama.cpp
-cmake -B build -DGGML_RPC=ON -DGGML_METAL=ON -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-```
+## Remove Caravan safely
 
-The UI expects binaries at `~/dev/llama.cpp/build/bin`; use
-`CARAVAN_LLAMA_BIN` for a different location (the same path must work on peers).
-Download a GGUF quant through Models on the lead. The lead holds the GGUF file
-and sends peer tensors over SSH-tunnelled RPC; peers do not yet load their own
-GGUF share from disk. Ollama is needed for the older Ollama-store CLI workflow,
-not for picker GGUF downloads. The llama.cpp branch is not pinned by this source
-package; its upgrade is still an open item.
+Unload in the page, then `~/.caravan/bin/caravan uninstall`. This removes only
+the owned web login job. For optional proxy/worker jobs, inspect `status` then
+use `uninstall --name NAME` for **each** owned job you intend to remove.
+Uninstall retains downloaded models, chat/cache data, source, runtime, settings,
+logs and the command. No “delete every model” switch is provided. Inspect those
+folders yourself before deleting anything. Do not delete `~/.caravan` wholesale
+unless you truly intend to lose its contents. Never sweep processes by name.
 
-## Check the source package
+## Troubleshooting
 
-From its root (no models or Minis needed):
+- **No browser:** run `~/.caravan/bin/caravan doctor`, then `status`. Read the
+  log path it prints. Try `open`. No need to reboot.
+- **Address in use:** do not kill unknown apps. Choose another `--port` on first
+  install. Existing service ports are deliberately not silently changed.
+- **Download failed/offline:** reconnect, check disk/Wi-Fi/firewall, rerun.
+  Setup is not offline-capable. GitHub, PyPI and model hosts must be reachable.
+- **Apple says the app cannot be verified:** this is not a signed `.app` or
+  `.pkg`. Do not bypass Gatekeeper or strip quarantine. Use reviewed source
+  instructions or report the warning. An enterprise policy may require IT.
+- **FileVault/reboot:** someone must unlock and log in. Login services cannot
+  serve before login; setup never enables auto-login or stores a login password.
+- **Spaces in a folder:** supported; quote paths in manual commands. Use an
+  absolute `--repo` path, not a literal `~` inside quotes.
+- **Another install running:** wait. A crash can leave `~/.caravan/install.lock`;
+  confirm no installer is running before removing that empty lock directory.
+- **Model won't load:** check free memory/files on every selected Mac. Start
+  with a smaller model. Do not force a memory guard to pass.
 
-```sh
-PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests
-```
-
-Node.js enables an optional UI assertion; it may skip if Node is absent.
-See [DAY17.md](docs/DAY17.md) for live lab results and known limits, including
-partial-file downloads that restart from zero.
-
-
-### Last-model auto-start (Nov 8 design update)
-
-Load a model successfully once in Models/Settings/Balance. Caravan saves its
-engine, exact placement/split and settings in `~/.caravan/web-ui/last-model.json`;
-failed loads do not overwrite it. At next login the web restores once using
-fresh node/files/memory validation. Unload before shutdown to restore nothing.
-Missing Minis/files/headroom show a clear idle-UI warning, not an automatic
-retry/download or crash loop. See SERVICES.md for explicit reboot-safe TB peers
-and migration away from old fixed worker jobs. Keep the web LaunchAgent; remote
-stages use normal trusted SSH and need no permanent model-specific agent.
+Report errors at https://github.com/linuxbren/caravan/issues with macOS/chip,
+command and relevant error text. Remove private paths, tokens and chat content.
+For actual test coverage and remaining acceptance gates see [PACKAGING](docs/PACKAGING.md).
