@@ -167,7 +167,7 @@ class MockMacBootstrapTests(unittest.TestCase):
 
     def test_checksum_mismatch_never_activates_source(self):
         self.command('curl', '''url=""; out=""; while [ "$#" -gt 0 ]; do case "$1" in https:*) url=$1 ;; -o) shift; out=$1 ;; esac; shift; done
-case "$url" in */packaging-version) printf '%040d %064d\\n' 0 0 > "$out" ;; *) printf 'wrong archive' > "$out" ;; esac''')
+case "$url" in */packaging-version*) printf '%040d %064d\\n' 0 0 > "$out" ;; *) printf 'wrong archive' > "$out" ;; esac''')
         result = self.run_bootstrap()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('checksum mismatch', result.stderr)

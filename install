@@ -51,7 +51,7 @@ trap 'code=$?; rmdir "$ROOT/install.lock"; [ -z "$TMP" ] || rm -rf "$TMP"; if [ 
 TMP=$(mktemp -d "$ROOT/setup.XXXXXX")
 fetch() { curl --proto '=https' --tlsv1.2 -fLsS --retry 2 --connect-timeout 15 --max-time 300 "$1" -o "$2" || fail "Could not download $1. Check Wi-Fi, proxy/firewall and free space, then retry."; }
 # The moving channel only selects a SHA-pinned source archive and checksum.
-fetch https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/packaging-version "$TMP/version"
+fetch "https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/packaging-version?channel=$(date +%s)" "$TMP/version"
 read -r REF SHA < "$TMP/version"
 [ "${#REF}" = 40 ] && [ "${#SHA}" = 64 ] || fail 'Invalid package manifest; nothing activated.'
 case "$REF$SHA" in *[!a-f0-9]*) fail 'Invalid package checksum; nothing activated.' ;; esac

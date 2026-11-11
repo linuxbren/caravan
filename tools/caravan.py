@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +38,7 @@ def main(argv=None):
             role = role_file.read_text().strip() if role_file.exists() else "lead"
             if role not in ("lead", "worker"): raise ValueError("Unknown saved installation role; no update attempted")
             # Fetch to a file: a failed HTTP request can never run a partial shell script.
-            with urllib.request.urlopen("https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install", timeout=30) as response:
+            with urllib.request.urlopen("https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install?channel=" + str(time.time_ns()), timeout=30) as response:
                 data = response.read()
             with tempfile.NamedTemporaryFile(suffix=".sh") as script:
                 script.write(data); script.flush()
