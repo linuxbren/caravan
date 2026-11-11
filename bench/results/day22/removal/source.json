@@ -1,0 +1,8 @@
+{
+  "repo_id": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+  "filename": "qwen2.5-3b-instruct-q4_0.gguf",
+  "revision": "7dabda4d13d513e3e842b20f0d435c732f172cbe",
+  "sha256": "670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a",
+  "size": 1997879712,
+  "metadata_url": "https://huggingface.co/api/models/Qwen/Qwen2.5-3B-Instruct-GGUF/revision/7dabda4d13d513e3e842b20f0d435c732f172cbe?blobs=true"
+}
