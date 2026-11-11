@@ -3058,3 +3058,36 @@ Title :18090 HTTP200, `X-Caravan-Aux: title-sidecar`,0.154s wall,
 “I'm online and ready to help.”,11.368s wall,0.399s TTFT,6.26tok/s,
 11309/11310 cached. Nothing restarted. Evidence: Omarchy
 `~/day21-checks/reboot3/`. Tag unmoved on `b6c9394`.
+
+### Day22 GGUF own-disk prototype (November10,18:20–18:23 CST)
+
+Built `agent/gguf_shards.py` and an isolated, pinned llama.cpp catalog-loader
+extension. Exact N-Mini layer ownership covers all tensor sizes; fresh shard
+trees use SHA256-verified native RPC tensor pieces. An explicit metadata-only
+`.cvgg` catalog uses the user-model API, not a fake/sparse GGUF or a full lead
+file. Peer loads use hash-only RPC, including small tensors; missing pieces
+fail without a weight-transfer fallback. Verified foreground role launchers
+reject bad pieces, role/build mismatches, and non-loopback RPC endpoints.
+
+Real Qwen2.5-3B-Instruct Q4_0, equal two-Mini split over a dedicated strictly
+verified Thunderbolt SSH tunnel: required shard trees **1,005,304,514 /
+998,777,538 bytes** (lead/peer). All **435 tensors** loaded from the owning
+Mini: 229 lead, 206 peer, including154 peer tensors <=10MiB. Originals
+**1,997,879,712 bytes each** retained unchanged; actual model-specific disk
+usage rose to **3,003,184,226 / 2,996,657,250 bytes**, not a disk cleanup.
+
+Full-lead baseline / own-piece prototype: observed load **2.288 / 3.149s**;
+three direct128-token chat medians **41.77 / 41.29tok/s**, wall TTFT
+**0.150 / 0.137s**. No prompt reuse, no Hermes; six identical completions.
+Warm filesystem/shader caches and one load per mode: no speedup claim.
+Fresh empty-cache negative test (no files deleted) exited1 in1.176s on
+`output_norm.weight`, with no full-file/weight-send fallback. Setup failures
+and RPC-session retry are retained, excluded from successful comparisons.
+
+Full suite **968 passed** (35 new shard tests). Experimental test processes
+and tunnel stopped; production Huihui PID1055, EXO2-first24/40 KV16, saved
+restore model unchanged, direct `/api/chat` still answered. No reboot,
+production restart, GGUF deletion/move/overwrite, post, or release. Web/picker
+integration, source-free peer Range downloads, additional architectures and
+physical3+Mini checks remain. [Day22 detail](DAY22.md) and
+[raw evidence](../bench/results/day22/live.json).
