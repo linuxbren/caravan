@@ -1,0 +1,103 @@
+{
+  "schema": "caravan-gguf-removal-batch-v1",
+  "gates": [
+    {
+      "checked_ns": 1794358179736952000,
+      "gate_passed": true,
+      "manifest_sha256": "f2218b171c16dff2a02fddd2c00064ea04811f4dc5d41cccb622acf7a2c9a826",
+      "n_minis": 2,
+      "pieces": {
+        "allocated_bytes": 1005432832,
+        "logical_bytes": 1005304514,
+        "n_minis": 2,
+        "ok": true,
+        "root": "/Users/brenden/.caravan/day22-shards/qwen2.5-3b-1-1",
+        "source_bytes": 1997879712,
+        "source_sha256": "670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a",
+        "stage_index": 0,
+        "tensor_bytes": 999225344,
+        "tensors": 229,
+        "unique_piece_bytes": 999225344
+      },
+      "production": {
+        "counts": [
+          24,
+          40
+        ],
+        "kv_bits": 16,
+        "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+        "pid": 1055,
+        "restore_model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit"
+      },
+      "proof_sha256": "c5781a00acd92329097a1fc16860753889b5c365b036f12b8e4e63b65e49f841",
+      "recovery_url": "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/7dabda4d13d513e3e842b20f0d435c732f172cbe/qwen2.5-3b-instruct-q4_0.gguf",
+      "root": "/Users/brenden/.caravan/day22-shards/qwen2.5-3b-1-1",
+      "schema": "caravan-gguf-removal-gate-v1",
+      "source_record_sha256": "563139926b56441f36429ac776fa0d35e201e7db805ec91874c4bf9c3c5d727a",
+      "stage_index": 0,
+      "transaction": "79653a42295f4832963d16f951343ca0",
+      "will_remove": [
+        {
+          "allocated_bytes": 1997881344,
+          "ctime_ns": 1794097153895784545,
+          "dev": 16777234,
+          "ino": 20077232,
+          "mtime_ns": 1794097153894936249,
+          "nlink": 1,
+          "path": "/Users/brenden/.caravan/models/Qwen--Qwen2.5-3B-Instruct-GGUF/qwen2.5-3b-instruct-q4_0.gguf",
+          "sha256": "670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a",
+          "size": 1997879712
+        }
+      ]
+    },
+    {
+      "checked_ns": 1794358179687025000,
+      "gate_passed": true,
+      "manifest_sha256": "79ebfc2230a6a9b671da546469f8359e47133117490b2c3f0ed82383593e1c47",
+      "n_minis": 2,
+      "pieces": {
+        "allocated_bytes": 998895616,
+        "logical_bytes": 998777538,
+        "n_minis": 2,
+        "ok": true,
+        "root": "/Users/brenden/.caravan/day22-shards/qwen2.5-3b-1-1",
+        "source_bytes": 1997879712,
+        "source_sha256": "670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a",
+        "stage_index": 1,
+        "tensor_bytes": 992698368,
+        "tensors": 206,
+        "unique_piece_bytes": 992698368
+      },
+      "production": {
+        "counts": [
+          24,
+          40
+        ],
+        "kv_bits": 16,
+        "model_id": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit",
+        "pid": 1055,
+        "restore_model": "huihui-qwen3-5-27b-claude-4-6-opus-abliterated-4bit"
+      },
+      "proof_sha256": "c5781a00acd92329097a1fc16860753889b5c365b036f12b8e4e63b65e49f841",
+      "recovery_url": "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/7dabda4d13d513e3e842b20f0d435c732f172cbe/qwen2.5-3b-instruct-q4_0.gguf",
+      "root": "/Users/brenden/.caravan/day22-shards/qwen2.5-3b-1-1",
+      "schema": "caravan-gguf-removal-gate-v1",
+      "source_record_sha256": "563139926b56441f36429ac776fa0d35e201e7db805ec91874c4bf9c3c5d727a",
+      "stage_index": 1,
+      "transaction": "79653a42295f4832963d16f951343ca0",
+      "will_remove": [
+        {
+          "allocated_bytes": 1997881344,
+          "ctime_ns": 1794097369461091637,
+          "dev": 16777232,
+          "ino": 20538354,
+          "mtime_ns": 1794097227854830690,
+          "nlink": 1,
+          "path": "/Users/brenden/.caravan/models/Qwen--Qwen2.5-3B-Instruct-GGUF/qwen2.5-3b-instruct-q4_0.gguf",
+          "sha256": "670d82d0fbee6289b661eb323612c65bd2e97ec8c65cdbd9131aa44d30e9816a",
+          "size": 1997879712
+        }
+      ]
+    }
+  ]
+}
