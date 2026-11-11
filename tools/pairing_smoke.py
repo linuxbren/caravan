@@ -39,7 +39,7 @@ def scratch(value):
     marker=home/'.pairing-smoke-owned'
     if not marker.exists():
         # A fresh easy-package install is also allowed, but not arbitrary data.
-        unrelated=[p.name for p in home.iterdir() if p.name not in ('.caravan','Library')]
+        unrelated=[p.name for p in home.iterdir() if p.name not in ('.caravan','Library','.rustup')]
         if unrelated:raise ValueError('This is not an empty or easy-package scratch folder.')
         atomic(marker,'Caravan isolated pairing acceptance\n',backup=False)
     return home
