@@ -962,3 +962,8 @@ comparison still substituted the removed personal home path, so 958/959 passed
 and `test_repo_plist_matches_build_head_command` failed. Updated that fixture to
 substitute the explicit `YOUR_MAC_USER` template home, retaining the complete
 functional argv comparison. No runtime behavior was changed for this correction.
+
+Final corrected archive `c928f2f`: **PASS**, Ran 959 tests in 46.416s; zero failures.
+Archive SHA256 `014e8a001f432b54b54ef46d48911d489a1c2c97a46b2c925e743b007811f8f4`.
+Channel source stays pinned to that verified tree; this later docs-only result
+does not move the immutable Day21 tag or require another runtime package.
