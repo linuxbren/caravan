@@ -14,7 +14,10 @@ class PublicDocsTest(unittest.TestCase):
     def test_current_guides_do_not_assume_private_names(self):
         pattern = r'(?i)\b(?:omarchy|exo1|exo2|brenden|riley|talaria|omasizer|hermes)\b'
         for filename in GUIDES:
-            self.assertIsNone(re.search(pattern, (ROOT/filename).read_text()), filename)
+            text = (ROOT/filename).read_text()
+            # The published MIT License legally names the copyright holder.
+            text = re.sub(r'Copyright \(c\) \d{4} Brenden Dawson\.?', '', text)
+            self.assertIsNone(re.search(pattern, text), filename)
 
     def test_current_guides_have_no_personal_network_or_paths(self):
         pattern = r'(?i)/Users/(?!YOUR_)[^ /`]+|/home/brenden|prf-hays|(?<!\d)(?:192\.168|169\.254|100\.68)\.\d+\.\d+'
