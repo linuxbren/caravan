@@ -813,6 +813,8 @@ def make_handler(app: App):
                 return self._api_settings()
             if path == "/api/hf-token":
                 return self._api_hf_token_get()
+            if path == "/api/remote":
+                return self._api_remote()
             if path == "/api/helpers":
                 import web_helpers
                 return self._json(200, {"offer": web_helpers.offer(app.mgr.snapshot())})
@@ -988,6 +990,8 @@ def make_handler(app: App):
                 return self._api_picker_placement(body=body)
             if path == "/api/hf-token":
                 return self._api_hf_token_set(body=body)
+            if path == "/api/remote":
+                return self._api_remote(post=True, body=body)
             return self._json(404, {"error": "not found"})
 
         def _serve_file(self, rel):
@@ -1351,6 +1355,37 @@ def make_handler(app: App):
                 except Exception as e:
                     nodes_out.append({"node": n.get("id"), "ok": False, "error": str(e)})
             return self._json(200, {**st, "nodes": nodes_out})
+
+        def _api_remote(self, post=False, body=None):
+            import sys as _sys
+            from pathlib import Path as _Path
+            tools = str(_Path(__file__).resolve().parents[1] / "tools")
+            if tools not in _sys.path:
+                _sys.path.insert(0, tools)
+            import caravan_remote as remote
+            port = int(getattr(getattr(self, "server", None), "server_port", None) or 8190)
+            try:
+                if post:
+                    body = body if isinstance(body, dict) else {}
+                    enabled = body.get("enabled")
+                    if enabled is None and body.get("action") in ("on", "off"):
+                        enabled = body["action"] == "on"
+                    if enabled is True:
+                        info = remote.turn_on(port=port)
+                    elif enabled is False:
+                        info = remote.turn_off(port=port)
+                    else:
+                        return self._json(400, {"error": "Send enabled true or false."})
+                else:
+                    info = remote.inspect(port=port)
+            except remote.RemoteError as e:
+                return self._json(400, {"error": str(e), "enabled": False, "available": False,
+                                        "addresses": [], "message": str(e), "port": port})
+            payload = dict(info)
+            if post and not info.get("available") and body and body.get("enabled") is True:
+                return self._json(400, {**payload, "error": info.get("message")})
+            return self._json(200, payload)
+
 
         def _api_picker_placement(self, body=None):
             body = body or {}

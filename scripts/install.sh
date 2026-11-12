@@ -190,5 +190,14 @@ say 'Open a new Terminal window to use caravan (for example: caravan status).'
 say 'Done. Caravan starts at user login, not before login. Choose a model in the browser.'
 if [ "$KIND" = web ]; then
   if [ "$FRESH_CONFIG" = 1 ]; then run "$VENV/bin/python" "$REPO/tools/caravan_pairing.py" prepare; fi
+  # One optional question, only on a fresh install, only if Tailscale is ready
+  # and a terminal can be read (/dev/tty under curl|bash). Otherwise silent.
+  if [ "$FRESH_CONFIG" = 1 ] && [ "$UPDATE" = 0 ]; then
+    if [ "$DRY" = 1 ]; then
+      say 'Would ask whether to open Caravan from your other devices over Tailscale.'
+    else
+      "$VENV/bin/python" "$REPO/tools/caravan_remote.py" maybe-prompt --port "$WEB_PORT"
+    fi
+  fi
   say "Open http://127.0.0.1:$WEB_PORT/ (local browser). To add a Mac, choose Add Macs. Logs: ~/.caravan/logs/"
 fi

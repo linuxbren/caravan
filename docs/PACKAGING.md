@@ -9,7 +9,7 @@
   3.12.11. System Python is untouched; a marked, idempotent PATH block
   is added to the login profile and removed on uninstall.
 - Per-user web service and local-only browser, no bundled models or credentials.
-- Safe start/stop/status/open/doctor/update/uninstall/add-mini command. Uninstall
+- Safe start/stop/status/open/doctor/update/uninstall/add-mini/remote command. Uninstall
   removes all owned local jobs/workers/data and marked PATH/SSH entries after
   confirmation; stop does not kill model workers.
 - Immutable committed-tree source archive builder and checksum. These are

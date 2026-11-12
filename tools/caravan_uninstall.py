@@ -144,7 +144,7 @@ def total_bytes(root):
     return total
 
 
-def uninstall(home=None, *, yes=False, confirm=input, run=None, inspect=command_of, send=os.kill):
+def uninstall(home=None, *, yes=False, confirm=input, run=None, inspect=command_of, send=os.kill, remote_off=None):
     import caravan_service as service
     from caravan_path import configure
     home = Path(home or Path.home())
@@ -177,6 +177,15 @@ def uninstall(home=None, *, yes=False, confirm=input, run=None, inspect=command_
               f'pairing keys and ~/.caravan ({size / 1e9:.2f} GB total), plus marked SSH/PATH entries? [y/N] ')
     if not yes and confirm(prompt).strip().lower() not in ('y', 'yes'):
         return 'Cancelled. Caravan files were kept.'
+    # Drop only Caravan's Tailscale serve entry before files disappear.
+    try:
+        if remote_off is None:
+            from caravan_remote import turn_off
+            turn_off(home=home, missing_ok=True, quiet=True)
+        else:
+            remote_off()
+    except Exception:
+        pass
     # Collect worker identities before bootout; the web may exit independently.
     tracked = workers(home, repos, inspect=inspect)
     for path, plan in jobs:

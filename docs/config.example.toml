@@ -43,3 +43,9 @@ thinking = "off"      # on / off: default for the Thinking button
 # peer = "169.254.x.y:5560"
 # role = "packer"
 # order = 1
+
+# Opt-in: share the local page with devices on your Tailscale network.
+# The page itself stays on 127.0.0.1. Prefer `caravan remote on` / Settings
+# over editing this by hand.
+# [remote]
+# enabled = true

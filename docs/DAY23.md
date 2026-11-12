@@ -153,3 +153,33 @@ No 1st-node or 2nd-node access is part of publication. To activate an update,
 stop the browser service with `caravan stop`, run `caravan update`, then
 `caravan start` and refresh the page. Model workers remain running until an
 explicit unload/reload; the update does not silently switch a loaded model.
+
+## Opt-in Tailscale access from other devices
+
+The page stays on `127.0.0.1`. An opt-in Tailscale forward, off by default,
+lets other devices on the same Tailscale network open it.
+
+- `caravan remote on|off|status` uses `tailscale serve --bg --tcp <port>
+  tcp://127.0.0.1:<port>` and `tailscale serve --tcp=<port> off`. Status is
+  one plain line, with the Tailscale IP and MagicDNS addresses when on.
+  Missing or signed-out Tailscale is explained in plain words. A hand-made
+  serve on the same loopback port is recognized as on and recorded in
+  `[remote] enabled = true`.
+- Fresh install asks exactly one optional question, and only when Tailscale
+  is installed and signed in and a terminal can be read (`/dev/tty` under
+  `curl | bash`): "Open Caravan from your other devices over Tailscale?
+  (y/N)". Default no. Updates and non-interactive installs skip it.
+- Settings has an **Open from my other devices** switch (`GET`/`POST
+  /api/remote`) that shows the addresses when on, and a plain note when
+  Tailscale is not available.
+- Uninstall removes Caravan's serve entry first. Doctor reports the state.
+  Other Tailscale serve entries are never touched. Funnel is never enabled.
+
+Portable tests cover the CLI, installer prompt (tty vs not, Tailscale
+present vs absent), API, uninstall, doctor, adoption of an existing serve,
+and the loopback bind. The box suite is **1,213 tests** (40 new). Live Mac checks still need a signed-in Tailscale
+client and a second device on the same network. No 1st-node or 2nd-node
+access is part of this change. To activate an update: `caravan stop`,
+`caravan update`, `caravan start`, then refresh the page. If a hand-made
+share is already on, `caravan remote status` and Settings should show it
+as on after the update.

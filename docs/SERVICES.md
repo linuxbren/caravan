@@ -6,7 +6,7 @@ For everyday setup use [INSTALL](../INSTALL.md), not the historical lab commands
 below. The bootstrap provides private Python, installs a web-only per-user
 LaunchAgent, and opens the page. Worker-only preparation creates no fixed-model
 job. The `~/.caravan/bin/caravan` command supplies start/stop/status/doctor/update/
-uninstall/add-mini/open. Stop/uninstall affect one owned service, not all model
+uninstall/add-mini/open/remote. Stop/uninstall affect one owned service, not all model
 workers; Unload in the page first to free model memory. Settings/models are kept.
 
 Login restore uses the last successful load, retries temporary node/memory/link

@@ -97,6 +97,35 @@ New installs get a local browser service even with `--role worker`; supplying a
 fixed `--model` remains the developer-only direct worker setup.
 
 
+## Open from other devices (Tailscale)
+
+The installed web service stays bound to `127.0.0.1`. It is never changed to
+`0.0.0.0`. Opt-in access uses Tailscale's own `serve` forward:
+
+```sh
+tailscale serve --bg --tcp <web-port> tcp://127.0.0.1:<web-port>
+```
+
+`caravan remote on` runs that command and records `[remote] enabled = true`
+in `~/.caravan/config.toml`. It never passes `--funnel`. `caravan remote off`
+runs `tailscale serve --tcp=<web-port> off` only, and only when the forward
+target is this Mac's loopback web port. Other Tailscale serve entries are
+left alone. `caravan uninstall` does the same cleanup before it deletes
+files.
+
+`caravan remote status`, the Settings switch, and `GET /api/remote` read
+the live serve table. A hand-made serve on the same port and loopback
+target is treated as on and written into the config (adopted). Doctor
+reports the same state without writing.
+
+The installer asks the one optional question only on a fresh install, only
+when Tailscale is installed and signed in, and only when a terminal can be
+read (`/dev/tty`, including under `curl | bash`). Otherwise it skips
+silently. Updates never ask. The CLI binary lookup checks the Tailscale
+app bundle, Homebrew (`/opt/homebrew/bin` and `/usr/local/bin`), then
+`PATH`. Settings talks to `GET`/`POST /api/remote`. The web process does
+not re-bind the page.
+
 ## Clean-install runtime and recovery
 
 Every install, including a new paired Mac and `caravan update`, prepares the
@@ -118,10 +147,12 @@ service information; `caravan status` is deliberately one line.
 The installer manages a marked PATH block in `.zprofile` (and `.bash_profile`
 for bash login shells). Open a new Terminal after setup. `caravan uninstall` removes all verified local Caravan jobs, owned local workers,
 its marked PATH/SSH entries, and the entire `~/.caravan` tree, including models,
-settings, keys, source and runtimes. It previews the total bytes and asks once;
+settings, keys, source and runtimes. It first turns off Caravan's Tailscale
+serve entry if one is present. It previews the total bytes and asks once;
 `--yes` skips the prompt. Remove paired Macs first. Unverified startup files and
 the unrelated remote-access watchdog stay untouched. Only exact known repository
-workers and recorded engine/tunnel PIDs are stopped; no remote commands run.
+workers and recorded engine/tunnel PIDs are stopped; no commands are sent to
+another Mac.
 
 
 For a developer/source installation, keep using the **same repo, role, Python,

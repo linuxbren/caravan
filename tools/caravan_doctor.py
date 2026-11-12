@@ -63,6 +63,11 @@ def checks(home=None, port=8190):
     except (OSError, ValueError):
         add("INFO", "Service details unavailable; rerun setup.")
     add("INFO", "Models and trusted Mac connections are separate setup steps. See INSTALL.md.")
+    try:
+        from caravan_remote import doctor_line
+        add("INFO", doctor_line(home=home, port=port))
+    except Exception as e:  # noqa: BLE001
+        add("INFO", "Open from other devices: could not check (" + str(e).splitlines()[0][:120] + ").")
     add("INFO", "No network checks performed. Downloads require GitHub, PyPI and model-host access; check Wi-Fi/firewall if setup fails.")
     return rows
 

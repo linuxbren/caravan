@@ -433,6 +433,21 @@ Also: `CARAVAN_CONFIG_TOML` overrides the path (default
 `~/.caravan/config.toml`).
 
 
+## Open from other devices (`[remote]`)
+
+`caravan remote on` writes this optional table to `~/.caravan/config.toml`:
+
+```toml
+[remote]
+enabled = true
+```
+
+The live Tailscale serve table is the source of truth. If a matching
+loopback forward is already present, status and Settings treat it as on
+and record this table. `enabled = false` after `caravan remote off`. The
+web bind address is not set here and stays `127.0.0.1`. See
+[the developer guide](DEVELOPMENT.md#open-from-other-devices-tailscale).
+
 ## Hugging Face token
 
 Unauthenticated Hugging Face downloads are rate-limited. Caravan resolves a

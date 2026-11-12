@@ -2,6 +2,10 @@
 
 ## Day 23 — clean-install fixes (published; pending native acceptance)
 
+- Opt-in Tailscale access from other devices: `caravan remote on|off|status`,
+  one optional install question, and an **Open from my other devices** Settings
+  switch. The page stays on 127.0.0.1; only the user's Tailscale network can
+  reach it. Uninstall turns the share off. Off by default.
 - Live-install follow-up: visible-page automatic model-list refresh with selection preservation;
   hide metadata-only starter models; Add a Mac from placement with return to fresh options;
   one-third-width desktop drawers and full-width mobile drawers.

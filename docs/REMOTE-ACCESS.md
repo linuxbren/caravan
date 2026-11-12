@@ -25,19 +25,26 @@ Confirm this returns the intended helper before loading a split model. Use a
 stable trusted SSH control name; do not identify a Mac solely by yesterday's
 Thunderbolt address. macOS can change link-local addresses after reboot.
 
-## Open the first Mac's browser page from the development node
+## Open the first Mac's browser page from another device
 
-Keep the browser service local to the Mac. Forward it over SSH:
+The page stays bound to this Mac (`127.0.0.1`). To open it from your other
+devices, use the opt-in Tailscale share: `caravan remote on`, the Settings
+switch **Open from my other devices**, or the install question if Tailscale
+is already signed in. Only devices on your Tailscale network can reach it.
+`caravan remote status` prints the addresses. `caravan remote off` and
+uninstall remove only Caravan's share. Details are in
+[the developer guide](DEVELOPMENT.md#open-from-other-devices-tailscale).
+
+You can also forward the local page over SSH and leave Tailscale unused:
 
 ```sh
 ssh -N -L 18190:127.0.0.1:8190 lead-mac
 ```
 
-Open http://127.0.0.1:18190/ on the development node. Choose a different local
+Open http://127.0.0.1:18190/ on your other computer. Choose a different local
 port if that one is busy. Keep the terminal open while using the tunnel.
 Caravan does not create this alias, enable Remote Login, or install a tunnel
-service on your development node. A VPN such as Tailscale is optional, not a
-requirement. It needs its own setup and authentication if you choose to use it.
+service for you.
 
 ## If a connection fails
 

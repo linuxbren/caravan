@@ -41,6 +41,18 @@ After restarting your Mac, unlock it and log in. Caravan starts and brings
 back the last model you successfully loaded. Choose **Unload** first if you
 want it to start without a model.
 
+## Open from your other devices
+
+The page normally opens only on the Mac where Caravan is installed. If
+Tailscale is already on that Mac and you are signed in, setup asks:
+
+Open Caravan from your other devices over Tailscale? (y/N)
+
+It defaults to no. You can also turn this on later in **Settings**, or by
+running `caravan remote on`. Only devices on your Tailscale network can
+open the page. `caravan remote status` shows the address to use. Turn it
+off in Settings, with `caravan remote off`, or when you uninstall.
+
 ## Add Minis
 
 Each extra Mac is **the new Mac**. The Mac you started with is **your first Mac**.
@@ -82,7 +94,7 @@ settings stay. If an update fails, run `caravan doctor` and keep the backup.
 
 ## Remove Caravan safely
 
-Remove paired Macs first, then run `caravan uninstall` and confirm: it removes all Caravan services, models, settings and files (use `--yes` to skip confirmation).
+Remove paired Macs first, then run `caravan uninstall` and confirm: it turns off the Tailscale share and removes all Caravan services, models, settings and files (use `--yes` to skip confirmation).
 
 ## Troubleshooting
 

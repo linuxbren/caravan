@@ -1006,6 +1006,10 @@
   #settingsDrawer .hf-token-card small { margin-top: 12px; }
   #settingsDrawer #barColorSwitch { display: flex; margin-bottom: 8px; }
   #settingsDrawer #barColorSwitch button { flex: 1; }
+  #settingsDrawer #remoteAccessSwitch { display: flex; margin-bottom: 8px; }
+  #settingsDrawer #remoteAccessSwitch button { flex: 1; }
+  #settingsDrawer #remoteAccessSwitch button:disabled { opacity: .5; cursor: not-allowed; }
+  #settingsDrawer #remoteAccessStatus a { color: var(--accent2); }
 
   .opt.mlxoff { opacity: .45; }
   .opt.mlxoff .seg button { cursor: not-allowed; }
@@ -1325,6 +1329,14 @@
       </div>
       <small>Also used: <code>HF_TOKEN</code> env, or <code>~/.cache/huggingface/token</code> from <code>huggingface-cli login</code>.</small>
     </div>
+    <div class="optcard drawer-section" id="remoteAccessCard">
+      <h2 class="drawer-section-title"><span class="tip" title="Only devices on your Tailscale network can open this page. The page itself stays on this Mac.">Open from my other devices</span></h2>
+      <div class="theme-switch" id="remoteAccessSwitch" title="Open from my other devices">
+        <button type="button" data-remote="off" class="on">Off</button>
+        <button type="button" data-remote="on">On</button>
+      </div>
+      <div class="help" id="remoteAccessStatus" role="status" aria-live="polite">Checking…</div>
+    </div>
     <div class="optcard drawer-section" id="topoBarsCard">
       <h2 class="drawer-section-title"><span class="tip" title="How Topology fills the CPU / GPU / RAM / Disk / Temp bars.">Topology bars</span></h2>
       <div class="theme-switch" id="barColorSwitch" title="Bar colors">
@@ -1367,6 +1379,7 @@
 
   const openDrawer = () => {
     refreshHfTokenStatus();
+    refreshRemoteAccess();
     $("settingsDrawer").classList.add("open");
     const b = $("drawerBackdrop"); b.hidden = false; b.classList.add("open");
   };
@@ -1422,6 +1435,52 @@
       } catch (e) { alert(e.error || e.message || e); }
     });
     refreshHfTokenStatus();
+  }
+  function renderRemoteAccess(j) {
+    const on = !!j.enabled;
+    const available = !!j.available;
+    document.querySelectorAll("#remoteAccessSwitch button").forEach((b) => {
+      b.classList.toggle("on", (b.dataset.remote === "on") === on);
+      b.disabled = !available;
+    });
+    const box = $("remoteAccessStatus");
+    box.replaceChildren();
+    if (!available) {
+      box.textContent = j.message || "Tailscale is not available on this Mac. Install the Tailscale app, sign in, then try again.";
+      return;
+    }
+    if (on && j.addresses && j.addresses.length) {
+      box.append("Open at ");
+      j.addresses.forEach((addr, i) => {
+        if (i) box.append(" or ");
+        const a = document.createElement("a");
+        a.href = addr;
+        a.textContent = addr;
+        a.target = "_blank";
+        a.rel = "noopener";
+        box.appendChild(a);
+      });
+      box.append(" from devices on your Tailscale network.");
+      return;
+    }
+    box.textContent = j.message || "Off. Only this Mac can open the page.";
+  }
+  async function refreshRemoteAccess() {
+    try { renderRemoteAccess(await api("/api/remote")); }
+    catch (e) { $("remoteAccessStatus").textContent = (e && (e.error || e.message)) || "Could not check this setting."; }
+  }
+  if ($("remoteAccessSwitch")) {
+    $("remoteAccessSwitch").addEventListener("click", async (e) => {
+      const b = e.target.closest("button[data-remote]");
+      if (!b || b.disabled) return;
+      const enable = b.dataset.remote === "on";
+      try {
+        renderRemoteAccess(await api("/api/remote", { method: "POST", body: JSON.stringify({ enabled: enable }) }));
+      } catch (err) {
+        $("remoteAccessStatus").textContent = (err && (err.error || err.message)) || "Could not change this setting.";
+      }
+    });
+    refreshRemoteAccess();
   }
   if (/[?&]settings=1\b/.test(location.search)) setTimeout(openDrawer, 300);
   $("btnCloseSettings").addEventListener("click", closeDrawer);
