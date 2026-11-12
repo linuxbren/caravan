@@ -179,6 +179,18 @@ chunk repeated many times), a plain note appears under it, for example
 the bad setting again in Auto-tune or Self-tuning. If settings are
 already safe, the note says so and nothing else is changed.
 
+On some models, Memory compression 4 cannot work well. Settings still
+lists 4 but shows it disabled, with the reason "4 is not available on
+this model. This model's chat memory is too compact for 4 to work
+well." Auto-tune and Self-tuning never try 4 on those models. If 4 was
+already saved, it is turned back to Auto before the model loads, and a
+plain note says so. Whenever a model loads at Memory compression 4 or
+8, a short check with a known answer runs. If the answer is wrong,
+Memory compression is put back to 16, and a plain note appears in chat
+and in Settings before you chat, for example "Memory compression 4
+gave wrong answers on this model, so it was turned back to 16." An
+Auto-tune trial must pass this check to be kept.
+
 ## Developer details and history
 
 The page is served by `proxy/web_server.py`; model processes are managed through

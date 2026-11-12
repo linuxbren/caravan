@@ -160,6 +160,15 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   on, each with a clickable link including `http://<lan-ip>:<port>`)
   changes the model process as well as the page, so an update from
   that pin reloads a loaded model. After the update, refresh the page.
+  A later live-review follow-up (Memory compression 4 is disabled on
+  models whose chat memory is too compact for 4 to work well, with a
+  short reason in Settings; a leftover saved 4 is turned back to Auto;
+  Auto-tune and Self-tuning never try 4 on those models; a short
+  known-answer check after a load at 4 or 8 puts Memory compression
+  back to 16 when the answer is wrong, with a plain note in chat and
+  Settings; Auto-tune trials must pass the check to be kept) changes
+  the model process as well as the page, so an update from that pin
+  reloads a loaded model. After the update, refresh the page.
 
 - Garbled replies, live review: a plain note under the reply, for
   example "This reply came out garbled, so Memory compression was
@@ -169,5 +178,17 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   Local-network access and the Tailscale share can both be on, each
   with a clickable link (`http://<lan-ip>:<port>` under the local-network
   switch). Anyone on the same network can use Caravan, and there is no login.
+
+- Memory compression quality, live review: on models that cannot use
+  4 well, Settings shows 4 disabled with the reason "4 is not
+  available on this model. This model's chat memory is too compact
+  for 4 to work well." A leftover saved 4 is turned back to Auto,
+  with the note "Memory compression 4 is not available on this model,
+  so it was turned back to Auto." After a load at 4 or 8, a short
+  check with a known answer puts Memory compression back to 16 if
+  the answer is wrong, with the note "Memory compression 4 gave wrong
+  answers on this model, so it was turned back to 16." Auto-tune and
+  Self-tuning never try 4 where it is disabled, and a trial must pass
+  the check to be kept.
 
 Details: [DAY24.md](../DAY24.md). Install: [INSTALL.md](../../INSTALL.md).

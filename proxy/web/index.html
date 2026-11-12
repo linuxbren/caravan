@@ -1126,6 +1126,16 @@
 
   .opt.mlxoff { opacity: .45; }
   .opt.mlxoff .seg button { cursor: not-allowed; }
+  .opt .seg button:disabled,
+  .opt .seg button.val-off { opacity: .45; cursor: not-allowed; }
+  .opt .help.val-disabled,
+  .opt .quality-note,
+  #qualityNotice {
+    color: var(--muted);
+    margin-top: 6px;
+    font-size: .82rem;
+    line-height: 1.4;
+  }
   .pinnote.mlxnote { margin-bottom: 6px; }
 
   #thunderboltPanel { border-top: 1px solid var(--line); font-size: .7rem; line-height: 1.6; overflow-wrap: anywhere; }
@@ -1461,6 +1471,7 @@
 
     <div id="balanceChatNotice" class="balance-notice" role="status" aria-live="polite" hidden></div>
     <div id="restoreNotice" role="status" aria-live="polite" hidden style="margin:6px 12px;font-size:.8rem"></div>
+    <div id="qualityNotice" role="status" aria-live="polite" hidden class="garble-note" style="margin:6px 12px"></div>
 
     <div class="card a-progress demoted" id="progressCard">
       <h2>Load progress</h2>
@@ -2186,9 +2197,10 @@
     return JSON.stringify({
       mid, mtp,
       gguf: selRow.source === "gguf",
-      opts: (state.opts || []).map(o => [o.id, o.label, o.help, o.values, o.locked, o.forced]),
+      opts: (state.opts || []).map(o => [o.id, o.label, o.help, o.values, o.locked, o.forced, o.disabled_values]),
       choice: state.choice,
       pins: state.filePins,
+      quality: state.qualityNotice || "",
     });
   }
   function renderOpts() {
@@ -2210,12 +2222,20 @@
       const locked = !!(o.locked || o.forced);
       if (locked && o.forced) state.choice[o.id] = o.forced;
       const values = (o.values || []).filter(v => v !== "mtp" || $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true");
+      const disabledVals = o.disabled_values || {};
+      const disabledReason = Object.values(disabledVals).filter(Boolean)[0] || "";
+      const qualityNote = (o.id === "kv_bits" && state.qualityNotice) ? state.qualityNotice : "";
       return `
       <div class="opt${locked ? " mlxoff" : ""}" data-id="${o.id}" ${locked ? 'aria-disabled="true"' : ""}>
         <div class="row"><span class="name">${o.label}</span>
-          <span class="seg">${values.map(v =>
-            `<button type="button" data-v="${v}" class="${state.choice[o.id] === v ? "sel" : ""} ${v === "auto" ? "auto" : ""}">${o.id === "self_tune" && v === "auto" ? (state.filePins.self_tune === "off" ? "Off (config)" : "On") : v === "mtp" ? "Native MTP · test" : v === "adaptive" ? "Adaptive · test" : (VAL_LABEL[v] || v)}</button>`).join("")}</span></div>
+          <span class="seg">${values.map(v => {
+            const off = !!disabledVals[v];
+            const label = o.id === "self_tune" && v === "auto" ? (state.filePins.self_tune === "off" ? "Off (config)" : "On") : v === "mtp" ? "Native MTP · test" : v === "adaptive" ? "Adaptive · test" : (VAL_LABEL[v] || v);
+            return `<button type="button" data-v="${v}" ${off ? "disabled aria-disabled=\"true\"" : ""} class="${state.choice[o.id] === v ? "sel" : ""} ${v === "auto" ? "auto" : ""} ${off ? "val-off" : ""}" ${off && disabledVals[v] ? `title="${String(disabledVals[v]).replace(/"/g, "&quot;")}"` : ""}>${label}</button>`;
+          }).join("")}</span></div>
         <div class="help">${gguf ? (SETTINGS_HELP_GGUF[o.id] || o.help) : (SETTINGS_HELP_COPY[o.id] || o.help)}${!gguf && o.id === "guess_ahead" && $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true" ? " Native MTP uses the model's built-in predictor instead of a separate helper. Up to ~46% faster writing replies in our tests; needs a matching MTP head and one chat at a time." : ""}</div>
+        ${disabledReason ? `<div class="help val-disabled">${disabledReason}</div>` : ""}
+        ${qualityNote ? `<div class="help quality-note">${qualityNote}</div>` : ""}
         ${state.filePins[o.id] && state.choice[o.id] === "auto"
           ? `<div class="help filepin">config.toml: ${VAL_LABEL[state.filePins[o.id]] || state.filePins[o.id]} (used while this is Auto)</div>` : ""}
         <div class="now"></div>
@@ -2228,6 +2248,7 @@
     for (const row of document.querySelectorAll(".opt")) {
       for (const b of row.querySelectorAll(".seg button")) {
         if (row.classList.contains("mlxoff")) { b.disabled = true; continue; }
+        if (b.disabled) continue;
         b.onclick = () => {
           state.choice[row.dataset.id] = b.dataset.v;
           // Self-tuning set to Auto puts every option back on Auto.
@@ -2445,6 +2466,11 @@
         restoreNotice.hidden = !["preparing", "blocked", "save_error"].includes(r.phase);
         restoreNotice.textContent = r.message || "";
       }
+      const qn = $("qualityNotice");
+      const qmsg = (j.worker && j.worker.quality_notice) || "";
+      state.qualityNotice = qmsg;
+      if (qn) { qn.hidden = !qmsg; qn.textContent = qmsg; }
+      if (qmsg && state.opts) renderOpts();
       setStatus(j.worker);
       window.caravanWorkerSnapshot = j;
       window.dispatchEvent(new CustomEvent('caravan-worker-status', {detail: j}));

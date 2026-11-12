@@ -3452,3 +3452,16 @@ changes the model process, so a `caravan update` reloads a loaded
 model. The 1st node and 2nd node were not touched. Suite counts and
 SHAs are recorded in DAY24 at publication.
 
+
+## Day 24 follow-up: Memory compression quality check (2026-11-12 CST)
+
+On models that cannot use Memory compression 4 well, Settings shows
+4 disabled with a short reason, and Auto-tune and Self-tuning never
+try it. A leftover saved 4 is turned back to Auto, with a plain note.
+After any load at 4 or 8, a short known-answer check puts Memory
+compression back to 16 if the answer is wrong, with a plain note in
+chat and Settings before you chat. Auto-tune trials must pass the
+check to be kept. Details: [DAY24.md](DAY24.md). This follow-up
+changes the model process, so a `caravan update` reloads a loaded
+model. The 1st node and 2nd node were not touched. Suite counts and
+SHAs are recorded in DAY24 at publication.

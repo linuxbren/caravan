@@ -115,6 +115,8 @@ def schedule(entry, settings, active, fp, *, n_layers=None):
             inc = base[name]
             if name == "kv_bits":
                 alternatives = [v for v in (8, 4, 16) if v != inc]
+                if not active.get("kv_4_supported", True):
+                    alternatives = [v for v in alternatives if v != 4]
             elif name == "fuse_kernels":
                 alternatives = ["on" if inc == "off" else "off"]
             elif name in ("keepalive", "native_mtp", "adaptive_lookup"):

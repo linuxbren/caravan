@@ -304,14 +304,23 @@ def merge_with_file(page: dict, fsets: dict):
     return s, used
 
 
-def options_for(source="mlx") -> list:
+def options_for(source="mlx", model_dir=None, config=None) -> list:
     """Settings rows for this model type, with the matching help and values.
 
     GGUF hides Fused kernels and GPU keep-warm, drops 4-bit memory
     compression, and marks Guess-ahead, Prompt lookup, and Two chats as
-    locked off for now.
+    locked off for now. On MLX, Memory compression 4 is still listed
+    but marked disabled when this model's chat memory is too compact
+    for 4 to work well.
     """
     src = "gguf" if (source or "").lower() == "gguf" else "mlx"
+    disabled = {}
+    if src == "mlx":
+        try:
+            import kv_quality as K
+            disabled = K.disabled_values_for(config, model_dir=model_dir, source=src)
+        except Exception:
+            disabled = {}
     out = []
     for o in OPTIONS:
         backends = o.get("backends") or ("mlx", "gguf")
@@ -326,6 +335,8 @@ def options_for(source="mlx") -> list:
         if src == "gguf" and o.get("locked_for_gguf"):
             item["locked"] = True
             item["forced"] = o["locked_for_gguf"]
+        if o.get("id") == "kv_bits" and disabled:
+            item["disabled_values"] = dict(disabled)
         out.append(item)
     return out
 

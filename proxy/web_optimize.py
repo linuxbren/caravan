@@ -73,16 +73,33 @@ class _Scores(list):
     garbled = False
 
 
+def _arm_quality_bad(scores):
+    """True when this arm garbled or failed the load-time quality probe."""
+    return bool(getattr(scores, "garbled", False) or getattr(scores, "quality_fail", False))
+
+
+def _arm_fail_why(scores, who):
+    if getattr(scores, "garbled", False):
+        return f"{who} garbled"
+    if getattr(scores, "quality_fail", False):
+        return f"{who} failed the quality check"
+    return who
+
+
 def decide_ab_winner(inc, ch, inc_scores, ch_scores, pick):
-    """Pick a winner. A garbled arm is a loss no matter how fast it was."""
-    a_garbled = bool(getattr(inc_scores, "garbled", False))
-    b_garbled = bool(getattr(ch_scores, "garbled", False))
-    if b_garbled and not a_garbled:
-        return inc, ch, "challenger garbled"
-    if a_garbled and not b_garbled:
-        return ch, inc, "incumbent garbled"
-    if a_garbled and b_garbled:
-        return inc, ch, "both garbled"
+    """Pick a winner. A garbled or quality-failed arm is a loss, even if fast."""
+    a_bad = _arm_quality_bad(inc_scores)
+    b_bad = _arm_quality_bad(ch_scores)
+    if b_bad and not a_bad:
+        return inc, ch, _arm_fail_why(ch_scores, "challenger")
+    if a_bad and not b_bad:
+        return ch, inc, _arm_fail_why(inc_scores, "incumbent")
+    if a_bad and b_bad:
+        a_g = bool(getattr(inc_scores, "garbled", False))
+        b_g = bool(getattr(ch_scores, "garbled", False))
+        if a_g or b_g:
+            return inc, ch, "both garbled"
+        return inc, ch, "both failed the quality check"
     if pick(inc_scores, ch_scores):
         return ch, inc, None
     return inc, ch, None
@@ -268,6 +285,26 @@ class Optimizer:
         self._note_tune_sample(result)
         return result
 
+    def _arm_quality_failed(self):
+        """True when the just-loaded arm failed the load-time quality probe."""
+        try:
+            snap = self.mgr.snapshot() or {}
+        except Exception:
+            return False
+        q = snap.get("quality") or {}
+        if q.get("definite") and q.get("ok") is False:
+            return True
+        return False
+
+    def _measure_or_quality_fail(self, name, arm):
+        """Measure this arm, or record a quality-check loss without measuring 16 as 4."""
+        if self._arm_quality_failed():
+            scores = _Scores()
+            scores.quality_fail = True
+            self._log(f"{name}: {arm} failed the quality check")
+            return scores
+        return self._measure(name, arm)
+
     def _measure(self, name, arm):
         scores = _Scores()
         scores_garbled = False
@@ -440,6 +477,12 @@ class Optimizer:
             self._boundary()
             active = self.mgr.lead_active_settings() or {}
             active["kv_quant_supported"] = TS.kv_quant_supported(self.mgr._lead_path)
+            try:
+                import kv_quality as K
+                active["kv_4_supported"] = K.allows_memory_compression_4(
+                    model_dir=self.mgr._lead_path)
+            except Exception:
+                active["kv_4_supported"] = True
             # Day 18: native MTP and adaptive lookup sweeps (both start off).
             active["split"] = bool(self.mgr.snapshot().get("split"))
             active["native_mtp_on_disk"] = bool((self.entry or {}).get("native_mtp_available"))
@@ -483,9 +526,9 @@ class Optimizer:
                 name, inc, ch = item["name"], item["incumbent"], item["challenger"]
                 self._log(f"A/B {name}: {inc} vs {ch}; all other values held")
                 self._apply(name, inc)
-                a = self._measure(name, "incumbent")
+                a = self._measure_or_quality_fail(name, "incumbent")
                 self._apply(name, ch)
-                b = self._measure(name, "challenger")
+                b = self._measure_or_quality_fail(name, "challenger")
                 self._boundary()  # Cancel during the last reply must not commit.
                 winner, lost, why = decide_ab_winner(inc, ch, a, b, AB.pick)
                 if why:

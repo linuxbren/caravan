@@ -18,6 +18,10 @@ and puts Memory compression back to Auto; the model stays loaded, and
 is reloaded at Auto if it was running a tighter value. A trial whose
 reply comes out garbled counts as a loss, no matter how fast it was,
 and is not kept.
+On models that cannot use Memory compression 4 well, Auto-tune never
+tries 4. After a trial loads at 4 or 8, a short known-answer check
+must pass for that trial to be kept; a wrong answer counts as a loss
+and Memory compression is put back to 16.
 
 ## Before starting
 

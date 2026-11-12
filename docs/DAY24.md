@@ -503,3 +503,29 @@ clone on the development node is recorded at publication, along with
 source and pin SHAs. The 1st node and 2nd node were not touched. No
 `day24` tag yet.
 
+
+On the same review, two more safeguards for Memory compression:
+
+Some models cannot use Memory compression 4 well. For those, Settings
+still lists 4 but shows it disabled, with a short reason: "4 is not
+available on this model. This model's chat memory is too compact for
+4 to work well." Auto-tune and Self-tuning never try 4 on those
+models. If 4 was already saved, it is turned back to Auto before the
+model loads, and a plain note says "Memory compression 4 is not
+available on this model, so it was turned back to Auto."
+
+Whenever a model loads at Memory compression 4 or 8, Caravan runs a
+short check with a known answer. If the answer is wrong, Memory
+compression is put back to 16 right away, the setting is remembered
+as a loss, and a plain note appears in chat and in Settings before
+you chat, for example "Memory compression 4 gave wrong answers on
+this model, so it was turned back to 16." The check is only a second
+or two and does not loop. An Auto-tune trial must also pass this
+check to be kept.
+
+This follow-up changes the model process as well as the page, so a
+`caravan update` from the previous Day 24 pin reloads a loaded model.
+After the update, refresh the page. The portable suite on a fresh
+clone on the development node is recorded at publication, along with
+source and pin SHAs. The 1st node and 2nd node were not touched. No
+`day24` tag yet.

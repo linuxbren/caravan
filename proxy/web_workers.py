@@ -309,12 +309,30 @@ class WorkerManager:
         fsets = web_settings.file_settings(entry.get("id"), entry.get("lead_path"), cfg)
         fsets.pop("thinking", None)   # the page's Thinking button reads that one
         settings, from_file = web_settings.merge_with_file(page, fsets)
+        fallback_notice = None
+        try:
+            from web_kv_probe import apply_saved_4_fallback, block_four_if_disallowed
+            settings, fallback_notice = apply_saved_4_fallback(self, entry, settings)
+            if fallback_notice:
+                page = dict(page)
+                page["kv_bits"] = settings.get("kv_bits") or "auto"
+                try:
+                    from web_kv_probe import write_last_model
+                    write_last_model(self, page["kv_bits"])
+                except Exception:
+                    pass
+            block_four_if_disallowed(self, entry)
+        except Exception:
+            pass
         self._set(settings=settings, page_settings=page, from_file=from_file,
-                  config_errors=cfg.get("errors") or [])
+                  config_errors=cfg.get("errors") or [],
+                  quality_notice=fallback_notice)
         for err in cfg.get("errors") or []:
             self._note("config.toml: " + err)
         if from_file:
             self._note("config.toml pins: " + ", ".join(f"{k}={v}" for k, v in from_file.items()))
+        if fallback_notice:
+            self._note(fallback_notice)
         try:
             self._load_once(entry, settings)
         except Exception as e:  # noqa: BLE001
@@ -335,6 +353,28 @@ class WorkerManager:
             except (OSError, ValueError) as ex:
                 self._note(f"could not record rejected trial ({ex})")
             self._load_once(entry, settings)
+        # After a successful load at 4 or 8, a short known-answer probe
+        # reverts to 16 if the model gives a wrong answer. The revert is
+        # a second _load_once (not switch), so this thread is not nested.
+        try:
+            from web_kv_probe import maybe_probe, finish_probe_reload
+            result = maybe_probe(self)
+            if result and result.get("need_reload"):
+                page16 = dict(page)
+                page16["kv_bits"] = "16"
+                settings16 = dict(settings)
+                settings16["kv_bits"] = "16"
+                self._set(page_settings=page16, settings=settings16,
+                          quality_notice=result.get("notice"))
+                if result.get("notice"):
+                    self._note(result["notice"])
+                self._load_once(entry, settings16)
+                finish_probe_reload(self, result)
+            elif fallback_notice:
+                self._set(quality_notice=fallback_notice)
+        except Exception as ex:
+            self._kv_probe_guard = False
+            self._note(f"memory check skipped ({ex})")
 
     def _load_once(self, entry: dict, settings: dict) -> None:
         self._check_load_cancel()
@@ -867,6 +907,13 @@ class WorkerManager:
             if not TS.kv_quant_supported(entry["lead_path"]):
                 for b in (8, 4):   # attention sinks (gpt-oss): quantized KV crashes the load
                     TS.block_value(e, "kv_bits", b, "model can't use quantized KV (attention sinks)")
+            try:
+                import kv_quality as K
+                if not K.allows_memory_compression_4(model_dir=entry["lead_path"]):
+                    TS.block_value(e, "kv_bits", 4,
+                                   "Memory compression 4 is not available on this model")
+            except Exception:
+                pass
             sweep = getattr(self, "_sweep_load", None)
             plan = TS.plan_reload(e, auto, apply_pending=not bool(sweep))
             if sweep:

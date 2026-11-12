@@ -1175,7 +1175,7 @@ def make_handler(app: App):
             src = ((entry or {}).get("source") or "")
             if src != "gguf" and snap.get("backend") == "llama" and mid == snap.get("model_id"):
                 src = "gguf"
-            return self._json(200, {"options": web_settings.options_for(src),
+            return self._json(200, {"options": web_settings.options_for(src, model_dir=(entry or {}).get("lead_path")),
                                    "backend": "llama" if src == "gguf" else "mlx",
                                    "current": snap.get("page_settings") or snap.get("settings"),
                                    "file": {"path": cfg["path"], "exists": cfg["exists"],

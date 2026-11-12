@@ -111,6 +111,15 @@
   Tailscale share can both be on, each with a clickable link) changes
   the model process as well as the page, so an update from that pin
   reloads a loaded model. After the update, refresh the page.
+  A later live-review follow-up (Memory compression 4 is disabled on
+  models whose chat memory is too compact for 4 to work well, with a
+  short reason in Settings; a leftover saved 4 is turned back to Auto;
+  Auto-tune and Self-tuning never try 4 on those models; a short
+  known-answer check after a load at 4 or 8 puts Memory compression
+  back to 16 when the answer is wrong, with a plain note in chat and
+  Settings; Auto-tune trials must pass the check to be kept) changes
+  the model process as well as the page, so an update from that pin
+  reloads a loaded model. After the update, refresh the page.
 
 ## MIT License (2026-11-12)
 
