@@ -2,7 +2,7 @@
 
 Stored in ~/.caravan/speed_averages.json so the numbers describe these Macs
 and this model setup, not a single browser. The page shows one quiet line
-such as "Usually 42 words/s, first word in 1.2 s" when at least one reply
+such as "Average 42 words/s, first word in 1.2 s" when at least one reply
 has been recorded for the current model and the current optimizations.
 The rate is the model's measured token rate, shown as words/s in plain
 language (one token is roughly one word). Changing an optimization starts
@@ -98,13 +98,13 @@ def format_line(write_tok_s, ttft_s) -> str:
     """Plain-language average line, or empty if there is nothing to show."""
     parts = []
     if write_tok_s is not None:
-        parts.append(f"Usually {_fmt_rate(float(write_tok_s))} words/s")
+        parts.append(f"Average {_fmt_rate(float(write_tok_s))} words/s")
     if ttft_s is not None:
         first = f"first word in {_fmt_secs(float(ttft_s))}"
         if parts:
             parts.append(first)
         else:
-            parts.append(f"Usually {first}")
+            parts.append(f"Average {first}")
     return ", ".join(parts)
 
 

@@ -22,7 +22,7 @@ and [file placement](FILES.md).
 Type in the chat box and send. The page streams the reply and reports measured
 reading/writing times from the worker, not simulated performance. Each reply
 has its own timing line. Under the input box, a quiet average such as
-"Usually 42 words/s, first word in 1.2 s" appears once this model has answered
+"Average 42 words/s, first word in 1.2 s" appears once this model has answered
 at least once with the current optimizations. The rate is the model's measured
 token rate, shown as words/s in plain language. The average is kept on the
 1st node in `~/.caravan/speed_averages.json`, separately for each model and
@@ -74,8 +74,10 @@ line stays hidden until a run has finished for this model, and it is kept
 on the 1st node with the other speed averages. Every other optimization — Guess-ahead,
 Prompt lookup, Shared start, Two chats, Fused kernels, Memory compression,
 GPU keep-warm, and **Optimize now** — sits under an **Advanced** section that
-is closed until you open it. Leave Auto when unsure. Some settings require a
-reload and not every model supports every feature. See
+is closed until you open it, along with **Apply & restart**. Toggling
+Self-tuning On or Off takes effect immediately on a loaded MLX model, without
+reloading. Leave Auto when unsure. The other settings require a reload (use
+Apply & restart) and not every model supports every feature. See
 [configuration](CONFIGURATION.md).
 **Optimize now** runs real comparisons and may reload the model; do not start
 it during an important chat. See [optimization](OPTIMIZE-NOW.md).

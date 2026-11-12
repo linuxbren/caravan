@@ -1036,6 +1036,17 @@ class Engine:
         except OSError as e:
             log(f"learn: could not save tuned settings ({e!r})")
 
+    def set_self_tune(self, enabled: bool) -> dict:
+        """Turn everyday learning on or off on a running worker. No reload."""
+        want = bool(enabled)
+        self._learn_enabled = want
+        if want and getattr(self, "_learn_entry", None) is None:
+            try:
+                self._learn_apply_startup()
+            except Exception as e:
+                log(f"self-tune: could not open learned settings ({e})")
+        return {"self_tune": bool(self._learn_enabled)}
+
     def active_settings(self, info=None) -> dict:
         """Day 15: what was actually in effect (per reply when info is given)."""
         a = self.args
@@ -3373,6 +3384,18 @@ def make_handler(engine: "Engine"):
                     return self._json(200, engine.call(lambda: apply(engine, body)))
                 except ValueError as e:
                     return self._json(400, {"error": str(e)})
+                except Exception as e:
+                    return self._json(500, {"error": f"{type(e).__name__}: {e}"})
+            if self.path.split("?")[0] == "/caravan/self-tune":
+                raw = body.get("enabled") if "enabled" in body else body.get("self_tune")
+                if raw in (False, 0, "0", "off", "false", "False"):
+                    want = False
+                elif raw in (True, 1, "1", "on", "auto", "true", "True"):
+                    want = True
+                else:
+                    return self._json(400, {"error": "self_tune must be on or off"})
+                try:
+                    return self._json(200, engine.call(lambda: engine.set_self_tune(want)))
                 except Exception as e:
                     return self._json(500, {"error": f"{type(e).__name__}: {e}"})
             if self.path.startswith("/caravan/cache/"):

@@ -1309,6 +1309,56 @@ class WorkerManager:
             time.sleep(1.0)
         raise TimeoutError("lead did not become ready in time")
 
+    def set_self_tune(self, value) -> dict:
+        """Save Self-tuning and apply it on a running MLX worker with no reload.
+
+        Learning is a live flag on the worker (`_learn_enabled`). Turning it
+        off stops observing chats; turning it on starts observing and, if
+        needed, opens the learned-settings store. Neither requires a reload.
+        """
+        raw = "off" if str(value).strip().lower() == "off" else "auto"
+        snap = self.snapshot()
+        page = dict(snap.get("page_settings") or web_settings.normalize({}))
+        page["self_tune"] = raw
+        settings = dict(snap.get("settings") or web_settings.normalize({}))
+        settings["self_tune"] = raw
+        self._set(page_settings=page, settings=settings)
+        applied = False
+        status = snap.get("status")
+        backend = snap.get("backend")
+        notice = (
+            "Self-tuning is off. It takes effect when you load a model."
+            if raw == "off" else
+            "Self-tuning is on. It takes effect when you load a model."
+        )
+        if status == "ready" and backend == "llama":
+            notice = "Self-tuning is for MLX models. This one is unchanged."
+        elif status == "ready":
+            try:
+                from urllib.request import Request, urlopen
+                req = Request(
+                    f"http://127.0.0.1:{self.lead_port}/caravan/self-tune",
+                    data=json.dumps({"enabled": raw != "off"}).encode(),
+                    headers={"Content-Type": "application/json"},
+                )
+                with urlopen(req, timeout=10) as response:
+                    json.loads(response.read())
+                applied = True
+                notice = (
+                    "Self-tuning is off. Caravan will keep the current settings and stop learning."
+                    if raw == "off" else
+                    "Self-tuning is on. Caravan will learn from your next chats."
+                )
+            except Exception as e:
+                notice = (
+                    "Could not update Self-tuning on the running model "
+                    f"({type(e).__name__}). Try again, or unload and load."
+                )
+                return {"self_tune": raw, "applied": False, "reloaded": False,
+                        "notice": notice, "error": str(e)}
+        return {"self_tune": raw, "applied": applied, "reloaded": False,
+                "notice": notice}
+
     def lead_healthy(self) -> bool:
         import urllib.request
         try:

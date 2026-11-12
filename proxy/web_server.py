@@ -893,6 +893,8 @@ def make_handler(app: App):
                 return self._api_time(post=True, body=body)
             if path == "/api/speed-average":
                 return self._api_speed_average(post=True, body=body)
+            if path == "/api/settings/self-tune":
+                return self._api_self_tune(body=body)
             if path == "/api/models/load":
                 return self._api_load(body=body)
             if path == "/api/models/stop":
@@ -1112,6 +1114,18 @@ def make_handler(app: App):
                 return self._json(200, out)
             except (TypeError, ValueError, OSError) as e:
                 return self._json(400, {"error": str(e)})
+
+        def _api_self_tune(self, body=None):
+            """Turn Self-tuning on or off without a model reload."""
+            body = body if isinstance(body, dict) else {}
+            raw = body.get("self_tune", body.get("value"))
+            if raw is None:
+                return self._json(400, {"error": "self_tune is required"})
+            try:
+                out = app.mgr.set_self_tune(raw)
+            except Exception as e:
+                return self._json(400, {"error": str(e)})
+            return self._json(200, out)
 
         def _api_settings(self):
             # ?model=<id>: what ~/.caravan/config.toml pins for that model (ROADMAP #13c).

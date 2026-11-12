@@ -7,8 +7,10 @@ speed; "Built in the open" removed; Models fit-summary follows the selected
 chip and says Macs; Family menu; row hover (maker, date, context,
 capabilities); one progress card per download, with consistent friendly
 Mac names; Self-tuning shows before and after speed once a run finishes;
-the Helper download button no longer flickers on repeated identical polls.
-On branch `day24-ui`. Day 23 is published (tag day23-2026-11-11).
+the Helper download button no longer flickers on repeated identical polls;
+the average under the input says "Average" (not "Usually"); Apply & restart
+sits inside Advanced, and Self-tuning On/Off takes effect immediately with
+no reload. On branch `day24-ui`. Day 23 is published (tag day23-2026-11-11).
 No 1st-node or 2nd-node access.
 
 ## 2026-11-11: Day 23 live testing and tag

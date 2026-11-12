@@ -606,6 +606,10 @@
     font-size: .72rem; color: var(--muted); line-height: 1.5; margin: 8px 0 0;
   }
   .tune-result[hidden] { display: none; }
+  .self-tune-note {
+    font-size: .72rem; color: var(--muted); line-height: 1.5; margin: 8px 0 0;
+  }
+  .self-tune-note[hidden] { display: none; }
   /* Reserved on the Guess-ahead row (inside Advanced) so the Helper
      download button cannot shift the rows below it when polls re-run. */
   .helper-slot {
@@ -1361,14 +1365,15 @@
 <div class="optcard drawer-section">
       <h2 class="drawer-section-title"><span class="tip" title="Caravan learns which Optimizations help this model on your Minis.">Optimizations</span></h2>
       <div id="optRows"></div>
-      <div class="applyrow">
-        <button class="primary drawer-control" id="btnApply">Apply &amp; restart</button>
-        <small id="optNote">Auto = Caravan decides (learned per model)</small>
-      </div>
+      <p class="self-tune-note" id="selfTuneNote" hidden></p>
       <div class="tunenote" id="tuneNote"></div>
       <details class="opt-advanced" id="optAdvanced">
         <summary>Advanced</summary>
         <div id="optAdvancedRows"></div>
+      <div class="applyrow" id="optApplyRow">
+        <button class="primary drawer-control" id="btnApply">Apply &amp; restart</button>
+        <small id="optNote">Auto = Caravan decides (learned per model)</small>
+      </div>
       <div class="optbox" id="optBox">
         <div class="row">
           <b class="tip" title="Walk-away pass: try each option once against the current best, reload only when a reload option needs a trial, then save the winner.">Optimize now</b>
@@ -1851,6 +1856,7 @@
             for (const o of state.opts) state.choice[o.id] = "auto";
           }
           renderOpts(); renderActive(state.active);
+          if (row.dataset.id === "self_tune") applySelfTune(b.dataset.v);
         };
       }
     }
@@ -1858,6 +1864,19 @@
     if (window.paintHelperButton) window.paintHelperButton();
   }
   state.filePins = {};      // what ~/.caravan/config.toml pins for the picked model
+  async function applySelfTune(value) {
+    // Self-tuning On/Off is a live flag: save and apply with no model reload.
+    const el = $("selfTuneNote");
+    try {
+      const j = await api("/api/settings/self-tune", {
+        method: "POST",
+        body: JSON.stringify({ self_tune: value }),
+      });
+      if (el) { el.hidden = !j.notice; el.textContent = j.notice || ""; }
+    } catch (e) {
+      if (el) { el.hidden = false; el.textContent = e.error || e.message || String(e); }
+    }
+  }
   async function loadOpts() {
     const sel = $("modelSelect");
     const j = await api("/api/settings" + (sel && sel.value ? `?model=${encodeURIComponent(sel.value)}` : ""));

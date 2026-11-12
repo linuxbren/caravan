@@ -3,10 +3,12 @@ import ast
 import io
 import json
 import subprocess
+import threading
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -73,12 +75,39 @@ class SettingsAdvanced(unittest.TestCase):
         snippet = HTML[start - 80:start + 80]
         self.assertIn("<details", snippet)
         self.assertNotIn(" open", snippet)
-        # Optimize now lives inside Advanced.
+        # Optimize now and Apply & restart live inside Advanced.
         opt_box = HTML.index('id="optBox"')
         adv = HTML.index('id="optAdvanced"')
         adv_end = HTML.index("</details>", opt_box)
         self.assertLess(adv, opt_box)
         self.assertLess(opt_box, adv_end)
+        apply = HTML.index('id="btnApply"')
+        note = HTML.index('id="optNote"')
+        self.assertLess(adv, apply)
+        self.assertLess(apply, adv_end)
+        self.assertLess(adv, note)
+        self.assertLess(note, adv_end)
+        # Not between Self-tuning (#optRows) and the Advanced disclosure.
+        rows = HTML.index('id="optRows"')
+        self.assertFalse(rows < apply < adv)
+        self.assertIn("Auto = Caravan decides (learned per model)", HTML)
+
+    def test_self_tuning_applies_immediately_without_reload(self):
+        # Clicking On/Off saves and applies live; it does not call Load / Apply.
+        self.assertIn("function applySelfTune(", HTML)
+        self.assertIn("/api/settings/self-tune", HTML)
+        self.assertIn('if (row.dataset.id === "self_tune") applySelfTune(b.dataset.v)', HTML)
+        self.assertIn('id="selfTuneNote"', HTML)
+        self.assertIn("def set_self_tune", Path(ROOT / "proxy/web_workers.py").read_text())
+        self.assertIn("def set_self_tune", Path(ROOT / "agent/mlx_worker.py").read_text())
+        workers = Path(ROOT / "proxy/web_workers.py").read_text()
+        # Must not fall back to a model reload.
+        start = workers.index("def set_self_tune")
+        body = workers[start:start+2500]
+        self.assertIn('"reloaded": False', body)
+        self.assertNotIn("self.switch", body)
+        self.assertNotIn("/api/models/load", body)
+        self.assertIn("/caravan/self-tune", body)
 
 
 class PickerFilters(unittest.TestCase):
@@ -148,7 +177,7 @@ class TopologyCollapse(unittest.TestCase):
 
 class SpeedAverages(unittest.TestCase):
     def test_format_and_separate_slots(self):
-        self.assertEqual(S.format_line(42, 1.2), "Usually 42 words/s, first word in 1.2 s")
+        self.assertEqual(S.format_line(42, 1.2), "Average 42 words/s, first word in 1.2 s")
         opts_on = {k: "auto" for k in S.OPT_IDS}
         opts_on["guess_ahead"] = "on"
         opts_off = dict(opts_on)
@@ -160,7 +189,7 @@ class SpeedAverages(unittest.TestCase):
             self.assertEqual(first["count"], 1)
             second = S.record("model-a", opts_on, write_tok_s=44, ttft_s=1.0, path=path)
             self.assertEqual(second["write_tok_s"], 42.0)
-            self.assertEqual(second["line"], "Usually 42 words/s, first word in 1.1 s")
+            self.assertEqual(second["line"], "Average 42 words/s, first word in 1.1 s")
             other_opts = S.get("model-a", opts_off, path=path)
             self.assertEqual(other_opts["count"], 0)
             other_model = S.get("model-b", opts_on, path=path)
@@ -215,6 +244,10 @@ class DocsMentionDay24(unittest.TestCase):
         self.assertIn("job id", day)
         self.assertIn("Before:", day)
         self.assertIn("Before:", web)
+        self.assertIn("Average 42 words/s", web)
+        self.assertIn("Average 42 words/s", day)
+        self.assertNotIn("Usually 42 words/s", web)
+        self.assertNotIn("Usually 42 words/s", day)
         self.assertNotRegex(web, r"(?i)tok/s")
         self.assertIn("Before:", day)
         web_docs = (ROOT / "docs/WEB.md").read_text()
@@ -518,6 +551,98 @@ class HelperFlicker(unittest.TestCase):
         self.assertNotIn("if (row && !row.querySelector('[data-helper]'))", helpers)
         self.assertIn("if (!button)", helpers)
         self.assertIn("paintHelperButton()", HTML)
+
+
+class SelfTuneImmediate(unittest.TestCase):
+    """Self-tuning On/Off saves and applies live; it never reloads the model."""
+
+    def test_worker_toggles_learning_without_reload(self):
+        sys.path.insert(0, str(ROOT / "agent"))
+        import mlx_worker as W
+        class E:
+            def __init__(self):
+                self._learn_enabled = False
+                self._learn_entry = None
+                self.opens = 0
+            def _learn_apply_startup(self):
+                self.opens += 1
+                self._learn_entry = {"winner": {}}
+        E.set_self_tune = W.Engine.set_self_tune
+        e = E()
+        out = e.set_self_tune(True)
+        self.assertTrue(out["self_tune"])
+        self.assertTrue(e._learn_enabled)
+        self.assertEqual(e.opens, 1)
+        # Already has an entry: do not reopen the store.
+        out = e.set_self_tune(True)
+        self.assertEqual(e.opens, 1)
+        out = e.set_self_tune(False)
+        self.assertFalse(out["self_tune"])
+        self.assertFalse(e._learn_enabled)
+        self.assertEqual(e.opens, 1)  # off does not touch startup
+
+    def test_manager_idle_saves_without_reload(self):
+        import web_workers as WW
+        state = tempfile.TemporaryDirectory()
+        self.addCleanup(state.cleanup)
+        mgr = WW.WorkerManager(lead_port=8194, packer_peer="127.0.0.1:5560",
+                               packer_ssh="nobody@127.0.0.1",
+                               state_dir=Path(state.name), repo=ROOT)
+        out = mgr.set_self_tune("off")
+        self.assertEqual(out["self_tune"], "off")
+        self.assertFalse(out["reloaded"])
+        self.assertFalse(out["applied"])
+        self.assertEqual(mgr.snapshot()["page_settings"]["self_tune"], "off")
+        self.assertEqual(mgr.snapshot()["settings"]["self_tune"], "off")
+        self.assertIn("takes effect when you load a model", out["notice"])
+        out = mgr.set_self_tune("auto")
+        self.assertEqual(out["self_tune"], "auto")
+        self.assertFalse(out["reloaded"])
+        self.assertIn("takes effect when you load a model", out["notice"])
+
+    def test_manager_ready_mlx_applies_live_no_reload(self):
+        import web_workers as WW
+        hits = []
+        class H(BaseHTTPRequestHandler):
+            def do_POST(self):
+                n = int(self.headers.get("Content-Length") or 0)
+                body = self.rfile.read(n)
+                hits.append((self.path, body))
+                data = b'{"self_tune": true}'
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            def log_message(self, *a):
+                pass
+        httpd = ThreadingHTTPServer(("127.0.0.1", 0), H)
+        port = httpd.server_address[1]
+        th = threading.Thread(target=httpd.serve_forever, daemon=True)
+        th.start()
+        self.addCleanup(lambda: (httpd.shutdown(), httpd.server_close()))
+        state = tempfile.TemporaryDirectory()
+        self.addCleanup(state.cleanup)
+        mgr = WW.WorkerManager(lead_port=port, packer_peer="127.0.0.1:5560",
+                               packer_ssh="nobody@127.0.0.1",
+                               state_dir=Path(state.name), repo=ROOT)
+        mgr._set(status="ready", backend=None)
+        out = mgr.set_self_tune("auto")
+        self.assertFalse(out["reloaded"])
+        self.assertTrue(out["applied"])
+        self.assertEqual(out["self_tune"], "auto")
+        self.assertIn("learn from your next chats", out["notice"])
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits[0][0], "/caravan/self-tune")
+        self.assertIn(b"true", hits[0][1])
+        # GGUF: no worker call, no reload.
+        hits.clear()
+        mgr._set(status="ready", backend="llama")
+        out = mgr.set_self_tune("off")
+        self.assertFalse(out["reloaded"])
+        self.assertFalse(out["applied"])
+        self.assertEqual(hits, [])
+        self.assertIn("MLX", out["notice"])
 
 
 

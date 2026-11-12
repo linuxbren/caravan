@@ -1,8 +1,8 @@
 # Day 24 — quieter page, Advanced sections, and model filters
 
-Day 24 work is on the `day24-ui` branch and is **not published**. Day 23 live
-testing and the `day23` tag come first. Nothing on the 1st node or 2nd node
-was changed for this work.
+Day 24 work is on the `day24-ui` branch and is **not published**. Day 23 is
+published (tag `day23-2026-11-11`, pin `5717c4a`, source `940cbec`). Nothing
+on the 1st node or 2nd node was changed for this work.
 
 ## What changed
 
@@ -13,8 +13,12 @@ The page is cleaned up from a list Brenden dictated, panel by panel.
 Self-tuning stays visible and on by default. Every other optimization
 (Guess-ahead, Prompt lookup, Shared start, Two chats, Fused kernels, Memory
 compression, GPU keep-warm) and **Optimize now** sit under an **Advanced**
-section that is closed until you open it. Apply & restart stays visible next
-to Self-tuning.
+section that is closed until you open it, along with **Apply & restart**
+and the "Auto = Caravan decides" note. Toggling Self-tuning On or Off
+saves and takes effect immediately on a loaded MLX model, with no reload:
+learning is a live flag on the running worker. A plain one-line notice
+confirms the change. Apply & restart is only needed for the other
+optimization options, which still require a reload to apply.
 
 When self-tuning or Optimize now finishes for a model, Caravan records the
 speed from before the run and the speed with the chosen winners, and shows
@@ -109,7 +113,7 @@ banner.
 - The Specifications box is removed (each reply already shows its own
   numbers). In its place, a quiet line directly under the input box and above
   Current optimizations shows the average for this model and this set of
-  optimizations, for example "Usually 42 words/s, first word in 1.2 s". The
+  optimizations, for example "Average 42 words/s, first word in 1.2 s". The
   line is hidden until at least one reply has been recorded for that setup.
   Averages are stored on the 1st node in `~/.caravan/speed_averages.json`
   (not only in the browser) so they describe these Macs and this setup, and
@@ -144,7 +148,6 @@ development node checkout. Counts are recorded at commit time.
 
 ## Not in this branch
 
-- No publish, no `day23` or `day24` tag, no push. Day 23 testing finishes
-  first.
+- No publish, no `day24` tag, no push. Day 23 is already published.
 - The 1st node and 2nd node were not touched.
-- Brenden will review the page live after Day 23 testing.
+- Brenden will review the page live.

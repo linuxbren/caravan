@@ -2,8 +2,10 @@
 
 ## Day 24 — quieter page and Advanced sections (not published)
 
-- Settings: Self-tuning stays visible; other optimizations and Optimize now
-  sit under a closed Advanced section. After a self-tuning or Optimize now
+- Settings: Self-tuning stays visible; other optimizations, Optimize now,
+  and Apply & restart sit under a closed Advanced section. Self-tuning
+  On/Off takes effect immediately on a loaded MLX model, with no reload.
+  After a self-tuning or Optimize now
   run, the Self-tuning section shows that model's before and after speed
   ("Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first
   word in 1.2 s."), hidden until a run has finished, stored with the
@@ -25,7 +27,7 @@
 - Chat: Clear chat is renamed New session. Option chips sit in a Current
   optimizations box, in Settings order with Self-tuning first, with hover
   hints. The Specifications box is replaced by a quiet per-model,
-  per-optimization average under the input ("Usually 42 words/s, first word
+  per-optimization average under the input ("Average 42 words/s, first word
   in 1.2 s"), stored on the 1st node. The "Built in the open" title and
   tagline are removed; the line reads "Your Macs. One model."
 - Not published. Day 23 is published (tag day23-2026-11-11). See
