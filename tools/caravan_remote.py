@@ -62,8 +62,13 @@ def run_tailscale(args, *, binary=None, runner=None, timeout=15):
     binary = binary or find_binary()
     if not binary:
         raise RemoteError(MISSING)
-    runner = runner or subprocess.run
     try:
+        if runner is None:
+            # The Mac app's bundled binary tries to launch its GUI when started
+            # from a background service unless told to act as a plain CLI.
+            env = dict(os.environ, TAILSCALE_BE_CLI="1")
+            return subprocess.run([binary, *args], capture_output=True, text=True,
+                                  timeout=timeout, env=env)
         return runner([binary, *args], capture_output=True, text=True, timeout=timeout)
     except FileNotFoundError as e:
         raise RemoteError(MISSING) from e

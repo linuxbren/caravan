@@ -37,7 +37,7 @@ class FakeTailscale:
         self.status_error = status_error
         self.calls = []
 
-    def __call__(self, argv, capture_output=True, text=True, timeout=15):
+    def __call__(self, argv, capture_output=True, text=True, timeout=15, env=None):
         self.calls.append(list(argv))
         if self.missing:
             raise FileNotFoundError("tailscale")
@@ -561,6 +561,20 @@ class UiAndBindTests(unittest.TestCase):
             p.write_text("\n".join(re.findall(r"<script>(.*?)</script>", text, re.S)))
             result = subprocess.run(["node", "--check", str(p)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
+
+
+class RealRunnerCliModeTest(unittest.TestCase):
+    def test_real_runner_forces_cli_mode(self):
+        import subprocess as sp
+        seen = {}
+
+        def fake(argv, **kw):
+            seen.update(kw)
+            return sp.CompletedProcess(argv, 0, "{}", "")
+
+        with mock.patch.object(R.subprocess, "run", fake):
+            R.run_tailscale(["version"], binary="/usr/bin/tailscale")
+        self.assertEqual(seen["env"]["TAILSCALE_BE_CLI"], "1")
 
 
 if __name__ == "__main__":
