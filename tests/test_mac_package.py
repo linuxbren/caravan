@@ -112,6 +112,39 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(cli.main(['stop']), 2)
             run.assert_not_called()
 
+    def _start(self, loaded):
+        plan = {"kind": "web", "port": 8190, "label": "com.caravan.v3.web"}
+        def run_launchctl(args):
+            if args[0] == "print":
+                return mock.Mock(returncode=0 if loaded else 1, stderr="")
+            return mock.Mock(returncode=0, stderr="")
+        with mock.patch.object(cli.service, "stored", return_value=plan), \
+             mock.patch.object(cli.service, "assert_owned"), \
+             mock.patch.object(cli.service, "check_platform"), \
+             mock.patch.object(cli.service, "gui_ready"), \
+             mock.patch.object(cli.service, "ensure_port_free") as free, \
+             mock.patch.object(cli.service, "domain", return_value="gui/501"), \
+             mock.patch.object(cli.service, "run_launchctl", side_effect=run_launchctl), \
+             mock.patch.object(cli.SC, "paths", return_value={"plist": Path("/tmp/web.plist")}), \
+             contextlib.redirect_stdout(io.StringIO()) as out:
+            code = cli.main(["start"])
+        return code, out.getvalue(), free
+
+    def test_start_says_started_when_bootstrapping(self):
+        code, text, free = self._start(loaded=False)
+        self.assertEqual(code, 0)
+        free.assert_called_once()
+        self.assertEqual(text.strip(), "Caravan started. Run caravan open to open it in your browser.")
+        self.assertNotIn("already running", text)
+
+    def test_start_says_running_when_already_loaded(self):
+        code, text, free = self._start(loaded=True)
+        self.assertEqual(code, 0)
+        free.assert_not_called()
+        self.assertEqual(text.strip(), "Caravan is running. Run caravan open to open it in your browser.")
+        self.assertNotIn("already running", text)
+        self.assertNotIn("Caravan started.", text)
+
 
 class MockMacBootstrapTests(unittest.TestCase):
     """Exercise failure branches using harmless fake macOS commands on Linux."""

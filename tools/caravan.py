@@ -111,7 +111,9 @@ def main(argv=None):
             service.ensure_port_free(plan)
             result = service.run_launchctl(["bootstrap", service.domain(), str(SC.paths(plan)["plist"])])
             if result.returncode: raise ValueError(result.stderr or "launchd could not start the service")
-        print("Service started (or already running). Use caravan open to open the browser.")
+            print("Caravan started. Run caravan open to open it in your browser.")
+        else:
+            print("Caravan is running. Run caravan open to open it in your browser.")
     except (OSError, ValueError, KeyError) as error:
         print(f"[Caravan] {error}", file=sys.stderr)
         return 2
