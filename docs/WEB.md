@@ -20,9 +20,18 @@ and [file placement](FILES.md).
 ## Chat and stop
 
 Type in the chat box and send. The page streams the reply and reports measured
-reading/writing times from the worker, not simulated performance. Reasoning
-may be shown separately when supported by the model. Stop cancels the current
-reply; **Unload** releases the loaded model and disables next-login restore.
+reading/writing times from the worker, not simulated performance. Each reply
+has its own timing line. Under the input box, a quiet average such as
+"Usually 42 words/s, first word in 1.2 s" appears once this model has answered
+at least once with the current optimizations. The rate is the model's measured
+token rate, shown as words/s in plain language. The average is kept on the
+1st node in `~/.caravan/speed_averages.json`, separately for each model and
+each set of optimizations, so a change of settings starts a new average. The
+line is hidden until there is something to show. Thinking may be shown
+separately when the model supports it. **New session** starts a fresh chat
+without unloading the model. The chips under the input sit in a **Current optimizations** box, in the same order as Settings (Self-tuning first), with a
+short hover hint on each chip. They are labels, not switches. Stop cancels the
+current reply; **Unload** releases the loaded model and disables next-login restore.
 
 Closing the browser does not unload the model. To stop the web service, use
 `~/.caravan/bin/caravan stop`; its model workers remain running. Unload first
@@ -30,10 +39,13 @@ if you want their memory freed. See [safe removal](../INSTALL.md#remove-caravan-
 
 ## Balance work between Macs
 
-In Topology, **Balance** starts on Auto and shows memory use for each Mac.
+In Topology, **Balance** and **Thunderbolt** stay collapsed until you click
+them. Balance starts on Auto and shows memory use for each Mac.
 **Adjust** reveals the controls and a live preview. **Apply** is black when a
 changed plan is ready; it is grey when no change is needed or during reload.
-A banner shows each Mac's reload steps. Chat is locked until the model is ready.
+A quiet line says when this split is already applied, or when it is not safe
+to apply, or when a new split is ready. A banner still shows each Mac's
+reload steps while a reload is running. Chat is locked until the model is ready.
 Changing the split moves memory use between Macs; it does not create memory.
 Use **Back to auto** to let Caravan choose the split again.
 
@@ -45,16 +57,21 @@ before a reload, not bypassed with a forced load.
 
 ## Thunderbolt checks
 
-The panel inspects configured, trusted Macs. Inventory and link checks are
+The panel stays collapsed until you click it. It inspects configured, trusted
+Macs. Inventory and link checks are
 read-only. Requested checks show verified/unverified/failed and expire after
 30 seconds. A reachable port alone does not verify SSH identity. A plan preview
 does not apply routes, pair Macs, install keys or authenticate model transport.
 
 ## Settings and optimization
 
-Settings can choose thinking, chat-memory compression and optional performance
-features. Leave Auto when unsure. Some settings require a reload and not every
-model supports every feature. See [configuration](CONFIGURATION.md).
+**Self-tuning** stays visible in Settings and is on by default: Caravan learns
+faster settings from your chats. Every other optimization — Guess-ahead,
+Prompt lookup, Shared start, Two chats, Fused kernels, Memory compression,
+GPU keep-warm, and **Optimize now** — sits under an **Advanced** section that
+is closed until you open it. Leave Auto when unsure. Some settings require a
+reload and not every model supports every feature. See
+[configuration](CONFIGURATION.md).
 **Optimize now** runs real comparisons and may reload the model; do not start
 it during an important chat. See [optimization](OPTIMIZE-NOW.md).
 

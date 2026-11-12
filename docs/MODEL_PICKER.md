@@ -4,6 +4,57 @@ The **Models** drawer searches models, checks what fits and downloads the
 required files. It is part of the browser page on your first Mac (1st node /
 lead). You do not need names from the build log to use it.
 
+## Filters
+
+The chips above the list narrow what you see.
+
+Shown by default:
+
+- **Chat** — ordinary conversation models.
+- **Coding** — models trained to write and edit code.
+- **Thinking** — models that can show their reasoning separately (the same
+  idea as the chat **Thinking** button). This used to be labelled Reasoning.
+- **Tools** — models that can call tools, so an agent app can ask them to
+  take an action and use the result.
+- **Vision** — models that can look at a picture you give them and answer
+  about it (image-text-to-text).
+
+An **Advanced** control, closed until you open it, shows more specialized
+types. They stay available, not removed, so Caravan can sit between an
+agent app and a model that is not meant for ordinary chat:
+
+- **Embedding** — turns text into numbers so a search tool can find similar
+  text. These models do not chat.
+- **Any-to-any** — models that accept and produce mixed kinds of input and
+  output (for example text and images together).
+- **Text-to-image**, **Text-to-video**, and **Text-to-speech** — models that
+  make a picture, a video, or spoken audio from text.
+- **Decision** — models that classify text, answer yes or no with a
+  probability, or score text against a rubric (the kind Ollama labels
+  "decision").
+
+Caravan is a chat app, so the default chips are the ones most people need.
+The Advanced types are there for agent apps that talk to a model through
+Caravan. A source tab (All, HF / MLX, GGUF, Cloud) is separate from these
+type filters.
+
+The **fits-on** chips limit the list to models that can run on that many of
+your Macs. The summary above the list follows the chip you selected — for
+example "14 models · fit on 1 Mac · Chat" — and counts only the models that
+match. It says Macs, not a technical word for machines.
+
+A **Family** menu sits on its own row, separate from the type chips. It
+offers the well-known families that appear in the current results: Qwen,
+Llama, Gemma, Mistral, DeepSeek, gpt-oss, and Phi. Only families that have
+a match in this search are listed. QwQ counts as Qwen, Mixtral as Mistral,
+and CodeLlama as Llama.
+
+Hover a model row for a short extra line or two: the maker, the month and
+year it was published, how long a chat it can hold in plain words, and
+whether it can use tools or read images. Fields that are not known are
+simply left out. The hover does not repeat the row and does not include a
+speed figure.
+
 ## Sources and fit
 
 Choose the intended model source/engine. Hugging Face hosts MLX and GGUF files;
@@ -30,11 +81,16 @@ setup, define your own `[web.nodes.*]` as described in
 [configuration](CONFIGURATION.md#web-ui-nodes-caravanconfigtoml).
 
 Downloads run directly on each Mac from the publisher; setup does not copy the
-lead's model folder to a helper. Watch per-Mac progress, disk requirements and
-missing files. Large downloads can pause while the publisher's transfer tool
-works; the UI distinguishes observed bytes from an unknown total. Resume/retry
-behavior depends on the file/source path. Check visible errors rather than
-assuming a stalled-looking download has finished.
+lead's model folder to a helper. Each download in progress has its own card,
+stacked when more than one is running, with its own bar, size, speed and
+waiting time, and its own Stop, Resume, and Load-when-ready controls. A card
+stays with its download and does not switch to another one. Both MLX and
+GGUF cards use the same friendly Mac name from your Topology (for example
+"My Mac" or "1st Mac"), never a machine hostname. Large downloads can pause
+while the publisher's transfer tool works; the UI distinguishes observed
+bytes from an unknown total. Resume/retry behavior depends on the file/source
+path. Check visible errors rather than assuming a stalled-looking download
+has finished. Watch disk requirements and missing files on each Mac.
 
 ## Load, change a split, or remove files
 

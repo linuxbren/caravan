@@ -1,5 +1,30 @@
 ### Day 21 release — day21-2026-11-10 (published 2026-11-10 CST)
 
+## Day 24 — quieter page and Advanced sections (not published)
+
+- Settings: Self-tuning stays visible; other optimizations and Optimize now
+  sit under a closed Advanced section.
+- Models: Reasoning is renamed Thinking. Default filter chips are Chat,
+  Coding, Thinking, Tools, and Vision. Embedding, any-to-any, text-to-image,
+  text-to-video, text-to-speech, and Decision stay available behind Advanced
+  so Caravan can sit between an agent app and a model. The list summary
+  follows the selected fits-on chip ("fit on 1 Mac") and says Macs, not
+  nodes. A Family menu lists known families present in the results. Row
+  hover shows maker, release date, context, and capabilities. Each
+  download in progress has its own stacked card, and MLX and GGUF use the
+  same friendly Mac name.
+- Topology: Balance and Thunderbolt stay collapsed until clicked. Balance
+  idle status is plain text, split into "already applied" and "not safe to
+  apply".
+- Chat: Clear chat is renamed New session. Option chips sit in a Current
+  optimizations box, in Settings order with Self-tuning first, with hover
+  hints. The Specifications box is replaced by a quiet per-model,
+  per-optimization average under the input ("Usually 42 words/s, first word
+  in 1.2 s"), stored on the 1st node. The "Built in the open" title and
+  tagline are removed; the line reads "Your Macs. One model."
+- Not published. Day 23 is published (tag day23-2026-11-11). See
+  [Day 24](docs/DAY24.md).
+
 ## Day 23 — clean-install fixes (published; live testing passed)
 
 - Live testing on both Minis passed on 2026-11-11 CST: single-step update,

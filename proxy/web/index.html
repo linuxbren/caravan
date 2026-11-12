@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Caravan — built in the open</title>
+<title>Caravan</title>
 <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png">
@@ -193,7 +193,7 @@
     font: 10px/1.2 var(--sans); color: rgba(235,230,220,.62); letter-spacing: .02em;
   }
   @media (max-width: 820px) {
-    /* Phone: sit under the chat card instead of over the Specifications bar. */
+    /* Phone: sit under the chat card instead of over the composer. */
     html[data-theme="nebula"] .nebula-credit { position: relative; right: auto; bottom: auto; z-index: 1; text-align: right; padding: 4px 12px 12px; }
   }
   @media (prefers-reduced-motion: reduce) { html[data-theme="nebula"] .nebula-bg { animation: none; } }
@@ -599,6 +599,51 @@
   .a-progress:not(.problem) { display: none !important; }
   .composer-meta { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
   .chips.under-input { margin: 0; }
+  .avg-speed {
+    font-size: .78rem; color: var(--muted); line-height: 1.5; margin: 0;
+  }
+  .current-opts {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 8px 12px 10px;
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+  }
+  .current-opts-title {
+    font-family: var(--mono); font-size: .72rem; color: var(--amber2);
+    letter-spacing: .04em; margin: 0 0 8px;
+  }
+  details.opt-advanced, details.picker-advanced, details.topo-collapse {
+    margin-top: 8px;
+  }
+  details.opt-advanced > summary, details.picker-advanced > summary,
+  details.topo-collapse > summary {
+    cursor: pointer; font-family: var(--mono); font-size: .72rem;
+    color: var(--amber2); letter-spacing: .06em; text-transform: uppercase;
+    list-style: none; padding: 6px 0;
+  }
+  details.opt-advanced > summary::-webkit-details-marker,
+  details.picker-advanced > summary::-webkit-details-marker,
+  details.topo-collapse > summary::-webkit-details-marker { display: none; }
+  details.opt-advanced > summary::before,
+  details.picker-advanced > summary::before,
+  details.topo-collapse > summary::before { content: "▸ "; }
+  details.opt-advanced[open] > summary::before,
+  details.picker-advanced[open] > summary::before,
+  details.topo-collapse[open] > summary::before { content: "▾ "; }
+  details.topo-collapse > summary.balance-heading {
+    text-transform: none; letter-spacing: 0; font-size: inherit; color: inherit;
+    padding: 0;
+  }
+  details.topo-collapse > summary.balance-heading::before,
+  details.topo-collapse[open] > summary.balance-heading::before { content: none; }
+  details.topo-collapse > summary.tb-heading { display: flex; align-items: center; gap: 8px; }
+  details.topo-collapse > summary.tb-heading h3,
+  details.topo-collapse > summary.balance-heading h3 { display: inline; margin: 0; }
+  details.topo-collapse > summary.tb-heading::before,
+  details.topo-collapse[open] > summary.tb-heading::before { content: none; }
+  .balance-idle {
+    font-size: .8rem; line-height: 1.6; color: var(--muted);
+    margin: 8px 0 0; font-weight: 400; border: 0; background: none; padding: 0;
+  }
   details.specs {
     border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px;
     background: color-mix(in srgb, var(--accent) 5%, transparent);
@@ -889,8 +934,11 @@
   .picker-disk-link { margin-top: 12px; }
   button.linkish { appearance: none; background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-size: .7rem; cursor: pointer; text-decoration: underline; }
   .picker-status { color: var(--muted); margin: 6px 0; min-height: 1.2em; }
-  .picker-job { margin-top: 8px; padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 6px; }
+  .picker-jobs { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .picker-job { padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 6px; }
   .picker-job .bar { height: 4px; background: var(--bg3); border-radius: 2px; margin: 4px 0; overflow: hidden; }
+  .picker-family-row { display: flex; gap: 8px; align-items: center; margin: 0 0 8px; font-size: .7rem; color: var(--muted); }
+  .picker-family-row select { background: var(--bg3); color: var(--fg); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 4px; padding: 2px 6px; font: inherit; }
   .picker-job .bar > i { display: block; height: 100%; background: var(--accent); width: 0; }
   .picker-job .stalled { color: var(--rose); }
   .picker-job .starting { color: var(--muted); font-style: italic; }
@@ -1113,7 +1161,7 @@
     <div class="brand">
       <div>
         <h1 aria-label="caravan"><svg xmlns="http://www.w3.org/2000/svg" class="brand-lockup" aria-hidden="true" focusable="false" viewBox="0 0 508 64"><g fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="12" width="72" height="40" rx="10"/><rect x="90" y="12" width="72" height="40" rx="10"/><rect x="172" y="12" width="72" height="40" rx="10"/><path d="M80 32h10m72 0h10"/></g><g fill="currentColor"><circle cx="64" cy="40" r="4"/><circle cx="146" cy="40" r="4"/><circle cx="228" cy="40" r="4"/></g><g fill="currentColor" transform="translate(276 50) scale(.026 -.026)"><path transform="translate(0 0)" d="M1061 57Q987 14 902.0 -7.5Q817 -29 719 -29Q460 -29 314.0 127.0Q168 283 168 559Q168 836 315.0 992.5Q462 1149 721 1149Q811 1149 894.5 1128.0Q978 1107 1061 1063V795Q997 850 920.5 879.5Q844 909 762 909Q619 909 542.0 818.0Q465 727 465 559Q465 391 542.0 301.0Q619 211 762 211Q847 211 921.0 239.5Q995 268 1061 326Z"/><path transform="translate(1233 0)" d="M700 526Q536 526 471.0 484.0Q406 442 406 340Q406 264 451.0 219.0Q496 174 573 174Q689 174 753.0 261.5Q817 349 817 506V526ZM1108 639V0H817V125Q764 51 681.0 11.0Q598 -29 498 -29Q307 -29 200.5 72.0Q94 173 94 354Q94 550 221.0 643.5Q348 737 614 737H817V786Q817 857 765.5 893.5Q714 930 614 930Q509 930 410.5 903.5Q312 877 205 819V1069Q302 1109 402.0 1128.0Q502 1147 614 1147Q887 1147 997.5 1036.0Q1108 925 1108 639Z"/><path transform="translate(2466 0)" d="M1151 811Q1103 855 1038.5 877.0Q974 899 897 899Q804 899 734.5 866.5Q665 834 627 772Q603 734 593.5 680.0Q584 626 584 516V0H291V1120H584V946Q627 1042 716.0 1094.5Q805 1147 924 1147Q984 1147 1041.5 1132.5Q1099 1118 1151 1090Z"/><path transform="translate(3699 0)" d="M700 526Q536 526 471.0 484.0Q406 442 406 340Q406 264 451.0 219.0Q496 174 573 174Q689 174 753.0 261.5Q817 349 817 506V526ZM1108 639V0H817V125Q764 51 681.0 11.0Q598 -29 498 -29Q307 -29 200.5 72.0Q94 173 94 354Q94 550 221.0 643.5Q348 737 614 737H817V786Q817 857 765.5 893.5Q714 930 614 930Q509 930 410.5 903.5Q312 877 205 819V1069Q302 1109 402.0 1128.0Q502 1147 614 1147Q887 1147 997.5 1036.0Q1108 925 1108 639Z"/><path transform="translate(4932 0)" d="M1153 1120 797 0H436L80 1120H377L616 246L856 1120Z"/><path transform="translate(6165 0)" d="M700 526Q536 526 471.0 484.0Q406 442 406 340Q406 264 451.0 219.0Q496 174 573 174Q689 174 753.0 261.5Q817 349 817 506V526ZM1108 639V0H817V125Q764 51 681.0 11.0Q598 -29 498 -29Q307 -29 200.5 72.0Q94 173 94 354Q94 550 221.0 643.5Q348 737 614 737H817V786Q817 857 765.5 893.5Q714 930 614 930Q509 930 410.5 903.5Q312 877 205 819V1069Q302 1109 402.0 1128.0Q502 1147 614 1147Q887 1147 997.5 1036.0Q1108 925 1108 639Z"/><path transform="translate(7398 0)" d="M1071 727V0H780V682Q780 804 745.5 856.5Q711 909 633 909Q554 909 508.5 838.0Q463 767 463 641V0H172V1120H463V952Q494 1045 569.0 1096.0Q644 1147 750 1147Q909 1147 990.0 1041.5Q1071 936 1071 727Z"/></g></svg></h1>
-        <p>Your Mac minis. One model. Built in the open.</p>
+        <p>Your Macs. One model.</p>
       </div>
     </div>
     <div class="theme-switch" id="themeSwitch" title="Theme">
@@ -1134,7 +1182,7 @@
         <button type="button" class="btn-settings" id="btnOpenSettings">Settings</button>
         <button type="button" class="btn-picker" id="btnOpenPicker">Models</button>
         <button type="button" class="btn-topo" id="btnOpenTopo">Topology</button>
-        <button type="button" class="btn-clear" id="btnClear">Clear chat</button>
+        <button type="button" class="btn-clear" id="btnClear">New session</button>
         <button type="button" class="btn-think" id="btnThink" title="Click to change how much the model thinks before answering">Thinking: off</button>
       </div>
     </div>
@@ -1159,18 +1207,11 @@
       <button class="primary" id="btnSend">Send</button>
     </div>
     <div class="composer-meta">
-      <div class="chips under-input" id="activeChips" title="Settings the running model reports right now"></div>
-      <details class="specs a-last">
-        <summary>Specifications</summary>
-        <div class="stat-grid" id="statGrid">
-          <div class="stat"><div class="k">Total</div><div class="v" id="sTotal">—</div></div>
-          <div class="stat"><div class="k">To first token</div><div class="v" id="sTtft">—</div></div>
-          <div class="stat"><div class="k">Read</div><div class="v" id="sRead">—</div></div>
-          <div class="stat"><div class="k">Write</div><div class="v" id="sWrite">—</div></div>
-        </div>
-        <div style="height:8px"></div>
-        <div class="features" id="featTags"></div>
-      </details>
+      <p class="avg-speed" id="avgSpeed" hidden></p>
+      <div class="current-opts" id="currentOpts" hidden>
+        <div class="current-opts-title">Current optimizations</div>
+        <div class="chips under-input" id="activeChips" title="Settings the running model reports right now"></div>
+      </div>
     </div>
   </main>
 
@@ -1194,8 +1235,8 @@
 <section><h2>On your first Mac</h2><p>Find the new Mac below. Check its name and use the code shown on the new Mac. Caravan saves the connection for you. It will work out what fits when you choose a model.</p><button id="find">Find nearby Macs</button><div id="nearby"></div></section></div>
 <div id="connected" hidden></div></section>
 
-  <section class="drawer-section" id="balancePanel" aria-label="Balance">
-    <div class="balance-heading"><h3>Balance</h3><span id="balanceMode">Auto · recommended</span></div>
+  <details class="drawer-section topo-collapse" id="balancePanel" aria-label="Balance">
+    <summary class="balance-heading"><h3>Balance</h3><span id="balanceMode">Auto · recommended</span></summary>
     <p class="balance-intro">Share the model across your Minis, leaving room for other apps.</p>
     <div id="balanceReload" class="balance-notice" role="status" aria-live="polite" hidden>
       <strong id="balanceReloadTitle"></strong><ol id="balanceReloadSteps"></ol>
@@ -1209,6 +1250,7 @@
     <p id="balancePreview" aria-live="polite">Open Topology to check each Mini’s memory and files.</p>
     <div class="balance-actions"><button type="button" id="balanceApply" disabled>Apply</button>
       <button type="button" class="ghost" id="balanceAuto" disabled>Back to auto</button></div>
+    <p id="balanceIdleStatus" class="balance-idle" hidden></p>
     <p class="balance-help">Apply reloads the model. Nothing changes until you apply.</p>
     <details id="balanceDetails"><summary>Technical details · layers, files &amp; stages</summary>
       <label>Model to inspect (including incomplete downloads)
@@ -1228,10 +1270,10 @@
     </details>
     <p class="balance-help">Bars show estimated model use within each Mini’s usable budget, not total RAM. Actual memory and speed are checked after loading.</p>
     </fieldset>
-  </section>
+  </details>
 
-  <section class="drawer-section" id="thunderboltPanel" aria-label="Thunderbolt discovery">
-    <h3>Thunderbolt links</h3>
+  <details class="drawer-section topo-collapse" id="thunderboltPanel" aria-label="Thunderbolt discovery">
+    <summary class="tb-heading"><h3>Thunderbolt</h3></summary>
     <p class="help">Inspect trusted Minis and candidate cable routes. This never changes the running connection.</p>
     <div class="tb-actions"><button type="button" class="ghost" id="thunderboltInspect">Inspect links</button>
     <button type="button" class="ghost" id="thunderboltValidate">Validate links</button></div>
@@ -1240,7 +1282,7 @@
     <label><input type="checkbox" id="thunderboltOptIn"> Preview a suggested N-Mini peer plan — never apply</label>
     <button type="button" class="ghost" id="thunderboltPreview" disabled>Preview plan</button>
     <div id="thunderboltPlan" aria-live="polite"></div>
-  </section>
+  </details>
   <div class="topo-disk">
     <div class="picker-section">On disk · all Minis</div>
     <div class="picker-disk" id="pickerDisk">loading…</div>
@@ -1263,6 +1305,16 @@
       <input id="pickerQuery" type="search" placeholder="Search models…" autocomplete="off" />
     </div>
     <div class="picker-chips" id="pickerChips"></div>
+    <details class="picker-advanced" id="pickerAdvanced">
+      <summary>Advanced</summary>
+      <div class="picker-chips" id="pickerAdvancedChips"></div>
+    </details>
+    <div class="picker-family-row" id="pickerFamilyRow" hidden>
+      <label for="pickerFamily">Family</label>
+      <select id="pickerFamily" aria-label="Family">
+        <option value="">Any family</option>
+      </select>
+    </div>
     <div class="picker-size-filter" id="pickerSizeFilter" style="display:flex;gap:8px;align-items:center;margin:0 0 8px;font-size:.7rem;color:var(--muted)">
       <label for="pickerMaxGb">Max download</label>
       <select id="pickerMaxGb" style="background:var(--bg3);color:var(--fg);border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);border-radius:4px;padding:2px 6px;font:inherit">
@@ -1274,7 +1326,7 @@
       </select>
     </div>
     <div class="picker-status" id="pickerStatus">Open to search Hugging Face…</div>
-    <div class="picker-job" id="pickerJob" hidden></div>
+    <div class="picker-jobs" id="pickerJob" hidden></div>
     <div id="pickerList"></div>
     <div class="picker-disk-link"><button type="button" class="linkish" id="btnDiskInTopo">On disk → Topology</button></div>
   </div>
@@ -1302,6 +1354,9 @@
         <small id="optNote">Auto = Caravan decides (learned per model)</small>
       </div>
       <div class="tunenote" id="tuneNote"></div>
+      <details class="opt-advanced" id="optAdvanced">
+        <summary>Advanced</summary>
+        <div id="optAdvancedRows"></div>
       <div class="optbox" id="optBox">
         <div class="row">
           <b class="tip" title="Walk-away pass: try each option once against the current best, reload only when a reload option needs a trial, then save the winner.">Optimize now</b>
@@ -1312,6 +1367,7 @@
         <div class="help" id="optTip">Optimize as used stays on when options are Auto — Caravan learns from real chats.</div>
         <div class="help" id="optProgress"></div>
       </div>
+      </details>
     </div>
     <div class="optcard drawer-section hf-token-card" id="hfTokenCard">
       <h2 class="drawer-section-title"><span class="tip" title="Hugging Face rate-limits unauthenticated downloads. Stored only on each Mini at ~/.caravan/hf_token (chmod 600). Never shown back to the page.">Hugging Face token</span></h2>
@@ -1588,29 +1644,42 @@
   state.opts = [];          // option specs from /api/settings
   state.choice = {};        // what the user picked (sent on load)
   const VAL_LABEL = { auto: "Auto", on: "On", off: "Off" };
+  const CHIP_HINTS = {
+    self_tune: "Caravan learns faster settings from your chats.",
+    guess_ahead: "A smaller model guesses upcoming words to speed up replies.",
+    prompt_lookup: "Reuses words from your prompt when the reply repeats them.",
+    shared_start: "Reuses the start of a repeated prompt so the model has less to read.",
+    pipeline_chats: "Lets two chats use different Macs at the same time.",
+    fuse_kernels: "Combines small GPU steps. Experimental.",
+    kv_bits: "Stores chat memory in less space.",
+    keepalive: "Keeps the GPU ready while it waits for another Mac.",
+  };
   function describeActive(a) {
     // Plain words for the settings the worker actually ran with.
+    // Order matches Settings (Self-tuning first). Chips stay read-only labels.
     if (!a) return [];
-    const out = [];
     const pin = new Set(a.pinned || []);
     const p = (k) => pin.has(k) ? " (pinned)" : "";
-    // Asked for On but nothing is running: say why instead of a bare "off".
-    // (Worker only runs a helper when split and a helper/MTP head is loaded.)
     const gaWhy = (!a.guess_ahead && state.choice.guess_ahead === "on")
       ? (!a.two_chats_available ? "on · split only, not running"
          : !a.guess_ahead_loaded ? "on · no helper on disk, not running" : "on · not running") : null;
-    out.push(["guess-ahead " + (a.guess_ahead_mode === "native_mtp" ? "native MTP · experimental" : (a.guess_ahead ? "on" : (gaWhy || "off")))
+    const items = {};
+    items.guess_ahead = {id:"guess_ahead", text:"guess-ahead " + (a.guess_ahead_mode === "native_mtp" ? "native MTP · experimental" : (a.guess_ahead ? "on" : (gaWhy || "off")))
               + (a.guess_ahead_from_draft != null ? ` · ${a.guess_ahead_from_draft} from helper` : "")
-              + p("guess_ahead"), !!a.guess_ahead]);
-    out.push(["self-tuning " + (a.self_tune ? "on" : "off"), !!a.self_tune]);
-    out.push(["shared start " + (a.shared_start ? "on" : "off") + p("shared_prefix"), !!a.shared_start]);
-    if (a.pipeline_chats != null) out.push([`two chats: ${a.pipeline_chats}` + ((a.two_chats_available === false || state.workerSplit === false) ? " · single Mini, serial" : "") + p("pipeline_chats"), a.pipeline_chats > 1]);
-    if (a.prompt_lookup) out.push([`prompt lookup: ${a.prompt_lookup.enabled ? "adaptive · overlap ≥ 0.50" : "off · experimental"}`, a.prompt_lookup.enabled]);
-    if (a.multi_token_verify && a.two_chats_available) out.push(["split block verify · Qwen N2 tested, helper slower", false]);
-    out.push([`memory ${a.kv_bits}-bit`, a.kv_bits && a.kv_bits < 16]);
-    out.push(["fused " + (a.fuse_kernels || "off"), a.fuse_kernels && a.fuse_kernels !== "off"]);
-    if (a.keepalive != null) out.push(["keep-warm " + (a.keepalive ? "on" : "off"), !!a.keepalive]);
-    return out;
+              + p("guess_ahead"), on:!!a.guess_ahead, hint:CHIP_HINTS.guess_ahead};
+    items.self_tune = {id:"self_tune", text:"self-tuning " + (a.self_tune ? "on" : "off"), on:!!a.self_tune, hint:CHIP_HINTS.self_tune};
+    items.shared_start = {id:"shared_start", text:"shared start " + (a.shared_start ? "on" : "off") + p("shared_prefix"), on:!!a.shared_start, hint:CHIP_HINTS.shared_start};
+    if (a.pipeline_chats != null) items.pipeline_chats = {id:"pipeline_chats", text:`two chats: ${a.pipeline_chats}` + ((a.two_chats_available === false || state.workerSplit === false) ? " · single Mini, serial" : "") + p("pipeline_chats"), on:a.pipeline_chats > 1, hint:CHIP_HINTS.pipeline_chats};
+    if (a.prompt_lookup) items.prompt_lookup = {id:"prompt_lookup", text:`prompt lookup: ${a.prompt_lookup.enabled ? "adaptive · overlap ≥ 0.50" : "off · experimental"}`, on:!!a.prompt_lookup.enabled, hint:CHIP_HINTS.prompt_lookup};
+    items.kv_bits = {id:"kv_bits", text:`memory ${a.kv_bits}-bit`, on:!!(a.kv_bits && a.kv_bits < 16), hint:CHIP_HINTS.kv_bits};
+    items.fuse_kernels = {id:"fuse_kernels", text:"fused " + (a.fuse_kernels || "off"), on:!!(a.fuse_kernels && a.fuse_kernels !== "off"), hint:CHIP_HINTS.fuse_kernels};
+    if (a.keepalive != null) items.keepalive = {id:"keepalive", text:"keep-warm " + (a.keepalive ? "on" : "off"), on:!!a.keepalive, hint:CHIP_HINTS.keepalive};
+    const extras = [];
+    if (a.multi_token_verify && a.two_chats_available) extras.push({id:"mtv", text:"split block verify · Qwen N2 tested, helper slower", on:false, hint:"A measured result for this setup, not a general promise."});
+    const order = (state.opts && state.opts.length)
+      ? state.opts.map(o => o.id)
+      : ["self_tune","guess_ahead","prompt_lookup","shared_start","pipeline_chats","fuse_kernels","kv_bits","keepalive"];
+    return order.filter(id => items[id]).map(id => items[id]).concat(extras);
   }
   function activeValue(id, a) {
     // What the running worker actually uses for one option.
@@ -1629,10 +1698,13 @@
   }
   function renderActive(a) {
     const el = $("activeChips");
+    const box = $("currentOpts");
     const items = describeActive(a);
     el.innerHTML = items.length
-      ? items.map(([t, on]) => `<span class="tag ${on ? "on" : "off"}">${t}</span>`).join("")
+      ? items.map((it) => `<span class="tag ${it.on ? "on" : "off"}" title="${(it.hint || "").replace(/"/g, "&quot;")}">${it.text}</span>`).join("")
       : "";
+    if (box) box.hidden = !items.length;
+    refreshAvgSpeed();
     if (a) {
       for (const o of state.opts) {
         const now = document.querySelector(`.opt[data-id="${o.id}"] .now`);
@@ -1717,7 +1789,7 @@
     const selRow = (state.modelRows || {})[$("modelSelect")?.value] || {};
     const gguf = selRow.source === "gguf";
     const ggufNote = gguf ? `<div class="pinnote mlxnote">MLX only — this GGUF runs on llama.cpp with its own defaults, so these options are not used.</div>` : "";
-    $("optRows").innerHTML = ggufNote + note + state.opts.map(o => `
+    const rowHtml = (o) => `
       <div class="opt${gguf ? " mlxoff" : ""}" data-id="${o.id}" ${gguf ? 'aria-disabled="true" title="MLX only — not used for GGUF"' : ""}>
         <div class="row"><span class="name">${o.label}</span>
           <span class="seg">${o.values.filter(v => v !== "mtp" || $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true").map(v =>
@@ -1726,7 +1798,10 @@
         ${state.filePins[o.id] && state.choice[o.id] === "auto"
           ? `<div class="help filepin">config.toml: ${VAL_LABEL[state.filePins[o.id]] || state.filePins[o.id]} (used while this is Auto)</div>` : ""}
         <div class="now"></div>
-      </div>`).join("");
+      </div>`;
+    $("optRows").innerHTML = ggufNote + state.opts.filter(o => o.id === "self_tune").map(rowHtml).join("");
+    const adv = $("optAdvancedRows");
+    if (adv) adv.innerHTML = note + state.opts.filter(o => o.id !== "self_tune").map(rowHtml).join("");
     for (const row of document.querySelectorAll(".opt")) {
       for (const b of row.querySelectorAll(".seg button")) {
         if (row.classList.contains("mlxoff")) { b.disabled = true; continue; }
@@ -1970,35 +2045,49 @@
     }
   }
 
-  function showFeatures(stats) {
-    const tags = [];
-    tags.push([stats.shared_start ? "shared start · hit" : "shared start", !!stats.shared_start]);
-    if (stats.guess_ahead) {
-      const g = stats.guess_ahead;
-      const frac = g.accepted_frac != null ? ` · ${(g.accepted_frac*100).toFixed(0)}%` : "";
-      tags.push([`guess-ahead${frac}`, true]);
-    } else {
-      tags.push(["guess-ahead", false]);
-    }
-    if (stats.tuned) tags.push(["tuned settings", true]);
-    if (stats.how) tags.push([String(stats.how).slice(0, 28), true]);
-    $("featTags").innerHTML = tags.map(([t, on]) =>
-      `<span class="tag ${on ? "on" : "off"}">${t}</span>`).join("");
+  function optsFromActive(a) {
+    if (!a) return null;
+    const pl = a.prompt_lookup;
+    return {
+      self_tune: a.self_tune ? "on" : "off",
+      guess_ahead: a.guess_ahead_mode === "native_mtp" ? "mtp" : (a.guess_ahead ? "on" : "off"),
+      prompt_lookup: pl ? (pl.enabled ? "adaptive" : "off") : "",
+      shared_start: a.shared_start ? "on" : "off",
+      pipeline_chats: a.pipeline_chats == null ? "" : String(a.pipeline_chats),
+      fuse_kernels: a.fuse_kernels || "",
+      kv_bits: a.kv_bits == null ? "" : String(a.kv_bits),
+      keepalive: a.keepalive == null ? "" : (a.keepalive ? "on" : "off"),
+    };
+  }
+  function paintAvg(j) {
+    const el = $("avgSpeed");
+    if (!el) return;
+    if (j && j.line) { el.hidden = false; el.textContent = j.line; }
+    else { el.hidden = true; el.textContent = ""; }
+  }
+  async function refreshAvgSpeed() {
+    const mid = state.loadedModel;
+    const opts = optsFromActive(state.active);
+    if (!mid || !opts) { paintAvg(null); return; }
+    try {
+      const q = new URLSearchParams({ model: mid, opts: JSON.stringify(opts) });
+      paintAvg(await api("/api/speed-average?" + q.toString()));
+    } catch (_) { paintAvg(null); }
+  }
+  function recordAvgSpeed(stats) {
+    const mid = state.loadedModel;
+    const opts = optsFromActive(state.active);
+    if (!mid || !opts || !stats) return;
+    if (stats.write_tok_s == null && stats.ttft_s == null) return;
+    api("/api/speed-average", {
+      method: "POST",
+      body: JSON.stringify({ model: mid, opts, write_tok_s: stats.write_tok_s, ttft_s: stats.ttft_s }),
+    }).then(paintAvg).catch(() => {});
   }
 
   function showStats(stats, ts) {
     window.dispatchEvent(new CustomEvent("caravan-reply-stats", {detail: {stats, model: state.loadedModel}}));
-    $("sTotal").innerHTML = `${fmt(stats.total_s)} <small>s</small>`;
-    $("sTtft").innerHTML = `${fmt(stats.ttft_s)} <small>s</small>`;
-    const read = stats.read_tok_s != null
-      ? `${fmt(stats.read_tok_s,1)} <small>tok/s · ${stats.prompt_tokens ?? "?"} tok</small>`
-      : `${stats.prompt_tokens ?? "—"} <small>tok</small>`;
-    const write = stats.write_tok_s != null
-      ? `${fmt(stats.write_tok_s,1)} <small>tok/s · ${stats.completion_tokens ?? "?"} tok</small>`
-      : `${stats.completion_tokens ?? "—"} <small>tok</small>`;
-    $("sRead").innerHTML = read;
-    $("sWrite").innerHTML = write;
-    showFeatures(stats || {});
+    recordAvgSpeed(stats || {});
 
     if (ts) {
       const sentB = ts.sent_browser;
@@ -2035,7 +2124,7 @@
     state.followChat = m.scrollHeight - m.scrollTop - m.clientHeight < 40;
   }, { passive: true });
 
-  // Thinking button (under Clear chat). Qwen3 / Gemma 4: on or off.
+  // Thinking button (under New session). Qwen3 / Gemma 4: on or off.
   // gpt-oss can't switch thinking off, so it cycles reasoning low / medium / high.
   function thinkKind() {
     const m = (state.loadedModel || "").toLowerCase();
@@ -2078,7 +2167,7 @@
   renderThink();
 
   // Keep the chat across page refreshes: session id + messages live in localStorage.
-  // Clear chat (or switching/stopping the model) starts fresh as before.
+  // New session (or switching/stopping the model) starts fresh as before.
   const LS_SID = "caravan.session", LS_MSGS = "caravan.messages", LS_HIST = "caravan.history";
   const CTX_TOKENS = 32768;   // trim history to leave room for max_tokens
   function approxTokens(s) { return Math.ceil(String(s || "").length / 4); }
@@ -2723,45 +2812,61 @@
 
   // ---- Model picker (ROADMAP) -----------------------------------------
   (function () {
-    const CATEGORY = ["chat","coding","reasoning","vision","image-to-image","voice","cloud"];
+    const CATEGORY_DEFAULT = ["chat","coding","thinking","tools","vision"];
+    const CATEGORY_ADVANCED = ["embedding","any-to-any","text-to-image","text-to-video","text-to-speech","decision"];
+    const CATEGORY = CATEGORY_DEFAULT.concat(CATEGORY_ADVANCED);
+    const CHIP_LABELS = {
+      chat: "Chat", coding: "Coding", thinking: "Thinking", tools: "Tools",
+      vision: "Vision", embedding: "Embedding", "any-to-any": "Any-to-any",
+      "text-to-image": "Text-to-image", "text-to-video": "Text-to-video",
+      "text-to-speech": "Text-to-speech", decision: "Decision", new: "New",
+    };
     const state = {
       source: "all", q: "", category: "chat", newer: false,
-      fit: new Set(), maxGb: 0,
-      groups: [], job: null, searchTimer: null, abort: null, searchSeq: 0,
+      fit: new Set(), maxGb: 0, family: "", families: [],
+      groups: [], jobs: {}, jobLoadable: {}, polling: new Set(),
+      searchTimer: null, abort: null, searchSeq: 0,
       onlineNodes: 1, maxSplitStages: 1, nodeLabels: ["My Mac"],
     };
     const $ = (id) => document.getElementById(id);
     const chipsEl = $("pickerChips");
     function fitChipName(k) { return "fits-on-" + k; }
+    function allChipButtons() {
+      const adv = $("pickerAdvancedChips");
+      return [...chipsEl.querySelectorAll("button"), ...(adv ? [...adv.querySelectorAll("button")] : [])];
+    }
     function rebuildChips() {
+      if (state.category === "reasoning") state.category = "thinking";
       const n = Math.max(1, state.onlineNodes || 1);
-      const wanted = CATEGORY.concat(["new"]).concat(
+      const defaultWanted = CATEGORY_DEFAULT.concat(["new"]).concat(
         Array.from({length: n}, (_, i) => fitChipName(i + 1))
       );
+      const advEl = $("pickerAdvancedChips");
+      const advWrap = $("pickerAdvanced");
       // Drop obsolete fit chips; keep category/new.
-      [...chipsEl.querySelectorAll("button")].forEach((b) => {
+      allChipButtons().forEach((b) => {
         const c = b.dataset.chip;
-        if (c && c.startsWith("fits-on-") && !wanted.includes(c)) {
+        if (c && c.startsWith("fits-on-") && !defaultWanted.includes(c)) {
           state.fit.delete(c);
           b.remove();
         }
       });
-      const have = new Set([...chipsEl.querySelectorAll("button")].map((b) => b.dataset.chip));
-      wanted.forEach((f) => {
-        if (have.has(f)) return;
+      function placeChip(host, f) {
+        if ([...host.querySelectorAll("button")].some((b) => b.dataset.chip === f)) return;
         const b = document.createElement("button");
-        b.type = "button"; b.textContent = f; b.dataset.chip = f;
+        b.type = "button"; b.textContent = CHIP_LABELS[f] || f; b.dataset.chip = f;
         if (state.category === f) b.classList.add("on");
         if (state.fit.has(f)) b.classList.add("on");
         if (f === "new" && state.newer) b.classList.add("on");
         b.addEventListener("click", () => {
           if (CATEGORY.includes(f)) {
             state.category = (state.category === f) ? "" : f;
-            [...chipsEl.querySelectorAll("button")].forEach((x) => {
+            allChipButtons().forEach((x) => {
               if (CATEGORY.includes(x.dataset.chip)) {
                 x.classList.toggle("on", x.dataset.chip === state.category);
               }
             });
+            if (advWrap && CATEGORY_ADVANCED.includes(state.category)) advWrap.open = true;
             search();
             return;
           }
@@ -2775,8 +2880,11 @@
           else { state.fit.add(f); b.classList.add("on"); }
           renderList();
         });
-        chipsEl.appendChild(b);
-      });
+        host.appendChild(b);
+      }
+      defaultWanted.forEach((f) => placeChip(chipsEl, f));
+      if (advEl) CATEGORY_ADVANCED.forEach((f) => placeChip(advEl, f));
+      if (advWrap && CATEGORY_ADVANCED.includes(state.category)) advWrap.open = true;
     }
     rebuildChips();
     $("pickerMaxGb").addEventListener("change", () => {
@@ -2784,6 +2892,11 @@
       renderList();
     });
     state.maxGb = parseFloat($("pickerMaxGb").value) || 0;
+    const famSel = $("pickerFamily");
+    if (famSel) famSel.addEventListener("change", () => {
+      state.family = famSel.value || "";
+      renderList();
+    });
 
     $("pickerSrc").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-src]");
@@ -2803,28 +2916,29 @@
       adoptLiveFetches();
     }
     async function adoptLiveFetches() {
-      // After a page refresh, pick the running job back up so the bar doesn't vanish.
+      // After a page refresh, show every running job (one stacked card each).
+      const seen = new Set();
       try {
         const all = await api("/api/picker/jobs");
-        const run = ((all && all.jobs) || []).filter((x) => x.status === "running" || x.status === "queued" || x.status === "cancelling")
-          .sort((a, b) => (b.t || 0) - (a.t || 0))[0];
-        if (run && (!state.job || state.job.id !== run.id) && (!state.job || state.job.status !== "running")) {
-          state.job = run; showJob();
+        const running = ((all && all.jobs) || []).filter((x) => x.status === "running" || x.status === "queued" || x.status === "cancelling");
+        for (const run of running) {
+          if (!run || !run.id || seen.has(run.id)) continue;
+          seen.add(run.id);
+          upsertJob(run);
           pollJob(run.id, { repo_id: run.repo_id });
-          return;
         }
-        if (state.job) showJob();
+        showJobs();
       } catch (_) {}
       try {
         const data = await api("/api/picker/live-fetches");
         const jobs = (data && data.jobs) || [];
-        if (!jobs.length) return;
-        // Prefer showing a live orphan if we aren't already tracking a job
-        if (!state.job || state.job.status === "done" || state.job.orphan) {
-          state.job = jobs[0];
-          showJob();
-          if (state.job && state.job.id) pollJob(state.job.id, { repo_id: state.job.repo_id });
+        for (const job of jobs) {
+          if (!job || !job.id || seen.has(job.id)) continue;
+          seen.add(job.id);
+          upsertJob(job);
+          pollJob(job.id, { repo_id: job.repo_id });
         }
+        showJobs();
       } catch (_) {}
     }
     function closePicker() {
@@ -2878,15 +2992,15 @@
         if (data.nodes_used != null) state.onlineNodes = data.nodes_used;
         if (data.max_split_stages != null) state.maxSplitStages = data.max_split_stages;
         if (data.node_labels) state.nodeLabels = data.node_labels;
+        state.families = data.families || [];
         rebuildChips();
-        let status = `${state.groups.length} models · fit on ${data.nodes_used || "?"} nodes`;
-        if (data.max_split_stages && data.nodes_used > data.max_split_stages) {
-          status += ` · ${data.nodes_used}-Mini split coming later`;
-        }
-        status += (data.filter ? ` · ${data.filter}` : "")
-          + (data.newer ? " · new" : "")
-          + (data.errors && data.errors.length ? ` · ${data.errors[0]}` : "");
-        $("pickerStatus").textContent = status;
+        rebuildFamily();
+        state.searchMeta = {
+          newer: data.newer,
+          errors: data.errors,
+          max_split_stages: data.max_split_stages,
+          nodes_used: data.nodes_used,
+        };
         renderList();
       } catch (e) {
         if (e && e.name === "AbortError") return;
@@ -2908,23 +3022,70 @@
       if (q.weights_gb == null) return true; // unknown stays visible (gray)
       return q.weights_gb <= state.maxGb + 1e-6;
     }
-    function passChips(g) {
-      const quants = (g.quants || []).filter(passMaxGb);
-      if (!quants.length) return false;
+    function passFit(q) {
       for (const c of state.fit) {
         const m = /^fits-on-(\d+)$/.exec(c);
-        if (m) {
-          const k = parseInt(m[1], 10);
-          if (!quants.some(function(q){
-            var f = q.fit || {};
-            return ((f.fits_on || []).includes(k) || f.nodes_needed === k);
-          })) return false;
-        }
+        if (!m) continue;
+        const k = parseInt(m[1], 10);
+        const f = q.fit || {};
+        if (!((f.fits_on || []).includes(k) || f.nodes_needed === k)) return false;
       }
       return true;
     }
+    function passFamily(g) {
+      if (!state.family) return true;
+      return (g.family || "") === state.family;
+    }
+    function passChips(g) {
+      if (!passFamily(g)) return false;
+      return (g.quants || []).filter(passMaxGb).filter(passFit).length > 0;
+    }
+    function rebuildFamily() {
+      const sel = $("pickerFamily");
+      const row = $("pickerFamilyRow");
+      if (!sel) return;
+      const cur = state.family;
+      const fams = state.families || [];
+      sel.innerHTML = '<option value="">Any family</option>';
+      for (const f of fams) {
+        const o = document.createElement("option");
+        o.value = f.id;
+        o.textContent = f.label;
+        if (f.id === cur) o.selected = true;
+        sel.appendChild(o);
+      }
+      if (cur && !fams.some((f) => f.id === cur)) {
+        state.family = "";
+        sel.value = "";
+      }
+      if (row) row.hidden = fams.length === 0;
+    }
     function filteredQuants(g) {
-      return (g.quants || []).filter(passMaxGb);
+      return (g.quants || []).filter(passMaxGb).filter(passFit);
+    }
+    function macWord(n) { return n === 1 ? "Mac" : "Macs"; }
+    function updatePickerStatus() {
+      const groups = (state.groups || []).filter(passChips);
+      const n = groups.length;
+      const parts = [n + (n === 1 ? " model" : " models")];
+      const ks = [...state.fit].map((c) => {
+        const m = /^fits-on-(\d+)$/.exec(c);
+        return m ? parseInt(m[1], 10) : null;
+      }).filter((k) => k != null).sort((a, b) => a - b);
+      if (ks.length === 1) parts.push("fit on " + ks[0] + " " + macWord(ks[0]));
+      else if (ks.length > 1) parts.push("fit on " + ks.map((k) => k + " " + macWord(k)).join(" or "));
+      const meta = state.searchMeta || {};
+      if (meta.max_split_stages && meta.nodes_used != null && meta.nodes_used > meta.max_split_stages) {
+        parts.push(meta.nodes_used + "-Mac split coming later");
+      }
+      if (state.family) {
+        const fl = ((state.families || []).find((f) => f.id === state.family) || {}).label;
+        parts.push(fl || state.family);
+      }
+      if (state.category) parts.push(CHIP_LABELS[state.category] || state.category);
+      if (meta.newer || state.newer) parts.push("new");
+      if (meta.errors && meta.errors.length) parts.push(meta.errors[0]);
+      $("pickerStatus").textContent = parts.join(" · ");
     }
 
     function sizeLabel(g, quants) {
@@ -2939,6 +3100,7 @@
       const box = $("pickerList");
       box.innerHTML = "";
       const groups = (state.groups || []).filter(passChips);
+      updatePickerStatus();
       if (!groups.length) {
         box.innerHTML = `<div class="picker-status">No models match.</div>`;
         return;
@@ -2959,7 +3121,7 @@
           <span class="p-title">${escapeHtml(g.base)}</span>
           ${g.cloud ? '<span class="p-cloud">CLOUD</span>' : ""}
           <span class="p-meta">${escapeHtml(sizeLabel(g, quants))} · ${quants.length} quant${quants.length===1?"":"s"} · ${escapeHtml(g.source || "")}</span>`;
-        head.title = fit.reason || g.base;
+        if (g.tooltip) head.title = g.tooltip;
         const reasonEl = document.createElement("div");
         reasonEl.className = "p-meta";
         reasonEl.style.cssText = "padding:0 10px 4px 26px; font-size:.65rem; opacity:.85";
@@ -3012,7 +3174,7 @@
         try {
           const data = await api("/api/picker/download", { method: "POST",
             body: JSON.stringify({ repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0 }) });
-          state.job = data.job; showJob(); pollJob(data.job.id, q);
+          upsertJob(data.job); showJobs(); pollJob(data.job.id, q);
         } catch (e) { $("pickerStatus").textContent = "Download failed: " + (e.error || e.message || e); }
         return;
       }
@@ -3045,8 +3207,8 @@
           method: "POST",
           body: JSON.stringify(body),
         });
-        state.job = data.job;
-        showJob();
+        upsertJob(data.job);
+        showJobs();
         try { $("pickerJob").scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {}
         pollJob(data.job.id, q);
       } catch (e) {
@@ -3150,14 +3312,77 @@
       if (s < 3600) return Math.floor(s/60) + "m " + (s%60) + "s";
       return Math.floor(s/3600) + "h " + Math.floor((s%3600)/60) + "m";
     }
-    function showJob() {
+    function looksLikeHostname(s) {
+      s = String(s || "").trim();
+      if (!s) return true;
+      if (/\s/.test(s)) return false;
+      const low = s.toLowerCase();
+      if (low === "localhost" || low === "local" || low === "127.0.0.1") return true;
+      if (s.includes(".") || s.includes(":")) return true;
+      if (/^exo\d+$/i.test(s)) return true;
+      if (/^[A-Za-z0-9]+(-[A-Za-z0-9]+)+$/.test(s) && !/mac|mini/i.test(s)) return true;
+      return false;
+    }
+    function macOrdinal(n) {
+      const suf = (n % 100 >= 10 && n % 100 <= 20) ? "th" : ({1:"st",2:"nd",3:"rd"}[n % 10] || "th");
+      return n + suf;
+    }
+    function friendlyMacName(runner, prog) {
+      const r = runner || {};
+      const p = prog || {};
+      const raw = String(r.label || p.label || "").trim();
+      const role = String(r.role || p.role || "").trim().toLowerCase();
+      const nid = r.id || "";
+      const n = Math.max(1, (state.nodeLabels || []).length);
+      if (raw && !looksLikeHostname(raw) && !["lead","packer","local"].includes(raw.toLowerCase())) return raw;
+      if (role === "lead" || nid === "lead") return n === 1 ? "My Mac" : "1st Mac";
+      if (role === "packer" || nid === "packer") return "2nd Mac";
+      if (nid && !looksLikeHostname(String(nid)) && !["lead","packer","local"].includes(String(nid).toLowerCase())) return String(nid);
+      return "Mac";
+    }
+    function upsertJob(j) {
+      if (!j || !j.id) return;
+      state.jobs[j.id] = j;
+    }
+    function dismissJob(id) {
+      delete state.jobs[id];
+      delete state.jobLoadable[id];
+      showJobs();
+    }
+    function anyActiveJobs(exceptId) {
+      return Object.values(state.jobs).some((x) => x.id !== exceptId && (x.status === "running" || x.status === "queued" || x.status === "cancelling"));
+    }
+    function jobCardEl(id) {
       const el = $("pickerJob");
-      if (!state.job) { el.hidden = true; return; }
+      if (!el) return null;
+      return el.querySelector('[data-job-id="' + CSS.escape(String(id)) + '"]');
+    }
+    function showJobs() {
+      const el = $("pickerJob");
+      const jobs = Object.values(state.jobs);
+      if (!jobs.length) { el.hidden = true; el.innerHTML = ""; return; }
       el.hidden = false;
-      const j = state.job;
+      const seen = new Set();
+      for (const j of jobs) {
+        if (!j || !j.id) continue;
+        seen.add(String(j.id));
+        let card = jobCardEl(j.id);
+        if (!card) {
+          card = document.createElement("div");
+          card.className = "picker-job";
+          card.dataset.jobId = j.id;
+          el.appendChild(card);
+        }
+        renderJobCard(card, j);
+      }
+      [...el.querySelectorAll("[data-job-id]")].forEach((card) => {
+        if (!seen.has(card.dataset.jobId)) card.remove();
+      });
+    }
+    function renderJobCard(card, j) {
       const prog = j.progress || {};
       const runners = (j.runners && j.runners.length) ? j.runners
-        : Object.keys(prog).filter((k) => k !== "lead" && k !== "packer").map((k) => ({ id: k, label: (prog[k] || {}).label || k }));
+        : Object.keys(prog).filter((k) => k !== "lead" && k !== "packer").map((k) => ({ id: k, label: (prog[k] || {}).label || k, role: (prog[k] || {}).role }));
       const st = j.status === "done" ? "done" : j.status === "error" ? "failed"
         : (j.status === "cancelled" || j.status === "cancelling") ? "stopped" : "running";
       const stLabel = { done: "Done", failed: "Failed", stopped: "Stopped", running: j.status === "queued" ? "Starting" : "Downloading" }[st];
@@ -3175,8 +3400,9 @@
         let note = (p.msg || "").startsWith("can't read") ? p.msg : (p.stalled ? "no new bytes for 30s+ (stalled?)" : (p.stage || ""));
         if (st === "running" && p.retry && p.retry.n) note = `network error — retry ${p.retry.n}/${p.retry.of}` + (note && note.startsWith("network") ? "" : ` · ${note}`);
         if (j.resuming && p.resume_base) note = `kept ${fmtBytes(p.resume_base)} already on disk` + (note && !String(note).startsWith("starting") ? " · " + note : "");
+        const mac = friendlyMacName(r, p);
         rowsHtml += `<div class="j-node ${p.stalled ? "stalled" : ""} ${starting ? "starting" : ""}">
-          <div class="j-line"><b>${escapeHtml(r.label || r.id)}</b><span>${starting ? "starting…" : pct + "%"}</span></div>
+          <div class="j-line"><b>${escapeHtml(mac)}</b><span>${starting ? "starting…" : pct + "%"}</span></div>
           <div class="bar"><i style="width:${pct}%"></i></div>
           <div class="j-line j-sub"><span>${fmtBytes(have)}${tot ? " / " + fmtBytes(tot) : ""}</span><span>${st === "running" ? [speed, eta].filter(Boolean).join(" · ") : ""}</span></div>
           ${note ? `<div class="j-sub">${escapeHtml(note)}</div>` : ""}
@@ -3186,37 +3412,38 @@
       let head = `<div class="j-head"><span class="j-state ${st}">${resumingNow ? "Resuming…" : (st === "running" && j.resuming ? "Downloading (resumed)" : stLabel)}</span><span>${escapeHtml(j.repo_id || "")}</span>`;
       if (j.note) head += `<span class="p-meta">· ${escapeHtml(j.note)}</span>`;
       head += `</div>`;
-      if (runners.length > 1 && tTot) head += `<div class="j-sub">All Minis: ${fmtBytes(tHave)} / ${fmtBytes(tTot)}${tSpeed ? " · " + (tSpeed/1e6).toFixed(1) + " MB/s" : ""}</div>`;
+      if (runners.length > 1 && tTot) head += `<div class="j-sub">All Macs: ${fmtBytes(tHave)} / ${fmtBytes(tTot)}${tSpeed ? " · " + (tSpeed/1e6).toFixed(1) + " MB/s" : ""}</div>`;
       if (st === "failed" && j.error) head += `<div class="j-sub" style="color:var(--rose)">${escapeHtml(j.error)}</div>`;
       let actions = `<div class="j-actions">`;
-      if (st === "running") actions += `<button type="button" class="ghost" id="btnCancelJob">Stop</button>`;
+      if (st === "running") actions += `<button type="button" class="ghost" data-act="cancel">Stop</button>`;
       else {
-        if (st === "stopped" || st === "failed") actions += `<button type="button" class="primary" id="btnResumeJob" title="Restart the same files and placement; finished files and partials on disk are reused">Resume</button>`;
-        actions += `<button type="button" class="ghost" id="btnDismissJob">Dismiss</button>`;
+        if (st === "stopped" || st === "failed") actions += `<button type="button" class="primary" data-act="resume" title="Restart the same files and placement; finished files and partials on disk are reused">Resume</button>`;
+        actions += `<button type="button" class="ghost" data-act="dismiss">Dismiss</button>`;
       }
-      if (st === "done" && state.jobLoadable) actions += `<button type="button" class="primary" id="btnLoadJob">Load ${escapeHtml((j.repo_id || "").split("/").pop())}</button>`;
+      if (st === "done" && state.jobLoadable[j.id]) actions += `<button type="button" class="primary" data-act="load">Load ${escapeHtml((j.repo_id || "").split("/").pop())}</button>`;
       actions += `</div>`;
-      el.innerHTML = head + rowsHtml + actions;
-      const c = $("btnCancelJob");
+      card.innerHTML = head + rowsHtml + actions;
+      const c = card.querySelector("[data-act=cancel]");
       if (c) c.onclick = async () => {
         try {
           await api("/api/picker/download/cancel", { method: "POST", body: JSON.stringify({ job_id: j.id }) });
-          $("pickerStatus").textContent = "Stopping download…";
+          if (!anyActiveJobs(j.id)) $("pickerStatus").textContent = "Stopping download…";
         } catch (e) { alert(e.message); }
       };
-      const rs = $("btnResumeJob");
+      const rs = card.querySelector("[data-act=resume]");
       if (rs) rs.onclick = async () => {
         rs.disabled = true; rs.textContent = "Resuming…";
         try {
           const r = await api("/api/picker/download/resume", { method: "POST", body: JSON.stringify({ job_id: j.id }) });
-          state.job = r.job; state.jobLoadable = false; showJob();
+          dismissJob(j.id);
+          upsertJob(r.job); state.jobLoadable[r.job.id] = false; showJobs();
           $("pickerStatus").textContent = "Resuming " + (j.repo_id || "") + "…";
           pollJob(r.job.id, { repo_id: j.repo_id });
         } catch (e) { rs.disabled = false; rs.textContent = "Resume"; alert(e.message); }
       };
-      const d = $("btnDismissJob");
-      if (d) d.onclick = () => { state.job = null; state.jobLoadable = false; showJob(); };
-      const l = $("btnLoadJob");
+      const d = card.querySelector("[data-act=dismiss]");
+      if (d) d.onclick = () => dismissJob(j.id);
+      const l = card.querySelector("[data-act=load]");
       if (l) l.onclick = async () => {
         l.disabled = true;
         try { await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: j.load_id || j.repo_id }) }); $("pickerStatus").textContent = "Loading " + j.repo_id + "…"; }
@@ -3236,69 +3463,84 @@
       });
     }
     async function pollJob(id, q) {
-      for (let i = 0; i < 900; i++) {
-        await new Promise((r) => setTimeout(r, 1000));
-        try {
-          const j = await api("/api/picker/jobs/" + id);
-          state.job = j; showJob();
-          if (j.status === "done") {
-            window.dispatchEvent(new CustomEvent("caravan-models-changed"));
-            let busy = false;
-            try { const s = await api("/api/status"); busy = !!(s.worker && s.worker.status === "ready"); } catch (_) {}
-            if (busy) {
-              // A model is already loaded: don't swap it out silently. Offer a Load button.
-              state.jobLoadable = true; showJob();
-              $("pickerStatus").textContent = "Downloaded. Press Load to switch to it.";
-            } else {
-              // Nothing loaded: ask first (Brenden, Day 18). Never auto-load silently.
-              const name = ((j && j.repo_id) || q.repo_id || "").split("/").pop();
-              const yes = await askLoadNow(name);
-              if (yes) {
-                $("pickerStatus").textContent = "Downloaded. Loading…";
-                try {
-                  await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: (j && j.load_id) || q.repo_id }) });
-                } catch (e) {
-                  state.jobLoadable = true; showJob();
-                  $("pickerStatus").textContent = "Could not load: " + String(e.error || e.message || "Please try again.").replace(/\s+/g, " ").trim();
-                }
+      if (!id) return;
+      if (state.polling.has(id)) return;
+      state.polling.add(id);
+      try {
+        for (let i = 0; i < 900; i++) {
+          await new Promise((r) => setTimeout(r, 1000));
+          if (!state.jobs[id]) return; // dismissed
+          try {
+            const j = await api("/api/picker/jobs/" + id);
+            upsertJob(j); showJobs();
+            if (j.status === "done") {
+              window.dispatchEvent(new CustomEvent("caravan-models-changed"));
+              let busy = false;
+              try { const s = await api("/api/status"); busy = !!(s.worker && s.worker.status === "ready"); } catch (_) {}
+              if (busy) {
+                state.jobLoadable[id] = true; showJobs();
+                if (!anyActiveJobs(id)) $("pickerStatus").textContent = "Downloaded. Press Load to switch to it.";
+              } else if (anyActiveJobs(id)) {
+                // Other downloads still running: leave Load on this card, don't steal the dialog.
+                state.jobLoadable[id] = true; showJobs();
               } else {
-                state.jobLoadable = true; showJob();
-                $("pickerStatus").textContent = "Downloaded. Press Load when ready.";
+                const name = ((j && j.repo_id) || (q && q.repo_id) || "").split("/").pop();
+                const yes = await askLoadNow(name);
+                if (yes) {
+                  $("pickerStatus").textContent = "Downloaded. Loading…";
+                  try {
+                    await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: (j && j.load_id) || (q && q.repo_id) }) });
+                  } catch (e) {
+                    state.jobLoadable[id] = true; showJobs();
+                    $("pickerStatus").textContent = "Could not load: " + String(e.error || e.message || "Please try again.").replace(/\s+/g, " ").trim();
+                  }
+                } else {
+                  state.jobLoadable[id] = true; showJobs();
+                  $("pickerStatus").textContent = "Downloaded. Press Load when ready.";
+                }
               }
+              refreshDisk();
+              window.dispatchEvent(new CustomEvent("caravan-models-changed"));
+              return;
             }
-            refreshDisk();
-            window.dispatchEvent(new CustomEvent("caravan-models-changed"));
-            return;
-          }
-          if (j.status === "error" || j.status === "cancelled") {
-            $("pickerStatus").textContent = j.status === "error" ? ("Download failed: " + (j.error || "")) : "Download stopped.";
-            return;
-          }
-        } catch (e) {
-          // The web server restarted (job ids are in memory). The fetch keeps running on
-          // the Minis and is re-listed as a live-* job: pick that up instead of freezing.
-          if (/unknown job|not found|404/i.test(e.message || "")) {
-            $("pickerStatus").textContent = "Web server restarted; re-attaching to the running download…";
-            await new Promise((r) => setTimeout(r, 3000));
-            try {
-              const all = await api("/api/picker/jobs");
-              let nj = ((all && all.jobs) || []).filter((x) => x.repo_id === q.repo_id && x.id !== id)
-                .sort((a, b) => (b.t || 0) - (a.t || 0))[0];
-              if (!nj) {
-                const lf = await api("/api/picker/live-fetches");
-                nj = ((lf && lf.jobs) || []).find((x) => x.repo_id === q.repo_id);
+            if (j.status === "error" || j.status === "cancelled") {
+              if (!anyActiveJobs(id)) {
+                $("pickerStatus").textContent = j.status === "error" ? ("Download failed: " + (j.error || "")) : "Download stopped.";
               }
-              if (nj) { state.job = nj; showJob(); pollJob(nj.id, q); return; }
-            } catch (_) {}
-            if (state.job) { state.job = { ...state.job, status: "error", error: "tracking lost after a web restart; files on disk are kept, press Resume to finish" }; showJob(); }
+              return;
+            }
+          } catch (e) {
+            if (/unknown job|not found|404/i.test(e.message || "")) {
+              if (!anyActiveJobs(id)) $("pickerStatus").textContent = "Web server restarted; re-attaching to the running download…";
+              await new Promise((r) => setTimeout(r, 3000));
+              try {
+                const all = await api("/api/picker/jobs");
+                let nj = ((all && all.jobs) || []).filter((x) => x.repo_id === (q && q.repo_id) && x.id !== id)
+                  .sort((a, b) => (b.t || 0) - (a.t || 0))[0];
+                if (!nj) {
+                  const lf = await api("/api/picker/live-fetches");
+                  nj = ((lf && lf.jobs) || []).find((x) => x.repo_id === (q && q.repo_id));
+                }
+                if (nj) {
+                  dismissJob(id);
+                  upsertJob(nj); showJobs();
+                  state.polling.delete(id);
+                  pollJob(nj.id, q);
+                  return;
+                }
+              } catch (_) {}
+              const cur = state.jobs[id];
+              if (cur) { upsertJob({ ...cur, status: "error", error: "tracking lost after a web restart; files on disk are kept, press Resume to finish" }); showJobs(); }
+              return;
+            }
+            if (!anyActiveJobs(id)) $("pickerStatus").textContent = e.message;
             return;
           }
-          $("pickerStatus").textContent = e.message;
-          return;
         }
+      } finally {
+        state.polling.delete(id);
       }
     }
-
     // Compact "where is it" note for one combined row: EXO2 · split EXO1+EXO2 · all.
     function diskLocation(m) {
       const held = m.held_on || Object.keys(m.size_by_label || {});

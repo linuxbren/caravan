@@ -512,14 +512,16 @@ class PageOrderTest(unittest.TestCase):
     def test_section_order(self):
         html = (REPO / "proxy" / "web" / "index.html").read_text()
         body = html[html.index("<body>"):]
-        # ba60fa9 (Day 16) intentionally moved load progress into the chat
-        # column (progressCard, shown only on problems) and the string card
-        # into the left Topology drawer, so those two left the main order.
-        order = ["a-chat", "a-last", "a-settings", "a-clock", "a-miles", "a-journey"]
+        # ba60fa9 (Day 16) moved load progress into the chat column and the
+        # string card into Topology. Day 24 removed the Specifications box
+        # (a-last); a quiet average line sits under the input instead.
+        order = ["a-chat", "a-settings", "a-clock", "a-miles", "a-journey"]
         pos = [body.index(f'{c}"') for c in order]
         self.assertEqual(pos, sorted(pos))
         self.assertIn('id="progressCard"', body)
         self.assertIn('id="topoDrawer"', body)
+        self.assertNotIn('id="statGrid"', body)
+        self.assertIn('id="avgSpeed"', body)
         self.assertLess(body.index('id="modelSelect"'), body.index('id="optRows"'))
         self.assertGreater(body.index('id="modelSelect"'), body.index('a-settings"'))
 

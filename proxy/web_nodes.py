@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 from pathlib import Path
 from typing import Optional
@@ -270,3 +271,109 @@ def make_ssh_fn(mgr):
             capture_output=True, text=True, timeout=timeout,
         )
     return ssh_fn
+
+
+def looks_like_hostname(name: str) -> bool:
+    """True for machine hostnames that should not appear as a Mac label."""
+    s = (name or "").strip()
+    if not s:
+        return True
+    if any(ch.isspace() for ch in s):
+        return False
+    if s.lower() in ("localhost", "local", "127.0.0.1"):
+        return True
+    if "." in s or ":" in s:
+        return True
+    if re.match(r"^exo\d+$", s, re.I):
+        return True
+    if re.match(r"^[A-Za-z0-9]+(-[A-Za-z0-9]+)+$", s) and not re.search(r"(?i)mac|mini", s):
+        return True
+    return False
+
+
+def _ordinal(n: int) -> str:
+    if 10 <= n % 100 <= 20:
+        suf = "th"
+    else:
+        suf = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suf}"
+
+
+def friendly_mac_label(node=None, *, label=None, role=None, node_id=None,
+                       index=None, node_count=None, inventory=None) -> str:
+    """Same friendly Mac name for MLX and GGUF job cards. Never a hostname.
+
+    Both job types look up the configured node (inventory) so a Mini that
+    GGUF shows as "My Mac" is not shown as a hostname on an MLX card.
+    """
+    node = node or {}
+    raw = (label if label is not None else node.get("label") or "").strip()
+    role = (role if role is not None else node.get("role") or "").strip().lower()
+    nid = node_id if node_id is not None else node.get("id")
+    inv = list(inventory or [])
+    match = None
+    if inv:
+        if nid:
+            match = next((n for n in inv if n.get("id") == nid), None)
+        if match is None and raw:
+            match = next((n for n in inv
+                          if n.get("label") == raw or n.get("host") == raw
+                          or n.get("id") == raw or n.get("ssh") == raw), None)
+        if match is None and role:
+            match = next((n for n in inv if (n.get("role") or "").lower() == role), None)
+        if match is not None:
+            inv_label = (match.get("label") or "").strip()
+            if inv_label and not looks_like_hostname(inv_label) and inv_label.lower() not in ("lead", "packer", "local"):
+                return inv_label
+            role = role or (match.get("role") or "").strip().lower()
+            if index is None:
+                try:
+                    index = inv.index(match)
+                except ValueError:
+                    index = None
+            if node_count is None:
+                node_count = len(inv)
+    if raw and not looks_like_hostname(raw) and raw.lower() not in ("lead", "packer", "local"):
+        return raw
+    # Role first: a job may have only the packer as its single runner (index 0).
+    if role == "lead":
+        return "My Mac" if node_count == 1 else "1st Mac"
+    if role == "packer":
+        return "2nd Mac"
+    if index == 0:
+        return "My Mac" if node_count == 1 else "1st Mac"
+    if index == 1:
+        return "2nd Mac"
+    if isinstance(index, int) and index >= 0:
+        return _ordinal(index + 1) + " Mac"
+    if nid and not looks_like_hostname(str(nid)):
+        return str(nid)
+    return "Mac"
+
+
+def friendly_job(job, inventory=None, node_count=None):
+    """Copy a picker job with hostname / EXO* labels replaced by friendly Mac names."""
+    if not job:
+        return job
+    j = dict(job)
+    runners = [dict(r) for r in (j.get("runners") or [])]
+    inv = list(inventory or [])
+    n = node_count if node_count is not None else (len(inv) or len(runners) or 1)
+    for i, r in enumerate(runners):
+        r["label"] = friendly_mac_label(r, index=i, node_count=n, inventory=inv)
+    j["runners"] = runners
+    by_id = {r.get("id"): r for r in runners}
+    by_role = {r.get("role"): r for r in runners if r.get("role")}
+    progress = {}
+    for k, snap in (j.get("progress") or {}).items():
+        snap = dict(snap)
+        match = by_id.get(k) or by_role.get(k)
+        if match:
+            snap["label"] = match["label"]
+        else:
+            snap["label"] = friendly_mac_label(
+                label=snap.get("label"), role=snap.get("role"),
+                node_id=k, node_count=n, inventory=inv)
+        progress[k] = snap
+    j["progress"] = progress
+    return j

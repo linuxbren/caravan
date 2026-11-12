@@ -1,3 +1,14 @@
+## 2026-11-11: Day 24 quieter page (not published)
+
+See [DAY24.md](DAY24.md): Advanced sections in Settings, Models, and a
+collapsed Topology; Thinking filter and specialized types behind Advanced;
+New session; Current optimizations; per-model and per-optimization average
+speed; "Built in the open" removed; Models fit-summary follows the selected
+chip and says Macs; Family menu; row hover (maker, date, context,
+capabilities); one progress card per download, with consistent friendly
+Mac names. On branch `day24-ui`. Day 23 is published (tag day23-2026-11-11).
+No 1st-node or 2nd-node access.
+
 ## 2026-11-11: Day 23 live testing and tag
 
 - Live testing on both Minis passed: `caravan update`, remote access from

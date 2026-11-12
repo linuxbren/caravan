@@ -10,7 +10,16 @@
   const fetchButton = $("balanceFetch");
   let jobId = null, latest = window.caravanWorkerSnapshot || null, reload = null, finished = false;
   const busy = st => ['stopping','starting_packer','starting_lead','loading'].includes(st);
+  function quietStatus(msg) {
+    const idle=$('balanceIdleStatus');
+    if (idle) { idle.hidden=!msg; idle.textContent=msg || ''; }
+    const box=$('balanceReload');
+    if (box && !reload) { box.hidden=true; if (typeof box.removeAttribute==='function') box.removeAttribute('data-state'); else if (box.dataset) delete box.dataset.state; }
+    const chat=$('balanceChatNotice');
+    if (chat && !reload) { chat.hidden=true; chat.textContent=''; }
+  }
   function notice(title, state, steps=[]) {
+    const idle=$('balanceIdleStatus'); if (idle) { idle.hidden=true; idle.textContent=''; }
     const box=$('balanceReload'); box.hidden=false; box.dataset.state=state;
     $('balanceReloadTitle').textContent=title;
     $('balanceReloadSteps').replaceChildren(...steps.map(s=>text('li',s)));
@@ -24,8 +33,14 @@
     if (locked) { $('btnLoad').disabled=true; $('btnApply').disabled=true; }
   }
   function updateApply() {
-    apply.disabled=!!reload || !plan || !plan.ready || !plan.stages.every(s=>V.card(s).safe) || !V.changed(plan,latest);
-    if (!reload && !finished && plan && latest?.worker?.status==='ready') notice(apply.disabled?'Ready · this split is already applied or not safe to apply.':'Ready to apply a new split.','ready');
+    const unsafe=!!(plan && (!plan.ready || !plan.stages.every(s=>V.card(s).safe)));
+    const already=!!(plan && !unsafe && !V.changed(plan,latest));
+    apply.disabled=!!reload || !plan || unsafe || already;
+    if (!reload && !finished && plan && latest?.worker?.status==='ready') {
+      quietStatus(already?'This split is already applied.':unsafe?'This split is not safe to apply.':'Ready to apply a new split.');
+    } else if (!reload && !plan) {
+      quietStatus('');
+    }
   }
   function reloadSteps(w) {
     const st=(w?.status==='ready' && reload && !reload.external && w.lead_pid===reload.oldPid)?'queued':(w?.status || 'queued'), labels=reload?.target?.stages?.map(s=>s.label) || latest?.worker?.balance?.node_ids || [];

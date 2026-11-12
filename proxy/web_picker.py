@@ -70,15 +70,243 @@ _QUANT_RE = re.compile(
 _FILTER_TAGS = {
     "chat": {"text-generation", "conversational", "chat"},
     "coding": {"code", "coding", "text2code", "code-generation"},
-    "reasoning": {"reasoning", "thinking", "chain-of-thought"},
-    "vision": {"image-text-to-text", "image-to-text", "visual-question-answering"},
-    "image-to-image": {"image-to-image", "text-to-image"},
-    "voice": {
-        "automatic-speech-recognition", "audio-to-text", "speech-to-text",
-        "text-to-speech", "text-to-audio",
+    "thinking": {"reasoning", "thinking", "chain-of-thought"},
+    "tools": {
+        "tools", "tool-use", "tool_use", "function-calling",
+        "function_calling", "tool-calling", "function-call",
     },
+    "vision": {"image-text-to-text", "image-to-text", "visual-question-answering"},
+    "embedding": {
+        "embedding", "embeddings", "feature-extraction",
+        "sentence-similarity", "sentence-transformers",
+    },
+    "any-to-any": {"any-to-any", "any_to_any"},
+    "text-to-image": {"text-to-image", "text-to-img"},
+    "text-to-video": {"text-to-video", "text-to-vid"},
+    "text-to-speech": {"text-to-speech", "text-to-audio", "tts"},
+    "decision": {"decision", "system-one", "systemone"},
+    # Kept for API callers; not shown as a default or Advanced chip.
+    "image-to-image": {"image-to-image"},
     "cloud": {"cloud", "ollama-cloud"},
 }
+
+# Older chip names the page or API may still send.
+_FILTER_ALIASES = {
+    "reasoning": "thinking",
+    "voice": "text-to-speech",
+}
+
+# Default chips on the Models page (Advanced hides the rest).
+FILTER_DEFAULT = ("chat", "coding", "thinking", "tools", "vision")
+FILTER_ADVANCED = (
+    "embedding", "any-to-any", "text-to-image",
+    "text-to-video", "text-to-speech", "decision",
+)
+
+# Known model-family set for the Models picker. The page only lists
+# families that appear in the current catalog results, in this order.
+# QwQ counts as Qwen (same family). Mixtral counts as Mistral.
+FAMILIES = (
+    {"id": "qwen", "label": "Qwen", "needles": ("qwen", "qwq")},
+    {"id": "llama", "label": "Llama", "needles": ("llama",)},
+    {"id": "gemma", "label": "Gemma", "needles": ("gemma",)},
+    {"id": "mistral", "label": "Mistral", "needles": ("mistral", "mixtral", "ministral")},
+    {"id": "deepseek", "label": "DeepSeek", "needles": ("deepseek",)},
+    {"id": "gpt-oss", "label": "gpt-oss", "needles": ("gpt-oss", "gptoss", "gpt_oss")},
+    # "phi" is a short syllable (sophia, graphic), so it needs a start boundary
+    # and must not be followed by a letter. Qwen2 / Llama-3 style names are
+    # ordinary substrings: "qwen" in "Qwen2.5", "llama" in "CodeLlama".
+    {"id": "phi", "label": "Phi", "pattern": r"(?:^|[^a-z0-9])phi(?:\d|[^a-z]|$)"},
+)
+
+
+def family_of(*names):
+    """Return {id, label} for the first known family in the given names, or None."""
+    blob = " ".join(str(n) for n in names if n).lower()
+    if not blob:
+        return None
+    for fam in FAMILIES:
+        needles = fam.get("needles") or ()
+        if needles and any(n in blob for n in needles):
+            return {"id": fam["id"], "label": fam["label"]}
+        pat = fam.get("pattern")
+        if pat and re.search(pat, blob):
+            return {"id": fam["id"], "label": fam["label"]}
+    return None
+
+
+def group_family(group: dict):
+    names = [group.get("base"), group.get("name"), group.get("repo_id")]
+    for q in group.get("quants") or []:
+        if isinstance(q, dict):
+            names += [q.get("repo_id"), q.get("name"), q.get("base")]
+        else:
+            names.append(q)
+    return family_of(*names)
+
+
+def families_present(groups) -> list:
+    """Known families that appear in these catalog groups, in FAMILIES order."""
+    found = set()
+    for g in groups or []:
+        if g.get("family"):
+            found.add(g["family"])
+        else:
+            fam = group_family(g)
+            if fam:
+                found.add(fam["id"])
+    return [{"id": f["id"], "label": f["label"]} for f in FAMILIES if f["id"] in found]
+
+def maker_of(repo_id=None, author=None):
+    """Publishing org: explicit author, or the owner half of owner/name."""
+    if author and str(author).strip() and str(author).strip().lower() not in ("none", "unknown", "?"):
+        return str(author).strip()
+    repo = str(repo_id or "").strip()
+    if "/" in repo:
+        org = repo.split("/", 1)[0].strip()
+        if org and org.lower() not in ("ollama-cloud", "unknown", "?"):
+            return org
+    return None
+
+
+def release_month(*timestamps):
+    """Month and year, e.g. 'October 2025'. Prefers a created date, then last modified."""
+    from datetime import datetime, timezone
+    for raw in timestamps:
+        ts = _parse_hf_time(raw)
+        if ts:
+            return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%B %Y")
+    return None
+
+
+_CONTEXT_KM = re.compile(
+    r"(?:^|[^a-z0-9])(?:(?:ctx|context)(?:[_-]?length)?[_-]?)?(\d{1,4})\s*([km])(?:[_-]?(?:ctx|context|tok(?:ens)?)?)?(?:[^a-z0-9]|$)",
+    re.I,
+)
+
+
+def _context_tokens(*blobs, config=None):
+    """Best-known context window in tokens, or None. Never guesses."""
+    if isinstance(config, dict):
+        for k in ("max_position_embeddings", "max_sequence_length", "n_positions",
+                  "context_length", "max_ctx", "model_max_length"):
+            v = config.get(k)
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                continue
+            if n >= 512:
+                return n
+    text = " ".join(str(b) for b in blobs if b)
+    best = None
+    for m in _CONTEXT_KM.finditer(text):
+        n = int(m.group(1))
+        unit = m.group(2).lower()
+        tokens = n * (1_000_000 if unit == "m" else 1000)
+        if tokens >= 512 and (best is None or tokens > best):
+            best = tokens
+    return best
+
+
+def context_phrase(*blobs, config=None, tokens=None):
+    """Plain-words context, or None when unknown. No question marks."""
+    n = tokens if tokens is not None else _context_tokens(*blobs, config=config)
+    if not n:
+        return None
+    if n >= 1_000_000:
+        m = n / 1_000_000
+        if abs(m - round(m)) < 0.08:
+            m = int(round(m))
+        else:
+            m = int(round(m, 1)) if isinstance(m, float) else m
+        size = f"about {m}m"
+    elif n >= 1000:
+        # "128k" tags are thousands; 32768-token configs are 32 × 1024.
+        k = None
+        if n % 1000 == 0 or abs(n / 1000 - round(n / 1000)) < 0.02:
+            k = int(round(n / 1000))
+        elif abs(n / 1024 - round(n / 1024)) < 0.08:
+            k = int(round(n / 1024))
+        else:
+            k = int(round(n / 1000))
+        size = f"about {k}k"
+    else:
+        size = f"about {n}"
+    if n >= 32000:
+        return f"handles long chats ({size})"
+    return f"{size} of chat history"
+
+
+def capability_phrases(tags=None, filters=None, pipeline=None, repo_id=""):
+    """Short capability clauses from tags. Speed is never included."""
+    filt = list(filters or [])
+    if not filt:
+        filt = _filters_for(pipeline or "", tags, repo_id)
+    blob = set(str(t).lower() for t in list(tags or []) + filt + ([pipeline] if pipeline else []))
+    out = []
+    if "tools" in filt or blob & {
+        "tools", "tool-use", "tool_use", "function-calling",
+        "function_calling", "tool-calling", "function-call",
+    }:
+        out.append("can use tools")
+    if "vision" in filt or blob & {
+        "image-text-to-text", "image-to-text", "visual-question-answering", "vision",
+    }:
+        out.append("reads images")
+    return out
+
+
+def row_tooltip(group: dict) -> str:
+    """One or two lines for a Models-row hover. Omits unknown fields. No speed."""
+    quants = [q for q in (group.get("quants") or []) if isinstance(q, dict)]
+    makers, created, modified, tags, filts, pipes, blobs, configs = [], [], [], [], [], [], [], []
+    blobs.append(group.get("base"))
+    for q in quants or [{}]:
+        makers.append(maker_of(q.get("repo_id") or group.get("repo_id"), q.get("author") or group.get("author")))
+        for key in ("created_at", "createdAt", "created"):
+            if q.get(key):
+                created.append(q.get(key))
+                break
+        for key in ("last_modified", "lastModified"):
+            if q.get(key):
+                modified.append(q.get(key))
+                break
+        tags += list(q.get("tags") or [])
+        filts += list(q.get("filters") or []) + list(group.get("filters") or [])
+        if q.get("pipeline_tag"):
+            pipes.append(q.get("pipeline_tag"))
+        blobs += [q.get("repo_id"), q.get("name"), " ".join(q.get("tags") or [])]
+        if q.get("config"):
+            configs.append(q.get("config"))
+    # Prefer a created date (release); otherwise last modified. Earliest created.
+    def _earliest(vals):
+        dated = [( _parse_hf_time(v), v) for v in vals]
+        dated = [(t, v) for t, v in dated if t]
+        if not dated:
+            return None
+        dated.sort()
+        return dated[0][1]
+    maker = next((m for m in makers if m), None)
+    released = release_month(_earliest(created), _earliest(modified))
+    ctx = context_phrase(*blobs, config=configs[0] if configs else (group.get("config") if isinstance(group.get("config"), dict) else None), tokens=group.get("context_tokens"))
+    caps = capability_phrases(tags, filts, pipes[0] if pipes else group.get("pipeline_tag"), (quants[0].get("repo_id") if quants else "") or group.get("base") or "")
+    line1 = " · ".join(p for p in (maker, released) if p)
+    line2_parts = [p for p in [ctx] + caps if p]
+    # Capabilities as "Can use tools, reads images." — first clause capitalised.
+    line2 = ""
+    if line2_parts:
+        # "Handles long chats (about 32k). Can use tools, reads images."
+        if ctx and caps:
+            cap = ", ".join(caps)
+            cap = cap[0].upper() + cap[1:]
+            line2 = ctx[0].upper() + ctx[1:] + ". " + cap + "."
+        else:
+            sentence = ", ".join(line2_parts)
+            line2 = sentence[0].upper() + sentence[1:] + ("." if not sentence.endswith(".") else "")
+    if line1 and line2:
+        return f"{line1}\n{line2}"
+    return line1 or line2
+
 
 # Category chip → real HF queries (plus name keywords).
 _FILTER_SEARCH = {
@@ -93,11 +321,17 @@ _FILTER_SEARCH = {
         "pipeline_tag": None,
         "name_keys": ("coder", "code-", "-code", "codestral", "deepseek-coder"),
     },
-    "reasoning": {
+    "thinking": {
         "mlx_search": ["QwQ", "thinking", "reasoning", "R1"],
         "hf_search": ["QwQ", "DeepSeek-R1", "thinking"],
         "pipeline_tag": None,
         "name_keys": ("qwq", "thinking", "reasoning", "r1-", "-r1", "distill-r1"),
+    },
+    "tools": {
+        "mlx_search": ["tool", "function-calling", "tool-use"],
+        "hf_search": ["function calling", "tool use"],
+        "pipeline_tag": None,
+        "name_keys": ("tool-use", "tool_use", "function-calling", "function_calling", "-tools"),
     },
     "vision": {
         "mlx_search": ["VL", "vision"],
@@ -111,11 +345,44 @@ _FILTER_SEARCH = {
         "pipeline_tag": "image-to-image",
         "name_keys": ("image-edit", "img2img", "flux", "sdxl", "stable-diffusion"),
     },
-    "voice": {
-        "mlx_search": ["whisper", "tts", "speech"],
-        "hf_search": ["whisper"],
-        "pipeline_tags": ("automatic-speech-recognition", "text-to-speech"),
-        "name_keys": ("whisper", "tts", "asr", "speecht5", "kokoro"),
+    "embedding": {
+        "mlx_search": ["embed", "embedding"],
+        "hf_search": ["embedding"],
+        "pipeline_tag": "feature-extraction",
+        "pipeline_tags": ("feature-extraction", "sentence-similarity"),
+        "name_keys": ("-embed", "embed-", "embedding", "nomic-embed", "bge-", "e5-"),
+    },
+    "any-to-any": {
+        "mlx_search": ["omni", "any-to-any"],
+        "hf_search": ["omni"],
+        "pipeline_tag": "any-to-any",
+        "name_keys": ("omni", "any-to-any", "any_to_any"),
+    },
+    "text-to-image": {
+        "mlx_search": ["text-to-image", "flux", "sdxl"],
+        "hf_search": [""],
+        "pipeline_tag": "text-to-image",
+        "name_keys": ("text-to-image", "txt2img", "stable-diffusion", "flux"),
+    },
+    "text-to-video": {
+        "mlx_search": ["text-to-video"],
+        "hf_search": [""],
+        "pipeline_tag": "text-to-video",
+        "name_keys": ("text-to-video", "txt2vid"),
+    },
+    "text-to-speech": {
+        "mlx_search": ["tts", "speech"],
+        "hf_search": ["tts"],
+        "pipeline_tag": "text-to-speech",
+        "pipeline_tags": ("text-to-speech", "text-to-audio"),
+        "name_keys": ("tts", "speecht5", "kokoro", "text-to-speech"),
+    },
+    "decision": {
+        # Ollama Decision / System One: classify text, yes/no probabilities, rubric scores.
+        "mlx_search": ["nimble", "clef", "decision"],
+        "hf_search": ["nimble", "clef"],
+        "pipeline_tag": None,
+        "name_keys": ("nimble", "tev1", "tev-", "clef", "system-one", "decision"),
     },
 }
 
@@ -679,6 +946,8 @@ def _normalize_hf_hit(m: dict, *, source: str) -> Optional[dict]:
         "downloads": m.get("downloads") or 0,
         "created_at": m.get("createdAt") or m.get("created_at"),
         "last_modified": m.get("lastModified") or m.get("last_modified"),
+        "author": m.get("author") or (repo.split("/")[0] if "/" in repo else None),
+        "config": cfg if cfg else None,
         "weights_gb": round(weights, 2) if weights else None,
         "needs_conversion": needs_conversion,
         "cloud": False,
@@ -702,6 +971,7 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
                   filt: str = "", newer: bool = False) -> dict:
     """Search HF. source: all|hf-mlx|gguf|cloud. filt: chat|coding|new|… chip."""
     filt = (filt or "").strip().lower()
+    filt = _FILTER_ALIASES.get(filt, filt)
     if filt == "new":
         newer = True
         filt_key = ""
@@ -788,7 +1058,7 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
                 for term in spec.get("hf_search") or []:
                     raw = _search((q + " " + term).strip() if q else term, limit=max(10, limit // 2))
                     _ingest(raw, "hf-mlx", extra_filters=[filt_key])
-        if want_gguf and filt_key in ("chat", "coding", "reasoning", "vision"):
+        if want_gguf and filt_key in ("chat", "coding", "thinking", "tools", "vision"):
             gq = q or (spec.get("mlx_search") or ["Instruct"])[0]
             for author in ("bartowski", "unsloth", "lmstudio-community"):
                 raw = _search(gq, author=author, filter_gguf=True, limit=max(6, limit // 4))
@@ -796,10 +1066,10 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
         if filt_key == "image-to-image":
             raw = _search(q or "", pipeline_tag="image-to-image", limit=limit)
             _ingest(raw, "hf-mlx", extra_filters=["image-to-image"])
-        if filt_key == "voice":
-            for ptag in ("automatic-speech-recognition", "text-to-speech"):
-                raw = _search(q or "whisper", pipeline_tag=ptag, limit=max(8, limit // 2))
-                _ingest(raw, "hf-mlx", extra_filters=["voice"])
+        if filt_key == "text-to-speech":
+            for ptag in ("text-to-speech", "text-to-audio"):
+                raw = _search(q or "tts", pipeline_tag=ptag, limit=max(8, limit // 2))
+                _ingest(raw, "hf-mlx", extra_filters=["text-to-speech"])
 
     else:
         # Default / free-text search
@@ -879,6 +1149,7 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
         quants.sort(key=lambda x: (_bits_of_quant(x.get("quant")), x.get("weights_gb") or 0, x["repo_id"]))
         filters = sorted({f for q in quants for f in q.get("filters") or []})
         sizes = [q.get("weights_gb") for q in quants if q.get("weights_gb")]
+        fam = group_family({"base": base, "quants": quants})
         grouped.append({
             "base": base,
             "source": quants[0]["source"],
@@ -888,7 +1159,10 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
             "likes": max(q.get("likes") or 0 for q in quants),
             "size_gb_min": min(sizes) if sizes else None,
             "size_gb_max": max(sizes) if sizes else None,
+            "family": fam["id"] if fam else None,
+            "family_label": fam["label"] if fam else None,
         })
+        grouped[-1]["tooltip"] = row_tooltip(grouped[-1])
     def _src_rank(g):
         s = g.get("source") or ""
         if s == "hf-mlx":
@@ -912,6 +1186,7 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
         "filter": filt_key,
         "newer": bool(newer),
         "groups": grouped[: max(limit, 1)],
+        "families": families_present(grouped[: max(limit, 1)]),
         "errors": errors,
         "gguf_catalog": "huggingface (bartowski / unsloth / lmstudio-community)",
         "cached": False,
@@ -1431,14 +1706,14 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
         dest_lead = dest_lead or str(MLX_MODEL_ROOTS[0] / folder)
         if run_lead:
             runners.append({
-                "id": "lead", "label": "EXO1", "role": "lead",
+                "id": "lead", "label": "1st Mac", "role": "lead",
                 "dest": dest_lead, "run": run_lead,
                 "total_bytes": total_bytes_lead, "measure": None,
             })
         dest_packer = dest_packer or f"~/.caravan/mlx-models/{folder}"
         if run_packer:
             runners.append({
-                "id": "packer", "label": "EXO2", "role": "packer",
+                "id": "packer", "label": "2nd Mac", "role": "packer",
                 "dest": dest_packer, "run": run_packer,
                 "total_bytes": total_bytes_packer, "measure": measure_packer,
             })

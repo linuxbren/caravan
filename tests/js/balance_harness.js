@@ -5,7 +5,7 @@ class El {
   constructor(tag='div') { this.tagName=tag;this.children=[];this.attrs={};this.style={};this.dataset={};this.listeners={};this.value='';this._text='';this.disabled=false;this.hidden=false;this.classList={contains:()=>true}; }
   set textContent(v) {this._text=String(v);this.children=[];} get textContent(){return this._text+this.children.map(e=>e.textContent).join('');}
   append(...els){this.children.push(...els);} replaceChildren(...els){this._text='';this.children=[...els];}
-  setAttribute(k,v){this.attrs[k]=v;} addEventListener(k,f){this.listeners[k]=f;}
+  setAttribute(k,v){this.attrs[k]=v;} removeAttribute(k){delete this.attrs[k]; if(k==='data-state') delete this.dataset.state;} addEventListener(k,f){this.listeners[k]=f;}
   get selectedOptions(){return this.children.filter(e=>e.value===this.value);}
 }
 function fixture(n=3,format='mlx') {

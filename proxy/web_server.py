@@ -32,6 +32,7 @@ sys.path.insert(0, str(HERE.parent / "agent"))
 
 import web_catalog as catalog
 import web_settings  # noqa: E402
+import web_speed  # noqa: E402
 import web_timing as timing  # noqa: E402
 from web_workers import WorkerManager, ManagedServiceError  # noqa: E402
 from service_endpoints import error_payload  # noqa: E402
@@ -474,10 +475,10 @@ class App:
                 pid, repo, dest = int(m.group(1)), m.group(2), m.group(3)
                 if repo in known:
                     continue
-                local = next((n for n in cfg if web_nodes.is_local(n)), cfg[0] if cfg else {"id": "local", "label": "local", "role": "lead"})
+                local = next((n for n in cfg if web_nodes.is_local(n)), cfg[0] if cfg else {"id": "local", "label": "My Mac", "role": "lead"})
                 nid = local.get("id") or "local"
                 snap = self.picker_measure_node(local, dest, repo_id=repo)
-                snap["label"] = local.get("label") or nid
+                snap["label"] = web_nodes.friendly_mac_label(local, node_id=nid, inventory=cfg, node_count=len(cfg) or 1)
                 snap["role"] = local.get("role") or "lead"
                 snap["pid"] = pid
                 found.setdefault(repo, {})[nid] = {"dest": dest, "snap": snap, "node": local}
@@ -496,7 +497,7 @@ class App:
                     continue
                 nid = n.get("id") or n.get("label")
                 snap = self.picker_measure_node(n, dest, repo_id=repo)
-                snap["label"] = n.get("label") or nid
+                snap["label"] = web_nodes.friendly_mac_label(n, node_id=nid, inventory=cfg, node_count=len(cfg) or 1)
                 snap["role"] = n.get("role") or "packer"
                 snap["pid"] = pid
                 found.setdefault(repo, {})[nid] = {"dest": dest, "snap": snap, "node": n}
@@ -713,6 +714,16 @@ def make_handler(app: App):
                              "Content-Type, X-Caravan-Session, X-Caravan-Sent")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
+        def _friendly_job(self, job):
+            """Same friendly Mac name on MLX and GGUF job cards; never a hostname."""
+            if not job:
+                return job
+            try:
+                inv = app.configured_nodes()
+            except Exception:
+                inv = []
+            return web_nodes.friendly_job(job, inventory=inv)
+
         def _json(self, code, obj):
             data = json.dumps(obj, default=str).encode()
             self.send_response(code)
@@ -811,6 +822,8 @@ def make_handler(app: App):
                 return self._json(200, {"worker": snap, "split": info})
             if path == "/api/settings":
                 return self._api_settings()
+            if path == "/api/speed-average":
+                return self._api_speed_average()
             if path == "/api/hf-token":
                 return self._api_hf_token_get()
             if path == "/api/remote":
@@ -823,7 +836,7 @@ def make_handler(app: App):
             if path == "/api/picker/disk":
                 return self._api_picker_disk()
             if path == "/api/picker/jobs":
-                return self._json(200, {"jobs": web_picker.list_jobs() + app.list_orphan_fetch_jobs()})
+                return self._json(200, {"jobs": [self._friendly_job(j) for j in (web_picker.list_jobs() + app.list_orphan_fetch_jobs())]})
             if path.startswith("/api/picker/jobs/"):
                 jid = path.rsplit("/", 1)[-1]
                 job = web_picker.get_job(jid)
@@ -832,9 +845,9 @@ def make_handler(app: App):
                         if oj.get("id") == jid:
                             job = oj
                             break
-                return self._json(200 if job else 404, job or {"error": "not found"})
+                return self._json(200 if job else 404, (self._friendly_job(job) if job else {"error": "not found"}))
             if path == "/api/picker/live-fetches":
-                return self._json(200, {"jobs": app.list_orphan_fetch_jobs()})
+                return self._json(200, {"jobs": [self._friendly_job(j) for j in app.list_orphan_fetch_jobs()]})
             if path.startswith("/api/"):
                 return self._json(404, {"error": "not found"})
             # fall through to static
@@ -878,6 +891,8 @@ def make_handler(app: App):
                     return self._json(400, {"error": str(e)})
             if path == "/api/time":
                 return self._api_time(post=True, body=body)
+            if path == "/api/speed-average":
+                return self._api_speed_average(post=True, body=body)
             if path == "/api/models/load":
                 return self._api_load(body=body)
             if path == "/api/models/stop":
@@ -970,7 +985,7 @@ def make_handler(app: App):
                 if req.get('file_fetch') and req.get('source')!='gguf':
                     try:
                         import web_files
-                        return self._json(200, {"job": web_files.start(app, app.balance(req, fresh=True))})
+                        return self._json(200, {"job": self._friendly_job(web_files.start(app, app.balance(req, fresh=True)))})
                     except (ValueError, OSError, KeyError, TypeError, RuntimeError) as e:
                         return self._json(400, {"error": str(e)})
                 return self._api_picker_download(body=req)
@@ -1053,6 +1068,32 @@ def make_handler(app: App):
                 "ports": {"web": DEFAULT_PORT, "lead": app.mgr.lead_port,
                           "packer": (split or {}).get("peer") or app.mgr.packer_peer},
             })
+
+        def _api_speed_average(self, post=False, body=None):
+            """GET/POST averages for the current model and optimization set."""
+            from urllib.parse import parse_qs, urlparse
+            try:
+                if post:
+                    body = body if isinstance(body, dict) else {}
+                    mid = body.get("model") or body.get("model_id") or ""
+                    opts = body.get("opts") or body.get("optimizations") or {}
+                    if isinstance(opts, str):
+                        opts = json.loads(opts)
+                    return self._json(200, web_speed.record(
+                        mid, opts,
+                        write_tok_s=body.get("write_tok_s"),
+                        ttft_s=body.get("ttft_s"),
+                    ))
+                q = parse_qs(urlparse(self.path).query)
+                mid = (q.get("model") or q.get("model_id") or [""])[0]
+                raw = (q.get("opts") or [""])[0]
+                try:
+                    opts = json.loads(raw) if raw else {}
+                except ValueError:
+                    return self._json(400, {"error": "opts must be a JSON object"})
+                return self._json(200, web_speed.get(mid, opts))
+            except (TypeError, ValueError, OSError) as e:
+                return self._json(400, {"error": str(e)})
 
         def _api_settings(self):
             # ?model=<id>: what ~/.caravan/config.toml pins for that model (ROADMAP #13c).
@@ -1485,7 +1526,7 @@ def make_handler(app: App):
                         # official release. Clean installs use standard RPC instead.
                         from gguf_runtime import current
                         current()
-                        return self._json(200, {'job': web_files.start(app, plan), 'note': 'Downloading this model across your Macs…'})
+                        return self._json(200, {'job': self._friendly_job(web_files.start(app, plan)), 'note': 'Downloading this model across your Macs…'})
                     except web_gguf_shares.D.UnsupportedLayout:
                         pass
                     except FileNotFoundError:
@@ -1589,7 +1630,7 @@ def make_handler(app: App):
                         raise ValueError('Use one count per Mini, not packer_layers, for an N-stage split')
                     plan = web_files.prepare_new_mlx(app, repo, target_nodes, body.get('counts'))
                     job = web_files.start(app, plan)
-                    return self._json(200, {'job': job, 'stages': len(target_nodes), 'placement': job.get('placement'),
+                    return self._json(200, {'job': self._friendly_job(job), 'stages': len(target_nodes), 'placement': job.get('placement'),
                                             'note': 'N-stage own-file download; no files are deleted'})
                 except Exception as e:
                     return self._json(400, {'error': str(e)})
@@ -1800,7 +1841,8 @@ def make_handler(app: App):
                     save_placement = None
                 runners.append({
                     "id": nid,
-                    "label": n.get("label") or nid,
+                    "label": web_nodes.friendly_mac_label(n, node_id=nid, role=role,
+                                                          inventory=app.configured_nodes()),
                     "role": role,
                     "dest": dest,
                     "run": run,
@@ -1826,6 +1868,7 @@ def make_handler(app: App):
                 extra.update(resume_of=body["resume_of"], resuming=True)
             web_picker._job_set(job["id"], **extra)
             job = {**job, **extra}
+            job = self._friendly_job(job)
             return self._json(200, {
                 "job": job,
                 "totals": totals,
@@ -1833,7 +1876,7 @@ def make_handler(app: App):
                 "max_split_stages": web_nodes.stage_limit(app.configured_nodes()),
                 "note": note,
                 "placement": place,
-                "nodes": [{"id": r["id"], "label": r["label"], "role": r["role"]} for r in runners],
+                "nodes": [{"id": r["id"], "label": r["label"], "role": r["role"]} for r in (job.get("runners") or runners)],
             })
 
 

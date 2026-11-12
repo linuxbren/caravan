@@ -1,6 +1,6 @@
 # Caravan identity — A3
 
-Current tagline: **Your Mac minis. One model. Built in the open.**
+Current tagline: **Your Macs. One model.**
 
 The mark is three evenly spaced, flat rounded Minis, linked through their centers,
 with a small light at each bottom-right corner. No underline and no special lead
