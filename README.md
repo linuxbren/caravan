@@ -55,3 +55,7 @@ Check whether Caravan is running with `caravan status`. Need help? Run `caravan 
 [Developer setup](docs/DEVELOPMENT.md) · [Clean-install fixes and verification](docs/DAY23.md) · [Package status](docs/PACKAGING.md) · [Documentation index](docs/README.md) · [Changelog](CHANGELOG.md).
 
 The browser page is for your own Mac. Do not expose it to the public internet.
+
+## License
+
+Caravan is open source under the [MIT License](LICENSE). Copyright (c) 2026 Brenden Dawson. One adapted file keeps its own MIT notice: [agent/native_mtp.LICENSE](agent/native_mtp.LICENSE).
