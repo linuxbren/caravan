@@ -42,12 +42,19 @@ In addition to Tailscale, you can open the page from other devices on the
 same network. This is off by default. Turn it on with the Settings switch
 **Open on my local network**, `caravan lan on`, or the install question
 (default No). Anyone on the same network can use Caravan, and there is no
-login. The Settings switch shows that warning beside it.
+login. The Settings switch shows that warning beside it, and when the
+switch is on, a clickable link (`http://<lan-ip>:<port>`) appears under
+it, the same way the Tailscale link is shown.
+
+This can be on at the same time as **Open from my other devices**. Both
+addresses stay reachable: the Tailscale address and the local-network
+address.
 
 `caravan lan status` prints the address to open (`http://<lan-ip>:<port>`).
 `caravan lan off` and uninstall turn it off, and the page goes back to
-this Mac only. Turning it on or off does not unload a model that is
-already loaded; the page comes back in a few seconds. This never opens
+this Mac only; the Tailscale share is unchanged. Turning it on or off
+does not unload a model that is already loaded, and the open page stays
+up. This never opens
 the page to the public internet. Your Mac may ask whether to allow
 incoming connections; that is expected.
 

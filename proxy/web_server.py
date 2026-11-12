@@ -1525,21 +1525,60 @@ def make_handler(app: App):
                                         "addresses": [], "message": str(e), "warning": lan.WARNING, "port": port})
             payload = dict(info)
             if post:
-                wanted = lan.listen_host(requested=getattr(app, "cli_host", None))
-                current = getattr(app, "bind_host", None)
-                if wanted != current:
-                    payload["restarting"] = True
-                    payload["keeps_model"] = True
-                    payload["message"] = lan.RESTART_MESSAGE
-                    def _rebind():
-                        hook = getattr(app, "rebind_listen", None)
-                        if hook is not None:
-                            hook(wanted)
-                            return
-                        time.sleep(0.4)
-                        _os.environ.setdefault("CARAVAN_WEB_KEEP_WORKERS", "1")
-                        _os.execv(_sys.executable, [_sys.executable] + _sys.argv)
-                    threading.Thread(target=_rebind, name="caravan-lan-rebind", daemon=True).start()
+                wanted = lan.listen_hosts(requested=getattr(app, "cli_host", None))
+                current = list(getattr(app, "bind_hosts", None) or [getattr(app, "bind_host", None)])
+                current = [h for h in current if h]
+                payload["restarting"] = False
+                if sorted(wanted) != sorted(current):
+                    hook = getattr(app, "rebind_listen", None)
+                    ok = False
+                    if hook is not None:
+                        try:
+                            ok = hook(wanted) is not False
+                        except Exception:
+                            ok = False
+                    if ok:
+                        # In-process: 127.0.0.1 stayed up, so Tailscale and
+                        # the open page are unchanged. Return addresses now.
+                        payload["restarting"] = False
+                        payload["keeps_model"] = True
+                        fresh = lan.inspect(port=port)
+                        payload["addresses"] = fresh.get("addresses") or payload.get("addresses") or []
+                        payload["binds"] = wanted
+                        payload["bind"] = lan.listen_host(requested=getattr(app, "cli_host", None))
+                        payload["message"] = fresh.get("message") or payload.get("message")
+                        app.bind_hosts = list(wanted)
+                        app.bind_host = payload["bind"]
+                    else:
+                        payload["restarting"] = True
+                        payload["keeps_model"] = True
+                        payload["message"] = lan.RESTART_MESSAGE
+                        def _rebind():
+                            hook2 = getattr(app, "rebind_listen", None)
+                            if hook2 is not None:
+                                try:
+                                    if hook2(wanted) is not False:
+                                        return
+                                except Exception:
+                                    pass
+                            # Close listening sockets so the inherited
+                            # file descriptors do not hold the port.
+                            closer = getattr(app, "close_listen", None)
+                            if closer is not None:
+                                try:
+                                    closer()
+                                except Exception:
+                                    pass
+                            httpd = getattr(app, "httpd", None)
+                            if httpd is not None:
+                                try:
+                                    httpd.server_close()
+                                except Exception:
+                                    pass
+                            time.sleep(0.2)
+                            _os.environ.setdefault("CARAVAN_WEB_KEEP_WORKERS", "1")
+                            _os.execv(_sys.executable, [_sys.executable] + _sys.argv)
+                        threading.Thread(target=_rebind, name="caravan-lan-rebind", daemon=True).start()
             return self._json(200, payload)
 
 
@@ -2234,6 +2273,12 @@ def make_handler(app: App):
                     "stats": stats, "settings": app.mgr.snapshot().get("settings"),
                     "session": session,
                 }
+                raw_text = ""
+                for ch in data.get("choices") or []:
+                    msg = ch.get("message") or {}
+                    raw_text += msg.get("content") or ""
+                import web_garble
+                web_garble.attach_garble(app, raw_text, data["caravan_web"])
                 return self._json(200, data)
 
             # Streamed: re-emit SSE, inject a caravan-meta event at the end.
@@ -2285,6 +2330,8 @@ def make_handler(app: App):
             usage = None
             timings_ = None
             buf = b""
+            raw_parts = []
+            cancelled = False
             try:
                 while True:
                     chunk = upstream.read(1024)
@@ -2310,6 +2357,10 @@ def make_handler(app: App):
                                 delta = ch0.get("delta") or {}
                                 if delta.get("content") or delta.get("reasoning_content") or delta.get("reasoning"):
                                     t_first = time.time()
+                            ch0 = (obj.get("choices") or [{}])[0]
+                            delta = ch0.get("delta") or ch0.get("message") or {}
+                            if isinstance(delta.get("content"), str):
+                                raw_parts.append(delta["content"])
                             if obj.get("usage"):
                                 usage = obj["usage"]
                             if obj.get("timings"):
@@ -2317,6 +2368,7 @@ def make_handler(app: App):
                         # Forward scrubbed frame (with blank line).
                         send_chunk(_scrub_frame(frame) + b"\n\n")
             except (BrokenPipeError, ConnectionResetError):
+                cancelled = True
                 return
             finally:
                 try:
@@ -2352,6 +2404,8 @@ def make_handler(app: App):
                 "settings": app.mgr.snapshot().get("settings"),
                 "session": session,
             }
+            import web_garble
+            web_garble.attach_garble(app, "".join(raw_parts), meta, cancelled=cancelled)
             try:
                 send_chunk(f"data: {json.dumps(meta)}\n\n".encode())
                 send_chunk(b"data: [DONE]\n\n")
@@ -2398,25 +2452,117 @@ def main(argv=None):
             self.server_port = self.server_address[1]
 
     # Opt-in local-network listen. Off by default keeps the service's
-    # --host (127.0.0.1 on an installed Mac). When on, listen so devices
-    # on the same network can open the page. Toggling re-execs this
-    # process; CARAVAN_WEB_KEEP_WORKERS keeps a loaded model in place.
+    # --host (127.0.0.1 on an installed Mac). When on, also listen on
+    # each private LAN address. 127.0.0.1 stays up so Tailscale serve
+    # and the open page keep working. Toggling adds or drops LAN
+    # sockets in-process; execv is only a fallback.
     import sys as _sys
+    import threading as _threading
     from pathlib import Path as _Path
     _tools = str(_Path(__file__).resolve().parents[1] / "tools")
     if _tools not in _sys.path:
         _sys.path.insert(0, _tools)
     import caravan_lan as _lan
-    host = _lan.listen_host(args.host)
+    hosts = _lan.listen_hosts(args.host)
+    # Prefer 127.0.0.1 as the primary so we never have to close it.
+    if "127.0.0.1" in hosts:
+        hosts = ["127.0.0.1"] + [h for h in hosts if h != "127.0.0.1"]
+    host = hosts[0]
     app.cli_host = args.host
     app.bind_host = host
+    app.bind_hosts = list(hosts)
+    handler = make_handler(app)
 
-    httpd = _Server((host, args.port), make_handler(app))
+    httpd = _Server((host, args.port), handler)
     httpd.daemon_threads = True
     app.httpd = httpd
+    app.extra_servers = []  # (host, server)
+
+    def _start_extra(h):
+        srv = _Server((h, args.port), handler)
+        srv.daemon_threads = True
+        th = _threading.Thread(target=srv.serve_forever, name=f"caravan-web-{h}", daemon=True)
+        th.start()
+        app.extra_servers.append((h, srv))
+        return srv
+
+    def _stop_extra(h):
+        kept = []
+        for eh, srv in app.extra_servers:
+            if eh == h:
+                try:
+                    srv.shutdown()
+                except Exception:
+                    pass
+                try:
+                    srv.server_close()
+                except Exception:
+                    pass
+            else:
+                kept.append((eh, srv))
+        app.extra_servers = kept
+
+    def rebind_listen(wanted):
+        """Add or drop LAN sockets in-process. Keep 127.0.0.1. Never bind 0.0.0.0.
+
+        Returns False when a process restart is required (primary is 0.0.0.0,
+        or a bind failed).
+        """
+        wanted = [h for h in (wanted or []) if h and h != "0.0.0.0"]
+        if "127.0.0.1" not in wanted:
+            wanted = ["127.0.0.1"] + wanted
+        primary = app.bind_host
+        if primary == "0.0.0.0":
+            return False
+        current_extra = {eh for eh, _ in app.extra_servers}
+        wanted_extra = [h for h in wanted if h != primary]
+        for eh in list(current_extra):
+            if eh not in wanted_extra:
+                _stop_extra(eh)
+        for h in wanted_extra:
+            if h not in {eh for eh, _ in app.extra_servers}:
+                try:
+                    _start_extra(h)
+                except OSError as e:
+                    print(f"[caravan-web] could not listen on {h}:{args.port}: {e}", flush=True)
+                    return False
+        app.bind_hosts = [primary] + [eh for eh, _ in app.extra_servers]
+        print("[caravan-web] listening on " + ", ".join(
+            f"http://{h}:{args.port}" for h in app.bind_hosts), flush=True)
+        return True
+
+    def close_listen():
+        for eh, srv in list(app.extra_servers):
+            try:
+                srv.shutdown()
+            except Exception:
+                pass
+            try:
+                srv.server_close()
+            except Exception:
+                pass
+        app.extra_servers = []
+        try:
+            httpd.server_close()
+        except Exception:
+            pass
+
+    app.rebind_listen = rebind_listen
+    app.close_listen = close_listen
+
+    for h in hosts[1:]:
+        if h == "0.0.0.0":
+            continue
+        try:
+            _start_extra(h)
+        except OSError as e:
+            print(f"[caravan-web] could not listen on {h}:{args.port}: {e}", flush=True)
+    app.bind_hosts = [host] + [eh for eh, _ in app.extra_servers]
+
     import web_pairing
     web_pairing.start(app)
-    print(f"[caravan-web] listening on http://{host}:{args.port}", flush=True)
+    print("[caravan-web] listening on " + ", ".join(
+        f"http://{h}:{args.port}" for h in app.bind_hosts), flush=True)
     print(f"[caravan-web] open http://<this-mac-address>:{args.port}/", flush=True)
     print(f"[caravan-web] lead worker port {args.lead_port}; packer {args.packer_peer}", flush=True)
     app.restore.start(f"http://127.0.0.1:{httpd.server_port}")
@@ -2436,7 +2582,7 @@ def main(argv=None):
                 print(f"[caravan-web] stop warn: {e}", flush=True)
         if getattr(app, "pairing", None):
             app.pairing.close()
-        httpd.server_close()
+        close_listen()
     return 0
 
 

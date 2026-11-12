@@ -1107,6 +1107,24 @@ class Engine:
         except ImportError:
             import importlib
             TS = importlib.import_module("tuned_settings")
+        if info.get("garbled"):
+            # A garbled reply is a loss no matter how fast it was. Do not
+            # promote the settings that produced it, and never try the
+            # Memory compression value again for this model.
+            try:
+                kv = int(getattr(self.args, "kv_bits", None) or 16)
+                if kv != 16:
+                    TS.block_value(self._learn_entry, "kv_bits", kv, "garbled reply")
+                fuse_on = str(getattr(self, "_fuse_mode", "off") or "off") != "off"
+                if fuse_on:
+                    TS.block_value(self._learn_entry, "fuse_kernels", "on", "garbled reply")
+                path = Path(self._learn_path).expanduser() if self._learn_path else None
+                TS.save_store(self._learn_store, path)
+                self._last_learn = {"garbled": True, "norm_tps": 0, "winner": dict(
+                    (self._learn_entry or {}).get("winner") or {})}
+            except Exception as e:
+                log(f"learn: garbled-reply loss not recorded ({type(e).__name__}: {e})")
+            return
         settings_used = {
             "pipeline_chats": self.pipeline_chats,
             "guess_ahead": self._learn_guess_ahead_on() if self.client is not None else None,
@@ -2461,6 +2479,7 @@ class Engine:
         s, n_reused, how = self._prepare_agent_prefix(key, prompt, body)
         completed = False
         n_gen = 0
+        gen_pieces = []
         try:
             rest = prompt[n_reused:]
             with request_wiring(self.wired_mode, G, self.model, self.stream):
@@ -2571,9 +2590,13 @@ class Engine:
                     if gen.finish_reason is not None:
                         finish = gen.finish_reason
                     if stops.advance(gen.token):
+                        if gen.text:
+                            gen_pieces.append(gen.text)
                         yield ("piece", gen.text, True)
                         finish = "stop"
                         break
+                    if gen.text:
+                        gen_pieces.append(gen.text)
                     yield ("piece", gen.text, gen.finish_reason is not None)
                     if gen.finish_reason is not None:
                         break
@@ -2628,6 +2651,13 @@ class Engine:
             f"total {info['total_s']:.2f}s, peak {info['peak_gb']} GB")
         if self.client is not None and hasattr(self.model, "session_key"):
             self.model.session_key = None
+        try:
+            raw = "".join(gen_pieces)
+            from garble import is_garbled
+            if is_garbled(raw):
+                info["garbled"] = True
+        except Exception:
+            pass
         self._learn_observe(info)
         if getattr(self, "_last_learn", None):
             info["learn"] = self._last_learn
@@ -3141,6 +3171,16 @@ class Engine:
                              "net_s": round(st["wait_s"] - st["front_s"], 3)}
         log(f"session {slot.key}: pipeline, reused {slot.n_reused}/{len(slot.prompt)}, "
             f"{slot.n_gen} generated, total {info['total_s']:.2f}s, peak {info['peak_gb']} GB")
+        try:
+            n = int(slot.n_gen or 0)
+            toks = list(slot.all_tokens or [])
+            tail = toks[-n:] if n and len(toks) >= n else toks
+            raw = self.tokenizer.decode(tail) if tail else ""
+            from garble import is_garbled
+            if is_garbled(raw):
+                info["garbled"] = True
+        except Exception:
+            pass
         self._learn_observe(info)
         if getattr(self, "_last_learn", None):
             info["learn"] = self._last_learn
@@ -3237,7 +3277,7 @@ def thinking_kwargs(tokenizer, on, kw):
 # Chat templates whose end-of-turn marker isn't in the model's eos list.
 # Gemma 4 ends a reply with <turn|> but only lists <eos>; without this it
 # keeps talking (often looping its own reasoning) until max_tokens.
-TURN_END_TOKENS = ("<turn|>", "<end_of_turn>")
+TURN_END_TOKENS = ("<turn|>", "<end_of_turn>", "<|im_start|>", "<|im_end|>")
 
 
 def add_turn_end_stops(tokenizer, log=None):
@@ -3566,7 +3606,7 @@ def make_handler(engine: "Engine"):
 
 # End-of-turn tokens some tokenizers decode into the reply text (Llama 3.x
 # <|eot_id|> in particular). They are never part of the answer.
-END_MARKERS = ("<|eot_id|>", "<|eom_id|>", "<|end_of_text|>", "<|im_end|>")
+END_MARKERS = ("<|eot_id|>", "<|eom_id|>", "<|end_of_text|>", "<|im_end|>", "<|im_start|>")
 
 
 def strip_end_markers(text):

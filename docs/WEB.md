@@ -92,7 +92,8 @@ once a run has finished and a result is saved. After Reset tuning
 clears those results, it says **Start** again. Either label runs a
 fresh trial on the loaded model — you do not need to remove or
 redownload it. Reset tuning clears the saved results for this
-model; the model stays loaded. After a Self-tuning or Auto-tune run
+model and puts Memory compression back to Auto; the model stays
+loaded, and is reloaded at Auto if it was running a tighter value. After a Self-tuning or Auto-tune run
 finishes for the loaded model, two quiet lines in Auto-tune
 show how fast the model was before and after, for example
 "Before · Write 88.4 tok/s · first token 0.29s" and
@@ -161,11 +162,22 @@ settings. The full detail is in the log (`caravan doctor`, then
 The browser has no login. Fresh installs keep the page only on this Mac.
 You can turn on **Open on my local network** in Settings or run
 `caravan lan on`. Anyone on the same network can use Caravan, and there is no login. `caravan lan status` shows the address to open
-(`http://<lan-ip>:<port>`). Turn it off with `caravan lan off` or the
-same Settings switch; the page goes back to this Mac only. Turning the
+(`http://<lan-ip>:<port>`), and a clickable link appears under the
+switch the same way the Tailscale link is shown. This can be on at the
+same time as **Open from my other devices**; both addresses stay
+reachable. Turn it off with `caravan lan off` or the
+same Settings switch; the page goes back to this Mac only, and the
+Tailscale share is unchanged. Turning the
 switch does not unload a model that is already loaded. Never expose
 the page to the public internet. [Security](SECURITY.md) explains the
 trust boundary.
+
+If a reply comes out garbled (blank, leftover markers, or a short
+chunk repeated many times), a plain note appears under it, for example
+"This reply came out garbled, so Memory compression was turned back to
+16." Caravan puts that model back on safe settings and will not pick
+the bad setting again in Auto-tune or Self-tuning. If settings are
+already safe, the note says so and nothing else is changed.
 
 ## Developer details and history
 

@@ -188,6 +188,7 @@ def reply_stats(usage: dict, wall_s: Optional[float] = None) -> dict:
 # Display cleanup for streamed replies (Qwen/Gemma/GPT-OSS end tokens that
 # sometimes leak into delta.content even after the worker stops).
 _REPLY_MARKERS = (
+    "<|im_start|>",
     "<|im_end|>",
     "<|end|>",
     "<|end_of_text|>",

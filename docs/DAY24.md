@@ -455,3 +455,51 @@ the development node: **1,396 tests passed** in 56.919 s.
 The 1st node and 2nd node were not touched. No `day24` tag yet.
 Source and pin SHAs are recorded at publication time.
 
+### Live review: garbled replies, and both ways to open the page
+
+A model could answer with a blank reply, or with the same short marker
+repeated, when Memory compression was tighter than 16. Auto-tune and
+Self-tuning could keep that setting because they only scored speed.
+Reset tuning cleared saved winners but left the live setting and the
+saved pin in place, so Reset did not help. After an update, the
+installed copy could also still show the previous version.
+
+Caravan now stops and hides those leftover markers so they are not
+shown as part of the answer. A garbled reply (empty, only markers, or
+a short chunk repeated many times) is detected. Ordinary short answers
+like "Hello!" and ordinary code that happens to repeat a line are not
+flagged.
+
+When a reply is garbled, a plain note appears under it that matches
+what actually changed, for example "This reply came out garbled, so
+Memory compression was turned back to 16." That model is put back on
+safe settings: Memory compression 16, and if that is already 16,
+Guess-ahead, Prompt lookup, Fused kernels, and Shared start are turned
+off. The setting that caused the garble is remembered as a loss, so
+Auto-tune and Self-tuning will not pick it again. If the next reply is
+still garbled at those safe settings, the note says settings are
+already on the usual safe values and nothing else is changed.
+
+A garbled Auto-tune or Self-tuning trial counts as a loss, no matter
+how fast it was. **Reset tuning** puts Memory compression back to Auto
+and clears a leftover saved pin, and reloads the model at Auto if it
+was running a tighter value.
+
+After an update, the installed copy records the version that was just
+applied, so the page shows the current version rather than the previous
+one.
+
+On the same publish, local-network access and the Tailscale share can
+both be on at once. The page stays reachable at the Tailscale address
+and at `http://<lan-ip>:<port>`. When **Open on my local network** is
+on, a clickable link appears under the switch, the same way the
+Tailscale link is shown. Turning either switch does not turn the other
+off, and the open page stays up.
+
+This follow-up changes the model process as well as the page, so a
+`caravan update` from the previous Day 24 pin reloads a loaded model.
+After the update, refresh the page. The portable suite on a fresh
+clone on the development node is recorded at publication, along with
+source and pin SHAs. The 1st node and 2nd node were not touched. No
+`day24` tag yet.
+

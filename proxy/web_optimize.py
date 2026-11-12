@@ -68,6 +68,27 @@ def experimental_settings(settings, values):
     return s
 
 
+class _Scores(list):
+    """A/B scores plus a quality flag the usual sum cannot see."""
+    garbled = False
+
+
+def decide_ab_winner(inc, ch, inc_scores, ch_scores, pick):
+    """Pick a winner. A garbled arm is a loss no matter how fast it was."""
+    a_garbled = bool(getattr(inc_scores, "garbled", False))
+    b_garbled = bool(getattr(ch_scores, "garbled", False))
+    if b_garbled and not a_garbled:
+        return inc, ch, "challenger garbled"
+    if a_garbled and not b_garbled:
+        return ch, inc, "incumbent garbled"
+    if a_garbled and b_garbled:
+        return inc, ch, "both garbled"
+    if pick(inc_scores, ch_scores):
+        return ch, inc, None
+    return inc, ch, None
+
+
+
 class Canceled(Exception):
     pass
 
@@ -208,7 +229,8 @@ class Optimizer:
         t0 = time.monotonic()
         try:
             with urlopen(req, timeout=600) as response:
-                usage = json.loads(response.read()).get("usage") or {}
+                body = json.loads(response.read())
+                usage = (body.get("usage") or {}) if isinstance(body, dict) else {}
         except (HTTPError, URLError) as exc:
             # Re-raise so the run stops and restores; body is kept for the log.
             if isinstance(exc, HTTPError):
@@ -216,9 +238,24 @@ class Optimizer:
             raise
         elapsed = time.monotonic() - t0
         detail = usage.get("caravan") or {}
+        content = ""
+        try:
+            for ch in (body.get("choices") or []):
+                msg = ch.get("message") or {}
+                if isinstance(msg.get("content"), str):
+                    content += msg["content"]
+        except Exception:
+            content = ""
+        garbled = False
+        try:
+            from garble import is_garbled
+            garbled = is_garbled(content)
+        except Exception:
+            garbled = False
         return dict(elapsed=elapsed, ttft=detail.get("ttft_s"),
                     completion_tokens=usage.get("completion_tokens"),
-                    total_s=detail.get("total_s", elapsed), prefill_s=detail.get("prefill_s", 0))
+                    total_s=detail.get("total_s", elapsed), prefill_s=detail.get("prefill_s", 0),
+                    content=content, garbled=garbled)
 
     def _one(self, messages):
         result = self._send(messages)
@@ -232,7 +269,8 @@ class Optimizer:
         return result
 
     def _measure(self, name, arm):
-        scores = []
+        scores = _Scores()
+        scores_garbled = False
         if name == "shared_prefix":
             self._boundary()
             self._one(prompt_plan(0))  # seed shared prefix; cold store is not a hit
@@ -252,12 +290,16 @@ class Optimizer:
                     n = self.state["prompts"]
                     self._set(prompts=n + 1)
                     self._note_tune_sample(result)
+                    if isinstance(result, dict) and result.get("garbled"):
+                        scores_garbled = True
                 ct = sum(r.get("completion_tokens") or 0 for r in results)
                 if ct <= 0:
                     raise ValueError("pipeline reply missing token counts")
                 score = ct / max(elapsed, 0.001)
             else:
                 result = self._one(prompt_plan(0 if name == "shared_prefix" else i))
+                if isinstance(result, dict) and result.get("garbled"):
+                    scores_garbled = True
                 if name == "shared_prefix":
                     if not result.get("ttft") or result["ttft"] <= 0:
                         raise ValueError("reply missing TTFT")
@@ -269,6 +311,11 @@ class Optimizer:
                         total_s=result.get("total_s", result["elapsed"]),
                         prefill_s=result.get("prefill_s") or 0)
             scores.append(score)
+        if scores_garbled:
+            try:
+                scores.garbled = True
+            except Exception:
+                pass
         return scores
 
     def _specs_from_reply(self, result):
@@ -440,7 +487,9 @@ class Optimizer:
                 self._apply(name, ch)
                 b = self._measure(name, "challenger")
                 self._boundary()  # Cancel during the last reply must not commit.
-                winner, lost = (ch, inc) if AB.pick(a, b) else (inc, ch)
+                winner, lost, why = decide_ab_winner(inc, ch, a, b, AB.pick)
+                if why:
+                    self._log(f"{name}: {why}; kept {winner}")
                 result = dict(name=name, incumbent=inc, challenger=ch,
                               incumbent_scores=a, challenger_scores=b, winner=winner, lost=lost)
                 if name in AB.EXPERIMENTAL and self.current.get(name):

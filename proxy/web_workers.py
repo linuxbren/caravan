@@ -1478,10 +1478,11 @@ class WorkerManager:
             self._note(f"could not turn Self-tuning on for the adopted model: {e}")
 
     def reset_tuning(self) -> dict:
-        """Clear saved winners, losses, and the before/after line for this model.
+        """Clear saved winners, losses, and leftover Memory compression pins.
 
-        The loaded model stays loaded; current live settings are not changed.
-        Press Start afterward to run a new trial from a clean slate.
+        Memory compression goes back to Auto (16). If the loaded model is
+        running a tighter value, it is reloaded at 16. Other live settings
+        stay as they are. Press Start afterward to run a new trial.
         """
         import web_speed
         snap = self.snapshot()
@@ -1521,9 +1522,48 @@ class WorkerManager:
                         GT.save_store(store, store_path)
             except Exception:
                 pass
+        # Put Memory compression back to Auto on the page and in last-model,
+        # so a leftover 4-bit pin cannot come back after the next load.
+        page = dict(snap.get("page_settings") or {})
+        page["kv_bits"] = "auto"
+        try:
+            self._set(page_settings=page)
+        except Exception:
+            pass
+        try:
+            from web_restore import Store
+            store = Store(self.state_dir / "last-model.json")
+            req = store.read()
+            if req:
+                settings = dict(req.get("settings") or {})
+                settings["kv_bits"] = "auto"
+                req["settings"] = settings
+                store.write(req)
+        except Exception:
+            pass
+        notice = (
+            "Saved tuning for this model is cleared. Memory compression is back to Auto. "
+            "Press Start to run a new trial."
+        )
+        live = dict(snap.get("settings") or {})
+        live_kv = str(live.get("kv_bits") or "auto").lower()
+        mid = snap.get("model_id")
+        needs_reload = mid and live_kv not in ("auto", "16", "f16", "", "none")
+        if needs_reload:
+            try:
+                self.switch(mid, wait=True, settings=page)
+                notice = (
+                    "Saved tuning for this model is cleared. Memory compression is back to Auto. "
+                    "Press Start to run a new trial."
+                )
+            except Exception as e:
+                notice = (
+                    "Saved tuning is cleared and Memory compression is set back to Auto, "
+                    "but the model could not be reloaded: " + str(e)[:160]
+                )
         return {
             "ok": True,
-            "notice": "Saved tuning for this model is cleared. Press Start to run a new trial.",
+            "notice": notice,
         }
 
     def lead_healthy(self) -> bool:

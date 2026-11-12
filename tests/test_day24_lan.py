@@ -86,9 +86,15 @@ class ConfigAndDefaultTests(unittest.TestCase):
             path = cfg(home)
             L.set_enabled(False, path)
             self.assertEqual(L.listen_host("127.0.0.1"), "127.0.0.1")
+            self.assertEqual(L.listen_hosts("127.0.0.1"), ["127.0.0.1"])
             L.set_enabled(True, path)
-            self.assertEqual(L.listen_host("127.0.0.1"), "0.0.0.0")
-            self.assertEqual(L.listen_host("192.168.1.20"), "0.0.0.0")
+            # Primary stays 127.0.0.1 so Tailscale serve keeps working.
+            self.assertEqual(L.listen_host("127.0.0.1"), "127.0.0.1")
+            self.assertEqual(L.listen_host("192.168.1.20"), "127.0.0.1")
+            with mock.patch.object(L, "lan_ips", return_value=["192.168.1.20"]):
+                self.assertEqual(L.listen_hosts("127.0.0.1"), ["127.0.0.1", "192.168.1.20"])
+                self.assertNotIn("0.0.0.0", L.listen_hosts("127.0.0.1"))
+                self.assertNotIn("0.0.0.0", L.listen_hosts("0.0.0.0"))
 
     def test_web_service_plan_stays_loopback_when_lan_off(self):
         plan = SC.make_plan(kind="web", repo=str(ROOT), python=sys.executable)
@@ -129,9 +135,14 @@ class AddressTests(unittest.TestCase):
         self.assertFalse(L._ok_ipv4("::1"))
         self.assertTrue(L._ok_ipv4("192.168.1.20"))
         self.assertTrue(L._ok_ipv4("10.0.0.4"))
+        self.assertTrue(L._ok_ipv4("172.16.1.1"))
+        self.assertFalse(L._ok_ipv4("100.68.62.20"))  # Tailscale / CGNAT
+        self.assertFalse(L._ok_ipv4("169.254.110.94"))  # link-local / Thunderbolt
+        self.assertFalse(L._ok_ipv4("8.8.8.8"))
 
     def test_lan_ips_skips_loopback(self):
-        with mock.patch.object(L.socket, "socket") as sock_cls, \
+        with mock.patch.object(L, "_ips_from_interfaces", return_value=[]), \
+             mock.patch.object(L.socket, "socket") as sock_cls, \
              mock.patch.object(L.socket, "gethostname", return_value="MyMac"), \
              mock.patch.object(L.socket, "getaddrinfo", return_value=[
                  (None, None, None, None, ("127.0.0.1", 0)),
@@ -144,6 +155,47 @@ class AddressTests(unittest.TestCase):
         self.assertEqual(ips, ["192.168.1.20"])
         self.assertNotIn("127.0.0.1", ips)
         self.assertNotIn("MyMac", ips)
+
+
+    def test_lan_ips_skips_tailscale_and_link_local(self):
+        with mock.patch.object(L, "_ips_from_interfaces", return_value=["192.168.1.79", "100.68.62.20", "169.254.110.94"]), \
+             mock.patch.object(L.socket, "socket") as sock_cls, \
+             mock.patch.object(L.socket, "gethostname", return_value="MyMac"), \
+             mock.patch.object(L.socket, "getaddrinfo", return_value=[
+                 (None, None, None, None, ("100.68.62.20", 0)),
+                 (None, None, None, None, ("169.254.110.94", 0)),
+                 (None, None, None, None, ("192.168.1.79", 0)),
+             ]):
+            sock = mock.MagicMock()
+            sock.getsockname.return_value = ("100.68.62.20", 0)  # default route is Tailscale
+            sock_cls.return_value = sock
+            ips = L.lan_ips()
+        self.assertEqual(ips, ["192.168.1.79"])
+        self.assertNotIn("100.68.62.20", ips)
+        self.assertNotIn("169.254.110.94", ips)
+
+    def test_inspect_on_without_address_has_no_placeholder(self):
+        with tmp_home() as home, mock.patch.object(L, "lan_ips", return_value=[]):
+            info = L.turn_on(port=8190, home=home, path=cfg(home))
+            self.assertTrue(info["enabled"])
+            self.assertEqual(info["addresses"], [])
+            self.assertNotIn("<lan-ip>", info["message"])
+            self.assertNotIn("<port>", info["message"])
+            self.assertIn("could not be found", info["message"])
+
+    def test_both_access_paths_share_loopback(self):
+        """Tailscale serve forwards to 127.0.0.1; LAN adds private addresses."""
+        with tmp_home() as home, mock.patch.object(L, "config_path", return_value=cfg(home)), \
+             mock.patch.object(L, "lan_ips", return_value=["192.168.1.79"]):
+            L.set_enabled(True, cfg(home))
+            hosts = L.listen_hosts("127.0.0.1")
+            self.assertIn("127.0.0.1", hosts)
+            self.assertIn("192.168.1.79", hosts)
+            self.assertNotIn("0.0.0.0", hosts)
+            info = L.inspect(port=8190, home=home, path=cfg(home))
+            self.assertEqual(info["addresses"], ["http://192.168.1.79:8190"])
+            self.assertEqual(info["bind"], "127.0.0.1")
+            self.assertEqual(info["binds"], ["127.0.0.1", "192.168.1.79"])
 
 
 class CliLanTests(unittest.TestCase):
@@ -353,28 +405,22 @@ class ApiLanTests(unittest.TestCase):
             self.assertEqual(code, 200)
             self.assertTrue(body["enabled"])
             self.assertEqual(body["addresses"], ["http://192.168.1.20:8190"])
-            self.assertTrue(body.get("restarting"))
+            # In-process: 127.0.0.1 stays up, addresses are returned now,
+            # the page does not reload, Tailscale is uninterrupted.
+            self.assertFalse(body.get("restarting"))
             self.assertTrue(body.get("keeps_model"))
-            self.assertEqual(body["message"], L.RESTART_MESSAGE)
-            # The hook runs on a short-lived thread; wait briefly.
-            import time
-            for _ in range(20):
-                if rebinds:
-                    break
-                time.sleep(0.05)
-            self.assertEqual(rebinds, ["0.0.0.0"])
-            # Turning off also rebinds back to the service host.
-            app.bind_host = "0.0.0.0"
+            self.assertIn("http://192.168.1.20:8190", body["message"])
+            self.assertEqual(rebinds, [["127.0.0.1", "192.168.1.20"]])
+            # Turning off drops the LAN socket and keeps 127.0.0.1.
+            app.bind_host = "127.0.0.1"
+            app.bind_hosts = ["127.0.0.1", "192.168.1.20"]
             rebinds.clear()
             h._api_lan(post=True, body={"enabled": False})
             code, body = captured[-1]
             self.assertFalse(body["enabled"])
-            self.assertTrue(body.get("restarting"))
-            for _ in range(20):
-                if rebinds:
-                    break
-                time.sleep(0.05)
-            self.assertEqual(rebinds, ["127.0.0.1"])
+            self.assertFalse(body.get("restarting"))
+            self.assertEqual(rebinds, [["127.0.0.1"]])
+            self.assertEqual(body["addresses"], [])
 
     def test_post_rejects_bad_body(self):
         with tmp_home() as home, mock.patch.object(L, "config_path", return_value=cfg(home)):
@@ -409,6 +455,12 @@ class UiTests(unittest.TestCase):
         self.assertIn("/api/lan", html)
         self.assertIn("refreshLanAccess", html)
         self.assertIn("renderLanAccess", html)
+        # Clickable links are built the same way as the Tailscale ones.
+        self.assertIn('const a = document.createElement("a");', html)
+        lan_fn = html[html.index("function renderLanAccess"):html.index("async function refreshLanAccess")]
+        self.assertIn('a.href = addr;', lan_fn)
+        self.assertIn('a.textContent = addr;', lan_fn)
+        self.assertIn('a.target = "_blank";', lan_fn)
         # Sits next to the Tailscale option.
         self.assertLess(html.index('id="remoteAccessCard"'), html.index('id="lanAccessCard"'))
         self.assertLess(html.index('id="lanAccessCard"'), html.index('id="topoBarsCard"'))

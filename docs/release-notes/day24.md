@@ -152,5 +152,22 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   toggling keeps a loaded model) does not change `agent/`,
   `runtime/`, or the requirements files, so an update from that pin
   keeps a loaded model running. The web page still restarts.
+  A later live-review follow-up (garbled replies get a plain note and
+  Memory compression is put back to 16; Auto-tune and Self-tuning
+  count a garbled trial as a loss; Reset tuning puts Memory
+  compression back to Auto; an update records the version just
+  applied; local-network access and the Tailscale share can both be
+  on, each with a clickable link including `http://<lan-ip>:<port>`)
+  changes the model process as well as the page, so an update from
+  that pin reloads a loaded model. After the update, refresh the page.
+
+- Garbled replies, live review: a plain note under the reply, for
+  example "This reply came out garbled, so Memory compression was
+  turned back to 16." Auto-tune and Self-tuning count a garbled trial
+  as a loss. Reset tuning puts Memory compression back to Auto.
+  After an update, the installed copy shows the version just applied.
+  Local-network access and the Tailscale share can both be on, each
+  with a clickable link (`http://<lan-ip>:<port>` under the local-network
+  switch). Anyone on the same network can use Caravan, and there is no login.
 
 Details: [DAY24.md](../DAY24.md). Install: [INSTALL.md](../../INSTALL.md).

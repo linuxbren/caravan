@@ -76,6 +76,10 @@ if [ ! -f "$REPO/.caravan-package" ] || [ "$(< "$REPO/.caravan-package")" != "$R
   tar -xzf "$TMP/source.tar.gz" -C "$TMP/source" --strip-components=1
   [ -f "$TMP/source/scripts/install.sh" ] || fail 'Package is missing its installer.'
   printf '%s\n' "$REF" > "$TMP/source/.caravan-package"
+  # The source archive carries the previous pin's packaging-version.
+  # Write the channel manifest (the SHA that selected this archive, plus
+  # its checksum) so an update records the version that was just applied.
+  printf '%s %s\n' "$REF" "$SHA" > "$TMP/source/packaging-version"
   (cd "$TMP/source" && /usr/bin/find . -type f ! -name '.caravan-package-files' ! -path '*/__pycache__/*' -exec shasum -a 256 {} \; > .caravan-package-files)
   if [ "$UPDATE" = 1 ]; then
     [ -f "$TMP/source/tools/caravan_update.py" ] || fail 'Package is missing its updater. Existing code kept.'

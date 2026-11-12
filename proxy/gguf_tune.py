@@ -180,12 +180,25 @@ def measure_http_specs(port: int, *, prompts=BENCH_PROMPTS, max_tokens: int = 19
             n = ((d.get("usage") or {}).get("completion_tokens")) or 0
             if dt > 0 and n:
                 specs["write_tok_s"] = n / dt
+        content = ""
+        try:
+            for ch in (d.get("choices") or []):
+                msg = ch.get("message") or {}
+                if isinstance(msg.get("content"), str):
+                    content += msg["content"]
+            from garble import is_garbled
+            if is_garbled(content):
+                specs["garbled"] = True
+        except Exception:
+            pass
         samples.append(specs)
     out = {}
     for key in ("write_tok_s", "read_tok_s", "ttft_s"):
         med = _median(s[key] for s in samples if key in s)
         if med is not None:
             out[key] = round(med, 4)
+    if any(s.get("garbled") for s in samples):
+        out["garbled"] = True
     return out
 
 
@@ -248,7 +261,14 @@ class GgufTuner:
                 chal = dict(best, **extra, **{name: ch})
                 ch_specs = self._score(chal)
                 scored.append((dict(chal), dict(ch_specs)))
-                won = beats(ch_specs, inc_specs)
+                if ch_specs.get("garbled") and not inc_specs.get("garbled"):
+                    won = False
+                elif inc_specs.get("garbled") and not ch_specs.get("garbled"):
+                    won = True
+                elif ch_specs.get("garbled") and inc_specs.get("garbled"):
+                    won = False
+                else:
+                    won = beats(ch_specs, inc_specs)
                 rec = {"name": name, "incumbent": inc, "challenger": ch,
                        "incumbent_tps": round(inc_specs.get("write_tok_s") or 0, 2),
                        "challenger_tps": round(ch_specs.get("write_tok_s") or 0, 2),

@@ -63,8 +63,10 @@ Open Caravan on your local network? (y/N)
 Anyone on the same network can use Caravan, and there is no login.
 You can change this later in **Settings**, or with `caravan lan on`
 and `caravan lan off`. `caravan lan status` shows the address to
-open (`http://<lan-ip>:<port>`). When this is off, the page stays
-only on this Mac. Your Mac may ask whether to allow incoming
+open (`http://<lan-ip>:<port>`), and a clickable link appears under
+the Settings switch. This can be on at the same time as the Tailscale
+share; both addresses stay reachable. When this is off, the page stays
+only on this Mac (the Tailscale share is unchanged). Your Mac may ask whether to allow incoming
 connections; that is expected. Uninstall turns this off.
 
 ## Add Minis

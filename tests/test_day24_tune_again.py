@@ -286,12 +286,14 @@ class ResetTuning(unittest.TestCase):
 
     def test_reset_does_not_unload(self):
         src = (REPO / "proxy/web_workers.py").read_text()
-        # The method must not call stop or switch (no unload / reload).
+        # Reset must not stop the worker. It may reload the same model when
+        # Memory compression is tight, so that value actually goes back to Auto.
         start = src.index("def reset_tuning")
         body = src[start:src.index("def lead_healthy")]
         self.assertNotIn("self.stop(", body)
-        self.assertNotIn("self.switch(", body)
-        self.assertIn("The loaded model stays loaded", body)
+        self.assertIn("self.switch(mid, wait=True, settings=page)", body)
+        self.assertIn("Memory compression goes back to Auto", body)
+        self.assertIn("needs_reload", body)
 
 
 class Notices(unittest.TestCase):

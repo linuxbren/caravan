@@ -94,18 +94,88 @@ def set_enabled(enabled, path=None):
     return path
 
 
-def _ok_ipv4(ip):
+def _octets(ip):
     if not ip or not isinstance(ip, str):
-        return False
-    if ip.startswith("127.") or ip in ("0.0.0.0", "255.255.255.255"):
-        return False
+        return None
     parts = ip.split(".")
     if len(parts) != 4:
-        return False
+        return None
     try:
-        return all(0 <= int(p) <= 255 for p in parts)
+        nums = [int(p) for p in parts]
     except ValueError:
+        return None
+    if any(n < 0 or n > 255 for n in nums):
+        return None
+    return nums
+
+
+def _is_loopback(ip):
+    n = _octets(ip)
+    return bool(n) and n[0] == 127
+
+
+def _is_link_local(ip):
+    n = _octets(ip)
+    return bool(n) and n[0] == 169 and n[1] == 254
+
+
+def _is_cgnat(ip):
+    """Tailscale and other carrier-grade NAT use 100.64.0.0/10."""
+    n = _octets(ip)
+    return bool(n) and n[0] == 100 and 64 <= n[1] <= 127
+
+
+def _is_rfc1918(ip):
+    n = _octets(ip)
+    if not n:
         return False
+    if n[0] == 10:
+        return True
+    if n[0] == 192 and n[1] == 168:
+        return True
+    if n[0] == 172 and 16 <= n[1] <= 31:
+        return True
+    return False
+
+
+def _ok_ipv4(ip):
+    """True for a private IPv4 address other devices on this network may use.
+
+    Excludes loopback, wildcard, broadcast, link-local (169.254), and
+    100.64/10 (Tailscale and other carrier-grade NAT). Those last two
+    would either be unreachable from a phone on Wi-Fi or collide with
+    Tailscale remote access.
+    """
+    if not ip or ip in ("0.0.0.0", "255.255.255.255"):
+        return False
+    if _is_loopback(ip) or _is_link_local(ip) or _is_cgnat(ip):
+        return False
+    return _is_rfc1918(ip)
+
+
+def _ips_from_interfaces():
+    """Every IPv4 address currently assigned to an interface."""
+    found = []
+
+    def add(ip):
+        if _ok_ipv4(ip) and ip not in found:
+            found.append(ip)
+
+    import subprocess
+    commands = (
+        ("ifconfig", "-a"),
+        ("ip", "-4", "-o", "addr", "show"),
+    )
+    for cmd in commands:
+        try:
+            out = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL, timeout=2)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        for m in re.finditer(r"\binet(?:\s+addr:|/)\s*(\d+\.\d+\.\d+\.\d+)|\binet\s+(\d+\.\d+\.\d+\.\d+)", out):
+            add(m.group(1) or m.group(2))
+        if found:
+            return found
+    return found
 
 
 def lan_ips():
@@ -116,6 +186,8 @@ def lan_ips():
         if _ok_ipv4(ip) and ip not in found:
             found.append(ip)
 
+    for ip in _ips_from_interfaces():
+        add(ip)
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
@@ -138,12 +210,38 @@ def addresses(port):
 
 
 def listen_host(requested=None, path=None):
-    """Host the web page should listen on given the saved choice."""
+    """Primary host the page listens on.
+
+    When local-network access is on, this is always 127.0.0.1 so Tailscale
+    serve (which forwards to 127.0.0.1) and the open page stay up. LAN
+    addresses are extra sockets from listen_hosts(), never 0.0.0.0 (which
+    would also claim the Tailscale address and fail with 'address already
+    in use').
+    """
     if enabled_in_config(path):
-        return "0.0.0.0"
+        return "127.0.0.1"
     if requested:
         return requested
     return "127.0.0.1"
+
+
+def listen_hosts(requested=None, path=None):
+    """Every address the page should listen on, given the saved choice.
+
+    Local-network access and Tailscale remote access can both be on: the
+    page stays on 127.0.0.1 (for this Mac and for Tailscale) and also
+    listens on each private LAN address. It never binds 0.0.0.0 while
+    local-network access is on.
+    """
+    if enabled_in_config(path):
+        hosts = ["127.0.0.1"]
+        for ip in lan_ips():
+            if ip not in hosts:
+                hosts.append(ip)
+        return hosts
+    if requested:
+        return [requested]
+    return ["127.0.0.1"]
 
 
 def inspect(*, port=None, home=None, path=None):
@@ -151,13 +249,13 @@ def inspect(*, port=None, home=None, path=None):
     path = path or config_path(home)
     on = enabled_in_config(path)
     addrs = addresses(port) if on else []
+    binds = listen_hosts(path=path)
     if on and addrs:
         message = "Open at " + " or ".join(addrs) + " from a device on the same network. " + WARNING
     elif on:
         message = (
-            "On. Open http://<lan-ip>:" + str(port)
-            + " from a device on the same network, using this Mac's network address. "
-            + WARNING
+            "On. The page is open on the local network, but this Mac's "
+            "network address could not be found right now. " + WARNING
         )
     else:
         message = "Off. The page is not open on the local network."
@@ -167,7 +265,8 @@ def inspect(*, port=None, home=None, path=None):
         "message": message,
         "warning": WARNING,
         "port": port,
-        "bind": "0.0.0.0" if on else "127.0.0.1",
+        "bind": listen_host(path=path),
+        "binds": binds,
     }
 
 
@@ -190,6 +289,7 @@ def turn_off(*, port=None, home=None, path=None, missing_ok=True):
     info["enabled"] = False
     info["addresses"] = []
     info["bind"] = "127.0.0.1"
+    info["binds"] = ["127.0.0.1"]
     info["message"] = OFF_MESSAGE.replace(" is off.", " is off.")  # stable
     info["message"] = "Off. The page is not open on the local network."
     return info

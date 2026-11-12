@@ -7,7 +7,10 @@ model workers or RPC service directly to the public internet.
 - The easy install keeps the browser page only on this Mac. You can turn
   on **Open on my local network** in Settings or `caravan lan on`.
   Anyone on the same network can use Caravan, and there is no login.
-  `caravan lan status` shows the address (`http://<lan-ip>:<port>`). The
+  `caravan lan status` shows the address (`http://<lan-ip>:<port>`),
+  and a clickable link appears under the Settings switch. This can be
+  on at the same time as the opt-in Tailscale share; both addresses
+  stay reachable. The
   opt-in Tailscale share is described in [remote access](REMOTE-ACCESS.md).
   Never expose the page to the public internet. Use an SSH tunnel for
   access from a development computer if you prefer not to open the page

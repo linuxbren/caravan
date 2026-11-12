@@ -13,8 +13,11 @@ nothing faster, Settings shows one line, "Already at its fastest settings.
 Nothing faster found," instead of two identical Before and After lines.
 Those lines (or the one-line message) appear in the Auto-tune block, not
 under Self-tuning; Self-tuning results still feed the same slot.
-**Reset tuning** clears the saved results for this model and this setup;
-the model stays loaded.
+**Reset tuning** clears the saved results for this model and this setup
+and puts Memory compression back to Auto; the model stays loaded, and
+is reloaded at Auto if it was running a tighter value. A trial whose
+reply comes out garbled counts as a loss, no matter how fast it was,
+and is not kept.
 
 ## Before starting
 

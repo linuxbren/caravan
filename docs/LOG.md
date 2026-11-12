@@ -3437,3 +3437,18 @@ re-execs the web process with workers kept, so a loaded model stays
 loaded. Details: [DAY24.md](DAY24.md). The 1st node and 2nd node were
 not touched. Suite counts and SHAs are recorded in DAY24 at publication.
 
+## Day 24 follow-up: garbled replies, and both ways to open the page (2026-11-12 CST)
+
+A garbled reply (blank, leftover markers, or a short repeated chunk)
+gets a plain note under the answer, and Memory compression is put
+back to 16 (or extras are turned off if it is already 16). Auto-tune
+and Self-tuning count a garbled trial as a loss. Reset tuning puts
+Memory compression back to Auto, including a leftover saved pin.
+After an update, the installed copy records the version just applied.
+Local-network access and the Tailscale share can both be on at once,
+each with a clickable link (`http://<lan-ip>:<port>` under the
+local-network switch). Details: [DAY24.md](DAY24.md). This follow-up
+changes the model process, so a `caravan update` reloads a loaded
+model. The 1st node and 2nd node were not touched. Suite counts and
+SHAs are recorded in DAY24 at publication.
+
