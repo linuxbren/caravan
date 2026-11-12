@@ -426,3 +426,32 @@ portable suite on a fresh clone on the development node:
 were not touched. No `day24` tag yet. Source and pin SHAs are recorded
 at publication time.
 
+### Live review: Open on the local network
+
+Brenden asked for an option to open Caravan on the local network, in
+addition to the Tailscale share. A new Settings switch, **Open on my
+local network**, sits next to **Open from my other devices**. A short
+warning is always visible beside it: "Anyone on the same network can
+use Caravan, and there is no login." When the switch is on, the status
+line shows the address to open (`http://<lan-ip>:<port>`).
+
+The same choice is available from the command line: `caravan lan on`,
+`caravan lan off`, and `caravan lan status` (status prints the
+address). A fresh install asks, with No as the default:
+
+Open Caravan on your local network? (y/N)
+
+and shows the same warning. Updates never ask. The option is off by
+default. When it is off, the page stays only on this Mac. Uninstall
+turns it off before files are removed. Turning the switch on or off
+does not unload a model that is already loaded; the page comes back
+in a few seconds.
+
+This follow-up is only tools, proxy, scripts, tests, and docs — not
+`agent/`, `runtime/`, or the requirements files — so a `caravan
+update` from the previous Day 24 pin keeps a loaded model running.
+The web page still restarts. The portable suite on a fresh clone on
+the development node: **1,396 tests passed** in 56.919 s.
+The 1st node and 2nd node were not touched. No `day24` tag yet.
+Source and pin SHAs are recorded at publication time.
+

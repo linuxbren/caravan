@@ -68,6 +68,11 @@ def checks(home=None, port=8190):
         add("INFO", doctor_line(home=home, port=port))
     except Exception as e:  # noqa: BLE001
         add("INFO", "Open from other devices: could not check (" + str(e).splitlines()[0][:120] + ").")
+    try:
+        from caravan_lan import doctor_line as lan_doctor_line
+        add("INFO", lan_doctor_line(home=home, port=port))
+    except Exception as e:  # noqa: BLE001
+        add("INFO", "Open on the local network: could not check (" + str(e).splitlines()[0][:120] + ").")
     add("INFO", "No network checks performed. Downloads require GitHub, PyPI and model-host access; check Wi-Fi/firewall if setup fails.")
     return rows
 

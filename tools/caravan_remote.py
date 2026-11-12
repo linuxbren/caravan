@@ -285,7 +285,7 @@ def inspect(*, port=None, home=None, path=None, binary=None, runner=None, adopt=
     if on:
         message = "Open at " + " or ".join(addrs) + " from devices on your Tailscale network."
     else:
-        message = "Off. Only this Mac can open the page."
+        message = "Off. Not shared on your Tailscale network."
     return {
         "enabled": on, "available": True, "installed": True, "logged_in": True,
         "addresses": addrs, "message": message, "port": port,

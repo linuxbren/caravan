@@ -95,6 +95,14 @@
   not change `agent/`, `runtime/`, or the requirements files, so an
   update from that pin keeps a loaded model running. The web page
   still restarts.
+  A later live-review follow-up (opt-in local-network access: Settings
+  switch **Open on my local network** next to Tailscale, with a warning
+  that anyone on the same network can use Caravan and there is no
+  login; `caravan lan on|off|status` prints `http://<lan-ip>:<port>`;
+  install question default No; off by default; uninstall turns it off;
+  toggling keeps a loaded model) does not change `agent/`,
+  `runtime/`, or the requirements files, so an update from that pin
+  keeps a loaded model running. The web page still restarts.
 
 ## MIT License (2026-11-12)
 

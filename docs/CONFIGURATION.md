@@ -444,9 +444,27 @@ enabled = true
 
 The live Tailscale serve table is the source of truth. If a matching
 loopback forward is already present, status and Settings treat it as on
-and record this table. `enabled = false` after `caravan remote off`. The
-web bind address is not set here and stays `127.0.0.1`. See
-[the developer guide](DEVELOPMENT.md#open-from-other-devices-tailscale).
+and record this table. `enabled = false` after `caravan remote off`.
+Tailscale does not change the listen address. For opening the page on
+your local network, see `[lan]` below.
+See [the developer guide](DEVELOPMENT.md#open-from-other-devices-tailscale).
+
+## Open on the local network (`[lan]`)
+
+`caravan lan on` writes this optional table to `~/.caravan/config.toml`:
+
+```toml
+[lan]
+enabled = true
+```
+
+Off by default. Missing or `enabled = false` keeps the installed page
+only on this Mac. When enabled, devices on the same network can open
+the page. Anyone on that network can use Caravan, and there is no
+login. Prefer `caravan lan on` / Settings over editing this by hand.
+`caravan lan status` prints the address (`http://<lan-ip>:<port>`).
+Toggling restarts only the web page; a loaded model stays loaded.
+See [REMOTE-ACCESS](REMOTE-ACCESS.md).
 
 ## Hugging Face token
 

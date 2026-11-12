@@ -4,8 +4,14 @@ Caravan is experimental software for Macs you control on a trusted network.
 There is no browser login or multi-user access policy. Do not expose the UI,
 model workers or RPC service directly to the public internet.
 
-- The easy install binds the browser service to localhost. Use an SSH tunnel
-  for access from your development node; see [remote access](REMOTE-ACCESS.md).
+- The easy install keeps the browser page only on this Mac. You can turn
+  on **Open on my local network** in Settings or `caravan lan on`.
+  Anyone on the same network can use Caravan, and there is no login.
+  `caravan lan status` shows the address (`http://<lan-ip>:<port>`). The
+  opt-in Tailscale share is described in [remote access](REMOTE-ACCESS.md).
+  Never expose the page to the public internet. Use an SSH tunnel for
+  access from a development computer if you prefer not to open the page
+  on the local network.
 - Trust each helper's SSH identity yourself. Never disable host-key checking
   or add a key from an unverified source. Setup does not establish SSH trust.
 - GGUF RPC should listen on loopback and travel through an SSH tunnel. Check

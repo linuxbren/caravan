@@ -3423,3 +3423,17 @@ backup/replacement, quiet optional discovery, PATH setup, Topology pairing and
 complete confirmed uninstall. Work and portable verification are isolated on the
 box and a development-node worktree. No 1st node or 2nd node was touched.
 Native acceptance is explicitly pending; tests are not Mac proof.
+
+
+## Day 24 follow-up: Open on the local network (2026-11-12 CST)
+
+Opt-in local-network access sits next to the Tailscale share. Settings
+has an **Open on my local network** switch and a short warning: anyone
+on the same network can use Caravan, and there is no login. CLI is
+`caravan lan on|off|status`; status prints `http://<lan-ip>:<port>`.
+A fresh install asks, default No. Off by default; the page stays only
+on this Mac until it is turned on. Uninstall turns it off. Toggling
+re-execs the web process with workers kept, so a loaded model stays
+loaded. Details: [DAY24.md](DAY24.md). The 1st node and 2nd node were
+not touched. Suite counts and SHAs are recorded in DAY24 at publication.
+

@@ -99,8 +99,9 @@ fixed `--model` remains the developer-only direct worker setup.
 
 ## Open from other devices (Tailscale)
 
-The installed web service stays bound to `127.0.0.1`. It is never changed to
-`0.0.0.0`. Opt-in access uses Tailscale's own `serve` forward:
+The installed web service starts bound to `127.0.0.1`. Tailscale never
+changes that address to `0.0.0.0`. Opt-in Tailscale access uses Tailscale's
+own `serve` forward:
 
 ```sh
 tailscale serve --bg --tcp <web-port> tcp://127.0.0.1:<web-port>
@@ -118,13 +119,35 @@ the live serve table. A hand-made serve on the same port and loopback
 target is treated as on and written into the config (adopted). Doctor
 reports the same state without writing.
 
-The installer asks the one optional question only on a fresh install, only
+The installer asks the Tailscale question only on a fresh install, only
 when Tailscale is installed and signed in, and only when a terminal can be
 read (`/dev/tty`, including under `curl | bash`). Otherwise it skips
 silently. Updates never ask. The CLI binary lookup checks the Tailscale
 app bundle, Homebrew (`/opt/homebrew/bin` and `/usr/local/bin`), then
 `PATH`. Settings talks to `GET`/`POST /api/remote`. The web process does
-not re-bind the page.
+not re-bind the page for Tailscale.
+
+## Open on the local network
+
+An optional local-network switch sits next to the Tailscale option. Off
+by default, the installed page stays on `127.0.0.1`. When `[lan] enabled
+= true`, the web process listens on `0.0.0.0` so devices on the same
+network can open the page. Anyone on that network can use Caravan, and
+there is no login. This never uses Funnel or opens the page to the
+public internet.
+
+`caravan lan on` writes the config and tells a running page to apply the
+new listen address. The web process re-execs with the same arguments and
+`CARAVAN_WEB_KEEP_WORKERS=1`, so a loaded model stays loaded; the page
+comes back in a few seconds. `caravan lan off` does the reverse.
+`caravan lan status` prints `http://<lan-ip>:<port>`. Settings talks to
+`GET`/`POST /api/lan`. Doctor reports the same state. `caravan uninstall`
+turns it off after confirm, before files disappear. A cancelled uninstall
+does not.
+
+The installer asks the local-network question on a fresh install when a
+terminal can be read, after the Tailscale question, with No as the
+default, and prints the warning first. Updates never ask.
 
 ## Package updates
 
@@ -190,7 +213,7 @@ The installer manages a marked PATH block in `.zprofile` (and `.bash_profile`
 for bash login shells). Open a new Terminal after setup. `caravan uninstall` removes all verified local Caravan jobs, owned local workers,
 its marked PATH/SSH entries, and the entire `~/.caravan` tree, including models,
 settings, keys, source and runtimes. It first turns off Caravan's Tailscale
-serve entry if one is present. It previews the total bytes and asks once;
+serve entry if one is present, and turns off local-network access. It previews the total bytes and asks once;
 `--yes` skips the prompt. Remove paired Macs first. Unverified startup files and
 the unrelated remote-access watchdog stay untouched. Only exact known repository
 workers and recorded engine/tunnel PIDs are stopped; no commands are sent to

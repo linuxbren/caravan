@@ -836,6 +836,8 @@ def make_handler(app: App):
                 return self._api_hf_token_get()
             if path == "/api/remote":
                 return self._api_remote()
+            if path == "/api/lan":
+                return self._api_lan()
             if path == "/api/helpers":
                 import web_helpers
                 return self._json(200, {"offer": web_helpers.offer(app.mgr.snapshot())})
@@ -1021,6 +1023,8 @@ def make_handler(app: App):
                 return self._api_hf_token_set(body=body)
             if path == "/api/remote":
                 return self._api_remote(post=True, body=body)
+            if path == "/api/lan":
+                return self._api_lan(post=True, body=body)
             return self._json(404, {"error": "not found"})
 
         def _serve_file(self, rel):
@@ -1488,6 +1492,54 @@ def make_handler(app: App):
             payload = dict(info)
             if post and not info.get("available") and body and body.get("enabled") is True:
                 return self._json(400, {**payload, "error": info.get("message")})
+            return self._json(200, payload)
+
+
+        def _api_lan(self, post=False, body=None):
+            import os as _os
+            import sys as _sys
+            import threading
+            import time
+            from pathlib import Path as _Path
+            tools = str(_Path(__file__).resolve().parents[1] / "tools")
+            if tools not in _sys.path:
+                _sys.path.insert(0, tools)
+            import caravan_lan as lan
+            port = int(getattr(getattr(self, "server", None), "server_port", None) or 8190)
+            try:
+                if post:
+                    body = body if isinstance(body, dict) else {}
+                    enabled = body.get("enabled")
+                    if enabled is None and body.get("action") in ("on", "off"):
+                        enabled = body["action"] == "on"
+                    if enabled is True:
+                        info = lan.turn_on(port=port)
+                    elif enabled is False:
+                        info = lan.turn_off(port=port)
+                    else:
+                        return self._json(400, {"error": "Send enabled true or false."})
+                else:
+                    info = lan.inspect(port=port)
+            except lan.LanError as e:
+                return self._json(400, {"error": str(e), "enabled": False,
+                                        "addresses": [], "message": str(e), "warning": lan.WARNING, "port": port})
+            payload = dict(info)
+            if post:
+                wanted = lan.listen_host(requested=getattr(app, "cli_host", None))
+                current = getattr(app, "bind_host", None)
+                if wanted != current:
+                    payload["restarting"] = True
+                    payload["keeps_model"] = True
+                    payload["message"] = lan.RESTART_MESSAGE
+                    def _rebind():
+                        hook = getattr(app, "rebind_listen", None)
+                        if hook is not None:
+                            hook(wanted)
+                            return
+                        time.sleep(0.4)
+                        _os.environ.setdefault("CARAVAN_WEB_KEEP_WORKERS", "1")
+                        _os.execv(_sys.executable, [_sys.executable] + _sys.argv)
+                    threading.Thread(target=_rebind, name="caravan-lan-rebind", daemon=True).start()
             return self._json(200, payload)
 
 
@@ -2345,12 +2397,26 @@ def main(argv=None):
             self.server_name = self.server_address[0]
             self.server_port = self.server_address[1]
 
-    httpd = _Server((args.host, args.port), make_handler(app))
+    # Opt-in local-network listen. Off by default keeps the service's
+    # --host (127.0.0.1 on an installed Mac). When on, listen so devices
+    # on the same network can open the page. Toggling re-execs this
+    # process; CARAVAN_WEB_KEEP_WORKERS keeps a loaded model in place.
+    import sys as _sys
+    from pathlib import Path as _Path
+    _tools = str(_Path(__file__).resolve().parents[1] / "tools")
+    if _tools not in _sys.path:
+        _sys.path.insert(0, _tools)
+    import caravan_lan as _lan
+    host = _lan.listen_host(args.host)
+    app.cli_host = args.host
+    app.bind_host = host
+
+    httpd = _Server((host, args.port), make_handler(app))
     httpd.daemon_threads = True
     app.httpd = httpd
     import web_pairing
     web_pairing.start(app)
-    print(f"[caravan-web] listening on http://{args.host}:{args.port}", flush=True)
+    print(f"[caravan-web] listening on http://{host}:{args.port}", flush=True)
     print(f"[caravan-web] open http://<this-mac-address>:{args.port}/", flush=True)
     print(f"[caravan-web] lead worker port {args.lead_port}; packer {args.packer_peer}", flush=True)
     app.restore.start(f"http://127.0.0.1:{httpd.server_port}")

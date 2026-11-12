@@ -45,7 +45,13 @@ thinking = "off"      # on / off: default for the Thinking button
 # order = 1
 
 # Opt-in: share the local page with devices on your Tailscale network.
-# The page itself stays on 127.0.0.1. Prefer `caravan remote on` / Settings
-# over editing this by hand.
+# The page itself stays on this Mac; Tailscale forwards to it.
+# Prefer `caravan remote on` / Settings over editing this by hand.
 # [remote]
+# enabled = true
+
+# Opt-in: open the page on your local network. Anyone on the same
+# network can use Caravan, and there is no login. Off by default.
+# Prefer `caravan lan on` / Settings over editing this by hand.
+# [lan]
 # enabled = true

@@ -53,6 +53,20 @@ running `caravan remote on`. Only devices on your Tailscale network can
 open the page. `caravan remote status` shows the address to use. Turn it
 off in Settings, with `caravan remote off`, or when you uninstall.
 
+## Open on your local network
+
+You can also open the page from other devices on the same network.
+Setup asks, with No as the default:
+
+Open Caravan on your local network? (y/N)
+
+Anyone on the same network can use Caravan, and there is no login.
+You can change this later in **Settings**, or with `caravan lan on`
+and `caravan lan off`. `caravan lan status` shows the address to
+open (`http://<lan-ip>:<port>`). When this is off, the page stays
+only on this Mac. Your Mac may ask whether to allow incoming
+connections; that is expected. Uninstall turns this off.
+
 ## Add Minis
 
 Each extra Mac is **the new Mac**. The Mac you started with is **your first Mac**.
@@ -93,7 +107,7 @@ fails, Caravan goes back to the previous version, starts it, and tells you.
 
 ## Remove Caravan safely
 
-Remove paired Macs first, then run `caravan uninstall` and confirm: it turns off the Tailscale share and removes all Caravan services, models, settings and files (use `--yes` to skip confirmation).
+Remove paired Macs first, then run `caravan uninstall` and confirm: it turns off the Tailscale share and local-network access and removes all Caravan services, models, settings and files (use `--yes` to skip confirmation).
 
 ## Troubleshooting
 

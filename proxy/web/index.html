@@ -1112,6 +1112,11 @@
   #settingsDrawer #remoteAccessSwitch button { flex: 1; }
   #settingsDrawer #remoteAccessSwitch button:disabled { opacity: .5; cursor: not-allowed; }
   #settingsDrawer #remoteAccessStatus a { color: var(--accent2); }
+  #settingsDrawer #lanAccessSwitch { display: flex; margin-bottom: 8px; }
+  #settingsDrawer #lanAccessSwitch button { flex: 1; }
+  #settingsDrawer #lanAccessSwitch button:disabled { opacity: .5; cursor: not-allowed; }
+  #settingsDrawer #lanAccessWarning { color: var(--accent2); margin: 0 0 6px; }
+  #settingsDrawer #lanAccessStatus a { color: var(--accent2); }
 
   .opt.mlxoff { opacity: .45; }
   .opt.mlxoff .seg button { cursor: not-allowed; }
@@ -1663,6 +1668,15 @@
       </div>
       <div class="help" id="remoteAccessStatus" role="status" aria-live="polite">Checking…</div>
     </div>
+    <div class="optcard drawer-section" id="lanAccessCard">
+      <h2 class="drawer-section-title"><span class="tip" title="Anyone on the same network can use Caravan, and there is no login.">Open on my local network</span></h2>
+      <div class="theme-switch" id="lanAccessSwitch" title="Open on my local network">
+        <button type="button" data-lan="off" class="on">Off</button>
+        <button type="button" data-lan="on">On</button>
+      </div>
+      <div class="help" id="lanAccessWarning">Anyone on the same network can use Caravan, and there is no login.</div>
+      <div class="help" id="lanAccessStatus" role="status" aria-live="polite">Checking…</div>
+    </div>
     <div class="optcard drawer-section" id="topoBarsCard">
       <h2 class="drawer-section-title"><span class="tip" title="How Topology fills the CPU / GPU / RAM / Disk / Temp bars.">Topology bars</span></h2>
       <div class="theme-switch" id="barColorSwitch" title="Bar colors">
@@ -1707,6 +1721,7 @@
   const openDrawer = () => {
     refreshHfTokenStatus();
     refreshRemoteAccess();
+    refreshLanAccess();
     $("settingsDrawer").classList.add("open");
     const b = $("drawerBackdrop"); b.hidden = false; b.classList.add("open");
   };
@@ -1790,7 +1805,7 @@
       box.append(" from devices on your Tailscale network.");
       return;
     }
-    box.textContent = j.message || "Off. Only this Mac can open the page.";
+    box.textContent = j.message || "Off. Not shared on your Tailscale network.";
   }
   async function refreshRemoteAccess() {
     try { renderRemoteAccess(await api("/api/remote")); }
@@ -1808,6 +1823,51 @@
       }
     });
     refreshRemoteAccess();
+  }
+  function renderLanAccess(j) {
+    const on = !!j.enabled;
+    document.querySelectorAll("#lanAccessSwitch button").forEach((b) => {
+      b.classList.toggle("on", (b.dataset.lan === "on") === on);
+    });
+    const box = $("lanAccessStatus");
+    box.replaceChildren();
+    if (j.restarting) {
+      box.textContent = j.message || "The page will be back in a few seconds. The model stays loaded.";
+      setTimeout(() => location.reload(), 2000);
+      return;
+    }
+    if (on && j.addresses && j.addresses.length) {
+      box.append("Open at ");
+      j.addresses.forEach((addr, i) => {
+        if (i) box.append(" or ");
+        const a = document.createElement("a");
+        a.href = addr;
+        a.textContent = addr;
+        a.target = "_blank";
+        a.rel = "noopener";
+        box.appendChild(a);
+      });
+      box.append(" from a device on the same network.");
+      return;
+    }
+    box.textContent = j.message || "Off. The page is not open on the local network.";
+  }
+  async function refreshLanAccess() {
+    try { renderLanAccess(await api("/api/lan")); }
+    catch (e) { $("lanAccessStatus").textContent = (e && (e.error || e.message)) || "Could not check this setting."; }
+  }
+  if ($("lanAccessSwitch")) {
+    $("lanAccessSwitch").addEventListener("click", async (e) => {
+      const b = e.target.closest("button[data-lan]");
+      if (!b || b.disabled) return;
+      const enable = b.dataset.lan === "on";
+      try {
+        renderLanAccess(await api("/api/lan", { method: "POST", body: JSON.stringify({ enabled: enable }) }));
+      } catch (err) {
+        $("lanAccessStatus").textContent = (err && (err.error || err.message)) || "Could not change this setting.";
+      }
+    });
+    refreshLanAccess();
   }
   if (/[?&]settings=1\b/.test(location.search)) setTimeout(openDrawer, 300);
   $("btnCloseSettings").addEventListener("click", closeDrawer);

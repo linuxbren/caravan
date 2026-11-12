@@ -27,13 +27,29 @@ Thunderbolt address. macOS can change link-local addresses after reboot.
 
 ## Open the first Mac's browser page from another device
 
-The page stays bound to this Mac (`127.0.0.1`). To open it from your other
+The Tailscale share does not change where the page itself listens; it
+stays on this Mac and Tailscale forwards to it. To open it from your other
 devices, use the opt-in Tailscale share: `caravan remote on`, the Settings
 switch **Open from my other devices**, or the install question if Tailscale
 is already signed in. Only devices on your Tailscale network can reach it.
 `caravan remote status` prints the addresses. `caravan remote off` and
 uninstall remove only Caravan's share. Details are in
 [the developer guide](DEVELOPMENT.md#open-from-other-devices-tailscale).
+
+## Open on your local network
+
+In addition to Tailscale, you can open the page from other devices on the
+same network. This is off by default. Turn it on with the Settings switch
+**Open on my local network**, `caravan lan on`, or the install question
+(default No). Anyone on the same network can use Caravan, and there is no
+login. The Settings switch shows that warning beside it.
+
+`caravan lan status` prints the address to open (`http://<lan-ip>:<port>`).
+`caravan lan off` and uninstall turn it off, and the page goes back to
+this Mac only. Turning it on or off does not unload a model that is
+already loaded; the page comes back in a few seconds. This never opens
+the page to the public internet. Your Mac may ask whether to allow
+incoming connections; that is expected.
 
 You can also forward the local page over SSH and leave Tailscale unused:
 

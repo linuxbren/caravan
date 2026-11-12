@@ -91,6 +91,13 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   is saved. After Reset tuning it says Start again. The action is the
   same fresh trials either way. The rest of the Auto-tune layout is
   unchanged.
+- Local network, live review: an **Open on my local network** switch
+  sits next to the Tailscale option in Settings, with the warning
+  "Anyone on the same network can use Caravan, and there is no login."
+  `caravan lan on|off|status` does the same; status prints the
+  address (`http://<lan-ip>:<port>`). A fresh install asks, default
+  No. Off by default; when off, the page stays only on this Mac.
+  Uninstall turns it off. Toggling does not unload a loaded model.
 
 ## Operational checks
 - Portable suite results are recorded at publication time in DAY24.md and
@@ -138,5 +145,12 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   not change `agent/`, `runtime/`, or the requirements files, so an
   update from that pin keeps a loaded model running. The web page
   still restarts.
+  A later live-review follow-up (opt-in local-network access next to
+  Tailscale, with a warning that anyone on the same network can use
+  Caravan and there is no login; `caravan lan on|off|status`; install
+  question default No; off by default; uninstall cleans it up;
+  toggling keeps a loaded model) does not change `agent/`,
+  `runtime/`, or the requirements files, so an update from that pin
+  keeps a loaded model running. The web page still restarts.
 
 Details: [DAY24.md](../DAY24.md). Install: [INSTALL.md](../../INSTALL.md).

@@ -397,10 +397,12 @@ class InstallerPromptTests(unittest.TestCase):
     def test_install_sh_asks_only_on_fresh_non_update(self):
         text = (ROOT / "scripts/install.sh").read_text()
         self.assertIn('caravan_remote.py" maybe-prompt --port', text)
+        self.assertIn('caravan_lan.py" maybe-prompt --port', text)
         self.assertIn('FRESH_CONFIG" = 1 ] && [ "$UPDATE" = 0 ]', text)
         self.assertIn("Would ask whether to open Caravan from your other devices over Tailscale.", text)
-        # No other new questions.
-        self.assertEqual(text.count("Would ask whether"), 1)
+        self.assertIn("Would ask whether to open Caravan on your local network.", text)
+        # Tailscale and local-network questions only, both fresh-install only.
+        self.assertEqual(text.count("Would ask whether"), 2)
 
     def test_install_scripts_have_no_other_read_prompts(self):
         # The only user question is maybe-prompt; install shells themselves don't read answers.

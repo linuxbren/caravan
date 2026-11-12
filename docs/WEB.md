@@ -158,8 +158,14 @@ Self-tuning, the model is usually already back on the previous
 settings. The full detail is in the log (`caravan doctor`, then
 `status` for the path).
 
-The browser has no login. Fresh installs bind localhost; never expose it to
-the public internet. [Security](SECURITY.md) explains the trust boundary.
+The browser has no login. Fresh installs keep the page only on this Mac.
+You can turn on **Open on my local network** in Settings or run
+`caravan lan on`. Anyone on the same network can use Caravan, and there is no login. `caravan lan status` shows the address to open
+(`http://<lan-ip>:<port>`). Turn it off with `caravan lan off` or the
+same Settings switch; the page goes back to this Mac only. Turning the
+switch does not unload a model that is already loaded. Never expose
+the page to the public internet. [Security](SECURITY.md) explains the
+trust boundary.
 
 ## Developer details and history
 
