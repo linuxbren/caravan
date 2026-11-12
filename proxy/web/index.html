@@ -1609,6 +1609,27 @@
     if (n === null || n === undefined || Number.isNaN(n)) return "—";
     return Number(n).toFixed(digits);
   }
+  // Same wording and rounding as the average line under the input
+  // (proxy/web_speed.format_reply_stats). Read rate falls back to
+  // prompt tokens / time-to-first-token when prefill isn't reported.
+  function formatReplyStats(st) {
+    st = st || {};
+    const readTs = st.read_tok_s ?? ((st.prompt_tokens && st.ttft_s) ? st.prompt_tokens / st.ttft_s : null);
+    const _ok = (v) => v != null && Number.isFinite(Number(v));
+    const _seg = (label, n, r, d) => {
+      if (!_ok(n) && !_ok(r)) return null;
+      let t = label;
+      if (_ok(n)) t += ` ${n} tok`;
+      if (_ok(r)) t += `${_ok(n) ? " at" : ""} ${fmt(r, d)} tok/s`;
+      return t;
+    };
+    return [
+      _seg("Read", st.prompt_tokens, readTs, 0),
+      _seg("Write", st.completion_tokens, st.write_tok_s, 1),
+      _ok(st.ttft_s) ? `first token ${fmt(st.ttft_s)}s` : null,
+      _ok(st.total_s) ? `total ${fmt(st.total_s)}s` : null,
+    ].filter(Boolean).join(" · ");
+  }
   function fmtTs(seconds) {
     if (seconds === null || seconds === undefined) return "—";
     const d = new Date(seconds * 1000);
@@ -2151,10 +2172,22 @@
     const mid = state.loadedModel;
     const opts = optsFromActive(state.active);
     if (!mid || !opts || !stats) return;
-    if (stats.write_tok_s == null && stats.ttft_s == null) return;
+    const readTs = stats.read_tok_s ?? ((stats.prompt_tokens && stats.ttft_s) ? stats.prompt_tokens / stats.ttft_s : null);
+    const body = {
+      model: mid,
+      opts,
+      write_tok_s: stats.write_tok_s,
+      ttft_s: stats.ttft_s,
+      prompt_tokens: stats.prompt_tokens,
+      completion_tokens: stats.completion_tokens,
+      read_tok_s: readTs,
+      total_s: stats.total_s,
+    };
+    const has = (v) => v != null && Number.isFinite(Number(v));
+    if (!["write_tok_s","ttft_s","prompt_tokens","completion_tokens","read_tok_s","total_s"].some(k => has(body[k]))) return;
     api("/api/speed-average", {
       method: "POST",
-      body: JSON.stringify({ model: mid, opts, write_tok_s: stats.write_tok_s, ttft_s: stats.ttft_s }),
+      body: JSON.stringify(body),
     }).then((j) => { paintAvg(j); refreshTuneResult(); }).catch(() => {});
   }
 
@@ -2451,22 +2484,7 @@
         const tdiv = document.createElement("div");
         tdiv.className = "timing";
         const st = meta.stats || {};
-        // Read = prompt tokens / prefill time (falls back to time-to-first-token).
-        const readTs = st.read_tok_s ?? ((st.prompt_tokens && st.ttft_s) ? st.prompt_tokens / st.ttft_s : null);
-        const _ok = (v) => v != null && Number.isFinite(Number(v));
-        const _seg = (label, n, r, d) => {
-          if (!_ok(n) && !_ok(r)) return null;
-          let t = label;
-          if (_ok(n)) t += ` ${n} tok`;
-          if (_ok(r)) t += `${_ok(n) ? " at" : ""} ${fmt(r, d)} tok/s`;
-          return t;
-        };
-        tdiv.textContent = [
-          _seg("Read", st.prompt_tokens, readTs, 0),
-          _seg("Write", st.completion_tokens, st.write_tok_s, 1),
-          _ok(st.ttft_s) ? `first token ${fmt(st.ttft_s)}s` : null,
-          _ok(st.total_s) ? `total ${fmt(st.total_s)}s` : null,
-        ].filter(Boolean).join(" · ");
+        tdiv.textContent = formatReplyStats(st);
         asst.appendChild(tdiv);
         const mg = meta.memory_guard || (st && st.memory_guard) || null;
         if (mg && ((mg.trimmed_turns|0) > 0 || (mg.recalled_snippets|0) > 0)) {

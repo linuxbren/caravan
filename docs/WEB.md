@@ -21,10 +21,14 @@ and [file placement](FILES.md).
 
 Type in the chat box and send. The page streams the reply and reports measured
 reading/writing times from the worker, not simulated performance. Each reply
-has its own timing line. Under the input box, a quiet average such as
-"Average 42 words/s, first word in 1.2 s" appears once this model has answered
-at least once with the current optimizations. The rate is the model's measured
-token rate, shown as words/s in plain language. The average is kept on the
+has its own timing line, for example "Read 165 tok at 200 tok/s · Write 10 tok
+at 20.7 tok/s · first token 0.34s · total 0.78s". Under the input box, a quiet
+average appears once this model has answered at least once with the current
+optimizations. It uses the same wording, units, and rounding, with a leading
+Average label: "Average · Read 165 tok at 200 tok/s · Write 10 tok at 20.7
+tok/s · first token 0.34s · total 0.78s". The numbers are averages for this
+model and this set of optimizations. A field with no data yet is left out.
+The average is kept on the
 1st node in `~/.caravan/speed_averages.json`, separately for each model and
 each set of optimizations, so a change of settings starts a new average. The
 line is hidden until there is something to show. Thinking may be shown

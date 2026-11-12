@@ -2,11 +2,12 @@
 
 Stored in ~/.caravan/speed_averages.json so the numbers describe these Macs
 and this model setup, not a single browser. The page shows one quiet line
-such as "Average 42 words/s, first word in 1.2 s" when at least one reply
-has been recorded for the current model and the current optimizations.
-The rate is the model's measured token rate, shown as words/s in plain
-language (one token is roughly one word). Changing an optimization starts
-a separate average.
+such as "Average · Read 165 tok at 200 tok/s · Write 10 tok at 20.7 tok/s
+· first token 0.34s · total 0.78s" when at least one reply has been
+recorded for the current model and the current optimizations. The wording,
+units, and rounding match the stats under each reply, with a leading
+Average label. Fields with no data yet are left out. Changing an
+optimization starts a separate average.
 """
 from __future__ import annotations
 
@@ -94,18 +95,70 @@ def _fmt_secs(n: float) -> str:
     return f"{n:.2f} s".replace("0.00 s", "0.01 s") if n > 0 else "0 s"
 
 
-def format_line(write_tok_s, ttft_s) -> str:
-    """Plain-language average line, or empty if there is nothing to show."""
-    parts = []
-    if write_tok_s is not None:
-        parts.append(f"Average {_fmt_rate(float(write_tok_s))} words/s")
-    if ttft_s is not None:
-        first = f"first word in {_fmt_secs(float(ttft_s))}"
-        if parts:
-            parts.append(first)
-        else:
-            parts.append(f"Average {first}")
-    return ", ".join(parts)
+def _ok_num(v) -> bool:
+    try:
+        n = float(v)
+    except (TypeError, ValueError):
+        return False
+    return n == n and n not in (float("inf"), float("-inf"))
+
+
+def _fmt_fixed(n, digits: int) -> str:
+    """Same rounding as the page's fmt() helper: Number.toFixed(digits)."""
+    return f"{float(n):.{int(digits)}f}"
+
+
+def _seg(label: str, n, rate, digits: int):
+    """One Read or Write clause, matching the stats under each reply."""
+    has_n = _ok_num(n)
+    has_r = _ok_num(rate)
+    if not has_n and not has_r:
+        return None
+    t = label
+    if has_n:
+        t += f" {int(round(float(n)))} tok"
+    if has_r:
+        t += f"{' at' if has_n else ''} {_fmt_fixed(rate, digits)} tok/s"
+    return t
+
+
+def format_reply_stats(
+    write_tok_s=None,
+    ttft_s=None,
+    *,
+    prompt_tokens=None,
+    read_tok_s=None,
+    completion_tokens=None,
+    total_s=None,
+) -> str:
+    """Wording and rounding of the stats under each reply, or empty."""
+    parts = [
+        _seg("Read", prompt_tokens, read_tok_s, 0),
+        _seg("Write", completion_tokens, write_tok_s, 1),
+        f"first token {_fmt_fixed(ttft_s, 2)}s" if _ok_num(ttft_s) else None,
+        f"total {_fmt_fixed(total_s, 2)}s" if _ok_num(total_s) else None,
+    ]
+    return " · ".join(p for p in parts if p)
+
+
+def format_line(
+    write_tok_s=None,
+    ttft_s=None,
+    *,
+    prompt_tokens=None,
+    read_tok_s=None,
+    completion_tokens=None,
+    total_s=None,
+) -> str:
+    """Average line for under the chat input, or empty if there is nothing to show."""
+    body = format_reply_stats(
+        write_tok_s, ttft_s,
+        prompt_tokens=prompt_tokens,
+        read_tok_s=read_tok_s,
+        completion_tokens=completion_tokens,
+        total_s=total_s,
+    )
+    return f"Average · {body}" if body else ""
 
 
 def _entry(data: dict, model_id: str, opts) -> dict:
@@ -120,17 +173,53 @@ def _entry(data: dict, model_id: str, opts) -> dict:
     return slot
 
 
+def _mean(slot: dict, sum_key: str, n_key: str, ndigits: int):
+    n = int(slot.get(n_key) or 0)
+    if not n:
+        return None
+    try:
+        v = float(slot.get(sum_key) or 0) / n
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+    return round(v, ndigits)
+
+
+def _empty_view() -> dict:
+    return {
+        "count": 0,
+        "write_tok_s": None,
+        "ttft_s": None,
+        "prompt_tokens": None,
+        "completion_tokens": None,
+        "read_tok_s": None,
+        "total_s": None,
+        "line": None,
+    }
+
+
 def _snapshot(slot: dict) -> dict:
     count = int(slot.get("count") or 0)
-    write_n = int(slot.get("write_n") or 0)
-    ttft_n = int(slot.get("ttft_n") or 0)
-    write = (float(slot["write_sum"]) / write_n) if write_n else None
-    ttft = (float(slot["ttft_sum"]) / ttft_n) if ttft_n else None
-    line = format_line(write, ttft) if count else ""
+    write = _mean(slot, "write_sum", "write_n", 3)
+    ttft = _mean(slot, "ttft_sum", "ttft_n", 4)
+    prompt = _mean(slot, "prompt_sum", "prompt_n", 3)
+    completion = _mean(slot, "completion_sum", "completion_n", 3)
+    read = _mean(slot, "read_sum", "read_n", 3)
+    total = _mean(slot, "total_sum", "total_n", 4)
+    line = format_line(
+        write, ttft,
+        prompt_tokens=prompt,
+        read_tok_s=read,
+        completion_tokens=completion,
+        total_s=total,
+    ) if count else ""
     return {
         "count": count,
-        "write_tok_s": round(write, 3) if write is not None else None,
-        "ttft_s": round(ttft, 4) if ttft is not None else None,
+        "write_tok_s": write,
+        "ttft_s": ttft,
+        "prompt_tokens": int(round(prompt)) if prompt is not None else None,
+        "completion_tokens": int(round(completion)) if completion is not None else None,
+        "read_tok_s": read,
+        "total_s": total,
         "line": line or None,
     }
 
@@ -138,13 +227,13 @@ def _snapshot(slot: dict) -> dict:
 def get(model_id: str, opts, path=None) -> dict:
     """Return the stored average for this model and optimization set."""
     if not str(model_id or "").strip():
-        return {"count": 0, "write_tok_s": None, "ttft_s": None, "line": None}
+        return _empty_view()
     data = _load(path)
     mid = str(model_id).strip()
     key = fingerprint(opts)
     slot = ((data.get("models") or {}).get(mid) or {}).get(key)
     if not isinstance(slot, dict) or not int(slot.get("count") or 0):
-        return {"count": 0, "write_tok_s": None, "ttft_s": None, "line": None}
+        return _empty_view()
     return _snapshot(slot)
 
 
@@ -158,24 +247,52 @@ def _finite(v):
     return n
 
 
-def record(model_id: str, opts, *, write_tok_s=None, ttft_s=None, path=None) -> dict:
+_ACCUM = (
+    ("write_tok_s", "write_sum", "write_n"),
+    ("ttft_s", "ttft_sum", "ttft_n"),
+    ("prompt_tokens", "prompt_sum", "prompt_n"),
+    ("completion_tokens", "completion_sum", "completion_n"),
+    ("read_tok_s", "read_sum", "read_n"),
+    ("total_s", "total_sum", "total_n"),
+)
+
+
+def record(
+    model_id: str,
+    opts,
+    *,
+    write_tok_s=None,
+    ttft_s=None,
+    prompt_tokens=None,
+    completion_tokens=None,
+    read_tok_s=None,
+    total_s=None,
+    path=None,
+) -> dict:
     """Add one reply's measurements and return the updated average.
 
     Replies with no usable numbers are ignored and do not change the store.
+    Fields present on older store entries (write and first-token only)
+    still produce a line; missing fields are left out.
     """
     mid = str(model_id or "").strip()
-    write = _finite(write_tok_s)
-    ttft = _finite(ttft_s)
-    if not mid or (write is None and ttft is None):
+    values = {
+        "write_tok_s": _finite(write_tok_s),
+        "ttft_s": _finite(ttft_s),
+        "prompt_tokens": _finite(prompt_tokens),
+        "completion_tokens": _finite(completion_tokens),
+        "read_tok_s": _finite(read_tok_s),
+        "total_s": _finite(total_s),
+    }
+    if not mid or all(v is None for v in values.values()):
         return get(mid, opts, path=path)
     data = _load(path)
     slot = _entry(data, mid, opts)
-    if write is not None:
-        slot["write_sum"] = float(slot.get("write_sum") or 0) + write
-        slot["write_n"] = int(slot.get("write_n") or 0) + 1
-    if ttft is not None:
-        slot["ttft_sum"] = float(slot.get("ttft_sum") or 0) + ttft
-        slot["ttft_n"] = int(slot.get("ttft_n") or 0) + 1
+    for key, sum_key, n_key in _ACCUM:
+        v = values[key]
+        if v is not None:
+            slot[sum_key] = float(slot.get(sum_key) or 0) + v
+            slot[n_key] = int(slot.get(n_key) or 0) + 1
     slot["count"] = int(slot.get("count") or 0) + 1
     _save(data, path)
     return _snapshot(slot)

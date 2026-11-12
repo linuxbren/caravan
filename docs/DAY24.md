@@ -118,12 +118,14 @@ banner.
 - The Specifications box is removed (each reply already shows its own
   numbers). In its place, a quiet line directly under the input box and above
   Current optimizations shows the average for this model and this set of
-  optimizations, for example "Average 42 words/s, first word in 1.2 s". The
-  line is hidden until at least one reply has been recorded for that setup.
-  Averages are stored on the 1st node in `~/.caravan/speed_averages.json`
-  (not only in the browser) so they describe these Macs and this setup, and
-  they are shared if the page is opened from another device. The rate is the
-  model's measured token rate, shown as words/s in plain language.
+  optimizations. The wording, units, and rounding match the stats under
+  each reply, with a leading Average label, for example "Average · Read 165
+  tok at 200 tok/s · Write 10 tok at 20.7 tok/s · first token 0.34s ·
+  total 0.78s". A field with no data yet is left out. The line is hidden
+  until at least one reply has been recorded for that setup. Averages are
+  stored on the 1st node in `~/.caravan/speed_averages.json` (not only in
+  the browser) so they describe these Macs and this setup, and they are
+  shared if the page is opened from another device.
 
 ### Tagline
 
@@ -161,3 +163,10 @@ this publication. A `caravan update` from the Day 23 pin picks up this
 release. Model-running code in `agent/` changed (`mlx_worker.py`, so
 Self-tuning can apply without a reload), so a loaded model is reloaded
 and Caravan says so. The same model is restored after the update.
+
+During live review, the average line under the chat input was changed to
+use the same wording as the stats under each reply (this section above).
+That follow-up is only page, proxy, and docs — not `agent/`, `runtime/`,
+or the requirements files — so a `caravan update` from the first Day 24
+pin keeps a loaded model running. The web page still restarts. See
+[release notes](release-notes/day24.md).

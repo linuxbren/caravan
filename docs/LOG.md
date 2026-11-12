@@ -1,3 +1,13 @@
+## 2026-11-12: Day 24 live review — chat average wording
+
+The average line under the chat input now uses the same wording, units,
+and rounding as the stats under each reply, with a leading Average
+label: "Average · Read 165 tok at 200 tok/s · Write 10 tok at 20.7
+tok/s · first token 0.34s · total 0.78s". Fields with no data yet are
+left out. This is a page, proxy, and docs follow-up; `agent/`,
+`runtime/`, and the requirements files are unchanged, so a
+`caravan update` from the first Day 24 pin keeps a loaded model running.
+
 ## 2026-11-12: Day 24 published (no tag yet)
 
 See [DAY24.md](DAY24.md) and [release-notes/day24.md](release-notes/day24.md).

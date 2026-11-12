@@ -21,14 +21,20 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
 - Chat: Clear chat is renamed New session. Option chips sit in a Current
   optimizations box, in Settings order, with Self-tuning first. The
   Specifications box is replaced by a quiet average under the input
-  ("Average 42 words/s, first word in 1.2 s"). The title is Caravan; the
+  that uses the same wording as the stats under each reply, with a
+  leading Average label ("Average · Read 165 tok at 200 tok/s · Write
+  10 tok at 20.7 tok/s · first token 0.34s · total 0.78s"). Fields
+  with no data yet are left out. The title is Caravan; the
   line under the mark is "Your Macs. One model."
 
 ## Operational checks
 - Portable suite results are recorded at publication time in DAY24.md and
   the Obsidian Day 24 note.
 - The 1st node and 2nd node were not changed for this publication.
-  Update them with `caravan update`. A loaded model is reloaded because
-  model-running code changed; the same model is restored.
+  Update them with `caravan update`. From the Day 23 pin, a loaded model
+  is reloaded because model-running code changed; the same model is
+  restored. A later live-review follow-up (the chat average line matching
+  reply stats) does not change model-running code, so an update from the
+  first Day 24 pin keeps a loaded model running.
 
 Details: [DAY24.md](../DAY24.md). Install: [INSTALL.md](../../INSTALL.md).

@@ -27,13 +27,18 @@
 - Chat: Clear chat is renamed New session. Option chips sit in a Current
   optimizations box, in Settings order with Self-tuning first, with hover
   hints. The Specifications box is replaced by a quiet per-model,
-  per-optimization average under the input ("Average 42 words/s, first word
-  in 1.2 s"), stored on the 1st node. The "Built in the open" title and
-  tagline are removed; the line reads "Your Macs. One model."
+  per-optimization average under the input, stored on the 1st node. During
+  live review the line was changed to use the same wording as the stats
+  under each reply, with a leading Average label ("Average · Read 165 tok
+  at 200 tok/s · Write 10 tok at 20.7 tok/s · first token 0.34s · total
+  0.78s"); fields with no data yet are left out. The "Built in the open"
+  title and tagline are removed; the line reads "Your Macs. One model."
 - Published. No `day24` tag yet; that waits for live review. See
   [Day 24](docs/DAY24.md) and [release notes](docs/release-notes/day24.md).
   A `caravan update` from the Day 23 pin picks this up and reloads a
-  loaded model (model-running code in `agent/` changed).
+  loaded model (model-running code in `agent/` changed). A follow-up
+  from the first Day 24 pin (chat average wording) does not reload the
+  model.
 
 ## MIT License (2026-11-12)
 

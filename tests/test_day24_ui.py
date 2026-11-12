@@ -177,7 +177,25 @@ class TopologyCollapse(unittest.TestCase):
 
 class SpeedAverages(unittest.TestCase):
     def test_format_and_separate_slots(self):
-        self.assertEqual(S.format_line(42, 1.2), "Average 42 words/s, first word in 1.2 s")
+        self.assertEqual(
+            S.format_line(
+                20.7, 0.34,
+                prompt_tokens=165, read_tok_s=200,
+                completion_tokens=10, total_s=0.78,
+            ),
+            "Average · Read 165 tok at 200 tok/s · Write 10 tok at 20.7 tok/s · first token 0.34s · total 0.78s",
+        )
+        # Rounding matches the page's fmt()/toFixed: read 0 decimals, write 1, times 2.
+        self.assertEqual(S.format_reply_stats(20.7, 0.34, prompt_tokens=165, read_tok_s=200, completion_tokens=10, total_s=0.78),
+                         "Read 165 tok at 200 tok/s · Write 10 tok at 20.7 tok/s · first token 0.34s · total 0.78s")
+        self.assertEqual(S.format_line(42, 1.2), "Average · Write 42.0 tok/s · first token 1.20s")
+        self.assertEqual(S.format_line(42, None), "Average · Write 42.0 tok/s")
+        self.assertEqual(S.format_line(None, 0.34), "Average · first token 0.34s")
+        self.assertEqual(S.format_line(None, None), "")
+        self.assertEqual(
+            S.format_line(None, None, prompt_tokens=165, read_tok_s=None),
+            "Average · Read 165 tok",
+        )
         opts_on = {k: "auto" for k in S.OPT_IDS}
         opts_on["guess_ahead"] = "on"
         opts_off = dict(opts_on)
@@ -189,7 +207,7 @@ class SpeedAverages(unittest.TestCase):
             self.assertEqual(first["count"], 1)
             second = S.record("model-a", opts_on, write_tok_s=44, ttft_s=1.0, path=path)
             self.assertEqual(second["write_tok_s"], 42.0)
-            self.assertEqual(second["line"], "Average 42 words/s, first word in 1.1 s")
+            self.assertEqual(second["line"], "Average · Write 42.0 tok/s · first token 1.10s")
             other_opts = S.get("model-a", opts_off, path=path)
             self.assertEqual(other_opts["count"], 0)
             other_model = S.get("model-b", opts_on, path=path)
@@ -199,6 +217,34 @@ class SpeedAverages(unittest.TestCase):
             self.assertEqual(same["count"], 2)
             empty = S.record("", opts_on, write_tok_s=1, path=path)
             self.assertEqual(empty["count"], 0)
+            # Full reply stats are averaged per field; a missing field is left out.
+            full = S.record(
+                "model-c", opts_on,
+                prompt_tokens=160, read_tok_s=190,
+                completion_tokens=8, write_tok_s=20.0,
+                ttft_s=0.30, total_s=0.70, path=path,
+            )
+            full = S.record(
+                "model-c", opts_on,
+                prompt_tokens=170, read_tok_s=210,
+                completion_tokens=12, write_tok_s=21.4,
+                ttft_s=0.38, total_s=0.86, path=path,
+            )
+            self.assertEqual(full["prompt_tokens"], 165)
+            self.assertEqual(full["completion_tokens"], 10)
+            self.assertEqual(full["read_tok_s"], 200.0)
+            self.assertEqual(full["write_tok_s"], 20.7)
+            self.assertAlmostEqual(full["ttft_s"], 0.34, places=4)
+            self.assertAlmostEqual(full["total_s"], 0.78, places=4)
+            self.assertEqual(
+                full["line"],
+                "Average · Read 165 tok at 200 tok/s · Write 10 tok at 20.7 tok/s · first token 0.34s · total 0.78s",
+            )
+            # An older store entry with only write and first-token still formats cleanly.
+            self.assertEqual(
+                S.get("model-a", opts_on, path=path)["line"],
+                "Average · Write 42.0 tok/s · first token 1.10s",
+            )
 
     def test_fingerprint_is_stable(self):
         a = S.fingerprint({"kv_bits": "8", "guess_ahead": "ON", "self_tune": "auto"})
@@ -209,10 +255,17 @@ class SpeedAverages(unittest.TestCase):
     def test_page_and_api_are_wired(self):
         self.assertIn("function recordAvgSpeed", HTML)
         self.assertIn("function refreshAvgSpeed", HTML)
+        self.assertIn("function formatReplyStats", HTML)
+        self.assertIn("prompt_tokens: stats.prompt_tokens", HTML)
+        self.assertIn("completion_tokens: stats.completion_tokens", HTML)
+        self.assertIn("read_tok_s: readTs", HTML)
+        self.assertIn("total_s: stats.total_s", HTML)
         self.assertIn("/api/speed-average", HTML)
         self.assertIn("/api/speed-average", SERVER)
         self.assertIn("import web_speed", SERVER)
         self.assertIn("def _api_speed_average", SERVER)
+        self.assertIn("prompt_tokens=body.get(\"prompt_tokens\")", SERVER)
+        self.assertIn("total_s=body.get(\"total_s\")", SERVER)
 
 
 class DocsMentionDay24(unittest.TestCase):
@@ -244,15 +297,25 @@ class DocsMentionDay24(unittest.TestCase):
         self.assertIn("job id", day)
         self.assertIn("Before:", day)
         self.assertIn("Before:", web)
-        self.assertIn("Average 42 words/s", web)
-        self.assertIn("Average 42 words/s", day)
+        def flat(s):
+            return " ".join(s.split())
+        self.assertIn("Average · Read 165 tok at 200 tok/s", flat(web))
+        self.assertIn("Average · Read 165 tok at 200 tok/s", flat(day))
+        self.assertIn("first token 0.34s", flat(web))
+        self.assertIn("first token 0.34s", flat(day))
+        self.assertIn("total 0.78s", flat(web))
+        self.assertIn("total 0.78s", flat(day))
         self.assertNotIn("Usually 42 words/s", web)
         self.assertNotIn("Usually 42 words/s", day)
-        self.assertNotRegex(web, r"(?i)tok/s")
+        self.assertNotIn("Average 42 words/s", web)
+        self.assertNotIn("Average 42 words/s", day)
         self.assertIn("Before:", day)
         web_docs = (ROOT / "docs/WEB.md").read_text()
         self.assertIn("Before:", web_docs)
-        self.assertNotIn("tok/s", (ROOT / "docs/WEB.md").read_text().split("Before")[1][:400] if "Before" in web_docs else "tok/s")
+        # Settings before/after stays in words/s; tok/s is only on the chat average.
+        after_before = web_docs.split("Before", 1)[1][:500] if "Before" in web_docs else "tok/s"
+        self.assertNotIn("tok/s", after_before)
+        self.assertIn("31 words/s", flat(after_before))
 
 
 
