@@ -115,7 +115,7 @@ class PickerFilters(unittest.TestCase):
         self.assertEqual(P.FILTER_DEFAULT, ("chat", "coding", "thinking", "tools", "vision"))
         self.assertEqual(P.FILTER_ADVANCED, (
             "embedding", "any-to-any", "text-to-image",
-            "text-to-video", "text-to-speech", "decision",
+            "text-to-video", "text-to-speech", "speech-to-text", "decision",
         ))
         self.assertIn('CATEGORY_DEFAULT = ["chat","coding","thinking","tools","vision"]', HTML)
         self.assertIn('thinking: "Thinking"', HTML)
@@ -141,6 +141,7 @@ class PickerFilters(unittest.TestCase):
         self.assertIn("text-to-image", P._filters_for("text-to-image", [], "flux"))
         self.assertIn("text-to-video", P._filters_for("text-to-video", [], "x"))
         self.assertIn("text-to-speech", P._filters_for("text-to-speech", [], "kokoro-tts"))
+        self.assertIn("speech-to-text", P._filters_for("automatic-speech-recognition", [], "whisper-tiny"))
         self.assertIn("decision", P._filters_for("", ["decision"], "nimble"))
         self.assertIn("vision", P._filters_for("image-text-to-text", [], "llama-vl-instruct"))
         self.assertIn("chat", P._filters_for("text-generation", []))

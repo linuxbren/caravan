@@ -2904,13 +2904,13 @@
   // ---- Model picker (ROADMAP) -----------------------------------------
   (function () {
     const CATEGORY_DEFAULT = ["chat","coding","thinking","tools","vision"];
-    const CATEGORY_ADVANCED = ["embedding","any-to-any","text-to-image","text-to-video","text-to-speech","decision"];
+    const CATEGORY_ADVANCED = ["embedding","any-to-any","text-to-image","text-to-video","text-to-speech","speech-to-text","decision"];
     const CATEGORY = CATEGORY_DEFAULT.concat(CATEGORY_ADVANCED);
     const CHIP_LABELS = {
       chat: "Chat", coding: "Coding", thinking: "Thinking", tools: "Tools",
       vision: "Vision", embedding: "Embedding", "any-to-any": "Any-to-any",
       "text-to-image": "Text-to-image", "text-to-video": "Text-to-video",
-      "text-to-speech": "Text-to-speech", decision: "Decision", new: "New",
+      "text-to-speech": "Text-to-speech", "speech-to-text": "Speech-to-text", decision: "Decision", new: "New",
     };
     const state = {
       source: "all", q: "", category: "chat", newer: false,
@@ -3237,6 +3237,14 @@
         }
         row.appendChild(head);
         if (fit.reason) row.appendChild(reasonEl);
+        const only = g.download_only_note || (quants[0] && quants[0].download_only_note);
+        if (only) {
+          const n = document.createElement("div");
+          n.className = "p-meta";
+          n.style.cssText = "padding:0 10px 6px 26px; font-size:.65rem; opacity:.85";
+          n.textContent = only;
+          row.appendChild(n);
+        }
         row.appendChild(quantsEl);
         box.appendChild(row);
       }
@@ -3264,9 +3272,9 @@
         $("pickerStatus").textContent = "Preparing your model download…";
         try {
           const data = await api("/api/picker/download", { method: "POST",
-            body: JSON.stringify({ repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0 }) });
+            body: JSON.stringify({ repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0, filters: q.filters, pipeline_tag: q.pipeline_tag }) });
           upsertJob(data.job); showJobs(); pollJob(data.job.id, q);
-        } catch (e) { $("pickerStatus").textContent = "Download failed: " + (e.error || e.message || e); }
+        } catch (e) { $("pickerStatus").textContent = "Download failed: " + plainDownloadError(e.error || e.message || e); }
         return;
       }
       if (q.needs_conversion) {
@@ -3292,7 +3300,7 @@
       }
       $("pickerStatus").textContent = `Downloading ${q.repo_id}…`;
       try {
-        const body = { repo_id: q.repo_id, source: q.source, packer_layers: 24, weights_gb: q.weights_gb || 0 };
+        const body = { repo_id: q.repo_id, source: q.source, packer_layers: 24, weights_gb: q.weights_gb || 0, filters: q.filters, pipeline_tag: q.pipeline_tag };
         if (placeId) body.placement_id = placeId;
         const data = await api("/api/picker/download", {
           method: "POST",
@@ -3303,7 +3311,7 @@
         try { $("pickerJob").scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {}
         pollJob(data.job.id, q);
       } catch (e) {
-        $("pickerStatus").textContent = "Download failed: " + (e.error || e.message || e);
+        $("pickerStatus").textContent = "Download failed: " + plainDownloadError(e.error || e.message || e);
       }
     }
 
@@ -3418,6 +3426,16 @@
       const suf = (n % 100 >= 10 && n % 100 <= 20) ? "th" : ({1:"st",2:"nd",3:"rd"}[n % 10] || "th");
       return n + suf;
     }
+    function plainDownloadError(s) {
+      const t = String(s || "");
+      if (!t) return "Download stopped. Press Resume to try again.";
+      if (/traceback|FileNotFoundError|EntryNotFoundError|Errno\s|OSError|\^\^\^|File "?[/\\]|paired_[0-9a-f]{8}|\/Users\/|\/home\/|\.caravan\//i.test(t))
+        return "Download stopped. Press Resume to try again.";
+      if (/no space|ENOSPC|out of disk/i.test(t))
+        return "Download stopped. This Mac is out of disk space.";
+      if (t.length <= 90 && !/\n/.test(t)) return t;
+      return "Download stopped. Press Resume to try again.";
+    }
     function friendlyMacName(runner, prog) {
       const r = runner || {};
       const p = prog || {};
@@ -3504,14 +3522,17 @@
       if (j.note) head += `<span class="p-meta">· ${escapeHtml(j.note)}</span>`;
       head += `</div>`;
       if (runners.length > 1 && tTot) head += `<div class="j-sub">All Macs: ${fmtBytes(tHave)} / ${fmtBytes(tTot)}${tSpeed ? " · " + (tSpeed/1e6).toFixed(1) + " MB/s" : ""}</div>`;
-      if (st === "failed" && j.error) head += `<div class="j-sub" style="color:var(--rose)">${escapeHtml(j.error)}</div>`;
+      if (st === "failed" && j.error) head += `<div class="j-sub" style="color:var(--rose)">${escapeHtml(plainDownloadError(j.error))}</div>`;
       let actions = `<div class="j-actions">`;
       if (st === "running") actions += `<button type="button" class="ghost" data-act="cancel">Stop</button>`;
       else {
         if (st === "stopped" || st === "failed") actions += `<button type="button" class="primary" data-act="resume" title="Restart the same files and placement; finished files and partials on disk are reused">Resume</button>`;
         actions += `<button type="button" class="ghost" data-act="dismiss">Dismiss</button>`;
       }
-      if (st === "done" && state.jobLoadable[j.id]) actions += `<button type="button" class="primary" data-act="load">Load ${escapeHtml((j.repo_id || "").split("/").pop())}</button>`;
+      if (st === "done" && state.jobLoadable[j.id] && !j.download_only && j.can_load !== false) actions += `<button type="button" class="primary" data-act="load">Load ${escapeHtml((j.repo_id || "").split("/").pop())}</button>`;
+      if (st === "done" && (j.download_only || j.can_load === false) && j.download_only_note) {
+        actions += `<div class="j-sub">${escapeHtml(j.download_only_note)}</div>`;
+      }
       actions += `</div>`;
       card.innerHTML = head + rowsHtml + actions;
       const c = card.querySelector("[data-act=cancel]");
@@ -3566,6 +3587,17 @@
             upsertJob(j); showJobs();
             if (j.status === "done") {
               window.dispatchEvent(new CustomEvent("caravan-models-changed"));
+              const onlyNote = j.download_only_note || j.download_only || (q && (q.download_only_note || q.download_only));
+              if (onlyNote) {
+                state.jobLoadable[id] = false; showJobs();
+                const msg = (typeof onlyNote === "string" && onlyNote.length > 3)
+                  ? onlyNote
+                  : "Downloaded. Caravan can't run this kind of model yet.";
+                if (!anyActiveJobs(id)) $("pickerStatus").textContent = msg;
+                refreshDisk();
+                window.dispatchEvent(new CustomEvent("caravan-models-changed"));
+                return;
+              }
               let busy = false;
               try { const s = await api("/api/status"); busy = !!(s.worker && s.worker.status === "ready"); } catch (_) {}
               if (busy) {
@@ -3596,7 +3628,7 @@
             }
             if (j.status === "error" || j.status === "cancelled") {
               if (!anyActiveJobs(id)) {
-                $("pickerStatus").textContent = j.status === "error" ? ("Download failed: " + (j.error || "")) : "Download stopped.";
+                $("pickerStatus").textContent = j.status === "error" ? ("Download failed: " + plainDownloadError(j.error || "")) : "Download stopped.";
               }
               return;
             }

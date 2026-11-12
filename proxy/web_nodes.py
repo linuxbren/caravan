@@ -299,6 +299,50 @@ def _ordinal(n: int) -> str:
     return f"{n}{suf}"
 
 
+
+_PLAIN_DOWNLOAD_FAIL = "Download stopped. Press Resume to try again."
+_INTERNAL_ERROR = re.compile(
+    r"Traceback|FileNotFoundError|EntryNotFoundError|Errno\s|OSError|\\^\^+|"
+    r"File \"[/\\]|paired_[0-9a-f]{8}|line \d+, in ",
+    re.I,
+)
+
+
+def looks_like_internal_error(text: str) -> bool:
+    s = str(text or "")
+    if not s:
+        return False
+    if _INTERNAL_ERROR.search(s):
+        return True
+    # A raw path or a Python exception type leaking onto the card.
+    if "/Users/" in s or "/home/" in s or ".caravan/" in s:
+        return True
+    if "Error:" in s or "Exception:" in s:
+        return True
+    return False
+
+
+def plain_download_error(exc, *, log=True) -> str:
+    """Short plain line for a download card. Full detail belongs in the log."""
+    import logging
+    if log:
+        logging.getLogger("caravan.download").error("Download failed: %s", exc, exc_info=isinstance(exc, BaseException))
+    if exc is None:
+        return _PLAIN_DOWNLOAD_FAIL
+    text = str(exc)
+    low = text.lower()
+    if "cancelled" in low and "resume" not in low:
+        return "stopped by user"
+    if "no space" in low or "enospc" in low or "out of disk" in low or "no space left" in low:
+        return "Download stopped. This Mac is out of disk space."
+    if looks_like_internal_error(text) or not text.strip():
+        return _PLAIN_DOWNLOAD_FAIL
+    # Already a short plain sentence without internals: keep it if it's brief.
+    if len(text) <= 90 and "\n" not in text and not looks_like_hostname(text):
+        return text.strip()
+    return _PLAIN_DOWNLOAD_FAIL
+
+
 def friendly_mac_label(node=None, *, label=None, role=None, node_id=None,
                        index=None, node_count=None, inventory=None) -> str:
     """Same friendly Mac name for MLX and GGUF job cards. Never a hostname.
@@ -374,6 +418,56 @@ def friendly_job(job, inventory=None, node_count=None):
             snap["label"] = friendly_mac_label(
                 label=snap.get("label"), role=snap.get("role"),
                 node_id=k, node_count=n, inventory=inv)
+        # Progress messages must stay short and plain.
+        if looks_like_internal_error(snap.get("msg") or ""):
+            snap["msg"] = _PLAIN_DOWNLOAD_FAIL
+        if looks_like_internal_error(snap.get("stage") or ""):
+            snap["stage"] = "working"
+        if isinstance(snap.get("retry"), dict) and looks_like_internal_error(snap["retry"].get("error") or ""):
+            snap["retry"] = dict(snap["retry"], error="network error")
         progress[k] = snap
     j["progress"] = progress
+    if j.get("error"):
+        j["error"] = plain_download_error(j["error"], log=False)
+    if j.get("note"):
+        j["note"] = friendly_job_note(j["note"], runners, inventory=inv, node_count=n)
     return j
+
+
+def friendly_job_note(note, runners=None, *, inventory=None, node_count=None) -> str:
+    """Replace hostnames and paired-ids in a job note with friendly Mac names."""
+    s = str(note or "")
+    if not s:
+        return s
+    runners = list(runners or [])
+    inv = list(inventory or [])
+    n = node_count if node_count is not None else (len(inv) or len(runners) or 1)
+    # Longer raw tokens first so a prefix does not shadow a full hostname.
+    replacements = []
+    for i, r in enumerate(runners):
+        friendly = r.get("label") or friendly_mac_label(r, index=i, node_count=n, inventory=inv)
+        for raw in (r.get("id"),):
+            if raw and str(raw) in s and (looks_like_hostname(str(raw)) or str(raw).startswith("paired_")):
+                replacements.append((str(raw), friendly))
+        # Original inventory hostname, if different from the already-friendly label.
+        raw_label = (r.get("host") or "")
+        if raw_label and looks_like_hostname(str(raw_label)):
+            replacements.append((str(raw_label), friendly))
+    for node in inv:
+        raw = node.get("label") or node.get("host") or node.get("id") or ""
+        if raw and looks_like_hostname(str(raw)):
+            friendly = friendly_mac_label(node, inventory=inv, node_count=n)
+            replacements.append((str(raw), friendly))
+    replacements.sort(key=lambda kv: -len(kv[0]))
+    for raw, friendly in replacements:
+        s = s.replace(raw, friendly)
+    # Any leftover hostname-looking token (e.g. a placement label).
+    def _repl(m):
+        tok = m.group(0)
+        if looks_like_hostname(tok) or tok.startswith("paired_"):
+            return friendly_mac_label(label=tok, inventory=inv, node_count=n)
+        return tok
+    s = re.sub(r"[A-Za-z0-9_.-]+", _repl, s)
+    s = re.sub(r"\s+·\s+$", "", s)
+    s = re.sub(r"\s{2,}", " ", s).strip()
+    return s

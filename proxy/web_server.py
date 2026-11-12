@@ -1732,7 +1732,7 @@ def make_handler(app: App):
                         cmd += ["--gguf-file", gguf_file]
                     elif pk and role != "all":
                         cmd += ["--packer-layers", str(int(pk))]
-                    prog(1, f"starting {node.get('label') or node.get('id')} fetch ({role})")
+                    prog(1, f"starting fetch ({role})")
                     proc = subprocess.Popen(
                         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                     )
@@ -1760,8 +1760,12 @@ def make_handler(app: App):
                                 pass
                     rc = proc.wait()
                     if rc != 0:
-                        blob = "".join(out_lines)[-500:]
-                        raise RuntimeError(blob or f"{role} download failed")
+                        blob = "".join(out_lines)[-4000:]
+                        import logging
+                        logging.getLogger("caravan.download").error(
+                            "Local download failed (%s): %s", role, blob)
+                        from web_nodes import plain_download_error
+                        raise RuntimeError(plain_download_error(blob or f"{role} download failed", log=False))
                     prog(100, "done")
                 return run_local
 
@@ -1785,7 +1789,7 @@ def make_handler(app: App):
                         "; echo $? > %s.exit ) > /tmp/caravan-fetch-%s.log 2>&1 & echo $! > %s; echo FETCH_STARTED"
                         % (pid_file, node.get("id") or "node", pid_file)
                     )
-                    prog(1, f"starting {node.get('label') or node.get('id')} fetch ({role})")
+                    prog(1, f"starting fetch ({role})")
                     r = app._ssh_fn()(node, script, timeout=60)
                     if r.returncode != 0 or "FETCH_STARTED" not in (r.stdout or ""):
                         raise RuntimeError((r.stderr or r.stdout or "remote start failed")[-400:])
@@ -1816,7 +1820,17 @@ def make_handler(app: App):
                             result = app._ssh_fn()(node, "cat %s.exit 2>/dev/null; tail -3 %s" % (pid_file, log_f), timeout=30)
                             lines = (result.stdout or "").strip().splitlines()
                             if not lines or lines[0] != "0":
-                                raise RuntimeError("Download did not finish. Press Resume to retry. " + " ".join(lines[1:])[-200:])
+                                import logging
+                                logging.getLogger("caravan.download").error(
+                                    "Remote download failed on %s: %s",
+                                    node.get("id") or node.get("label"),
+                                    "\n".join(lines),
+                                )
+                                from web_nodes import plain_download_error
+                                raise RuntimeError(plain_download_error(
+                                    " ".join(lines[1:]) if len(lines) > 1 else "download failed",
+                                    log=False,
+                                ))
                             break
                         _t.sleep(1.5)
                     prog(100, "done")
@@ -1898,6 +1912,22 @@ def make_handler(app: App):
             )
             req = {k: v for k, v in body.items() if k != "resume_of"}
             extra = {"request": req}
+            notice = web_picker.serve_notice(
+                body.get("filters"),
+                body.get("pipeline_tag") or "",
+                repo_id=repo,
+            )
+            if not notice:
+                notice = web_picker.serve_notice(repo_id=repo)
+            if notice:
+                extra["download_only"] = True
+                extra["download_only_note"] = notice
+                extra["can_load"] = False
+                place = dict(place or {}, download_only_note=notice,
+                             filters=body.get("filters") or [],
+                             pipeline_tag=body.get("pipeline_tag") or "",
+                             repo_id=repo)
+                extra["placement"] = place
             if gguf_file:
                 extra["load_id"] = "gguf/" + Path(gguf_file).stem
             if body.get("resume_of"):
@@ -1952,6 +1982,17 @@ def make_handler(app: App):
             mid = body.get("model_id") or body.get("id")
             if not mid:
                 return self._json(400, {"error": "model_id required"})
+            notice = web_picker.serve_notice(
+                body.get("filters"), body.get("pipeline_tag") or "", repo_id=mid)
+            if not notice:
+                # Folder already on disk (image trees with model_index.json).
+                for root in (getattr(web_picker, "MLX_MODEL_ROOTS", None) or []):
+                    folder = Path(root) / str(mid).replace("/", "--")
+                    notice = web_picker.serve_notice_for_folder(folder)
+                    if notice:
+                        break
+            if notice:
+                return self._json(400, {"error": web_picker.load_refusal(notice)})
             # Prefer N-node disk inventory (helper-only placements, for example) over the
             # local-only catalog.get_model fallback.
             entry = None

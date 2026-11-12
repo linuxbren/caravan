@@ -9,13 +9,17 @@ straight from Hugging Face -- nothing is relayed through the lead.
 Internally the lead is "head" and Packer 1 is "front", as in mlx_split.py.
 --role all downloads every shard — used for single-Mini / copy-to-all placement.)
 
-How: read config.json + model.safetensors.index.json (small files, fetched
-first), map every weight name to a role, and pass the needed shard files to
-huggingface_hub.snapshot_download(allow_patterns=...) together with the
-config/tokenizer files. After a real download it writes
-caravan-split-sizes.json (the shard sizes Hugging Face lists) next to the
-files; the worker checks each shard's size against it, and against the
-shard's own safetensors header, before it starts.
+How: first fetch config.json + model.safetensors.index.json (the LLM
+layout). If both are present, map every weight name to a role and pass
+the needed shard files to huggingface_hub.snapshot_download together
+with the config and tokenizer files. If those index files are not at
+the top of the tree (text-to-image and similar repos, which may use
+model_index.json and subfolders), download the whole repository
+instead. Resume reuses files already on disk. After a real download it
+writes caravan-split-sizes.json (the shard sizes Hugging Face lists)
+next to the files; the worker checks each shard's size against it, and
+against the shard's own safetensors header, before it starts. A folder
+with no LLM index is not started as a chat worker.
 
 Progress: writes JSON lines to /tmp/caravan-progress-<folder>.jsonl (hook for
 the web UI). With hf_xet, `.incomplete` often stays 0 while nettop still shows
@@ -246,6 +250,92 @@ def _emit_progress_loop(stop_evt, repo, dest, total_bytes, pid):
             pass
 
 
+def _is_llm_layout(d) -> bool:
+    """True when this folder has the top-level LLM files used to plan a split."""
+    d = Path(d)
+    return (d / "config.json").is_file() and (d / "model.safetensors.index.json").is_file()
+
+
+def _payload_files(d):
+    """Model files on disk, skipping Hugging Face cache and git metadata."""
+    out = []
+    d = Path(d)
+    if not d.is_dir():
+        return out
+    for p in d.rglob("*"):
+        if not p.is_file():
+            continue
+        parts = p.parts
+        if ".cache" in parts or ".git" in parts:
+            continue
+        if p.name in (".gitattributes", ".gitignore"):
+            continue
+        out.append(p)
+    return out
+
+
+def _fetch_whole_repo(a, d, token, shown="all"):
+    """Download every file in a repo that is not an LLM shard layout.
+
+    Used for text-to-image and similar trees (model_index.json, nested
+    configs and weights). A 1-Mac placement uses --role all; a split is
+    not planned, so every selected Mac gets the complete tree. Resume
+    reuses files already on disk.
+    """
+    d = Path(d)
+    d.mkdir(parents=True, exist_ok=True)
+    try:
+        sizes = file_sizes(a.repo, token=token)
+    except Exception:
+        sizes = {}
+    names = [f for f in sizes if not str(f).startswith(".") and "/." not in str(f)]
+    total = int(sum(int(sizes.get(f) or 0) for f in names)) if names else 0
+    report = {
+        "repo": a.repo,
+        "role": shown,
+        "whole_repo": True,
+        "split": None,
+        "tied": False,
+        "files": names,
+        "shared": [],
+        "my_gb": round(total / 1e9, 2) if total else 0,
+        "full_gb": round(total / 1e9, 2) if total else 0,
+        "other_gb": 0,
+    }
+    print(json.dumps({k: report[k] for k in (
+        "repo", "role", "whole_repo", "split", "tied", "shared",
+        "my_gb", "full_gb", "other_gb",
+    )} | {"files": [f for f in names if f.endswith((".safetensors", ".json", ".gguf", ".npz", ".bin"))][:80]}), flush=True)
+
+    stop_evt = threading.Event()
+    emitter = None
+    if not a.dry_run and not a.no_progress:
+        emitter = threading.Thread(
+            target=_emit_progress_loop,
+            args=(stop_evt, a.repo, d, total or 1, os.getpid()),
+            daemon=True, name="caravan-fetch-progress",
+        )
+        emitter.start()
+    try:
+        if not a.dry_run:
+            from huggingface_hub import snapshot_download
+            # Whole tree, including subfolders such as transformer/ and vae/.
+            # snapshot_download reuses files already on disk, so Resume is safe.
+            snapshot_download(a.repo, local_dir=str(d), token=token)
+            if not _payload_files(d):
+                raise FileNotFoundError(
+                    f"no model files landed in {d} for {a.repo}"
+                )
+            if sizes:
+                write_sizes(d, a.repo, {f: sizes[f] for f in names if f in sizes})
+            print("FETCHED", shown, report["my_gb"], "GB of", report["full_gb"], flush=True)
+    finally:
+        stop_evt.set()
+        if emitter is not None:
+            emitter.join(timeout=2)
+    return report
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("repo"); ap.add_argument("local_dir")
@@ -272,11 +362,19 @@ def main(argv=None):
     d.mkdir(parents=True, exist_ok=True)
     if a.gguf_file:
         return _fetch_gguf(a, d, token)
-    snapshot_download(
-        a.repo, local_dir=str(d),
-        allow_patterns=["config.json", "model.safetensors.index.json"],
-        token=token,
-    )
+    # LLM splits need a top-level config.json and shard index. Diffusion and
+    # other image/audio repos often use subfolders (transformer/, vae/, …)
+    # and model_index.json instead — fetch those as a whole tree.
+    try:
+        snapshot_download(
+            a.repo, local_dir=str(d),
+            allow_patterns=["config.json", "model.safetensors.index.json"],
+            token=token,
+        )
+    except Exception:
+        pass
+    if not _is_llm_layout(d):
+        return _fetch_whole_repo(a, d, token, shown)
     cfg = json.loads((d / "config.json").read_text())
     idx = json.loads((d / "model.safetensors.index.json").read_text())
     if a.split_counts:

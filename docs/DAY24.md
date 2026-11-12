@@ -152,7 +152,10 @@ Mac names, speed-average math and separate slots per model and
 optimization set, before and after auto-tune specs, the Helper download
 button staying still across repeated identical polls, the start-message
 wording (a related Day 23 fix, committed on its own), Balance status
-wording, and the Models fit-summary line. The full suite is run on the
+wording, and the Models fit-summary line. Later tests cover whole-repo fetch for
+models without a top-level `config.json`, download-only notices for
+Advanced types Caravan cannot serve, and plain download errors with
+friendly Mac names. The full suite is run on the
 development node checkout. Counts are recorded at commit time.
 
 ## Publication
@@ -170,3 +173,37 @@ That follow-up is only page, proxy, and docs — not `agent/`, `runtime/`,
 or the requirements files — so a `caravan update` from the first Day 24
 pin keeps a loaded model running. The web page still restarts. See
 [release notes](release-notes/day24.md).
+
+### Live review: image downloads, honesty, and plain errors
+
+A download of a repo without a top-level `config.json` (image, video,
+text-to-speech, speech-to-text/ASR, or any other non-LLM layout, with
+files in subfolders such as `transformer/`, `voices/`, or `whisper/`,
+and maybe a `model_index.json`) used to fail after the fetch looked
+only for an LLM layout. The fetch now downloads the whole tree whenever
+those LLM index files are not at the top level — the layout does not
+have to be a diffusion repo — and Resume continues from the files
+already on disk. There is no need to delete a partial folder.
+
+The picker is honest about what Caravan's chat can run. Advanced types
+(embedding, any-to-any, text-to-image, text-to-video, text-to-speech,
+speech-to-text, and Decision) stay available for download, with a quiet
+line on the row and in the hover: "Download only, Caravan can't run
+image models yet", "Download only, Caravan can't run video models yet",
+or "Download only, Caravan can't run speech models yet" (the same
+speech line covers text-to-speech and speech-to-text, including ASR).
+After download, the card does not offer Load. A Load request returns a
+short line such as "Caravan can't run image models yet."
+
+Download cards use friendly Mac names (1st Mac / 2nd Mac / My Mac) and a
+short plain error, for example "Download stopped. Press Resume to try
+again." They never show a machine hostname, an internal paired id, or a
+Python traceback. The full detail goes to the log on that Mac.
+
+This follow-up changes `agent/mlx_split_fetch.py`, so a `caravan update`
+from the previous Day 24 pin reloads a loaded model; the same model is
+restored. The portable suite on a fresh clone on the development node:
+**1,296 tests passed** in 54.024 s. The 1st node and 2nd node were not
+touched for this publication. No `day24` tag yet — that still waits for
+Brenden's live review. Source and pin SHAs are recorded at publication
+time.

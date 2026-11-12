@@ -29,6 +29,8 @@ agent app and a model that is not meant for ordinary chat:
   output (for example text and images together).
 - **Text-to-image**, **Text-to-video**, and **Text-to-speech** — models that
   make a picture, a video, or spoken audio from text.
+- **Speech-to-text** — models that turn spoken audio into text
+  (automatic speech recognition, including Whisper-style repos).
 - **Decision** — models that classify text, answer yes or no with a
   probability, or score text against a rubric (the kind Ollama labels
   "decision").
@@ -37,6 +39,18 @@ Caravan is a chat app, so the default chips are the ones most people need.
 The Advanced types are there for agent apps that talk to a model through
 Caravan. A source tab (All, HF / MLX, GGUF, Cloud) is separate from these
 type filters.
+
+Caravan's own chat can run Chat, Coding, Thinking, Tools, and Vision
+models. It cannot yet run the Advanced types (embedding, any-to-any,
+text-to-image, text-to-video, text-to-speech, speech-to-text, and
+Decision). Those rows still let you download the files — Caravan can
+sit as a middle layer — and a quiet line on the row and in the hover
+says so, for example "Download only, Caravan can't run image models
+yet", "Download only, Caravan can't run video models yet", or
+"Download only, Caravan can't run speech models yet" (the same speech
+line covers text-to-speech and speech-to-text). After a download
+finishes, the card does not offer Load. If Load is requested anyway, the
+page shows a short line such as "Caravan can't run image models yet."
 
 The **fits-on** chips limit the list to models that can run on that many of
 your Macs. The summary above the list follows the chip you selected — for
@@ -86,11 +100,14 @@ stacked when more than one is running, with its own bar, size, speed and
 waiting time, and its own Stop, Resume, and Load-when-ready controls. A card
 stays with its download and does not switch to another one. Both MLX and
 GGUF cards use the same friendly Mac name from your Topology (for example
-"My Mac" or "1st Mac"), never a machine hostname. Large downloads can pause
-while the publisher's transfer tool works; the UI distinguishes observed
-bytes from an unknown total. Resume/retry behavior depends on the file/source
-path. Check visible errors rather than assuming a stalled-looking download
-has finished. Watch disk requirements and missing files on each Mac.
+"My Mac", "1st Mac", or "2nd Mac"), never a machine hostname or an internal
+id. If a download stops, the card shows a short plain line such as
+"Download stopped. Press Resume to try again." The full technical detail
+goes to the log on that Mac, not onto the card. Resume continues files
+already on disk; you do not need to delete a partial folder first. Large
+downloads can pause while the publisher's transfer tool works; the UI
+distinguishes observed bytes from an unknown total. Watch disk
+requirements and missing files on each Mac.
 
 ## Load, change a split, or remove files
 

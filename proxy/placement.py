@@ -11,6 +11,19 @@ from typing import Optional
 PLACEMENT_FILE = "caravan-placement.json"
 
 
+
+def _friendly_label(n, i, nodes) -> str:
+    """Display name for a placement option. Never a machine hostname."""
+    try:
+        import web_nodes
+        return web_nodes.friendly_mac_label(
+            n, index=i, node_count=len(nodes or []), inventory=nodes,
+            role=n.get("role"), node_id=n.get("id"),
+        )
+    except Exception:
+        return n.get("label") or n.get("id") or f"n{i}"
+
+
 def _caps(nodes: list) -> list:
     out = []
     for i, n in enumerate(nodes or []):
@@ -27,7 +40,7 @@ def _caps(nodes: list) -> list:
         out.append({
             "node": n,
             "id": n.get("id") or n.get("label") or f"n{i}",
-            "label": n.get("label") or n.get("id") or f"n{i}",
+            "label": _friendly_label(n, i, nodes),
             "role": n.get("role") or ("lead" if i == 0 else "packer"),
             "cap": cap,
             "disk": disk,

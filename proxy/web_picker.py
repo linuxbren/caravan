@@ -82,8 +82,12 @@ _FILTER_TAGS = {
     },
     "any-to-any": {"any-to-any", "any_to_any"},
     "text-to-image": {"text-to-image", "text-to-img"},
-    "text-to-video": {"text-to-video", "text-to-vid"},
+    "text-to-video": {"text-to-video", "text-to-vid", "image-to-video", "text-to-video-synthesis"},
     "text-to-speech": {"text-to-speech", "text-to-audio", "tts"},
+    "speech-to-text": {
+        "speech-to-text", "automatic-speech-recognition", "asr",
+        "speech2text", "audio-to-text",
+    },
     "decision": {"decision", "system-one", "systemone"},
     # Kept for API callers; not shown as a default or Advanced chip.
     "image-to-image": {"image-to-image"},
@@ -94,13 +98,16 @@ _FILTER_TAGS = {
 _FILTER_ALIASES = {
     "reasoning": "thinking",
     "voice": "text-to-speech",
+    "asr": "speech-to-text",
+    "stt": "speech-to-text",
+    "automatic-speech-recognition": "speech-to-text",
 }
 
 # Default chips on the Models page (Advanced hides the rest).
 FILTER_DEFAULT = ("chat", "coding", "thinking", "tools", "vision")
 FILTER_ADVANCED = (
     "embedding", "any-to-any", "text-to-image",
-    "text-to-video", "text-to-speech", "decision",
+    "text-to-video", "text-to-speech", "speech-to-text", "decision",
 )
 
 # Known model-family set for the Models picker. The page only lists
@@ -303,9 +310,18 @@ def row_tooltip(group: dict) -> str:
         else:
             sentence = ", ".join(line2_parts)
             line2 = sentence[0].upper() + sentence[1:] + ("." if not sentence.endswith(".") else "")
+    notice = group.get("download_only_note") or serve_notice(
+        filts, pipes[0] if pipes else group.get("pipeline_tag"),
+        tags, (quants[0].get("repo_id") if quants else "") or group.get("base") or "",
+    )
+    body = ""
     if line1 and line2:
-        return f"{line1}\n{line2}"
-    return line1 or line2
+        body = f"{line1}\n{line2}"
+    else:
+        body = line1 or line2
+    if notice:
+        return (body + "\n" + notice) if body else notice
+    return body
 
 
 # Category chip → real HF queries (plus name keywords).
@@ -368,7 +384,8 @@ _FILTER_SEARCH = {
         "mlx_search": ["text-to-video"],
         "hf_search": [""],
         "pipeline_tag": "text-to-video",
-        "name_keys": ("text-to-video", "txt2vid"),
+        "pipeline_tags": ("text-to-video", "image-to-video"),
+        "name_keys": ("text-to-video", "txt2vid", "cogvideox", "ltx-video", "hunyuan-video"),
     },
     "text-to-speech": {
         "mlx_search": ["tts", "speech"],
@@ -376,6 +393,13 @@ _FILTER_SEARCH = {
         "pipeline_tag": "text-to-speech",
         "pipeline_tags": ("text-to-speech", "text-to-audio"),
         "name_keys": ("tts", "speecht5", "kokoro", "text-to-speech"),
+    },
+    "speech-to-text": {
+        "mlx_search": ["whisper", "asr", "speech-to-text"],
+        "hf_search": ["whisper", "asr"],
+        "pipeline_tag": "automatic-speech-recognition",
+        "pipeline_tags": ("automatic-speech-recognition", "speech-to-text"),
+        "name_keys": ("whisper", "speech-to-text", "speech2text", "-asr-", "asr-"),
     },
     "decision": {
         # Ollama Decision / System One: classify text, yes/no probabilities, rubric scores.
@@ -484,6 +508,94 @@ def _filters_for(pipeline_tag: str, tags, repo_id: str = "") -> list:
         out.append("chat")
     return out
 
+
+
+# Types Caravan can load into the chat worker (MLX LM / GGUF). The Advanced
+# types stay in the picker so Caravan can sit between an agent app and a
+# model, but these cannot be served for chat yet.
+DOWNLOAD_ONLY_NOTES = {
+    "text-to-image": "Download only, Caravan can't run image models yet",
+    "image-to-image": "Download only, Caravan can't run image models yet",
+    "text-to-video": "Download only, Caravan can't run video models yet",
+    "text-to-speech": "Download only, Caravan can't run speech models yet",
+    "speech-to-text": "Download only, Caravan can't run speech models yet",
+    "embedding": "Download only, Caravan can't run embedding models yet",
+    "decision": "Download only, Caravan can't run Decision models yet",
+    "any-to-any": "Download only, Caravan can't run this kind of model yet",
+}
+SERVEABLE_FILTERS = {"chat", "coding", "thinking", "tools", "vision", "cloud"}
+
+
+def serve_notice(filters=None, pipeline_tag: str = "", tags=None, repo_id: str = "") -> str:
+    """Plain line when Caravan cannot load this model for chat, or empty."""
+    filts = list(filters or [])
+    if not filts:
+        filts = _filters_for(pipeline_tag or "", tags, repo_id)
+    if any(f in SERVEABLE_FILTERS for f in filts):
+        return ""
+    for f in filts:
+        if f in DOWNLOAD_ONLY_NOTES:
+            return DOWNLOAD_ONLY_NOTES[f]
+    return ""
+
+
+def serve_notice_for_folder(path) -> str:
+    """Detect a non-chat tree already on disk (for Load)."""
+    d = Path(path).expanduser() if path else None
+    if not d or not d.is_dir():
+        return ""
+    try:
+        from placement import read_placement
+        place = read_placement(d) or {}
+        note = serve_notice(
+            place.get("filters") or place.get("serve_filters"),
+            place.get("pipeline_tag") or "",
+            repo_id=place.get("repo_id") or "",
+        )
+        if note:
+            return note
+        if place.get("download_only_note"):
+            return place["download_only_note"]
+    except Exception:
+        pass
+    # Diffusers-style image or video trees ship model_index.json and usually
+    # have no top-level LLM config (or a non-language one).
+    if (d / "model_index.json").is_file():
+        try:
+            idx_text = (d / "model_index.json").read_text().lower()
+        except OSError:
+            idx_text = ""
+        videoish = "video" in idx_text
+        note = (
+            DOWNLOAD_ONLY_NOTES["text-to-video"] if videoish
+            else DOWNLOAD_ONLY_NOTES["text-to-image"]
+        )
+        cfg = d / "config.json"
+        if not cfg.is_file():
+            return note
+        try:
+            blob = json.loads(cfg.read_text())
+        except (OSError, ValueError):
+            blob = {}
+        if not isinstance(blob, dict) or not (
+            blob.get("model_type") or blob.get("architectures") or blob.get("num_hidden_layers")
+        ):
+            return note
+    # Voice, video, and other non-chat trees often have no top-level
+    # config.json at all. Refuse Load with a plain line.
+    if not (d / "config.json").is_file():
+        return "Download only, Caravan can't run this kind of model yet."
+    return ""
+
+
+def load_refusal(notice: str) -> str:
+    """One-line Load error from a download-only notice."""
+    s = (notice or "").strip()
+    if s.lower().startswith("download only, "):
+        s = s[len("Download only, "):]
+        if s:
+            s = s[0].upper() + s[1:]
+    return s or "Caravan can't run this kind of model yet."
 
 def _estimate_weights_gb(params_b: Optional[float], quant: Optional[str],
                         siblings_bytes: Optional[int] = None) -> float:
@@ -1070,6 +1182,10 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
             for ptag in ("text-to-speech", "text-to-audio"):
                 raw = _search(q or "tts", pipeline_tag=ptag, limit=max(8, limit // 2))
                 _ingest(raw, "hf-mlx", extra_filters=["text-to-speech"])
+        if filt_key == "speech-to-text":
+            for ptag in ("automatic-speech-recognition", "speech-to-text"):
+                raw = _search(q or "whisper", pipeline_tag=ptag, limit=max(8, limit // 2))
+                _ingest(raw, "hf-mlx", extra_filters=["speech-to-text"])
 
     else:
         # Default / free-text search
@@ -1162,6 +1278,19 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
             "family": fam["id"] if fam else None,
             "family_label": fam["label"] if fam else None,
         })
+        grouped[-1]["download_only_note"] = serve_notice(
+            filters, (quants[0].get("pipeline_tag") if quants else "") or "",
+            repo_id=base,
+        )
+        grouped[-1]["download_only"] = bool(grouped[-1]["download_only_note"])
+        for qq in quants:
+            if "download_only_note" not in qq:
+                qq["download_only_note"] = serve_notice(
+                    qq.get("filters") or filters,
+                    qq.get("pipeline_tag") or "",
+                    repo_id=qq.get("repo_id") or base,
+                )
+                qq["download_only"] = bool(qq["download_only_note"])
         grouped[-1]["tooltip"] = row_tooltip(grouped[-1])
     def _src_rank(g):
         s = g.get("source") or ""
@@ -1908,13 +2037,17 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             with _jobs_lock:
                                 cur = dict(_jobs[jid]["progress"].get(rid) or {})
                                 cur["retry"] = {"n": attempt, "of": RETRY_MAX, "wait_s": wait,
-                                                "error": str(e)[-160:]}
+                                                "error": "network error"}
                                 cur["stage"] = f"network error, retry {attempt}/{RETRY_MAX} in {wait}s"
                                 _jobs[jid]["progress"][rid] = cur
                             if stop_evt.wait(0) or _sleep_unless_cancel(jid, wait):
                                 raise
                 except Exception as e:  # noqa: BLE001
-                    errors.append(f"{rid}: {e}")
+                    import logging
+                    logging.getLogger("caravan.download").exception(
+                        "Download failed on %s: %s", rid, e)
+                    from web_nodes import plain_download_error
+                    errors.append(plain_download_error(e, log=False))
                 finally:
                     stop_evt.set()
 
@@ -1944,7 +2077,11 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                 return
             if errors:
                 _mark("failed")
-                _job_set(jid, status="error", error="; ".join(errors))
+                seen = []
+                for e in errors:
+                    if e not in seen:
+                        seen.append(e)
+                _job_set(jid, status="error", error="; ".join(seen))
                 return
             with _jobs_lock:
                 for rid, p in list(_jobs[jid]["progress"].items()):
@@ -1992,7 +2129,10 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
         except Exception as e:  # noqa: BLE001
             for e2 in stops.values():
                 e2.set()
-            _job_set(jid, status="error", error=str(e))
+            import logging
+            logging.getLogger("caravan.download").exception("Download failed: %s", e)
+            from web_nodes import plain_download_error
+            _job_set(jid, status="error", error=plain_download_error(e, log=False))
 
     threading.Thread(target=worker, name=f"picker-dl-{jid}", daemon=True).start()
     return get_job(jid)
@@ -2010,15 +2150,16 @@ def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],
         try:
             hf_hub_download(repo_id, fname, local_dir=str(dest_p), token=_hf_token())
         except Exception:
-            if fname == "config.json":
-                raise
-    cfg = json.loads((dest_p / "config.json").read_text())
+            pass
+    cfg_path = dest_p / "config.json"
     idx_path = dest_p / "model.safetensors.index.json"
-    if not idx_path.is_file():
-        progress(20, "single-file snapshot")
+    if not cfg_path.is_file() or not idx_path.is_file():
+        # Not an LLM shard layout (diffusion trees, single-file repos, …).
+        progress(20, "full snapshot")
         snapshot_download(repo_id, local_dir=str(dest_p), token=_hf_token())
         progress(100, "done")
         return
+    cfg = json.loads(cfg_path.read_text())
     index = json.loads(idx_path.read_text())
     import mlx_split_fetch as MSF
     plan = MSF.plan_files(cfg, index, front_layers=packer_layers)

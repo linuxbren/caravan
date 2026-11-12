@@ -1,3 +1,21 @@
+## 2026-11-12: Day 24 live review — image downloads and plain errors
+
+MLX fetch no longer requires a top-level `config.json`. Any repo that
+is not an LLM shard layout (image, video, text-to-speech,
+speech-to-text/ASR, or similar, including `model_index.json` and
+subfolders such as `transformer/`, `voices/`, or `whisper/`) downloads
+as a whole tree; Resume continues from the files already on disk.
+Advanced types stay in the picker for agent apps, with a quiet
+"Download only, Caravan can't run image models yet" line (and the same
+shape for video and speech, including speech-to-text, as well as
+embedding, Decision, and any-to-any). After download, Load is not
+offered.
+Download cards use friendly Mac names and a short plain error
+("Download stopped. Press Resume to try again."); hostnames, internal
+ids, and Python traces go to the log only. This follow-up changes
+`agent/mlx_split_fetch.py`, so a `caravan update` reloads a loaded
+model; the same model is restored.
+
 ## 2026-11-12: Day 24 live review — chat average wording
 
 The average line under the chat input now uses the same wording, units,

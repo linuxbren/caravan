@@ -38,7 +38,14 @@
   A `caravan update` from the Day 23 pin picks this up and reloads a
   loaded model (model-running code in `agent/` changed). A follow-up
   from the first Day 24 pin (chat average wording) does not reload the
-  model.
+  model. A later live-review follow-up (whole-repo fetch for any
+  model without a top-level `config.json`, including image, video,
+  text-to-speech, and speech-to-text/ASR; "Download only, Caravan
+  can't run image models yet" and the same shape for video and
+  speech, for every Advanced type Caravan cannot serve; plain
+  download errors and friendly Mac names on every download card)
+  changes `agent/mlx_split_fetch.py`, so an update from that pin
+  reloads a loaded model; the same model is restored.
 
 ## MIT License (2026-11-12)
 

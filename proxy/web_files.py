@@ -235,6 +235,10 @@ def prepare_new_mlx(app, repo, nodes, counts=None):
     with tempfile.TemporaryDirectory(prefix='caravan-preview-') as tmp:
         snapshot_download(repo, revision=info.sha, local_dir=tmp, token=token,
                           allow_patterns=['config.json', 'model.safetensors.index.json'])
+        if not (Path(tmp)/'config.json').is_file() or not (Path(tmp)/'model.safetensors.index.json').is_file():
+            raise ValueError(
+                "This model isn't a chat model Caravan can split. Download it to one Mac instead."
+            )
         cfg = json.loads((Path(tmp)/'config.json').read_text())
         idx = json.loads((Path(tmp)/'model.safetensors.index.json').read_text())
     nodes = SB.pipeline_order(nodes)
