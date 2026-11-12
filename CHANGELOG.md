@@ -1,7 +1,13 @@
 ### Day 21 release — day21-2026-11-10 (published 2026-11-10 CST)
 
-## Day 23 — clean-install fixes (published; pending native acceptance)
+## Day 23 — clean-install fixes (published; live testing passed)
 
+- Live testing on both Minis passed on 2026-11-11 CST: single-step update,
+  remote access from another device, one-Mac and split MLX and GGUF
+  downloads with load and chat, Add a Mac from placement, reboot, and
+  uninstall then reinstall.
+- `caravan start` says "Caravan started" or "Caravan is running",
+  whichever is true, instead of "Service started (or already running)".
 - `caravan update` is now a single step: it stops what is needed, installs the
   verified package, and brings the page back. A loaded model stays running when
   the model-running code did not change; otherwise it is reloaded and Caravan
@@ -24,8 +30,10 @@
   and idempotent Terminal PATH setup.
 - Add-a-Mac flow inside Topology, first-run invitation and themed two-column setup.
 - Complete confirmed uninstall: all owned local jobs/workers/data and marked PATH/SSH entries.
-- Beginner guide wording and portable regression tests. Native acceptance remains required;
-  see [Day 23](docs/DAY23.md). No Minis changed during implementation.
+- Beginner guide wording and portable regression tests. See [Day 23](docs/DAY23.md).
+  Remaining untested gates (fresh account, Gatekeeper, FileVault, a finished
+  new-Mac pairing, old-startup-file replacement, and some engine paths) are
+  listed there.
 
 ## Day 21 follow-up — Mac installation and documentation
 

@@ -99,16 +99,12 @@ a commit cannot contain its own hash. The local source-package artifact is
 built again from the final release tip. Linux fetch/check-only verification
 is not native Mac acceptance.
 
-### Live Mac acceptance still required
+### Live Mac acceptance
 
-- Fresh account setup/update, Gatekeeper behavior, dyld/Metal and first inference.
-- Single-file and complete multi-part GGUF downloads, load prompt and reboot.
-- Standard RPC loads on both Macs, including unsupported own-share architectures.
-- Pairing in Topology, code handoff, one-Mac banner, removal and narrow screens.
-- Old-startup-file backup/replacement under real launchd.
-- New Terminal PATH, doctor/status, and complete uninstall including worker exit,
-  marked SSH cleanup, confirmation size, and unrelated watchdog preservation.
-- FileVault unlock/login behavior. Neither Linux suite proves any of these.
+A later live pass on both Minis covered the Day 23 test list; see
+[Live testing on both Minis](#live-testing-on-both-minis-2026-11-11-cst).
+Remaining gates are listed there. The Linux portable suite is not a
+substitute for those remaining checks.
 
 ## Live clean-install follow-up
 
@@ -220,6 +216,52 @@ Portable tests cover an already-current install, a web-only change that
 keeps workers, a worker-code change that reloads and keeps the saved model,
 install and start failures that roll back and restart the old version, and
 the services-loaded path no longer refusing. The box suite is **1,238 tests**
-(24 new). `caravan stop` / `start` are
-unchanged. No 1st-node or 2nd-node access is part of this change. To
-activate: `caravan update`, then refresh the page.
+(24 new). `caravan stop` is unchanged. `caravan start` later gained
+clearer messages; see below. No 1st-node or 2nd-node access is part of
+this change. To activate: `caravan update`, then refresh the page.
+
+## Clearer start messages
+
+`caravan start` says "Caravan started" when the service is just brought
+up, and "Caravan is running" when it is already loaded. Both lines tell
+you to run `caravan open`. The old "Service started (or already running)"
+line is gone. Two portable tests cover the two cases. This goes out with
+the Day 23 tag.
+
+## Live testing on both Minis (2026-11-11 CST)
+
+Brenden completed live testing on both Minis against the then-current
+pin (`15f4b32`, source `254b401`). Every item on the Day 23 test list
+passed:
+
+1. Update both Macs with `caravan update` (the other Mac first when a
+   split model is loaded), then refresh the browser. The model stayed
+   loaded.
+2. Turn on "Open from my other devices" in Settings and open the page
+   from another device on the same Tailscale network.
+3. Download a model to one Mac, then load it and chat.
+4. Download a model that needs both Macs, pick the split placement,
+   then load it and chat. One-Mac and split downloads were each tried
+   as GGUF and as MLX.
+5. Start a download, choose Add a Mac on the placement screen, and
+   return to the same choice. A new Mac did not need to be finished
+   pairing for this check.
+6. Restart a Mini and confirm Caravan comes back on its own.
+7. `caravan uninstall` on one Mini: one confirmation, then nothing
+   left behind and remote access off. Reinstall used the install line.
+
+Portable suite at this source: **1,240 tests passed** in 52.988 s on
+the development node (2 new, for the start messages).
+
+### Remaining gates
+
+These were not part of this live pass:
+
+- Fresh account setup, Gatekeeper behavior, and FileVault unlock/login.
+- Old-startup-file backup and replacement under real launchd.
+- A finished pairing of a new Mac (Add a Mac from placement was checked
+  through the return-to-choice path only).
+- Standard RPC loads for unsupported own-share architectures, and a
+  complete multi-part GGUF set specifically.
+
+The Linux portable suite is not a substitute for those remaining checks.

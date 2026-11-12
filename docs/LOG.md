@@ -1,3 +1,13 @@
+## 2026-11-11: Day 23 live testing and tag
+
+- Live testing on both Minis passed: `caravan update`, remote access from
+  another device, one-Mac and split MLX and GGUF downloads with load and
+  chat, Add a Mac from placement, reboot, and uninstall then reinstall.
+- `caravan start` says "Caravan started" or "Caravan is running",
+  whichever is true. Portable suite: **1,240 tests passed** in 52.988 s
+  on the development node (2 new). Tag `day23-2026-11-11` follows the
+  source pin.
+
 ## 2026-11-11: Day 23 live clean-install follow-up
 
 - Fix stale Settings/picker/Topology lists with mutation-triggered and five-second visible-page refresh; preserve selections and avoid overlapping requests.
