@@ -519,13 +519,24 @@ class WorkerManager:
         self._seed_gguf_peers(entry, path, shares, peers, meta)
         try:
             import gguf_tune as GT
-            tune = (dict(entry["tune_override"]) if isinstance(entry.get("tune_override"), dict)
-                    else GT.best_tune(path, 1 + len(rpc)))
+            import web_settings as WS
+            if isinstance(entry.get("tune_override"), dict):
+                tune = dict(entry["tune_override"])
+            else:
+                tune = WS.apply_gguf_settings(
+                    GT.best_tune(path, 1 + len(rpc)),
+                    self.snapshot().get("settings") or {},
+                )
         except Exception:  # noqa: BLE001 - tuning is optional
             tune = {}
         if tune:
-            self._note(f"GGUF tuned settings from Optimize now: {tune}")
+            self._note("using saved GGUF settings")
         args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares, tune=tune)
+        if "--slot-save-path" in args:
+            try:
+                Path(args[args.index("--slot-save-path") + 1]).mkdir(parents=True, exist_ok=True)
+            except OSError:
+                pass
         self._set(status="starting_lead", packer_pid=None)
         seeded = bool(meta.get("seed"))
         if not rpc:
@@ -1397,7 +1408,11 @@ class WorkerManager:
             "Self-tuning is on. It takes effect when you load a model."
         )
         if status == "ready" and backend == "llama":
-            notice = "Self-tuning is for MLX models. This one is unchanged."
+            notice = (
+                "Self-tuning is off. Caravan will keep the current settings."
+                if raw == "off" else
+                "Self-tuning is on. For this model, a change reloads when you are not mid-reply."
+            )
         elif status == "ready":
             try:
                 from urllib.request import Request, urlopen

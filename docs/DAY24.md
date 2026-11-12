@@ -163,8 +163,9 @@ wording, and the Models fit-summary line. Later tests cover whole-repo fetch for
 models without a top-level `config.json`, download-only notices for
 Advanced types Caravan cannot serve, plain download errors with
 friendly Mac names, leftover SSH-forward reuse (only Caravan's own
-forward is reused or replaced), and plain load errors with friendly
-Mac names and no paths. The full suite is run on the
+forward is reused or replaced), plain load errors with friendly
+Mac names and no paths, and GGUF Settings and Optimize now
+(trusted load flags, f16 vs q8_0 trials, and before/after lines). The full suite is run on the
 development node checkout. Counts are recorded at commit time.
 
 ## Publication
@@ -262,4 +263,35 @@ from the previous Day 24 pin keeps a loaded model running. The web page
 still restarts. The portable suite on a fresh clone on the development node:
 **1,312 tests passed** in 55.774 s. The 1st node and 2nd node were
 not touched. No `day24` tag yet. Source and pin SHAs are recorded at
+publication time.
+
+### Live review: GGUF Settings and Optimize now
+
+The web Load path for a GGUF model now uses the same trusted options
+Caravan already uses on its other llama-server path: flash attention
+on, automatic memory compression (the full 16-bit option when it fits,
+otherwise the lighter 8-bit option — never 4-bit), a default prompt
+batch, saved slots for later turns, and no extra host-memory cache
+copy. The chat window size is unchanged.
+
+Settings no longer greys out the whole panel with an "MLX only" note.
+For a GGUF model, Self-tuning, Memory compression, Shared start, Flash attention, and Prompt batch are available, with plain-word hints.
+Memory compression offers Auto, 16, and 8 only. Guess-ahead, Prompt
+lookup, and Two chats stay off until a later test says otherwise.
+Fused kernels and GPU keep-warm are hidden, because they have no
+GGUF equivalent. Self-tuning on a GGUF model is a saved preference:
+a change reloads the model when you are not mid-reply.
+
+Optimize now (and the same self-tuning trial) also compares 16-bit and
+8-bit memory compression, with flash attention kept on, and scores
+read speed, first-token time, and write speed — not write speed alone.
+The Before and After lines under Self-tuning (and under Optimize now
+when that produced the result) work for GGUF models too.
+
+This follow-up is only proxy, tests, and docs — not `agent/`,
+`runtime/`, or the requirements files — so a `caravan update` from the
+previous Day 24 pin keeps a loaded model running. The web page still
+restarts. The portable suite on a fresh clone on the development node:
+**1,329 tests passed** in 57.055 s. The 1st node and 2nd node were not
+touched. No `day24` tag yet. Source and pin SHAs are recorded at
 publication time.

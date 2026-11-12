@@ -531,7 +531,7 @@ class SelfTuneFirstTest(unittest.TestCase):
         self.assertEqual(web_settings.OPTIONS[0]["id"], "self_tune")
         self.assertEqual([o["id"] for o in web_settings.OPTIONS[1:]],
                          ["guess_ahead", "prompt_lookup", "shared_start", "pipeline_chats",
-                          "fuse_kernels", "kv_bits", "keepalive"])
+                          "fuse_kernels", "kv_bits", "keepalive", "flash_attn", "ubatch"])
         html = (REPO / "proxy" / "web" / "index.html").read_text()
         self.assertIn('(b.id === "self_tune") - (a.id === "self_tune")', html)
 

@@ -60,6 +60,14 @@
   not change `agent/`, `runtime/`, or the requirements files, so an
   update from that pin keeps a loaded model running. The web page
   still restarts.
+  A later live-review follow-up (GGUF Settings rows and trusted web
+  Load flags — flash attention, automatic 16- or 8-bit memory
+  compression never 4-bit, prompt batch, and saved slots; Optimize now
+  and self-tuning compare 16-bit vs 8-bit and score read speed,
+  first-token time, and write speed; Before/After lines work for GGUF)
+  does not change `agent/`, `runtime/`, or the requirements files, so
+  an update from that pin keeps a loaded model running. The web page
+  still restarts.
 
 ## MIT License (2026-11-12)
 

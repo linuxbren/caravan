@@ -29,7 +29,16 @@ GGUF_ROOTS = [Path(p).expanduser() for p in os.environ.get(
 GPU_FRACTION = 0.75
 HEADROOM_GB = 1.5
 GGUF_UBATCH = (256, 512, 1024)
-GGUF_KNOBS = (("flash_attn", ("on", "off")), ("ubatch", GGUF_UBATCH))
+GGUF_DEFAULT_UBATCH = 512
+GGUF_DEFAULT_BATCH = 2048
+# Only these KV cache types are offered. q4_* is never a trial or a default.
+GGUF_KV_TYPES = ("f16", "q8_0")
+GGUF_KNOBS = (
+    ("flash_attn", ("on", "off")),
+    ("ubatch", GGUF_UBATCH),
+    ("cache_type", GGUF_KV_TYPES),
+)
+GGUF_SLOT_ROOT = Path("~/.caravan/web-ui/slots")
 RPC_PID = "~/.caravan/web-ui/rpc-server.pid"
 RPC_LOG = "~/.caravan/web-ui/rpc-server.log"
 
@@ -139,24 +148,106 @@ def tensor_split(nodes: list) -> list:
     return [round(c, 1) for c in caps]
 
 
+def slot_save_dir(cache_type_k: str, cache_type_v: str, root=None) -> Path:
+    """Per-type folder so a memory-compression change starts a fresh (cold) save.
+
+    Old slot files from a different KV type are not required and are not
+    loaded — they live in a different folder.
+    """
+    base = Path(root) if root is not None else GGUF_SLOT_ROOT
+    return Path(str(base)).expanduser() / f"{cache_type_k}_{cache_type_v}"
+
+
+def resolve_web_kv(*, flash_attn: str = "on", cache_type=None,
+                   cache_type_k=None, cache_type_v=None,
+                   model_path=None, ctx: int = GGUF_CTX, ubatch: int = GGUF_DEFAULT_UBATCH,
+                   n_devices: int = 1, decide=None) -> tuple:
+    """Resolve -ctk/-ctv to f16 or q8_0. Never 4-bit. Quantized V needs flash on."""
+    allowed = set(GGUF_KV_TYPES)
+
+    def _clean(v, fallback="auto"):
+        s = (str(v).strip().lower() if v is not None else fallback) or fallback
+        if s in ("q4_0", "q4_1", "iq4_nl", "q4", "4"):
+            raise ValueError("GGUF memory compression does not offer 4-bit")
+        return s
+
+    if cache_type is not None:
+        ct = _clean(cache_type, "")
+        if ct not in allowed:
+            raise ValueError("cache_type must be f16 or q8_0")
+        k = v = ct
+    else:
+        k = _clean(cache_type_k)
+        v = _clean(cache_type_v)
+        if k not in allowed | {"auto"} or v not in allowed | {"auto"}:
+            raise ValueError("cache type must be auto, f16, or q8_0")
+        if k == "auto" or v == "auto":
+            decided_k = decided_v = "q8_0"
+            try:
+                import kv_auto
+                fn = decide or kv_auto.decide
+                d = fn(
+                    model_path, n_slots=1, ctx_per_slot=int(ctx),
+                    n_ubatch=int(ubatch),
+                    cache_type_k="auto" if k == "auto" else k,
+                    cache_type_v="auto" if v == "auto" else v,
+                    n_devices=max(1, int(n_devices)),
+                )
+                decided_k = d.cache_type_k
+                decided_v = d.cache_type_v
+            except Exception:
+                pass
+            if k == "auto":
+                k = decided_k if decided_k in allowed else "q8_0"
+            if v == "auto":
+                v = decided_v if decided_v in allowed else "q8_0"
+    if k not in allowed:
+        k = "q8_0"
+    if v not in allowed:
+        v = "q8_0"
+    # A quantized V cache needs flash attention (same rule as the agent path).
+    if flash_attn == "off" and v not in ("f16", "f32", "bf16"):
+        v = "f16"
+    return k, v
+
+
 def llama_args(model_path: str, *, port: int, peers: list, shares: list,
                ctx: int = GGUF_CTX, bin_dir: str = LLAMA_BIN,
-               tune: Optional[dict] = None) -> list:
+               tune: Optional[dict] = None, decide=None, slot_root=None) -> list:
     """llama-server argv. peers = ["host:port", ...] (empty for one Mini).
-    tune (Day 18, GGUF Optimize now): {"flash_attn": "on"|"off", "ubatch": int}."""
+
+    Always passes the flags Caravan already trusts on the agent path: flash
+    attention, auto KV (f16 or q8_0 only), default prompt batch, saved slots,
+    and --cache-ram 0. Context stays at the web default (8192); it is not
+    raised to the agent path's larger window.
+
+    tune: {"flash_attn": "on"|"off", "ubatch": int, "cache_type": "f16"|"q8_0",
+           "slot_save": bool}.
+    """
     tune = tune or {}
     fa = tune.get("flash_attn", "on")
     if fa not in ("on", "off"):
         raise ValueError("flash_attn must be on or off")
+    ub = int(tune["ubatch"]) if tune.get("ubatch") is not None else GGUF_DEFAULT_UBATCH
+    if ub not in GGUF_UBATCH:
+        raise ValueError("ubatch must be one of %s" % (GGUF_UBATCH,))
+    batch = max(ub, GGUF_DEFAULT_BATCH)
+    ctk, ctv = resolve_web_kv(
+        flash_attn=fa, cache_type=tune.get("cache_type"),
+        cache_type_k=tune.get("cache_type_k"), cache_type_v=tune.get("cache_type_v"),
+        model_path=model_path, ctx=ctx, ubatch=ub,
+        n_devices=1 + len(peers or []), decide=decide,
+    )
     args = [str(Path(bin_dir).expanduser() / "llama-server"),
             "-m", str(Path(model_path).expanduser()),
             "--host", "127.0.0.1", "--port", str(int(port)),
-            "-c", str(int(ctx)), "-ngl", "999", "-fa", fa, "--jinja"]
-    if tune.get("ubatch"):
-        ub = int(tune["ubatch"])
-        if ub not in GGUF_UBATCH:
-            raise ValueError("ubatch must be one of %s" % (GGUF_UBATCH,))
-        args += ["-ub", str(ub), "-b", str(max(ub, 2048))]
+            "-c", str(int(ctx)), "-ngl", "999", "-fa", fa,
+            "-ctk", ctk, "-ctv", ctv,
+            "-b", str(batch), "-ub", str(ub),
+            "--cache-ram", "0", "--jinja"]
+    if tune.get("slot_save", True) is not False:
+        sp = slot_save_dir(ctk, ctv, root=slot_root)
+        args += ["--slot-save-path", str(sp) + "/"]
     if peers:
         devs = ["MTL0"] + [f"RPC{i}" for i in range(len(peers))]
         args += ["--rpc", ",".join(peers), "--device", ",".join(devs),
@@ -349,7 +440,12 @@ def gguf_schedule(best: dict, losses: list) -> list:
     reload), skipping recorded losers ("name=value"), same 3% margin as MLX."""
     items = []
     for name, values in GGUF_KNOBS:
-        inc = best.get(name, "on" if name == "flash_attn" else 512)
+        if name == "flash_attn":
+            inc = best.get(name, "on")
+        elif name == "ubatch":
+            inc = best.get(name, GGUF_DEFAULT_UBATCH)
+        else:
+            inc = best.get(name, "f16")
         alts = [v for v in values if v != inc and f"{name}={v}" not in losses]
         if name == "ubatch":
             alts.sort(key=lambda v: abs(v - inc))

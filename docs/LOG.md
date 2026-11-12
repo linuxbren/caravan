@@ -1,3 +1,17 @@
+## 2026-11-12: Day 24 live review — GGUF Settings and Optimize now
+
+The web Load path for a GGUF model now passes flash attention, automatic
+memory compression (16-bit or 8-bit only, never 4-bit), a default prompt
+batch, saved slots, and no extra host-memory cache copy. The chat window
+size is unchanged. Settings shows the matching rows with plain-word
+hints, hides Fused kernels and GPU keep-warm, and keeps Guess-ahead and
+Prompt lookup off. Optimize now (and self-tuning) compares 16-bit vs
+8-bit memory compression, with flash attention on, and scores read
+speed, first-token time, and write speed. The Before and After lines
+work for GGUF too. This follow-up does not change `agent/`, `runtime/`,
+or the requirements files, so a `caravan update` keeps a loaded model
+running; the web page still restarts.
+
 ## 2026-11-12: Day 24 live review — leftover SSH tunnel after an update
 
 After an update that keeps the model, the web page restarts and leaves

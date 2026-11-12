@@ -55,10 +55,11 @@ class GgufOptimizer:
             self.state["log"] = (self.state["log"] + [{"t": time.time(), "msg": msg}])[-60:]
         self._on_log(msg)
 
-    def start(self):
+    def start(self, source="optimize_now"):
         with self._lock:
             if self.state["running"]:
                 raise RuntimeError("optimize already running")
+            self.source = source or "optimize_now"
             snap = self.mgr.snapshot()
             entry = copy.deepcopy(getattr(self.mgr, "_loaded_entry", None) or {})
             if snap.get("status") != "ready" or not snap.get("model_id"):
@@ -130,7 +131,7 @@ class GgufOptimizer:
     def _measure(self):
         self._set(phase="measuring")
         t0 = time.time()
-        tps = (self._measure_fn or (lambda: GT.measure_http(self.mgr.lead_port)))()
+        raw = (self._measure_fn or (lambda: GT.measure_http_specs(self.mgr.lead_port)))()
         dt = time.time() - t0
         with self._lock:
             self.state["prompts"] += len(GT.BENCH_PROMPTS)
@@ -140,7 +141,7 @@ class GgufOptimizer:
             cur = self._current()
             if cur:
                 cur["done_arms"] = int(cur.get("done_arms") or 0) + 1
-        return tps
+        return raw
 
     def _on_log(self, msg):
         # gguf_tune logs "gguf tune: <name> ... -> keep X|stay Y" after each option.
@@ -161,10 +162,22 @@ class GgufOptimizer:
                                    log=self._log, cancelled=self._cancel.is_set)
             res = tuner.run()
             status = res.get("status") or "done"
+            source = getattr(self, "source", "optimize_now") or "optimize_now"
+            if res.get("before") and res.get("after") and getattr(self, "model_id", None):
+                try:
+                    import web_speed
+                    web_speed.record_tuning(
+                        self.model_id,
+                        before=res["before"], after=res["after"],
+                        source=source,
+                    )
+                except Exception as ex:  # noqa: BLE001
+                    self._log(f"could not save before/after: {ex}")
             self._set(results=res.get("tried") or [],
                       error=None if status in ("done", "cancelled") else status,
                       summary={"complete": status == "done", "winner": res.get("best") or {},
-                               "minutes": round((time.time() - self.state["started"]) / 60, 1)})
+                               "minutes": round((time.time() - self.state["started"]) / 60, 1),
+                               "before": res.get("before"), "after": res.get("after")})
         except Exception as e:  # noqa: BLE001
             self._set(error=f"{type(e).__name__}: {e}")
         finally:

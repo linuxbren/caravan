@@ -20,7 +20,7 @@ workload does not prove the same result on another.
 
 ## Settings and safety
 
-MLX and optional GGUF use different tuning paths. Not every model supports
+MLX and optional GGUF use different tuning paths. For a GGUF model, Optimize now compares 16-bit and 8-bit memory compression (never 4-bit), with flash attention on, and scores read speed, first-token time, and write speed — not write speed alone. The two Before and After lines in Settings work for GGUF as well. Not every model supports
 compressed chat memory, guess-ahead or a proposed setting. Unknown capacity,
 missing files, load failure or changed topology should stop a trial safely.
 Do not bypass a guard or delete active files to make a run appear successful.

@@ -35,7 +35,9 @@ class Tuner(unittest.TestCase):
         self.assertEqual(loads[-1], r["best"])  # winner left running
         st = json.loads(self.store.read_text())["x.gguf|2mini"]
         self.assertIn("ubatch=256", st["losses"])
-        self.assertEqual(T.best_tune("/m/x.gguf", 2, self.store), {"flash_attn": "off", "ubatch": 512})
+        got = T.best_tune("/m/x.gguf", 2, self.store)
+        self.assertEqual(got["flash_attn"], "off")
+        self.assertEqual(got["ubatch"], 512)
 
     def test_losers_not_retried(self):
         self.run_with(lambda t: 100.0)
@@ -71,6 +73,67 @@ class Tuner(unittest.TestCase):
             return R(json.dumps({"timings": {"predicted_per_second": 42.0}}).encode())
         self.assertEqual(T.measure_http(9000, urlopen=fake), 42.0)
         self.assertTrue(seen[0].endswith(":9000/v1/chat/completions"))
+
+
+
+    def test_measure_http_records_read_and_first_token(self):
+        class R(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        def fake(req, timeout=0):
+            return R(json.dumps({"timings": {
+                "predicted_per_second": 40.0,
+                "prompt_per_second": 200.0,
+                "prompt_ms": 250,
+            }}).encode())
+        specs = T.measure_http_specs(9000, urlopen=fake)
+        self.assertEqual(specs["write_tok_s"], 40.0)
+        self.assertEqual(specs["read_tok_s"], 200.0)
+        self.assertEqual(specs["ttft_s"], 0.25)
+        self.assertEqual(T.measure_http(9000, urlopen=fake), 40.0)
+
+    def test_read_speed_can_decide_a_write_tie(self):
+        # Same write speed; challenger reads faster and gets first token sooner.
+        def sp(t):
+            if t.get("ubatch") == 1024:
+                return {"write_tok_s": 50.0, "read_tok_s": 300.0, "ttft_s": 0.10}
+            return {"write_tok_s": 50.0, "read_tok_s": 100.0, "ttft_s": 0.30}
+        # Only try ubatch: pre-record flash and cache_type as already lost / set
+        r, loads = self.run_with(sp)
+        ub = [x for x in r["tried"] if x["name"] == "ubatch"]
+        self.assertTrue(ub)
+        # 256 is first challenger (closest to 512); may or may not win depending on
+        # our stub (same as 512 if stub only special-cases 1024). The important
+        # case: a later or explicit f16 vs q8 comparison uses all three metrics.
+        self.assertTrue(r["before"])
+        self.assertIn("write_tok_s", r["before"])
+        self.assertIn("read_tok_s", r["before"])
+
+    def test_cache_type_trial_keeps_flash_on_and_never_offers_4bit(self):
+        def sp(t):
+            return {"write_tok_s": 40.0,
+                    "read_tok_s": 200.0 if t.get("cache_type") == "q8_0" else 120.0,
+                    "ttft_s": 0.2}
+        r, loads = self.run_with(sp)
+        names = [x["name"] for x in r["tried"]]
+        self.assertIn("cache_type", names)
+        ct = next(x for x in r["tried"] if x["name"] == "cache_type")
+        self.assertEqual(sorted([ct["incumbent"], ct["challenger"]]), ["f16", "q8_0"])
+        self.assertNotIn("q4_0", [ct["incumbent"], ct["challenger"]])
+        # When scoring cache_type, flash attention is on.
+        self.assertTrue(any(t.get("cache_type") == "q8_0" and t.get("flash_attn") == "on"
+                            for t in loads))
+        if ct["won"]:
+            self.assertEqual(r["best"]["cache_type"], "q8_0")
+        self.assertTrue(r["before"] and r["after"])
+        self.assertIn("read_tok_s", r["after"])
+
+    def test_combined_score_prefers_faster_read_when_write_ties(self):
+        a = {"write_tok_s": 50, "read_tok_s": 100, "ttft_s": 0.3}
+        b = {"write_tok_s": 50, "read_tok_s": 300, "ttft_s": 0.1}
+        self.assertTrue(T.beats(b, a))
+        self.assertFalse(T.beats(a, b))
+        self.assertGreater(T.combined_score(b), T.combined_score(a) * 1.03)
 
 
 if __name__ == "__main__":

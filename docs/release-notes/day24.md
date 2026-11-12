@@ -50,6 +50,16 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   start the model on the 2nd Mac. Try loading again." and the full
   detail goes to the log.
 
+- GGUF, live review: the web Load path now uses flash attention,
+  automatic memory compression (16-bit or 8-bit only, never 4-bit),
+  a default prompt batch, and saved slots. Settings shows the matching
+  rows (Self-tuning, Memory compression, Shared start, Flash attention,
+  Prompt batch) with plain-word hints, hides Fused kernels and GPU
+  keep-warm, and keeps Guess-ahead and Prompt lookup off. Optimize now
+  (and self-tuning) compares 16-bit vs 8-bit memory compression and
+  scores read speed, first-token time, and write speed. The two Before
+  and After lines work for GGUF too.
+
 ## Operational checks
 - Portable suite results are recorded at publication time in DAY24.md and
   the Obsidian Day 24 note.
@@ -69,6 +79,11 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   A later live-review follow-up (reuse or replace Caravan's leftover
   SSH forward after a web restart, plain load errors, and friendly
   Mac names on load status) does not change `agent/`, `runtime/`, or
+  the requirements files, so an update from that pin keeps a loaded
+  model running. The web page still restarts.
+  A later live-review follow-up (GGUF Settings rows, trusted web load
+  flags, and Optimize now scoring of read speed and first-token time
+  as well as write speed) does not change `agent/`, `runtime/`, or
   the requirements files, so an update from that pin keeps a loaded
   model running. The web page still restarts.
 

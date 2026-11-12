@@ -93,6 +93,16 @@ Apply & restart) and not every model supports every feature. See
 **Optimize now** runs real comparisons and may reload the model; do not start
 it during an important chat. See [optimization](OPTIMIZE-NOW.md).
 
+When a GGUF model is loaded, Self-tuning, Memory compression, Shared start,
+**Flash attention**, and **Prompt batch** are used, with plain-word hints.
+Memory compression offers Auto, 16, and 8 only (never 4). Guess-ahead and
+Prompt lookup stay off for now. Fused kernels and GPU keep-warm are hidden,
+because they do not apply. Self-tuning on a GGUF model reloads when you
+are not mid-reply. Optimize now also compares 16-bit and 8-bit memory
+compression and scores how fast the model reads, how soon the first
+token arrives, and how fast it writes, so the two Before and After
+lines work for GGUF as well.
+
 At login, Caravan restores the last successful model and placement. Temporary
 node/memory/link readiness failures retry within a bounded window. Missing
 files are not automatically downloaded. FileVault needs its owner to unlock

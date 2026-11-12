@@ -13,28 +13,48 @@ from pathlib import Path
 OPTIONS = [
     {"id": "self_tune", "label": "Self-tuning",
      "help": "On by default: Caravan learns from your chats immediately and remembers faster settings for each MLX model. Other Auto settings follow its choices; pinned choices stay yours.",
+     "help_gguf": "Caravan learns faster settings from your chats. For GGUF, a change reloads the model when you are not mid-reply.",
      "values": ["auto", "off"]},
     {"id": "guess_ahead", "label": "Guess-ahead",
      "help": "A smaller model guesses upcoming words for the main MLX model to check. Needs a matching helper; up to ~33% faster writing one reply on a split model in our tests, but slower with two chats.",
-     "values": ["auto", "on", "off", "mtp"]},
+     "help_gguf": "A smaller model guesses upcoming words for the main model to check. Often slower on a Mac, so it stays off until a test says otherwise.",
+     "values": ["auto", "on", "off", "mtp"],
+     "locked_for_gguf": "off"},
     {"id": "prompt_lookup", "label": "Prompt lookup (experimental)",
      "help": "Reuse words from your prompt to help the MLX model write repeated text. Up to ~44% faster in our tests on repeated text, but slower on mixed chats; one chat at a time.",
-     "values": ["auto", "off", "adaptive"]},
+     "help_gguf": "Reuse words from your prompt to help with repeated text. Can help on repeated passages and can slow mixed chats.",
+     "values": ["auto", "off", "adaptive"],
+     "locked_for_gguf": "off"},
     {"id": "shared_start", "label": "Shared start (trim / rebuild)",
      "help": "Reuse the beginning of repeated system prompts so the model has less to read. MLX models only.",
+     "help_gguf": "Reuse the start of a chat so later turns begin sooner.",
      "values": ["auto", "on", "off"]},
     {"id": "pipeline_chats", "label": "Two chats",
      "help": "Let two chats use different Minis at the same time when an MLX model is split. Up to ~70% more combined output in our tests without a helper; no gain on one Mini, and slower with a helper.",
-     "values": ["auto", "1", "2"]},
+     "help_gguf": "Let two chats share the model. Not used until they will not get in each other's way.",
+     "values": ["auto", "1", "2"],
+     "locked_for_gguf": "off"},
     {"id": "fuse_kernels", "label": "Fused kernels",
      "help": "Combine small GPU steps when running an MLX model. Experimental — no meaningful speed gain in our tests; some models are incompatible.",
-     "values": ["auto", "on"]},
+     "values": ["auto", "on"],
+     "backends": ("mlx",)},
     {"id": "kv_bits", "label": "Memory compression",
      "help": "Store MLX chat memory more compactly to save RAM; 16 leaves it uncompressed. May lower quality and slow reading; not supported by every model or Native MTP.",
-     "values": ["auto", "16", "8", "4"]},
+     "help_gguf": "Store the chat's working memory more compactly. Auto uses the lighter option only when the full one will not fit.",
+     "values": ["auto", "16", "8", "4"],
+     "values_gguf": ["auto", "16", "8"]},
     {"id": "keepalive", "label": "GPU keep-warm",
      "help": "Keep the main GPU warm while it waits for another Mini. Split MLX models only; up to ~50% faster writing replies in our tests.",
-     "values": ["auto", "off"]},
+     "values": ["auto", "off"],
+     "backends": ("mlx",)},
+    {"id": "flash_attn", "label": "Flash attention",
+     "help": "A faster way to read the chat so far. Leave on unless a test says off.",
+     "values": ["auto", "on", "off"],
+     "backends": ("gguf",)},
+    {"id": "ubatch", "label": "Prompt batch",
+     "help": "How much of a long question the model reads at once. Larger can read faster and uses more working memory.",
+     "values": ["auto", "256", "512", "1024"],
+     "backends": ("gguf",)},
 ]
 _BY_ID = {o["id"]: o for o in OPTIONS}
 
@@ -260,3 +280,62 @@ def merge_with_file(page: dict, fsets: dict):
             s[k] = v
             used[k] = v
     return s, used
+
+
+def options_for(source="mlx") -> list:
+    """Settings rows for this model type, with the matching help and values.
+
+    GGUF hides Fused kernels and GPU keep-warm, drops 4-bit memory
+    compression, and marks Guess-ahead, Prompt lookup, and Two chats as
+    locked off for now.
+    """
+    src = "gguf" if (source or "").lower() == "gguf" else "mlx"
+    out = []
+    for o in OPTIONS:
+        backends = o.get("backends") or ("mlx", "gguf")
+        if src not in backends:
+            continue
+        item = {k: v for k, v in o.items()
+                if k not in ("backends", "help_gguf", "values_gguf", "locked_for_gguf")}
+        if src == "gguf" and o.get("help_gguf"):
+            item["help"] = o["help_gguf"]
+        if src == "gguf" and o.get("values_gguf"):
+            item["values"] = list(o["values_gguf"])
+        if src == "gguf" and o.get("locked_for_gguf"):
+            item["locked"] = True
+            item["forced"] = o["locked_for_gguf"]
+        out.append(item)
+    return out
+
+
+def apply_gguf_settings(tune: dict, settings) -> dict:
+    """Merge page Settings (pins) onto a learned GGUF tune. Pins win.
+
+    Auto leaves the learned/default value. Guess-ahead and Prompt lookup
+    cannot be turned on for GGUF here.
+    """
+    out = dict(tune or {})
+    try:
+        s = normalize(settings)
+    except (ValueError, TypeError):
+        return out
+    fa = s.get("flash_attn")
+    if fa in ("on", "off"):
+        out["flash_attn"] = fa
+    ub = s.get("ubatch")
+    if ub in ("256", "512", "1024"):
+        out["ubatch"] = int(ub)
+    kv = s.get("kv_bits")
+    if kv == "16":
+        out["cache_type"] = "f16"
+    elif kv == "8":
+        out["cache_type"] = "q8_0"
+    elif kv == "4":
+        raise ValueError("GGUF memory compression does not offer 4-bit")
+    ss = s.get("shared_start")
+    if ss == "off":
+        out["slot_save"] = False
+    elif ss == "on":
+        out["slot_save"] = True
+    return out
+

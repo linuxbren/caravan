@@ -1149,7 +1149,11 @@ def make_handler(app: App):
                 hf = token_status()
             except Exception:
                 hf = {"configured": False, "source": None}
-            return self._json(200, {"options": web_settings.OPTIONS,
+            src = ((entry or {}).get("source") or "")
+            if src != "gguf" and snap.get("backend") == "llama" and mid == snap.get("model_id"):
+                src = "gguf"
+            return self._json(200, {"options": web_settings.options_for(src),
+                                   "backend": "llama" if src == "gguf" else "mlx",
                                    "current": snap.get("page_settings") or snap.get("settings"),
                                    "file": {"path": cfg["path"], "exists": cfg["exists"],
                                             "errors": cfg["errors"], "model": mid, "pins": fsets},
@@ -2038,7 +2042,7 @@ def make_handler(app: App):
                         return self._json(409, {"error": "Split needs files or more memory; nothing was changed", "balance": plan})
                     entry = plan["entry"]
                     if entry.get("source")=="gguf" and isinstance(body.get("gguf_tune"),dict):
-                        entry=dict(entry,tune_override={k:v for k,v in body["gguf_tune"].items() if k in ("flash_attn","ubatch")})
+                        entry=dict(entry,tune_override={k:v for k,v in body["gguf_tune"].items() if k in ("flash_attn","ubatch","cache_type","slot_save")})
                 except (ValueError, OSError, KeyError, TypeError) as e:
                     return self._json(400, error_payload(e))
             balanced_msg = None

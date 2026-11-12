@@ -644,7 +644,7 @@ class HelperFlicker(unittest.TestCase):
         self.assertIn("state.optsRenderSignature", HTML)
         self.assertIn("if (sig === state.optsRenderSignature", HTML)
         # Reserved slot lives on the Guess-ahead row, which is inside Advanced.
-        self.assertIn('o.id === "guess_ahead" ? `<div class="helper-slot" data-helper-slot>', HTML)
+        self.assertIn('o.id === "guess_ahead" && !gguf ? `<div class="helper-slot" data-helper-slot>', HTML)
         self.assertIn('Helper download…', HTML)
         self.assertIn(".helper-slot", HTML)
         self.assertIn("min-height: 2.25rem", HTML)
@@ -739,14 +739,19 @@ class SelfTuneImmediate(unittest.TestCase):
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits[0][0], "/caravan/self-tune")
         self.assertIn(b"true", hits[0][1])
-        # GGUF: no worker call, no reload.
+        # GGUF: preference is saved; no live worker call, no reload.
         hits.clear()
         mgr._set(status="ready", backend="llama")
         out = mgr.set_self_tune("off")
         self.assertFalse(out["reloaded"])
         self.assertFalse(out["applied"])
         self.assertEqual(hits, [])
-        self.assertIn("MLX", out["notice"])
+        self.assertIn("keep the current settings", out["notice"])
+        self.assertNotIn("MLX only", out["notice"])
+        out = mgr.set_self_tune("auto")
+        self.assertFalse(out["reloaded"])
+        self.assertIn("reloads", out["notice"])
+        self.assertEqual(hits, [])
 
 
 
