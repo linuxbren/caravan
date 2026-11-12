@@ -67,17 +67,31 @@ read-only. Requested checks show verified/unverified/failed and expire after
 30 seconds. A reachable port alone does not verify SSH identity. A plan preview
 does not apply routes, pair Macs, install keys or authenticate model transport.
 
+## Look
+
+The theme switch at the top of the page offers **Amber**, **Green**,
+**Meadow**, and **Campfire**. Campfire is a cool night sky with a soft
+moon, crisp stars, a dark tree line, and a campfire glowing low, drawn
+in the page itself with no photos. Panels are frosted and dark, with
+amber accents, and the text stays readable. The logo, chips, dialogs,
+helper prompt, drawers, model picker, download cards, and Topology bars
+(in Theme mode) all follow the chosen theme, including on a phone. If
+you had previously chosen Nebula, the page opens in Campfire instead.
+
 ## Settings and optimization
 
 **Self-tuning** stays visible in Settings and is on by default: Caravan learns
 from your chats and remembers faster settings for each model; pinned choices
 stay yours. Below a thin divider, **Auto-tune** sits outside Advanced,
 with the hint "Tries different settings on the loaded model right now and
-keeps the fastest." An indented block holds **Tune again** and **Reset
-tuning**, a short note, and the Before and After lines. Auto-tune works
-whether Self-tuning is On or Off. Press Tune again for a fresh trial
-on the loaded model, even if one already ran — you do not need to remove
-or redownload the model. Reset tuning clears the saved results for this
+keeps the fastest." An indented block holds **Start** (or **Tune again**)
+and **Reset tuning**, a short note, and the Before and After lines.
+Auto-tune works whether Self-tuning is On or Off. The primary button
+says **Start** when this model has never been tuned, and **Tune again**
+once a run has finished and a result is saved. After Reset tuning
+clears those results, it says **Start** again. Either label runs a
+fresh trial on the loaded model — you do not need to remove or
+redownload it. Reset tuning clears the saved results for this
 model; the model stays loaded. After a Self-tuning or Auto-tune run
 finishes for the loaded model, two quiet lines in Auto-tune
 show how fast the model was before and after, for example

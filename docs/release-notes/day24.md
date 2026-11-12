@@ -80,6 +80,17 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   Auto-tune works whether Self-tuning is On or Off. The page and docs
   say Auto-tune where they used to say Optimize now; the API routes
   are unchanged.
+- Campfire, live review: Campfire replaces Nebula in the theme switch
+  (Amber, Green, Meadow, Campfire). It is a cool night sky with a
+  soft moon, crisp stars, a dark tree line, and a campfire glowing
+  low, drawn in SVG and CSS with no photos. Frosted dark panels and
+  amber accents; the text stays readable. A saved Nebula choice opens
+  as Campfire. The Webb image and credit are removed.
+- Auto-tune Start, live review: the primary button says Start when
+  the loaded model has never been tuned, and Tune again once a result
+  is saved. After Reset tuning it says Start again. The action is the
+  same fresh trials either way. The rest of the Auto-tune layout is
+  unchanged.
 
 ## Operational checks
 - Portable suite results are recorded at publication time in DAY24.md and
@@ -120,6 +131,11 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   A later live-review follow-up (Auto-tune section, independent of
   Self-tuning On or Off, Before and After only in Auto-tune) does not
   change `agent/`, `runtime/`, or the requirements files, so an
+  update from that pin keeps a loaded model running. The web page
+  still restarts.
+  A later live-review follow-up (Campfire replaces Nebula; Auto-tune
+  says Start until this model has been tuned, then Tune again) does
+  not change `agent/`, `runtime/`, or the requirements files, so an
   update from that pin keeps a loaded model running. The web page
   still restarts.
 

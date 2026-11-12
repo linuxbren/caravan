@@ -30,7 +30,11 @@ The header's inline SVG uses `currentColor` from `--accent`:
 | Amber | `#efc923` |
 | Green | `#3ecf5a` |
 | Meadow | `#2e7d32` |
-| Nebula | `#e0893a` |
+| Campfire | `#e0924a` (wordmark `#f0d2a0`) |
+
+Campfire draws its night-sky background in SVG and CSS, with no photos.
+A saved Nebula choice opens as Campfire. The header wordmark in Campfire
+uses a warm moonlight gold (`#f0d2a0`) on the dark sky.
 
 Standalone SVGs default to the surrounding SVG color (black without a specified
 color); embedding an SVG with `<img>` does not inherit the host's CSS color.

@@ -19,7 +19,12 @@ const fragments=new URLSearchParams(location.hash.slice(1));
 const capability=fragments.get('pair');
 const nextHome=fragments.get('next')==='home';
 history.replaceState(null,'',location.pathname + (location.hash === '#add-mac' ? '#add-mac' : ''));
-try { document.documentElement.dataset.theme=localStorage.getItem('caravan-theme') || 'amber'; } catch (_) {}
+try {
+  let _t = localStorage.getItem('caravan-theme') || 'amber';
+  if (_t === 'nebula') _t = 'campfire';
+  if (!['amber','green','meadow','campfire'].includes(_t)) _t = 'amber';
+  document.documentElement.dataset.theme = _t;
+} catch (_) {}
 const initialized=capability?fetch('/api/pairing/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({capability})}).then(async r=>{if(!r.ok)throw Error((await r.json()).error);if(location.pathname==='/pairing')location.replace(nextHome?'/':'/#add-mac');}):Promise.resolve();
 const el=id=>document.getElementById(id);
 const message=text=>{el('message').textContent=text;};

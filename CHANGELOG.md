@@ -89,6 +89,12 @@
   used to say Optimize now; API routes unchanged) does not change
   `agent/`, `runtime/`, or the requirements files, so an update from
   that pin keeps a loaded model running. The web page still restarts.
+  A later live-review follow-up (Campfire replaces Nebula, drawn in
+  SVG and CSS with no photos; saved Nebula opens as Campfire; Auto-tune
+  says Start until this model has been tuned, then Tune again) does
+  not change `agent/`, `runtime/`, or the requirements files, so an
+  update from that pin keeps a loaded model running. The web page
+  still restarts.
 
 ## MIT License (2026-11-12)
 

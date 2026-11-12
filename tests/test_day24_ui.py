@@ -95,10 +95,14 @@ class SettingsAdvanced(unittest.TestCase):
         self.assertFalse(rows < apply < adv)
         self.assertIn("Auto = Caravan decides (learned per model)", HTML)
         self.assertIn(">Auto-tune</h3>", HTML)
-        self.assertIn(">Tune again</button>", HTML)
+        self.assertIn(">Start</button>", HTML[start_btn:adv])
         self.assertIn(">Reset tuning</button>", HTML)
         self.assertNotIn(">Optimize now</b>", HTML)
-        self.assertNotIn('id="btnOptStart">Start</button>', HTML)
+        # Default label is Start (never tuned). JS swaps it to Tune again
+        # once a saved result exists; that string lives in the script, not
+        # as a second button.
+        self.assertIn('has ? "Tune again" : "Start"', HTML)
+        self.assertNotIn(">Tune again</button>", HTML)
         # No Tune / Optimize / Auto-tune button inside Advanced.
         self.assertNotIn("Optimize now", HTML[adv:adv_end])
         self.assertNotIn("Tune again", HTML[adv:adv_end])

@@ -20,7 +20,8 @@ the hint "Caravan learns from your chats and remembers faster settings
 for each model. Pinned choices stay yours." A thin divider sits below
 it, then a new **Auto-tune** heading, outside Advanced, with the hint
 "Tries different settings on the loaded model right now and keeps the
-fastest." Under that, an indented block holds **Tune again** and
+fastest." Under that, an indented block holds **Start** (or **Tune
+again**, once this model has been tuned) and
 **Reset tuning**, the note "Tune again runs fresh trials. Reset tuning
 forgets saved results for this model. The model stays loaded," and the
 Before and After lines. Auto-tune works whether Self-tuning is On or
@@ -396,3 +397,32 @@ restarts. The portable suite on a fresh clone on the development node:
 **1,357 tests passed** in 57.188 s. The 1st node and 2nd node
 were not touched. No `day24` tag yet. Source and pin SHAs are recorded
 at publication time.
+
+### Live review: Campfire theme, and Start until a model is tuned
+
+Campfire replaces Nebula in the theme switch: Amber, Green, Meadow,
+Campfire. It is the approved Moonlit mockup, drawn in SVG and CSS with
+no photos — a cool blue night sky, a soft moon, crisp stars, a dark
+tree line, and a campfire glowing low in the lower-left. Panels are
+frosted and dark, with amber accents, and the text stays readable. The
+logo, chips, dialogs, helper prompt, drawers, Topology bars in Theme
+mode, the model picker, download cards, and the phone layout all follow
+the theme. Anyone who had Nebula saved opens Campfire instead. The
+Webb image asset and its credit are removed.
+
+In Auto-tune, the primary button says **Start** when the loaded model
+has never been tuned (no saved result for it), and **Tune again** once
+a run has finished. After Reset tuning clears the saved results, it
+says **Start** again. Either label runs the same fresh trials. The
+label stays correct after a run finishes and after a page reload. The
+rest of the Auto-tune layout is unchanged.
+
+This follow-up is only proxy, tests, tools, docs, and the removal of
+the unused Nebula images — not `agent/`, `runtime/`, or the
+requirements files — so a `caravan update` from the previous Day 24
+pin keeps a loaded model running. The web page still restarts. The
+portable suite on a fresh clone on the development node:
+**1,365 tests passed** in 57.304 s. The 1st node and 2nd node
+were not touched. No `day24` tag yet. Source and pin SHAs are recorded
+at publication time.
+

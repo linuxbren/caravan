@@ -1,11 +1,14 @@
 # Auto-tune a model
 
 **Auto-tune** sits in Settings, below Self-tuning and outside Advanced.
-**Tune again** runs real comparisons to find settings that help the loaded
-model on the participating Macs. It works whether Self-tuning is On or
-Off. It is not a synthetic progress animation or a guarantee that every
-model gets faster. You can press it again on a model that was already
-tuned; you do not need to remove or redownload the model. If a run finds
+The primary button says **Start** when this model has never been tuned,
+and **Tune again** once a result is saved (and **Start** again after
+Reset tuning). Either label runs real comparisons to find settings that
+help the loaded model on the participating Macs. It works whether
+Self-tuning is On or Off. It is not a synthetic progress animation or a
+guarantee that every model gets faster. You can press it again on a
+model that was already tuned; you do not need to remove or redownload
+the model. If a run finds
 nothing faster, Settings shows one line, "Already at its fastest settings.
 Nothing faster found," instead of two identical Before and After lines.
 Those lines (or the one-line message) appear in the Auto-tune block, not

@@ -52,7 +52,7 @@ class TuneAgainButton(unittest.TestCase):
         self.assertTrue(sub < note < slot < adv)
         self.assertTrue(adv < apply)
         self.assertIn(">Auto-tune</h3>", HTML)
-        self.assertIn(">Tune again</button>", HTML)
+        self.assertIn(">Start</button>", HTML[start:adv])
         self.assertIn(">Reset tuning</button>", HTML)
         self.assertIn(
             "Tries different settings on the loaded model right now and keeps the fastest.",
@@ -66,7 +66,7 @@ class TuneAgainButton(unittest.TestCase):
         self.assertIn("border-left", HTML)
         # Buttons are not in the Self-tuning block (before the Auto-tune heading).
         self.assertGreater(start, heading)
-        self.assertNotIn('id="btnOptStart">Start</button>', HTML)
+        self.assertNotIn(">Tune again</button>", HTML)
         self.assertNotIn(">Optimize now</b>", HTML)
         adv_end = HTML.index("</details>", adv)
         self.assertNotIn("btnOptStart", HTML[adv:adv_end])
@@ -275,7 +275,8 @@ class ResetTuning(unittest.TestCase):
         mgr._tuned_entry = _tuned_entry
         out = WorkerManager.reset_tuning(mgr)
         self.assertTrue(out["ok"])
-        self.assertIn("Tune again", out["notice"])
+        self.assertIn("Start", out["notice"])
+        self.assertNotIn("Tune again", out["notice"])
         store = TS.load_store(tuned)
         e = store["models"]["m:spanned"]
         self.assertEqual(e["winner"], {})

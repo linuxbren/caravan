@@ -1,5 +1,15 @@
 # Changelog
 
+## Day 24 live review — Campfire theme, and Start until a model is tuned
+
+- Campfire replaces Nebula: Amber, Green, Meadow, Campfire. Drawn in
+  SVG and CSS (no photos). A saved Nebula choice opens as Campfire.
+  The Webb image and credit are removed.
+- Auto-tune's primary button says Start until this model has a saved
+  result, then Tune again; Reset tuning returns it to Start. A
+  `caravan update` from the previous Day 24 pin keeps a loaded model
+  running.
+
 ## Day 24 live review — Auto-tune section
 
 - Auto-tune sits below Self-tuning, outside Advanced, with Tune again,

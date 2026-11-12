@@ -1481,7 +1481,7 @@ class WorkerManager:
         """Clear saved winners, losses, and the before/after line for this model.
 
         The loaded model stays loaded; current live settings are not changed.
-        Press Tune again afterward to run a new trial from a clean slate.
+        Press Start afterward to run a new trial from a clean slate.
         """
         import web_speed
         snap = self.snapshot()
@@ -1523,7 +1523,7 @@ class WorkerManager:
                 pass
         return {
             "ok": True,
-            "notice": "Saved tuning for this model is cleared. Press Tune again to run a new trial.",
+            "notice": "Saved tuning for this model is cleared. Press Start to run a new trial.",
         }
 
     def lead_healthy(self) -> bool:

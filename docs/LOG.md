@@ -1,3 +1,20 @@
+## 2026-11-12: Day 24 live review — Campfire theme, and Start until a model is tuned
+
+Campfire replaces Nebula: a cool night sky, a soft moon, crisp stars,
+a dark tree line, and a campfire glowing low, drawn in SVG and CSS
+with no photos. The theme switch is Amber, Green, Meadow, Campfire.
+A saved Nebula choice opens as Campfire. The Webb image and credit
+are removed. The logo, chips, dialogs, helper prompt, drawers,
+Topology bars, model picker, and phone layout follow the theme, and
+the text stays readable.
+
+In Auto-tune, the primary button says **Start** when this model has
+never been tuned, and **Tune again** once a result is saved. After
+Reset tuning, it says **Start** again. The action is the same fresh
+trials either way. This follow-up does not change `agent/`,
+`runtime/`, or the requirements files, so a `caravan update` keeps a
+loaded model running; the web page still restarts.
+
 ## 2026-11-12: Day 24 live review — Auto-tune section
 
 An approved Settings layout moves **Tune again** and **Reset tuning**

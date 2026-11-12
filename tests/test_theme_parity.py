@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 HTML = (Path(__file__).resolve().parents[1] / "proxy" / "web" / "index.html").read_text()
-THEMES = ("amber", "green", "meadow", "nebula")
+THEMES = ("amber", "green", "meadow", "campfire")
 
 
 class ThemeParityTest(unittest.TestCase):

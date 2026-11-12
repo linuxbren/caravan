@@ -20,9 +20,9 @@ class LoadNowPrompt(unittest.TestCase):
         self.assertLess(body.index("await askLoadNow("), load)
 
     def test_dialog_is_themed(self):
-        # Base dialog style uses theme vars; Meadow and Nebula add glass.
+        # Base dialog style uses theme vars; Meadow and Campfire add glass.
         self.assertRegex(HTML, r"\n  dialog \{\s*background: var\(--bg2\)")
-        for t in ("meadow", "nebula"):
+        for t in ("meadow", "campfire"):
             self.assertRegex(HTML, r'html\[data-theme="%s"\] dialog' % t)
 
 

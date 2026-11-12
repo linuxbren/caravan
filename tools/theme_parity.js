@@ -1,5 +1,5 @@
 const p=require('puppeteer-core');const fs=require('fs');
-const THEMES=['amber','green','meadow','nebula'];
+const THEMES=['amber','green','meadow','campfire'];
 const VIEWS={main:null,settings:'#btnOpenSettings',models:'#btnOpenPicker',topology:'#btnOpenTopo'};
 const SIZES={desktop:[1280,900],phone:[390,844]};
 const shots=process.argv[2]==='shots';

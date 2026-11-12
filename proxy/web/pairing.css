@@ -72,25 +72,25 @@
     --scan: transparent;
   }
 
-  html[data-theme="nebula"] {
-    --bg: rgba(10,12,26,.58);
-    --bg2: rgba(12,14,30,.68);
-    --bg3: rgba(26,26,48,.82);
-    --line: rgba(224,180,130,.22);
-    --text: #f3eee6;
-    --fg: #f3eee6;
-    --muted: #c6c8d8;
-    --accent: #e0893a;
-    --accent2: #7cc4ff;
+  html[data-theme="campfire"] {
+    --bg: rgba(10,16,28,.58);
+    --bg2: rgba(12,18,32,.76);
+    --bg3: rgba(18,26,42,.88);
+    --line: rgba(232,176,120,.26);
+    --text: #f3efe6;
+    --fg: #f3efe6;
+    --muted: #9aabc0;
+    --accent: #e0924a;
+    --accent2: #f0c48a;
     --glow: transparent;
     --amber: var(--accent);
-    --amber2: #9fd3ff;
+    --amber2: var(--accent2);
     --teal: var(--accent);
-    --teal2: #9fd3ff;
+    --teal2: var(--accent2);
     --rose: #fda4af;
-    --ok: #6ee7b7;
-    --warn: #fcd34d;
-    --shadow: 0 12px 40px rgba(0,0,10,.45), 0 1px 0 rgba(255,255,255,.06) inset;
+    --ok: #7dcea0;
+    --warn: #f0c48a;
+    --shadow: 0 12px 40px rgba(0,0,10,.5), 0 1px 0 rgba(255,220,180,.08) inset, 0 16px 36px rgba(224,120,40,.08);
     --radius: 14px;
     --statmono: "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
     --sans: "Nunito", "Avenir Next", "SF Pro Rounded", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
