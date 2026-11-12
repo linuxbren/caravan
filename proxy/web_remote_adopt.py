@@ -8,11 +8,8 @@ import web_settings
 
 
 def tunnel_matches(command,target,port):
-    try:
-        args=shlex.split(command)
-        return (bool(args) and Path(args[0]).name=="ssh" and "-N" in args
-                and O.option(args,"-L")==f"{port}:127.0.0.1:{port}" and args[-1]==target)
-    except (ValueError,IndexError):return False
+    from web_tunnels import tunnel_matches as _match
+    return _match(command, target, port)
 
 
 def adopt(mgr):

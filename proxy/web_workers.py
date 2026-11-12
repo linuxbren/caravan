@@ -107,7 +107,28 @@ class WorkerManager:
             s["progress"] = list(self.state["progress"])
         return s
 
+    def _mac_name(self, node=None) -> str:
+        """Friendly Mac name for user-facing load status. Never a hostname."""
+        node = node if node is not None else getattr(self, "_worker_node", None)
+        try:
+            import web_nodes
+            inv = web_nodes.nodes_from_config()
+            return web_nodes.friendly_mac_label(
+                node or {}, inventory=inv, node_count=len(inv) or 1)
+        except Exception:
+            role = ((node or {}).get("role") or "").lower()
+            if role == "packer":
+                return "2nd Mac"
+            if role == "lead":
+                return "1st Mac"
+            return "Mac"
+
     def _note(self, msg: str) -> None:
+        try:
+            from web_tunnels import plain_load_status
+            msg = plain_load_status(msg, mac=self._mac_name())
+        except Exception:
+            pass
         with self._lock:
             self.state["progress"].append({"t": round(time.time(), 3), "msg": msg})
             # keep last 40
@@ -255,8 +276,22 @@ class WorkerManager:
                     self._set(status="error", error=str(e), retryable=True, retry_kind=e.kind)
                     self._note(f"error: {e}")
                 else:
-                    self._set(status="error", error=f"{type(e).__name__}: {e}", retryable=False, retry_kind=None)
-                    self._note(f"error: {e}")
+                    import logging as _log
+                    from web_tunnels import TunnelError, plain_tunnel_error, plain_load_status
+                    if isinstance(e, TunnelError):
+                        plain = e.plain
+                        _log.getLogger("caravan.tunnel").error(
+                            "load tunnel failed: %s", e.detail or e)
+                    else:
+                        raw = f"{type(e).__name__}: {e}"
+                        _log.getLogger("caravan.tunnel").error("load failed: %s", raw)
+                        low = raw.lower()
+                        if "tunnel" in low or "already in use" in low or "forwarding" in low:
+                            plain = plain_tunnel_error(raw, mac=self._mac_name())
+                        else:
+                            plain = plain_load_status(raw, mac=self._mac_name()) or raw
+                    self._set(status="error", error=plain, error_detail=None, retryable=False, retry_kind=None)
+                    self._note("error: " + plain)
             finally:
                 self._sweep_load = None
 
@@ -345,25 +380,22 @@ class WorkerManager:
         if run_mode == "split":
             packer_path = self._resolve_packer_path(entry)
             self._set(status="starting_packer", packer_pid=None)
-            self._note(f"starting helper on the 2nd node ({packer_path})")
+            self._note("starting helper on the 2nd Mac")
             packer_pid = self._start_packer(entry, packer_path)
             self._set(packer_pid=packer_pid)
             self._wait_packer_ready(timeout=300)
             self._set(status="starting_lead")
-            self._note(f"starting lead on the 1st node ({entry['lead_path']})")
+            self._note("starting lead on the 1st Mac")
             lead_pid = self._start_lead(entry, split=True)
         else:
             self._set(status="starting_lead", packer_pid=None)
             node = self._resolve_worker_node(entry, place=entry.get("placement"))
             self._worker_node = node
             if node and not self._node_is_local(node):
-                self._note(
-                    f"starting single-Mini worker on {node.get('label') or node.get('id')} "
-                    f"({entry.get('lead_path')})"
-                )
+                self._note(f"starting single-Mini worker on {self._mac_name(node)}")
                 lead_pid = self._start_remote_single(entry, node)
             else:
-                self._note(f"starting model worker on the lead Mac ({entry['lead_path']})")
+                self._note("starting model worker on this Mac")
                 lead_pid = self._start_lead(entry, split=False)
         self._set(lead_pid=lead_pid)
         self._wait_lead_ready(timeout=600)
@@ -1089,49 +1121,77 @@ class WorkerManager:
             ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", target, cmd],
             capture_output=True, text=True, timeout=timeout)
 
-    def _stop_tunnel(self) -> None:
+    def _stop_tunnel(self, node=None) -> None:
+        """Stop only Caravan's own ssh forward to this worker. Never a foreign pid."""
+        import web_tunnels as T
+        pids = []
         proc = getattr(self, "_tunnel_proc", None)
-        if proc and proc.poll() is None:
-            try:
-                proc.terminate()
-                proc.wait(timeout=3)
-            except Exception:
-                try:
-                    proc.kill()
-                except Exception:
-                    pass
-        self._tunnel_proc = None
-        adopted=getattr(self,"_adopted_tunnel",None)
+        if proc is not None:
+            if proc.poll() is None and proc.pid:
+                pids.append(proc.pid)
+            self._tunnel_proc = None
+        target = None
+        port = int(self.lead_port)
+        adopted = getattr(self, "_adopted_tunnel", None)
         if adopted:
-            from web_remote_adopt import tunnel_matches
-            from worker_ownership import command_of
-            import signal
-            pid,target,port=adopted
-            if tunnel_matches(command_of(pid),target,port):
-                try:os.kill(pid,signal.SIGTERM)
-                except ProcessLookupError:pass
-                deadline=time.monotonic()+3
-                while tunnel_matches(command_of(pid),target,port) and time.monotonic()<deadline:
-                    time.sleep(.05)
-                if tunnel_matches(command_of(pid),target,port):
-                    raise RuntimeError("Owned SSH tunnel is still stopping; retry shortly. No other PID was touched.")
-            self._adopted_tunnel=None
+            pid, target, port = adopted
+            pids.append(pid)
+            self._adopted_tunnel = None
+        node = node or getattr(self, "_worker_node", None) or {}
+        if not target:
+            target = (node.get("ssh") or node.get("host") or self.packer_ssh or "").strip()
+        meta_path = self.state_dir / "remote-worker.json"
+        if meta_path.is_file():
+            try:
+                meta = json.loads(meta_path.read_text())
+                if meta.get("tunnel_pid"):
+                    pids.append(int(meta["tunnel_pid"]))
+                if not target:
+                    target = (meta.get("ssh") or "").strip()
+            except (OSError, ValueError, TypeError):
+                pass
+        if target:
+            T.stop_forward(target, port, pids=pids)
+        else:
+            for pid in pids:
+                cmd = T.command_of(pid)
+                try:
+                    args = __import__("shlex").split(cmd or "")
+                    maybe = args[-1] if args else ""
+                except (ValueError, IndexError):
+                    maybe = ""
+                if maybe:
+                    T.stop_owned(pid, maybe, port)
 
     def _ensure_tunnel(self, node: dict) -> None:
-        """Forward local lead_port → remote 127.0.0.1:lead_port so chat/health stay local."""
-        self._stop_tunnel()
+        """Forward local lead_port → remote 127.0.0.1:lead_port so chat/health stay local.
+
+        A leftover Caravan forward from a web restart is reused when it still
+        works, or replaced (only that process) when it does not. A process
+        that is not ours is never killed.
+        """
+        import web_tunnels as T
         target = (node.get("ssh") or node.get("host") or self.packer_ssh or "").strip()
-        port = str(self.lead_port)
-        # -N -L local:remote; ExitOnForwardFailure so we notice bind races.
-        self._tunnel_proc = subprocess.Popen(
-            ["ssh", "-o", "BatchMode=yes", "-o", "ExitOnForwardFailure=yes",
-             "-o", "ServerAliveInterval=15", "-N",
-             "-L", f"{port}:127.0.0.1:{port}", target],
-            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, start_new_session=True)
-        time.sleep(0.4)
-        if self._tunnel_proc.poll() is not None:
-            err = (self._tunnel_proc.stderr.read() if self._tunnel_proc.stderr else b"") or b""
-            raise RuntimeError(f"ssh tunnel to {target} failed: {err.decode(errors='replace')[:300]}")
+        port = int(self.lead_port)
+        adopted = getattr(self, "_adopted_tunnel", None)
+        if adopted and adopted[1] and adopted[1] != target:
+            self._stop_tunnel()
+        try:
+            got = T.ensure_forward(target, port)
+        except T.TunnelError:
+            raise
+        except Exception as e:
+            raise T.TunnelError(
+                T.plain_tunnel_error(e, mac=self._mac_name(node)),
+                detail=str(e),
+            ) from e
+        if got.get("reused"):
+            if not (self._tunnel_proc and self._tunnel_proc.pid == got["pid"]):
+                self._tunnel_proc = None
+                self._adopted_tunnel = (got["pid"], target, port)
+        else:
+            self._tunnel_proc = got.get("proc")
+            self._adopted_tunnel = None
 
     def _start_remote_single(self, entry: dict, node: dict) -> int:
         """Run mlx_worker as a non-split HTTP server on a non-lead Mini; tunnel to it."""
@@ -1171,13 +1231,18 @@ class WorkerManager:
         self._ensure_tunnel(node)
         self._lead_proc = None
         (self.state_dir / "lead.pid").write_text(str(pid))
+        tun_pid = None
+        if self._tunnel_proc is not None and self._tunnel_proc.pid:
+            tun_pid = self._tunnel_proc.pid
+        elif getattr(self, "_adopted_tunnel", None):
+            tun_pid = self._adopted_tunnel[0]
         (self.state_dir / "remote-worker.json").write_text(json.dumps({
             "pid": pid, "node": node.get("id") or node.get("label"),
             "ssh": node.get("ssh") or node.get("host"),
             "model": remote_model, "repo": repo,
             "model_id":entry["id"],"model_name":entry.get("name") or entry["id"],
             "settings":self.snapshot().get("settings") or {},
-            "tunnel_pid":self._tunnel_proc.pid,
+            "tunnel_pid": tun_pid,
         }))
         return pid
 

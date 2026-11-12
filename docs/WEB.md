@@ -106,6 +106,12 @@ memory. Start with a smaller model rather than bypassing safety checks.
 The model-report link opens an editable report; review it before submitting.
 Never include tokens, private chats, usernames or real network addresses.
 
+If a model load fails with "Couldn't start the model on the 2nd Mac. Try loading again.", the full detail is in the log on that Mac. Caravan
+reuses its own leftover SSH forward when it still works, or replaces
+only that process when it does not. It never stops a process that is
+not its own. Try loading again. If it still fails, check that the other
+Mac is reachable.
+
 The browser has no login. Fresh installs bind localhost; never expose it to
 the public internet. [Security](SECURITY.md) explains the trust boundary.
 

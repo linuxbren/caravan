@@ -52,6 +52,14 @@
   under Self-tuning and by the button that produced the result) does
   not change `agent/`, `runtime/`, or the requirements files, so an
   update from that pin keeps a loaded model running.
+  A later live-review follow-up (reuse or replace Caravan's leftover
+  SSH forward after a web restart that kept the model; never kill a
+  process that is not ours; load status uses friendly Mac names and
+  no paths; a remaining tunnel error is "Couldn't start the model on
+  the 2nd Mac. Try loading again.", with detail in the log only) does
+  not change `agent/`, `runtime/`, or the requirements files, so an
+  update from that pin keeps a loaded model running. The web page
+  still restarts.
 
 ## MIT License (2026-11-12)
 

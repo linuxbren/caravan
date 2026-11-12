@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -322,7 +323,74 @@ def _stop_gguf(home, *, inspect, send, pause, run_ssh):
     # Leave the file; a new load rewrites it. Never touch last-model.json.
 
 
-def _stop_remote_mlx(home, *, lead_port, run_ssh):
+def _is_our_tunnel(command, target, port):
+    """True when this command is Caravan's ssh -N -L <port> to this host alias.
+
+    Stdlib-only: this module cannot import proxy/ at import time.
+    """
+    try:
+        args = shlex.split(command or "")
+    except ValueError:
+        return False
+    if not args or Path(args[0]).name != "ssh" or "-N" not in args:
+        return False
+    if target and args[-1] != str(target):
+        return False
+    flag = f"{int(port)}:127.0.0.1:{int(port)}"
+    for i, a in enumerate(args):
+        if a == "-L" and i + 1 < len(args) and args[i + 1] == flag:
+            return True
+        if a.startswith("-L") and flag in a:
+            return True
+    return False
+
+
+def _stop_owned_local_tunnels(meta, lead_port, *, inspect=None, send=None, pause=None):
+    """Stop leftover local ssh forwards recorded for a remote MLX worker.
+
+    Only a pid whose command line still matches our forward is signaled.
+    """
+    inspect = inspect or _command_of
+    send = send or os.kill
+    pause = pause or time.sleep
+    target = ((meta or {}).get("ssh") or "").strip()
+    pids = []
+    tid = (meta or {}).get("tunnel_pid")
+    if tid:
+        try:
+            pids.append(int(tid))
+        except (TypeError, ValueError):
+            pass
+    if not target or not pids:
+        return
+    import signal as _signal
+    for pid in pids:
+        if pid <= 1:
+            continue
+        try:
+            cmd = inspect(pid) or ""
+        except Exception:
+            cmd = ""
+        if not _is_our_tunnel(cmd, target, lead_port):
+            continue
+        try:
+            send(pid, _signal.SIGTERM)
+        except ProcessLookupError:
+            continue
+        except PermissionError:
+            continue
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            try:
+                cmd = inspect(pid) or ""
+            except Exception:
+                cmd = ""
+            if not cmd or not _is_our_tunnel(cmd, target, lead_port):
+                break
+            pause(0.05)
+
+
+def _stop_remote_mlx(home, *, lead_port, run_ssh, inspect=None, send=None, pause=None):
     meta_path = Path(home) / ".caravan" / "web-ui" / "remote-worker.json"
     if not meta_path.is_file():
         return
@@ -330,6 +398,9 @@ def _stop_remote_mlx(home, *, lead_port, run_ssh):
         meta = json.loads(meta_path.read_text())
     except (OSError, ValueError):
         return
+    # Local leftover forward first: does not need SSH to the other Mac.
+    _stop_owned_local_tunnels(
+        meta, lead_port, inspect=inspect, send=send, pause=pause)
     target = (meta.get("ssh") or "").strip()
     if not target or run_ssh is None:
         return
@@ -389,7 +460,10 @@ def stop_model_workers(
         pause=pause, ownership_stop=ownership_stop,
     )
     _stop_gguf(home, inspect=inspect, send=send, pause=pause, run_ssh=run_ssh)
-    _stop_remote_mlx(home, lead_port=lead_port, run_ssh=run_ssh)
+    _stop_remote_mlx(
+        home, lead_port=lead_port, run_ssh=run_ssh,
+        inspect=inspect, send=send, pause=pause,
+    )
     _stop_remote_packer(home, run_ssh=run_ssh)
     if path.is_file() and before is not None and path.read_bytes() != before:
         raise ValueError("Update must not clear the saved model")

@@ -1,3 +1,22 @@
+## 2026-11-12: Day 24 live review — leftover SSH tunnel after an update
+
+After an update that keeps the model, the web page restarts and leaves
+the SSH forward that chat uses. The next load used to fail with a raw
+SSH "Address already in use" message, because the leftover process was
+no longer tracked. The load now reuses Caravan's own forward when it
+still works, or stops only that process and opens a new one when it
+does not. A process that is not Caravan's is never killed. Unload, a
+model switch, a web stop that stops the workers, and an update that
+reloads workers also clean up Caravan's own forwards. When the update
+keeps the model, the forward is left for the new page to pick up.
+Load status uses a friendly Mac name ("starting single-Mini worker on
+2nd Mac") and never a hostname or a file path. If a tunnel error still
+happens, the page shows "Couldn't start the model on the 2nd Mac. Try
+loading again." The full detail goes to the log only. This follow-up
+does not change `agent/`, `runtime/`, or the requirements files, so a
+`caravan update` keeps a loaded model running; the web page still
+restarts.
+
 ## 2026-11-12: Day 24 live review — before/after lines by the button that produced them
 
 The Settings before/after result is two lines, using the same wording

@@ -161,8 +161,10 @@ button staying still across repeated identical polls, the start-message
 wording (a related Day 23 fix, committed on its own), Balance status
 wording, and the Models fit-summary line. Later tests cover whole-repo fetch for
 models without a top-level `config.json`, download-only notices for
-Advanced types Caravan cannot serve, and plain download errors with
-friendly Mac names. The full suite is run on the
+Advanced types Caravan cannot serve, plain download errors with
+friendly Mac names, leftover SSH-forward reuse (only Caravan's own
+forward is reused or replaced), and plain load errors with friendly
+Mac names and no paths. The full suite is run on the
 development node checkout. Counts are recorded at commit time.
 
 ## Publication
@@ -229,3 +231,35 @@ running. The web page still restarts. The portable suite on a fresh
 clone on the development node: **1,296 tests passed** in 54.517 s. The
 1st node and 2nd node were not touched. No `day24` tag yet. Source and
 pin SHAs are recorded at publication time.
+
+### Live review: leftover SSH tunnel after an update
+
+After an update that keeps the model, the web page restarts and leaves
+the SSH forward that chat uses, so the model can stay loaded. The next
+load — for example, switching to a smaller model on the 2nd Mac — used
+to try to open the same forward again and fail with a raw SSH message,
+because the leftover process was no longer tracked.
+
+The load now checks whether the process holding that port is Caravan's
+own forward to the same Mac and port (by matching the command line). If
+it still works, it is reused. If it is ours but no longer works, only
+that process is stopped and the forward is opened again. A process that
+is not Caravan's is never killed. Unload, a model switch, a web stop
+that actually stops the workers, and an update that reloads workers
+also clean up Caravan's own forwards, so they are less likely to be
+left behind. When the update keeps the model, the forward is left for
+the new page to pick up.
+
+User-facing load status uses a friendly Mac name and never a hostname
+or a file path — for example, "starting single-Mini worker on 2nd Mac".
+If a tunnel error still happens, the page shows a one-line message such
+as "Couldn't start the model on the 2nd Mac. Try loading again." The
+full detail goes to the log only.
+
+This follow-up is only proxy, the update tool, tests, and docs — not
+`agent/`, `runtime/`, or the requirements files — so a `caravan update`
+from the previous Day 24 pin keeps a loaded model running. The web page
+still restarts. The portable suite on a fresh clone on the development node:
+**1,312 tests passed** in 55.774 s. The 1st node and 2nd node were
+not touched. No `day24` tag yet. Source and pin SHAs are recorded at
+publication time.

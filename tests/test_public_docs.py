@@ -41,7 +41,13 @@ class PublicDocsTest(unittest.TestCase):
         text = (ROOT/'proxy/web_workers.py').read_text()
         for old in ('starting packer on EXO2', 'starting lead on EXO1', 'model folder missing on EXO1'):
             self.assertNotIn(old, text)
-        self.assertIn('starting lead on the 1st node', text)
+        self.assertIn('starting lead on the 1st Mac', text)
+        self.assertIn('starting helper on the 2nd Mac', text)
+        self.assertNotIn('prf-hays', text)
+        self.assertNotIn("starting lead on the 1st Mac ({", text)
+        self.assertNotIn("starting helper on the 2nd Mac ({", text)
+        self.assertNotIn("entry['lead_path']", text)
+
 
 
 if __name__ == '__main__': unittest.main()

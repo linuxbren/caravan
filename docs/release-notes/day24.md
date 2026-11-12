@@ -39,6 +39,16 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   Download cards use friendly Mac names and a short plain error
   ("Download stopped. Press Resume to try again."); traces, hostnames,
   and internal ids stay in the log.
+- Load, live review: after an update that keeps the model, the web page
+  restarts and may leave Caravan's SSH forward in place. The next load
+  reuses that forward when it still works, or stops only that process
+  and opens a new one when it does not. A process that is not Caravan's
+  is never killed. Unload, a model switch, a web stop that stops the
+  workers, and an update that reloads workers clean up Caravan's own
+  forwards. Load status says "2nd Mac" (never a hostname or a file
+  path). If a tunnel error still happens, the page shows "Couldn't
+  start the model on the 2nd Mac. Try loading again." and the full
+  detail goes to the log.
 
 ## Operational checks
 - Portable suite results are recorded at publication time in DAY24.md and
@@ -56,5 +66,10 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   Self-tuning and by the button that produced the result) does not
   change `agent/`, `runtime/`, or the requirements files, so an update
   from that pin keeps a loaded model running. The web page still restarts.
+  A later live-review follow-up (reuse or replace Caravan's leftover
+  SSH forward after a web restart, plain load errors, and friendly
+  Mac names on load status) does not change `agent/`, `runtime/`, or
+  the requirements files, so an update from that pin keeps a loaded
+  model running. The web page still restarts.
 
 Details: [DAY24.md](../DAY24.md). Install: [INSTALL.md](../../INSTALL.md).
