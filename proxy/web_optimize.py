@@ -101,23 +101,37 @@ class Optimizer:
         with self._lock:
             self.state["log"] = (self.state["log"] + [{"t": time.time(), "msg": msg}])[-60:]
 
-    def start(self, mode="now", source="optimize_now"):
+    def start(self, mode="now", source="optimize_now", fresh=True):
         # Accept legacy clients, but never resurrect Deep/Quick coverage.
+        # fresh=True (the Tune again button, and the default): retry even if a
+        # previous pass already recorded losses or the page has pins, so a
+        # second press is not a silent no-op. No unload or redownload.
         with self._lock:
             if self.state["running"]:
                 raise RuntimeError("optimize already running")
             snap = self.mgr.snapshot()
             if snap.get("status") != "ready" or not snap.get("model_id"):
                 raise RuntimeError("load a model first")
+            settings = web_settings.normalize(snap.get("settings") or {})
             active = self.mgr.lead_active_settings()
+            # A split start can leave the worker with learning off even when
+            # Self-tuning is On. Turn learning on live, then continue.
+            if ((not active or not active.get("self_tune", True))
+                    and settings.get("self_tune") != "off"
+                    and hasattr(self.mgr, "set_self_tune")):
+                try:
+                    self.mgr.set_self_tune("auto")
+                    active = self.mgr.lead_active_settings() or active
+                except Exception:
+                    pass
             if not active or not active.get("self_tune", True):
                 raise RuntimeError("Optimize now needs an MLX model with Auto learning on")
-            settings = web_settings.normalize(snap.get("settings") or {})
             if (settings.get("guess_ahead") == "mtp" or
                     settings.get("prompt_lookup") == "adaptive"):
                 raise RuntimeError("turn off native MTP / adaptive lookup before Optimize now")
             self.model_id = snap["model_id"]
             self.settings = settings
+            self.fresh = bool(fresh)
             self.entry = copy.deepcopy(getattr(self.mgr, "_loaded_entry", None))
             self._cancel.clear()
             self._pause.clear()
@@ -356,11 +370,27 @@ class Optimizer:
             "total_s": avg.get("total_s"),
         }
 
-    def _record_tune_result(self, before, after, source="optimize_now"):
+    def _schedule(self, entry, settings, active, fp, *, n_layers=None, fresh=True):
+        """Plan one-option trials. A fresh run retries earlier losses and pins."""
+        entry = copy.deepcopy(entry or {})
+        settings = dict(settings or {})
+        active = dict(active or {})
+        if fresh:
+            for rec in (entry.get("optimize_hardware") or {}).values():
+                if isinstance(rec, dict):
+                    rec["losses"] = []
+            # Trial every available option, including ones the page currently
+            # pins. Capability skips (unavailable, blocked) still apply.
+            settings = web_settings.normalize({})
+            active["pinned"] = []
+        return AB.schedule(entry, settings, active, fp, n_layers=n_layers)
+
+    def _record_tune_result(self, before, after, source="optimize_now", unchanged=False):
         try:
             import web_speed
             return web_speed.record_tuning(
-                self.model_id, before=before, after=after, source=source)
+                self.model_id, before=before, after=after, source=source,
+                unchanged=unchanged)
         except Exception:
             return None
 
@@ -386,7 +416,9 @@ class Optimizer:
             _, entry = self.mgr._tuned_entry(self.mgr._lead_path, create=True)
             self.best = AB.baseline(entry, active, self.settings)
             self.current = AB.baseline({}, active)
-            items = AB.schedule(entry, self.settings, active, self.fp, n_layers=active.get("n_layers"))
+            items = self._schedule(entry, self.settings, active, self.fp,
+                                   n_layers=active.get("n_layers"),
+                                   fresh=getattr(self, "fresh", True))
             self._set(schedule=items)
             self._hold(self.best)
             if any(self.current.get(n) != v for n, v in self.best.items() if n not in AB.LIVE):
@@ -481,17 +513,21 @@ class Optimizer:
                             detail=raw)
             canceled = self._cancel.is_set()
             if complete and not failure and not canceled:
-                kept = any(i.get("state") == "kept" for i in (self.state.get("schedule") or []))
-                if kept:
-                    try:
-                        before = getattr(self, "_tune_before", None) or {}
-                        if not (before.get("write_tok_s") or before.get("ttft_s")):
-                            before = self._specs_for_settings(
-                                getattr(self, "_tune_initial", self.best))
-                        after = self._specs_for_settings(self.best)
-                        self._record_tune_result(before, after)
-                    except Exception:
-                        pass
+                try:
+                    import web_speed
+                    schedule = self.state.get("schedule") or []
+                    kept = any(i.get("state") == "kept" for i in schedule)
+                    before = getattr(self, "_tune_before", None) or {}
+                    if not (before.get("write_tok_s") or before.get("ttft_s")):
+                        before = self._specs_for_settings(
+                            getattr(self, "_tune_initial", self.best))
+                    after = self._specs_for_settings(self.best) if kept else dict(before or {})
+                    same = (not kept) or web_speed.tuning_bodies_match(before, after)
+                    self._record_tune_result(before, after, unchanged=same)
+                    if same:
+                        self._log(web_speed.NOTHING_FASTER)
+                except Exception:
+                    pass
             self._set(running=False, paused=False, error=failure,
                       phase="stopped (error)" if failure else "canceled" if canceled else "done",
                       eta_s=0 if complete else None,

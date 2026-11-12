@@ -1070,8 +1070,9 @@
   #settingsDrawer .applyrow { flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   #settingsDrawer .applyrow small { flex: 1 1 100%; }
   #settingsDrawer .optbox { border-top-color: var(--line); padding-top: 12px; margin-top: 16px; }
-  #settingsDrawer .optbox .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-  #settingsDrawer .optbox b { grid-column: 1 / -1; }
+  #settingsDrawer .optbox { margin-top: 8px; padding-top: 8px; }
+  #settingsDrawer .optbox .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: center; }
+  #settingsDrawer .optbox b { font-size: .72rem; font-weight: 600; }
   #settingsDrawer .hf-token-card input { padding: 6px 10px; margin-top: 8px; width: 100%; min-width: 0; }
   #settingsDrawer .hf-token-card small { margin-top: 12px; }
   #settingsDrawer #barColorSwitch { display: flex; margin-bottom: 8px; }
@@ -1371,30 +1372,30 @@
 <div class="optcard drawer-section">
       <h2 class="drawer-section-title"><span class="tip" title="Caravan learns which Optimizations help this model on your Minis.">Optimizations</span></h2>
       <div id="optRows"></div>
-      <div class="tune-slot" data-tune-slot="self_tune">
-        <p class="tune-result" id="tuneResult"></p>
+      <div class="optbox" id="optBox">
+        <div class="row">
+          <button class="primary drawer-control" id="btnOptStart" title="Run a fresh trial on the loaded model. Safe to press again; you do not need to remove or redownload the model.">Tune again</button>
+          <button class="ghost drawer-control" id="btnTuneReset" title="Clear saved tuning for this model and this setup. The model stays loaded.">Reset tuning</button>
+          <button class="ghost drawer-control" id="btnOptPause">Pause</button>
+          <button class="ghost drawer-control" id="btnOptCancel">Cancel</button>
+        </div>
+        <div class="tune-slot" data-tune-slot="self_tune">
+          <p class="tune-result" id="tuneResult"></p>
+        </div>
+        <div class="tune-slot" data-tune-slot="optimize_now">
+          <p class="tune-result" id="tuneResultOpt"></p>
+        </div>
+        <p class="self-tune-note" id="selfTuneNote" hidden></p>
+        <div class="tunenote" id="tuneNote"></div>
+        <div class="help" id="optTip">Self-tuning stays on when options are Auto — Caravan learns from real chats. Tune again runs a fresh trial on the loaded model.</div>
+        <div class="help" id="optProgress"></div>
       </div>
-      <p class="self-tune-note" id="selfTuneNote" hidden></p>
-      <div class="tunenote" id="tuneNote"></div>
       <details class="opt-advanced" id="optAdvanced">
         <summary>Advanced</summary>
         <div id="optAdvancedRows"></div>
       <div class="applyrow" id="optApplyRow">
         <button class="primary drawer-control" id="btnApply">Apply &amp; restart</button>
         <small id="optNote">Auto = Caravan decides (learned per model)</small>
-      </div>
-      <div class="optbox" id="optBox">
-        <div class="row">
-          <b class="tip" title="Walk-away pass: try each option once against the current best, reload only when a reload option needs a trial, then save the winner.">Optimize now</b>
-          <button class="primary drawer-control" id="btnOptStart">Start</button>
-          <button class="ghost drawer-control" id="btnOptPause">Pause</button>
-          <button class="ghost drawer-control" id="btnOptCancel">Cancel</button>
-        </div>
-        <div class="tune-slot" data-tune-slot="optimize_now">
-          <p class="tune-result" id="tuneResultOpt"></p>
-        </div>
-        <div class="help" id="optTip">Optimize as used stays on when options are Auto — Caravan learns from real chats.</div>
-        <div class="help" id="optProgress"></div>
       </div>
       </details>
     </div>
@@ -1761,9 +1762,20 @@
       for (const o of state.opts) {
         const now = document.querySelector(`.opt[data-id="${o.id}"] .now`);
         if (!now) continue;
+        // The Self-tuning switch already shows On/Off. A "now: off"
+        // next to On (from a worker that started with learning paused)
+        // is contradictory and unhelpful.
+        if (o.id === "self_tune") { now.textContent = ""; continue; }
         const v = activeValue(o.id, a);
         now.textContent = `now: ${v ?? "—"}`;
       }
+    }
+    // Clear a leftover "takes effect when you load" notice once a model is ready.
+    const stale = $("selfTuneNote");
+    if (stale && !stale.dataset.tuneError && state.loadedModel
+        && /takes effect when you load/.test(stale.textContent || "")) {
+      stale.hidden = true;
+      stale.textContent = "";
     }
     for (const o of state.opts) {
       const b = document.querySelector(`.opt[data-id="${o.id}"] button[data-v="auto"]`);
@@ -1803,12 +1815,13 @@
     if (note && opt && !opt.error) delete note.dataset.tuneError;
     const few = t && t.known && (t.replies_learned || 0) < 10;
     $("optTip").textContent = few && !(opt && opt.running)
-      ? "Tip: Optimize now can tune this model while you wait." : "";
+      ? "Tip: Tune again can try this model again while you wait." : "";
   }
   async function refreshOptimize() {
     let j;
     try { j = await api("/api/optimize"); } catch (e) { return; }
     $("btnOptStart").disabled = !!j.running || $("btnLoad").disabled;
+    if ($("btnTuneReset")) $("btnTuneReset").disabled = !!j.running || $("btnLoad").disabled;
     $("btnOptCancel").disabled = !j.running;
     $("btnOptPause").disabled = !j.running;
     $("btnOptPause").textContent = j.paused ? "Resume" : "Pause";
@@ -1816,7 +1829,7 @@
     if (!j.mode) { el.textContent = ""; return; }
     const schedule = j.schedule || [];
     const done = schedule.filter(i => ["kept", "skipped"].includes(i.state)).length;
-    let txt = `Optimize now${j.backend === "llama" ? " (GGUF, each option reloads llama.cpp twice)" : ""}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
+    let txt = `Tune again${j.backend === "llama" ? " (GGUF, each option reloads llama.cpp twice)" : ""}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
     if (schedule.length) txt += ` · ${done}/${schedule.length} options settled`;
     for (const item of schedule) txt += `\n${item.name}: ${item.state}${item.skip ? " — " + item.skip : item.state === "kept" ? " — " + item.winner : ""}`;
     if (j.running) txt += ` · about ${fmtMin(j.eta_s)} left`;
@@ -1841,7 +1854,7 @@
   // Presentation-only mirror of web_settings.OPTIONS, checked by test_day17_web_labels.
   // Served from disk so copy updates need not interrupt an active remote worker.
   const SETTINGS_HELP_COPY = {
-  "self_tune": "On by default: Caravan learns from your chats immediately and remembers faster settings for each MLX model. Other Auto settings follow its choices; pinned choices stay yours.",
+  "self_tune": "On by default: Caravan learns from your chats immediately and remembers faster settings for each model. Other Auto settings follow its choices; pinned choices stay yours.",
   "guess_ahead": "A smaller model guesses upcoming words for the main MLX model to check. Needs a matching helper; up to ~33% faster writing one reply on a split model in our tests, but slower with two chats.",
   "prompt_lookup": "Reuse words from your prompt to help the MLX model write repeated text. Up to ~44% faster in our tests on repeated text, but slower on mixed chats; one chat at a time.",
   "shared_start": "Reuse the beginning of repeated system prompts so the model has less to read. MLX models only.",
@@ -2641,9 +2654,21 @@
     window.dispatchEvent(new CustomEvent("caravan-models-changed"));
   };
   $("btnApply").onclick = () => $("btnLoad").onclick();
+  $("btnTuneReset").onclick = async () => {
+    const note = $("selfTuneNote");
+    try {
+      const j = await api("/api/settings/reset-tuning", { method: "POST", body: "{}" });
+      if (note) { note.hidden = !j.notice; note.textContent = j.notice || ""; }
+      paintTuneResult($("tuneResult"), "");
+      paintTuneResult($("tuneResultOpt"), "");
+      refreshTuneResult();
+    } catch (e) {
+      if (note) { note.hidden = false; note.textContent = e.error || e.message || String(e); }
+    }
+  };
   $("btnOptStart").onclick = async () => {
     try {
-      await api("/api/optimize/start", { method: "POST", body: "{}" });
+      await api("/api/optimize/start", { method: "POST", body: JSON.stringify({ fresh: true }) });
     } catch (e) { $("optProgress").textContent = String(e.error || e.message || e); }
     refreshOptimize();
   };

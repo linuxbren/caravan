@@ -323,8 +323,26 @@ def format_tuning_side(label: str, specs=None) -> str:
     return f"{label} · {body}" if body else ""
 
 
-def format_tuning_lines(before=None, after=None) -> list:
-    """Two lines: Before and After, omitting a side that has nothing to show."""
+NOTHING_FASTER = "Already at its fastest settings. Nothing faster found."
+
+
+def tuning_bodies_match(before=None, after=None) -> bool:
+    """True when Before and After would print as the same visible line."""
+    b = format_tuning_side("Before", before)
+    a = format_tuning_side("After", after)
+    if not b or not a:
+        return False
+    return b[len("Before · "):] == a[len("After · "):]
+
+
+def format_tuning_lines(before=None, after=None, *, unchanged=False) -> list:
+    """Before and After, or one plain line when nothing was faster.
+
+    When the two sides would look identical, or the run recorded no
+    improvement, return a single sentence instead of two matching lines.
+    """
+    if unchanged or tuning_bodies_match(before, after):
+        return [NOTHING_FASTER]
     out = []
     b = format_tuning_side("Before", before)
     a = format_tuning_side("After", after)
@@ -335,9 +353,9 @@ def format_tuning_lines(before=None, after=None) -> list:
     return out
 
 
-def format_tuning_line(before=None, after=None) -> str:
+def format_tuning_line(before=None, after=None, *, unchanged=False) -> str:
     """The two before/after lines joined by a newline, or empty."""
-    return "\n".join(format_tuning_lines(before, after))
+    return "\n".join(format_tuning_lines(before, after, unchanged=unchanged))
 
 
 _SPEC_FIELDS = (
@@ -408,16 +426,20 @@ def _tuning_slot(data: dict, model_id: str) -> dict:
 def _tuning_view(slot: dict) -> dict:
     before = slot.get("before") if isinstance(slot.get("before"), dict) else {}
     after = slot.get("after") if isinstance(slot.get("after"), dict) else {}
-    lines = (
-        format_tuning_lines(before, after)
-        if _has_specs(before) and _has_specs(after) else []
-    )
+    unchanged = bool(slot.get("unchanged"))
+    if unchanged:
+        lines = [NOTHING_FASTER]
+    elif _has_specs(before) and _has_specs(after):
+        lines = format_tuning_lines(before, after)
+    else:
+        lines = []
     return {
         "before": dict(before) if before else None,
         "after": dict(after) if after else None,
         "line": "\n".join(lines) if lines else None,
         "lines": lines or None,
         "source": slot.get("source"),
+        "unchanged": unchanged or tuning_bodies_match(before, after),
     }
 
 
@@ -437,23 +459,51 @@ def get_tuning(model_id: str, path=None) -> dict:
     return _tuning_view(slot)
 
 
-def record_tuning(model_id: str, *, before, after, source="optimize_now", path=None) -> dict:
-    """Save a finished run's baseline and winner speeds. Per model, last run wins."""
+def record_tuning(model_id: str, *, before=None, after=None, source="optimize_now",
+                  unchanged=False, path=None) -> dict:
+    """Save a finished run's baseline and winner speeds. Per model, last run wins.
+
+    When nothing was faster (or the two sides match), ``unchanged`` is stored
+    so the page shows one plain sentence instead of two identical lines.
+    """
     mid = str(model_id or "").strip()
-    b = specs_from(before)
-    a = specs_from(after)
-    if not mid or not _has_specs(b) or not _has_specs(a):
+    b = specs_from(before) if before else {}
+    a = specs_from(after) if after else {}
+    if not mid:
         return get_tuning(mid, path=path)
+    same = unchanged or tuning_bodies_match(b, a)
+    if not same and (not _has_specs(b) or not _has_specs(a)):
+        return get_tuning(mid, path=path)
+    if same and _has_specs(b) and not _has_specs(a):
+        a = dict(b)
     import time
     data = _load(path)
     slot = _tuning_slot(data, mid)
     slot.clear()
-    slot["before"] = b
-    slot["after"] = a
+    if _has_specs(b):
+        slot["before"] = b
+    if _has_specs(a):
+        slot["after"] = a
     slot["source"] = source
+    slot["unchanged"] = bool(same)
     slot["updated"] = time.time()
     _save(data, path)
     return _tuning_view(slot)
+
+
+def clear_tuning(model_id: str, path=None) -> dict:
+    """Drop the saved before/after (and nothing-faster note) for this model."""
+    mid = str(model_id or "").strip()
+    empty = {"before": None, "after": None, "line": None, "lines": None,
+             "source": None, "unchanged": False}
+    if not mid:
+        return empty
+    data = _load(path)
+    tun = data.get("tuning")
+    if isinstance(tun, dict) and mid in tun:
+        del tun[mid]
+        _save(data, path)
+    return empty
 
 
 def snapshot_pending_before(model_id: str, specs, path=None) -> dict:

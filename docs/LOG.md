@@ -1,3 +1,22 @@
+## 2026-11-12: Day 24 live review — Tune again, next to Self-tuning
+
+On a split MLX model, a later Optimize now press did not measure anything
+new: every option was skipped because a previous pass had already
+recorded losses, or the page had pins, so the run finished instantly.
+The Before and After lines were an older record of the same numbers on
+both sides. Self-tuning showed On, with a conflicting "now: off" and a
+leftover "takes effect when you load a model" notice. The hint said it
+was for each MLX model; it also covers GGUF.
+
+**Tune again** now sits next to Self-tuning, outside Advanced, with
+**Reset tuning** beside it. A press always runs a fresh trial on the
+loaded model; you never need to remove or redownload it. If nothing is
+faster, the page shows one plain line, not two identical Before and
+After lines. The conflicting "now: off" is gone. The Self-tuning hint
+is for each model. This follow-up does not change `agent/`, `runtime/`,
+or the requirements files, so a `caravan update` keeps a loaded model
+running; the web page still restarts.
+
 ## 2026-11-12: Day 24 live review — Self-tuning error with no reason on the page
 
 A Self-tuning trial on a split MLX model stopped while trying Memory

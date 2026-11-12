@@ -15,17 +15,22 @@ The page is cleaned up from a list Brenden dictated, panel by panel.
 
 ### Settings
 
-Self-tuning stays visible and on by default. Every other optimization
-(Guess-ahead, Prompt lookup, Shared start, Two chats, Fused kernels, Memory
-compression, GPU keep-warm) and **Optimize now** sit under an **Advanced**
+Self-tuning stays visible and on by default. **Tune again** and **Reset
+tuning** sit next to it, outside Advanced. Press Tune again for a fresh
+trial on the loaded model, even if a trial already ran — you do not need
+to remove or redownload the model. Reset tuning clears the saved results
+for this model and this setup; the model stays loaded. Every other
+optimization (Guess-ahead, Prompt lookup, Shared start, Two chats, Fused
+kernels, Memory compression, GPU keep-warm) sits under an **Advanced**
 section that is closed until you open it, along with **Apply & restart**
 and the "Auto = Caravan decides" note. Toggling Self-tuning On or Off
-saves and takes effect immediately on a loaded MLX model, with no reload:
+saves and takes effect immediately on a loaded model, with no reload:
 learning is a live flag on the running worker. A plain one-line notice
-confirms the change. Apply & restart is only needed for the other
+confirms the change. The On/Off switch does not show a conflicting
+"now: off" line. Apply & restart is only needed for the other
 optimization options, which still require a reload to apply.
 
-When self-tuning or Optimize now finishes for a model, Caravan records the
+When self-tuning or Tune again finishes for a model, Caravan records the
 speed from before the run and the speed with the chosen winners, and shows
 them as two lines in the Self-tuning section (still visible, not inside
 Advanced), for example "Before · Write 88.4 tok/s · first token 0.29s"
@@ -33,21 +38,23 @@ and "After · Write 94.5 tok/s · first token 0.15s". The wording, units,
 and rounding match the stats under each reply and the average under the
 chat input (tok/s, first token, and any extra fields that were recorded).
 The same two lines are also shown next to the control that produced the
-result, based on the stored `source`: under Optimize now (inside Advanced)
-when the source is `optimize_now`, and under the Self-tuning switch when
-Self-tuning's own learning wrote the after (`self_tune`). The slots are
-reserved at two-line height so the Settings rows below do not jump when
-the text appears. The lines stay empty until a run has finished for the
-loaded model. The pair is stored per model in `~/.caravan/speed_averages.json`
-next to the chat averages (under a `tuning` key), so it describes these
-Macs and survives a page refresh. Optimize now uses the existing chat
-average if there is one; otherwise Before and After come from the trial
-replies already sent during the run (incumbent replies at the starting
-settings, then replies measured with the winning settings), so the run
-does not add extra prompts. Self-tuning uses real-chat replies: those
-before winners exist become Before; once winners are chosen and any
-trial has settled, the next replies become After, and the pair is frozen.
-A later Optimize now run replaces it.
+result, based on the stored `source`: next to Tune again when the source
+is `optimize_now`, and under the Self-tuning switch when Self-tuning's
+own learning wrote the after (`self_tune`). If a run finds nothing
+faster, or the two sides would look the same, the page shows one plain
+line instead: "Already at its fastest settings. Nothing faster found."
+The slots are reserved at two-line height so the Settings rows below do
+not jump when the text appears. The lines stay empty until a run has
+finished for the loaded model. The pair is stored per model in
+`~/.caravan/speed_averages.json` next to the chat averages (under a
+`tuning` key), so it describes these Macs and survives a page refresh.
+Tune again uses the existing chat average if there is one; otherwise
+Before and After come from the trial replies already sent during the run
+(incumbent replies at the starting settings, then replies measured with
+the winning settings), so the run does not add extra prompts. Self-tuning
+uses real-chat replies: those before winners exist become Before; once
+winners are chosen and any trial has settled, the next replies become
+After, and the pair is frozen. A later Tune again run replaces it.
 
 The **Helper download…** button on the Guess-ahead row (inside Advanced)
 is reserved in that row and only rewritten when its state actually
@@ -324,3 +331,39 @@ restarts. The portable suite on a fresh clone on the development node:
 **1,339 tests passed** in 55.862 s. The 1st node and 2nd node were not
 touched. No `day24` tag yet. Source and pin SHAs are recorded at
 publication time.
+
+### Live review: Tune again, next to Self-tuning
+
+A later live review on the same split model (Qwen2.5 Coder 7B Instruct
+4bit, on the 1st Mac and the 2nd Mac) found that pressing the old
+Optimize now control did not measure anything new. Every option was
+skipped (already tried, or pinned on the page), so the run finished
+in no time with no prompts. The Before and After lines were an older
+record of the same numbers on both sides, which looked like a proof
+the model got faster when it had not. Self-tuning showed On, and a
+conflicting "now: off" next to it, with a leftover notice that
+Self-tuning "takes effect when you load a model" even though a model
+was already loaded. The Self-tuning hint also said it was for each
+MLX model; it also covers GGUF.
+
+**Tune again** now sits next to the Self-tuning switch, outside
+Advanced, with a smaller **Reset tuning** beside it. There is no
+duplicate inside Advanced. Pressing Tune again always runs a fresh
+trial on the loaded model: earlier losses and page pins do not skip
+the run, and you never need to remove or redownload the model. Reset
+tuning clears the saved winners, losses, and the speed lines for this
+model; the model stays loaded. If a run finds nothing faster, the page
+shows one line, "Already at its fastest settings. Nothing faster
+found," not two identical Before and After lines. The conflicting
+"now: off" line next to On is gone. The leftover "takes effect when
+you load a model" notice is cleared once a model is ready. The
+Self-tuning hint is for each model, not only MLX. A split load with
+Self-tuning on no longer starts the lead with learning paused.
+
+This follow-up is only proxy, tests, and docs — not `agent/`,
+`runtime/`, or the requirements files — so a `caravan update` from the
+previous Day 24 pin keeps a loaded model running. The web page still
+restarts. The portable suite on a fresh clone on the development node:
+**1,356 tests passed** in 56.131 s. The 1st node and 2nd node
+were not touched. No `day24` tag yet. Source and pin SHAs are recorded
+at publication time.

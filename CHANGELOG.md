@@ -74,6 +74,14 @@
   only; no hostnames or paths) does not change `agent/`, `runtime/`,
   or the requirements files, so an update from that pin keeps a
   loaded model running. The web page still restarts.
+  A later live-review follow-up (Tune again sits next to Self-tuning,
+  outside Advanced, and always runs a fresh trial on the loaded model;
+  Reset tuning clears saved results without unloading; one plain line
+  when nothing is faster instead of two identical Before and After
+  lines; the Self-tuning hint is for each model, not only MLX) does
+  not change `agent/`, `runtime/`, or the requirements files, so an
+  update from that pin keeps a loaded model running. The web page
+  still restarts.
 
 ## MIT License (2026-11-12)
 

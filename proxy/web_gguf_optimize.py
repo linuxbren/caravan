@@ -57,11 +57,12 @@ class GgufOptimizer:
             self.state["log"] = (self.state["log"] + [{"t": time.time(), "msg": msg}])[-60:]
         self._on_log(msg)
 
-    def start(self, source="optimize_now"):
+    def start(self, source="optimize_now", fresh=True):
         with self._lock:
             if self.state["running"]:
                 raise RuntimeError("optimize already running")
             self.source = source or "optimize_now"
+            self.fresh = bool(fresh)
             snap = self.mgr.snapshot()
             entry = copy.deepcopy(getattr(self.mgr, "_loaded_entry", None) or {})
             if snap.get("status") != "ready" or not snap.get("model_id"):
@@ -75,10 +76,13 @@ class GgufOptimizer:
             self.path = Path(entry["lead_path"]).expanduser()
             store = GT.load_store(self.store_path)
             e = GT.entry(store, GT.entry_key(self.path, self.n_minis))
+            # A fresh Tune again retries earlier losses; the on-disk record
+            # is only updated when this run itself commits a result.
+            losses = [] if self.fresh else list(e.get("losses") or [])
             sched = [{"name": i["name"], "state": "skipped" if i["skip"] else "pending",
                       "skip": i["skip"], "reload": True, "incumbent": i["incumbent"],
                       "challenger": i["challenger"], "winner": None, "done_arms": 0}
-                     for i in G.gguf_schedule(e["best"], e["losses"])]
+                     for i in G.gguf_schedule(e["best"], losses)]
             self._cancel.clear(); self._pause.clear()
             self.state = self._blank()
             self._set(running=True, mode="now", phase="starting", started=time.time(),
@@ -169,10 +173,11 @@ class GgufOptimizer:
             if res.get("before") and res.get("after") and getattr(self, "model_id", None):
                 try:
                     import web_speed
+                    same = web_speed.tuning_bodies_match(res["before"], res["after"])
                     web_speed.record_tuning(
                         self.model_id,
                         before=res["before"], after=res["after"],
-                        source=source,
+                        source=source, unchanged=same,
                     )
                 except Exception as ex:  # noqa: BLE001
                     self._log(f"could not save before/after: {ex}")

@@ -1,5 +1,15 @@
 # Changelog
 
+## Day 24 live review — Tune again, next to Self-tuning
+
+- Tune again sits next to Self-tuning, outside Advanced, and always runs
+  a fresh trial on the loaded model. Reset tuning clears saved results
+  without unloading. When nothing is faster, one plain line is shown
+  instead of two identical Before and After lines. The Self-tuning hint
+  is for each model, not only MLX. A `caravan update` from the previous
+  Day 24 pin keeps a loaded model running.
+
+
 ## Day 21 follow-up — Mac installation and documentation
 
 - Friendly Mac-owner README and current Day 20/21 setup, Balance, restore,

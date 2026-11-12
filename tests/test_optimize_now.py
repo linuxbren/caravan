@@ -388,9 +388,17 @@ class RunnerTest(unittest.TestCase):
         AB.commit(mgr.entry,fp,'kv_bits',16,8)
         AB.commit(mgr.entry,fp,'kv_bits',16,4)
         AB.commit(mgr.entry,fp,'fuse_kernels','off','on')
-        _,opt=self.run_opt(mgr)
+        # A non-fresh start still skips known losses (everyday schedule).
+        opt=WO.Optimizer(mgr,send=mgr.send)
+        opt.start(fresh=False); opt._thread.join(5)
+        self.assertFalse(opt.snapshot()['running'])
         self.assertEqual(opt.snapshot()['prompts'],0)
         self.assertFalse(mgr.reloads)
+        # Tune again (fresh=True, the default) retries those losses.
+        opt2=WO.Optimizer(mgr,send=mgr.send)
+        opt2.start(fresh=True); opt2._thread.join(5)
+        self.assertEqual(opt2.snapshot()['phase'],'done')
+        self.assertGreater(opt2.snapshot()['prompts'],0)
 
     def test_single_start_atomic(self):
         mgr=FakeMgr(); opt=WO.Optimizer(mgr,send=mgr.send,inflight=lambda:1)

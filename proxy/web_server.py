@@ -903,6 +903,8 @@ def make_handler(app: App):
                 return self._api_speed_average(post=True, body=body)
             if path == "/api/settings/self-tune":
                 return self._api_self_tune(body=body)
+            if path == "/api/settings/reset-tuning":
+                return self._api_reset_tuning()
             if path == "/api/models/load":
                 return self._api_load(body=body)
             if path == "/api/models/stop":
@@ -937,11 +939,13 @@ def make_handler(app: App):
                 gguf = (path.endswith("/gguf/start")
                         or app.mgr.snapshot().get("backend") == "llama")
                 try:
+                    fresh = True if not isinstance(body, dict) else body.get("fresh", True)
+                    fresh = bool(fresh) if fresh is not False and str(fresh).strip().lower() not in ("0", "false", "no") else False
                     if gguf:
-                        snap_ = app.gguf_optimizer.start()
+                        snap_ = app.gguf_optimizer.start(fresh=fresh)
                         app.optimizer = app.gguf_optimizer
                         return self._json(200, snap_)
-                    snap_ = app.mlx_optimizer.start()
+                    snap_ = app.mlx_optimizer.start(fresh=fresh)
                     app.optimizer = app.mlx_optimizer
                     return self._json(200, snap_)
                 except RuntimeError as e:
@@ -1138,6 +1142,14 @@ def make_handler(app: App):
                 return self._json(400, {"error": "self_tune is required"})
             try:
                 out = app.mgr.set_self_tune(raw)
+            except Exception as e:
+                return self._json(400, {"error": str(e)})
+            return self._json(200, out)
+
+        def _api_reset_tuning(self):
+            """Clear saved tuned settings for the loaded model; do not unload."""
+            try:
+                out = app.mgr.reset_tuning()
             except Exception as e:
                 return self._json(400, {"error": str(e)})
             return self._json(200, out)

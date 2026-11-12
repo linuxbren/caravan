@@ -12,7 +12,7 @@ from pathlib import Path
 # id -> label, plain help, allowed values (first is "auto")
 OPTIONS = [
     {"id": "self_tune", "label": "Self-tuning",
-     "help": "On by default: Caravan learns from your chats immediately and remembers faster settings for each MLX model. Other Auto settings follow its choices; pinned choices stay yours.",
+     "help": "On by default: Caravan learns from your chats immediately and remembers faster settings for each model. Other Auto settings follow its choices; pinned choices stay yours.",
      "help_gguf": "Caravan learns faster settings from your chats. For GGUF, a change reloads the model when you are not mid-reply.",
      "values": ["auto", "off"]},
     {"id": "guess_ahead", "label": "Guess-ahead",
@@ -113,6 +113,28 @@ def to_args(settings) -> tuple[list, list]:
     if s["keepalive"] == "off":
         lead.append("--no-split-keepalive")
     return lead, packer
+
+
+def lead_omits_no_learn(settings) -> bool:
+    """True when the lead should learn: Self-tuning is on, no experimental mode.
+
+    A split start builds its command from a shared default that includes
+    ``--no-learn`` so packers never record. The lead must drop that flag
+    when Self-tuning is on, or the worker starts with learning off and
+    Settings shows a contradictory "now: off" next to On.
+    """
+    s = normalize(settings or {})
+    return (s.get("self_tune") != "off"
+            and s.get("guess_ahead") != "mtp"
+            and s.get("prompt_lookup") != "adaptive")
+
+
+def drop_no_learn_for_lead(args, settings) -> list:
+    """Remove a default ``--no-learn`` from lead argv when learning should be on."""
+    args = list(args or [])
+    if lead_omits_no_learn(settings):
+        return [a for a in args if a != "--no-learn"]
+    return args
 
 
 def from_args(cmd: str) -> dict:

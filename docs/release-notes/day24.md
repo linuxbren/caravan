@@ -65,6 +65,14 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   now — not only "stopped (error)" in the closed Advanced section, and
   not a raw request error. Friendly Mac names only; no hostnames or
   paths. The full detail goes to the log only.
+- Tune again, live review: the button sits next to Self-tuning, outside
+  Advanced, labeled Tune again, with Reset tuning beside it. Pressing it
+  always runs a fresh trial on the loaded model; you do not need to
+  remove or redownload the model. If nothing is faster, Settings shows
+  one line ("Already at its fastest settings. Nothing faster found.")
+  instead of two identical Before and After lines. The conflicting
+  "now: off" next to On is gone. The Self-tuning hint is for each
+  model, not only MLX.
 
 ## Operational checks
 - Portable suite results are recorded at publication time in DAY24.md and
@@ -97,5 +105,10 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   log only) does not change `agent/`, `runtime/`, or the requirements
   files, so an update from that pin keeps a loaded model running.
   The web page still restarts.
+  A later live-review follow-up (Tune again next to Self-tuning, a
+  fresh trial every press, one line when nothing is faster, and a
+  generic Self-tuning hint) does not change `agent/`, `runtime/`, or
+  the requirements files, so an update from that pin keeps a loaded
+  model running. The web page still restarts.
 
 Details: [DAY24.md](../DAY24.md). Install: [INSTALL.md](../../INSTALL.md).

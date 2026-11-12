@@ -233,7 +233,11 @@ def load_pipeline(mgr, entry, settings):
         mgr._set(status="starting_lead")
         lead = nodes[-1]
         args = commands[-1] + ["--host", "127.0.0.1", "--port", str(mgr.lead_port)]
-        args += __import__("web_settings").to_args(dict(settings, pipeline_chats="1", guess_ahead="off"))[0]
+        import web_settings as _ws
+        args += _ws.to_args(dict(settings, pipeline_chats="1", guess_ahead="off"))[0]
+        # Shared stage defaults include --no-learn (packers should not record).
+        # Drop it on the lead when Self-tuning is on, so learning matches On.
+        args = _ws.drop_no_learn_for_lead(args, settings)
         args = [str(Path(a).expanduser()) if a.startswith("~/") else a for a in args]
         with mgr._lead_log().open("wb") as output:
             mgr._lead_proc = subprocess.Popen([mgr.python, str(mgr.worker)] + args, stdout=output,

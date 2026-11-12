@@ -1,8 +1,14 @@
 # Optimize a model
 
-**Optimize now** runs real comparisons to find settings that help the loaded
-model on the participating Macs. It is not a synthetic progress animation or
-a guarantee that every model gets faster.
+**Tune again** (next to Self-tuning in Settings) runs real comparisons to
+find settings that help the loaded model on the participating Macs. It is
+not a synthetic progress animation or a guarantee that every model gets
+faster. You can press it again on a model that was already tuned; you do
+not need to remove or redownload the model. If a run finds nothing faster,
+Settings shows one line, "Already at its fastest settings. Nothing faster
+found," instead of two identical Before and After lines. **Reset tuning**
+clears the saved results for this model and this setup; the model stays
+loaded.
 
 ## Before starting
 
@@ -20,11 +26,11 @@ workload does not prove the same result on another.
 
 ## Settings and safety
 
-MLX and optional GGUF use different tuning paths. For a GGUF model, Optimize now compares 16-bit and 8-bit memory compression (never 4-bit), with flash attention on, and scores read speed, first-token time, and write speed — not write speed alone. The two Before and After lines in Settings work for GGUF as well. Not every model supports
+MLX and optional GGUF use different tuning paths. For a GGUF model, Tune again compares 16-bit and 8-bit memory compression (never 4-bit), with flash attention on, and scores read speed, first-token time, and write speed — not write speed alone. The two Before and After lines in Settings work for GGUF as well. Not every model supports
 compressed chat memory, guess-ahead or a proposed setting. Unknown capacity,
 missing files, load failure or changed topology should stop a trial safely.
 Do not bypass a guard or delete active files to make a run appear successful.
-The ordinary chat path must remain usable after a cancelled/failed trial. If a trial stops, Settings shows a short plain reason next to Self-tuning (and under Optimize now); the full detail goes to the log only.
+The ordinary chat path must remain usable after a cancelled/failed trial. If a trial stops, Settings shows a short plain reason next to Self-tuning; the full detail goes to the log only.
 
 Saved results are scoped to model/hardware configuration; current runtime
 settings and defaults are described in [CONFIGURATION](CONFIGURATION.md).

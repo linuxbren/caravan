@@ -952,6 +952,7 @@ class WorkerManager:
                     self.sweep({"release": True})
                     self._note("released abandoned Optimize now live holds after web restart")
                 self._note(f"adopted running lead (pid {pid}) after web restart")
+                self._sync_learn_flag()
                 return True
         return False
 
@@ -1402,11 +1403,14 @@ class WorkerManager:
         applied = False
         status = snap.get("status")
         backend = snap.get("backend")
-        notice = (
-            "Self-tuning is off. It takes effect when you load a model."
-            if raw == "off" else
-            "Self-tuning is on. It takes effect when you load a model."
-        )
+        # "when you load a model" only if nothing is loaded; a leftover of that
+        # next to a ready model is confusing.
+        ready_on = "Self-tuning is on. Caravan will learn from your next chats."
+        ready_off = "Self-tuning is off. Caravan will keep the current settings."
+        load_on = "Self-tuning is on. It takes effect when you load a model."
+        load_off = "Self-tuning is off. It takes effect when you load a model."
+        notice = (ready_off if raw == "off" else ready_on) if status == "ready" else (
+            load_off if raw == "off" else load_on)
         if status == "ready" and backend == "llama":
             notice = (
                 "Self-tuning is off. Caravan will keep the current settings."
@@ -1438,6 +1442,89 @@ class WorkerManager:
                         "notice": notice, "error": str(e)}
         return {"self_tune": raw, "applied": applied, "reloaded": False,
                 "notice": notice}
+
+    def _page_self_tune(self) -> str:
+        """The user's Self-tuning preference (auto/off).
+
+        After a web restart, adopt can infer "off" from a leftover
+        ``--no-learn`` on the command line. Prefer the last-model record
+        the page actually saved; default is On.
+        """
+        try:
+            from web_restore import Store
+            req = Store(self.state_dir / "last-model.json").read() or {}
+            raw = (req.get("settings") or {}).get("self_tune")
+            if raw is not None and str(raw).strip():
+                return "off" if str(raw).strip().lower() == "off" else "auto"
+        except Exception:
+            pass
+        for key in ("page_settings", "settings"):
+            raw = (self.state.get(key) or {}).get("self_tune")
+            if raw:
+                return "off" if str(raw).strip().lower() == "off" else "auto"
+        return "auto"
+
+    def _sync_learn_flag(self) -> None:
+        """After adopting a running worker, match its learn flag to the page.
+
+        A split start used to leave ``--no-learn`` on the lead even when
+        Self-tuning was On. Turning the flag on live does not reload.
+        """
+        if self._page_self_tune() == "off":
+            return
+        try:
+            self.set_self_tune("auto")
+        except Exception as e:
+            self._note(f"could not turn Self-tuning on for the adopted model: {e}")
+
+    def reset_tuning(self) -> dict:
+        """Clear saved winners, losses, and the before/after line for this model.
+
+        The loaded model stays loaded; current live settings are not changed.
+        Press Tune again afterward to run a new trial from a clean slate.
+        """
+        import web_speed
+        snap = self.snapshot()
+        mid = snap.get("model_id")
+        if mid:
+            try:
+                web_speed.clear_tuning(mid)
+            except Exception:
+                pass
+        lp = getattr(self, "_lead_path", None)
+        if lp:
+            try:
+                import tuned_settings as TS
+                st, e = self._tuned_entry(lp)
+                if e:
+                    e["winner"] = {}
+                    e["optimize_hardware"] = {}
+                    e["pending_reload"] = {}
+                    e["reload_trial"] = None
+                    e["reply_n"] = 0
+                    TS.save_store(st, self.tuned_path)
+            except Exception:
+                pass
+        if snap.get("backend") == "llama":
+            try:
+                import gguf_tune as GT
+                entry = getattr(self, "_loaded_entry", None) or {}
+                path = entry.get("lead_path")
+                if path:
+                    store_path = GT.STORE
+                    store = GT.load_store(store_path)
+                    nodes = (snap.get("gguf") or {}).get("nodes") or [None]
+                    key = GT.entry_key(Path(path).expanduser(), max(1, len(nodes)))
+                    models = store.get("models") if isinstance(store, dict) else None
+                    if isinstance(models, dict) and key in models:
+                        del models[key]
+                        GT.save_store(store, store_path)
+            except Exception:
+                pass
+        return {
+            "ok": True,
+            "notice": "Saved tuning for this model is cleared. Press Tune again to run a new trial.",
+        }
 
     def lead_healthy(self) -> bool:
         import urllib.request
