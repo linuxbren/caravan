@@ -7,11 +7,13 @@
   On/Off takes effect immediately on a loaded MLX model, with no reload.
   After a self-tuning or Optimize now
   run, the Self-tuning section shows that model's before and after speed
-  ("Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first
-  word in 1.2 s."), hidden until a run has finished, stored with the
-  speed averages. The Helper download button on Guess-ahead stays in a
-  reserved slot and is not rewritten when status or helper polls repeat
-  the same result, so Settings rows do not jump.
+  as two lines ("Before · Write 88.4 tok/s · first token 0.29s" and
+  "After · Write 94.5 tok/s · first token 0.15s"), using the same wording
+  as the reply stats, empty until a run has finished, stored with the
+  speed averages. The same two lines also appear next to the control that
+  produced them. The slots are reserved so Settings rows do not jump.
+  The Helper download button on Guess-ahead stays in a reserved slot and
+  is not rewritten when status or helper polls repeat the same result.
 - Models: Reasoning is renamed Thinking. Default filter chips are Chat,
   Coding, Thinking, Tools, and Vision. Embedding, any-to-any, text-to-image,
   text-to-video, text-to-speech, and Decision stay available behind Advanced
@@ -46,6 +48,10 @@
   download errors and friendly Mac names on every download card)
   changes `agent/mlx_split_fetch.py`, so an update from that pin
   reloads a loaded model; the same model is restored.
+  A later live-review follow-up (two-line before/after in tok/s, shown
+  under Self-tuning and by the button that produced the result) does
+  not change `agent/`, `runtime/`, or the requirements files, so an
+  update from that pin keeps a loaded model running.
 
 ## MIT License (2026-11-12)
 

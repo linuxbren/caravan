@@ -257,28 +257,47 @@ class Optimizer:
         return scores
 
     def _specs_from_reply(self, result):
-        """Words/s (decode rate) and time to first word from one Optimize reply."""
+        """Token rate and first-token time, plus any other fields the reply has."""
         if not isinstance(result, dict):
             return {}
         ttft = result.get("ttft") if result.get("ttft") else result.get("ttft_s")
         tokens = result.get("completion_tokens")
+        prompt = result.get("prompt_tokens")
         total = result.get("total_s", result.get("elapsed"))
         prefill = result.get("prefill_s") or 0
         write = None
+        read = result.get("read_tok_s")
         try:
             if tokens and total is not None:
                 decode = max(float(total) - float(prefill or 0), 0.001)
                 write = float(tokens) / decode
         except (TypeError, ValueError):
             write = None
-        return {"write_tok_s": write, "ttft_s": ttft}
+        try:
+            if read is None and prompt and prefill:
+                read = float(prompt) / max(float(prefill), 0.001)
+        except (TypeError, ValueError):
+            read = None
+        return {
+            "write_tok_s": write,
+            "ttft_s": ttft,
+            "completion_tokens": tokens,
+            "prompt_tokens": prompt,
+            "read_tok_s": read,
+            "total_s": total,
+        }
 
     def _mean_specs(self, samples):
-        writes = [s["write_tok_s"] for s in samples if s.get("write_tok_s")]
-        ttfts = [s["ttft_s"] for s in samples if s.get("ttft_s")]
+        def avg(key):
+            vals = [s[key] for s in samples if s.get(key) is not None]
+            return (sum(vals) / len(vals)) if vals else None
         return {
-            "write_tok_s": (sum(writes) / len(writes)) if writes else None,
-            "ttft_s": (sum(ttfts) / len(ttfts)) if ttfts else None,
+            "write_tok_s": avg("write_tok_s"),
+            "ttft_s": avg("ttft_s"),
+            "completion_tokens": avg("completion_tokens"),
+            "prompt_tokens": avg("prompt_tokens"),
+            "read_tok_s": avg("read_tok_s"),
+            "total_s": avg("total_s"),
         }
 
     def _note_tune_sample(self, result):
@@ -317,7 +336,14 @@ class Optimizer:
             return {}
         if not avg or not avg.get("count"):
             return {}
-        return {"write_tok_s": avg.get("write_tok_s"), "ttft_s": avg.get("ttft_s")}
+        return {
+            "write_tok_s": avg.get("write_tok_s"),
+            "ttft_s": avg.get("ttft_s"),
+            "prompt_tokens": avg.get("prompt_tokens"),
+            "completion_tokens": avg.get("completion_tokens"),
+            "read_tok_s": avg.get("read_tok_s"),
+            "total_s": avg.get("total_s"),
+        }
 
     def _record_tune_result(self, before, after, source="optimize_now"):
         try:

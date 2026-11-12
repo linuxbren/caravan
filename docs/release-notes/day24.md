@@ -7,8 +7,11 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   and Apply & restart sit under a closed Advanced section. Self-tuning
   On/Off takes effect immediately on a loaded MLX model, without a reload.
   After a self-tuning or Optimize now run, that model's starting and ending
-  speed is shown in Self-tuning, for example "Before: 31 words/s, first
-  word in 2.1 s. After: 42 words/s, first word in 1.2 s."
+  speed is shown as two lines, for example "Before · Write 88.4 tok/s ·
+  first token 0.29s" and "After · Write 94.5 tok/s · first token 0.15s",
+  using the same wording as the reply stats. The same two lines also
+  appear next to the control that produced them (Optimize now when that
+  was the source). The slots are reserved so Settings does not jump.
 - Models: the Reasoning filter is renamed Thinking. Default chips are Chat,
   Coding, Thinking, Tools, and Vision. Specialized types stay available
   behind Advanced, so Caravan can sit between an agent app and a model.
@@ -48,6 +51,10 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   first Day 24 pin keeps a loaded model running. A later live-review
   follow-up (image-repo fetch, download-only honesty, and plain download
   errors) changes `agent/mlx_split_fetch.py`, so a `caravan update` from
-  this pin reloads a loaded model; the same model is restored.
+  this pin reloads a loaded model; the same model is restored. A later
+  live-review follow-up (two-line before/after in tok/s, shown under
+  Self-tuning and by the button that produced the result) does not
+  change `agent/`, `runtime/`, or the requirements files, so an update
+  from that pin keeps a loaded model running. The web page still restarts.
 
 Details: [DAY24.md](../DAY24.md). Install: [INSTALL.md](../../INSTALL.md).

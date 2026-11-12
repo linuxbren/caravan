@@ -1100,6 +1100,10 @@ def make_handler(app: App):
                             mid,
                             write_tok_s=body.get("write_tok_s"),
                             ttft_s=body.get("ttft_s"),
+                            prompt_tokens=body.get("prompt_tokens"),
+                            completion_tokens=body.get("completion_tokens"),
+                            read_tok_s=body.get("read_tok_s"),
+                            total_s=body.get("total_s"),
                             has_winners=bool((tun or {}).get("winner")),
                             settling=bool((tun or {}).get("trial")),
                         )

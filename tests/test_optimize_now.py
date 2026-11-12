@@ -283,8 +283,20 @@ class RunnerTest(unittest.TestCase):
         _,opt=self.run_opt(mgr,send=send)
         self.assertEqual(opt.snapshot()["phase"], "done")
         got=S.get_tuning("m")
-        self.assertEqual(got["line"], "Before: 10 words/s, first word in 2.1 s. After: 12 words/s, first word in 1.2 s.")
         self.assertEqual(got["source"], "optimize_now")
+        self.assertIsNotNone(got["lines"])
+        self.assertEqual(len(got["lines"]), 2)
+        self.assertTrue(got["lines"][0].startswith("Before · "))
+        self.assertTrue(got["lines"][1].startswith("After · "))
+        self.assertIn("Write", got["lines"][0])
+        self.assertIn("tok/s", got["lines"][0])
+        self.assertIn("first token", got["lines"][0])
+        self.assertNotIn("words/s", got["line"])
+        self.assertIn("10.0 tok/s", got["lines"][0])  # baseline kv 16
+        self.assertIn("12.0 tok/s", got["lines"][1])  # winner kv 8
+        self.assertIn("first token 2.10s", got["lines"][0])
+        self.assertIn("first token 1.20s", got["lines"][1])
+        self.assertEqual(got["line"], "\n".join(got["lines"]))
         self.assertEqual(opt.snapshot()["prompts"], 12)  # samples are not counted as trial prompts
 
     def test_unavailable_saved_keepalive_does_not_trigger_reload(self):

@@ -602,10 +602,16 @@
   .avg-speed {
     font-size: .78rem; color: var(--muted); line-height: 1.5; margin: 0;
   }
-  .tune-result {
-    font-size: .72rem; color: var(--muted); line-height: 1.5; margin: 8px 0 0;
+  /* Reserved two-line slot so before/after appearing does not jump the
+     Settings rows below (same idea as the Helper download slot). */
+  .tune-slot {
+    min-height: 2.25rem;
+    margin-top: 8px;
   }
-  .tune-result[hidden] { display: none; }
+  .tune-result {
+    font-size: .72rem; color: var(--muted); line-height: 1.5; margin: 0;
+    white-space: pre-line;
+  }
   .self-tune-note {
     font-size: .72rem; color: var(--muted); line-height: 1.5; margin: 8px 0 0;
   }
@@ -1365,6 +1371,9 @@
 <div class="optcard drawer-section">
       <h2 class="drawer-section-title"><span class="tip" title="Caravan learns which Optimizations help this model on your Minis.">Optimizations</span></h2>
       <div id="optRows"></div>
+      <div class="tune-slot" data-tune-slot="self_tune">
+        <p class="tune-result" id="tuneResult"></p>
+      </div>
       <p class="self-tune-note" id="selfTuneNote" hidden></p>
       <div class="tunenote" id="tuneNote"></div>
       <details class="opt-advanced" id="optAdvanced">
@@ -1380,6 +1389,9 @@
           <button class="primary drawer-control" id="btnOptStart">Start</button>
           <button class="ghost drawer-control" id="btnOptPause">Pause</button>
           <button class="ghost drawer-control" id="btnOptCancel">Cancel</button>
+        </div>
+        <div class="tune-slot" data-tune-slot="optimize_now">
+          <p class="tune-result" id="tuneResultOpt"></p>
         </div>
         <div class="help" id="optTip">Optimize as used stays on when options are Auto — Caravan learns from real chats.</div>
         <div class="help" id="optProgress"></div>
@@ -1860,7 +1872,6 @@
         ${state.filePins[o.id] && state.choice[o.id] === "auto"
           ? `<div class="help filepin">config.toml: ${VAL_LABEL[state.filePins[o.id]] || state.filePins[o.id]} (used while this is Auto)</div>` : ""}
         <div class="now"></div>
-        ${o.id === "self_tune" ? `<p class="tune-result" id="tuneResult" hidden></p>` : ""}
         ${o.id === "guess_ahead" ? `<div class="helper-slot" data-helper-slot><button type="button" data-helper="1">Helper download…</button></div>` : ""}
       </div>`;
     $("optRows").innerHTML = ggufNote + state.opts.filter(o => o.id === "self_tune").map(rowHtml).join("");
@@ -2146,18 +2157,34 @@
     if (j && j.line) { el.hidden = false; el.textContent = j.line; }
     else { el.hidden = true; el.textContent = ""; }
   }
-  async function refreshTuneResult() {
-    const el = $("tuneResult");
+  function paintTuneResult(el, text) {
+    // Reserved slots keep their height; do not toggle hidden, and skip
+    // a write when the text has not changed (same idea as the Helper slot).
     if (!el) return;
+    const next = text || "";
+    if (el.textContent !== next) el.textContent = next;
+  }
+  function tuneResultText(tun) {
+    if (!tun) return "";
+    if (tun.lines && tun.lines.length) return tun.lines.join("\n");
+    return tun.line || "";
+  }
+  async function refreshTuneResult() {
+    const selfEl = $("tuneResult");
+    const optEl = $("tuneResultOpt");
     const mid = state.loadedModel || ($("modelSelect") && $("modelSelect").value) || "";
-    if (!mid) { el.hidden = true; el.textContent = ""; return; }
+    const clear = () => { paintTuneResult(selfEl, ""); paintTuneResult(optEl, ""); };
+    if (!mid) { clear(); return; }
     try {
       const q = new URLSearchParams({ model: mid });
       const j = await api("/api/speed-average?" + q.toString());
-      const line = j && j.tuning && j.tuning.line;
-      if (line) { el.hidden = false; el.textContent = line; }
-      else { el.hidden = true; el.textContent = ""; }
-    } catch (_) { el.hidden = true; el.textContent = ""; }
+      const tun = j && j.tuning;
+      const text = tuneResultText(tun);
+      // Always under Self-tuning. Duplicate by Optimize now only when
+      // that button is the one that produced the result.
+      paintTuneResult(selfEl, text);
+      paintTuneResult(optEl, (tun && tun.source === "optimize_now") ? text : "");
+    } catch (_) { clear(); }
   }
   async function refreshAvgSpeed() {
     const mid = state.loadedModel;

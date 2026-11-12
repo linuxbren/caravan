@@ -296,8 +296,8 @@ class DocsMentionDay24(unittest.TestCase):
         self.assertNotIn("prf-hays", day)
         self.assertIn("Family", day)
         self.assertIn("job id", day)
-        self.assertIn("Before:", day)
-        self.assertIn("Before:", web)
+        self.assertIn("Before ·", day)
+        self.assertIn("Before ·", web)
         def flat(s):
             return " ".join(s.split())
         self.assertIn("Average · Read 165 tok at 200 tok/s", flat(web))
@@ -310,13 +310,16 @@ class DocsMentionDay24(unittest.TestCase):
         self.assertNotIn("Usually 42 words/s", day)
         self.assertNotIn("Average 42 words/s", web)
         self.assertNotIn("Average 42 words/s", day)
-        self.assertIn("Before:", day)
+        self.assertIn("Before · Write 88.4 tok/s", day)
+        self.assertIn("Before · Write 88.4 tok/s", web)
+        self.assertIn("After · Write 94.5 tok/s", day)
+        self.assertIn("After · Write 94.5 tok/s", web)
         web_docs = (ROOT / "docs/WEB.md").read_text()
-        self.assertIn("Before:", web_docs)
-        # Settings before/after stays in words/s; tok/s is only on the chat average.
-        after_before = web_docs.split("Before", 1)[1][:500] if "Before" in web_docs else "tok/s"
-        self.assertNotIn("tok/s", after_before)
-        self.assertIn("31 words/s", flat(after_before))
+        # Settings before/after uses the same tok/s wording as the reply stats.
+        after_before = web_docs.split("Before", 1)[1][:800] if "Before" in web_docs else ""
+        self.assertIn("tok/s", after_before)
+        self.assertNotIn("words/s", after_before)
+        self.assertIn("first token 0.29s", after_before)
 
 
 
@@ -487,20 +490,38 @@ class MultiJobCards(unittest.TestCase):
 
 class TuneBeforeAfter(unittest.TestCase):
     def test_format_matches_plain_words(self):
-        line = S.format_tuning_line(
-            {"write_tok_s": 31, "ttft_s": 2.1},
-            {"write_tok_s": 42, "ttft_s": 1.2},
+        lines = S.format_tuning_lines(
+            {"write_tok_s": 88.4, "ttft_s": 0.29},
+            {"write_tok_s": 94.5, "ttft_s": 0.15},
         )
+        self.assertEqual(lines, [
+            "Before · Write 88.4 tok/s · first token 0.29s",
+            "After · Write 94.5 tok/s · first token 0.15s",
+        ])
         self.assertEqual(
-            line,
-            "Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first word in 1.2 s.",
+            S.format_tuning_line(
+                {"write_tok_s": 88.4, "ttft_s": 0.29},
+                {"write_tok_s": 94.5, "ttft_s": 0.15},
+            ),
+            "\n".join(lines),
         )
-        self.assertNotRegex(line, r"(?i)tok")
+        # Extra fields use the same wording as the reply stats and chat average.
+        extra = S.format_tuning_side("Before", {
+            "write_tok_s": 20.7, "ttft_s": 0.34,
+            "prompt_tokens": 165, "read_tok_s": 200,
+            "completion_tokens": 10, "total_s": 0.78,
+        })
+        self.assertEqual(
+            extra,
+            "Before · Read 165 tok at 200 tok/s · Write 10 tok at 20.7 tok/s · "
+            "first token 0.34s · total 0.78s",
+        )
+        self.assertNotIn("words/s", "\n".join(lines))
 
     def test_omits_unknown_and_hides_when_empty(self):
         self.assertEqual(
             S.format_tuning_line({"write_tok_s": 31}, {"write_tok_s": 42}),
-            "Before: 31 words/s. After: 42 words/s.",
+            "Before · Write 31.0 tok/s\nAfter · Write 42.0 tok/s",
         )
         self.assertEqual(S.format_tuning_line({}, {}), "")
         with tempfile.TemporaryDirectory() as td:
@@ -521,7 +542,11 @@ class TuneBeforeAfter(unittest.TestCase):
                 after={"write_tok_s": 42, "ttft_s": 1.2},
                 path=path,
             )
-            self.assertEqual(a["line"], "Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first word in 1.2 s.")
+            self.assertEqual(a["lines"], [
+                "Before · Write 31.0 tok/s · first token 2.10s",
+                "After · Write 42.0 tok/s · first token 1.20s",
+            ])
+            self.assertIn("Before · Write 31.0 tok/s", a["line"])
             self.assertIsNone(S.get_tuning("model-b", path=path)["line"])
             # Last finished run for this model replaces the previous one.
             b = S.record_tuning(
@@ -531,13 +556,13 @@ class TuneBeforeAfter(unittest.TestCase):
                 source="self_tune",
                 path=path,
             )
-            self.assertIn("Before: 20 words/s", b["line"])
+            self.assertIn("Before · Write 20.0 tok/s", b["line"])
             self.assertEqual(b["source"], "self_tune")
             # Chat averages in the same file stay independent.
             opts = {k: "auto" for k in S.OPT_IDS}
             S.record("model-a", opts, write_tok_s=40, ttft_s=1.0, path=path)
             self.assertIsNotNone(S.get("model-a", opts, path=path)["line"])
-            self.assertIn("Before: 20 words/s", S.get_tuning("model-a", path=path)["line"])
+            self.assertIn("Before · Write 20.0 tok/s", S.get_tuning("model-a", path=path)["line"])
 
     def test_self_tune_observe_freezes_after_winners(self):
         with tempfile.TemporaryDirectory() as td:
@@ -553,7 +578,8 @@ class TuneBeforeAfter(unittest.TestCase):
             got = S.observe_tuning("m", write_tok_s=42, ttft_s=1.2, has_winners=True, path=path)
             self.assertEqual(
                 got["line"],
-                "Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first word in 1.2 s.",
+                "Before · Write 31.0 tok/s · first token 2.10s\n"
+                "After · Write 42.0 tok/s · first token 1.20s",
             )
             self.assertEqual(got["source"], "self_tune")
             # Further replies do not move a frozen result.
@@ -561,21 +587,35 @@ class TuneBeforeAfter(unittest.TestCase):
             self.assertEqual(S.get_tuning("m", path=path)["after"]["write_tok_s"], 42)
 
     def test_settings_shows_line_outside_advanced(self):
-        # The Self-tuning row (in #optRows, not Advanced) owns the line.
+        # Under Self-tuning (above Advanced): a reserved two-line slot.
         self.assertIn('id="tuneResult"', HTML)
+        self.assertIn('data-tune-slot="self_tune"', HTML)
         self.assertIn("function refreshTuneResult", HTML)
+        self.assertIn("function paintTuneResult", HTML)
         self.assertIn("j.tuning", HTML)
-        self.assertIn("format_tuning_line", Path(ROOT / "proxy/web_speed.py").read_text())
-        # The template is only emitted for the self_tune option, which is
-        # rendered into #optRows, above the Advanced section.
-        self.assertIn(
-            'o.id === "self_tune" ? `<p class="tune-result" id="tuneResult" hidden></p>`',
-            HTML,
-        )
-        adv = HTML[HTML.find('id="optAdvanced"'):HTML.find('id="optAdvanced"') + 800]
-        self.assertNotIn('id="tuneResult"', adv)
+        self.assertIn("format_tuning_lines", Path(ROOT / "proxy/web_speed.py").read_text())
+        self.assertIn(".tune-slot", HTML)
+        self.assertIn("min-height: 2.25rem", HTML)
+        # The Self-tuning slot sits above Advanced, in the static markup,
+        # so a Settings redraw cannot drop it or jump the rows below.
+        self_pos = HTML.find('data-tune-slot="self_tune"')
+        adv_pos = HTML.find('id="optAdvanced"')
+        self.assertTrue(0 < self_pos < adv_pos)
+        # Optimize now (inside Advanced) has its own reserved copy, filled
+        # only when source is optimize_now.
+        self.assertIn('data-tune-slot="optimize_now"', HTML)
+        self.assertIn('id="tuneResultOpt"', HTML)
+        self.assertIn('tun.source === "optimize_now"', HTML)
+        opt_pos = HTML.find('id="btnOptStart"')
+        opt_slot = HTML.find('data-tune-slot="optimize_now"')
+        self.assertTrue(adv_pos < opt_pos < opt_slot)
+        # Do not collapse the slot with hidden (that jumps the layout).
+        self.assertNotIn('tune-result" id="tuneResult" hidden', HTML)
+        self.assertNotIn(".tune-result[hidden]", HTML)
         self.assertIn("get_tuning", SERVER)
         self.assertIn("observe_tuning", SERVER)
+        # paintTuneResult skips a write when the text is unchanged.
+        self.assertIn("if (el.textContent !== next)", HTML)
 
 
 class HelperFlicker(unittest.TestCase):

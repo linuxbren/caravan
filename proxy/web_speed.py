@@ -298,41 +298,98 @@ def record(
     return _snapshot(slot)
 
 
-def format_specs(write_tok_s=None, ttft_s=None) -> str:
-    """One side of the before/after line, e.g. '31 words/s, first word in 2.1 s'."""
-    parts = []
-    if write_tok_s is not None:
-        parts.append(f"{_fmt_rate(float(write_tok_s))} words/s")
-    if ttft_s is not None:
-        parts.append(f"first word in {_fmt_secs(float(ttft_s))}")
-    return ", ".join(parts)
+def format_specs(write_tok_s=None, ttft_s=None, **extra) -> str:
+    """One side of a before/after line, matching reply-stats wording."""
+    return format_reply_stats(
+        write_tok_s, ttft_s,
+        prompt_tokens=extra.get("prompt_tokens"),
+        read_tok_s=extra.get("read_tok_s"),
+        completion_tokens=extra.get("completion_tokens"),
+        total_s=extra.get("total_s"),
+    )
+
+
+def format_tuning_side(label: str, specs=None) -> str:
+    """'Before · Write 88.4 tok/s · first token 0.29s', or empty."""
+    specs = specs or {}
+    body = format_reply_stats(
+        specs.get("write_tok_s"),
+        specs.get("ttft_s"),
+        prompt_tokens=specs.get("prompt_tokens"),
+        read_tok_s=specs.get("read_tok_s"),
+        completion_tokens=specs.get("completion_tokens"),
+        total_s=specs.get("total_s"),
+    )
+    return f"{label} · {body}" if body else ""
+
+
+def format_tuning_lines(before=None, after=None) -> list:
+    """Two lines: Before and After, omitting a side that has nothing to show."""
+    out = []
+    b = format_tuning_side("Before", before)
+    a = format_tuning_side("After", after)
+    if b:
+        out.append(b)
+    if a:
+        out.append(a)
+    return out
 
 
 def format_tuning_line(before=None, after=None) -> str:
-    """'Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first word in 1.2 s.'"""
-    before = before or {}
-    after = after or {}
-    b = format_specs(before.get("write_tok_s"), before.get("ttft_s"))
-    a = format_specs(after.get("write_tok_s"), after.get("ttft_s"))
-    bits = []
-    if b:
-        bits.append(f"Before: {b}.")
-    if a:
-        bits.append(f"After: {a}.")
-    return " ".join(bits)
+    """The two before/after lines joined by a newline, or empty."""
+    return "\n".join(format_tuning_lines(before, after))
 
 
-def _specs(write_tok_s=None, ttft_s=None) -> dict:
-    write = _finite(write_tok_s)
-    ttft = _finite(ttft_s)
-    return {
-        "write_tok_s": round(write, 3) if write is not None else None,
-        "ttft_s": round(ttft, 4) if ttft is not None else None,
+_SPEC_FIELDS = (
+    ("write_tok_s", 3),
+    ("ttft_s", 4),
+    ("prompt_tokens", 0),
+    ("completion_tokens", 0),
+    ("read_tok_s", 3),
+    ("total_s", 4),
+)
+
+
+def _specs(write_tok_s=None, ttft_s=None, **extra) -> dict:
+    raw = {
+        "write_tok_s": write_tok_s,
+        "ttft_s": ttft_s,
+        "prompt_tokens": extra.get("prompt_tokens"),
+        "completion_tokens": extra.get("completion_tokens"),
+        "read_tok_s": extra.get("read_tok_s"),
+        "total_s": extra.get("total_s"),
     }
+    # A dict passed as the first positional (legacy call sites use two numbers).
+    out = {}
+    for key, nd in _SPEC_FIELDS:
+        v = _finite(raw.get(key))
+        if v is None:
+            continue
+        if key in ("prompt_tokens", "completion_tokens"):
+            out[key] = int(round(v))
+        else:
+            out[key] = round(v, nd)
+    return out
+
+
+def specs_from(src) -> dict:
+    """Pick the known speed fields out of a stored or measured dict."""
+    src = src or {}
+    if not isinstance(src, dict):
+        return {}
+    return _specs(
+        src.get("write_tok_s"), src.get("ttft_s"),
+        prompt_tokens=src.get("prompt_tokens"),
+        completion_tokens=src.get("completion_tokens"),
+        read_tok_s=src.get("read_tok_s"),
+        total_s=src.get("total_s"),
+    )
 
 
 def _has_specs(s) -> bool:
-    return bool(s) and (s.get("write_tok_s") is not None or s.get("ttft_s") is not None)
+    if not s or not isinstance(s, dict):
+        return False
+    return any(_finite(s.get(k)) is not None for k, _nd in _SPEC_FIELDS)
 
 
 def _tuning_slot(data: dict, model_id: str) -> dict:
@@ -351,11 +408,15 @@ def _tuning_slot(data: dict, model_id: str) -> dict:
 def _tuning_view(slot: dict) -> dict:
     before = slot.get("before") if isinstance(slot.get("before"), dict) else {}
     after = slot.get("after") if isinstance(slot.get("after"), dict) else {}
-    line = format_tuning_line(before, after) if _has_specs(before) and _has_specs(after) else None
+    lines = (
+        format_tuning_lines(before, after)
+        if _has_specs(before) and _has_specs(after) else []
+    )
     return {
         "before": dict(before) if before else None,
         "after": dict(after) if after else None,
-        "line": line,
+        "line": "\n".join(lines) if lines else None,
+        "lines": lines or None,
         "source": slot.get("source"),
     }
 
@@ -366,7 +427,7 @@ def get_tuning(model_id: str, path=None) -> dict:
     Empty (line is None) when no run has finished yet.
     """
     mid = str(model_id or "").strip()
-    empty = {"before": None, "after": None, "line": None, "source": None}
+    empty = {"before": None, "after": None, "line": None, "lines": None, "source": None}
     if not mid:
         return empty
     data = _load(path)
@@ -379,8 +440,8 @@ def get_tuning(model_id: str, path=None) -> dict:
 def record_tuning(model_id: str, *, before, after, source="optimize_now", path=None) -> dict:
     """Save a finished run's baseline and winner speeds. Per model, last run wins."""
     mid = str(model_id or "").strip()
-    b = _specs((before or {}).get("write_tok_s"), (before or {}).get("ttft_s"))
-    a = _specs((after or {}).get("write_tok_s"), (after or {}).get("ttft_s"))
+    b = specs_from(before)
+    a = specs_from(after)
     if not mid or not _has_specs(b) or not _has_specs(a):
         return get_tuning(mid, path=path)
     import time
@@ -398,7 +459,7 @@ def record_tuning(model_id: str, *, before, after, source="optimize_now", path=N
 def snapshot_pending_before(model_id: str, specs, path=None) -> dict:
     """Remember the pre-tune average so a later finish can use it as Before."""
     mid = str(model_id or "").strip()
-    b = _specs((specs or {}).get("write_tok_s"), (specs or {}).get("ttft_s"))
+    b = specs_from(specs)
     if not mid or not _has_specs(b):
         return get_tuning(mid, path=path)
     data = _load(path)
@@ -409,27 +470,44 @@ def snapshot_pending_before(model_id: str, specs, path=None) -> dict:
     return _tuning_view(slot)
 
 
-def _accum_specs(bucket: dict, write, ttft) -> dict:
+_ACCUM_SPECS = (
+    ("write_tok_s", "write_sum", "write_n"),
+    ("ttft_s", "ttft_sum", "ttft_n"),
+    ("prompt_tokens", "prompt_sum", "prompt_n"),
+    ("completion_tokens", "completion_sum", "completion_n"),
+    ("read_tok_s", "read_sum", "read_n"),
+    ("total_s", "total_sum", "total_n"),
+)
+
+
+def _accum_specs(bucket: dict, write, ttft=None, **extra) -> dict:
+    """Add one sample. ``write`` may be a specs dict (new) or a write rate (old)."""
     bucket = dict(bucket or {})
-    w, t = _finite(write), _finite(ttft)
-    if w is not None:
-        bucket["write_sum"] = float(bucket.get("write_sum") or 0) + w
-        bucket["write_n"] = int(bucket.get("write_n") or 0) + 1
-    if t is not None:
-        bucket["ttft_sum"] = float(bucket.get("ttft_sum") or 0) + t
-        bucket["ttft_n"] = int(bucket.get("ttft_n") or 0) + 1
+    if isinstance(write, dict):
+        sample = specs_from(write)
+    else:
+        sample = _specs(write, ttft, **extra)
+    for key, sum_key, n_key in _ACCUM_SPECS:
+        v = _finite(sample.get(key))
+        if v is not None:
+            bucket[sum_key] = float(bucket.get(sum_key) or 0) + v
+            bucket[n_key] = int(bucket.get(n_key) or 0) + 1
     return bucket
 
 
 def _bucket_specs(bucket: dict) -> dict:
     bucket = bucket or {}
-    wn, tn = int(bucket.get("write_n") or 0), int(bucket.get("ttft_n") or 0)
-    write = (float(bucket["write_sum"]) / wn) if wn else None
-    ttft = (float(bucket["ttft_sum"]) / tn) if tn else None
-    return _specs(write, ttft)
+    raw = {}
+    for key, sum_key, n_key in _ACCUM_SPECS:
+        n = int(bucket.get(n_key) or 0)
+        if n:
+            raw[key] = float(bucket[sum_key]) / n
+    return specs_from(raw)
 
 
 def observe_tuning(model_id: str, *, write_tok_s=None, ttft_s=None,
+                   prompt_tokens=None, completion_tokens=None,
+                   read_tok_s=None, total_s=None,
                    has_winners=False, settling=False, path=None) -> dict:
     """Fold a real-chat reply into a self-tuning before/after record.
 
@@ -438,7 +516,14 @@ def observe_tuning(model_id: str, *, write_tok_s=None, ttft_s=None,
     the pair is frozen. A finished Optimize now result is left alone.
     """
     mid = str(model_id or "").strip()
-    if not mid or (_finite(write_tok_s) is None and _finite(ttft_s) is None):
+    sample = _specs(
+        write_tok_s, ttft_s,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        read_tok_s=read_tok_s,
+        total_s=total_s,
+    )
+    if not mid or not _has_specs(sample):
         return get_tuning(mid, path=path)
     data = _load(path)
     slot = _tuning_slot(data, mid)
@@ -446,16 +531,16 @@ def observe_tuning(model_id: str, *, write_tok_s=None, ttft_s=None,
     if _has_specs(slot.get("before")) and _has_specs(slot.get("after")):
         return _tuning_view(slot)
     if not has_winners:
-        slot["pending_before"] = _accum_specs(slot.get("pending_before"), write_tok_s, ttft_s)
+        slot["pending_before"] = _accum_specs(slot.get("pending_before"), sample)
         _save(data, path)
         return _tuning_view(slot)
     # Winners exist. Freeze the baseline if we have one.
     if not _has_specs(slot.get("before")):
         frozen = slot.get("pending_before")
-        if isinstance(frozen, dict) and ("write_n" in frozen or "ttft_n" in frozen):
+        if isinstance(frozen, dict) and any(k.endswith("_n") for k in frozen):
             slot["before"] = _bucket_specs(frozen)
         elif isinstance(frozen, dict):
-            slot["before"] = _specs(frozen.get("write_tok_s"), frozen.get("ttft_s"))
+            slot["before"] = specs_from(frozen)
     if not _has_specs(slot.get("before")):
         # No baseline to compare against: do not show a one-sided result.
         _save(data, path)
@@ -463,7 +548,7 @@ def observe_tuning(model_id: str, *, write_tok_s=None, ttft_s=None,
     if settling:
         _save(data, path)
         return _tuning_view(slot)
-    slot["pending_after"] = _accum_specs(slot.get("pending_after"), write_tok_s, ttft_s)
+    slot["pending_after"] = _accum_specs(slot.get("pending_after"), sample)
     after = _bucket_specs(slot["pending_after"])
     after_n = int((slot["pending_after"] or {}).get("write_n") or 0) + int(
         (slot["pending_after"] or {}).get("ttft_n") or 0)

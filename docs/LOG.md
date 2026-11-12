@@ -1,3 +1,15 @@
+## 2026-11-12: Day 24 live review — before/after lines by the button that produced them
+
+The Settings before/after result is two lines, using the same wording
+as the reply stats and the chat average: "Before · Write 88.4 tok/s ·
+first token 0.29s" and "After · Write 94.5 tok/s · first token 0.15s"
+(extra recorded fields are included). The same two lines appear under
+Self-tuning and, when Optimize now produced the result, under that
+button as well. The slots are reserved so Settings does not jump. This
+follow-up does not change `agent/`, `runtime/`, or the requirements
+files, so a `caravan update` keeps a loaded model running; the web
+page still restarts.
+
 ## 2026-11-12: Day 24 live review — image downloads and plain errors
 
 MLX fetch no longer requires a top-level `config.json`. Any repo that

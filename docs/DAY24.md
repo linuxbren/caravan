@@ -27,11 +27,18 @@ optimization options, which still require a reload to apply.
 
 When self-tuning or Optimize now finishes for a model, Caravan records the
 speed from before the run and the speed with the chosen winners, and shows
-both in the Self-tuning section (still visible, not inside Advanced):
-"Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first word in
-1.2 s." The rate is the measured token rate, shown as words/s; the line
-never says tok/s. It is hidden until a run has finished for the loaded
-model. The pair is stored per model in `~/.caravan/speed_averages.json`
+them as two lines in the Self-tuning section (still visible, not inside
+Advanced), for example "Before · Write 88.4 tok/s · first token 0.29s"
+and "After · Write 94.5 tok/s · first token 0.15s". The wording, units,
+and rounding match the stats under each reply and the average under the
+chat input (tok/s, first token, and any extra fields that were recorded).
+The same two lines are also shown next to the control that produced the
+result, based on the stored `source`: under Optimize now (inside Advanced)
+when the source is `optimize_now`, and under the Self-tuning switch when
+Self-tuning's own learning wrote the after (`self_tune`). The slots are
+reserved at two-line height so the Settings rows below do not jump when
+the text appears. The lines stay empty until a run has finished for the
+loaded model. The pair is stored per model in `~/.caravan/speed_averages.json`
 next to the chat averages (under a `tuning` key), so it describes these
 Macs and survives a page refresh. Optimize now uses the existing chat
 average if there is one; otherwise Before and After come from the trial
@@ -207,3 +214,18 @@ restored. The portable suite on a fresh clone on the development node:
 touched for this publication. No `day24` tag yet — that still waits for
 Brenden's live review. Source and pin SHAs are recorded at publication
 time.
+
+### Live review: before/after lines by the button that produced them
+
+The Settings before/after result is now two lines, using the same wording
+as the reply stats and the chat average ("Before · Write 88.4 tok/s ·
+first token 0.29s" and "After · Write 94.5 tok/s · first token 0.15s"),
+not words/s. The same two lines appear under Self-tuning and, when
+Optimize now produced the result, under that button as well. The slots
+are reserved so the page does not jump. This follow-up is only page,
+proxy, and docs — not `agent/`, `runtime/`, or the requirements files —
+so a `caravan update` from the previous Day 24 pin keeps a loaded model
+running. The web page still restarts. The portable suite on a fresh
+clone on the development node: **1,296 tests passed** in 54.517 s. The
+1st node and 2nd node were not touched. No `day24` tag yet. Source and
+pin SHAs are recorded at publication time.
