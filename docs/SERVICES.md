@@ -136,8 +136,11 @@ Options:
 - Repeats reuse matching clean checkouts and venvs. Existing settings are never
   replaced. Dirty trees, different origins/branches and unrelated existing
   folders are refused; no reset, force, branch switching or scp.
-- `--update`: explicit clean `git pull --ff-only` on the selected branch; no
-  tag rewriting. Plan service restarts separately after a code update.
+- `--update`: on a package install, this is the single-step path (stop what
+  is needed, verify, install, start, or roll back). On a source checkout,
+  `scripts/install.sh --update` is still an explicit clean
+  `git pull --ff-only` on the selected branch, with no tag rewriting; plan
+  those service restarts separately.
 - `--use-existing`: use an extracted source archive (no Git operations).
 - `--no-start`: write the owned LaunchAgent but do not load it now. It will still
   start at the **next user login**. Use `uninstall` to remove auto-start entirely.

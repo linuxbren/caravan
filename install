@@ -56,13 +56,16 @@ fetch "https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/
 read -r REF SHA < "$TMP/version"
 [ "${#REF}" = 40 ] && [ "${#SHA}" = 64 ] || fail 'Invalid package manifest; nothing activated.'
 case "$REF$SHA" in *[!a-f0-9]*) fail 'Invalid package checksum; nothing activated.' ;; esac
+if [ "$UPDATE" = 1 ] && [ -f "$REPO/.caravan-package" ] && [ "$(< "$REPO/.caravan-package")" = "$REF" ]; then
+  printf '%s\n' 'Caravan is already up to date.'
+  exit 0
+fi
 if [ -e "$REPO" ]; then
   [ -f "$REPO/.caravan-package" ] && [ ! -d "$REPO/.git" ] || fail 'An existing source install lives here. Keep it; see INSTALL.md for migration. Nothing was replaced.'
   if [ "$(< "$REPO/.caravan-package")" != "$REF" ]; then
     [ "$UPDATE" = 1 ] || fail 'Caravan is already installed. Run ~/.caravan/bin/caravan update to change versions.'
     [ -f "$REPO/.caravan-package-files" ] || fail 'Package integrity list missing; existing code kept.'
     (cd "$REPO" && shasum -a 256 -c .caravan-package-files >/dev/null) || fail 'Installed source has edits. Keep them; use a separate source checkout. No files replaced.'
-    if launchctl print "gui/$(id -u)/com.caravan.v3.$NAME" >/dev/null 2>&1; then fail 'Stop the web first with caravan stop, then run caravan update. Models are left running.'; fi
   fi
 fi
 if [ ! -f "$REPO/.caravan-package" ] || [ "$(< "$REPO/.caravan-package")" != "$REF" ]; then
@@ -74,6 +77,17 @@ if [ ! -f "$REPO/.caravan-package" ] || [ "$(< "$REPO/.caravan-package")" != "$R
   [ -f "$TMP/source/scripts/install.sh" ] || fail 'Package is missing its installer.'
   printf '%s\n' "$REF" > "$TMP/source/.caravan-package"
   (cd "$TMP/source" && /usr/bin/find . -type f ! -name '.caravan-package-files' ! -path '*/__pycache__/*' -exec shasum -a 256 {} \; > .caravan-package-files)
+  if [ "$UPDATE" = 1 ]; then
+    [ -f "$TMP/source/tools/caravan_update.py" ] || fail 'Package is missing its updater. Existing code kept.'
+    VPY="$ROOT/venvs/mlx/bin/python"
+    [ -x "$VPY" ] || fail 'Caravan Python is missing; existing source kept. Run the install command again or caravan doctor.'
+    APPLY=("$VPY" "$TMP/source/tools/caravan_update.py" apply --home "$HOME" --repo "$REPO" --new "$TMP/source" --name "$NAME" --port "$PORT" --role "$ROLE" --python "$VPY")
+    [ "$START" = 1 ] || APPLY+=(--no-start)
+    "${APPLY[@]}"
+    code=$?
+    trap 'rmdir "$ROOT/install.lock"; [ -z "$TMP" ] || rm -rf "$TMP"' EXIT
+    exit "$code"
+  fi
   mkdir -p "$ROOT/src"
   if [ -e "$REPO" ]; then
     BACKUP="$ROOT/src/caravan-backup-$(date +%s)"

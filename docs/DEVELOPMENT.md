@@ -126,6 +126,48 @@ app bundle, Homebrew (`/opt/homebrew/bin` and `/usr/local/bin`), then
 `PATH`. Settings talks to `GET`/`POST /api/remote`. The web process does
 not re-bind the page.
 
+## Package updates
+
+A published package install updates with `caravan update`. There is no
+separate stop or start. The command is safe to run while the page is up.
+
+The bootstrap still fetches `packaging-version`, verifies the 40-character
+source revision and the SHA-256 of the GitHub codeload tarball, and refuses
+a tree whose `.caravan-package-files` list does not match. What changed is
+the service handling:
+
+- An opening line ("Updating Caravan, the page will be back in a few
+  seconds.") is printed before the swap. The closing line is the same
+  one-line `caravan status` result. If the pin already matches
+  `.caravan-package`, the command prints "Caravan is already up to date."
+  and does not touch services or files.
+- Model-running hashes are those for `agent/`, `runtime/`,
+  `requirements-mac.lock` and `requirements-mac.txt`. Unchanged hashes
+  mean the loaded model is left running; only `com.caravan.v3.web` is
+  restarted (and `proxy` / `aux` only if their own files or the lock
+  changed). `CARAVAN_WEB_KEEP_WORKERS=1` is unchanged.
+- When those hashes change, web-owned workers (local `mlx_worker` /
+  `llama-server`, and a paired Mac's recorded worker via the same SSH
+  stop the app already uses) are stopped without writing `last-model.json`.
+  The page's saved restore then reloads the same model, and the command
+  prints "The model is reloading." A paired Mac is not itself updated;
+  run `caravan update` on each Mac. For a split model, update the other
+  Macs first, or let the reload finish after every Mac is current.
+- On failure after services were stopped, `~/.caravan/src/caravan-backup-<ts>`
+  is moved back, the previous `scripts/install.sh` is rerun with
+  `--no-start` to restore the previous venv, and the previous services
+  are started. Installer output is kept in `~/.caravan/logs/update.log`.
+  The user sees one line: the update failed, the previous version is
+  running, and they should check the connection and try again.
+- The previous `caravan update` always passed `--no-start` and refused a
+  loaded web job. The new bootstrap ignores that refusal. If the page was
+  running, it is started again even when `--no-start` is passed (the
+  leftover flag from the previous command). If the page was already
+  stopped and `--no-start` is passed, it stays stopped.
+
+Source checkouts still update with `git pull --ff-only` and
+`scripts/install.sh`, not `caravan update`.
+
 ## Clean-install runtime and recovery
 
 Every install, including a new paired Mac and `caravan update`, prepares the

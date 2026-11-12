@@ -9,9 +9,12 @@
   3.12.11. System Python is untouched; a marked, idempotent PATH block
   is added to the login profile and removed on uninstall.
 - Per-user web service and local-only browser, no bundled models or credentials.
-- Safe start/stop/status/open/doctor/update/uninstall/add-mini/remote command. Uninstall
-  removes all owned local jobs/workers/data and marked PATH/SSH entries after
-  confirmation; stop does not kill model workers.
+- Safe start/stop/status/open/doctor/update/uninstall/add-mini/remote command.
+  `caravan update` is a single step: it restarts the page, leaves a loaded
+  model running when model-running code did not change, and on failure
+  restores and starts the previous source (and reruns its installer for the
+  previous venv). Uninstall removes all owned local jobs/workers/data and
+  marked PATH/SSH entries after confirmation; stop does not kill model workers.
 - Immutable committed-tree source archive builder and checksum. These are
   **source packages**, not compiled, signed or notarized application bundles.
 - Current documentation and required daily release checklist.
@@ -46,8 +49,10 @@ is separate from the codeload SHA256 used by the bootstrap.
   account and FileVault-on unlock/login behavior. An isolated HOME is **not** a
   new macOS user or proof of all clean-machine cases.
 - Hash-locked dependency artifacts/wheel availability across supported macOS versions,
-  offline download-failure tests, and transactional update/rollback (source
-  backups exist; environment rollback is manual).
+  offline download-failure tests. Source and venv rollback on a failed update
+  is implemented (previous source backup, previous installer, previous
+  services started); a failure mid-pip still depends on the previous
+  installer being able to restore the environment.
 - Independent security review and native/fresh-account acceptance of the new short-code pairing UI. Day 21 discovery itself only
   inventories/checks configured trusted peers; it cannot apply a plan.
 - Signed/notarized app or package and updater. The publisher needs an Apple Developer

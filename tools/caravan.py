@@ -80,12 +80,11 @@ def main(argv=None):
                 data = response.read()
             with tempfile.NamedTemporaryFile(suffix=".sh") as script:
                 script.write(data); script.flush()
-                cmd = ["bash", script.name, "--update", "--role", role, "--no-start"]
+                cmd = ["bash", script.name, "--update", "--role", role]
                 if role in ("lead", "worker"):
                     plan = service.stored(args.name, Path.home())
                     cmd += ["--port", str(plan["port"]), "--name", args.name]
                 result = subprocess.run(cmd)
-            if result.returncode == 0: print("Updated; run caravan start when ready. Old source backup kept; models/settings unchanged.")
             return result.returncode
         if args.action == "status":
             return simple_status(args.name)

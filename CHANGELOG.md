@@ -2,6 +2,11 @@
 
 ## Day 23 — clean-install fixes (published; pending native acceptance)
 
+- `caravan update` is now a single step: it stops what is needed, installs the
+  verified package, and brings the page back. A loaded model stays running when
+  the model-running code did not change; otherwise it is reloaded and Caravan
+  says so. A failed update restores and starts the previous version. If Caravan
+  is already current, it says so and changes nothing.
 - Opt-in Tailscale access from other devices: `caravan remote on|off|status`,
   one optional install question, and an **Open from my other devices** Settings
   switch. The page stays on 127.0.0.1; only the user's Tailscale network can

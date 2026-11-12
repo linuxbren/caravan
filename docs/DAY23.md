@@ -149,10 +149,8 @@ fresh-config worker learning before saved winners. Live Mac checks still need
 real download/load transitions, pairing/discovery and the resized drawers.
 The update replaces application source and refreshes the existing per-user
 installation, preserving models, settings, explicit user choices and pairing.
-No 1st-node or 2nd-node access is part of publication. To activate an update,
-stop the browser service with `caravan stop`, run `caravan update`, then
-`caravan start` and refresh the page. Model workers remain running until an
-explicit unload/reload; the update does not silently switch a loaded model.
+No 1st-node or 2nd-node access is part of publication. To activate an update, run `caravan update` and refresh the page. Model
+workers remain running when the model-running code did not change.
 
 ## Opt-in Tailscale access from other devices
 
@@ -179,7 +177,49 @@ Portable tests cover the CLI, installer prompt (tty vs not, Tailscale
 present vs absent), API, uninstall, doctor, adoption of an existing serve,
 and the loopback bind. The box suite is **1,213 tests** (40 new). Live Mac checks still need a signed-in Tailscale
 client and a second device on the same network. No 1st-node or 2nd-node
-access is part of this change. To activate an update: `caravan stop`,
-`caravan update`, `caravan start`, then refresh the page. If a hand-made
-share is already on, `caravan remote status` and Settings should show it
-as on after the update.
+access is part of this change. To activate an update, run `caravan update` and refresh the page. If a
+hand-made share is already on, `caravan remote status` and Settings should
+show it as on after the update.
+
+## Single-step update
+
+`caravan update` is one command. It prints "Updating Caravan, the page will
+be back in a few seconds.", fetches and verifies the same SHA-pinned source
+as before, and finishes with the same one-line status as `caravan status`.
+`caravan stop` and `caravan start` still work on their own.
+
+- If the installed package already matches the pin, it prints "Caravan is
+  already up to date." and changes nothing.
+- After a verified extract, file hashes in `.caravan-package-files` decide
+  what to restart. Model-running code is `agent/`, `runtime/`,
+  `requirements-mac.lock` and `requirements-mac.txt`. If none of those
+  changed, only the browser service is restarted (`CARAVAN_WEB_KEEP_WORKERS=1`
+  still leaves a loaded model running). The optional proxy and aux services
+  restart only if their own files, or the venv lock, changed.
+- If model-running code changed, web-owned workers are stopped without
+  clearing the saved last model, and the page's saved restore reloads it.
+  Caravan prints "The model is reloading." A launchd worker job is stopped
+  and started the same way. A paired Mac's worker is asked to stop with the
+  same SSH command the app already uses; a missing peer does not fail the
+  update. The other Mac still runs its previously installed code until you
+  update it too — update every Mac, and if the model is split, update the
+  other Macs first or let the reload finish after every Mac is current.
+- If fetch, verify, install or start fails after the running services were
+  touched, the previous source backup is restored, the old installer is
+  rerun to put the previous packages back, and the old services are started.
+  The only user line is: "The update failed. Caravan is back on the previous
+  version. Check your internet connection and try again." Caravan is not
+  left stopped.
+- The first update from a Mini still running the previous command can also
+  be just `caravan update`. That older command already fetches the current
+  bootstrap, which now stops and starts as needed. It may print an extra
+  leftover "run caravan start when ready" line, which can be ignored; the
+  page is already coming back. After this one update, that extra line is gone.
+
+Portable tests cover an already-current install, a web-only change that
+keeps workers, a worker-code change that reloads and keeps the saved model,
+install and start failures that roll back and restart the old version, and
+the services-loaded path no longer refusing. The box suite is **1,238 tests**
+(24 new). `caravan stop` / `start` are
+unchanged. No 1st-node or 2nd-node access is part of this change. To
+activate: `caravan update`, then refresh the page.

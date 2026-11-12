@@ -34,7 +34,7 @@ to install it. Setup keeps your existing models and settings.
 | `caravan stop` | Stops the browser service until your next login |
 | `caravan start` | Starts it again |
 | `caravan doctor` | Shows detailed checks when something goes wrong |
-| `caravan update` | Updates Caravan after you stop it |
+| `caravan update` | Updates Caravan and brings the page back |
 
 Use **Unload** in the browser to free the model's memory before stopping.
 After restarting your Mac, unlock it and log in. Caravan starts and brings
@@ -83,14 +83,13 @@ Can't open setup? Run `caravan add-mini` on the Mac where you want to open it.
 In Terminal:
 
 ```sh
-caravan stop
 caravan update
-caravan start
-caravan open
 ```
 
-Do not update during a chat. Previous source files are backed up; models and
-settings stay. If an update fails, run `caravan doctor` and keep the backup.
+Do not update during a chat. The page comes back on its own. If the code that
+runs the model changed, the last model is reloaded and Caravan says so.
+Previous source files are backed up; models and settings stay. If an update
+fails, Caravan goes back to the previous version, starts it, and tells you.
 
 ## Remove Caravan safely
 
