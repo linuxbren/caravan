@@ -910,7 +910,7 @@ def make_handler(app: App):
             if path == "/api/models/stop":
                 if hasattr(app,"restore"):app.restore.cancel()
                 if app.optimizer.snapshot().get("running"):
-                    return self._json(409, {"error": "Cancel Optimize now and wait before unloading"})
+                    return self._json(409, {"error": "Cancel Auto-tune and wait before unloading"})
                 try:
                     app.mgr.stop(reason="ui")
                 except ManagedServiceError as e:
@@ -931,7 +931,7 @@ def make_handler(app: App):
                 except ManagedServiceError as e:
                     return self._json(409, {"error":str(e)})
                 if len((app.mgr.snapshot().get("balance") or {}).get("counts") or []) > 2:
-                    return self._json(409, {"error": "Optimize now is not yet safe for N-stage MLX Balance; use measured replies instead"})
+                    return self._json(409, {"error": "Auto-tune is not yet safe for N-stage MLX Balance; use measured replies instead"})
                 if app.mgr._switch_thread and app.mgr._switch_thread.is_alive():
                     return self._json(409, {"error": "a model load is in progress"})
                 if app.optimizer.snapshot().get("running"):
@@ -2004,7 +2004,7 @@ def make_handler(app: App):
                 except ManagedServiceError as e:
                     return self._json(409, error_payload(e))
             if app.optimizer.snapshot().get("running"):
-                return self._json(409, {"error": "Cancel Optimize now and wait before loading"})
+                return self._json(409, {"error": "Cancel Auto-tune and wait before loading"})
             body = body or {}
             mid = body.get("model_id") or body.get("id")
             if not mid:

@@ -82,6 +82,13 @@
   not change `agent/`, `runtime/`, or the requirements files, so an
   update from that pin keeps a loaded model running. The web page
   still restarts.
+  A later live-review follow-up (Auto-tune section: Tune again and
+  Reset tuning sit under an Auto-tune heading outside Advanced, in an
+  indented block with the Before and After lines; Auto-tune works
+  whether Self-tuning is On or Off; the page says Auto-tune where it
+  used to say Optimize now; API routes unchanged) does not change
+  `agent/`, `runtime/`, or the requirements files, so an update from
+  that pin keeps a loaded model running. The web page still restarts.
 
 ## MIT License (2026-11-12)
 

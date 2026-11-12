@@ -1,4 +1,4 @@
-"""Plain-language errors for Self-tuning and Optimize now.
+"""Plain-language errors for Self-tuning and Auto-tune.
 
 The page shows only a short sentence. Full exception text, HTTP bodies,
 paths, and hostnames stay in the log.
@@ -102,7 +102,7 @@ def plain_tune_error(error, *, schedule=None, source=None, detail=None) -> str:
     if source == "self_tune":
         who = "Self-tuning"
     elif source == "optimize_now" or source == "now":
-        who = "Optimize now"
+        who = "Auto-tune"
     else:
         who = "The trial"
     label = knob_label(running_knob(schedule))

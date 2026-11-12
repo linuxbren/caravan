@@ -12,8 +12,8 @@ from pathlib import Path
 # id -> label, plain help, allowed values (first is "auto")
 OPTIONS = [
     {"id": "self_tune", "label": "Self-tuning",
-     "help": "On by default: Caravan learns from your chats immediately and remembers faster settings for each model. Other Auto settings follow its choices; pinned choices stay yours.",
-     "help_gguf": "Caravan learns faster settings from your chats. For GGUF, a change reloads the model when you are not mid-reply.",
+     "help": "Caravan learns from your chats and remembers faster settings for each model. Pinned choices stay yours.",
+     "help_gguf": "Caravan learns from your chats and remembers faster settings for each model. Pinned choices stay yours. For GGUF, a change reloads the model when you are not mid-reply.",
      "values": ["auto", "off"]},
     {"id": "guess_ahead", "label": "Guess-ahead",
      "help": "A smaller model guesses upcoming words for the main MLX model to check. Needs a matching helper; up to ~33% faster writing one reply on a split model in our tests, but slower with two chats.",

@@ -15,46 +15,52 @@ The page is cleaned up from a list Brenden dictated, panel by panel.
 
 ### Settings
 
-Self-tuning stays visible and on by default. **Tune again** and **Reset
-tuning** sit next to it, outside Advanced. Press Tune again for a fresh
-trial on the loaded model, even if a trial already ran — you do not need
-to remove or redownload the model. Reset tuning clears the saved results
-for this model and this setup; the model stays loaded. Every other
-optimization (Guess-ahead, Prompt lookup, Shared start, Two chats, Fused
-kernels, Memory compression, GPU keep-warm) sits under an **Advanced**
-section that is closed until you open it, along with **Apply & restart**
-and the "Auto = Caravan decides" note. Toggling Self-tuning On or Off
+Self-tuning stays visible and on by default, with its On/Off switch and
+the hint "Caravan learns from your chats and remembers faster settings
+for each model. Pinned choices stay yours." A thin divider sits below
+it, then a new **Auto-tune** heading, outside Advanced, with the hint
+"Tries different settings on the loaded model right now and keeps the
+fastest." Under that, an indented block holds **Tune again** and
+**Reset tuning**, the note "Tune again runs fresh trials. Reset tuning
+forgets saved results for this model. The model stays loaded," and the
+Before and After lines. Auto-tune works whether Self-tuning is On or
+Off. Press Tune again for a fresh trial on the loaded model, even if a
+trial already ran — you do not need to remove or redownload the model.
+Reset tuning clears the saved results for this model and this setup; the
+model stays loaded. Pause and Cancel appear in that same block during a
+run. Every other optimization (Guess-ahead, Prompt lookup, Shared start,
+Two chats, Fused kernels, Memory compression, GPU keep-warm) sits under
+an **Advanced** section that is closed until you open it, along with
+**Apply & restart** and the "Auto = Caravan decides" note. There is no
+Tune or Optimize button inside Advanced. Toggling Self-tuning On or Off
 saves and takes effect immediately on a loaded model, with no reload:
 learning is a live flag on the running worker. A plain one-line notice
 confirms the change. The On/Off switch does not show a conflicting
 "now: off" line. Apply & restart is only needed for the other
 optimization options, which still require a reload to apply.
 
-When self-tuning or Tune again finishes for a model, Caravan records the
+When Self-tuning or Auto-tune finishes for a model, Caravan records the
 speed from before the run and the speed with the chosen winners, and shows
-them as two lines in the Self-tuning section (still visible, not inside
-Advanced), for example "Before · Write 88.4 tok/s · first token 0.29s"
+them as two lines in the Auto-tune section (still visible, not inside
+Advanced, and not under Self-tuning), for example "Before · Write 88.4 tok/s · first token 0.29s"
 and "After · Write 94.5 tok/s · first token 0.15s". The wording, units,
 and rounding match the stats under each reply and the average under the
 chat input (tok/s, first token, and any extra fields that were recorded).
-The same two lines are also shown next to the control that produced the
-result, based on the stored `source`: next to Tune again when the source
-is `optimize_now`, and under the Self-tuning switch when Self-tuning's
-own learning wrote the after (`self_tune`). If a run finds nothing
+Self-tuning results feed the same Auto-tune lines. If a run finds nothing
 faster, or the two sides would look the same, the page shows one plain
 line instead: "Already at its fastest settings. Nothing faster found."
-The slots are reserved at two-line height so the Settings rows below do
+The slot is reserved at two-line height so the Settings rows below do
 not jump when the text appears. The lines stay empty until a run has
 finished for the loaded model. The pair is stored per model in
 `~/.caravan/speed_averages.json` next to the chat averages (under a
 `tuning` key), so it describes these Macs and survives a page refresh.
-Tune again uses the existing chat average if there is one; otherwise
+Auto-tune uses the existing chat average if there is one; otherwise
 Before and After come from the trial replies already sent during the run
 (incumbent replies at the starting settings, then replies measured with
 the winning settings), so the run does not add extra prompts. Self-tuning
 uses real-chat replies: those before winners exist become Before; once
 winners are chosen and any trial has settled, the next replies become
-After, and the pair is frozen. A later Tune again run replaces it.
+After, and the pair is frozen. A later Auto-tune run replaces it.
 
 The **Helper download…** button on the Guess-ahead row (inside Advanced)
 is reserved in that row and only rewritten when its state actually
@@ -365,5 +371,28 @@ This follow-up is only proxy, tests, and docs — not `agent/`,
 previous Day 24 pin keeps a loaded model running. The web page still
 restarts. The portable suite on a fresh clone on the development node:
 **1,356 tests passed** in 56.131 s. The 1st node and 2nd node
+were not touched. No `day24` tag yet. Source and pin SHAs are recorded
+at publication time.
+
+### Live review: Auto-tune section
+
+A later layout follow-up, approved from a mockup, moves Tune again and
+Reset tuning out of the Self-tuning block and into their own **Auto-tune**
+section, still outside Advanced. Self-tuning keeps only the On/Off
+switch and its hint. A thin divider, then the Auto-tune heading and
+hint, then an indented block with a left border holds the buttons, a
+short note, and the Before and After lines (or the one-line "already
+fastest" message). Pause and Cancel appear in that block during a run.
+Auto-tune works whether Self-tuning is On or Off. The Before and After
+lines no longer appear under Self-tuning; Self-tuning results still
+feed the Auto-tune slot. There is no Tune or Optimize button inside
+Advanced. The page and the docs say Auto-tune where they used to say
+Optimize now; the API routes are unchanged.
+
+This follow-up is only proxy, tests, and docs — not `agent/`,
+`runtime/`, or the requirements files — so a `caravan update` from the
+previous Day 24 pin keeps a loaded model running. The web page still
+restarts. The portable suite on a fresh clone on the development node:
+**1,357 tests passed** in 57.188 s. The 1st node and 2nd node
 were not touched. No `day24` tag yet. Source and pin SHAs are recorded
 at publication time.

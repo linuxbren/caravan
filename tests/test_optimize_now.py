@@ -400,6 +400,17 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(opt2.snapshot()['phase'],'done')
         self.assertGreater(opt2.snapshot()['prompts'],0)
 
+    def test_start_runs_when_self_tune_is_off(self):
+        """Auto-tune works whether Self-tuning is On or Off."""
+        mgr=FakeMgr()
+        mgr.active['self_tune']=False
+        mgr.state['settings']=web_settings.normalize({'self_tune':'off'})
+        _,opt=self.run_opt(mgr)
+        self.assertEqual(opt.snapshot()['phase'],'done')
+        self.assertGreater(opt.snapshot()['prompts'],0)
+        self.assertEqual(mgr.state['settings']['self_tune'],'off')
+        self.assertFalse(mgr.active['self_tune'])
+
     def test_single_start_atomic(self):
         mgr=FakeMgr(); opt=WO.Optimizer(mgr,send=mgr.send,inflight=lambda:1)
         opt.start()

@@ -75,7 +75,7 @@ class SettingsAdvanced(unittest.TestCase):
         snippet = HTML[start - 80:start + 80]
         self.assertIn("<details", snippet)
         self.assertNotIn(" open", snippet)
-        # Tune again sits next to Self-tuning, outside Advanced.
+        # Auto-tune sits outside Advanced, after Self-tuning.
         # Apply & restart stays inside Advanced.
         opt_box = HTML.index('id="optBox"')
         adv = HTML.index('id="optAdvanced"')
@@ -87,21 +87,24 @@ class SettingsAdvanced(unittest.TestCase):
         self.assertLess(apply, adv_end)
         self.assertLess(adv, note)
         self.assertLess(note, adv_end)
-        # Tune again is between Self-tuning (#optRows) and Advanced;
-        # Apply is not.
         rows = HTML.index('id="optRows"')
+        heading = HTML.index('id="autoTuneHeading"')
+        start_btn = HTML.index('id="btnOptStart"')
         self.assertTrue(rows < opt_box < adv)
+        self.assertTrue(rows < heading < start_btn < adv)
         self.assertFalse(rows < apply < adv)
         self.assertIn("Auto = Caravan decides (learned per model)", HTML)
+        self.assertIn(">Auto-tune</h3>", HTML)
         self.assertIn(">Tune again</button>", HTML)
         self.assertIn(">Reset tuning</button>", HTML)
         self.assertNotIn(">Optimize now</b>", HTML)
-        # No leftover Start button (the control is now labeled Tune again).
         self.assertNotIn('id="btnOptStart">Start</button>', HTML)
-        # No duplicate Tune again / Optimize now inside Advanced.
+        # No Tune / Optimize / Auto-tune button inside Advanced.
         self.assertNotIn("Optimize now", HTML[adv:adv_end])
         self.assertNotIn("Tune again", HTML[adv:adv_end])
         self.assertNotIn("btnOptStart", HTML[adv:adv_end])
+        self.assertNotIn("Auto-tune", HTML[adv:adv_end])
+        self.assertNotIn("Reset tuning", HTML[adv:adv_end])
 
     def test_self_tuning_applies_immediately_without_reload(self):
         # Clicking On/Off saves and applies live; it does not call Load / Apply.
@@ -610,30 +613,27 @@ class TuneBeforeAfter(unittest.TestCase):
             self.assertEqual(S.get_tuning("m", path=path)["after"]["write_tok_s"], 42)
 
     def test_settings_shows_line_outside_advanced(self):
-        # Under Self-tuning (above Advanced): a reserved two-line slot.
+        # In Auto-tune (above Advanced): one reserved two-line slot,
+        # filled by Auto-tune or Self-tuning results. Not under Self-tuning.
         self.assertIn('id="tuneResult"', HTML)
-        self.assertIn('data-tune-slot="self_tune"', HTML)
+        self.assertIn('data-tune-slot="auto_tune"', HTML)
+        self.assertNotIn('data-tune-slot="self_tune"', HTML)
+        self.assertNotIn('id="tuneResultOpt"', HTML)
         self.assertIn("function refreshTuneResult", HTML)
         self.assertIn("function paintTuneResult", HTML)
         self.assertIn("j.tuning", HTML)
         self.assertIn("format_tuning_lines", Path(ROOT / "proxy/web_speed.py").read_text())
         self.assertIn(".tune-slot", HTML)
         self.assertIn("min-height: 2.25rem", HTML)
-        # The Self-tuning slot sits above Advanced, in the static markup,
-        # so a Settings redraw cannot drop it or jump the rows below.
-        self_pos = HTML.find('data-tune-slot="self_tune"')
         adv_pos = HTML.find('id="optAdvanced"')
-        self.assertTrue(0 < self_pos < adv_pos)
-        # Tune again (outside Advanced, next to Self-tuning) has its own
-        # reserved copy, filled only when source is optimize_now.
-        self.assertIn('data-tune-slot="optimize_now"', HTML)
-        self.assertIn('id="tuneResultOpt"', HTML)
-        self.assertIn('tun.source === "optimize_now"', HTML)
+        heading = HTML.find('id="autoTuneHeading"')
+        slot = HTML.find('data-tune-slot="auto_tune"')
+        self.assertTrue(0 < heading < slot < adv_pos)
         opt_pos = HTML.find('id="btnOptStart"')
-        opt_slot = HTML.find('data-tune-slot="optimize_now"')
         self.assertTrue(0 < opt_pos < adv_pos)
-        self.assertTrue(0 < opt_slot < adv_pos)
         self.assertIn('JSON.stringify({ fresh: true })', HTML)
+        # Both Auto-tune and Self-tuning results paint this one slot.
+        self.assertIn("paintTuneResult(el, tuneResultText(tun))", HTML)
         # Do not collapse the slot with hidden (that jumps the layout).
         self.assertNotIn('tune-result" id="tuneResult" hidden', HTML)
         self.assertNotIn(".tune-result[hidden]", HTML)

@@ -70,35 +70,38 @@ does not apply routes, pair Macs, install keys or authenticate model transport.
 ## Settings and optimization
 
 **Self-tuning** stays visible in Settings and is on by default: Caravan learns
-faster settings from your chats. **Tune again** and **Reset tuning** sit
-next to that switch, outside Advanced. Press Tune again for a fresh trial
+from your chats and remembers faster settings for each model; pinned choices
+stay yours. Below a thin divider, **Auto-tune** sits outside Advanced,
+with the hint "Tries different settings on the loaded model right now and
+keeps the fastest." An indented block holds **Tune again** and **Reset
+tuning**, a short note, and the Before and After lines. Auto-tune works
+whether Self-tuning is On or Off. Press Tune again for a fresh trial
 on the loaded model, even if one already ran — you do not need to remove
 or redownload the model. Reset tuning clears the saved results for this
-model; the model stays loaded. After a self-tuning or Tune again run
-finishes for the loaded model, two quiet lines in that same Self-tuning
-section show how fast the model was before and after, for example
+model; the model stays loaded. After a Self-tuning or Auto-tune run
+finishes for the loaded model, two quiet lines in Auto-tune
+show how fast the model was before and after, for example
 "Before · Write 88.4 tok/s · first token 0.29s" and
 "After · Write 94.5 tok/s · first token 0.15s". The wording, units, and
 rounding match the stats under each reply and the average under the chat
 input. Extra fields that were recorded (Read, token counts, total time)
-are included; a field with no data is left out. The same two lines also
-appear next to the control that produced the result: next to Tune again
-when that produced them, and under Self-tuning when Self-tuning
-wrote them. If a run finds nothing faster, or the two sides would look
-the same, the page shows one line instead: "Already at its fastest
-settings. Nothing faster found." The slots are reserved so the rows
+are included; a field with no data is left out. Self-tuning results feed
+the same Auto-tune lines. If a run finds nothing faster, or the two sides
+would look the same, the page shows one line instead: "Already at its
+fastest settings. Nothing faster found." The slot is reserved so the rows
 below do not jump. The lines stay empty until a run has finished for
 this model, and they are kept on the 1st node with the other speed
 averages. Every other optimization — Guess-ahead,
 Prompt lookup, Shared start, Two chats, Fused kernels, Memory compression,
 and GPU keep-warm — sits under an **Advanced** section that
-is closed until you open it, along with **Apply & restart**. Toggling
+is closed until you open it, along with **Apply & restart**. There is no
+Tune or Optimize button inside Advanced. Toggling
 Self-tuning On or Off takes effect immediately on a loaded model, without
 reloading. The switch does not show a conflicting "now: off" line.
 Leave Auto when unsure. The other settings require a reload (use
 Apply & restart) and not every model supports every feature. See
 [configuration](CONFIGURATION.md).
-**Tune again** runs real comparisons and may reload the model; do not start
+**Auto-tune** runs real comparisons and may reload the model; do not start
 it during an important chat. See [optimization](OPTIMIZE-NOW.md).
 
 When a GGUF model is loaded, Self-tuning, Memory compression, Shared start,
@@ -106,12 +109,12 @@ When a GGUF model is loaded, Self-tuning, Memory compression, Shared start,
 Memory compression offers Auto, 16, and 8 only (never 4). Guess-ahead and
 Prompt lookup stay off for now. Fused kernels and GPU keep-warm are hidden,
 because they do not apply. Self-tuning on a GGUF model reloads when you
-are not mid-reply. Tune again also compares 16-bit and 8-bit memory
+are not mid-reply. Auto-tune also compares 16-bit and 8-bit memory
 compression and scores how fast the model reads, how soon the first
 token arrives, and how fast it writes, so the two Before and After
 lines work for GGUF as well.
 
-If a Self-tuning or Tune again trial stops, a short plain reason
+If a Self-tuning or Auto-tune trial stops, a short plain reason
 appears next to Self-tuning, for example
 "Self-tuning stopped while trying Memory compression. A trial setting
 was rejected. The model is back on the previous settings." The full
@@ -136,7 +139,7 @@ only that process when it does not. It never stops a process that is
 not its own. Try loading again. If it still fails, check that the other
 Mac is reachable.
 
-If Self-tuning or Tune again stops with a short reason next to
+If Self-tuning or Auto-tune stops with a short reason next to
 Self-tuning, the model is usually already back on the previous
 settings. The full detail is in the log (`caravan doctor`, then
 `status` for the path).

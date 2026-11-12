@@ -1,3 +1,17 @@
+## 2026-11-12: Day 24 live review — Auto-tune section
+
+An approved Settings layout moves **Tune again** and **Reset tuning**
+out of the Self-tuning block and into a new **Auto-tune** section,
+still outside Advanced: a heading and hint, then an indented block
+with the buttons, a short note, and the Before and After lines (or
+the one-line "already fastest" message). Self-tuning keeps only its
+On/Off switch and hint. Auto-tune works whether Self-tuning is On or
+Off. The page and the docs say Auto-tune where they used to say
+Optimize now; the API routes are unchanged. This follow-up does not
+change `agent/`, `runtime/`, or the requirements files, so a
+`caravan update` keeps a loaded model running; the web page still
+restarts.
+
 ## 2026-11-12: Day 24 live review — Tune again, next to Self-tuning
 
 On a split MLX model, a later Optimize now press did not measure anything

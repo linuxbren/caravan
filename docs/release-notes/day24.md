@@ -73,6 +73,13 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   instead of two identical Before and After lines. The conflicting
   "now: off" next to On is gone. The Self-tuning hint is for each
   model, not only MLX.
+- Auto-tune, live review: Tune again and Reset tuning move out of the
+  Self-tuning block into a new Auto-tune section, still outside
+  Advanced, with a heading, a hint, an indented button block, and the
+  Before and After lines (or the one-line "already fastest" message).
+  Auto-tune works whether Self-tuning is On or Off. The page and docs
+  say Auto-tune where they used to say Optimize now; the API routes
+  are unchanged.
 
 ## Operational checks
 - Portable suite results are recorded at publication time in DAY24.md and
@@ -110,5 +117,10 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   generic Self-tuning hint) does not change `agent/`, `runtime/`, or
   the requirements files, so an update from that pin keeps a loaded
   model running. The web page still restarts.
+  A later live-review follow-up (Auto-tune section, independent of
+  Self-tuning On or Off, Before and After only in Auto-tune) does not
+  change `agent/`, `runtime/`, or the requirements files, so an
+  update from that pin keeps a loaded model running. The web page
+  still restarts.
 
 Details: [DAY24.md](../DAY24.md). Install: [INSTALL.md](../../INSTALL.md).

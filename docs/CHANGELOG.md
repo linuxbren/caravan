@@ -1,5 +1,13 @@
 # Changelog
 
+## Day 24 live review — Auto-tune section
+
+- Auto-tune sits below Self-tuning, outside Advanced, with Tune again,
+  Reset tuning, and the Before and After lines in an indented block.
+  Auto-tune works whether Self-tuning is On or Off. A `caravan update`
+  from the previous Day 24 pin keeps a loaded model running.
+
+
 ## Day 24 live review — Tune again, next to Self-tuning
 
 - Tune again sits next to Self-tuning, outside Advanced, and always runs

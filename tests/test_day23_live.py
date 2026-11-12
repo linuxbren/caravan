@@ -123,7 +123,7 @@ class FreshTuningTests(unittest.TestCase):
         block=HTML[HTML.index('  function renderActive('):HTML.index('  function fmtMin(')]
         self.assertIn('o.id === "self_tune"',block)
         self.assertIn('"Off (config)" : "On"',block)
-        self.assertIn('On by default:',HTML)
+        self.assertIn('Caravan learns from your chats and remembers faster settings for each model. Pinned choices stay yours.',HTML)
 
 
 @unittest.skipUnless(shutil.which('node'),'Node needed for executable production UI regressions')

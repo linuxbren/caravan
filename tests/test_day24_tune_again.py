@@ -34,24 +34,55 @@ ACTIVE = dict(
 
 
 class TuneAgainButton(unittest.TestCase):
-    def test_sits_next_to_self_tuning_outside_advanced(self):
+    def test_auto_tune_section_matches_approved_layout(self):
         rows = HTML.index('id="optRows"')
+        heading = HTML.index('id="autoTuneHeading"')
+        hint = HTML.index('id="autoTuneHint"')
+        sub = HTML.index('id="autoTuneSub"')
         start = HTML.index('id="btnOptStart"')
         reset = HTML.index('id="btnTuneReset"')
+        note = HTML.index('id="autoTuneNote"')
+        slot = HTML.index('data-tune-slot="auto_tune"')
         adv = HTML.index('id="optAdvanced"')
         apply = HTML.index('id="btnApply"')
-        self.assertTrue(rows < start < adv)
-        self.assertTrue(rows < reset < adv)
+        # Self-tuning rows, then a divider (optBox), Auto-tune heading,
+        # then the indented sub-block with buttons, note, and results.
+        self.assertTrue(rows < heading < hint < sub < start < adv)
+        self.assertTrue(sub < reset < adv)
+        self.assertTrue(sub < note < slot < adv)
         self.assertTrue(adv < apply)
+        self.assertIn(">Auto-tune</h3>", HTML)
         self.assertIn(">Tune again</button>", HTML)
         self.assertIn(">Reset tuning</button>", HTML)
-        # No leftover Start / Optimize now title, and no duplicate in Advanced.
+        self.assertIn(
+            "Tries different settings on the loaded model right now and keeps the fastest.",
+            HTML,
+        )
+        self.assertIn(
+            "Tune again runs fresh trials. Reset tuning forgets saved results for this model. The model stays loaded.",
+            HTML,
+        )
+        self.assertIn(".auto-tune-sub", HTML)
+        self.assertIn("border-left", HTML)
+        # Buttons are not in the Self-tuning block (before the Auto-tune heading).
+        self.assertGreater(start, heading)
         self.assertNotIn('id="btnOptStart">Start</button>', HTML)
         self.assertNotIn(">Optimize now</b>", HTML)
         adv_end = HTML.index("</details>", adv)
         self.assertNotIn("btnOptStart", HTML[adv:adv_end])
         self.assertNotIn("Tune again", HTML[adv:adv_end])
         self.assertNotIn("Optimize now", HTML[adv:adv_end])
+        self.assertNotIn("Reset tuning", HTML[adv:adv_end])
+        # One results slot, in Auto-tune only.
+        self.assertEqual(HTML.count('class="tune-slot"'), 1)
+        self.assertNotIn('data-tune-slot="self_tune"', HTML)
+        # Pause and Cancel are in the sub-block and hidden until a run starts.
+        pause = HTML.index('id="btnOptPause"')
+        cancel = HTML.index('id="btnOptCancel"')
+        self.assertTrue(sub < pause < adv)
+        self.assertTrue(sub < cancel < adv)
+        self.assertIn('id="btnOptPause" hidden', HTML)
+        self.assertIn('id="btnOptCancel" hidden', HTML)
 
     def test_press_always_sends_fresh(self):
         self.assertIn('JSON.stringify({ fresh: true })', HTML)
@@ -67,12 +98,14 @@ class TuneAgainButton(unittest.TestCase):
 
     def test_self_tune_help_is_generic(self):
         opt = next(o for o in web_settings.OPTIONS if o["id"] == "self_tune")
-        self.assertIn("for each model", opt["help"])
+        self.assertEqual(
+            opt["help"],
+            "Caravan learns from your chats and remembers faster settings "
+            "for each model. Pinned choices stay yours.",
+        )
         self.assertNotIn("for each MLX model", opt["help"])
-        self.assertIn("for each model", HTML)
-        self.assertNotIn("for each MLX model", HTML)
-        # OPTIONS.help and the page copy stay in lockstep.
         self.assertIn(opt["help"], HTML)
+        self.assertNotIn("for each MLX model", HTML)
 
 
 class FreshSchedule(unittest.TestCase):
@@ -272,13 +305,15 @@ class Notices(unittest.TestCase):
         self.assertIn("load_on", body)
         self.assertIn("ready_on", body)
 
-    def test_start_enables_learn_when_worker_is_off(self):
+    def test_start_does_not_require_self_tuning(self):
         src = (REPO / "proxy/web_optimize.py").read_text()
         start = src.index("def start(")
         body = src[start:src.index("def cancel(")]
-        self.assertIn("set_self_tune", body)
+        self.assertNotIn("needs an MLX model with Auto learning on", body)
+        self.assertIn("independent of Self-tuning", body)
         self.assertIn('fresh=True', body)
         self.assertIn("self.fresh", body)
+        self.assertNotIn("set_self_tune", body)
 
 
 if __name__ == "__main__":

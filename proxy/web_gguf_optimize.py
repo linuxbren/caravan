@@ -68,7 +68,7 @@ class GgufOptimizer:
             if snap.get("status") != "ready" or not snap.get("model_id"):
                 raise RuntimeError("load a model first")
             if snap.get("backend") != "llama" or entry.get("source") != "gguf":
-                raise RuntimeError("GGUF Optimize now needs a GGUF model loaded")
+                raise RuntimeError("GGUF Auto-tune needs a GGUF model loaded")
             self.entry, self.model_id = entry, snap["model_id"]
             self.settings = snap.get("settings") or {}
             nodes = (snap.get("gguf") or {}).get("nodes") or [None]

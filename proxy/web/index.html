@@ -604,6 +604,14 @@
   }
   /* Reserved two-line slot so before/after appearing does not jump the
      Settings rows below (same idea as the Helper download slot). */
+  .auto-tune-title {
+    font-size: .72rem; font-weight: 600; margin: 0 0 8px; color: var(--text);
+  }
+  .auto-tune-sub {
+    margin: 10px 0 4px 6px;
+    padding: 8px 0 4px 14px;
+    border-left: 2px solid color-mix(in srgb, var(--accent) 50%, var(--line));
+  }
   .tune-slot {
     min-height: 2.25rem;
     margin-top: 8px;
@@ -1372,23 +1380,25 @@
 <div class="optcard drawer-section">
       <h2 class="drawer-section-title"><span class="tip" title="Caravan learns which Optimizations help this model on your Minis.">Optimizations</span></h2>
       <div id="optRows"></div>
+      <p class="self-tune-note" id="selfTuneNote" hidden></p>
       <div class="optbox" id="optBox">
-        <div class="row">
-          <button class="primary drawer-control" id="btnOptStart" title="Run a fresh trial on the loaded model. Safe to press again; you do not need to remove or redownload the model.">Tune again</button>
-          <button class="ghost drawer-control" id="btnTuneReset" title="Clear saved tuning for this model and this setup. The model stays loaded.">Reset tuning</button>
-          <button class="ghost drawer-control" id="btnOptPause">Pause</button>
-          <button class="ghost drawer-control" id="btnOptCancel">Cancel</button>
+        <h3 class="auto-tune-title" id="autoTuneHeading">Auto-tune</h3>
+        <div class="help" id="autoTuneHint">Tries different settings on the loaded model right now and keeps the fastest.</div>
+        <div class="auto-tune-sub" id="autoTuneSub">
+          <div class="row">
+            <button class="primary drawer-control" id="btnOptStart" title="Run a fresh trial on the loaded model. Works whether Self-tuning is on or off. You do not need to remove or redownload the model.">Tune again</button>
+            <button class="ghost drawer-control" id="btnTuneReset" title="Clear saved tuning for this model and this setup. The model stays loaded.">Reset tuning</button>
+            <button class="ghost drawer-control" id="btnOptPause" hidden>Pause</button>
+            <button class="ghost drawer-control" id="btnOptCancel" hidden>Cancel</button>
+          </div>
+          <div class="help" id="autoTuneNote">Tune again runs fresh trials. Reset tuning forgets saved results for this model. The model stays loaded.</div>
+          <div class="tune-slot" data-tune-slot="auto_tune">
+            <p class="tune-result" id="tuneResult"></p>
+          </div>
+          <div class="tunenote" id="tuneNote"></div>
+          <div class="help" id="optTip"></div>
+          <div class="help" id="optProgress"></div>
         </div>
-        <div class="tune-slot" data-tune-slot="self_tune">
-          <p class="tune-result" id="tuneResult"></p>
-        </div>
-        <div class="tune-slot" data-tune-slot="optimize_now">
-          <p class="tune-result" id="tuneResultOpt"></p>
-        </div>
-        <p class="self-tune-note" id="selfTuneNote" hidden></p>
-        <div class="tunenote" id="tuneNote"></div>
-        <div class="help" id="optTip">Self-tuning stays on when options are Auto — Caravan learns from real chats. Tune again runs a fresh trial on the loaded model.</div>
-        <div class="help" id="optProgress"></div>
       </div>
       <details class="opt-advanced" id="optAdvanced">
         <summary>Advanced</summary>
@@ -1797,25 +1807,20 @@
     if (t && t.trial) lines.push(`Self-tuning is trying ${t.trial.label} ${t.trial.value}: ${t.trial.remaining} replies left.`);
     for (const c of (t && t.reload_wanted) || []) {
       lines.push(c.why === "try"
-        ? `Self-tuning wants to try ${c.label} ${c.to} — click Apply &amp; restart (or Optimize now) to try it.`
+        ? `Self-tuning wants to try ${c.label} ${c.to} — click Apply &amp; restart (or Auto-tune) to try it.`
         : `${c.label} ${c.from} didn't win — Apply &amp; restart goes back to ${c.to}.`);
     }
     if (opt && opt.running && /reloading/.test(opt.phase || "")) lines.unshift(`<b>${opt.phase}…</b>`);
     if (opt && opt.error && !opt.running) lines.push(escHtml(String(opt.error)));
     el.innerHTML = lines.join("<br>");
-    const note = $("selfTuneNote");
-    if (note && opt && opt.error && !opt.running) {
-      note.hidden = false;
-      note.textContent = String(opt.error);
-    } else if (note && opt && opt.running) {
-      // A new trial is underway; clear a previous error.
-      if (note.dataset.tuneError === "1") { note.hidden = true; note.textContent = ""; }
-    }
-    if (note && opt && opt.error && !opt.running) note.dataset.tuneError = "1";
-    if (note && opt && !opt.error) delete note.dataset.tuneError;
+    // Trial errors belong in Auto-tune (tuneNote above). selfTuneNote is
+    // only for the On/Off apply notice.
     const few = t && t.known && (t.replies_learned || 0) < 10;
-    $("optTip").textContent = few && !(opt && opt.running)
-      ? "Tip: Tune again can try this model again while you wait." : "";
+    if (few && !(opt && opt.running)) {
+      $("optTip").textContent = "Tip: Auto-tune can try this model again while you wait.";
+    } else if ($("optTip") && !($("optTip").textContent || "").startsWith("config.toml")) {
+      $("optTip").textContent = "";
+    }
   }
   async function refreshOptimize() {
     let j;
@@ -1825,23 +1830,20 @@
     $("btnOptCancel").disabled = !j.running;
     $("btnOptPause").disabled = !j.running;
     $("btnOptPause").textContent = j.paused ? "Resume" : "Pause";
+    // Pause and Cancel belong in the Auto-tune block, and only while a run is underway.
+    $("btnOptPause").hidden = !j.running;
+    $("btnOptCancel").hidden = !j.running;
     const el = $("optProgress");
     if (!j.mode) { el.textContent = ""; return; }
     const schedule = j.schedule || [];
     const done = schedule.filter(i => ["kept", "skipped"].includes(i.state)).length;
-    let txt = `Tune again${j.backend === "llama" ? " (GGUF, each option reloads llama.cpp twice)" : ""}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
+    let txt = `Auto-tune${j.backend === "llama" ? " (GGUF, each option reloads llama.cpp twice)" : ""}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
     if (schedule.length) txt += ` · ${done}/${schedule.length} options settled`;
     for (const item of schedule) txt += `\n${item.name}: ${item.state}${item.skip ? " — " + item.skip : item.state === "kept" ? " — " + item.winner : ""}`;
     if (j.running) txt += ` · about ${fmtMin(j.eta_s)} left`;
     if (j.reply_s != null) txt += ` · ${j.reply_s}s per reply`;
     if (j.reload_s != null) txt += ` · ${j.reload_s}s per reload`;
     if (j.error) txt += `\n${j.error}`;
-    const note = $("selfTuneNote");
-    if (note && j.error && !j.running) {
-      note.hidden = false;
-      note.textContent = String(j.error);
-      note.dataset.tuneError = "1";
-    }
     if (j.summary) {
       const w = j.summary.winner || {};
       const pick = Object.entries(w).map(([k, v]) => `${k}=${v === true ? "on" : v === false ? "off" : v}`).join(", ");
@@ -1854,7 +1856,7 @@
   // Presentation-only mirror of web_settings.OPTIONS, checked by test_day17_web_labels.
   // Served from disk so copy updates need not interrupt an active remote worker.
   const SETTINGS_HELP_COPY = {
-  "self_tune": "On by default: Caravan learns from your chats immediately and remembers faster settings for each model. Other Auto settings follow its choices; pinned choices stay yours.",
+  "self_tune": "Caravan learns from your chats and remembers faster settings for each model. Pinned choices stay yours.",
   "guess_ahead": "A smaller model guesses upcoming words for the main MLX model to check. Needs a matching helper; up to ~33% faster writing one reply on a split model in our tests, but slower with two chats.",
   "prompt_lookup": "Reuse words from your prompt to help the MLX model write repeated text. Up to ~44% faster in our tests on repeated text, but slower on mixed chats; one chat at a time.",
   "shared_start": "Reuse the beginning of repeated system prompts so the model has less to read. MLX models only.",
@@ -1866,7 +1868,7 @@
   "ubatch": "How much of a long question the model reads at once. Larger can read faster and uses more working memory."
 };
   const SETTINGS_HELP_GGUF = {
-  "self_tune": "Caravan learns faster settings from your chats. For GGUF, a change reloads the model when you are not mid-reply.",
+  "self_tune": "Caravan learns from your chats and remembers faster settings for each model. Pinned choices stay yours. For GGUF, a change reloads the model when you are not mid-reply.",
   "guess_ahead": "A smaller model guesses upcoming words for the main model to check. Often slower on a Mac, so it stays off until a test says otherwise.",
   "prompt_lookup": "Reuse words from your prompt to help with repeated text. Can help on repeated passages and can slow mixed chats.",
   "shared_start": "Reuse the start of a chat so later turns begin sooner.",
@@ -2218,20 +2220,16 @@
     return tun.line || "";
   }
   async function refreshTuneResult() {
-    const selfEl = $("tuneResult");
-    const optEl = $("tuneResultOpt");
+    const el = $("tuneResult");
     const mid = state.loadedModel || ($("modelSelect") && $("modelSelect").value) || "";
-    const clear = () => { paintTuneResult(selfEl, ""); paintTuneResult(optEl, ""); };
+    const clear = () => { paintTuneResult(el, ""); };
     if (!mid) { clear(); return; }
     try {
       const q = new URLSearchParams({ model: mid });
       const j = await api("/api/speed-average?" + q.toString());
       const tun = j && j.tuning;
-      const text = tuneResultText(tun);
-      // Always under Self-tuning. Duplicate by Optimize now only when
-      // that button is the one that produced the result.
-      paintTuneResult(selfEl, text);
-      paintTuneResult(optEl, (tun && tun.source === "optimize_now") ? text : "");
+      // One reserved slot in Auto-tune, for both Auto-tune and Self-tuning results.
+      paintTuneResult(el, tuneResultText(tun));
     } catch (_) { clear(); }
   }
   async function refreshAvgSpeed() {
@@ -2660,7 +2658,6 @@
       const j = await api("/api/settings/reset-tuning", { method: "POST", body: "{}" });
       if (note) { note.hidden = !j.notice; note.textContent = j.notice || ""; }
       paintTuneResult($("tuneResult"), "");
-      paintTuneResult($("tuneResultOpt"), "");
       refreshTuneResult();
     } catch (e) {
       if (note) { note.hidden = false; note.textContent = e.error || e.message || String(e); }

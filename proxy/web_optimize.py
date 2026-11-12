@@ -113,22 +113,12 @@ class Optimizer:
             if snap.get("status") != "ready" or not snap.get("model_id"):
                 raise RuntimeError("load a model first")
             settings = web_settings.normalize(snap.get("settings") or {})
-            active = self.mgr.lead_active_settings()
-            # A split start can leave the worker with learning off even when
-            # Self-tuning is On. Turn learning on live, then continue.
-            if ((not active or not active.get("self_tune", True))
-                    and settings.get("self_tune") != "off"
-                    and hasattr(self.mgr, "set_self_tune")):
-                try:
-                    self.mgr.set_self_tune("auto")
-                    active = self.mgr.lead_active_settings() or active
-                except Exception:
-                    pass
-            if not active or not active.get("self_tune", True):
-                raise RuntimeError("Optimize now needs an MLX model with Auto learning on")
+            active = self.mgr.lead_active_settings() or {}
+            # Auto-tune is independent of Self-tuning: it runs a walk-away
+            # trial now, whether learning from chats is on or off.
             if (settings.get("guess_ahead") == "mtp" or
                     settings.get("prompt_lookup") == "adaptive"):
-                raise RuntimeError("turn off native MTP / adaptive lookup before Optimize now")
+                raise RuntimeError("turn off native MTP / adaptive lookup before Auto-tune")
             self.model_id = snap["model_id"]
             self.settings = settings
             self.fresh = bool(fresh)
@@ -168,7 +158,7 @@ class Optimizer:
             raise Canceled()
         snap = self.mgr.snapshot()
         if snap.get("model_id") != self.model_id or snap.get("status") != "ready":
-            raise RuntimeError("model changed during Optimize now")
+            raise RuntimeError("model changed during Auto-tune")
 
     def _hold(self, values):
         self.mgr.sweep({"pause": True, "hold": {n: v for n, v in values.items()

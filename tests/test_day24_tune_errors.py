@@ -50,7 +50,7 @@ class PlainTuneErrorTest(unittest.TestCase):
 
     def test_optimize_now_wording_and_timeout(self):
         msg = TE.plain_tune_error("URLError: timed out", source="optimize_now")
-        self.assertIn("Optimize now stopped", msg)
+        self.assertIn("Auto-tune stopped", msg)
         self.assertIn("took too long", msg)
         self.assertNotIn("URLError", msg)
 
@@ -218,24 +218,28 @@ class OptimizerPlainErrorTest(unittest.TestCase):
             time.sleep(0.01)
         snap = opt.snapshot()
         self.assertEqual(snap["phase"], "stopped (error)")
-        self.assertIn("Optimize now stopped", snap["error"])
+        self.assertIn("Auto-tune stopped", snap["error"])
         self.assertIn("rejected", snap["error"])
         self.assertNotIn("HTTPError", snap["error"])
         self.assertIn("HTTP Error 400", snap.get("error_detail") or "")
 
 
 class DocsAndPageTest(unittest.TestCase):
-    def test_page_paints_error_next_to_self_tuning(self):
-        # Visible Self-tuning area, not only the closed Advanced panel.
-        self.assertIn('id="selfTuneNote"', HTML)
+    def test_page_paints_error_in_auto_tune(self):
+        # Visible Auto-tune section, not only the closed Advanced panel.
         self.assertIn('id="tuneNote"', HTML)
+        self.assertIn('id="autoTuneSub"', HTML)
         self.assertIn("if (opt && opt.error && !opt.running) lines.push", HTML)
-        self.assertIn('note.textContent = String(opt.error)', HTML)
-        self.assertIn('note.textContent = String(j.error)', HTML)
+        self.assertIn("escHtml(String(opt.error))", HTML)
+        self.assertIn("if (j.error)", HTML)
         # Full raw detail must not be painted from error_detail on the optimize path.
         # The load-status error_detail slot is a different element and stays as-is.
         self.assertNotIn("j.error_detail", HTML)
         self.assertNotIn("opt.error_detail", HTML)
+        note = HTML.index('id="tuneNote"')
+        sub = HTML.index('id="autoTuneSub"')
+        adv = HTML.index('id="optAdvanced"')
+        self.assertTrue(sub < note < adv)
 
     def test_docs_mention_plain_reason(self):
         day = (REPO / "docs" / "DAY24.md").read_text()
