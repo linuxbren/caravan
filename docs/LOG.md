@@ -1,17 +1,28 @@
-## 2026-11-11: Day 24 quieter page (not published)
+## 2026-11-12: Day 24 published (no tag yet)
 
-See [DAY24.md](DAY24.md): Advanced sections in Settings, Models, and a
-collapsed Topology; Thinking filter and specialized types behind Advanced;
-New session; Current optimizations; per-model and per-optimization average
-speed; "Built in the open" removed; Models fit-summary follows the selected
-chip and says Macs; Family menu; row hover (maker, date, context,
-capabilities); one progress card per download, with consistent friendly
-Mac names; Self-tuning shows before and after speed once a run finishes;
-the Helper download button no longer flickers on repeated identical polls;
-the average under the input says "Average" (not "Usually"); Apply & restart
-sits inside Advanced, and Self-tuning On/Off takes effect immediately with
-no reload. On branch `day24-ui`. Day 23 is published (tag day23-2026-11-11).
-No 1st-node or 2nd-node access.
+See [DAY24.md](DAY24.md) and [release-notes/day24.md](release-notes/day24.md).
+Advanced sections in Settings, Models, and a collapsed Topology; Thinking
+filter and specialized types behind Advanced; New session; Current
+optimizations; per-model and per-optimization average speed ("Average",
+not "Usually"); "Built in the open" removed; Models fit-summary follows
+the selected chip and says Macs; Family menu; row hover (maker, date,
+context, capabilities); one progress card per download, with consistent
+friendly Mac names; Self-tuning shows before and after speed once a run
+finishes; the Helper download button no longer flickers; Apply & restart
+sits inside Advanced; Self-tuning On/Off takes effect immediately with no
+reload. Published to the install channel. No `day24` tag yet; that waits
+for live review. The 1st node and 2nd node were not touched. A
+`caravan update` from the Day 23 pin picks this up and reloads a loaded
+model (`agent/mlx_worker.py` changed); the same model is restored.
+
+## 2026-11-12: MIT License
+
+Brenden chose the MIT License. Copyright (c) 2026 Brenden Dawson. The
+license is in [LICENSE](../LICENSE); the README License section links
+[agent/native_mtp.LICENSE](../agent/native_mtp.LICENSE) for the one
+adapted file. Committed as `ee978c6` on top of the Day 23 pin, on
+`caravan-v3-mlx-split`, `main`, and `clean-install-fixes`. The packaging
+pin was left on the Day 23 source until Day 24 was published.
 
 ## 2026-11-11: Day 23 live testing and tag
 

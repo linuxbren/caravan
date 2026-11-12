@@ -1,8 +1,13 @@
 # Day 24 — quieter page, Advanced sections, and model filters
 
-Day 24 work is on the `day24-ui` branch and is **not published**. Day 23 is
-published (tag `day23-2026-11-11`, pin `5717c4a`, source `940cbec`). Nothing
-on the 1st node or 2nd node was changed for this work.
+Day 24 is **published** (Nov 12 2026, America/Chicago). There is no `day24`
+tag yet; that waits for live review. Day 23 remains published (tag
+`day23-2026-11-11`, pin `5717c4a`, source `940cbec`). The 1st node and 2nd
+node were not changed for this work: Brenden updates those Macs with
+`caravan update`.
+
+Caravan is open source under the MIT License. Copyright (c) 2026 Brenden
+Dawson. See [LICENSE](../LICENSE).
 
 ## What changed
 
@@ -132,7 +137,9 @@ already had a plain title and was left as it is.
 [WEB.md](WEB.md) and [MODEL_PICKER.md](MODEL_PICKER.md) describe the Advanced
 sections, each filter, the middle-layer use case (as "agent apps", without
 lab names), the average-speed line, New session, and the quieter Topology
-status. This file and the Obsidian Day 24 note record the same decisions.
+status. Short release notes are in [release-notes/day24.md](release-notes/day24.md).
+This file and the Obsidian Day 24 note record the same decisions. The
+repository also carries the [MIT License](../LICENSE).
 
 ## Tests
 
@@ -146,8 +153,11 @@ wording (a related Day 23 fix, committed on its own), Balance status
 wording, and the Models fit-summary line. The full suite is run on the
 development node checkout. Counts are recorded at commit time.
 
-## Not in this branch
+## Publication
 
-- No publish, no `day24` tag, no push. Day 23 is already published.
-- The 1st node and 2nd node were not touched.
-- Brenden will review the page live.
+Published to the install channel and main. No `day24` tag yet — that waits
+for Brenden's live review. The 1st node and 2nd node were not touched for
+this publication. A `caravan update` from the Day 23 pin picks up this
+release. Model-running code in `agent/` changed (`mlx_worker.py`, so
+Self-tuning can apply without a reload), so a loaded model is reloaded
+and Caravan says so. The same model is restored after the update.

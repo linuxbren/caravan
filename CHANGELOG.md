@@ -1,6 +1,6 @@
 ### Day 21 release — day21-2026-11-10 (published 2026-11-10 CST)
 
-## Day 24 — quieter page and Advanced sections (not published)
+## Day 24 — quieter page and Advanced sections (published; pending live review)
 
 - Settings: Self-tuning stays visible; other optimizations, Optimize now,
   and Apply & restart sit under a closed Advanced section. Self-tuning
@@ -30,8 +30,16 @@
   per-optimization average under the input ("Average 42 words/s, first word
   in 1.2 s"), stored on the 1st node. The "Built in the open" title and
   tagline are removed; the line reads "Your Macs. One model."
-- Not published. Day 23 is published (tag day23-2026-11-11). See
-  [Day 24](docs/DAY24.md).
+- Published. No `day24` tag yet; that waits for live review. See
+  [Day 24](docs/DAY24.md) and [release notes](docs/release-notes/day24.md).
+  A `caravan update` from the Day 23 pin picks this up and reloads a
+  loaded model (model-running code in `agent/` changed).
+
+## MIT License (2026-11-12)
+
+- Caravan is open source under the [MIT License](LICENSE). Copyright (c)
+  2026 Brenden Dawson. One adapted file keeps its own MIT notice:
+  [agent/native_mtp.LICENSE](agent/native_mtp.LICENSE).
 
 ## Day 23 — clean-install fixes (published; live testing passed)
 

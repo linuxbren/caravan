@@ -29,7 +29,8 @@ is required. Never paste an old build-log command into your Mac unchanged.
 
 [Install and recovery](../INSTALL.md) · [Browser controls](WEB.md) ·
 [Models and downloads](MODEL_PICKER.md) · [Add/remote Macs](REMOTE-ACCESS.md) ·
-[Security](SECURITY.md) · [Package status](PACKAGING.md)
+[Security](SECURITY.md) · [Package status](PACKAGING.md) ·
+[License](../LICENSE) (MIT)
 
 ## Development and technical details
 
@@ -47,3 +48,9 @@ is required. Never paste an old build-log command into your Mac unchanged.
 History describes what was tested then; it is not a promise about every Mac.
 
 [Adding Macs securely](PAIRING.md) · [Cleanup candidates (approval required)](CLUTTER.md) · [Paused C++ experiment](history/cpp/README.md).
+
+## License
+
+Caravan is open source under the [MIT License](../LICENSE). Copyright (c)
+2026 Brenden Dawson. One adapted file keeps its own MIT notice:
+[agent/native_mtp.LICENSE](../agent/native_mtp.LICENSE).
