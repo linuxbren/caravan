@@ -24,7 +24,7 @@ MLX and optional GGUF use different tuning paths. For a GGUF model, Optimize now
 compressed chat memory, guess-ahead or a proposed setting. Unknown capacity,
 missing files, load failure or changed topology should stop a trial safely.
 Do not bypass a guard or delete active files to make a run appear successful.
-The ordinary chat path must remain usable after a cancelled/failed trial.
+The ordinary chat path must remain usable after a cancelled/failed trial. If a trial stops, Settings shows a short plain reason next to Self-tuning (and under Optimize now); the full detail goes to the log only.
 
 Saved results are scoped to model/hardware configuration; current runtime
 settings and defaults are described in [CONFIGURATION](CONFIGURATION.md).

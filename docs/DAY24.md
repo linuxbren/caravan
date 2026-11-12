@@ -295,3 +295,32 @@ restarts. The portable suite on a fresh clone on the development node:
 **1,329 tests passed** in 57.055 s. The 1st node and 2nd node were not
 touched. No `day24` tag yet. Source and pin SHAs are recorded at
 publication time.
+
+### Live review: Self-tuning error with no reason on the page
+
+After the GGUF Settings update, a split MLX model (Qwen2.5 Coder 7B
+Instruct 4bit, on the 1st Mac and the 2nd Mac) loaded fine. Turning
+Self-tuning on started a trial run. Shared start was tried and kept.
+The next trial, Memory compression, reloads the model and then
+measures. That measurement was rejected, and the run stopped. The
+model was put back on the previous settings and stayed ready.
+
+The page did not explain. The only visible sign was "stopped (error)"
+under Optimize now, which sits in the closed Advanced section, and
+the recorded reason was a raw request error with no useful wording.
+The full worker reply was not kept for the log, because the restore
+reload replaced the worker log.
+
+Self-tuning and Optimize now errors now show a short plain reason
+next to Self-tuning (and under Optimize now), for example "Self-tuning
+stopped while trying Memory compression. A trial setting was rejected.
+The model is back on the previous settings." Friendly Mac names only;
+no hostnames or paths. The full detail goes to the log only.
+
+This follow-up is only proxy, tests, and docs — not `agent/`,
+`runtime/`, or the requirements files — so a `caravan update` from the
+previous Day 24 pin keeps a loaded model running. The web page still
+restarts. The portable suite on a fresh clone on the development node:
+**1,339 tests passed** in 55.862 s. The 1st node and 2nd node were not
+touched. No `day24` tag yet. Source and pin SHAs are recorded at
+publication time.

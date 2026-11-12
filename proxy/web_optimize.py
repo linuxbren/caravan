@@ -8,10 +8,12 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 import optimize_schedule as AB
 import tuned_settings as TS
 import web_settings
+import web_tune_errors
 
 AB_ARM = 3
 
@@ -79,7 +81,8 @@ class Optimizer:
         self._thread = None
         self.state = dict(running=False, mode=None, phase="idle", prompts=0, reloads=0,
                           started=None, eta_s=None, reply_s=None, reload_s=None,
-                          schedule=[], results=[], log=[], summary=None, error=None, paused=False)
+                          schedule=[], results=[], log=[], summary=None, error=None,
+                          error_detail=None, source=None, paused=False)
 
     def snapshot(self):
         with self._lock:
@@ -98,7 +101,7 @@ class Optimizer:
         with self._lock:
             self.state["log"] = (self.state["log"] + [{"t": time.time(), "msg": msg}])[-60:]
 
-    def start(self, mode="now"):
+    def start(self, mode="now", source="optimize_now"):
         # Accept legacy clients, but never resurrect Deep/Quick coverage.
         with self._lock:
             if self.state["running"]:
@@ -118,9 +121,11 @@ class Optimizer:
             self.entry = copy.deepcopy(getattr(self.mgr, "_loaded_entry", None))
             self._cancel.clear()
             self._pause.clear()
+            self.source = source or "optimize_now"
             self._set(running=True, mode="now", phase="starting", prompts=0, reloads=0,
                       started=time.time(), eta_s=None, reply_s=None, reload_s=None,
-                      schedule=[], results=[], log=[], summary=None, error=None, paused=False)
+                      schedule=[], results=[], log=[], summary=None, error=None,
+                      error_detail=None, source=self.source, paused=False)
             self._thread = threading.Thread(target=self._run_safe, daemon=True)
             self._thread.start()
             return self.snapshot()
@@ -197,8 +202,14 @@ class Optimizer:
                       data=data, headers={"Content-Type": "application/json",
                       "X-Caravan-Session": "opt-" + uuid.uuid4().hex[:12]})
         t0 = time.monotonic()
-        with urlopen(req, timeout=600) as response:
-            usage = json.loads(response.read()).get("usage") or {}
+        try:
+            with urlopen(req, timeout=600) as response:
+                usage = json.loads(response.read()).get("usage") or {}
+        except (HTTPError, URLError) as exc:
+            # Re-raise so the run stops and restores; body is kept for the log.
+            if isinstance(exc, HTTPError):
+                web_tune_errors.http_body(exc)
+            raise
         elapsed = time.monotonic() - t0
         detail = usage.get("caravan") or {}
         return dict(elapsed=elapsed, ttft=detail.get("ttft_s"),
@@ -428,8 +439,14 @@ class Optimizer:
         except Canceled:
             pass
         except Exception as error:
-            failure = f"{type(error).__name__}: {error}"
-            self._log(failure)
+            failure_detail = web_tune_errors.detail_of(error)
+            source = getattr(self, "source", None) or self.state.get("source") or "optimize_now"
+            failure = web_tune_errors.plain_tune_error(
+                error, schedule=self.state.get("schedule"),
+                source=source, detail=failure_detail)
+            self._log(failure_detail)
+            web_tune_errors.log_tune_error(failure_detail, source=source)
+            self._set(error_detail=failure_detail)
         finally:
             if self.owns_pause:
                 try:
@@ -438,16 +455,30 @@ class Optimizer:
                         self._reload(self.best, restoring=True)
                     self._hold(self.best)
                 except Exception as error:
-                    failure = (failure + "; " if failure else "") + "restore failed: " + str(error)
-                    self._log(failure)
+                    extra = "restore failed: " + str(error)
+                    raw = ((self.state.get("error_detail") or "") + "; " + extra).strip("; ")
+                    self._set(error_detail=raw)
+                    self._log(extra)
+                    web_tune_errors.log_tune_error(raw, source=getattr(self, "source", None) or "optimize_now")
+                    failure = web_tune_errors.plain_tune_error(
+                        extra, schedule=self.state.get("schedule"),
+                        source=getattr(self, "source", None) or "optimize_now",
+                        detail=raw)
                 finally:
                     # Even a preflight/recovery failure can leave the original
                     # healthy worker alive. Never strand it in sweep pause.
                     try:
                         self.mgr.sweep({"release": True})
                     except Exception as error:
-                        failure = (failure + "; " if failure else "") + "release failed: " + str(error)
-                        self._log(failure)
+                        extra = "release failed: " + str(error)
+                        raw = ((self.state.get("error_detail") or "") + "; " + extra).strip("; ")
+                        self._set(error_detail=raw)
+                        self._log(extra)
+                        web_tune_errors.log_tune_error(raw, source=getattr(self, "source", None) or "optimize_now")
+                        failure = web_tune_errors.plain_tune_error(
+                            extra, schedule=self.state.get("schedule"),
+                            source=getattr(self, "source", None) or "optimize_now",
+                            detail=raw)
             canceled = self._cancel.is_set()
             if complete and not failure and not canceled:
                 kept = any(i.get("state") == "kept" for i in (self.state.get("schedule") or []))

@@ -1,3 +1,16 @@
+## 2026-11-12: Day 24 live review — Self-tuning error with no reason on the page
+
+A Self-tuning trial on a split MLX model stopped while trying Memory
+compression: a measurement after the trial reload was rejected. The
+model was put back on the previous settings and stayed ready. The
+page only showed "stopped (error)" under Optimize now in the closed
+Advanced section, with a raw request error and no useful wording.
+Self-tuning and Optimize now errors now show a short plain reason
+next to Self-tuning (and under Optimize now). Full detail goes to
+the log only. This follow-up does not change `agent/`, `runtime/`,
+or the requirements files, so a `caravan update` keeps a loaded model
+running; the web page still restarts.
+
 ## 2026-11-12: Day 24 live review — GGUF Settings and Optimize now
 
 The web Load path for a GGUF model now passes flash attention, automatic

@@ -103,6 +103,12 @@ compression and scores how fast the model reads, how soon the first
 token arrives, and how fast it writes, so the two Before and After
 lines work for GGUF as well.
 
+If a Self-tuning or Optimize now trial stops, a short plain reason
+appears next to Self-tuning (and under Optimize now), for example
+"Self-tuning stopped while trying Memory compression. A trial setting
+was rejected. The model is back on the previous settings." The full
+detail goes to the log only.
+
 At login, Caravan restores the last successful model and placement. Temporary
 node/memory/link readiness failures retry within a bounded window. Missing
 files are not automatically downloaded. FileVault needs its owner to unlock
@@ -121,6 +127,11 @@ reuses its own leftover SSH forward when it still works, or replaces
 only that process when it does not. It never stops a process that is
 not its own. Try loading again. If it still fails, check that the other
 Mac is reachable.
+
+If Self-tuning or Optimize now stops with a short reason next to
+Self-tuning, the model is usually already back on the previous
+settings. The full detail is in the log (`caravan doctor`, then
+`status` for the path).
 
 The browser has no login. Fresh installs bind localhost; never expose it to
 the public internet. [Security](SECURITY.md) explains the trust boundary.

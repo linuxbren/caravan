@@ -1789,7 +1789,18 @@
         : `${c.label} ${c.from} didn't win — Apply &amp; restart goes back to ${c.to}.`);
     }
     if (opt && opt.running && /reloading/.test(opt.phase || "")) lines.unshift(`<b>${opt.phase}…</b>`);
+    if (opt && opt.error && !opt.running) lines.push(escHtml(String(opt.error)));
     el.innerHTML = lines.join("<br>");
+    const note = $("selfTuneNote");
+    if (note && opt && opt.error && !opt.running) {
+      note.hidden = false;
+      note.textContent = String(opt.error);
+    } else if (note && opt && opt.running) {
+      // A new trial is underway; clear a previous error.
+      if (note.dataset.tuneError === "1") { note.hidden = true; note.textContent = ""; }
+    }
+    if (note && opt && opt.error && !opt.running) note.dataset.tuneError = "1";
+    if (note && opt && !opt.error) delete note.dataset.tuneError;
     const few = t && t.known && (t.replies_learned || 0) < 10;
     $("optTip").textContent = few && !(opt && opt.running)
       ? "Tip: Optimize now can tune this model while you wait." : "";
@@ -1811,7 +1822,13 @@
     if (j.running) txt += ` · about ${fmtMin(j.eta_s)} left`;
     if (j.reply_s != null) txt += ` · ${j.reply_s}s per reply`;
     if (j.reload_s != null) txt += ` · ${j.reload_s}s per reload`;
-    if (j.error) txt += ` · ${j.error}`;
+    if (j.error) txt += `\n${j.error}`;
+    const note = $("selfTuneNote");
+    if (note && j.error && !j.running) {
+      note.hidden = false;
+      note.textContent = String(j.error);
+      note.dataset.tuneError = "1";
+    }
     if (j.summary) {
       const w = j.summary.winner || {};
       const pick = Object.entries(w).map(([k, v]) => `${k}=${v === true ? "on" : v === false ? "off" : v}`).join(", ");

@@ -68,6 +68,12 @@
   does not change `agent/`, `runtime/`, or the requirements files, so
   an update from that pin keeps a loaded model running. The web page
   still restarts.
+  A later live-review follow-up (Self-tuning and Optimize now errors
+  show a short plain reason next to Self-tuning, for example that a
+  trial of Memory compression was rejected; full detail in the log
+  only; no hostnames or paths) does not change `agent/`, `runtime/`,
+  or the requirements files, so an update from that pin keeps a
+  loaded model running. The web page still restarts.
 
 ## MIT License (2026-11-12)
 

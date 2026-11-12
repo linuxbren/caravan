@@ -14,6 +14,7 @@ from pathlib import Path
 
 import gguf_split as G
 import gguf_tune as GT
+import web_tune_errors
 
 
 class GgufOptimizer:
@@ -32,7 +33,8 @@ class GgufOptimizer:
     def _blank():
         return dict(running=False, mode=None, backend="llama", phase="idle", prompts=0,
                     reloads=0, started=None, eta_s=None, reply_s=None, reload_s=None,
-                    schedule=[], results=[], log=[], summary=None, error=None, paused=False)
+                    schedule=[], results=[], log=[], summary=None, error=None,
+                    error_detail=None, source=None, paused=False)
 
     def snapshot(self):
         with self._lock:
@@ -79,7 +81,8 @@ class GgufOptimizer:
                      for i in G.gguf_schedule(e["best"], e["losses"])]
             self._cancel.clear(); self._pause.clear()
             self.state = self._blank()
-            self._set(running=True, mode="now", phase="starting", started=time.time(), schedule=sched)
+            self._set(running=True, mode="now", phase="starting", started=time.time(),
+                      schedule=sched, source=self.source)
             self._thread = threading.Thread(target=self._run_safe, daemon=True)
             self._thread.start()
             return self.snapshot()
@@ -173,16 +176,40 @@ class GgufOptimizer:
                     )
                 except Exception as ex:  # noqa: BLE001
                     self._log(f"could not save before/after: {ex}")
-            self._set(results=res.get("tried") or [],
-                      error=None if status in ("done", "cancelled") else status,
-                      summary={"complete": status == "done", "winner": res.get("best") or {},
-                               "minutes": round((time.time() - self.state["started"]) / 60, 1),
-                               "before": res.get("before"), "after": res.get("after")})
+            if status in ("done", "cancelled"):
+                self._set(results=res.get("tried") or [], error=None, error_detail=None,
+                          summary={"complete": status == "done", "winner": res.get("best") or {},
+                                   "minutes": round((time.time() - self.state["started"]) / 60, 1),
+                                   "before": res.get("before"), "after": res.get("after")})
+                phase = "done" if status == "done" else "canceled"
+            else:
+                raw = status
+                source = getattr(self, "source", None) or "optimize_now"
+                plain = web_tune_errors.plain_tune_error(
+                    raw, schedule=self.state.get("schedule"), source=source, detail=raw)
+                self._log(raw)
+                web_tune_errors.log_tune_error(raw, source=source)
+                self._set(results=res.get("tried") or [], error=plain, error_detail=raw,
+                          summary={"complete": False, "winner": res.get("best") or {},
+                                   "minutes": round((time.time() - self.state["started"]) / 60, 1),
+                                   "before": res.get("before"), "after": res.get("after")})
+                phase = "stopped (error)"
+            self._pending_phase = phase
         except Exception as e:  # noqa: BLE001
-            self._set(error=f"{type(e).__name__}: {e}")
+            raw = web_tune_errors.detail_of(e)
+            source = getattr(self, "source", None) or "optimize_now"
+            plain = web_tune_errors.plain_tune_error(
+                e, schedule=self.state.get("schedule"), source=source, detail=raw)
+            self._log(raw)
+            web_tune_errors.log_tune_error(raw, source=source)
+            self._set(error=plain, error_detail=raw)
+            self._pending_phase = "stopped (error)"
         finally:
             with self._lock:
                 for i in self.state["schedule"]:
                     if i["state"] in ("running", "pending"):
                         i["state"] = "skipped"; i["skip"] = i["skip"] or "not run"
-            self._set(running=False, phase="done", paused=False, eta_s=None)
+            phase = getattr(self, "_pending_phase", "done")
+            if self.state.get("error") and phase == "done":
+                phase = "stopped (error)"
+            self._set(running=False, phase=phase, paused=False, eta_s=None)

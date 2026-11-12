@@ -160,8 +160,20 @@ def measure_http_specs(port: int, *, prompts=BENCH_PROMPTS, max_tokens: int = 19
         req = urllib.request.Request(f"http://127.0.0.1:{int(port)}/v1/chat/completions",
                                      data=body, headers={"Content-Type": "application/json"})
         t0 = time.time()
-        with urlopen(req, timeout=timeout) as r:
-            d = json.loads(r.read())
+        try:
+            with urlopen(req, timeout=timeout) as r:
+                d = json.loads(r.read())
+        except Exception as exc:
+            # Keep the HTTP body for the log; the wrapper turns it into a
+            # plain page sentence.
+            try:
+                from urllib.error import HTTPError
+                import web_tune_errors
+                if isinstance(exc, HTTPError):
+                    web_tune_errors.http_body(exc)
+            except Exception:
+                pass
+            raise
         dt = time.time() - t0
         specs = specs_from_response(d)
         if "write_tok_s" not in specs:

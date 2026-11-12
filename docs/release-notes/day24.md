@@ -59,6 +59,12 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   (and self-tuning) compares 16-bit vs 8-bit memory compression and
   scores read speed, first-token time, and write speed. The two Before
   and After lines work for GGUF too.
+- Self-tuning and Optimize now, live review: a trial that stops (for
+  example a Memory compression trial whose measurement is rejected)
+  shows a short plain reason next to Self-tuning, and under Optimize
+  now — not only "stopped (error)" in the closed Advanced section, and
+  not a raw request error. Friendly Mac names only; no hostnames or
+  paths. The full detail goes to the log only.
 
 ## Operational checks
 - Portable suite results are recorded at publication time in DAY24.md and
@@ -86,5 +92,10 @@ Published Nov 12 CST. No development-day tag yet; that waits for live review.
   as well as write speed) does not change `agent/`, `runtime/`, or
   the requirements files, so an update from that pin keeps a loaded
   model running. The web page still restarts.
+  A later live-review follow-up (Self-tuning and Optimize now errors
+  show a short plain reason next to Self-tuning; full detail in the
+  log only) does not change `agent/`, `runtime/`, or the requirements
+  files, so an update from that pin keeps a loaded model running.
+  The web page still restarts.
 
 Details: [DAY24.md](../DAY24.md). Install: [INSTALL.md](../../INSTALL.md).

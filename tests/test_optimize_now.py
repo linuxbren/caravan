@@ -335,7 +335,10 @@ class RunnerTest(unittest.TestCase):
             orig(*args,**kw); mgr.state['status']='ready'
         mgr.switch=switch
         _,opt=self.run_opt(mgr)
-        self.assertIn('load failed',opt.snapshot()['error'])
+        snap = opt.snapshot()
+        self.assertIn('load failed', snap.get('error_detail') or '')
+        self.assertIn('didn\'t finish reloading', snap['error'])
+        self.assertNotIn('HTTPError', snap['error'])
         self.assertEqual(mgr.state['status'],'ready')
         self.assertEqual(mgr.active['kv_bits'],16)
         self.assertFalse(mgr.entry.get('optimize_hardware'))
@@ -345,7 +348,10 @@ class RunnerTest(unittest.TestCase):
         def switch(*args,**kw): raise RuntimeError("preflight denied")
         mgr.switch=switch
         _,opt=self.run_opt(mgr)
-        self.assertIn("restore failed",opt.snapshot()["error"])
+        snap = opt.snapshot()
+        self.assertIn("restore failed", snap.get("error_detail") or "")
+        self.assertIn("couldn't return to the previous settings", snap["error"])
+        self.assertNotIn("restore failed:", snap["error"])
         self.assertEqual(mgr.controls[-1],{"release":True})
 
     def test_pause_at_boundary_then_resume(self):
@@ -368,7 +374,11 @@ class RunnerTest(unittest.TestCase):
 
     def test_missing_measurements_no_commit(self):
         mgr,opt=self.run_opt(send=lambda m:{'elapsed':1})
-        self.assertIn('token counts',opt.snapshot()['error'])
+        snap = opt.snapshot()
+        self.assertIn('token counts', snap.get('error_detail') or '')
+        self.assertTrue(snap['error'])
+        self.assertNotIn('token counts', snap['error'])
+        self.assertNotIn('ValueError', snap['error'])
         self.assertFalse(mgr.entry.get('winner'))
         self.assertEqual(mgr.controls[-1],{'release':True})
 

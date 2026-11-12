@@ -41,6 +41,7 @@ import web_picker  # noqa: E402
 import web_nodes  # noqa: E402
 import web_alert  # noqa: E402
 import web_gguf_optimize  # noqa: E402
+import web_tune_errors  # noqa: E402
 
 DEFAULT_HOST = os.environ.get("CARAVAN_WEB_HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.environ.get("CARAVAN_WEB_PORT", "8190"))
@@ -803,7 +804,14 @@ def make_handler(app: App):
                     "max_split_stages": web_nodes.stage_limit(app.configured_nodes()),
                 })
             if path == "/api/optimize":
-                return self._json(200, app.optimizer.snapshot())
+                snap = dict(app.optimizer.snapshot())
+                raw = snap.pop("error_detail", None)
+                if snap.get("error"):
+                    snap["error"] = web_tune_errors.plain_tune_error(
+                        snap["error"], schedule=snap.get("schedule"),
+                        source=snap.get("source"),
+                        detail=raw or snap["error"])
+                return self._json(200, snap)
             if path == "/api/journey":
                 return self._json(200, load_journey())
             if path == "/api/thunderbolt":
@@ -1059,8 +1067,7 @@ def make_handler(app: App):
             active = app.mgr.lead_active_settings() if healthy else None
             return self._json(200, {
                 "tuning": app.mgr.tuning_status(active) if healthy else None,
-                "optimize": {k: v for k, v in app.optimizer.snapshot().items()
-                             if k in ("running", "mode", "phase", "eta_s")},
+                "optimize": web_tune_errors.public_optimize_status(app.optimizer.snapshot()),
                 "worker": snap,
                 "restore": app.restore.snapshot() if hasattr(app,"restore") else None,
                 "lead_healthy": healthy,
