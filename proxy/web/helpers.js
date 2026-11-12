@@ -27,6 +27,52 @@
     } catch(e) { status.textContent = e.message; }
     finally {yes.disabled = false;}
   };
+  function offerKey(o) {
+    return (o && !o.declined && o.id) ? String(o.id) : '';
+  }
+
+  // Keep the Helper download button in a reserved slot on the Guess-ahead
+  // row (inside Advanced). Create it once; identical later polls must not
+  // replace it or the row will jump.
+  function paintHelperButton() {
+    const row = document.querySelector('.opt[data-id="guess_ahead"]');
+    if (!row) return null;
+    let slot = row.querySelector('[data-helper-slot]');
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.className = 'helper-slot';
+      slot.dataset.helperSlot = '1';
+      row.append(slot);
+    }
+    let b = slot.querySelector('[data-helper]');
+    if (!b) {
+      b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.helper = '1';
+      b.textContent = 'Helper download…';
+      slot.append(b);
+    }
+    b.onclick = () => { if (offer) show(); else alert('No missing compatible helper for the loaded split MLX model.'); };
+    return b;
+  }
+
+  // One /api/helpers response. Returns whether the button DOM was written.
+  // Repeated identical polls with the button already present are a no-op.
+  function applyHelperPoll(data) {
+    const next = (data && data.offer) || null;
+    const prevKey = offerKey(offer);
+    const nextKey = offerKey(next);
+    offer = next;
+    const button = document.querySelector('.opt[data-id="guess_ahead"] [data-helper]');
+    let wrote = false;
+    if (!button) {
+      paintHelperButton();
+      wrote = true;
+    }
+    if (offer && !offer.declined && shown !== offer.id) { shown = offer.id; show(); }
+    return { changed: wrote || prevKey !== nextKey, wrote, offerKey: nextKey };
+  }
+
   async function refresh() {
     try {
       if (job) {
@@ -40,14 +86,11 @@
         }
         return;
       }
-      offer = (await api('/api/helpers')).offer;
-      const row = document.querySelector('.opt[data-id="guess_ahead"]');
-      if (row && !row.querySelector('[data-helper]')) {
-        const b = document.createElement('button'); b.dataset.helper='1'; b.textContent='Helper download…';
-        b.onclick=()=> { if (offer) show(); else alert('No missing compatible helper for the loaded split MLX model.'); }; row.append(b);
-      }
-      if (offer && !offer.declined && shown !== offer.id) { shown=offer.id; show(); }
+      applyHelperPoll(await api('/api/helpers'));
     } catch (_) { /* Retry on next tick if web server is restarting. */ }
   }
+  window.paintHelperButton = paintHelperButton;
+  window.applyHelperPoll = applyHelperPoll;
+  window.helperOfferKey = offerKey;
   setInterval(refresh, 3000); refresh();
 })();

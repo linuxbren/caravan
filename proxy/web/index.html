@@ -602,6 +602,18 @@
   .avg-speed {
     font-size: .78rem; color: var(--muted); line-height: 1.5; margin: 0;
   }
+  .tune-result {
+    font-size: .72rem; color: var(--muted); line-height: 1.5; margin: 8px 0 0;
+  }
+  .tune-result[hidden] { display: none; }
+  /* Reserved on the Guess-ahead row (inside Advanced) so the Helper
+     download button cannot shift the rows below it when polls re-run. */
+  .helper-slot {
+    min-height: 2.25rem;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+  }
   .current-opts {
     border: 1px solid var(--line); border-radius: var(--radius);
     padding: 8px 12px 10px;
@@ -1767,6 +1779,7 @@
     }
     el.style.whiteSpace = "pre-line";
     el.textContent = txt;
+    if (!j.running) refreshTuneResult();
   }
   // Presentation-only mirror of web_settings.OPTIONS, checked by test_day17_web_labels.
   // Served from disk so copy updates need not interrupt an active remote worker.
@@ -1780,7 +1793,30 @@
   "kv_bits": "Store MLX chat memory more compactly to save RAM; 16 leaves it uncompressed. May lower quality and slow reading; not supported by every model or Native MTP.",
   "keepalive": "Keep the main GPU warm while it waits for another Mini. Split MLX models only; up to ~50% faster writing replies in our tests."
 };
+  function optsRenderSignature() {
+    // Everything that actually changes Settings row HTML. Pollers that
+    // call renderOpts with the same state must be a no-op so rows (and
+    // the Helper download button) do not flash or jump.
+    const sel = $("modelSelect");
+    const mid = (sel && sel.value) || "";
+    const mtp = (sel && sel.selectedOptions[0] && sel.selectedOptions[0].dataset.mtp) || "";
+    const selRow = (state.modelRows || {})[mid] || {};
+    return JSON.stringify({
+      mid, mtp,
+      gguf: selRow.source === "gguf",
+      opts: (state.opts || []).map(o => [o.id, o.label, o.help, o.values]),
+      choice: state.choice,
+      pins: state.filePins,
+    });
+  }
   function renderOpts() {
+    if (!state.opts) return;
+    const sig = optsRenderSignature();
+    const rows = $("optRows");
+    if (sig === state.optsRenderSignature && rows && rows.querySelector('.opt[data-id="self_tune"]')) {
+      return;
+    }
+    state.optsRenderSignature = sig;
     const pins = pinnedUnderSelfTune();
     const note = pins.length
       ? `<div class="pinnote" id="pinNote">${pins.length} pinned — self-tuning can't change these: ${pins.map(o => o.label).join(", ")}</div>`
@@ -1798,6 +1834,8 @@
         ${state.filePins[o.id] && state.choice[o.id] === "auto"
           ? `<div class="help filepin">config.toml: ${VAL_LABEL[state.filePins[o.id]] || state.filePins[o.id]} (used while this is Auto)</div>` : ""}
         <div class="now"></div>
+        ${o.id === "self_tune" ? `<p class="tune-result" id="tuneResult" hidden></p>` : ""}
+        ${o.id === "guess_ahead" ? `<div class="helper-slot" data-helper-slot><button type="button" data-helper="1">Helper download…</button></div>` : ""}
       </div>`;
     $("optRows").innerHTML = ggufNote + state.opts.filter(o => o.id === "self_tune").map(rowHtml).join("");
     const adv = $("optAdvancedRows");
@@ -1816,6 +1854,8 @@
         };
       }
     }
+    // Re-bind the Helper button after a real rebuild; do not create a second one.
+    if (window.paintHelperButton) window.paintHelperButton();
   }
   state.filePins = {};      // what ~/.caravan/config.toml pins for the picked model
   async function loadOpts() {
@@ -1830,6 +1870,7 @@
     renderOpts();
     renderActive(state.active);
     renderThink();
+    refreshTuneResult();
     if (state.fileErrors.length) $("optTip").textContent = "config.toml: " + state.fileErrors.join("; ");
   }
 
@@ -2065,6 +2106,19 @@
     if (j && j.line) { el.hidden = false; el.textContent = j.line; }
     else { el.hidden = true; el.textContent = ""; }
   }
+  async function refreshTuneResult() {
+    const el = $("tuneResult");
+    if (!el) return;
+    const mid = state.loadedModel || ($("modelSelect") && $("modelSelect").value) || "";
+    if (!mid) { el.hidden = true; el.textContent = ""; return; }
+    try {
+      const q = new URLSearchParams({ model: mid });
+      const j = await api("/api/speed-average?" + q.toString());
+      const line = j && j.tuning && j.tuning.line;
+      if (line) { el.hidden = false; el.textContent = line; }
+      else { el.hidden = true; el.textContent = ""; }
+    } catch (_) { el.hidden = true; el.textContent = ""; }
+  }
   async function refreshAvgSpeed() {
     const mid = state.loadedModel;
     const opts = optsFromActive(state.active);
@@ -2082,7 +2136,7 @@
     api("/api/speed-average", {
       method: "POST",
       body: JSON.stringify({ model: mid, opts, write_tok_s: stats.write_tok_s, ttft_s: stats.ttft_s }),
-    }).then(paintAvg).catch(() => {});
+    }).then((j) => { paintAvg(j); refreshTuneResult(); }).catch(() => {});
   }
 
   function showStats(stats, ts) {

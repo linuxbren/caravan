@@ -213,6 +213,7 @@ class Optimizer:
         elapsed = float(result["elapsed"])
         avg = (float(self.state["reply_s"] or 0) * n + elapsed) / (n + 1)
         self._set(prompts=n + 1, reply_s=round(avg, 3))
+        self._note_tune_sample(result)
         return result
 
     def _measure(self, name, arm):
@@ -235,6 +236,7 @@ class Optimizer:
                     # Account outside threads (avoid lost counter updates).
                     n = self.state["prompts"]
                     self._set(prompts=n + 1)
+                    self._note_tune_sample(result)
                 ct = sum(r.get("completion_tokens") or 0 for r in results)
                 if ct <= 0:
                     raise ValueError("pipeline reply missing token counts")
@@ -253,6 +255,77 @@ class Optimizer:
                         prefill_s=result.get("prefill_s") or 0)
             scores.append(score)
         return scores
+
+    def _specs_from_reply(self, result):
+        """Words/s (decode rate) and time to first word from one Optimize reply."""
+        if not isinstance(result, dict):
+            return {}
+        ttft = result.get("ttft") if result.get("ttft") else result.get("ttft_s")
+        tokens = result.get("completion_tokens")
+        total = result.get("total_s", result.get("elapsed"))
+        prefill = result.get("prefill_s") or 0
+        write = None
+        try:
+            if tokens and total is not None:
+                decode = max(float(total) - float(prefill or 0), 0.001)
+                write = float(tokens) / decode
+        except (TypeError, ValueError):
+            write = None
+        return {"write_tok_s": write, "ttft_s": ttft}
+
+    def _mean_specs(self, samples):
+        writes = [s["write_tok_s"] for s in samples if s.get("write_tok_s")]
+        ttfts = [s["ttft_s"] for s in samples if s.get("ttft_s")]
+        return {
+            "write_tok_s": (sum(writes) / len(writes)) if writes else None,
+            "ttft_s": (sum(ttfts) / len(ttfts)) if ttfts else None,
+        }
+
+    def _note_tune_sample(self, result):
+        """Stash a trial reply so before/after can be taken without extra sends."""
+        samples = getattr(self, "_tune_samples", None)
+        if samples is None:
+            return
+        if not isinstance(result, dict):
+            result = {"elapsed": float(result)}
+        samples.append((dict(self.current), self._specs_from_reply(result)))
+
+    def _specs_for_settings(self, settings):
+        settings = settings or {}
+        picked = [
+            specs for cur, specs in (getattr(self, "_tune_samples", None) or [])
+            if all(cur.get(k) == v for k, v in settings.items())
+        ]
+        return self._mean_specs(picked)
+
+    def _sample_speed(self, n=2):
+        """Measure current settings without bumping the public prompt counter."""
+        samples = []
+        for i in range(n):
+            self._boundary()
+            result = self._send(prompt_plan(i))
+            if not isinstance(result, dict):
+                result = {"elapsed": float(result)}
+            samples.append(self._specs_from_reply(result))
+        return self._mean_specs(samples)
+
+    def _chat_average_specs(self):
+        try:
+            import web_speed
+            avg = web_speed.get(self.model_id, self.settings)
+        except Exception:
+            return {}
+        if not avg or not avg.get("count"):
+            return {}
+        return {"write_tok_s": avg.get("write_tok_s"), "ttft_s": avg.get("ttft_s")}
+
+    def _record_tune_result(self, before, after, source="optimize_now"):
+        try:
+            import web_speed
+            return web_speed.record_tuning(
+                self.model_id, before=before, after=after, source=source)
+        except Exception:
+            return None
 
     def _run_safe(self):
         self.best, self.current, self.pinned = {}, {}, set()
@@ -283,6 +356,17 @@ class Optimizer:
                 self.dirty_reload = True
                 self._reload(self.best)
                 self.dirty_reload = False
+            # Baseline: prefer the chat average from before this run; otherwise
+            # use incumbent trial replies already sent during A/B (no extra send,
+            # so "exactly one option running" snapshots stay valid).
+            self._tune_samples = []
+            self._tune_initial = dict(self.best)
+            self._tune_before = self._chat_average_specs()
+            try:
+                import web_speed
+                web_speed.snapshot_pending_before(self.model_id, self._tune_before)
+            except Exception:
+                pass
             for item in items:
                 if item["skip"]:
                     self._log("skip " + item["name"] + ": " + item["skip"])
@@ -339,6 +423,18 @@ class Optimizer:
                         failure = (failure + "; " if failure else "") + "release failed: " + str(error)
                         self._log(failure)
             canceled = self._cancel.is_set()
+            if complete and not failure and not canceled:
+                kept = any(i.get("state") == "kept" for i in (self.state.get("schedule") or []))
+                if kept:
+                    try:
+                        before = getattr(self, "_tune_before", None) or {}
+                        if not (before.get("write_tok_s") or before.get("ttft_s")):
+                            before = self._specs_for_settings(
+                                getattr(self, "_tune_initial", self.best))
+                        after = self._specs_for_settings(self.best)
+                        self._record_tune_result(before, after)
+                    except Exception:
+                        pass
             self._set(running=False, paused=False, error=failure,
                       phase="stopped (error)" if failure else "canceled" if canceled else "done",
                       eta_s=0 if complete else None,

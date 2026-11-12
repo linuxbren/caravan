@@ -1,6 +1,7 @@
 """One-option trials, worker controls, hardware loss isolation and reload recovery."""
 from __future__ import annotations
 import copy
+import os
 import json
 from pathlib import Path
 import sys
@@ -235,6 +236,18 @@ class FakeMgr:
 
 
 class RunnerTest(unittest.TestCase):
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        self._prev_speed = os.environ.get("CARAVAN_SPEED_AVERAGES")
+        os.environ["CARAVAN_SPEED_AVERAGES"] = str(Path(self._td.name) / "speed.json")
+
+    def tearDown(self):
+        if self._prev_speed is None:
+            os.environ.pop("CARAVAN_SPEED_AVERAGES", None)
+        else:
+            os.environ["CARAVAN_SPEED_AVERAGES"] = self._prev_speed
+        self._td.cleanup()
+
     def run_opt(self,mgr=None,send=None):
         mgr=mgr or FakeMgr(); opt=WO.Optimizer(mgr,send=send or mgr.send)
         opt.start(); opt._thread.join(5)
@@ -258,6 +271,21 @@ class RunnerTest(unittest.TestCase):
             self.assertEqual(sum(i['state']=='running' for i in snap['schedule']),1)
         self.assertEqual(s['mode'],'now')
         self.assertEqual(mgr._loaded_entry['placement'],{'nodes':['a']})
+
+    def test_records_before_and_after_speeds(self):
+        import web_speed as S
+        mgr=FakeMgr()
+        def send(msgs):
+            r=mgr.send(msgs)
+            # Baseline (16-bit) is slower to first word than the 8-bit winner.
+            r["ttft"]=2.1 if mgr.active["kv_bits"]==16 else 1.2
+            return r
+        _,opt=self.run_opt(mgr,send=send)
+        self.assertEqual(opt.snapshot()["phase"], "done")
+        got=S.get_tuning("m")
+        self.assertEqual(got["line"], "Before: 10 words/s, first word in 2.1 s. After: 12 words/s, first word in 1.2 s.")
+        self.assertEqual(got["source"], "optimize_now")
+        self.assertEqual(opt.snapshot()["prompts"], 12)  # samples are not counted as trial prompts
 
     def test_unavailable_saved_keepalive_does_not_trigger_reload(self):
         mgr=FakeMgr();mgr.entry={"winner":{"keepalive":True}}

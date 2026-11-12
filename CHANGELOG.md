@@ -3,7 +3,13 @@
 ## Day 24 — quieter page and Advanced sections (not published)
 
 - Settings: Self-tuning stays visible; other optimizations and Optimize now
-  sit under a closed Advanced section.
+  sit under a closed Advanced section. After a self-tuning or Optimize now
+  run, the Self-tuning section shows that model's before and after speed
+  ("Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first
+  word in 1.2 s."), hidden until a run has finished, stored with the
+  speed averages. The Helper download button on Guess-ahead stays in a
+  reserved slot and is not rewritten when status or helper polls repeat
+  the same result, so Settings rows do not jump.
 - Models: Reasoning is renamed Thinking. Default filter chips are Chat,
   Coding, Thinking, Tools, and Vision. Embedding, any-to-any, text-to-image,
   text-to-video, text-to-speech, and Decision stay available behind Advanced

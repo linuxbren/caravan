@@ -1079,11 +1079,27 @@ def make_handler(app: App):
                     opts = body.get("opts") or body.get("optimizations") or {}
                     if isinstance(opts, str):
                         opts = json.loads(opts)
-                    return self._json(200, web_speed.record(
+                    out = web_speed.record(
                         mid, opts,
                         write_tok_s=body.get("write_tok_s"),
                         ttft_s=body.get("ttft_s"),
-                    ))
+                    )
+                    try:
+                        tun = app.mgr.tuning_status(
+                            app.mgr.lead_active_settings() if hasattr(app.mgr, "lead_active_settings") else None)
+                    except Exception:
+                        tun = {}
+                    try:
+                        out["tuning"] = web_speed.observe_tuning(
+                            mid,
+                            write_tok_s=body.get("write_tok_s"),
+                            ttft_s=body.get("ttft_s"),
+                            has_winners=bool((tun or {}).get("winner")),
+                            settling=bool((tun or {}).get("trial")),
+                        )
+                    except Exception:
+                        out["tuning"] = web_speed.get_tuning(mid)
+                    return self._json(200, out)
                 q = parse_qs(urlparse(self.path).query)
                 mid = (q.get("model") or q.get("model_id") or [""])[0]
                 raw = (q.get("opts") or [""])[0]
@@ -1091,7 +1107,9 @@ def make_handler(app: App):
                     opts = json.loads(raw) if raw else {}
                 except ValueError:
                     return self._json(400, {"error": "opts must be a JSON object"})
-                return self._json(200, web_speed.get(mid, opts))
+                out = web_speed.get(mid, opts)
+                out["tuning"] = web_speed.get_tuning(mid)
+                return self._json(200, out)
             except (TypeError, ValueError, OSError) as e:
                 return self._json(400, {"error": str(e)})
 

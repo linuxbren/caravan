@@ -16,6 +16,29 @@ compression, GPU keep-warm) and **Optimize now** sit under an **Advanced**
 section that is closed until you open it. Apply & restart stays visible next
 to Self-tuning.
 
+When self-tuning or Optimize now finishes for a model, Caravan records the
+speed from before the run and the speed with the chosen winners, and shows
+both in the Self-tuning section (still visible, not inside Advanced):
+"Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first word in
+1.2 s." The rate is the measured token rate, shown as words/s; the line
+never says tok/s. It is hidden until a run has finished for the loaded
+model. The pair is stored per model in `~/.caravan/speed_averages.json`
+next to the chat averages (under a `tuning` key), so it describes these
+Macs and survives a page refresh. Optimize now uses the existing chat
+average if there is one; otherwise Before and After come from the trial
+replies already sent during the run (incumbent replies at the starting
+settings, then replies measured with the winning settings), so the run
+does not add extra prompts. Self-tuning uses real-chat replies: those
+before winners exist become Before; once winners are chosen and any
+trial has settled, the next replies become After, and the pair is frozen.
+A later Optimize now run replaces it.
+
+The **Helper download…** button on the Guess-ahead row (inside Advanced)
+is reserved in that row and only rewritten when its state actually
+changes. Status and helper polls that return the same result leave the
+button, and the other Settings rows, in place so the section does not
+jump.
+
 ### Models
 
 The **Reasoning** filter is renamed **Thinking**, so it matches the chat
@@ -113,10 +136,11 @@ Portable tests cover the page structure, filter tags and the Reasoning →
 Thinking alias, family matching (including QwQ, Mixtral, CodeLlama, and the
 Phi boundary), row tooltips, stacked per-job download cards and friendly
 Mac names, speed-average math and separate slots per model and
-optimization set, the start-message wording (a related Day 23 fix, committed
-on its own), Balance status wording, and the Models fit-summary line. The
-full suite is run on the development node checkout. Counts are recorded at
-commit time.
+optimization set, before and after auto-tune specs, the Helper download
+button staying still across repeated identical polls, the start-message
+wording (a related Day 23 fix, committed on its own), Balance status
+wording, and the Models fit-summary line. The full suite is run on the
+development node checkout. Counts are recorded at commit time.
 
 ## Not in this branch
 

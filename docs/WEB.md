@@ -66,7 +66,12 @@ does not apply routes, pair Macs, install keys or authenticate model transport.
 ## Settings and optimization
 
 **Self-tuning** stays visible in Settings and is on by default: Caravan learns
-faster settings from your chats. Every other optimization — Guess-ahead,
+faster settings from your chats. After a self-tuning or Optimize now run
+finishes for the loaded model, a quiet line in that same Self-tuning section
+shows how fast the model was before and after, for example "Before: 31
+words/s, first word in 2.1 s. After: 42 words/s, first word in 1.2 s." The
+line stays hidden until a run has finished for this model, and it is kept
+on the 1st node with the other speed averages. Every other optimization — Guess-ahead,
 Prompt lookup, Shared start, Two chats, Fused kernels, Memory compression,
 GPU keep-warm, and **Optimize now** — sits under an **Advanced** section that
 is closed until you open it. Leave Auto when unsure. Some settings require a

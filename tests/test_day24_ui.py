@@ -2,6 +2,7 @@
 import ast
 import io
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -212,6 +213,13 @@ class DocsMentionDay24(unittest.TestCase):
         self.assertNotIn("prf-hays", day)
         self.assertIn("Family", day)
         self.assertIn("job id", day)
+        self.assertIn("Before:", day)
+        self.assertIn("Before:", web)
+        self.assertNotRegex(web, r"(?i)tok/s")
+        self.assertIn("Before:", day)
+        web_docs = (ROOT / "docs/WEB.md").read_text()
+        self.assertIn("Before:", web_docs)
+        self.assertNotIn("tok/s", (ROOT / "docs/WEB.md").read_text().split("Before")[1][:400] if "Before" in web_docs else "tok/s")
 
 
 
@@ -377,6 +385,139 @@ class MultiJobCards(unittest.TestCase):
         self.assertIn("_friendly_job", SERVER)
         self.assertNotIn('"label": "EXO1"', Path(ROOT / "proxy/web_picker.py").read_text())
         self.assertNotIn('"label": "EXO2"', Path(ROOT / "proxy/web_picker.py").read_text())
+
+
+
+class TuneBeforeAfter(unittest.TestCase):
+    def test_format_matches_plain_words(self):
+        line = S.format_tuning_line(
+            {"write_tok_s": 31, "ttft_s": 2.1},
+            {"write_tok_s": 42, "ttft_s": 1.2},
+        )
+        self.assertEqual(
+            line,
+            "Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first word in 1.2 s.",
+        )
+        self.assertNotRegex(line, r"(?i)tok")
+
+    def test_omits_unknown_and_hides_when_empty(self):
+        self.assertEqual(
+            S.format_tuning_line({"write_tok_s": 31}, {"write_tok_s": 42}),
+            "Before: 31 words/s. After: 42 words/s.",
+        )
+        self.assertEqual(S.format_tuning_line({}, {}), "")
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "speed.json"
+            empty = S.get_tuning("model-a", path=path)
+            self.assertIsNone(empty["line"])
+            self.assertIsNone(empty["before"])
+            # One-sided results are not shown.
+            none = S.record_tuning("model-a", before={"write_tok_s": 31}, after={}, path=path)
+            self.assertIsNone(none["line"])
+
+    def test_persists_per_model(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "speed.json"
+            a = S.record_tuning(
+                "model-a",
+                before={"write_tok_s": 31, "ttft_s": 2.1},
+                after={"write_tok_s": 42, "ttft_s": 1.2},
+                path=path,
+            )
+            self.assertEqual(a["line"], "Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first word in 1.2 s.")
+            self.assertIsNone(S.get_tuning("model-b", path=path)["line"])
+            # Last finished run for this model replaces the previous one.
+            b = S.record_tuning(
+                "model-a",
+                before={"write_tok_s": 20, "ttft_s": 3},
+                after={"write_tok_s": 25, "ttft_s": 2},
+                source="self_tune",
+                path=path,
+            )
+            self.assertIn("Before: 20 words/s", b["line"])
+            self.assertEqual(b["source"], "self_tune")
+            # Chat averages in the same file stay independent.
+            opts = {k: "auto" for k in S.OPT_IDS}
+            S.record("model-a", opts, write_tok_s=40, ttft_s=1.0, path=path)
+            self.assertIsNotNone(S.get("model-a", opts, path=path)["line"])
+            self.assertIn("Before: 20 words/s", S.get_tuning("model-a", path=path)["line"])
+
+    def test_self_tune_observe_freezes_after_winners(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "speed.json"
+            # Baseline chats, no winners yet.
+            S.observe_tuning("m", write_tok_s=30, ttft_s=2.2, has_winners=False, path=path)
+            S.observe_tuning("m", write_tok_s=32, ttft_s=2.0, has_winners=False, path=path)
+            self.assertIsNone(S.get_tuning("m", path=path)["line"])
+            # Trial in progress: do not close the run.
+            S.observe_tuning("m", write_tok_s=50, ttft_s=0.5, has_winners=True, settling=True, path=path)
+            self.assertIsNone(S.get_tuning("m", path=path)["line"])
+            # Winners chosen, trial over: first after-reply closes it.
+            got = S.observe_tuning("m", write_tok_s=42, ttft_s=1.2, has_winners=True, path=path)
+            self.assertEqual(
+                got["line"],
+                "Before: 31 words/s, first word in 2.1 s. After: 42 words/s, first word in 1.2 s.",
+            )
+            self.assertEqual(got["source"], "self_tune")
+            # Further replies do not move a frozen result.
+            S.observe_tuning("m", write_tok_s=99, ttft_s=0.1, has_winners=True, path=path)
+            self.assertEqual(S.get_tuning("m", path=path)["after"]["write_tok_s"], 42)
+
+    def test_settings_shows_line_outside_advanced(self):
+        # The Self-tuning row (in #optRows, not Advanced) owns the line.
+        self.assertIn('id="tuneResult"', HTML)
+        self.assertIn("function refreshTuneResult", HTML)
+        self.assertIn("j.tuning", HTML)
+        self.assertIn("format_tuning_line", Path(ROOT / "proxy/web_speed.py").read_text())
+        # The template is only emitted for the self_tune option, which is
+        # rendered into #optRows, above the Advanced section.
+        self.assertIn(
+            'o.id === "self_tune" ? `<p class="tune-result" id="tuneResult" hidden></p>`',
+            HTML,
+        )
+        adv = HTML[HTML.find('id="optAdvanced"'):HTML.find('id="optAdvanced"') + 800]
+        self.assertNotIn('id="tuneResult"', adv)
+        self.assertIn("get_tuning", SERVER)
+        self.assertIn("observe_tuning", SERVER)
+
+
+class HelperFlicker(unittest.TestCase):
+    """Settings 'Helper download…' must not flash on repeated identical polls."""
+
+    def _node(self, name):
+        script = ROOT / "tests/js/helper_flicker_harness.js"
+        p = subprocess.run(
+            ["node", str(script), name],
+            cwd=ROOT, capture_output=True, text=True, timeout=15,
+        )
+        self.assertEqual(p.returncode, 0, p.stdout + "\n" + p.stderr)
+        self.assertIn("ok " + name, p.stdout)
+
+    def test_repeated_identical_polls_do_not_toggle(self):
+        self._node("identical_polls_do_not_toggle")
+
+    def test_restore_after_wipe_then_stable(self):
+        self._node("restore_after_wipe_then_stable")
+
+    def test_render_skip_and_polls_together(self):
+        self._node("render_skip_and_polls_together")
+
+    def test_page_skips_unchanged_settings_and_reserves_slot(self):
+        self.assertIn("function optsRenderSignature()", HTML)
+        self.assertIn("state.optsRenderSignature", HTML)
+        self.assertIn("if (sig === state.optsRenderSignature", HTML)
+        # Reserved slot lives on the Guess-ahead row, which is inside Advanced.
+        self.assertIn('o.id === "guess_ahead" ? `<div class="helper-slot" data-helper-slot>', HTML)
+        self.assertIn('Helper download…', HTML)
+        self.assertIn(".helper-slot", HTML)
+        self.assertIn("min-height: 2.25rem", HTML)
+        helpers = (ROOT / "proxy/web/helpers.js").read_text()
+        self.assertIn("function applyHelperPoll(", helpers)
+        self.assertIn("function paintHelperButton()", helpers)
+        # The old append-if-missing path is gone; identical polls must not write.
+        self.assertNotIn("if (row && !row.querySelector('[data-helper]'))", helpers)
+        self.assertIn("if (!button)", helpers)
+        self.assertIn("paintHelperButton()", HTML)
 
 
 
