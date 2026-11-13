@@ -21,6 +21,10 @@
 - Auto-tune (MLX and GGUF) uses the same five short prompts plus one
   ~2k-token long prompt, scores on medians including long-prompt
   read speed, and still treats a garbled trial as a loss.
+- `caravan bench --yes` shows a small campfire animation on a
+  terminal with the current step and elapsed time. Piped output,
+  `NO_COLOR`, and `--quiet` use a plain step line or stay silent.
+  Ctrl-C still puts the original model back.
 - Does not change `agent/`, `runtime/`, or the requirements files, so
   a `caravan update` from the Day 24 pin keeps a loaded model running.
   The web page still restarts. See [Day 25](DAY25.md).

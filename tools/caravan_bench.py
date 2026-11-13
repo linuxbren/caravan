@@ -13,9 +13,13 @@ at each size; sizes that will not fit the chat window are skipped).
 shows which two models it would compare and the exact command.
 `--from-averages` reads already-saved chat averages without loading
 or unloading any model. After a live comparison, the model that was
-loaded before is put back, even if a measurement failed. Each prompt
-starts with a unique opening so a shared-start cache does not make
-later prompts look faster.
+loaded before is put back, even if a measurement failed. On a
+terminal, a small campfire animation shows the current step and
+elapsed time; when output is piped, or with NO_COLOR or --quiet,
+that is a plain step line or is silent. Ctrl-C stops the animation
+and still puts the original model back. Each prompt starts with a
+unique opening so a shared-start cache does not make later prompts
+look faster.
 """
 from __future__ import annotations
 
@@ -35,6 +39,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import web_speed as S  # noqa: E402
 import gguf_tune as T  # noqa: E402
 import caravan_prompts as P  # noqa: E402
+from caravan_progress import (  # noqa: E402
+    Progress,
+    loading_step,
+    long_step,
+    restore_step,
+    short_step,
+)
 from caravan_models import (  # noqa: E402
     DEFAULT_PORT,
     fetch_catalog,
@@ -113,10 +124,13 @@ def load_model(port: int, model_id: str, urlopen=_urlopen, wait=300) -> dict:
 
 
 def measure_chat(port: int, prompts=None, max_tokens=192, urlopen=_urlopen,
-                 timeout=300) -> dict:
+                 timeout=300, on_prompt=None) -> dict:
     prompts = prompts or T.BENCH_PROMPTS
     samples = []
-    for p in prompts:
+    n = len(prompts)
+    for i, p in enumerate(prompts, 1):
+        if on_prompt:
+            on_prompt(i, n)
         body = json.dumps({
             "messages": [{"role": "user", "content": p}],
             "max_tokens": int(max_tokens),
@@ -191,11 +205,25 @@ def _running_window(port, urlopen, st=None):
 
 
 def measure_series(port, urlopen, *, run_short=True, run_long=True,
-                   prompts=None, window=None, timeout=600) -> list:
+                   prompts=None, window=None, timeout=600,
+                   progress=None, side="GGUF") -> list:
     """Run the short and/or long series. Returns a list of result rows."""
     rows = []
+
+    def hook_short(i, n):
+        if progress:
+            progress.set(short_step(side, i, n))
+
+    def hook_long(size):
+        def hook(i, n):
+            if progress:
+                progress.set(long_step(side, size, i, n))
+        return hook
+
     if prompts is not None:
-        specs = measure_chat(port, prompts=prompts, urlopen=urlopen)
+        specs = measure_chat(
+            port, prompts=prompts, urlopen=urlopen, on_prompt=hook_short,
+        )
         rows.append({
             "label": f"Short prompts ({len(prompts)})",
             "specs": specs, "n": len(prompts),
@@ -203,7 +231,9 @@ def measure_series(port, urlopen, *, run_short=True, run_long=True,
         return rows
     if run_short:
         shorts = P.short_prompts(tag_prefix="Bench short")
-        specs = measure_chat(port, prompts=shorts, urlopen=urlopen)
+        specs = measure_chat(
+            port, prompts=shorts, urlopen=urlopen, on_prompt=hook_short,
+        )
         rows.append({
             "label": f"Short prompts ({len(shorts)})",
             "specs": specs, "n": len(shorts),
@@ -222,7 +252,10 @@ def measure_series(port, urlopen, *, run_short=True, run_long=True,
             try:
                 specs = measure_chat(
                     port, prompts=long_ps, urlopen=urlopen, timeout=timeout,
+                    on_prompt=hook_long(size),
                 )
+            except KeyboardInterrupt:
+                raise
             except Exception as e:
                 rows.append({
                     "label": label, "skipped": True,
@@ -453,7 +486,10 @@ def run_from_averages(gguf_id: str, mlx_id: str, *, gguf_name=None, mlx_name=Non
     ]
 
 
-def _restore_original(port, original_id, original_name, urlopen, notes):
+def _restore_original(port, original_id, original_name, urlopen, notes,
+                      progress=None):
+    if progress:
+        progress.set(restore_step())
     if not original_id:
         return
     label = original_name or original_id
@@ -469,11 +505,22 @@ def _restore_original(port, original_id, original_name, urlopen, notes):
         notes.append(f"Could not put the original model back: {e}")
 
 
+def _emit(progress, lines, chunk, *, printed):
+    """Append result lines; on a TTY, print them now after clearing the spinner."""
+    for line in chunk:
+        lines.append(line)
+        if progress is not None and progress.mode == "animate":
+            progress.println(line)
+            printed[0] = True
+
+
 def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
              gguf_name=None, mlx_name=None, prompts=None,
-             run_short=True, run_long=True) -> dict:
+             run_short=True, run_long=True, progress=None) -> dict:
     try:
         st = status(port, urlopen=urlopen)
+    except KeyboardInterrupt:
+        raise
     except Exception:
         raise RuntimeError(
             "Caravan is not running. Start it with caravan start, then run this again."
@@ -492,35 +539,52 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
     notes = []
     err = None
     g_rows, m_rows = [], []
+    printed = [False]
+    gname = gguf_name or f"{gguf_id} (GGUF)"
+    mname = mlx_name or f"{mlx_id} (MLX)"
     try:
+        if progress:
+            progress.set(loading_step(gname))
         load_model(port, gguf_id, urlopen=urlopen)
         g_window = _running_window(port, urlopen)
         g_rows = measure_series(
             port, urlopen, run_short=run_short, run_long=run_long,
             prompts=prompts, window=g_window,
+            progress=progress, side="GGUF",
         )
-        lines.extend(format_series(gguf_name or f"{gguf_id} (GGUF)", g_rows))
+        _emit(progress, lines, format_series(gname, g_rows), printed=printed)
+        if progress:
+            progress.set(loading_step(mname))
         load_model(port, mlx_id, urlopen=urlopen)
         m_window = _running_window(port, urlopen)
         m_rows = measure_series(
             port, urlopen, run_short=run_short, run_long=run_long,
             prompts=prompts, window=m_window,
+            progress=progress, side="MLX",
         )
-        lines.extend(format_series(mlx_name or f"{mlx_id} (MLX)", m_rows))
+        _emit(progress, lines, format_series(mname, m_rows), printed=printed)
         summary = summarize(
             g_rows, m_rows,
             gguf_name=gguf_name or "GGUF",
             mlx_name=mlx_name or "MLX",
         )
+        tail = []
         if summary:
-            lines.append("")
-            lines.append(summary.rstrip())
-        lines.append("")
-        lines.append(P.CACHE_NOTE)
+            tail.append("")
+            tail.append(summary.rstrip())
+        tail.append("")
+        tail.append(P.CACHE_NOTE)
+        _emit(progress, lines, tail, printed=printed)
+    except KeyboardInterrupt:
+        err = KeyboardInterrupt()
+        notes.append("Stopped.")
     except Exception as e:
         err = e
     finally:
-        _restore_original(port, original_id, original_name, urlopen, notes)
+        _restore_original(
+            port, original_id, original_name, urlopen, notes,
+            progress=progress,
+        )
     return {
         "lines": lines,
         "notes": notes,
@@ -528,6 +592,7 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
         "original": original_id,
         "gguf_rows": g_rows,
         "mlx_rows": m_rows,
+        "printed": printed[0],
     }
 
 
@@ -598,6 +663,10 @@ def main(argv=None, *, models=None):
         "--from-averages", action="store_true",
         help="print already-saved chat averages only; do not load or unload a model",
     )
+    p.add_argument(
+        "--quiet", action="store_true",
+        help="no progress animation or step lines; still print the results",
+    )
     p.add_argument("--port", type=int, default=DEFAULT_PORT, help=argparse.SUPPRESS)
     p.add_argument("--gguf-name", default=None, help=argparse.SUPPRESS)
     p.add_argument("--mlx-name", default=None, help=argparse.SUPPRESS)
@@ -628,21 +697,34 @@ def main(argv=None, *, models=None):
             run_short=run_short, run_long=run_long,
         ))
         return 0
+    progress = Progress(quiet=bool(args.quiet))
+    progress.start()
     try:
         result = run_live(
             gid, mid, port=args.port,
             gguf_name=gname, mlx_name=mname,
             run_short=run_short, run_long=run_long,
+            progress=progress,
         )
+    except KeyboardInterrupt:
+        progress.stop()
+        sys.stderr.write("Stopped.\n")
+        return 130
     except Exception as e:
+        progress.stop()
         sys.stderr.write(f"Could not finish the comparison: {e}\n")
         return 1
-    for line in result.get("lines") or []:
-        print(line)
+    progress.stop()
+    if not result.get("printed"):
+        for line in result.get("lines") or []:
+            print(line)
     for note in result.get("notes") or []:
         print(note)
-    if result.get("error"):
-        sys.stderr.write(f"Could not finish the comparison: {result['error']}\n")
+    err = result.get("error")
+    if isinstance(err, KeyboardInterrupt) or err == "stopped":
+        return 130
+    if err:
+        sys.stderr.write(f"Could not finish the comparison: {err}\n")
         return 1
     return 0
 

@@ -11,7 +11,7 @@ models` lists downloaded models with their ids, including GGUF files
 the running page omitted. `caravan bench` accepts a plain name, runs
 five short prompts and a long-prompt series, compares a GGUF model to
 its MLX counterpart in reply-stats wording without inventing numbers,
-and puts the original model back after a live run. Auto-tune uses the
+and puts the original model back after a live run. On a terminal, `caravan bench --yes` shows a small campfire animation with the current step and elapsed time. Auto-tune uses the
 same five short prompts plus one ~2k-token long prompt, and scores
 include long-prompt read speed. First measured bench on the 1st Mac
 (Qwen2.5 Coder 7B, two short prompts of that build): GGUF Q4_K_M

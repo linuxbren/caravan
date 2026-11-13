@@ -10,7 +10,7 @@ coder 7b" --yes` (or another plain name). By default that runs five
 short prompts and a long-prompt series at about 1k, 4k, and 8k
 tokens; `--short` or `--long` runs just one. Without `--yes` it shows
 which two it would compare and the exact command, and does not load a
-model. After a live run it puts the original model back. See
+model. After a live run it puts the original model back. On a terminal, a small campfire shows the current step and elapsed time. See
 [Day 25](DAY25.md).
 
 ## Day 25 — first `caravan bench` on the 1st Mac

@@ -21,6 +21,10 @@
   one ~2k-token long prompt (skipped if it will not fit), scores on
   medians including long-prompt read speed, and still treats a
   garbled trial as a loss. The memory-check probe is still required.
+- `caravan bench --yes` shows a small campfire animation on a
+  terminal with the current step and elapsed time. Piped output,
+  `NO_COLOR`, and `--quiet` use a plain step line or stay silent.
+  Ctrl-C stops the animation and still puts the original model back.
 - See [Day 25](docs/DAY25.md). This follow-up does not change
   `agent/`, `runtime/`, or the requirements files, so a `caravan
   update` from the Day 24 pin keeps a loaded model running. The web

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import time
 import json
 import sys
 import tempfile
@@ -23,6 +24,7 @@ import web_settings as WS  # noqa: E402
 import web_speed as S  # noqa: E402
 import caravan_bench as B  # noqa: E402
 import caravan_models as M  # noqa: E402
+import caravan_progress as PR  # noqa: E402
 
 
 def _decide_f16(*a, **k):
@@ -982,6 +984,176 @@ class AutotunePromptsAndScore(unittest.TestCase):
         self.assertEqual(specs["write_tok_s"], 99)
 
 
+
+class ProgressAnimation(unittest.TestCase):
+    def test_step_text_is_plain(self):
+        self.assertEqual(
+            PR.loading_step("Qwen2.5 Coder 7B (GGUF)"),
+            "Loading Qwen2.5 Coder 7B (GGUF)…",
+        )
+        self.assertEqual(PR.short_step("GGUF", 3, 5), "GGUF · short prompt 3 of 5")
+        self.assertEqual(PR.long_step("MLX", "4k", 1, 2), "MLX · long prompt ~4k, 1 of 2")
+        self.assertEqual(PR.long_step("MLX", 4096, 1, 2), "MLX · long prompt ~4k, 1 of 2")
+        self.assertEqual(PR.restore_step(), "Putting the original model back…")
+        self.assertEqual(PR.format_elapsed(12), "0:12")
+        self.assertEqual(PR.format_elapsed(75), "1:15")
+
+    def test_non_tty_is_plain_and_quiet_is_off(self):
+        buf = io.StringIO()
+        self.assertFalse(buf.isatty())
+        self.assertEqual(PR.decide_mode(buf), "plain")
+        self.assertEqual(PR.decide_mode(buf, quiet=True), "off")
+        with mock.patch.dict("os.environ", {"NO_COLOR": "1"}):
+            self.assertEqual(PR.decide_mode(buf), "plain")
+            # Even a fake tty is plain when NO_COLOR is set.
+            tty = mock.Mock()
+            tty.isatty.return_value = True
+            self.assertEqual(PR.decide_mode(tty), "plain")
+        tty = mock.Mock()
+        tty.isatty.return_value = True
+        with mock.patch.dict("os.environ", {"NO_COLOR": ""}, clear=False):
+            # empty NO_COLOR does not force plain
+            # If NO_COLOR is already in env from the parent, pop it.
+            import os
+            env = {k: v for k, v in os.environ.items() if k != "NO_COLOR"}
+            with mock.patch.dict("os.environ", env, clear=True):
+                self.assertEqual(PR.decide_mode(tty), "animate")
+                self.assertEqual(PR.decide_mode(buf), "plain")
+
+    def test_plain_path_prints_step_lines(self):
+        buf = io.StringIO()
+        prog = PR.Progress(out=buf, mode="plain")
+        prog.start()
+        self.assertFalse(prog.alive)  # no thread in plain mode
+        prog.set(PR.loading_step("Qwen2.5 Coder 7B (GGUF)"))
+        prog.set(PR.short_step("GGUF", 3, 5))
+        prog.set(PR.long_step("MLX", "4k", 1, 2))
+        prog.set(PR.restore_step())
+        prog.stop()
+        self.assertFalse(prog.alive)
+        out = buf.getvalue()
+        self.assertIn("Loading Qwen2.5 Coder 7B (GGUF)…\n", out)
+        self.assertIn("GGUF · short prompt 3 of 5\n", out)
+        self.assertIn("MLX · long prompt ~4k, 1 of 2\n", out)
+        self.assertIn("Putting the original model back…\n", out)
+        self.assertNotIn("\r", out)
+
+    def test_quiet_prints_nothing(self):
+        buf = io.StringIO()
+        prog = PR.Progress(out=buf, mode="off", quiet=True)
+        prog.start()
+        prog.set("Loading X…")
+        prog.println("should not matter if we never call it from run")
+        # println still writes if called — quiet is about set() / animation.
+        # The mode is off, println is used for results; that's fine.
+        prog.stop()
+        # set() must be silent
+        buf2 = io.StringIO()
+        prog = PR.Progress(out=buf2, quiet=True)
+        self.assertEqual(prog.mode, "off")
+        prog.start()
+        prog.set("Loading X…")
+        prog.stop()
+        self.assertEqual(buf2.getvalue(), "")
+
+    def test_thread_starts_and_stops(self):
+        buf = io.StringIO()
+        prog = PR.Progress(out=buf, mode="animate")
+        prog.start()
+        prog.set("Loading Qwen2.5 Coder 7B (GGUF)…")
+        time.sleep(0.35)
+        self.assertTrue(prog.alive)
+        raw = buf.getvalue()
+        self.assertIn("Loading Qwen2.5 Coder 7B (GGUF)…", raw)
+        self.assertIn("\r", raw)
+        # elapsed is on the line
+        self.assertRegex(raw, r"0:0[0-9]")
+        # a campfire frame is present
+        self.assertTrue(any(f in raw for f in PR.FRAMES))
+        prog.stop()
+        self.assertFalse(prog.alive)
+        # After stop the in-place line is cleared (spaces + CR), no hanging frame.
+        end = buf.getvalue()
+        self.assertTrue(end.endswith("\r") or "\r" in end[-20:])
+
+    def test_clear_before_result_line(self):
+        buf = io.StringIO()
+        prog = PR.Progress(out=buf, mode="animate")
+        prog.start()
+        prog.set("GGUF · short prompt 3 of 5")
+        time.sleep(0.2)
+        prog.println("Qwen (GGUF):")
+        prog.stop()
+        out = buf.getvalue()
+        # Result line is a real newline, after a clear.
+        self.assertIn("Qwen (GGUF):\n", out)
+        # The clear uses CR and spaces.
+        self.assertIn("\r", out)
+
+    def test_live_plain_steps_and_ctrl_c_restores(self):
+        loaded = {"id": "orig/model", "name": "Original Model"}
+        calls = []
+        buf = io.StringIO()
+        prog = PR.Progress(out=buf, mode="plain")
+
+        def urlopen(url, data=None, timeout=30, headers=None):
+            body = {}
+            if data:
+                import json as _json
+                body = _json.loads(data.decode() if isinstance(data, (bytes, bytearray)) else data)
+            calls.append((url, body))
+            if url.endswith("/api/status"):
+                mid = loaded.get("id")
+                return {"worker": {
+                    "status": "ready" if mid else "idle",
+                    "model_id": mid,
+                    "model_name": loaded.get("name") or mid,
+                }}
+            if url.endswith("/api/models/load"):
+                loaded["id"] = body.get("id")
+                loaded["name"] = body.get("id")
+                return {"ok": True}
+            if url.endswith("/api/chat"):
+                raise KeyboardInterrupt()
+            if url.endswith("/api/settings"):
+                return {}
+            raise AssertionError(url)
+
+        result = B.run_live(
+            "gguf/a", "mlx/b", urlopen=urlopen,
+            gguf_name="Qwen2.5 Coder 7B (GGUF)",
+            mlx_name="Qwen2.5 Coder 7B (MLX)",
+            prompts=["hi"],
+            progress=prog,
+        )
+        prog.stop()
+        self.assertFalse(prog.alive)
+        self.assertIsInstance(result["error"], KeyboardInterrupt)
+        self.assertIn("Stopped.", result["notes"])
+        self.assertIn("Putting the original model back: Original Model.", result["notes"])
+        loads = [body.get("id") for url, body in calls if url.endswith("/api/models/load")]
+        # Loaded GGUF, then interrupted on first chat, then original put back.
+        self.assertEqual(loads, ["gguf/a", "orig/model"])
+        self.assertEqual(loaded["id"], "orig/model")
+        out = buf.getvalue()
+        self.assertIn("Loading Qwen2.5 Coder 7B (GGUF)…", out)
+        self.assertIn("GGUF · short prompt 1 of 1", out)
+        self.assertIn("Putting the original model back…", out)
+
+    def test_help_mentions_the_animation(self):
+        buf = io.StringIO()
+        with mock.patch("sys.stdout", buf):
+            try:
+                B.main(["--help"])
+            except SystemExit as e:
+                self.assertEqual(e.code, 0)
+        help_txt = buf.getvalue()
+        self.assertIn("campfire", help_txt.lower())
+        self.assertIn("--quiet", help_txt)
+        self.assertIn("Ctrl-C", help_txt)
+
+
+
 class Docs(unittest.TestCase):
     def test_day25_docs_are_plain(self):
         day = ROOT / "docs/DAY25.md"
@@ -998,6 +1170,7 @@ class Docs(unittest.TestCase):
         self.assertIn("23.5 tok/s", text)
         self.assertIn("five short prompts", text)
         self.assertIn("long-prompt series", text)
+        self.assertIn("campfire", text.lower())
         self.assertIn("2nd Mac", text)
         for bad in ("prf-hays", "16 GB", "24 GB", "exo1", "exo2", "262144"):
             self.assertNotIn(bad, text)

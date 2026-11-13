@@ -91,7 +91,13 @@ exact command, and does not load anything. `--from-averages` prints
 already-saved chat averages without loading or unloading a model.
 `--yes` loads each model in turn on a running Caravan. When the
 comparison finishes, or if a measurement fails, Caravan puts the
-original model back, if one was loaded, and says so.
+original model back, if one was loaded, and says so. On a terminal, a
+small campfire animation shows the current step in plain words (for
+example "Loading Qwen2.5 Coder 7B (GGUF)…", "GGUF · short prompt 3 of
+5", "MLX · long prompt ~4k, 1 of 2", "Putting the original model
+back…") and the elapsed time, on one line. When output is piped, or
+with `NO_COLOR` or `--quiet`, that is a plain step line or is silent.
+Ctrl-C stops the animation and still puts the original model back.
 
 On the 1st Mac, with both models already downloaded:
 
@@ -159,5 +165,7 @@ back, five short prompts and the long-prompt series (sizing, skip
 when the window is too small, unique openings, `--short`/`--long`,
 and a summary from measured numbers only), and Auto-tune's same five
 short prompts plus one long prompt (a faster write that hurts
-long-prompt reading loses). Existing tests were updated for the new
-prompt counts.
+long-prompt reading loses). The live progress animation is tested
+on the non-TTY path, for step wording, and that the background
+thread stops, including on Ctrl-C (the original model is still
+put back). Existing tests were updated for the new prompt counts.
