@@ -1636,6 +1636,20 @@ def make_handler(app: App):
             return self._json(200, payload)
 
 
+        def _update_inspect(self):
+            hook = getattr(app, "update_inspect", None)
+            if hook is not None:
+                try:
+                    return hook() or {}
+                except Exception:
+                    return {}
+            try:
+                import caravan_remote as remote
+                port = int(getattr(getattr(self, "server", None), "server_port", None) or 8190)
+                return remote.inspect(port=port, adopt=False)
+            except Exception:
+                return {}
+
         def _api_update(self, post=False, body=None):
             import sys as _sys
             from pathlib import Path as _Path
@@ -1646,16 +1660,28 @@ def make_handler(app: App):
             home = _Path(getattr(app, "update_home", None) or _Path.home())
             repo = _Path(getattr(app, "update_repo", None) or _Path(__file__).resolve().parents[1])
             opener = getattr(app, "update_opener", None)
+            ssh_runner = getattr(app, "update_ssh", None)
             nodes = None
             try:
                 nodes = app.configured_nodes()
             except Exception:
                 nodes = None
-            local = UC.is_local_owner(self)
+            inspect_info = self._update_inspect()
+            allowed, how = UC.can_apply_from(self, inspect_info=inspect_info)
+            local = how == "local"
+            via_ts = how == "tailscale"
             busy, busy_msg = UC.busy_reason(app)
             prefs = UC.load_prefs(home)
             packaged = UC.is_package_install(repo)
             result = None
+
+            def payload_of(res, progress=None):
+                return UC.public_status(
+                    res, local=local, via_tailscale=via_ts, busy=busy,
+                    packaged=packaged, check_daily=prefs["check_daily"],
+                    progress=progress if progress is not None else UC.resolve_progress(home, repo),
+                )
+
             if post:
                 body = body if isinstance(body, dict) else {}
                 action = str(body.get("action") or "").strip().lower()
@@ -1669,11 +1695,31 @@ def make_handler(app: App):
                 elif action == "check":
                     result = UC.check(
                         home, repo, force=True, opener=opener, nodes=nodes,
+                        ssh_runner=ssh_runner,
                     )
-                elif action == "apply":
-                    if not local:
+                elif action == "retry":
+                    if not allowed:
                         return self._json(403, {
                             "error": UC.NOT_LOCAL, "local": False, "can_apply": False,
+                            "via_tailscale": False,
+                        })
+                    mac_id = body.get("mac") or body.get("id")
+                    if not mac_id:
+                        return self._json(400, {"error": "Choose a Mac to try again."})
+                    retry_fn = getattr(app, "update_retry", None) or UC.retry_peer
+                    try:
+                        row = retry_fn(home, mac_id, expected=None, runner=ssh_runner)
+                    except Exception:
+                        return self._json(500, {"error": "Couldn't try that Mac again."})
+                    if row is None:
+                        return self._json(404, {"error": "That Mac is not in this group."})
+                    result = UC.load_cache(home) or {}
+                    return self._json(200, payload_of(result))
+                elif action == "apply":
+                    if not allowed:
+                        return self._json(403, {
+                            "error": UC.NOT_LOCAL, "local": False, "can_apply": False,
+                            "via_tailscale": False,
                         })
                     if not packaged:
                         return self._json(400, {"error": UC.SOURCE_CHECKOUT})
@@ -1681,13 +1727,10 @@ def make_handler(app: App):
                         return self._json(409, {"error": busy_msg, "busy": busy})
                     result = UC.check(
                         home, repo, force=False, opener=opener, nodes=nodes,
+                        ssh_runner=ssh_runner,
                     )
-                    if not result.get("newer"):
-                        payload = UC.public_status(
-                            result, local=local, busy=busy, packaged=packaged,
-                            check_daily=prefs["check_daily"],
-                            progress=UC.resolve_progress(home, repo),
-                        )
+                    if not result.get("newer") and not result.get("peers_behind"):
+                        payload = payload_of(result)
                         payload["error"] = UC.UP_TO_DATE
                         return self._json(400, payload)
                     existing = UC.resolve_progress(home, repo)
@@ -1703,24 +1746,15 @@ def make_handler(app: App):
                         )
                     except Exception:
                         return self._json(500, {"error": UC.FAILED})
-                    payload = UC.public_status(
-                        result, local=local, busy=busy, progress=progress,
-                        packaged=packaged, check_daily=prefs["check_daily"],
-                    )
-                    return self._json(200, payload)
+                    return self._json(200, payload_of(result, progress))
                 elif action:
-                    return self._json(400, {"error": "Send action check, set, or apply."})
+                    return self._json(400, {"error": "Send action check, set, apply, or retry."})
             if result is None:
                 result = UC.load_cache(home) or {}
                 result = dict(result)
                 result["check_daily"] = prefs["check_daily"]
                 result["helper"] = UC.has_helper(home, nodes=nodes)
-            progress = UC.resolve_progress(home, repo)
-            payload = UC.public_status(
-                result, local=local, busy=busy, progress=progress,
-                packaged=packaged, check_daily=prefs["check_daily"],
-            )
-            return self._json(200, payload)
+            return self._json(200, payload_of(result))
 
 
         def _api_picker_placement(self, body=None):

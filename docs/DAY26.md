@@ -102,18 +102,28 @@ background. A campfire flicker and a short "Updating…" line show
 progress. The page comes back on its own and says Done, with the
 new version, or shows the error and that the previous version is
 still running. The button is off during a chat reply or Auto-tune;
-you can confirm before it starts. Because there is no login, Update
-now is only available when you open Caravan on this Mac itself
-(the same local page `caravan open` uses). On the local network, and
-over Tailscale from another device, the badge and the Updates section
-still appear, but the button is hidden and the page asks you to update
-on this Mac, or to run `caravan update` in Terminal. The daily check itself still
-runs on this Mac.
+you can confirm before it starts.
 
-On a two-Mac setup, this update covers this Mac only — the same as
-`caravan update`. The Settings section says the 2nd Mac needs the
-update too, and that after this Mac is done you should open Caravan
-on the 2nd Mac and click Update now, or run `caravan update` there.
+**Update now** is available when you open Caravan on this Mac itself,
+and when you open it through this Mac's Tailscale share. Caravan
+checks that the share is on and that the address matches a live
+Tailscale address for this Mac, not just a name that looks like
+Tailscale. On the local network there is no login, so the button
+stays hidden and the page asks you to run `caravan update` in
+Terminal on this Mac. The daily check itself still runs on this Mac.
+
+**Update now** and `caravan update` on this Mac also update the other
+Macs Caravan already knows about — the 2nd Mac, 3rd Mac, and so on —
+over the connection already set up when each Mac was added. The other
+Macs are updated first, then this Mac, and the model comes back
+afterwards if it was loaded. If a Mac is off or the update doesn't
+finish, this Mac still updates. Settings lists each Mac's status, and
+when something goes wrong, step-by-step help appears right under that
+Mac: check that it's on and awake, check that it's on the same
+network or on Tailscale, click **Try again**, or on that Mac open
+Terminal and run `caravan update`, then load the model again. The
+daily check also shows when another Mac is on an older version, and
+the **Update available** badge appears in that case too.
 
 This follow-up does not change `agent/`, `runtime/`, or the
 requirements files, so a `caravan update` from the previous Day 26
@@ -158,6 +168,19 @@ offline Mac keeps the last result and stays quiet, the daily switch
 skips automatic checks but still allows Check now, the model-stays-
 loaded preview follows the same path prefixes as `caravan update`,
 `caravan update --check` prints the plain result, Update now is refused
-from a local-network or Tailscale address and during a chat reply or
-Auto-tune, and the chat page has the Update available badge and the
-Updates section in Settings.
+from a local-network address and during a chat reply or Auto-tune, and
+the chat page has the Update available badge and the Updates section
+in Settings.
+
+New tests also cover updating every other Mac: the 1st Mac asks each
+known Mac (2nd, 3rd, 4th, and so on) over the existing connection,
+other Macs are updated first, a Mac that is off or that fails does
+not stop the rest or this Mac, `--local-only` and a one-Mac
+environment flag do not ask the other Macs, and the daily check
+shows when a Mac is on an older version. When a Mac couldn't be
+reached, the update failed, it is still on the previous version, or
+the model didn't come back, Settings shows plain step-by-step help
+under that Mac, with Try again. Update now over Tailscale is allowed
+only when the share is on and the address matches a live Tailscale
+address; a made-up Tailscale name and a local-network request are
+still refused.

@@ -32,6 +32,22 @@
   keeps a loaded model running. The web page still restarts. No
   `day26` tag yet.
 
+- **Update now** and `caravan update` on this Mac also update the
+  other Macs Caravan already knows about (the 2nd Mac, 3rd Mac, and
+  so on), over the existing connection. Those Macs are updated first,
+  then this Mac, and the model comes back afterwards. If a Mac is off
+  or the update doesn't finish, this Mac still updates, and Settings
+  shows step-by-step help under that Mac, with **Try again**, or you
+  can run `caravan update` on that Mac. The daily check also shows
+  when another Mac is on an older version. **Update now** works over
+  Tailscale when the page is reached through this Mac's Tailscale
+  share, not just a name that looks like Tailscale. On the local
+  network the button stays off; use Terminal there. This follow-up
+  does not change `agent/`, `runtime/`, or the requirements files,
+  so a `caravan update` from the previous Day 26 pin keeps a loaded
+  model running. The web page still restarts. No `day26` tag yet.
+  See [Day 26](docs/DAY26.md).
+
 ## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
 
 - GGUF Self-tuning learns from real chats, proposes one quiet trial,

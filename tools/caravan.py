@@ -40,6 +40,19 @@ def simple_status(name="web"):
     return 0
 
 
+
+def _update_other_macs(home=None, out=None):
+    """Ask every other known Mac to update. This Mac is updated by the caller."""
+    home = Path(home) if home is not None else Path.home()
+    out = sys.stdout if out is None else out
+    from caravan_update_peers import update_other_macs, load_nodes
+    peers = load_nodes(home)
+    if peers:
+        print("Updating the other Macs first, then this Mac.", file=out, flush=True)
+        update_other_macs(home, peers, out=out)
+    return peers
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] == "remote":
@@ -61,6 +74,7 @@ def main(argv=None):
     parser.add_argument("--everything", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--yes", action="store_true", help="with uninstall: confirm removal of all Caravan data")
     parser.add_argument("--check", action="store_true", help="with update: only check for a newer version, do not install it")
+    parser.add_argument("--local-only", action="store_true", help="with update: only this Mac, do not ask the other Macs")
     args = parser.parse_args(argv)
     try:
         if args.action == "remote":
@@ -91,6 +105,14 @@ def main(argv=None):
             role_file = ROOT / ".caravan-role"
             role = role_file.read_text().strip() if role_file.exists() else "lead"
             if role not in ("lead", "worker"): raise ValueError("Unknown saved installation role; no update attempted")
+            local_only = bool(args.local_only) or os.environ.get("CARAVAN_UPDATE_LOCAL", "").strip() in ("1", "true", "yes")
+            if not local_only:
+                # Other Macs first, over the existing SSH link. A failure there
+                # is printed and does not stop this Mac from updating.
+                try:
+                    _update_other_macs(Path.home(), out=sys.stdout)
+                except Exception as peer_error:
+                    print(f"Couldn't update the other Macs ({peer_error}). This Mac will still update.", flush=True)
             # Fetch to a file: a failed HTTP request can never run a partial shell script.
             with urllib.request.urlopen("https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install?channel=" + str(time.time_ns()), timeout=30) as response:
                 data = response.read()

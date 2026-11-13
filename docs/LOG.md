@@ -1,3 +1,23 @@
+## 2026-11-13: Day 26 — Update the other Macs, and Update now over Tailscale
+
+**Update now** and `caravan update` on this Mac also update the other
+Macs Caravan already knows about (the 2nd Mac, 3rd Mac, and so on),
+over the connection already set up when each Mac was added. Those
+Macs are updated first, then this Mac, and the model comes back
+afterwards. If a Mac is off or the update doesn't finish, this Mac
+still updates. Settings lists each Mac, and when something goes
+wrong, step-by-step help appears under that Mac: check that it's on
+and awake, check the same network or Tailscale, click **Try again**,
+or run `caravan update` on that Mac. The daily check also shows when
+another Mac is on an older version. **Update now** works over
+Tailscale when the page is reached through this Mac's Tailscale
+share; on the local network it stays off, and you run
+`caravan update` in Terminal. This follow-up does not change
+`agent/`, `runtime/`, or the requirements files, so a
+`caravan update` from the previous Day 26 pin keeps a loaded model
+running; the web page still restarts. See [DAY26.md](DAY26.md). No
+`day26` tag yet.
+
 ## 2026-11-13: Day 26 — Daily update check and Update on the page
 
 Caravan checks once a day, and shortly after it starts, whether a

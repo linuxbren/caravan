@@ -1197,6 +1197,26 @@
   #settingsDrawer #updateChanges li { margin: 2px 0; }
   #settingsDrawer #updateActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
   #settingsDrawer #btnUpdateNow.is-tuning { cursor: wait; }
+  #settingsDrawer #updateMacs { margin: 10px 0 8px; }
+  #settingsDrawer #updateMacs[hidden] { display: none; }
+  #settingsDrawer .update-mac {
+    border-top: 1px solid var(--line);
+    padding: 10px 0 4px;
+  }
+  #settingsDrawer .update-mac-line {
+    margin: 0 0 6px;
+    font-size: .78rem;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  #settingsDrawer .update-help {
+    margin: 0 0 8px 1.15em;
+    padding: 0;
+    font-size: .72rem;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+  #settingsDrawer .update-help li { margin: 3px 0; }
   .update-badge { cursor: pointer; }
   .update-badge:hover { border-color: var(--accent); }
   .update-badge:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -1787,6 +1807,7 @@
       <ul class="update-changes" id="updateChanges" hidden></ul>
       <p class="help" id="updateModelNote" hidden></p>
       <p class="help" id="updateHelperNote" hidden></p>
+      <div id="updateMacs" hidden></div>
       <p class="help" id="updateLocalNote" hidden></p>
       <div class="row" id="updateActions">
         <button class="ghost drawer-control" id="btnUpdateCheck" type="button">Check now</button>
@@ -2027,7 +2048,7 @@
       tuning = true;
     } else if (phase === "done" && pending) {
       text = "Done";
-    } else if (j && j.newer && phase !== "failed") {
+    } else if (j && (j.newer || j.peers_behind) && phase !== "failed") {
       text = "Update available";
     }
     el.hidden = !text;
@@ -2127,10 +2148,14 @@
     }
     if (helperNote) {
       const help = j && j.helper_text;
-      helperNote.textContent = (j && j.newer && help) ? help : "";
+      const needs = !!(j && (j.newer || j.peers_behind));
+      helperNote.textContent = (needs && help) ? help : "";
       helperNote.hidden = !helperNote.textContent;
     }
-    const showApply = !!(j && j.newer && j.local && phase !== "failed");
+    renderUpdateMacs(j);
+    const allowed = !!(j && (j.local || j.via_tailscale));
+    const needs = !!(j && (j.newer || j.peers_behind));
+    const showApply = !!(needs && allowed && phase !== "failed" && phase !== "updating");
     if (btnNow) {
       btnNow.hidden = !showApply;
       btnNow.textContent = "Update now";
@@ -2141,9 +2166,56 @@
       else btnNow.title = "";
     }
     if (localNote) {
-      const needLocal = !!(j && j.newer && !j.local);
-      localNote.textContent = needLocal ? (j.not_local_text || "To update, open Caravan on this Mac and click Update now, or run caravan update in Terminal.") : "";
+      const needLocal = !!(needs && !allowed);
+      localNote.textContent = needLocal ? (j.not_local_text || "To update, open Caravan on this Mac or from a device on your Tailscale network, and click Update now. On the local network, run caravan update in Terminal on this Mac.") : "";
       localNote.hidden = !needLocal;
+    }
+  }
+  function renderUpdateMacs(j) {
+    const box = $("updateMacs");
+    if (!box) return;
+    const macs = (j && j.progress && j.progress.macs) || (j && j.macs) || [];
+    box.replaceChildren();
+    if (!macs.length) { box.hidden = true; return; }
+    box.hidden = false;
+    macs.forEach((m) => {
+      const row = document.createElement("div");
+      row.className = "update-mac";
+      const line = document.createElement("p");
+      line.className = "update-mac-line";
+      const name = m.label || "Mac";
+      const st = m.status || m.phase || "";
+      line.textContent = st ? (name + ": " + st) : name;
+      row.appendChild(line);
+      const steps = m.help || [];
+      if (steps.length) {
+        const ol = document.createElement("ol");
+        ol.className = "update-help";
+        steps.forEach((step) => {
+          const li = document.createElement("li");
+          li.textContent = step;
+          ol.appendChild(li);
+        });
+        row.appendChild(ol);
+      }
+      if (m.can_retry) {
+        const btn = document.createElement("button");
+        btn.className = "ghost drawer-control";
+        btn.type = "button";
+        btn.textContent = "Try again";
+        btn.addEventListener("click", () => retryUpdateMac(m.id));
+        row.appendChild(btn);
+      }
+      box.appendChild(row);
+    });
+  }
+  async function retryUpdateMac(id) {
+    const status = $("updateStatus");
+    try {
+      const out = await api("/api/update", { method: "POST", body: JSON.stringify({ action: "retry", mac: id }) });
+      renderUpdate(out);
+    } catch (err) {
+      if (status) status.textContent = (err && (err.error || err.message)) || "Couldn't try that Mac again.";
     }
   }
   function scheduleUpdatePoll(on) {
@@ -2209,6 +2281,7 @@
         return;
       }
       let msg = "Update now? The page will be back in a few seconds.";
+      if (j.macs && j.macs.some((m) => !m.mine)) msg += " The other Macs are updated first.";
       if (j.reload_model) msg += " Caravan will reload the model.";
       else if (j.reload_model === false) msg += " Your model stays loaded.";
       if (!confirm(msg)) return;

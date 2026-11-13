@@ -11,6 +11,7 @@
 | `tools/caravan.py` | User command and safe single-service controls |
 | `tools/caravan_update.py` | Single-step package update and rollback |
 | `tools/caravan_update_check.py` | Daily update check, cache, and Update on the page |
+| `tools/caravan_update_peers.py` | Ask the other known Macs to update, over the existing connection |
 | `tools/caravan_doctor.py` | Read-only checks and human-readable fixes |
 | `scripts/package.sh` | Committed-tree source archive and checksum |
 

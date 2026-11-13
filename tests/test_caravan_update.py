@@ -372,7 +372,7 @@ class CommandTests(unittest.TestCase):
             script = io.BytesIO(b"#!/bin/bash\n")
             result_mock = mock.Mock(returncode=0)
             plan = {"port": 8190, "kind": "web"}
-            with mock.patch.object(cli, "ROOT", package), mock.patch.object(cli.urllib.request, "urlopen", return_value=contextlib.closing(script)), mock.patch.object(cli.service, "stored", return_value=plan), mock.patch.object(cli.subprocess, "run", return_value=result_mock) as run, contextlib.redirect_stdout(io.StringIO()) as out:
+            with mock.patch.object(cli, "ROOT", package), mock.patch.object(cli, "_update_other_macs", return_value=[]), mock.patch.object(cli.urllib.request, "urlopen", return_value=contextlib.closing(script)), mock.patch.object(cli.service, "stored", return_value=plan), mock.patch.object(cli.subprocess, "run", return_value=result_mock) as run, contextlib.redirect_stdout(io.StringIO()) as out:
                 # urlopen is used both for the install script and maybe not for status (install prints it)
                 self.assertEqual(cli.main(["update"]), 0)
                 cmd = run.call_args[0][0]

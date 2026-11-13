@@ -48,8 +48,10 @@ caravan stop
 Start it again with `caravan start`, then `caravan open`.
 Caravan checks once a day for a newer version. When one is ready, an
 **Update available** badge appears on the page, and **Update now** in
-Settings runs the same update as `caravan update`. From another
-device, update on this Mac, or run `caravan update` in Terminal.
+Settings runs the same update as `caravan update`, including the
+other Macs Caravan already knows about. **Update now** works on this
+Mac and over Tailscale. On the local network, run `caravan update` in
+Terminal on this Mac.
 Remove paired Macs first. `caravan uninstall` asks before removing all Caravan services, models, settings and files. [Uninstall help](INSTALL.md#remove-caravan-safely).
 
 Check whether Caravan is running with `caravan status`. Need help? Run `caravan doctor`, read [installation help](INSTALL.md#troubleshooting), or [open an issue](https://github.com/linuxbren/caravan/issues). Do not include passwords, tokens or private chats in reports.

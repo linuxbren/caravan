@@ -268,10 +268,15 @@ class CacheAndOfflineTests(unittest.TestCase):
         ui = self.home / ".caravan" / "web-ui"
         ui.mkdir(parents=True)
         (ui / "remote-worker.json").write_text(json.dumps({"ssh": "helper-mac"}))
-        result = UC.check(self.home, self.repo, force=True, opener=opener_for())
+        def silent_ssh(*args, **kwargs):
+            raise OSError("offline")
+        result = UC.check(
+            self.home, self.repo, force=True, opener=opener_for(),
+            ssh_runner=silent_ssh,
+        )
         self.assertTrue(result["helper"])
         payload = UC.public_status(result, packaged=True, local=True)
-        self.assertIn("2nd Mac", payload["helper_text"])
+        self.assertIn("other Macs", payload["helper_text"])
 
     def test_progress_promotes_to_done_when_the_new_ref_is_installed(self):
         UC.save_progress(self.home, {
@@ -460,6 +465,8 @@ class UpdateApiTests(unittest.TestCase):
             cls.started.append((home, repo, kwargs))
             return {"phase": "updating", "message": UC.OPENING, "expected": NEW, "old": OLD}
         cls.app.update_start = _start
+        cls.app.update_inspect = lambda: {}
+        cls.app.update_ssh = lambda *a, **k: (_ for _ in ()).throw(OSError("no ssh in tests"))
 
         class _S(ThreadingHTTPServer):
             def server_bind(self):
@@ -593,6 +600,82 @@ class UpdateApiTests(unittest.TestCase):
         self.assertIn("on this Mac", j["not_local_text"])
 
 
+    def test_apply_from_verified_tailscale_is_allowed(self):
+        UC.check(self.home, self.repo, force=True, opener=opener_for())
+        self.started.clear()
+        self.app.update_inspect = lambda: {
+            "enabled": True,
+            "funnel": False,
+            "addresses": ["http://my-mac.tailnet.ts.net:8190"],
+        }
+        try:
+            code, j = self._post(
+                "/api/update", {"action": "apply"},
+                headers={"Host": "my-mac.tailnet.ts.net"},
+            )
+            self.assertEqual(code, 200, j)
+            self.assertTrue(self.started)
+            self.assertTrue(j.get("via_tailscale") or j.get("can_apply"))
+        finally:
+            self.app.update_inspect = lambda: {}
+
+    def test_apply_from_spoofed_tailscale_name_is_forbidden(self):
+        UC.check(self.home, self.repo, force=True, opener=opener_for())
+        self.started.clear()
+        self.app.update_inspect = lambda: {
+            "enabled": True,
+            "funnel": False,
+            "addresses": ["http://my-mac.tailnet.ts.net:8190"],
+        }
+        try:
+            code, j = self._post(
+                "/api/update", {"action": "apply"},
+                headers={"Host": "not-mine.tailnet.ts.net"},
+            )
+            self.assertEqual(code, 403, j)
+            self.assertFalse(self.started)
+        finally:
+            self.app.update_inspect = lambda: {}
+
+    def test_retry_action_tries_one_mac(self):
+        called = []
+
+        def _retry(home, mac_id, **kwargs):
+            called.append(mac_id)
+            return {"id": mac_id, "label": "2nd Mac", "phase": "done", "help": [], "can_retry": False, "mine": False}
+
+        self.app.update_retry = _retry
+        try:
+            code, j = self._post("/api/update", {"action": "retry", "mac": "mac-1"})
+            self.assertEqual(code, 200, j)
+            self.assertEqual(called, ["mac-1"])
+        finally:
+            self.app.update_retry = None
+
+    def test_apply_when_only_a_peer_is_behind(self):
+        result = {
+            "newer": False,
+            "installed": NEW,
+            "available": NEW,
+            "peers_behind": True,
+            "macs": [{
+                "id": "mac-1", "label": "2nd Mac", "phase": "behind",
+                "behind": True, "help": ["Check that the 2nd Mac is on and awake."],
+                "can_retry": True, "mine": False, "status": "on an older version",
+                "message": "The 2nd Mac is on an older version.",
+            }],
+            "helper": True,
+            "checked_at": 1,
+        }
+        UC.save_cache(self.home, result)
+        self.started.clear()
+        with mock.patch.object(UC, "check", return_value=result):
+            code, j = self._post("/api/update", {"action": "apply"})
+        self.assertEqual(code, 200, j)
+        self.assertTrue(self.started)
+
+
+
 class PageAndDocsTests(unittest.TestCase):
     def setUp(self):
         self.page = (ROOT / "proxy" / "web" / "index.html").read_text()
@@ -610,7 +693,9 @@ class PageAndDocsTests(unittest.TestCase):
         self.assertIn("Your model stays loaded", self.page)
         self.assertIn("Caravan will reload the model", self.page)
         self.assertIn("the page will be back in a few seconds", self.page)
-        self.assertIn("2nd Mac", self.page)
+        self.assertIn("Try again", self.page)
+        self.assertIn("renderUpdateMacs", self.page)
+        self.assertIn("other Macs", self.page)
         # Campfire busy style reused for the Update button.
         self.assertIn('btnUpdateNow', self.page)
         self.assertIn("is-tuning", self.page)
@@ -629,9 +714,10 @@ class PageAndDocsTests(unittest.TestCase):
         self.assertIn("Your model stays loaded", self.day26)
         self.assertIn("Caravan will reload the model", self.day26)
         self.assertIn("2nd Mac", self.day26)
-        # Safe choice: Update is only from this Mac, including over Tailscale.
+        self.assertIn("Try again", self.day26)
         self.assertIn("this Mac", self.day26)
         self.assertIn("Tailscale", self.day26)
+        self.assertIn("local network", self.day26)
         for term in ("prf-hays", "16 GB", "16GB", "/home/brenden"):
             self.assertNotIn(term, self.day26)
             self.assertNotIn(term, self.web)

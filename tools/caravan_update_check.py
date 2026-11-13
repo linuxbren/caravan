@@ -52,13 +52,15 @@ NEWER_PREFIX = "A {label} update is ready."
 KEEP_MODEL = "Your model stays loaded."
 RELOAD_MODEL = "Caravan will reload the model."
 HELPER = (
-    "The 2nd Mac needs this update too. After this Mac is done, open "
-    "Caravan on the 2nd Mac and click Update now, or run caravan update there."
+    "Caravan will also update the other Macs it knows about. "
+    "If one is off, this Mac still updates, and that Mac is listed in Settings."
 )
 NOT_LOCAL = (
-    "To update, open Caravan on this Mac and click Update now, "
-    "or run caravan update in Terminal."
+    "To update, open Caravan on this Mac or from a device on your Tailscale "
+    "network, and click Update now. On the local network, run caravan update "
+    "in Terminal on this Mac."
 )
+NOT_LAN = NOT_LOCAL
 SOURCE_CHECKOUT = (
     "This is a source checkout. Update it with git pull --ff-only, "
     "then rerun scripts/install.sh with the same options. No checkout changed."
@@ -430,6 +432,29 @@ def _build_result(
     }
 
 
+def _with_peers(result, home, *, nodes=None, ssh_runner=None, published_ref=None):
+    """Attach per-Mac rows (2nd, 3rd, …) without putting hashes in the public payload."""
+    try:
+        import caravan_update_peers as P
+        peers = P.discover_peers(home, nodes) if nodes is not None else P.load_nodes(home)
+    except Exception:
+        peers = []
+    result = dict(result or {})
+    result["helper"] = bool(peers) or bool(result.get("helper"))
+    if not peers:
+        result["macs"] = result.get("macs") or []
+        result["peers_behind"] = False
+        return result
+    want = published_ref or result.get("available") or result.get("installed")
+    try:
+        rows = P.check_peers(peers, want, runner=ssh_runner)
+    except Exception:
+        rows = []
+    result["macs"] = rows
+    result["peers_behind"] = any(r.get("behind") for r in rows)
+    return result
+
+
 def check(
     home,
     repo,
@@ -440,6 +465,7 @@ def check(
     interval=INTERVAL_S,
     nodes=None,
     manifest_url=None,
+    ssh_runner=None,
 ):
     """Return a result dict. Never raises for network errors."""
     now = time.time() if now is None else now
@@ -504,6 +530,10 @@ def check(
             check_daily=prefs["check_daily"],
             helper=helper,
         )
+        result = _with_peers(
+            result, home, nodes=nodes, ssh_runner=ssh_runner,
+            published_ref=(published or {}).get("ref"),
+        )
         save_cache(home, result)
         return result
 
@@ -535,6 +565,7 @@ def public_status(
     result,
     *,
     local=False,
+    via_tailscale=False,
     busy=None,
     progress=None,
     packaged=True,
@@ -577,7 +608,25 @@ def public_status(
             # After a successful check with no date and no newer pin.
             if result.get("checked_at") and not result.get("error"):
                 message = UP_TO_DATE
-    can_apply = bool(packaged and newer and local and not busy and phase != "updating")
+    macs = []
+    if progress and progress.get("macs"):
+        macs = list(progress["macs"])
+    elif result.get("macs"):
+        macs = list(result["macs"])
+    peers_behind = bool(result.get("peers_behind") or any(m.get("behind") for m in macs))
+    if not packaged:
+        pass
+    elif not newer and peers_behind and phase not in ("updating", "failed", "done"):
+        behind = [m.get("label") for m in macs if m.get("behind")]
+        if len(behind) == 1:
+            message = f"This Mac is up to date. The {behind[0]} is on an older version."
+        elif behind:
+            names = ", ".join(behind[:-1]) + " and " + behind[-1]
+            message = f"This Mac is up to date. The {names} are on an older version."
+    via_tailscale = bool(via_tailscale)
+    allowed = bool(local or via_tailscale)
+    needs = bool(newer or peers_behind)
+    can_apply = bool(packaged and needs and allowed and not busy and phase != "updating")
     payload = {
         "packaged": bool(packaged),
         "check_daily": bool(check_daily if result.get("check_daily") is None else result.get("check_daily")),
@@ -587,16 +636,19 @@ def public_status(
         "changes": list(result.get("changes") or []),
         "reload_model": result.get("reload_model"),
         "keep_model_text": keep_model_text(result.get("reload_model")),
-        "helper": bool(result.get("helper")),
-        "helper_text": HELPER if result.get("helper") and newer else None,
+        "helper": bool(result.get("helper") or macs),
+        "helper_text": HELPER if (result.get("helper") or macs) and needs else None,
         "local": bool(local),
+        "via_tailscale": via_tailscale,
         "can_apply": can_apply,
         "busy": busy,
         "offline": bool(result.get("offline")),
         "message": message,
-        "not_local_text": None if local else NOT_LOCAL,
+        "not_local_text": None if allowed else NOT_LOCAL,
         "progress": progress,
         "checked_at": result.get("checked_at"),
+        "macs": macs,
+        "peers_behind": peers_behind,
     }
     return payload
 
@@ -652,6 +704,118 @@ def is_local_owner(handler):
         if value and str(value).strip():
             return False
     return True
+
+
+def _tailnet_ipv4(ip):
+    """Tailscale uses CGNAT 100.64.0.0/10 for tailnet IPv4."""
+    parts = (ip or "").strip().split(".")
+    if len(parts) != 4:
+        return False
+    try:
+        a, b, c, d = (int(x) for x in parts)
+    except ValueError:
+        return False
+    return a == 100 and 64 <= b <= 127 and 0 <= c <= 255 and 0 <= d <= 255
+
+
+def _tailnet_ipv6(ip):
+    ip = (ip or "").strip().lower().lstrip("[").rstrip("]")
+    return ip.startswith("fd7a:115c:a1e0:")
+
+
+def _host_key(host):
+    host = (host or "").strip().lower()
+    if not host:
+        return ""
+    if host.startswith("["):
+        end = host.find("]")
+        inner = host[1:end] if end > 0 else host
+        return inner
+    if host.count(":") == 1:
+        # hostname:port (not IPv6)
+        host = host.split(":")[0]
+    return host
+
+
+def _addr_host(addr):
+    """Host part of an http://host:port Tailscale address."""
+    text = (addr or "").strip().lower()
+    if "://" in text:
+        text = text.split("://", 1)[1]
+    text = text.split("/", 1)[0]
+    return _host_key(text)
+
+
+def known_tailscale_hosts(info):
+    """Hosts from this Mac's live Tailscale share, not a guess from the name."""
+    hosts = set()
+    if not isinstance(info, dict):
+        return hosts
+    for addr in info.get("addresses") or []:
+        host = _addr_host(addr)
+        if host:
+            hosts.add(host)
+    for key in ("ips", "TailscaleIPs", "ip"):
+        raw = info.get(key)
+        if isinstance(raw, str):
+            raw = [raw]
+        for item in raw or []:
+            host = _host_key(str(item))
+            if host:
+                hosts.add(host)
+    return hosts
+
+
+def is_tailscale_owner(handler, *, inspect_info=None):
+    """True when the request arrived through this Mac's Tailscale share.
+
+    The share is a TCP forward to loopback, so Tailscale identity headers
+    (Tailscale-User-Login) are usually absent. A spoofable Host name is
+    not enough: Host must match a live address from Tailscale itself,
+    the share must be on, and the client must be the serve forward
+    (loopback) or a tailnet address. A local-network client cannot
+    present a loopback or tailnet client address.
+
+    If Tailscale-User-Login is present (HTTPS serve), it is extra
+    identity and is only accepted together with the same Host and
+    share checks.
+    """
+    if not inspect_info or not inspect_info.get("enabled") or inspect_info.get("funnel"):
+        return False
+    known = known_tailscale_hosts(inspect_info)
+    if not known:
+        return False
+    try:
+        addr = handler.client_address[0]
+    except (AttributeError, IndexError, TypeError):
+        return False
+    try:
+        headers = handler.headers
+    except AttributeError:
+        return False
+    host = _host_key(headers.get("Host") or headers.get("host") or "")
+    if not host or host not in known:
+        return False
+    login = (
+        headers.get("Tailscale-User-Login")
+        or headers.get("tailscale-user-login")
+        or ""
+    ).strip()
+    client_ok = _loopback_ip(addr) or _tailnet_ipv4(addr) or _tailnet_ipv6(addr)
+    if not client_ok:
+        return False
+    # Identity header, when present, is extra confirmation. Its absence
+    # is normal for TCP serve and is not a rejection.
+    return True
+
+
+def can_apply_from(handler, *, inspect_info=None):
+    """Local on this Mac, or a verified Tailscale share. Never plain LAN."""
+    if is_local_owner(handler):
+        return True, "local"
+    if is_tailscale_owner(handler, inspect_info=inspect_info):
+        return True, "tailscale"
+    return False, None
 
 
 def busy_reason(app):
@@ -766,7 +930,7 @@ def start_apply(home, repo, *, name="web", python=None, runner=None, now=None, e
     return progress
 
 
-def _run_cli_update(repo, *, name="web"):
+def _run_cli_update(repo, *, name="web", local_only=True):
     """Same path as `caravan update`: fetch the install script and run it."""
     tools = str(Path(repo) / "tools")
     if tools not in sys.path:
@@ -776,49 +940,151 @@ def _run_cli_update(repo, *, name="web"):
     previous = getattr(cli, "ROOT", None)
     try:
         cli.ROOT = Path(repo)
-        return int(cli.main(["update", "--name", str(name)]) or 0)
+        argv = ["update", "--name", str(name)]
+        if local_only:
+            argv.append("--local-only")
+        return int(cli.main(argv) or 0)
     finally:
         if previous is not None:
             cli.ROOT = previous
 
 
-def apply_job(home, repo, *, name="web"):
-    """Foreground job for the detached process. Writes done or failed."""
+def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None):
+    """Foreground job: update every other Mac first, then this Mac.
+
+    Other Macs are asked over the existing SSH link, with
+    CARAVAN_UPDATE_LOCAL so they do not try to update anyone else.
+    A Mac that is off or that fails is recorded with plain help; this
+    Mac still updates. The local step uses --local-only so we do not
+    fan out twice.
+    """
+    import caravan_update_peers as P
     progress = load_progress(home) or {}
+    expected = (progress.get("expected") or "").strip().lower() or None
+    if peers is None:
+        try:
+            peers = P.load_nodes(home)
+        except Exception:
+            peers = []
+    local_label = P.coordinator_label(len(peers or []))
+    macs = P.initial_progress(peers, local_phase="waiting", local_label=local_label)
     progress["phase"] = "updating"
-    progress["message"] = OPENING
+    progress["message"] = (
+        "Updating the other Macs first, then this Mac." if peers else OPENING
+    )
+    progress["macs"] = macs
     save_progress(home, progress)
+
+    def persist():
+        progress["macs"] = macs
+        save_progress(home, progress)
+
+    def set_local(phase, message=None, kind=None):
+        nonlocal macs
+        row = P.local_row(phase=phase, label=local_label, message=message, kind=kind)
+        macs = P.replace_mac(macs, "local", row)
+        if message:
+            progress["message"] = message
+        persist()
+
+    def on_progress(row):
+        nonlocal macs
+        macs = P.replace_mac(macs, row.get("id"), row)
+        persist()
+
+    if peers:
+        P.update_other_macs(
+            home, peers, expected=expected, runner=runner, on_progress=on_progress,
+        )
+
+    set_local("updating", OPENING)
     try:
-        code = _run_cli_update(repo, name=name)
+        code = _run_cli_update(repo, name=name, local_only=True)
     except Exception as error:
-        failed = dict(progress)
-        failed["phase"] = "failed"
-        failed["message"] = FAILED
-        failed["error"] = str(error)[:300]
-        failed["finished_at"] = time.time()
-        save_progress(home, failed)
+        set_local("failed", FAILED)
+        progress["phase"] = "failed"
+        progress["message"] = FAILED
+        progress["error"] = str(error)[:300]
+        progress["finished_at"] = time.time()
+        persist()
         return 1
     current = installed_ref(repo)
-    expected = (progress.get("expected") or "").strip().lower()
-    final = dict(progress)
-    final["finished_at"] = time.time()
+    expected_ref = expected
+    final_msg = DONE
+    local_phase = "done"
     if code == 0:
-        final["phase"] = "done"
-        if expected and current and current != expected and current == (progress.get("old") or ""):
-            # Already up to date: the installed ref did not change.
-            final["message"] = UP_TO_DATE
+        if expected_ref and current and current != expected_ref and current == (progress.get("old") or ""):
+            final_msg = UP_TO_DATE
         else:
-            final["message"] = DONE
-            final["new"] = current
-        save_progress(home, final)
+            final_msg = DONE
+            progress["new"] = current
+        try:
+            if P.model_did_not_return(home, status_fn=status_fn):
+                # If a peer already has failure help, still note the model.
+                peer_trouble = any(
+                    (not m.get("mine")) and m.get("phase") in
+                    ("offline", "failed", "still_old") for m in macs
+                )
+                if not peer_trouble:
+                    final_msg = "The Macs updated, but the model didn't come back."
+                    set_local("no_model", final_msg, kind="no_model")
+                    local_phase = "no_model"
+        except Exception:
+            pass
+        peer_trouble = any(
+            (not m.get("mine")) and m.get("phase") in
+            ("offline", "failed", "still_old", "no_model") for m in macs
+        )
+        if peer_trouble and local_phase != "no_model":
+            final_msg = (
+                "This Mac is updated. Some other Macs need attention — "
+                "see the steps below."
+            )
+        set_local(local_phase, final_msg, kind=("no_model" if local_phase == "no_model" else None))
+        # Local no_model still means the update itself finished; page should show Done-ish help.
+        progress["phase"] = "done"
+        progress["message"] = final_msg
+        progress["finished_at"] = time.time()
+        persist()
         return 0
-    final["phase"] = "failed"
-    final["message"] = FAILED
-    save_progress(home, final)
+    set_local("failed", FAILED)
+    progress["phase"] = "failed"
+    progress["message"] = FAILED
+    progress["finished_at"] = time.time()
+    persist()
     return code or 1
 
 
-def cli_check(repo, *, home=None, name="web", opener=None, file=None):
+def retry_peer(home, mac_id, *, expected=None, peers=None, runner=None, timeout=None):
+    """Try one Mac again. Used by the Try again button. Never updates this Mac."""
+    import caravan_update_peers as P
+    if peers is None:
+        try:
+            peers = P.load_nodes(home)
+        except Exception:
+            peers = []
+    node = next((n for n in peers if str(n.get("id")) == str(mac_id)), None)
+    if node is None:
+        return None
+    progress = load_progress(home) or {}
+    macs = list(progress.get("macs") or [])
+    updating = P._row(node, phase="updating", can_retry=False)
+    macs = P.replace_mac(macs, node.get("id"), updating)
+    progress["macs"] = macs
+    progress["phase"] = progress.get("phase") or "updating"
+    save_progress(home, progress)
+    kw = {}
+    if timeout is not None:
+        kw["timeout"] = timeout
+    expected = expected or (progress.get("expected") or None)
+    row = P.update_peer(node, expected=expected, runner=runner, **kw)
+    macs = P.replace_mac(macs, node.get("id"), row)
+    progress["macs"] = macs
+    save_progress(home, progress)
+    return row
+
+
+def cli_check(repo, *, home=None, name="web", opener=None, file=None, nodes=None, ssh_runner=None):
     """`caravan update --check`. Returns 0 up to date, 1 newer, 2 error."""
     file = sys.stdout if file is None else file
     home = Path(home) if home is not None else Path.home()
@@ -826,10 +1092,11 @@ def cli_check(repo, *, home=None, name="web", opener=None, file=None):
     if not (repo / ".caravan-package").exists():
         print(SOURCE_CHECKOUT, file=file)
         return 2
-    result = check(home, repo, force=True, opener=opener)
+    result = check(home, repo, force=True, opener=opener, nodes=nodes, ssh_runner=ssh_runner)
     if result.get("error") == "offline" and not result.get("available") and not result.get("newer"):
         print(OFFLINE, file=file)
         return 2
+    behind = [m for m in (result.get("macs") or []) if m.get("behind")]
     if result.get("newer"):
         label = result.get("available_label") or "newer"
         print(NEWER_PREFIX.format(label=label), file=file)
@@ -841,9 +1108,19 @@ def cli_check(repo, *, home=None, name="web", opener=None, file=None):
             print("What's new:", file=file)
             for line in changes:
                 print("  " + line, file=file)
-        if result.get("helper"):
+        if result.get("helper") or behind:
             print(HELPER, file=file)
-        print("Run caravan update to install it.", file=file)
+        for m in (result.get("macs") or []):
+            if m.get("behind") or m.get("phase") == "offline":
+                print(m["message"], file=file)
+        print("Run caravan update to install it. Other Macs are updated first.", file=file)
+        return 1
+    if behind:
+        for m in (result.get("macs") or []):
+            print(m["message"], file=file)
+            for step in m.get("help") or []:
+                print("  " + step, file=file)
+        print("Run caravan update to update the other Macs.", file=file)
         return 1
     print(UP_TO_DATE, file=file)
     return 0

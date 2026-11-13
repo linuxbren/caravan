@@ -208,11 +208,17 @@ shows progress; the page comes back and says Done, or shows the error
 and that the previous version is still running. The button is off
 during a chat reply or Auto-tune.
 
-Because there is no login, **Update now** is only shown when you open
-Caravan on this Mac itself. From another device on the local network,
-or over Tailscale, you still see that an update is ready, and the page
-asks you to update on this Mac. On a two-Mac setup, the 2nd Mac needs
-the same update after this Mac is done.
+**Update now** is shown when you open Caravan on this Mac itself, and
+when you open it through this Mac's Tailscale share. On the local
+network, you still see that an update is ready, and the page asks you
+to run `caravan update` in Terminal on this Mac. **Update now** and
+`caravan update` on this Mac also update the other Macs Caravan
+already knows about (the 2nd Mac, 3rd Mac, and so on). Those Macs are
+updated first, then this Mac. If a Mac is off or the update doesn't
+finish, this Mac still updates, and Settings shows step-by-step help
+under that Mac, with **Try again**, or you can run `caravan update` on
+that Mac. The daily check also shows when another Mac is on an older
+version.
 
 The browser has no login. Fresh installs keep the page only on this Mac.
 You can turn on **Open on my local network** in Settings or run
