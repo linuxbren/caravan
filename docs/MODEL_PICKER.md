@@ -95,10 +95,16 @@ setup, define your own `[web.nodes.*]` as described in
 [configuration](CONFIGURATION.md#web-ui-nodes-caravanconfigtoml).
 
 Downloads run directly on each Mac from the publisher; setup does not copy the
-lead's model folder to a helper. Each download in progress has its own card,
-stacked when more than one is running, with its own bar, size, speed and
-waiting time, and its own Stop, Resume, and Load-when-ready controls. A card
-stays with its download and does not switch to another one. Both MLX and
+lead's model folder to a helper. Each download in progress has its own card, which appears right under
+the model you clicked Download on, so it is clear that this model is
+the one downloading. The card stays visible there even if you close
+the model's file list. Cards stack under that model when more than
+one of its downloads is running, each with its own bar, size, speed
+and waiting time, and its own Stop, Resume, and Load-when-ready
+controls. If that model is not in the list you are looking at (for
+example after a new search), the card sits at the top of the Models
+list until the model is visible again. A card stays with its
+download and does not switch to another one. Both MLX and
 GGUF cards use the same friendly Mac name from your Topology (for example
 "My Mac", "1st Mac", or "2nd Mac"), never a machine hostname or an internal
 id. If a download stops, the card shows a short plain line such as

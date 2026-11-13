@@ -10,7 +10,8 @@ operating system for the dev machine, or personal SSH alias is required.
 Open **Models**, search for a model, and check its fit and download location.
 More memory or adding Macs lets larger models fit; Caravan checks each Mac's
 capacity and files for you. Start with a small model. Download, then **Load**.
-No model is bundled with the installer. Publisher terms may apply.
+While a download runs, its progress card appears right under the model
+you clicked. No model is bundled with the installer. Publisher terms may apply.
 
 A one-Mac placement uses only the selected Mac. A split placement runs different
 parts on participating Macs. A copy on every Mac is not the same as a split.

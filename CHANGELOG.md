@@ -1,3 +1,14 @@
+## Day 26 — Download progress under the model you clicked
+
+- In the Models list, the download progress card appears right under
+  the model you clicked Download on. It stays visible there even if
+  you close the file list, and moves to the top of the list only
+  when that model is not currently shown. See [Day 26](docs/DAY26.md).
+- This follow-up does not change `agent/`, `runtime/`, or the
+  requirements files, so a `caravan update` from the Day 25 pin
+  keeps a loaded model running. The web page still restarts. No
+  `day26` tag yet.
+
 ## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
 
 - GGUF Self-tuning learns from real chats, proposes one quiet trial,

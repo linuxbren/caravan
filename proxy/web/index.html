@@ -266,6 +266,7 @@
   /* Model picker, download cards, and chips pick up the frosted panels and amber accents. */
   html[data-theme="campfire"] .picker-jobs,
   html[data-theme="campfire"] .picker-job,
+  html[data-theme="campfire"] .picker-job-slot,
   html[data-theme="campfire"] .picker-src,
   html[data-theme="campfire"] .picker-advanced,
   html[data-theme="campfire"] .picker-chips button,
@@ -1070,6 +1071,10 @@
   .picker-job .j-line { display: flex; justify-content: space-between; gap: 8px; font-size: .68rem; }
   .picker-job .j-sub { font-size: .62rem; color: var(--muted); }
   .picker-job .j-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+  /* Progress sits under the model you clicked, always visible even if the row is closed. */
+  .picker-job-slot { display: none; padding: 0 8px 8px; }
+  .picker-job-slot:not(:empty) { display: block; }
+  .picker-job-slot .picker-job { margin: 6px 0 0; }
   .p-quant.picked { background: color-mix(in srgb, var(--accent) 18%, transparent); outline: 1px solid var(--accent); }
   .place-step {
     margin: 6px 8px 10px; padding: 10px 12px; border-radius: 8px;
@@ -3798,6 +3803,7 @@
       updatePickerStatus();
       if (!groups.length) {
         box.innerHTML = `<div class="picker-status">No models match.</div>`;
+        showJobs();
         return;
       }
       for (const g of groups) {
@@ -3809,6 +3815,9 @@
         const fit = best.fit || {};
         const row = document.createElement("div");
         row.className = "p-row";
+        const repoIds = quants.map((q) => q.repo_id).filter(Boolean);
+        row.dataset.repoIds = repoIds.join("\n");
+        if (g.base) row.dataset.base = g.base;
         const head = document.createElement("button");
         head.type = "button"; head.className = "p-head";
         const reasonShort = fit.reason ? ` · ${fit.reason}` : "";
@@ -3850,8 +3859,12 @@
           row.appendChild(n);
         }
         row.appendChild(quantsEl);
+        const slot = document.createElement("div");
+        slot.className = "picker-job-slot";
+        row.appendChild(slot);
         box.appendChild(row);
       }
+      showJobs();
     }
 
     function escapeHtml(s) {
@@ -3877,7 +3890,9 @@
         try {
           const data = await api("/api/picker/download", { method: "POST",
             body: JSON.stringify({ repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0, filters: q.filters, pipeline_tag: q.pipeline_tag }) });
-          upsertJob(data.job); showJobs(); pollJob(data.job.id, q);
+          upsertJob(data.job); showJobs();
+          try { const c = jobCardEl(data.job.id); (c || $("pickerJob")).scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {}
+          pollJob(data.job.id, q);
         } catch (e) { $("pickerStatus").textContent = "Download failed: " + plainDownloadError(e.error || e.message || e); }
         return;
       }
@@ -3912,7 +3927,7 @@
         });
         upsertJob(data.job);
         showJobs();
-        try { $("pickerJob").scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {}
+        try { const c = jobCardEl(data.job.id); (c || $("pickerJob")).scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {}
         pollJob(data.job.id, q);
       } catch (e) {
         $("pickerStatus").textContent = "Download failed: " + plainDownloadError(e.error || e.message || e);
@@ -4066,31 +4081,58 @@
       return Object.values(state.jobs).some((x) => x.id !== exceptId && (x.status === "running" || x.status === "queued" || x.status === "cancelling"));
     }
     function jobCardEl(id) {
-      const el = $("pickerJob");
-      if (!el) return null;
-      return el.querySelector('[data-job-id="' + CSS.escape(String(id)) + '"]');
+      const root = $("pickerBody") || document;
+      return root.querySelector('[data-job-id="' + CSS.escape(String(id)) + '"]');
+    }
+    function jobCardHost(j) {
+      // Prefer a slot under the model this job belongs to. If that model
+      // is not in the current list, keep the card in the fallback area.
+      const repo = String((j && j.repo_id) || "");
+      if (repo) {
+        for (const row of document.querySelectorAll("#pickerList .p-row[data-repo-ids]")) {
+          const ids = (row.dataset.repoIds || "").split("\n");
+          if (ids.includes(repo)) {
+            let slot = row.querySelector(":scope > .picker-job-slot");
+            if (!slot) {
+              slot = document.createElement("div");
+              slot.className = "picker-job-slot";
+              row.appendChild(slot);
+            }
+            return slot;
+          }
+        }
+      }
+      return $("pickerJob");
     }
     function showJobs() {
-      const el = $("pickerJob");
+      const fallback = $("pickerJob");
       const jobs = Object.values(state.jobs);
-      if (!jobs.length) { el.hidden = true; el.innerHTML = ""; return; }
-      el.hidden = false;
       const seen = new Set();
+      let usedFallback = false;
       for (const j of jobs) {
         if (!j || !j.id) continue;
         seen.add(String(j.id));
+        const host = jobCardHost(j) || fallback;
+        if (host === fallback) usedFallback = true;
+        if (!host) continue;
         let card = jobCardEl(j.id);
         if (!card) {
           card = document.createElement("div");
           card.className = "picker-job";
           card.dataset.jobId = j.id;
-          el.appendChild(card);
+          host.appendChild(card);
+        } else if (card.parentElement !== host) {
+          host.appendChild(card);
         }
         renderJobCard(card, j);
       }
-      [...el.querySelectorAll("[data-job-id]")].forEach((card) => {
+      document.querySelectorAll("#pickerJob [data-job-id], .picker-job-slot [data-job-id]").forEach((card) => {
         if (!seen.has(card.dataset.jobId)) card.remove();
       });
+      if (fallback) {
+        fallback.hidden = !usedFallback;
+        if (!usedFallback) fallback.innerHTML = "";
+      }
     }
     function renderJobCard(card, j) {
       const prog = j.progress || {};
