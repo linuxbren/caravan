@@ -133,8 +133,8 @@ quiet trial, and reloads when you are not mid-reply. The same Before and
 After lines Auto-tune uses are filled. Auto-tune also compares 16-bit
 and 8-bit memory compression and scores how fast the model reads, how
 soon the first token arrives, and how fast it writes. To compare a GGUF
-model with its MLX counterpart, see `caravan bench` in
-[Day 25](DAY25.md).
+model with its MLX counterpart, see `caravan models` and
+`caravan bench` in [Day 25](DAY25.md).
 
 If a Self-tuning or Auto-tune trial stops, a short plain reason
 appears next to Self-tuning, for example

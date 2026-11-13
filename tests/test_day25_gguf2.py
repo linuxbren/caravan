@@ -22,6 +22,7 @@ import kv_auto  # noqa: E402
 import web_settings as WS  # noqa: E402
 import web_speed as S  # noqa: E402
 import caravan_bench as B  # noqa: E402
+import caravan_models as M  # noqa: E402
 
 
 def _decide_f16(*a, **k):
@@ -362,6 +363,8 @@ class Bench(unittest.TestCase):
         self.assertIn("caravan bench --gguf gguf/qwen --mlx mlx-community/qwen --yes", text)
         self.assertIn("--from-averages", text)
         self.assertIn("1st Mac", text)
+        self.assertIn("puts", text.lower())
+        self.assertIn("original model back", text)
         self.assertNotIn("tok/s", text)  # no invented speeds
         self.assertNotIn("prf-hays", text)
 
@@ -423,13 +426,17 @@ class Bench(unittest.TestCase):
                     }},
                 }
             raise AssertionError(url)
-        lines = B.run_live("gguf/a", "mlx/b", urlopen=urlopen,
-                           gguf_name="G", mlx_name="M", prompts=["hi"])
+        result = B.run_live("gguf/a", "mlx/b", urlopen=urlopen,
+                            gguf_name="G", mlx_name="M", prompts=["hi"])
+        lines = result["lines"]
         self.assertIn("G:", lines[0])
         self.assertIn("Write 20 tok at 20.0 tok/s", lines[0])
         self.assertIn("M:", lines[1])
         self.assertIn("Write 20 tok at 30.0 tok/s", lines[1])
         self.assertTrue(any(c.endswith("/api/models/load") for c in calls))
+        self.assertIsNone(result["error"])
+        self.assertIsNone(result["original"])  # started idle, nothing to put back
+        self.assertEqual(result["notes"], [])
 
     def test_caravan_dispatches_bench(self):
         import caravan as C
@@ -441,6 +448,275 @@ class Bench(unittest.TestCase):
         self.assertIn('"bench"', src)
 
 
+
+    def test_caravan_dispatches_models(self):
+        src = (ROOT / "tools/caravan.py").read_text()
+        self.assertIn('argv[0] == "models"', src)
+        self.assertIn('"models"', src)
+
+
+SAMPLE_MODELS = [
+    {"id": "gguf/qwen2.5-coder-7b-instruct-q4_k_m",
+     "name": "Qwen2.5 Coder 7B Instruct (GGUF)",
+     "source": "gguf", "backend": "llama", "usable": True},
+    {"id": "gguf/qwen2.5-coder-7b-instruct-q8_0",
+     "name": "Qwen2.5 Coder 7B Instruct Q8 (GGUF)",
+     "source": "gguf", "backend": "llama", "usable": True},
+    {"id": "gguf/qwen2.5-coder-14b-instruct-q4_k_m",
+     "name": "Qwen2.5 Coder 14B Instruct (GGUF)",
+     "source": "gguf", "backend": "llama", "usable": True},
+    {"id": "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",
+     "name": "Qwen2.5 Coder 7B Instruct",
+     "source": "hf-mlx", "hf": "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",
+     "usable": True},
+    {"id": "mlx-community/Qwen2.5-Coder-14B-Instruct-4bit",
+     "name": "Qwen2.5 Coder 14B Instruct",
+     "source": "hf-mlx", "hf": "mlx-community/Qwen2.5-Coder-14B-Instruct-4bit",
+     "usable": True},
+    {"id": "gguf/only-gguf-model-q4_k_m",
+     "name": "Only GGUF Model (GGUF)",
+     "source": "gguf", "backend": "llama", "usable": True},
+]
+
+
+class ModelsList(unittest.TestCase):
+    def test_one_line_per_model_with_id_and_kind(self):
+        text = M.format_list(SAMPLE_MODELS[:1] + SAMPLE_MODELS[3:4],
+                             current="mlx-community/Qwen2.5-Coder-7B-Instruct-4bit")
+        lines = [ln for ln in text.strip().splitlines() if ln]
+        self.assertEqual(len(lines), 2)
+        self.assertIn("Qwen2.5 Coder 7B Instruct  (GGUF)  gguf/qwen2.5-coder-7b-instruct-q4_k_m", lines[0])
+        self.assertNotIn("(currently loaded)", lines[0])
+        self.assertIn("Qwen2.5 Coder 7B Instruct  (MLX)  mlx-community/Qwen2.5-Coder-7B-Instruct-4bit  (currently loaded)", lines[1])
+
+    def test_not_running_is_plain(self):
+        text = M.format_list(SAMPLE_MODELS[:1], current="gguf/qwen2.5-coder-7b-instruct-q4_k_m", running=False)
+        self.assertIn("Caravan is not running", text)
+        self.assertIn("caravan start", text)
+        self.assertIn("gguf/qwen2.5-coder-7b-instruct-q4_k_m", text)
+        self.assertNotIn("currently loaded", text)  # cannot know
+
+    def test_empty_catalog(self):
+        text = M.format_list([], running=True)
+        self.assertIn("No models are downloaded", text)
+
+    def test_cli_uses_running_catalog(self):
+        cat = {
+            "models": SAMPLE_MODELS[:1] + SAMPLE_MODELS[3:4],
+            "current": "gguf/qwen2.5-coder-7b-instruct-q4_k_m",
+            "running": True,
+        }
+        buf = io.StringIO()
+        with mock.patch("caravan_models.fetch_catalog", return_value=cat), \
+             mock.patch("sys.stdout", buf):
+            rc = M.main([])
+        self.assertEqual(rc, 0)
+        out = buf.getvalue()
+        self.assertIn("(currently loaded)", out)
+        self.assertIn("(GGUF)", out)
+        self.assertIn("(MLX)", out)
+
+
+class NameMatch(unittest.TestCase):
+    def test_unique_pair_ignores_case_punctuation_and_quants(self):
+        # One 7B GGUF only, one 7B MLX: unique pair. Drop the Q8 GGUF.
+        models = [SAMPLE_MODELS[0], SAMPLE_MODELS[2], SAMPLE_MODELS[3], SAMPLE_MODELS[4]]
+        pair = M.resolve_pair(models, query="Qwen2.5 Coder 7B")
+        self.assertTrue(pair["ok"])
+        self.assertEqual(M.model_id(pair["gguf"]), "gguf/qwen2.5-coder-7b-instruct-q4_k_m")
+        self.assertEqual(M.model_id(pair["mlx"]), "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit")
+
+    def test_several_gguf_lists_ids_and_how_to_pick(self):
+        pair = M.resolve_pair(SAMPLE_MODELS, query="qwen2.5 coder 7b")
+        self.assertFalse(pair["ok"])
+        msg = "\n".join(pair["messages"])
+        self.assertIn("Several GGUF models match", msg)
+        self.assertIn("--gguf", msg)
+        self.assertIn("gguf/qwen2.5-coder-7b-instruct-q4_k_m", msg)
+        self.assertIn("gguf/qwen2.5-coder-7b-instruct-q8_0", msg)
+        # The 14B model is not a 7B match.
+        self.assertNotIn("14b", msg.lower())
+        # MLX side is unique for 7B, so it is chosen; only GGUF is ambiguous.
+        self.assertEqual(M.model_id(pair["mlx"]), "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit")
+
+    def test_none_match_is_plain(self):
+        pair = M.resolve_pair(SAMPLE_MODELS, query="gemma 4 26b")
+        self.assertFalse(pair["ok"])
+        msg = "\n".join(pair["messages"])
+        self.assertIn("No GGUF model matches 'gemma 4 26b'", msg)
+        self.assertIn("No MLX model matches 'gemma 4 26b'", msg)
+        self.assertIn("caravan models", msg)
+
+    def test_one_side_only(self):
+        pair = M.resolve_pair(SAMPLE_MODELS, query="only gguf model")
+        self.assertFalse(pair["ok"])
+        msg = "\n".join(pair["messages"])
+        self.assertIn("No MLX model matches", msg)
+        self.assertEqual(M.model_id(pair["gguf"]), "gguf/only-gguf-model-q4_k_m")
+
+    def test_flags_override_and_disambiguate(self):
+        pair = M.resolve_pair(
+            SAMPLE_MODELS, query="qwen2.5 coder 7b",
+            gguf_id="gguf/qwen2.5-coder-7b-instruct-q8_0",
+        )
+        self.assertTrue(pair["ok"])
+        self.assertEqual(M.model_id(pair["gguf"]), "gguf/qwen2.5-coder-7b-instruct-q8_0")
+        self.assertEqual(M.model_id(pair["mlx"]), "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit")
+
+    def test_flags_alone_still_work(self):
+        pair = M.resolve_pair(
+            SAMPLE_MODELS,
+            gguf_id="gguf/qwen2.5-coder-7b-instruct-q4_k_m",
+            mlx_id="mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",
+        )
+        self.assertTrue(pair["ok"])
+        self.assertEqual(M.model_id(pair["gguf"]), "gguf/qwen2.5-coder-7b-instruct-q4_k_m")
+
+    def test_cli_without_yes_shows_pair_and_command(self):
+        models = [SAMPLE_MODELS[0], SAMPLE_MODELS[3]]
+        buf = io.StringIO()
+        with mock.patch("sys.stdout", buf):
+            rc = B.main(["qwen2.5 coder 7b"], models=models)
+        self.assertEqual(rc, 0)
+        out = buf.getvalue()
+        self.assertIn("This would compare", out)
+        self.assertIn("gguf/qwen2.5-coder-7b-instruct-q4_k_m", out)
+        self.assertIn("mlx-community/Qwen2.5-Coder-7B-Instruct-4bit", out)
+        self.assertIn("caravan bench --gguf gguf/qwen2.5-coder-7b-instruct-q4_k_m --mlx mlx-community/Qwen2.5-Coder-7B-Instruct-4bit --yes", out)
+        self.assertIn('caravan bench "qwen2.5 coder 7b" --yes', out)
+        self.assertIn("original model back", out)
+        self.assertNotIn("tok/s", out)
+
+    def test_cli_ambiguous_prints_candidates(self):
+        buf = io.StringIO()
+        with mock.patch("sys.stdout", buf):
+            rc = B.main(["qwen2.5 coder 7b"], models=SAMPLE_MODELS)
+        self.assertEqual(rc, 2)
+        out = buf.getvalue()
+        self.assertIn("Several GGUF models match", out)
+        self.assertIn("--gguf", out)
+        self.assertIn("gguf/qwen2.5-coder-7b-instruct-q8_0", out)
+
+
+class RestoreOriginal(unittest.TestCase):
+    def _urlopen(self, loaded, calls, *, fail_chat_on=None, fail_restore=False):
+        def urlopen(url, data=None, timeout=30, headers=None):
+            body = {}
+            if data:
+                import json as _json
+                body = _json.loads(data.decode() if isinstance(data, (bytes, bytearray)) else data)
+            calls.append((url, body))
+            if url.endswith("/api/status"):
+                mid = loaded.get("id")
+                return {"worker": {
+                    "status": "ready" if mid else "idle",
+                    "model_id": mid,
+                    "model_name": loaded.get("name") or mid,
+                }}
+            if url.endswith("/api/models/load"):
+                if fail_restore and body.get("id") == "orig/model":
+                    # Accept the load request, then status will... actually
+                    # raise here so restore catches it.
+                    raise RuntimeError("restore refused")
+                loaded["id"] = body.get("id")
+                loaded["name"] = body.get("id")
+                return {"ok": True}
+            if url.endswith("/api/chat"):
+                if fail_chat_on and loaded.get("id") == fail_chat_on:
+                    raise RuntimeError("chat failed")
+                write = 20.0 if str(loaded.get("id", "")).startswith("gguf/") else 30.0
+                return {
+                    "caravan_web": {"stats": {
+                        "write_tok_s": write, "read_tok_s": 100, "ttft_s": 0.20,
+                        "prompt_tokens": 50, "completion_tokens": 20, "total_s": 0.80,
+                    }},
+                }
+            raise AssertionError(url)
+        return urlopen
+
+    def test_puts_original_back_after_success(self):
+        loaded = {"id": "orig/model", "name": "Original Model"}
+        calls = []
+        result = B.run_live(
+            "gguf/a", "mlx/b", urlopen=self._urlopen(loaded, calls),
+            gguf_name="G", mlx_name="M", prompts=["hi"],
+        )
+        self.assertIsNone(result["error"])
+        self.assertEqual(result["original"], "orig/model")
+        self.assertIn("Putting the original model back: Original Model.", result["notes"])
+        loads = [body.get("id") for url, body in calls if url.endswith("/api/models/load")]
+        self.assertEqual(loads, ["gguf/a", "mlx/b", "orig/model"])
+        self.assertEqual(loaded["id"], "orig/model")
+        self.assertIn("Write 20 tok at 20.0 tok/s", result["lines"][0])
+        self.assertIn("Write 20 tok at 30.0 tok/s", result["lines"][1])
+
+    def test_puts_original_back_when_a_measurement_fails(self):
+        loaded = {"id": "orig/model", "name": "Original Model"}
+        calls = []
+        result = B.run_live(
+            "gguf/a", "mlx/b",
+            urlopen=self._urlopen(loaded, calls, fail_chat_on="gguf/a"),
+            gguf_name="G", mlx_name="M", prompts=["hi"],
+        )
+        self.assertIsNotNone(result["error"])
+        self.assertIn("chat failed", str(result["error"]))
+        self.assertEqual(result["lines"], [])  # failed before any line
+        self.assertIn("Putting the original model back: Original Model.", result["notes"])
+        loads = [body.get("id") for url, body in calls if url.endswith("/api/models/load")]
+        self.assertEqual(loads, ["gguf/a", "orig/model"])
+        self.assertEqual(loaded["id"], "orig/model")
+
+    def test_restore_failure_is_plain_and_results_still_show(self):
+        loaded = {"id": "orig/model", "name": "Original Model"}
+        calls = []
+        result = B.run_live(
+            "gguf/a", "mlx/b",
+            urlopen=self._urlopen(loaded, calls, fail_restore=True),
+            gguf_name="G", mlx_name="M", prompts=["hi"],
+        )
+        self.assertIsNone(result["error"])
+        self.assertEqual(len(result["lines"]), 2)
+        self.assertIn("Putting the original model back: Original Model.", result["notes"])
+        self.assertTrue(any("Could not put the original model back" in n for n in result["notes"]))
+
+    def test_already_the_original_is_said_plainly(self):
+        # Original is the MLX side, which is the last one measured.
+        loaded = {"id": "mlx/b", "name": "MLX Side"}
+        calls = []
+        result = B.run_live(
+            "gguf/a", "mlx/b", urlopen=self._urlopen(loaded, calls),
+            gguf_name="G", mlx_name="M", prompts=["hi"],
+        )
+        self.assertIsNone(result["error"])
+        self.assertIn("Putting the original model back: MLX Side.", result["notes"])
+        self.assertIn("It is already loaded.", result["notes"])
+        loads = [body.get("id") for url, body in calls if url.endswith("/api/models/load")]
+        self.assertEqual(loads, ["gguf/a", "mlx/b"])  # no third load
+
+    def test_main_prints_restore_note(self):
+        loaded = {"id": "orig/model", "name": "Original Model"}
+        calls = []
+        models = [SAMPLE_MODELS[0], SAMPLE_MODELS[3]]
+        buf = io.StringIO()
+        err = io.StringIO()
+        with mock.patch.object(B, "_urlopen", self._urlopen(loaded, calls)), \
+             mock.patch("sys.stdout", buf), mock.patch("sys.stderr", err):
+            # main() calls run_live which defaults to _urlopen; pass through
+            # by patching run_live's default is already bound. Patch run_live.
+            urlopen = self._urlopen(loaded, calls)
+            real_live = B.run_live
+            def fake_live(*a, **k):
+                k.setdefault("urlopen", urlopen)
+                k.setdefault("prompts", ["hi"])
+                return real_live(*a, **k)
+            with mock.patch.object(B, "run_live", side_effect=fake_live):
+                rc = B.main(["qwen2.5 coder 7b", "--yes"], models=models)
+        self.assertEqual(rc, 0)
+        out = buf.getvalue()
+        self.assertIn("Putting the original model back: Original Model.", out)
+        self.assertIn("Write 20 tok at 20.0 tok/s", out)
+
+
 class Docs(unittest.TestCase):
     def test_day25_docs_are_plain(self):
         day = ROOT / "docs/DAY25.md"
@@ -450,6 +726,7 @@ class Docs(unittest.TestCase):
         self.assertIn("Chat window", text)
         self.assertIn("Two chats", text)
         self.assertIn("caravan bench", text)
+        self.assertIn("caravan models", text)
         self.assertIn("1st Mac", text)
         self.assertIn("2nd Mac", text)
         for bad in ("prf-hays", "16 GB", "24 GB", "exo1", "exo2", "262144"):
@@ -460,6 +737,7 @@ class Docs(unittest.TestCase):
         self.assertIn("caravan bench", web)
         inst = (ROOT / "INSTALL.md").read_text()
         self.assertIn("`caravan bench`", inst)
+        self.assertIn("`caravan models`", inst)
 
 
 if __name__ == "__main__":

@@ -35,7 +35,8 @@ to install it. Setup keeps your existing models and settings.
 | `caravan start` | Starts it again |
 | `caravan doctor` | Shows detailed checks when something goes wrong |
 | `caravan update` | Updates Caravan and brings the page back |
-| `caravan bench` | Compare a GGUF model to its MLX counterpart; prints the same wording as the stats under a reply. Run `caravan bench --help` for the exact steps |
+| `caravan models` | Lists downloaded models, with a friendly name, GGUF or MLX, and the id to copy. Marks the currently loaded one |
+| `caravan bench` | Compare a GGUF model to its MLX counterpart by a plain name or by ids; prints the same wording as the stats under a reply. Without `--yes` it shows the pair and the exact command. After a live run it puts the original model back. Run `caravan bench --help` for details |
 
 Use **Unload** in the browser to free the model's memory before stopping.
 After restarting your Mac, unlock it and log in. Caravan starts and brings

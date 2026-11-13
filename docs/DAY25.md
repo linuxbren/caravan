@@ -50,25 +50,47 @@ chat. Set 2 and apply to let two chats share the model at the same
 time, including on one Mac. The page no longer treats this as locked
 off. Guess-ahead and Prompt lookup stay off for GGUF.
 
+### `caravan models`
+
+Lists the models already downloaded and ready to load, one line each:
+the friendly name, whether it is GGUF or MLX, and the id to copy.
+The currently loaded model is marked. The list comes from a running
+Caravan. If Caravan is not running, the command says so and lists
+what it can see on this Mac's disk.
+
+    caravan models
+
 ### `caravan bench`
 
-A new command compares a GGUF model to its MLX counterpart and prints
-each side in the same wording as the stats under a reply:
+Compares a GGUF model to its MLX counterpart and prints each side in
+the same wording as the stats under a reply:
 
     Read X tok at Y tok/s · Write Z tok at W tok/s · first token A s · total B s
 
-It does not invent numbers. Without `--yes` it only prints the exact
-steps. `--from-averages` prints already-saved chat averages without
-loading or unloading a model. `--yes` loads each model in turn on a
-running Caravan (the currently loaded model is replaced until the
-command finishes) and measures with the same prompts Auto-tune uses.
+It does not invent numbers. Pass a plain name, and Caravan finds the
+matching GGUF and MLX among downloaded models (it ignores case,
+punctuation, and quant suffixes). If none, one, or several match on a
+side, it lists the candidates with their ids and how to pick with
+`--gguf` or `--mlx`. Those flags still work on their own.
+
+Without `--yes` it shows which two models it would compare and the
+exact command, and does not load anything. `--from-averages` prints
+already-saved chat averages without loading or unloading a model.
+`--yes` loads each model in turn on a running Caravan and measures
+with the same prompts Auto-tune uses. When the comparison finishes, or
+if a measurement fails, Caravan puts the original model back, if one
+was loaded, and says so.
 
 On the 1st Mac, with both models already downloaded:
 
-    caravan bench --gguf <gguf-id> --mlx <mlx-id> --yes
+    caravan models
+    caravan bench "qwen2.5 coder 7b" --yes
 
-Example ids, when those files are on disk: a Qwen2.5 Coder 7B GGUF
-(Q4_K_M or similar) and the matching MLX 4-bit repo.
+Without `--yes`, the same command only prints the pair it would
+compare and the exact command. To pick a specific file when several
+match:
+
+    caravan bench --gguf <gguf-id> --mlx <mlx-id> --yes
 
 Live GGUF vs MLX numbers from this command are not in this note. They
 wait for Brenden to run it on the Macs.
@@ -93,6 +115,9 @@ hidden.
 
 New tests cover the launch flags, Auto Chat window (fallback, cap,
 fit, and shorter trained windows), Settings pins, Self-tuning's one
-quiet trial (keep, revert, pins, and a reload only when idle), and
-`caravan bench` wording and steps. Existing tests were updated for the
-new Settings rows.
+quiet trial (keep, revert, pins, and a reload only when idle),
+`caravan models`, plain-name matching for `caravan bench` (unique,
+several, none, and `--gguf`/`--mlx` still work), putting the original
+model back after a live comparison even when a measurement fails, and
+bench wording and steps. Existing tests were updated for the new
+Settings rows.

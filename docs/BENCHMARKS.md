@@ -4,11 +4,14 @@ Only measured numbers are listed here, each with where it came from. The
 raw step-by-step notes are in [LOG.md](LOG.md).
 
 To compare a GGUF model with its MLX counterpart on your own Macs, in
-the same wording as the stats under a reply, run `caravan bench`.
-Without `--yes` it only prints the exact steps and does not load a
-model. `--from-averages` prints already-saved chat averages. See
-[Day 25](DAY25.md). Numbers from that command are added here only after
-they have been measured.
+the same wording as the stats under a reply, run `caravan models` to
+see downloaded models and their ids, then `caravan bench "qwen2.5
+coder 7b"` (or another plain name). Without `--yes` it shows which two
+it would compare and the exact command, and does not load a model.
+`--yes` measures and then puts the original model back. `--from-averages`
+prints already-saved chat averages. If several files match, pick with
+`--gguf` and `--mlx`. See [Day 25](DAY25.md). Numbers from that command
+are added here only after they have been measured.
 
 ## Method
 

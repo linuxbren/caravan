@@ -6,8 +6,13 @@
 - Chat window is a Settings row with a sane Auto default from the
   model and this Mac's memory. Two chats is available for GGUF; Auto
   keeps one chat. Guess-ahead and Prompt lookup stay off.
+- `caravan models` lists downloaded models with a friendly name, GGUF
+  or MLX, and the id to copy, and marks the currently loaded one.
 - `caravan bench` compares a GGUF model to its MLX counterpart in the
   same wording as the stats under a reply, without inventing numbers.
+  A plain name finds the matching pair among downloaded models.
+  `--gguf` and `--mlx` still work. After a live run, the original
+  model is put back, even if a measurement failed.
 - See [Day 25](docs/DAY25.md). This follow-up does not change
   `agent/`, `runtime/`, or the requirements files, so a `caravan
   update` from the Day 24 pin keeps a loaded model running. The web
