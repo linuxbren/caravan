@@ -106,7 +106,7 @@ class SettingsRows(unittest.TestCase):
         self.assertEqual(
             ids,
             ["self_tune", "guess_ahead", "prompt_lookup", "shared_start",
-             "pipeline_chats", "kv_bits", "flash_attn", "ubatch"],
+             "pipeline_chats", "chat_window", "kv_bits", "flash_attn", "ubatch"],
         )
         self.assertNotIn("fuse_kernels", ids)
         self.assertNotIn("keepalive", ids)
@@ -120,7 +120,14 @@ class SettingsRows(unittest.TestCase):
         self.assertIn("Leave on unless a test says off", fa["help"])
         ub = next(o for o in WS.options_for("gguf") if o["id"] == "ubatch")
         self.assertIn("long question", ub["help"])
-        for locked in ("guess_ahead", "prompt_lookup", "pipeline_chats"):
+        pc = next(x for x in WS.options_for("gguf") if x["id"] == "pipeline_chats")
+        self.assertFalse(pc.get("locked"))
+        self.assertIn("at the same time", pc["help"])
+        cw = next(x for x in WS.options_for("gguf") if x["id"] == "chat_window")
+        self.assertEqual(cw["values"][0], "auto")
+        self.assertIn("4096", cw["values"])
+        self.assertIn("keep in mind", cw["help"])
+        for locked in ("guess_ahead", "prompt_lookup"):
             o = next(x for x in WS.options_for("gguf") if x["id"] == locked)
             self.assertTrue(o["locked"])
             self.assertEqual(o["forced"], "off")
@@ -131,6 +138,7 @@ class SettingsRows(unittest.TestCase):
         self.assertIn("keepalive", ids)
         self.assertNotIn("flash_attn", ids)
         self.assertNotIn("ubatch", ids)
+        self.assertNotIn("chat_window", ids)
         kv = next(o for o in WS.options_for("mlx") if o["id"] == "kv_bits")
         self.assertIn("4", kv["values"])
 

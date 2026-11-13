@@ -27,6 +27,9 @@ OPT_IDS = (
     "kv_bits",
     "keepalive",
 )
+# GGUF-only pins. Auto or missing is omitted so existing averages stay
+# in the same bucket when these are left on Auto.
+GGUF_OPT_IDS = ("flash_attn", "ubatch", "chat_window")
 
 STORE_PATH = Path(os.environ.get(
     "CARAVAN_SPEED_AVERAGES",
@@ -38,6 +41,10 @@ def fingerprint(opts) -> str:
     """Stable key for one set of optimizations."""
     opts = opts if isinstance(opts, dict) else {}
     clean = {k: str(opts.get(k, "")).strip().lower() for k in OPT_IDS}
+    for k in GGUF_OPT_IDS:
+        v = str(opts.get(k, "")).strip().lower()
+        if v and v != "auto":
+            clean[k] = v
     return json.dumps(clean, separators=(",", ":"), sort_keys=True)
 
 

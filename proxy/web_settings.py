@@ -31,9 +31,12 @@ OPTIONS = [
      "values": ["auto", "on", "off"]},
     {"id": "pipeline_chats", "label": "Two chats",
      "help": "Let two chats use different Minis at the same time when an MLX model is split. Up to ~70% more combined output in our tests without a helper; no gain on one Mini, and slower with a helper.",
-     "help_gguf": "Let two chats share the model. Not used until they will not get in each other's way.",
-     "values": ["auto", "1", "2"],
-     "locked_for_gguf": "off"},
+     "help_gguf": "Let two chats share the model at the same time. Auto keeps one chat.",
+     "values": ["auto", "1", "2"]},
+    {"id": "chat_window", "label": "Chat window",
+     "help": "How much of the conversation the model can keep in mind at once. Auto picks a size that fits this model and this Mac.",
+     "values": ["auto", "4096", "8192", "16384", "32768", "65536"],
+     "backends": ("gguf",)},
     {"id": "fuse_kernels", "label": "Fused kernels",
      "help": "Combine small GPU steps when running an MLX model. Experimental — no meaningful speed gain in our tests; some models are incompatible.",
      "values": ["auto", "on"],
@@ -304,14 +307,14 @@ def merge_with_file(page: dict, fsets: dict):
     return s, used
 
 
-def options_for(source="mlx", model_dir=None, config=None) -> list:
+def options_for(source="mlx", model_dir=None, config=None, n_minis=1) -> list:
     """Settings rows for this model type, with the matching help and values.
 
     GGUF hides Fused kernels and GPU keep-warm, drops 4-bit memory
-    compression, and marks Guess-ahead, Prompt lookup, and Two chats as
-    locked off for now. On MLX, Memory compression 4 is still listed
-    but marked disabled when this model's chat memory is too compact
-    for 4 to work well.
+    compression, and marks Guess-ahead and Prompt lookup as locked off
+    for now. Two chats and Chat window are offered. On MLX, Memory
+    compression 4 is still listed but marked disabled when this model's
+    chat memory is too compact for 4 to work well.
     """
     src = "gguf" if (source or "").lower() == "gguf" else "mlx"
     disabled = {}
@@ -321,6 +324,17 @@ def options_for(source="mlx", model_dir=None, config=None) -> list:
             disabled = K.disabled_values_for(config, model_dir=model_dir, source=src)
         except Exception:
             disabled = {}
+    ctx_disabled = {}
+    ctx_auto = None
+    if src == "gguf" and model_dir:
+        try:
+            import gguf_split as G
+            ctx_disabled = G.disabled_ctx_values(
+                model_dir, n_slots=1, n_devices=max(1, int(n_minis or 1)))
+            ctx_auto = G.auto_ctx(
+                model_dir, n_slots=1, n_devices=max(1, int(n_minis or 1)))
+        except Exception:
+            ctx_disabled, ctx_auto = {}, None
     out = []
     for o in OPTIONS:
         backends = o.get("backends") or ("mlx", "gguf")
@@ -337,6 +351,15 @@ def options_for(source="mlx", model_dir=None, config=None) -> list:
             item["forced"] = o["locked_for_gguf"]
         if o.get("id") == "kv_bits" and disabled:
             item["disabled_values"] = dict(disabled)
+        if o.get("id") == "chat_window":
+            if ctx_disabled:
+                item["disabled_values"] = dict(ctx_disabled)
+            if ctx_auto:
+                item["auto_value"] = int(ctx_auto)
+                item["help"] = (
+                    "How much of the conversation the model can keep in mind at once. "
+                    f"Auto is {ctx_auto} for this model."
+                )
         out.append(item)
     return out
 
@@ -345,7 +368,9 @@ def apply_gguf_settings(tune: dict, settings) -> dict:
     """Merge page Settings (pins) onto a learned GGUF tune. Pins win.
 
     Auto leaves the learned/default value. Guess-ahead and Prompt lookup
-    cannot be turned on for GGUF here.
+    cannot be turned on for GGUF here. Chat window and Two chats pins
+    become ctx and n_slots; Auto leaves them unset so the loader picks
+    a sane window and one slot.
     """
     out = dict(tune or {})
     try:
@@ -370,5 +395,48 @@ def apply_gguf_settings(tune: dict, settings) -> dict:
         out["slot_save"] = False
     elif ss == "on":
         out["slot_save"] = True
+    cw = s.get("chat_window")
+    if cw in ("4096", "8192", "16384", "32768", "65536"):
+        out["ctx"] = int(cw)
+    elif cw == "auto":
+        out.pop("ctx", None)
+    pc = s.get("pipeline_chats")
+    if pc in ("1", "2"):
+        out["n_slots"] = int(pc)
+    elif pc == "auto":
+        out.pop("n_slots", None)
     return out
+
+
+def gguf_active_settings(tune=None, settings=None, *, launch=None) -> dict:
+    """Chip-facing 'active' dict for a loaded GGUF model (no /caravan/settings)."""
+    tune = dict(tune or {})
+    try:
+        s = normalize(settings or {})
+    except (ValueError, TypeError):
+        s = {}
+    launch = dict(launch or {})
+    ctx = launch.get("ctx") or tune.get("ctx")
+    n_slots = launch.get("n_slots") or tune.get("n_slots") or 1
+    ct = tune.get("cache_type")
+    if ct == "f16":
+        kv = 16
+    elif ct == "q8_0":
+        kv = 8
+    else:
+        kv = None
+    return {
+        "backend": "llama",
+        "self_tune": s.get("self_tune") != "off",
+        "guess_ahead": False,
+        "guess_ahead_loaded": False,
+        "shared_start": tune.get("slot_save", True) is not False,
+        "pipeline_chats": int(n_slots),
+        "two_chats_available": True,
+        "kv_bits": kv,
+        "flash_attn": tune.get("flash_attn") or "on",
+        "ubatch": tune.get("ubatch") or 512,
+        "chat_window": int(ctx) if ctx else None,
+        "pinned": [k for k, v in s.items() if v not in (None, "", "auto")],
+    }
 

@@ -120,14 +120,21 @@ Apply & restart) and not every model supports every feature. See
 it during an important chat. See [optimization](OPTIMIZE-NOW.md).
 
 When a GGUF model is loaded, Self-tuning, Memory compression, Shared start,
-**Flash attention**, and **Prompt batch** are used, with plain-word hints.
-Memory compression offers Auto, 16, and 8 only (never 4). Guess-ahead and
-Prompt lookup stay off for now. Fused kernels and GPU keep-warm are hidden,
-because they do not apply. Self-tuning on a GGUF model reloads when you
-are not mid-reply. Auto-tune also compares 16-bit and 8-bit memory
-compression and scores how fast the model reads, how soon the first
-token arrives, and how fast it writes, so the two Before and After
-lines work for GGUF as well.
+**Two chats**, **Chat window**, **Flash attention**, and **Prompt batch**
+are used, with plain-word hints. Memory compression offers Auto, 16, and
+8 only (never 4). Chat window Auto picks a size that fits this model and
+this Mac, falling back to the same default as before when that cannot be
+measured, and never jumping to a much larger window. Two chats Auto keeps
+one chat; set 2 and apply to let two chats share the model at the same
+time, including on one Mac. Guess-ahead and Prompt lookup stay off for
+now. Fused kernels and GPU keep-warm are hidden, because they do not
+apply. Self-tuning on a GGUF model learns from real chats, proposes one
+quiet trial, and reloads when you are not mid-reply. The same Before and
+After lines Auto-tune uses are filled. Auto-tune also compares 16-bit
+and 8-bit memory compression and scores how fast the model reads, how
+soon the first token arrives, and how fast it writes. To compare a GGUF
+model with its MLX counterpart, see `caravan bench` in
+[Day 25](DAY25.md).
 
 If a Self-tuning or Auto-tune trial stops, a short plain reason
 appears next to Self-tuning, for example

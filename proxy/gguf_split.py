@@ -22,6 +22,13 @@ from llama_runtime import bin_dir as llama_bin_dir
 LLAMA_BIN = str(llama_bin_dir())
 RPC_PORT = int(os.environ.get("CARAVAN_GGUF_RPC_PORT", "50052"))
 GGUF_CTX = int(os.environ.get("CARAVAN_GGUF_CTX", "8192"))
+# Offered Chat window sizes. Auto never jumps past AUTO_CAP, and never
+# to the agent path's much larger window. 8192 stays the fallback when
+# the model or memory cannot be measured.
+GGUF_CTX_CHOICES = (4096, 8192, 16384, 32768, 65536)
+GGUF_CTX_AUTO_CAP = 32768
+GGUF_DEFAULT_SLOTS = 1
+GGUF_MAX_SLOTS = 2
 GGUF_ROOTS = [Path(p).expanduser() for p in os.environ.get(
     "CARAVAN_GGUF_ROOTS", "~/.caravan/models").split(":") if p]
 # macOS lets Metal wire ~75% of RAM (recommendedMaxWorkingSetSize); keep
@@ -148,20 +155,168 @@ def tensor_split(nodes: list) -> list:
     return [round(c, 1) for c in caps]
 
 
-def slot_save_dir(cache_type_k: str, cache_type_v: str, root=None) -> Path:
+def model_context_length(model_path, meta_fn=None):
+    """Trained context length from the GGUF header, or None if unknown."""
+    try:
+        import gguf_meta
+        fn = meta_fn or gguf_meta.read_metadata
+        meta = fn(model_path)
+        arch = meta.get("general.architecture") or ""
+        v = meta.get(f"{arch}.context_length")
+        if v is None:
+            return None
+        n = int(v)
+        return n if n > 0 else None
+    except Exception:
+        return None
+
+
+def ctx_estimate(model_path, ctx: int, *, n_slots: int = 1,
+                 ubatch: int = GGUF_DEFAULT_UBATCH, n_devices: int = 1,
+                 decide=None):
+    """(need_q8_mib, budget_mib) from kv_auto, or (None, None) if unknown."""
+    try:
+        import kv_auto
+        fn = decide or kv_auto.decide
+        d = fn(
+            model_path, n_slots=max(1, int(n_slots)), ctx_per_slot=int(ctx),
+            n_ubatch=int(ubatch), n_devices=max(1, int(n_devices)),
+        )
+        est = d.estimate or {}
+        need = est.get("need_q8_0_mib")
+        budget = est.get("budget_mib")
+        if need is None or budget is None:
+            return None, None
+        return float(need), float(budget)
+    except Exception:
+        return None, None
+
+
+def ctx_fits_known(model_path, ctx: int, **kw):
+    """True if the lighter memory option fits, False if not, None if unknown."""
+    need, budget = ctx_estimate(model_path, ctx, **kw)
+    if need is None or budget is None:
+        return None
+    return need <= budget
+
+
+def auto_ctx(model_path, *, n_slots: int = 1, ubatch: int = GGUF_DEFAULT_UBATCH,
+             n_devices: int = 1, decide=None, meta_fn=None) -> int:
+    """Sane Chat window from this model and this Mac's memory.
+
+    Keeps the trusted 8192 default when the file or memory cannot be
+    measured. Never returns more than GGUF_CTX_AUTO_CAP, and never the
+    agent path's much larger window. May pick a shorter window when the
+    model was trained for less, or a longer one (up to the cap) when
+    both the model and memory allow it.
+    """
+    trained = model_context_length(model_path, meta_fn=meta_fn)
+    if not trained:
+        return GGUF_CTX
+    cap = min(int(trained), GGUF_CTX_AUTO_CAP)
+    choices = [c for c in GGUF_CTX_CHOICES if c <= cap]
+    if not choices:
+        return max(1, cap)
+    # Start at the trusted default when the model allows it. If the model
+    # was trained for less, start at the largest offered size within that
+    # window. Grow past the default only when memory is known to fit.
+    if GGUF_CTX <= cap and GGUF_CTX in choices:
+        best = GGUF_CTX
+    else:
+        best = choices[-1]
+    for c in choices:
+        if c <= best:
+            continue
+        fits = ctx_fits_known(
+            model_path, c, n_slots=n_slots, ubatch=ubatch,
+            n_devices=n_devices, decide=decide,
+        )
+        if fits is True:
+            best = c
+        else:
+            # Unknown or too large: do not grow further.
+            break
+    return best
+
+
+def disabled_ctx_values(model_path, *, n_slots: int = 1,
+                        ubatch: int = GGUF_DEFAULT_UBATCH, n_devices: int = 1,
+                        decide=None, meta_fn=None) -> dict:
+    """{value: plain reason} for Chat window sizes that stay listed but unusable."""
+    out = {}
+    trained = model_context_length(model_path, meta_fn=meta_fn)
+    for c in GGUF_CTX_CHOICES:
+        if trained and c > trained:
+            out[str(c)] = "This model was trained for a shorter window."
+            continue
+        fits = ctx_fits_known(
+            model_path, c, n_slots=n_slots, ubatch=ubatch,
+            n_devices=n_devices, decide=decide,
+        )
+        if fits is False:
+            out[str(c)] = "This window will not fit in this Mac's memory with this model."
+    return out
+
+
+def resolve_launch(model_path, *, tune=None, ctx=None, decide=None,
+                   n_devices: int = 1, ubatch: int = GGUF_DEFAULT_UBATCH,
+                   meta_fn=None) -> dict:
+    """Resolved per-chat window and slot count for a web llama-server start.
+
+    Pins on the tune win. Auto Chat window uses auto_ctx(). Auto Two chats
+    is one slot. -c passed to llama-server is window times slots.
+    """
+    tune = dict(tune or {})
+    try:
+        n_slots = int(tune["n_slots"]) if tune.get("n_slots") is not None else GGUF_DEFAULT_SLOTS
+    except (TypeError, ValueError):
+        n_slots = GGUF_DEFAULT_SLOTS
+    n_slots = max(1, min(int(n_slots), GGUF_MAX_SLOTS))
+    raw = tune.get("ctx") if tune.get("ctx") is not None else ctx
+    if raw is not None:
+        try:
+            ctx_per = int(raw)
+        except (TypeError, ValueError):
+            ctx_per = auto_ctx(
+                model_path, n_slots=n_slots, ubatch=ubatch,
+                n_devices=n_devices, decide=decide, meta_fn=meta_fn,
+            )
+    else:
+        ctx_per = auto_ctx(
+            model_path, n_slots=n_slots, ubatch=ubatch,
+            n_devices=n_devices, decide=decide, meta_fn=meta_fn,
+        )
+    if ctx_per < 1:
+        ctx_per = GGUF_CTX
+    return {
+        "ctx": ctx_per,
+        "n_slots": n_slots,
+        "total_ctx": ctx_per * n_slots,
+    }
+
+
+def slot_save_dir(cache_type_k: str, cache_type_v: str, root=None,
+                  ctx=None, n_slots=None) -> Path:
     """Per-type folder so a memory-compression change starts a fresh (cold) save.
 
-    Old slot files from a different KV type are not required and are not
-    loaded — they live in a different folder.
+    Old slot files from a different KV type, window, or slot count are not
+    required and are not loaded — they live in a different folder. The
+    default 8192 window and one slot keep the original folder name so
+    existing saves still apply.
     """
     base = Path(root) if root is not None else GGUF_SLOT_ROOT
-    return Path(str(base)).expanduser() / f"{cache_type_k}_{cache_type_v}"
+    name = f"{cache_type_k}_{cache_type_v}"
+    if ctx is not None and int(ctx) != GGUF_CTX:
+        name += f"_c{int(ctx)}"
+    if n_slots is not None and int(n_slots) > 1:
+        name += f"_s{int(n_slots)}"
+    return Path(str(base)).expanduser() / name
 
 
 def resolve_web_kv(*, flash_attn: str = "on", cache_type=None,
                    cache_type_k=None, cache_type_v=None,
                    model_path=None, ctx: int = GGUF_CTX, ubatch: int = GGUF_DEFAULT_UBATCH,
-                   n_devices: int = 1, decide=None) -> tuple:
+                   n_devices: int = 1, n_slots: int = 1, decide=None) -> tuple:
     """Resolve -ctk/-ctv to f16 or q8_0. Never 4-bit. Quantized V needs flash on."""
     allowed = set(GGUF_KV_TYPES)
 
@@ -187,7 +342,7 @@ def resolve_web_kv(*, flash_attn: str = "on", cache_type=None,
                 import kv_auto
                 fn = decide or kv_auto.decide
                 d = fn(
-                    model_path, n_slots=1, ctx_per_slot=int(ctx),
+                    model_path, n_slots=max(1, int(n_slots)), ctx_per_slot=int(ctx),
                     n_ubatch=int(ubatch),
                     cache_type_k="auto" if k == "auto" else k,
                     cache_type_v="auto" if v == "auto" else v,
@@ -212,19 +367,24 @@ def resolve_web_kv(*, flash_attn: str = "on", cache_type=None,
 
 
 def llama_args(model_path: str, *, port: int, peers: list, shares: list,
-               ctx: int = GGUF_CTX, bin_dir: str = LLAMA_BIN,
-               tune: Optional[dict] = None, decide=None, slot_root=None) -> list:
+               ctx: int = None, bin_dir: str = LLAMA_BIN,
+               tune: Optional[dict] = None, decide=None, slot_root=None,
+               meta_fn=None) -> list:
     """llama-server argv. peers = ["host:port", ...] (empty for one Mini).
 
     Always passes the flags Caravan already trusts on the agent path: flash
     attention, auto KV (f16 or q8_0 only), default prompt batch, saved slots,
-    and --cache-ram 0. Context stays at the web default (8192); it is not
-    raised to the agent path's larger window.
+    and --cache-ram 0. Chat window defaults to a size that fits this model
+    and this Mac, falling back to 8192 when that cannot be measured, and
+    never jumping to the agent path's much larger window. Two chats adds
+    --parallel and --no-kv-unified, and -c is the per-chat window times
+    the number of slots.
 
     tune: {"flash_attn": "on"|"off", "ubatch": int, "cache_type": "f16"|"q8_0",
-           "slot_save": bool}.
+           "slot_save": bool, "ctx": int, "n_slots": 1|2}.
+    Use resolve_launch() for the resolved ctx, n_slots, and total_ctx.
     """
-    tune = tune or {}
+    tune = dict(tune or {})
     fa = tune.get("flash_attn", "on")
     if fa not in ("on", "off"):
         raise ValueError("flash_attn must be on or off")
@@ -232,21 +392,29 @@ def llama_args(model_path: str, *, port: int, peers: list, shares: list,
     if ub not in GGUF_UBATCH:
         raise ValueError("ubatch must be one of %s" % (GGUF_UBATCH,))
     batch = max(ub, GGUF_DEFAULT_BATCH)
+    n_devices = 1 + len(peers or [])
+    launch = resolve_launch(
+        model_path, tune=tune, ctx=ctx, decide=decide,
+        n_devices=n_devices, ubatch=ub, meta_fn=meta_fn,
+    )
+    ctx_per, n_slots, total_c = launch["ctx"], launch["n_slots"], launch["total_ctx"]
     ctk, ctv = resolve_web_kv(
         flash_attn=fa, cache_type=tune.get("cache_type"),
         cache_type_k=tune.get("cache_type_k"), cache_type_v=tune.get("cache_type_v"),
-        model_path=model_path, ctx=ctx, ubatch=ub,
-        n_devices=1 + len(peers or []), decide=decide,
+        model_path=model_path, ctx=ctx_per, ubatch=ub,
+        n_devices=n_devices, n_slots=n_slots, decide=decide,
     )
     args = [str(Path(bin_dir).expanduser() / "llama-server"),
             "-m", str(Path(model_path).expanduser()),
             "--host", "127.0.0.1", "--port", str(int(port)),
-            "-c", str(int(ctx)), "-ngl", "999", "-fa", fa,
+            "-c", str(int(total_c)), "-ngl", "999", "-fa", fa,
             "-ctk", ctk, "-ctv", ctv,
             "-b", str(batch), "-ub", str(ub),
             "--cache-ram", "0", "--jinja"]
+    if n_slots > 1:
+        args += ["--parallel", str(n_slots), "--no-kv-unified"]
     if tune.get("slot_save", True) is not False:
-        sp = slot_save_dir(ctk, ctv, root=slot_root)
+        sp = slot_save_dir(ctk, ctv, root=slot_root, ctx=ctx_per, n_slots=n_slots)
         args += ["--slot-save-path", str(sp) + "/"]
     if peers:
         devs = ["MTL0"] + [f"RPC{i}" for i in range(len(peers))]

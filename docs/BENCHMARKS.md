@@ -3,6 +3,13 @@
 Only measured numbers are listed here, each with where it came from. The
 raw step-by-step notes are in [LOG.md](LOG.md).
 
+To compare a GGUF model with its MLX counterpart on your own Macs, in
+the same wording as the stats under a reply, run `caravan bench`.
+Without `--yes` it only prints the exact steps and does not load a
+model. `--from-averages` prints already-saved chat averages. See
+[Day 25](DAY25.md). Numbers from that command are added here only after
+they have been measured.
+
 ## Method
 
 **Hardware.**

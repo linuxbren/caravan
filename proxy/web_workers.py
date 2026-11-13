@@ -572,6 +572,9 @@ class WorkerManager:
         if tune:
             self._note("using saved GGUF settings")
         args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares, tune=tune)
+        launch = G.resolve_launch(str(path), tune=tune, n_devices=1 + len(rpc))
+        if launch:
+            tune = dict(tune, ctx=launch["ctx"], n_slots=launch["n_slots"])
         if "--slot-save-path" in args:
             try:
                 Path(args[args.index("--slot-save-path") + 1]).mkdir(parents=True, exist_ok=True)
@@ -601,7 +604,9 @@ class WorkerManager:
         self._check_cancel()
         self._note(f"loaded in {time.time() - t0:.1f}s")
         # GGUF Optimize now reads this (it refused "needs a GGUF model loaded" before).
-        self._loaded_entry = dict({k: v for k, v in entry.items() if k != "tune_override"}, gguf_shares=shares, _loaded_tune=tune)
+        self._loaded_entry = dict({k: v for k, v in entry.items() if k != "tune_override"},
+                                  gguf_shares=shares, _loaded_tune=tune,
+                                  _launch=launch if launch else None)
         self._set(status="ready", split=bool(peers))
         self._note("ready")
         self._start_gguf_watch(meta)
@@ -1459,6 +1464,10 @@ class WorkerManager:
         notice = (ready_off if raw == "off" else ready_on) if status == "ready" else (
             load_off if raw == "off" else load_on)
         if status == "ready" and backend == "llama":
+            if raw == "off":
+                tun = getattr(self, "gguf_self_tuner", None)
+                if tun is not None and hasattr(tun, "cancel"):
+                    tun.cancel()
             notice = (
                 "Self-tuning is off. Caravan will keep the current settings."
                 if raw == "off" else
@@ -1556,17 +1565,22 @@ class WorkerManager:
         if snap.get("backend") == "llama":
             try:
                 import gguf_tune as GT
+                import gguf_self_tune as GST
                 entry = getattr(self, "_loaded_entry", None) or {}
                 path = entry.get("lead_path")
                 if path:
+                    nodes = (snap.get("gguf") or {}).get("nodes") or [None]
+                    n_minis = max(1, len(nodes))
                     store_path = GT.STORE
                     store = GT.load_store(store_path)
-                    nodes = (snap.get("gguf") or {}).get("nodes") or [None]
-                    key = GT.entry_key(Path(path).expanduser(), max(1, len(nodes)))
-                    models = store.get("models") if isinstance(store, dict) else None
-                    if isinstance(models, dict) and key in models:
-                        del models[key]
+                    key = GT.entry_key(Path(path).expanduser(), n_minis)
+                    if isinstance(store, dict) and key in store:
+                        del store[key]
                         GT.save_store(store, store_path)
+                    GST.clear_entry(path, n_minis)
+                    tun = getattr(self, "gguf_self_tuner", None)
+                    if tun is not None and hasattr(tun, "cancel"):
+                        tun.cancel()
             except Exception:
                 pass
         # Put Memory compression back to Auto on the page and in last-model,
@@ -1652,6 +1666,18 @@ class WorkerManager:
 
     def lead_active_settings(self):
         """Day 15: settings the running lead reports (learned winners applied)."""
+        snap = self.snapshot()
+        if snap.get("backend") == "llama" and snap.get("status") == "ready":
+            try:
+                import web_settings as WS
+                entry = getattr(self, "_loaded_entry", None) or {}
+                return WS.gguf_active_settings(
+                    entry.get("_loaded_tune"),
+                    snap.get("page_settings") or snap.get("settings"),
+                    launch=entry.get("_launch"),
+                )
+            except Exception:
+                return None
         import urllib.request
         try:
             with urllib.request.urlopen(

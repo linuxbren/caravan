@@ -1,3 +1,18 @@
+## 2026-11-12: Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
+
+GGUF Self-tuning learns from everyday chat averages, proposes one quiet
+trial (Prompt batch, then Memory compression, then Flash attention),
+and reloads only when the chat is idle. The Before and After lines use
+the same wording as Auto-tune. Chat window is a Settings row with a
+sane Auto default from the model and this Mac's memory (8192 when
+unknown, never a jump to a much larger window). Two chats is available
+(`--parallel`, including on one Mac); Auto keeps one chat. `caravan
+bench` compares a GGUF model to its MLX counterpart in reply-stats
+wording, without inventing numbers. This follow-up does not change
+`agent/`, `runtime/`, or the requirements files, so a `caravan update`
+keeps a loaded model running; the web page still restarts. Details:
+[DAY25.md](DAY25.md).
+
 ## 2026-11-12: Day 24 live review — Campfire theme, and Start until a model is tuned
 
 Campfire replaces Nebula: a cool night sky, a soft moon, crisp stars,

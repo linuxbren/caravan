@@ -48,8 +48,11 @@ def main(argv=None):
     if argv and argv[0] == "lan":
         from caravan_lan import main as lan
         return lan(argv[1:])
+    if argv and argv[0] == "bench":
+        from caravan_bench import main as bench
+        return bench(argv[1:])
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("start", "stop", "status", "doctor", "update", "uninstall", "add-mini", "open", "remote", "lan"))
+    parser.add_argument("action", choices=("start", "stop", "status", "doctor", "update", "uninstall", "add-mini", "open", "remote", "lan", "bench"))
     parser.add_argument("--name", default="web", help="one owned service; default web")
     parser.add_argument("--full", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--everything", action="store_true", help=argparse.SUPPRESS)

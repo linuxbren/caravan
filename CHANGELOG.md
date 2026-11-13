@@ -1,3 +1,18 @@
+## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
+
+- GGUF Self-tuning learns from real chats, proposes one quiet trial,
+  and fills the same Before and After lines Auto-tune uses. A change
+  reloads when you are not mid-reply.
+- Chat window is a Settings row with a sane Auto default from the
+  model and this Mac's memory. Two chats is available for GGUF; Auto
+  keeps one chat. Guess-ahead and Prompt lookup stay off.
+- `caravan bench` compares a GGUF model to its MLX counterpart in the
+  same wording as the stats under a reply, without inventing numbers.
+- See [Day 25](docs/DAY25.md). This follow-up does not change
+  `agent/`, `runtime/`, or the requirements files, so a `caravan
+  update` from the Day 24 pin keeps a loaded model running. The web
+  page still restarts. No `day25` tag yet.
+
 ### Day 21 release — day21-2026-11-10 (published 2026-11-10 CST)
 
 ## Day 24 — quieter page and Advanced sections (published; pending live review)

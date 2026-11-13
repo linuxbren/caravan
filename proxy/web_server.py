@@ -73,6 +73,15 @@ class App:
         self.mlx_optimizer = web_optimize.Optimizer(mgr, inflight=lambda: self._inflight)
         self.gguf_optimizer = web_gguf_optimize.GgufOptimizer(mgr, inflight=lambda: self._inflight)
         self.optimizer = self.mlx_optimizer
+        import gguf_self_tune as GST
+        self.gguf_self_tuner = GST.Controller(
+            mgr, inflight=lambda: self._inflight,
+            optimizer_running=lambda: bool(
+                (self.gguf_optimizer.snapshot() or {}).get("running")
+                or (self.mlx_optimizer.snapshot() or {}).get("running")
+            ),
+        )
+        mgr.gguf_self_tuner = self.gguf_self_tuner
         import web_restore
         self.restore = web_restore.Controller(self)
 
@@ -1110,6 +1119,42 @@ def make_handler(app: App):
                             app.mgr.lead_active_settings() if hasattr(app.mgr, "lead_active_settings") else None)
                     except Exception:
                         tun = {}
+                    has_winners = bool((tun or {}).get("winner"))
+                    settling = bool((tun or {}).get("trial"))
+                    try:
+                        snap = app.mgr.snapshot()
+                        if (snap.get("backend") == "llama"
+                                and (snap.get("page_settings") or snap.get("settings") or {}).get("self_tune") != "off"):
+                            import gguf_self_tune as GST
+                            entry = getattr(app.mgr, "_loaded_entry", None) or {}
+                            path = entry.get("lead_path")
+                            nodes = (snap.get("gguf") or {}).get("nodes") or [None]
+                            plan = GST.observe(
+                                path, max(1, len(nodes)),
+                                {
+                                    "write_tok_s": body.get("write_tok_s"),
+                                    "ttft_s": body.get("ttft_s"),
+                                    "prompt_tokens": body.get("prompt_tokens"),
+                                    "completion_tokens": body.get("completion_tokens"),
+                                    "read_tok_s": body.get("read_tok_s"),
+                                    "total_s": body.get("total_s"),
+                                },
+                                used=entry.get("_loaded_tune"),
+                                settings=snap.get("page_settings") or snap.get("settings"),
+                                self_tune_on=True,
+                                model_id=mid,
+                            )
+                            has_winners = has_winners or bool(plan.get("has_winners"))
+                            settling = settling or (plan.get("reason") == "settling") or (
+                                plan.get("action") == "idle" and plan.get("trial"))
+                            if plan.get("action") == "reload" and hasattr(app, "gguf_self_tuner"):
+                                app.gguf_self_tuner.handle(
+                                    plan, model_id=mid, entry=entry,
+                                    settings=snap.get("page_settings") or snap.get("settings"),
+                                    model_path=path, n_minis=max(1, len(nodes)),
+                                )
+                    except Exception:
+                        pass
                     try:
                         out["tuning"] = web_speed.observe_tuning(
                             mid,
@@ -1119,8 +1164,8 @@ def make_handler(app: App):
                             completion_tokens=body.get("completion_tokens"),
                             read_tok_s=body.get("read_tok_s"),
                             total_s=body.get("total_s"),
-                            has_winners=bool((tun or {}).get("winner")),
-                            settling=bool((tun or {}).get("trial")),
+                            has_winners=has_winners,
+                            settling=settling,
                         )
                     except Exception:
                         out["tuning"] = web_speed.get_tuning(mid)
@@ -1175,7 +1220,12 @@ def make_handler(app: App):
             src = ((entry or {}).get("source") or "")
             if src != "gguf" and snap.get("backend") == "llama" and mid == snap.get("model_id"):
                 src = "gguf"
-            return self._json(200, {"options": web_settings.options_for(src, model_dir=(entry or {}).get("lead_path")),
+            n_minis = 1
+            if src == "gguf":
+                nodes = (snap.get("gguf") or {}).get("nodes") or [1]
+                if mid == snap.get("model_id"):
+                    n_minis = max(1, len(nodes))
+            return self._json(200, {"options": web_settings.options_for(src, model_dir=(entry or {}).get("lead_path"), n_minis=n_minis),
                                    "backend": "llama" if src == "gguf" else "mlx",
                                    "current": snap.get("page_settings") or snap.get("settings"),
                                    "file": {"path": cfg["path"], "exists": cfg["exists"],
@@ -2152,7 +2202,7 @@ def make_handler(app: App):
                         return self._json(409, {"error": "Split needs files or more memory; nothing was changed", "balance": plan})
                     entry = plan["entry"]
                     if entry.get("source")=="gguf" and isinstance(body.get("gguf_tune"),dict):
-                        entry=dict(entry,tune_override={k:v for k,v in body["gguf_tune"].items() if k in ("flash_attn","ubatch","cache_type","slot_save")})
+                        entry=dict(entry,tune_override={k:v for k,v in body["gguf_tune"].items() if k in ("flash_attn","ubatch","cache_type","slot_save","ctx","n_slots")})
                 except (ValueError, OSError, KeyError, TypeError) as e:
                     return self._json(400, error_payload(e))
             balanced_msg = None

@@ -35,6 +35,7 @@ to install it. Setup keeps your existing models and settings.
 | `caravan start` | Starts it again |
 | `caravan doctor` | Shows detailed checks when something goes wrong |
 | `caravan update` | Updates Caravan and brings the page back |
+| `caravan bench` | Compare a GGUF model to its MLX counterpart; prints the same wording as the stats under a reply. Run `caravan bench --help` for the exact steps |
 
 Use **Unload** in the browser to free the model's memory before stopping.
 After restarting your Mac, unlock it and log in. Caravan starts and brings

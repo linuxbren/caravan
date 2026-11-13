@@ -1,5 +1,19 @@
 # Changelog
 
+## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
+
+- GGUF Self-tuning learns from real chats, proposes one quiet trial,
+  and fills the same Before and After lines Auto-tune uses. A change
+  reloads when you are not mid-reply.
+- Chat window (Auto and offered sizes) with a sane Auto default from
+  the model and this Mac's memory. Two chats is available for GGUF;
+  Auto keeps one chat.
+- `caravan bench` compares a GGUF model to its MLX counterpart in the
+  same wording as the stats under a reply. It does not invent numbers.
+- Does not change `agent/`, `runtime/`, or the requirements files, so
+  a `caravan update` from the Day 24 pin keeps a loaded model running.
+  The web page still restarts. See [Day 25](DAY25.md).
+
 ## Day 24 live review — Campfire theme, and Start until a model is tuned
 
 - Campfire replaces Nebula: Amber, Green, Meadow, Campfire. Drawn in
