@@ -134,7 +134,10 @@ After lines Auto-tune uses are filled. Auto-tune also compares 16-bit
 and 8-bit memory compression and scores how fast the model reads, how
 soon the first token arrives, and how fast it writes. To compare a GGUF
 model with its MLX counterpart, see `caravan models` and
-`caravan bench` in [Day 25](DAY25.md).
+`caravan bench` in [Day 25](DAY25.md). Auto-tune uses the same five
+short prompts plus one long prompt of about 2k tokens, and scores
+include long-prompt read speed so a setting that hurts reading is
+not picked.
 
 If a Self-tuning or Auto-tune trial stops, a short plain reason
 appears next to Self-tuning, for example

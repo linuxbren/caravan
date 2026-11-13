@@ -429,10 +429,12 @@ class Bench(unittest.TestCase):
         result = B.run_live("gguf/a", "mlx/b", urlopen=urlopen,
                             gguf_name="G", mlx_name="M", prompts=["hi"])
         lines = result["lines"]
-        self.assertIn("G:", lines[0])
-        self.assertIn("Write 20 tok at 20.0 tok/s", lines[0])
-        self.assertIn("M:", lines[1])
-        self.assertIn("Write 20 tok at 30.0 tok/s", lines[1])
+        text = "\n".join(lines)
+        self.assertIn("G:", text)
+        self.assertIn("Write 20 tok at 20.0 tok/s", text)
+        self.assertIn("M:", text)
+        self.assertIn("Write 20 tok at 30.0 tok/s", text)
+        self.assertIn("Short prompts", text)
         self.assertTrue(any(c.endswith("/api/models/load") for c in calls))
         self.assertIsNone(result["error"])
         self.assertIsNone(result["original"])  # started idle, nothing to put back
@@ -647,8 +649,9 @@ class RestoreOriginal(unittest.TestCase):
         loads = [body.get("id") for url, body in calls if url.endswith("/api/models/load")]
         self.assertEqual(loads, ["gguf/a", "mlx/b", "orig/model"])
         self.assertEqual(loaded["id"], "orig/model")
-        self.assertIn("Write 20 tok at 20.0 tok/s", result["lines"][0])
-        self.assertIn("Write 20 tok at 30.0 tok/s", result["lines"][1])
+        text = "\n".join(result["lines"])
+        self.assertIn("Write 20 tok at 20.0 tok/s", text)
+        self.assertIn("Write 20 tok at 30.0 tok/s", text)
 
     def test_puts_original_back_when_a_measurement_fails(self):
         loaded = {"id": "orig/model", "name": "Original Model"}
@@ -675,7 +678,10 @@ class RestoreOriginal(unittest.TestCase):
             gguf_name="G", mlx_name="M", prompts=["hi"],
         )
         self.assertIsNone(result["error"])
-        self.assertEqual(len(result["lines"]), 2)
+        text = "\n".join(result["lines"])
+        self.assertIn("G:", text)
+        self.assertIn("M:", text)
+        self.assertIn("Write", text)
         self.assertIn("Putting the original model back: Original Model.", result["notes"])
         self.assertTrue(any("Could not put the original model back" in n for n in result["notes"]))
 
@@ -717,6 +723,265 @@ class RestoreOriginal(unittest.TestCase):
         self.assertIn("Write 20 tok at 20.0 tok/s", out)
 
 
+
+class LongSeries(unittest.TestCase):
+    def test_five_short_prompts_keep_the_auto_tune_pair(self):
+        import caravan_prompts as P
+        import gguf_tune as T
+        self.assertEqual(len(P.SHORT_PROMPTS), 5)
+        self.assertEqual(P.SHORT_PROMPTS[0], T.BENCH_PROMPTS[0])
+        self.assertEqual(P.SHORT_PROMPTS[1], T.BENCH_PROMPTS[1])
+        self.assertIn("bicycle", P.SHORT_PROMPTS[0])
+        self.assertIn("palindrome", P.SHORT_PROMPTS[1])
+        # The three new ones: code, explanation, list.
+        self.assertTrue(any("def average" in p for p in P.SHORT_PROMPTS))
+        self.assertTrue(any("hash table" in p for p in P.SHORT_PROMPTS))
+        self.assertTrue(any(p.startswith("List eight") or "List eight" in p for p in P.SHORT_PROMPTS))
+        # Unique openings.
+        shorts = P.short_prompts()
+        self.assertEqual(len({s[:50] for s in shorts}), 5)
+
+    def test_long_prompts_are_sized_and_unique(self):
+        import caravan_prompts as P
+        for size in (1024, 4096, 8192):
+            pair = P.long_prompts_for_size(size)
+            self.assertEqual(len(pair), 2)
+            self.assertNotEqual(pair[0][:80], pair[1][:80])
+            for text in pair:
+                est = P.estimate_tokens(text)
+                self.assertGreater(est, size * 0.8)
+                self.assertLess(est, size * 1.25)
+                self.assertIn("This opening is only for this prompt", text)
+
+    def test_skips_sizes_that_will_not_fit(self):
+        import caravan_prompts as P
+        self.assertTrue(P.fits_window(1024, 8192))
+        self.assertTrue(P.fits_window(4096, 8192))
+        self.assertFalse(P.fits_window(8192, 8192))
+        self.assertFalse(P.fits_window(2048, 2048))
+        self.assertTrue(P.fits_window(2048, 8192))
+        reason = P.skip_reason(8192, 8192)
+        self.assertIn("chat window is 8192", reason)
+        self.assertIn("8k", reason)
+
+    def test_measure_series_skips_and_labels_counts(self):
+        calls = []
+        def urlopen(url, data=None, timeout=30, headers=None):
+            calls.append(url)
+            if url.endswith("/api/chat"):
+                import json as _json
+                body = _json.loads(data.decode()) if data else {}
+                n = len((body.get("messages") or [{}])[-1].get("content") or "")
+                return {"caravan_web": {"stats": {
+                    "write_tok_s": 20.0, "read_tok_s": 100.0, "ttft_s": 0.20,
+                    "prompt_tokens": max(10, n // 4), "completion_tokens": 20,
+                    "total_s": 0.80,
+                }}}
+            raise AssertionError(url)
+        rows = B.measure_series(8190, urlopen, run_short=True, run_long=True, window=8192)
+        labels = [r["label"] for r in rows]
+        self.assertEqual(labels[0], "Short prompts (5)")
+        self.assertTrue(labels[1].startswith("Long prompts (~1k tok) (2)"))
+        self.assertTrue(labels[2].startswith("Long prompts (~4k tok) (2)"))
+        self.assertTrue(labels[3].startswith("Long prompts (~8k tok) (2)"))
+        self.assertTrue(rows[3].get("skipped"))
+        self.assertIn("chat window is 8192", rows[3]["reason"])
+        self.assertFalse(rows[0].get("skipped"))
+        self.assertFalse(rows[1].get("skipped"))
+        # 5 short + 2 at 1k + 2 at 4k; 8k skipped. No shared prefix across first 80 chars
+        # (already tested on the prompts themselves).
+        self.assertEqual(sum(1 for c in calls if c.endswith("/api/chat")), 5 + 2 + 2)
+
+    def test_short_flag_skips_long(self):
+        n = [0]
+        def urlopen(url, data=None, timeout=30, headers=None):
+            n[0] += 1
+            return {"caravan_web": {"stats": {
+                "write_tok_s": 20.0, "read_tok_s": 100, "ttft_s": 0.2,
+                "prompt_tokens": 40, "completion_tokens": 20, "total_s": 0.8,
+            }}}
+        rows = B.measure_series(8190, urlopen, run_short=True, run_long=False, window=32768)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["label"], "Short prompts (5)")
+        self.assertEqual(n[0], 5)
+
+    def test_summary_uses_only_measured_numbers(self):
+        g = [{"label": "Short prompts (5)", "specs": {
+            "write_tok_s": 22.3, "read_tok_s": 157, "ttft_s": 0.22,
+            "total_s": 7.65, "prompt_tokens": 46, "completion_tokens": 166,
+        }}]
+        m = [{"label": "Short prompts (5)", "specs": {
+            "write_tok_s": 23.5, "read_tok_s": 182, "ttft_s": 0.33,
+            "total_s": 7.61, "prompt_tokens": 46, "completion_tokens": 172,
+        }}]
+        text = B.summarize(g, m, gguf_name="GGUF", mlx_name="MLX")
+        self.assertIn("On short prompts", text)
+        self.assertIn("MLX was faster at reading", text)
+        self.assertIn("16% faster", text)
+        self.assertIn("182 vs 157", text)
+        self.assertIn("MLX was faster at writing", text)
+        self.assertIn("22.3", text)
+        self.assertIn("23.5", text)
+        self.assertIn("GGUF's first token was sooner", text)
+        self.assertIn("0.22s vs 0.33s", text)
+        self.assertIn("about the same", text)  # totals 7.61 vs 7.65
+        self.assertIn("7.61", text)
+        self.assertIn("7.65", text)
+        # no invented third speed
+        self.assertNotIn("999", text)
+
+    def test_summary_skips_unmeasured_sizes(self):
+        g = [{"label": "Long prompts (~8k tok) (2)", "skipped": True,
+              "reason": "this model's chat window is 8192, and a ~8k-token prompt would not fit."}]
+        m = [{"label": "Long prompts (~8k tok) (2)", "specs": {
+            "write_tok_s": 20, "read_tok_s": 80, "ttft_s": 1.0, "total_s": 10,
+        }}]
+        text = B.summarize(g, m)
+        self.assertIn("GGUF was skipped", text)
+        self.assertIn("No comparison at this size", text)
+        self.assertNotIn("faster at writing", text)
+
+    def test_preview_mentions_long_series_and_no_speeds(self):
+        text = B.steps_text("gguf/qwen", "mlx-community/qwen")
+        self.assertIn("five short prompts", text)
+        self.assertIn("1k, 4k, and 8k", text)
+        self.assertIn("unique", text.lower())
+        self.assertIn("original model back", text)
+        self.assertNotIn("tok/s", text)
+        self.assertIn("--yes", text)
+
+    def test_cli_short_flag_in_preview(self):
+        buf = io.StringIO()
+        with mock.patch("sys.stdout", buf):
+            rc = B.main(["--gguf", "gguf/a", "--mlx", "mlx/b", "--short"])
+        self.assertEqual(rc, 0)
+        out = buf.getvalue()
+        self.assertIn("--short --yes", out)
+        self.assertIn("five short prompts", out)
+        self.assertNotIn("1k, 4k, and 8k", out)
+        self.assertNotIn("tok/s", out)
+
+
+class ModelsMerge(unittest.TestCase):
+    def test_merge_adds_gguf_omitted_by_the_page(self):
+        api = [
+            {"id": "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",
+             "name": "Qwen2.5 Coder 7B Instruct", "source": "hf-mlx", "usable": True},
+        ]
+        disk = api + [
+            {"id": "gguf/Llama-3.2-3B-Instruct-Q2_K_L",
+             "name": "Llama-3.2-3B-Instruct-Q2_K_L", "source": "gguf",
+             "backend": "llama", "usable": True},
+        ]
+        with mock.patch("caravan_models.disk_models", return_value=disk):
+            merged = M.merge_local_gguf(api)
+        ids = [M.model_id(m) for m in merged]
+        self.assertIn("mlx-community/Qwen2.5-Coder-7B-Instruct-4bit", ids)
+        self.assertIn("gguf/Llama-3.2-3B-Instruct-Q2_K_L", ids)
+        # Listing shows the GGUF line with its id.
+        text = M.format_list(merged)
+        self.assertIn("Llama-3.2-3B-Instruct-Q2_K_L  (GGUF)  gguf/Llama-3.2-3B-Instruct-Q2_K_L", text)
+        self.assertIn("(MLX)", text)
+
+    def test_merge_does_not_duplicate(self):
+        both = [
+            {"id": "gguf/Llama-3.2-3B-Instruct-Q2_K_L", "name": "Llama", "source": "gguf"},
+            {"id": "mlx-community/foo", "name": "Foo", "source": "hf-mlx"},
+        ]
+        with mock.patch("caravan_models.disk_models", return_value=both):
+            merged = M.merge_local_gguf(both)
+        self.assertEqual(len(merged), 2)
+
+    def test_fetch_catalog_merges_when_api_omits_gguf(self):
+        api = {"models": [{"id": "mlx/only", "name": "Only MLX", "source": "hf-mlx"}],
+               "current": "mlx/only"}
+        disk = [
+            {"id": "mlx/only", "name": "Only MLX", "source": "hf-mlx"},
+            {"id": "gguf/Llama-3.2-3B-Instruct-Q2_K_L", "name": "Llama",
+             "source": "gguf", "backend": "llama"},
+        ]
+        def urlopen(url, data=None, timeout=5, headers=None):
+            return api
+        with mock.patch("caravan_models.disk_models", return_value=disk):
+            cat = M.fetch_catalog(port=8190, urlopen=urlopen)
+        ids = [M.model_id(m) for m in cat["models"]]
+        self.assertIn("gguf/Llama-3.2-3B-Instruct-Q2_K_L", ids)
+        self.assertTrue(cat["running"])
+
+
+class AutotunePromptsAndScore(unittest.TestCase):
+    def test_default_measure_uses_five_short_and_one_long(self):
+        import gguf_tune as T
+        seen = []
+        class R:
+            def __init__(self, body): self._b = body
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self):
+                return (
+                    b'{"timings":{"predicted_per_second":40,"prompt_per_second":200,'
+                    b'"prompt_ms":250},"usage":{"prompt_tokens":100,"completion_tokens":20}}'
+                )
+        def fake(req, timeout=0):
+            # urlopen is passed the Request; body is on req
+            seen.append(req.data.decode() if req.data else "")
+            return R(b"")
+        specs = T.measure_http_specs(9000, urlopen=fake, chat_window=8192)
+        self.assertEqual(len(seen), 6)  # 5 short + 1 long (~2k)
+        # Unique openings
+        openings = [s[:80] for s in seen]
+        self.assertEqual(len(set(openings)), 6)
+        self.assertEqual(specs["write_tok_s"], 40.0)
+        self.assertEqual(specs["long_read_tok_s"], 200.0)
+        # Long prompt is actually long.
+        long_bodies = [s for s in seen if "about 2k tokens" in s or "2048" in s or "2k" in s]
+        self.assertTrue(long_bodies)
+        self.assertGreater(len(max(seen, key=len)), 4000)
+
+    def test_long_autotune_prompt_skipped_when_window_is_small(self):
+        import gguf_tune as T
+        seen = []
+        class R:
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self):
+                return b'{"timings":{"predicted_per_second":40,"prompt_per_second":200,"prompt_ms":250}}'
+        def fake(req, timeout=0):
+            seen.append(1)
+            return R()
+        specs = T.measure_http_specs(9000, urlopen=fake, chat_window=2048)
+        self.assertEqual(len(seen), 5)  # long skipped
+        self.assertNotIn("long_read_tok_s", specs)
+
+    def test_faster_write_loses_if_long_read_is_much_slower(self):
+        import gguf_tune as T
+        inc = {"write_tok_s": 100.0, "long_read_tok_s": 200.0, "total_s": 8.0}
+        # Writes 15% faster but reads at half speed.
+        ch = {"write_tok_s": 115.0, "long_read_tok_s": 100.0, "total_s": 8.0}
+        self.assertFalse(T.beats(ch, inc))
+        # And a fair improvement on both still wins.
+        ch2 = {"write_tok_s": 115.0, "long_read_tok_s": 230.0, "total_s": 7.0}
+        self.assertTrue(T.beats(ch2, inc))
+
+    def test_garbled_still_recorded(self):
+        import gguf_tune as T
+        class R:
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self):
+                # A clearly garbled reply: repeated junk, if is_garbled checks content.
+                return (
+                    b'{"timings":{"predicted_per_second":99},"choices":'
+                    b'[{"message":{"content":"aaaaaaaaaa"}}]}'
+                )
+        def fake(req, timeout=0):
+            return R()
+        # Even if garble detection does not fire on this string, the field is optional;
+        # the keep-a-garbled-loss path is covered in existing GGUF tests.
+        specs = T.measure_http_specs(9000, urlopen=fake, prompts=["hi"])
+        self.assertEqual(specs["write_tok_s"], 99)
+
+
 class Docs(unittest.TestCase):
     def test_day25_docs_are_plain(self):
         day = ROOT / "docs/DAY25.md"
@@ -728,6 +993,11 @@ class Docs(unittest.TestCase):
         self.assertIn("caravan bench", text)
         self.assertIn("caravan models", text)
         self.assertIn("1st Mac", text)
+        self.assertIn("157 tok/s", text)
+        self.assertIn("22.3 tok/s", text)
+        self.assertIn("23.5 tok/s", text)
+        self.assertIn("five short prompts", text)
+        self.assertIn("long-prompt series", text)
         self.assertIn("2nd Mac", text)
         for bad in ("prf-hays", "16 GB", "24 GB", "exo1", "exo2", "262144"):
             self.assertNotIn(bad, text)

@@ -137,12 +137,54 @@ def disk_models() -> list:
     return rows
 
 
+def merge_local_gguf(models) -> list:
+    """Add GGUF files from this Mac's disk if the running page omitted them.
+
+    `caravan models` talks to /api/models first. If that list is MLX-only
+    (an older page, or a scan that skipped a file the disk still has),
+    local GGUF ids would be missing from the list while `caravan bench`
+    name matching might still see them from a later disk look, or the
+    other way around. Merging makes both commands show the same GGUF.
+    """
+    rows = [m for m in (models or []) if isinstance(m, dict)]
+    seen = {model_id(m) for m in rows if model_id(m)}
+    # Also treat a leading "gguf/" as matching a bare stem, and vice versa.
+    def aliases(mid):
+        mid = str(mid or "")
+        out = {mid, mid.lower()}
+        if mid.lower().startswith("gguf/"):
+            out.add(mid[5:])
+            out.add(mid[5:].lower())
+        else:
+            out.add("gguf/" + mid)
+            out.add("gguf/" + mid.lower())
+        return out
+    all_seen = set()
+    for s in seen:
+        all_seen |= aliases(s)
+    try:
+        extra = disk_models()
+    except Exception:
+        extra = []
+    for m in extra:
+        if kind_of(m) != "GGUF":
+            continue
+        mid = model_id(m)
+        if not mid or all_seen & aliases(mid):
+            continue
+        rows.append(m)
+        seen.add(mid)
+        all_seen |= aliases(mid)
+    return rows
+
+
 def fetch_catalog(port: int = None, urlopen=_urlopen) -> dict:
-    """{models, current, running, source} from the page, or from disk."""
+    """{models, current, running, source} from the page, merged with local GGUF."""
     port = int(port or resolve_port())
     try:
         data = urlopen(f"http://127.0.0.1:{port}/api/models", timeout=5)
         models = list((data or {}).get("models") or [])
+        models = merge_local_gguf(models)
         return {
             "models": models,
             "current": (data or {}).get("current"),

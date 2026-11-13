@@ -6,12 +6,26 @@ raw step-by-step notes are in [LOG.md](LOG.md).
 To compare a GGUF model with its MLX counterpart on your own Macs, in
 the same wording as the stats under a reply, run `caravan models` to
 see downloaded models and their ids, then `caravan bench "qwen2.5
-coder 7b"` (or another plain name). Without `--yes` it shows which two
-it would compare and the exact command, and does not load a model.
-`--yes` measures and then puts the original model back. `--from-averages`
-prints already-saved chat averages. If several files match, pick with
-`--gguf` and `--mlx`. See [Day 25](DAY25.md). Numbers from that command
-are added here only after they have been measured.
+coder 7b" --yes` (or another plain name). By default that runs five
+short prompts and a long-prompt series at about 1k, 4k, and 8k
+tokens; `--short` or `--long` runs just one. Without `--yes` it shows
+which two it would compare and the exact command, and does not load a
+model. After a live run it puts the original model back. See
+[Day 25](DAY25.md).
+
+## Day 25 — first `caravan bench` on the 1st Mac
+
+Qwen2.5 Coder 7B, measured on the 1st Mac with the two short Auto-tune
+prompts of that build (before the five short prompts and the
+long-prompt series). Figures are as printed by the command.
+
+    GGUF Q4_K_M: Read 46 tok at 157 tok/s · Write 166 tok at 22.3 tok/s · first token 0.22s · total 7.65s
+    MLX 4bit: Read 46 tok at 182 tok/s · Write 172 tok at 23.5 tok/s · first token 0.33s · total 7.61s
+
+On those short prompts, MLX was faster at reading (16% faster, 182 vs
+157 tok/s) and at writing (5% faster, 23.5 vs 22.3 tok/s). GGUF's
+first token was sooner (33% sooner, 0.22s vs 0.33s). Total time was
+about the same (7.61s vs 7.65s).
 
 ## Method
 

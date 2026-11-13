@@ -305,16 +305,55 @@ class Optimizer:
             return scores
         return self._measure(name, arm)
 
+    def _chat_window(self):
+        try:
+            import caravan_prompts as P
+            return P.chat_window_from(self.mgr.snapshot() or {})
+        except Exception:
+            return None
+
+    def _median_specs(self, samples, kinds=None):
+        import gguf_tune as GT
+        out = {}
+        for key in ("write_tok_s", "read_tok_s", "ttft_s", "total_s",
+                    "prompt_tokens", "completion_tokens"):
+            vals = [s[key] for s in samples if isinstance(s, dict) and s.get(key) is not None]
+            med = GT._median(vals) if vals else None
+            if med is not None:
+                out[key] = med
+        if kinds:
+            long_reads = [
+                s["read_tok_s"] for s, k in zip(samples, kinds)
+                if k == "long" and isinstance(s, dict) and s.get("read_tok_s") is not None
+            ]
+            if long_reads:
+                med = GT._median(long_reads)
+                if med is not None:
+                    out["long_read_tok_s"] = med
+        return out
+
     def _measure(self, name, arm):
         scores = _Scores()
         scores_garbled = False
         if name == "shared_prefix":
             self._boundary()
             self._one(prompt_plan(0))  # seed shared prefix; cold store is not a hit
-        for i in range(AB_ARM):
-            self._boundary()
-            self._set(phase=f"A/B {name}: {arm} {i + 1}/{AB_ARM}")
-            if name == "pipeline_chats":
+            for i in range(AB_ARM):
+                self._boundary()
+                self._set(phase=f"A/B {name}: {arm} {i + 1}/{AB_ARM}")
+                result = self._one(prompt_plan(0))
+                if isinstance(result, dict) and result.get("garbled"):
+                    scores_garbled = True
+                if not result.get("ttft") or result["ttft"] <= 0:
+                    raise ValueError("reply missing TTFT")
+                scores.append(1.0 / result["ttft"])
+            if scores_garbled:
+                scores.garbled = True
+            return scores
+        if name == "pipeline_chats":
+            for i in range(AB_ARM):
+                self._boundary()
+                self._set(phase=f"A/B {name}: {arm} {i + 1}/{AB_ARM}")
                 t0 = time.monotonic()
                 # Only this knob needs simultaneous requests, not simultaneous
                 # option trials. Same pair is sent to both arm widths.
@@ -323,7 +362,6 @@ class Optimizer:
                     results = [f.result() for f in futures]
                 elapsed = time.monotonic() - t0
                 for result in results:
-                    # Account outside threads (avoid lost counter updates).
                     n = self.state["prompts"]
                     self._set(prompts=n + 1)
                     self._note_tune_sample(result)
@@ -332,22 +370,30 @@ class Optimizer:
                 ct = sum(r.get("completion_tokens") or 0 for r in results)
                 if ct <= 0:
                     raise ValueError("pipeline reply missing token counts")
-                score = ct / max(elapsed, 0.001)
-            else:
-                result = self._one(prompt_plan(0 if name == "shared_prefix" else i))
-                if isinstance(result, dict) and result.get("garbled"):
-                    scores_garbled = True
-                if name == "shared_prefix":
-                    if not result.get("ttft") or result["ttft"] <= 0:
-                        raise ValueError("reply missing TTFT")
-                    score = 1.0 / result["ttft"]
-                else:
-                    if not result.get("completion_tokens"):
-                        raise ValueError("reply missing token counts")
-                    score = TS.normalized_tps(completion_tokens=result["completion_tokens"],
-                        total_s=result.get("total_s", result["elapsed"]),
-                        prefill_s=result.get("prefill_s") or 0)
-            scores.append(score)
+                scores.append(ct / max(elapsed, 0.001))
+            if scores_garbled:
+                scores.garbled = True
+            return scores
+        # Regular knobs: the same five short prompts as bench, plus one
+        # ~2k-token long prompt if it fits, each with a unique opening.
+        import caravan_prompts as P
+        import gguf_tune as GT
+        prompts, kinds, _note = P.autotune_prompt_list(self._chat_window())
+        samples = []
+        for i, prompt in enumerate(prompts):
+            self._boundary()
+            self._set(phase=f"A/B {name}: {arm} {i + 1}/{len(prompts)}")
+            result = self._one([{"role": "user", "content": prompt}])
+            if isinstance(result, dict) and result.get("garbled"):
+                scores_garbled = True
+            samples.append(self._specs_from_reply(result) if isinstance(result, dict) else {})
+        specs = self._median_specs(samples, kinds)
+        if not (specs.get("write_tok_s") or specs.get("completion_tokens")):
+            raise ValueError("reply missing token counts")
+        score = GT.combined_score(specs)
+        if score <= 0:
+            raise ValueError("reply missing token counts")
+        scores.append(score)
         if scores_garbled:
             try:
                 scores.garbled = True

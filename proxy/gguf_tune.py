@@ -19,12 +19,13 @@ from typing import Callable, Optional
 
 import gguf_split as G
 
+import caravan_prompts as P
+
 MARGIN = 0.03
 STORE = Path("~/.caravan/gguf-tuned.json").expanduser()
-BENCH_PROMPTS = (
-    "Explain how a bicycle gear system works in about 150 words.",
-    "Write a short Python function that checks whether a string is a palindrome, with a docstring.",
-)
+# Five short prompts shared with caravan bench (the original pair first).
+# measure_http_specs also adds one ~2k-token long prompt when it fits.
+BENCH_PROMPTS = P.SHORT_PROMPTS
 
 
 def entry_key(model_path, n_minis: int) -> str:
@@ -111,7 +112,8 @@ def as_specs(measure) -> dict:
     """A measure() return is either a write-speed float or a specs dict."""
     if isinstance(measure, dict):
         return {k: float(v) for k, v in measure.items()
-                if k in ("write_tok_s", "read_tok_s", "ttft_s")
+                if k in ("write_tok_s", "read_tok_s", "long_read_tok_s",
+                         "ttft_s", "total_s")
                 and isinstance(v, (int, float))}
     try:
         return {"write_tok_s": float(measure)}
@@ -120,20 +122,26 @@ def as_specs(measure) -> dict:
 
 
 def combined_score(specs: dict) -> float:
-    """Higher is better. Geometric mean of write, read, and 1/first-token.
+    """Higher is better. Geometric mean of write, long-prompt read, and 1/total.
 
-    A batch size that only helps prompt reading can now win, which a
-    write-only score would have called a draw.
+    Long-prompt read is preferred (falls back to overall read) so a setting
+    that hurts reading is not picked, even if it writes a little faster.
+    First-token time is included when total is not available, so older
+    saved scores still compare fairly.
     """
     parts = []
-    w = (specs or {}).get("write_tok_s")
-    r = (specs or {}).get("read_tok_s")
-    t = (specs or {}).get("ttft_s")
+    s = specs or {}
+    w = s.get("write_tok_s")
+    r = s.get("long_read_tok_s") or s.get("read_tok_s")
+    total = s.get("total_s")
+    t = s.get("ttft_s")
     if w and w > 0:
         parts.append(float(w))
     if r and r > 0:
         parts.append(float(r))
-    if t and t > 0:
+    if total and total > 0:
+        parts.append(1.0 / float(total))
+    elif t and t > 0:
         parts.append(1.0 / float(t))
     if not parts:
         return 0.0
@@ -147,11 +155,23 @@ def beats(challenger, incumbent, margin: float = MARGIN) -> bool:
     return combined_score(as_specs(challenger)) > combined_score(as_specs(incumbent)) * (1 + margin)
 
 
-def measure_http_specs(port: int, *, prompts=BENCH_PROMPTS, max_tokens: int = 192,
-                       urlopen=None, timeout: float = 300.0) -> dict:
-    """Median write, read, and first-token time over the prompts."""
+def measure_http_specs(port: int, *, prompts=None, max_tokens: int = 192,
+                       urlopen=None, timeout: float = 300.0,
+                       chat_window=None, prompt_kinds=None) -> dict:
+    """Median write, read, first-token, and total over the Auto-tune prompts.
+
+    Default is the five short prompts plus one ~2k-token long prompt when
+    it fits the chat window. `long_read_tok_s` is the median read speed
+    of the long prompt(s) only.
+    """
     import urllib.request
     urlopen = urlopen or urllib.request.urlopen
+    kinds = list(prompt_kinds or [])
+    if prompts is None:
+        prompts, kinds, _note = P.autotune_prompt_list(chat_window)
+    prompts = list(prompts)
+    if len(kinds) < len(prompts):
+        kinds = kinds + ["short"] * (len(prompts) - len(kinds))
     samples = []
     for p in prompts:
         body = json.dumps({"messages": [{"role": "user", "content": p}],
@@ -176,6 +196,12 @@ def measure_http_specs(port: int, *, prompts=BENCH_PROMPTS, max_tokens: int = 19
             raise
         dt = time.time() - t0
         specs = specs_from_response(d)
+        if "total_s" not in specs and dt > 0:
+            specs["total_s"] = dt
+        usage = (d or {}).get("usage") or {}
+        for k in ("prompt_tokens", "completion_tokens"):
+            if k not in specs and isinstance(usage.get(k), (int, float)):
+                specs[k] = usage[k]
         if "write_tok_s" not in specs:
             n = ((d.get("usage") or {}).get("completion_tokens")) or 0
             if dt > 0 and n:
@@ -193,20 +219,31 @@ def measure_http_specs(port: int, *, prompts=BENCH_PROMPTS, max_tokens: int = 19
             pass
         samples.append(specs)
     out = {}
-    for key in ("write_tok_s", "read_tok_s", "ttft_s"):
+    for key in ("write_tok_s", "read_tok_s", "ttft_s", "total_s",
+                "prompt_tokens", "completion_tokens"):
         med = _median(s[key] for s in samples if key in s)
         if med is not None:
-            out[key] = round(med, 4)
+            out[key] = round(med, 4) if key in ("write_tok_s", "read_tok_s",
+                                                 "ttft_s", "total_s") else med
+    long_reads = [
+        s["read_tok_s"] for s, k in zip(samples, kinds)
+        if k == "long" and "read_tok_s" in s
+    ]
+    if long_reads:
+        med = _median(long_reads)
+        if med is not None:
+            out["long_read_tok_s"] = round(med, 4)
     if any(s.get("garbled") for s in samples):
         out["garbled"] = True
     return out
 
 
-def measure_http(port: int, *, prompts=BENCH_PROMPTS, max_tokens: int = 192,
-                 urlopen=None, timeout: float = 300.0) -> float:
+def measure_http(port: int, *, prompts=None, max_tokens: int = 192,
+                 urlopen=None, timeout: float = 300.0, chat_window=None) -> float:
     """Median write tok/s. Prefer measure_http_specs for the full score."""
     specs = measure_http_specs(port, prompts=prompts, max_tokens=max_tokens,
-                               urlopen=urlopen, timeout=timeout)
+                               urlopen=urlopen, timeout=timeout,
+                               chat_window=chat_window)
     return specs.get("write_tok_s") or 0.0
 
 

@@ -54,7 +54,7 @@ class GgufOptimizerTest(unittest.TestCase):
         s = opt.start()
         self.assertTrue(s["running"]); self.assertTrue(s["schedule"])
         s = wait_done(opt)
-        self.assertEqual(s["reloads"], 3); self.assertEqual(s["prompts"], 4)
+        self.assertEqual(s["reloads"], 3); self.assertEqual(s["prompts"], 12)  # 2 arms x (5 short + 1 long)
         self.assertEqual(s["summary"]["winner"], {"ubatch": 256}); self.assertTrue(s["summary"]["complete"])
         ub = next(i for i in s["schedule"] if i["name"] == "ubatch")
         self.assertEqual((ub["state"], ub["winner"]), ("kept", "256"))

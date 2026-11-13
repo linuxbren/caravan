@@ -55,8 +55,9 @@ off. Guess-ahead and Prompt lookup stay off for GGUF.
 Lists the models already downloaded and ready to load, one line each:
 the friendly name, whether it is GGUF or MLX, and the id to copy.
 The currently loaded model is marked. The list comes from a running
-Caravan. If Caravan is not running, the command says so and lists
-what it can see on this Mac's disk.
+Caravan, and GGUF files on this Mac's disk are included even if the
+page's own list omitted them. If Caravan is not running, the command
+says so and lists what it can see on this Mac's disk.
 
     caravan models
 
@@ -73,13 +74,24 @@ punctuation, and quant suffixes). If none, one, or several match on a
 side, it lists the candidates with their ids and how to pick with
 `--gguf` or `--mlx`. Those flags still work on their own.
 
+By default it runs five short prompts (the two Auto-tune has always
+used, plus a short code, explanation, and list prompt) and a
+long-prompt series at about 1k, 4k, and 8k tokens (two prompts at
+each size, reported as medians). Sizes that will not fit the model's
+chat window are skipped, with a short reason. `--short` or `--long`
+runs just one of those. Each prompt starts with a unique opening so a
+shared-start cache does not make later prompts look faster. For each
+model the output has a "Short prompts (5)" line and a "Long prompts
+(~N tok) (2)" line per size, then a short plain summary of which is
+faster at reading, writing, first token, and total, with the percent
+difference, from the measured numbers only.
+
 Without `--yes` it shows which two models it would compare and the
 exact command, and does not load anything. `--from-averages` prints
 already-saved chat averages without loading or unloading a model.
-`--yes` loads each model in turn on a running Caravan and measures
-with the same prompts Auto-tune uses. When the comparison finishes, or
-if a measurement fails, Caravan puts the original model back, if one
-was loaded, and says so.
+`--yes` loads each model in turn on a running Caravan. When the
+comparison finishes, or if a measurement fails, Caravan puts the
+original model back, if one was loaded, and says so.
 
 On the 1st Mac, with both models already downloaded:
 
@@ -92,8 +104,33 @@ match:
 
     caravan bench --gguf <gguf-id> --mlx <mlx-id> --yes
 
-Live GGUF vs MLX numbers from this command are not in this note. They
-wait for Brenden to run it on the Macs.
+### First measured results (1st Mac)
+
+Brenden's first real `caravan bench` on the 1st Mac, Qwen2.5 Coder 7B,
+using the two short Auto-tune prompts of that build (before the five
+short prompts and the long-prompt series):
+
+    GGUF Q4_K_M: Read 46 tok at 157 tok/s · Write 166 tok at 22.3 tok/s · first token 0.22s · total 7.65s
+    MLX 4bit: Read 46 tok at 182 tok/s · Write 172 tok at 23.5 tok/s · first token 0.33s · total 7.61s
+
+On those short prompts, MLX was faster at reading (16% faster, 182 vs
+157 tok/s) and at writing (5% faster, 23.5 vs 22.3 tok/s). GGUF's
+first token was sooner (33% sooner, 0.22s vs 0.33s). Total time was
+about the same (7.61s vs 7.65s).
+
+### Auto-tune prompts and scoring
+
+Auto-tune (MLX and GGUF) uses the same five short prompts as bench,
+plus one long prompt of about 2k tokens, skipped if it will not fit
+the chat window. Each prompt has a unique opening so a shared-start
+cache does not skew a trial. The winner is picked from medians, and
+the score includes long-prompt read speed as well as write speed and
+total time, so a setting that hurts reading is not picked. Before and
+After stay in the same wording as the stats under a reply. A garbled
+trial still loses, and the memory-check probe is still required.
+Shared start and Two chats keep their own measurements, because those
+knobs are about a cached prefix and two chats at once.
+
 
 ## What is in Settings for a GGUF model
 
@@ -116,8 +153,11 @@ hidden.
 New tests cover the launch flags, Auto Chat window (fallback, cap,
 fit, and shorter trained windows), Settings pins, Self-tuning's one
 quiet trial (keep, revert, pins, and a reload only when idle),
-`caravan models`, plain-name matching for `caravan bench` (unique,
-several, none, and `--gguf`/`--mlx` still work), putting the original
-model back after a live comparison even when a measurement fails, and
-bench wording and steps. Existing tests were updated for the new
-Settings rows.
+`caravan models` (including GGUF files the running page omitted),
+plain-name matching for `caravan bench`, putting the original model
+back, five short prompts and the long-prompt series (sizing, skip
+when the window is too small, unique openings, `--short`/`--long`,
+and a summary from measured numbers only), and Auto-tune's same five
+short prompts plus one long prompt (a faster write that hurts
+long-prompt reading loses). Existing tests were updated for the new
+prompt counts.

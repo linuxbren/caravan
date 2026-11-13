@@ -2,7 +2,8 @@
 same snapshot shape the MLX Optimizer reports (phase, prompts, reloads,
 schedule, eta_s, summary) so the existing Optimize now panel renders it.
 
-Each option costs 2 reloads + 2 measurements (2 prompts each). The reload is a
+Each option costs 2 reloads + 2 measurements (five short prompts
+and one ~2k-token long prompt, skipped if it will not fit the chat window). The reload is a
 full GGUF relaunch with an explicit tune (entry["tune_override"]). The tuner
 and its hooks are injectable so this is unit-tested with fakes."""
 from __future__ import annotations
@@ -138,11 +139,24 @@ class GgufOptimizer:
     def _measure(self):
         self._set(phase="measuring")
         t0 = time.time()
-        raw = (self._measure_fn or (lambda: GT.measure_http_specs(self.mgr.lead_port)))()
+        window = None
+        try:
+            import caravan_prompts as P
+            window = P.chat_window_from(self.mgr.snapshot() or {})
+        except Exception:
+            window = None
+        raw = (self._measure_fn or (
+            lambda: GT.measure_http_specs(self.mgr.lead_port, chat_window=window)
+        ))()
         dt = time.time() - t0
+        try:
+            import caravan_prompts as P
+            n_prompts = len(P.autotune_prompt_list(window)[0])
+        except Exception:
+            n_prompts = len(GT.BENCH_PROMPTS)
         with self._lock:
-            self.state["prompts"] += len(GT.BENCH_PROMPTS)
-            per = dt / len(GT.BENCH_PROMPTS)
+            self.state["prompts"] += n_prompts
+            per = dt / max(n_prompts, 1)
             r = self.state["reply_s"]
             self.state["reply_s"] = round(per if r is None else (r + per) / 2, 1)
             cur = self._current()

@@ -6,11 +6,16 @@ Prints the same wording as the stats under each reply:
 
 Does not invent numbers. Pass a plain name (for example
 `caravan bench "qwen2.5 coder 7b"`) or both `--gguf` and `--mlx` ids
-(`caravan models` lists them). Without `--yes` it shows which two
-models it would compare and the exact command. `--from-averages`
-reads already-saved chat averages without loading or unloading any
-model. After a live comparison, the model that was loaded before is
-put back, even if a measurement failed.
+(`caravan models` lists them). By default it runs five short prompts
+and a long-prompt series at about 1k, 4k, and 8k tokens (two prompts
+at each size; sizes that will not fit the chat window are skipped).
+`--short` or `--long` runs just one of those. Without `--yes` it
+shows which two models it would compare and the exact command.
+`--from-averages` reads already-saved chat averages without loading
+or unloading any model. After a live comparison, the model that was
+loaded before is put back, even if a measurement failed. Each prompt
+starts with a unique opening so a shared-start cache does not make
+later prompts look faster.
 """
 from __future__ import annotations
 
@@ -29,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import web_speed as S  # noqa: E402
 import gguf_tune as T  # noqa: E402
+import caravan_prompts as P  # noqa: E402
 from caravan_models import (  # noqa: E402
     DEFAULT_PORT,
     fetch_catalog,
@@ -167,15 +173,244 @@ def _side_label(model, fallback_kind=None) -> str:
     return f"{name} ({kind})"
 
 
+def _running_window(port, urlopen, st=None):
+    if st is None:
+        try:
+            st = status(port, urlopen=urlopen)
+        except Exception:
+            st = None
+    w = P.chat_window_from(st)
+    if w:
+        return w
+    try:
+        s = urlopen(f"http://127.0.0.1:{int(port)}/api/settings", timeout=5)
+        w = P.chat_window_from(s)
+    except Exception:
+        pass
+    return w
+
+
+def measure_series(port, urlopen, *, run_short=True, run_long=True,
+                   prompts=None, window=None, timeout=600) -> list:
+    """Run the short and/or long series. Returns a list of result rows."""
+    rows = []
+    if prompts is not None:
+        specs = measure_chat(port, prompts=prompts, urlopen=urlopen)
+        rows.append({
+            "label": f"Short prompts ({len(prompts)})",
+            "specs": specs, "n": len(prompts),
+        })
+        return rows
+    if run_short:
+        shorts = P.short_prompts(tag_prefix="Bench short")
+        specs = measure_chat(port, prompts=shorts, urlopen=urlopen)
+        rows.append({
+            "label": f"Short prompts ({len(shorts)})",
+            "specs": specs, "n": len(shorts),
+        })
+    if run_long:
+        window = window if window is not None else _running_window(port, urlopen)
+        for size in P.BENCH_LONG_SIZES:
+            label = f"Long prompts (~{P.size_label(size)} tok) (2)"
+            if not P.fits_window(size, window):
+                rows.append({
+                    "label": label, "skipped": True,
+                    "reason": P.skip_reason(size, window), "size": size,
+                })
+                continue
+            long_ps = P.long_prompts_for_size(size)
+            try:
+                specs = measure_chat(
+                    port, prompts=long_ps, urlopen=urlopen, timeout=timeout,
+                )
+            except Exception as e:
+                rows.append({
+                    "label": label, "skipped": True,
+                    "reason": f"the prompt did not fit or the measurement failed ({e})",
+                    "size": size,
+                })
+                continue
+            rows.append({
+                "label": label, "specs": specs, "n": 2, "size": size,
+            })
+    return rows
+
+
+def format_series(name, rows) -> list:
+    lines = [f"{name}:"]
+    for r in rows or []:
+        if r.get("skipped"):
+            lines.append(f"  {r['label']}: skipped — {r['reason']}")
+            continue
+        specs = r.get("specs") or {}
+        line = S.format_reply_stats(
+            specs.get("write_tok_s"),
+            specs.get("ttft_s"),
+            prompt_tokens=specs.get("prompt_tokens"),
+            read_tok_s=specs.get("read_tok_s"),
+            completion_tokens=specs.get("completion_tokens"),
+            total_s=specs.get("total_s"),
+        )
+        if line:
+            lines.append(f"  {r['label']}: {line}")
+        else:
+            lines.append(f"  {r['label']}: no speed numbers recorded yet.")
+    return lines
+
+
+def _fmt_speed(x) -> str:
+    x = float(x)
+    if abs(x - round(x)) < 0.05:
+        return f"{x:.0f}"
+    return f"{x:.1f}"
+
+
+def _fmt_time(x) -> str:
+    x = float(x)
+    if x >= 10:
+        return f"{x:.1f}s"
+    return f"{x:.2f}s"
+
+
+def _fmt_pct(p) -> str:
+    ap = abs(float(p))
+    if ap >= 9.5:
+        return f"{ap:.0f}%"
+    if ap >= 1:
+        return f"{ap:.0f}%"
+    return f"{ap:.1f}%"
+
+
+def _pct(fast, slow) -> float:
+    return (float(fast) - float(slow)) / abs(float(slow)) * 100.0
+
+
+def summarize(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX") -> str:
+    """Plain-words comparison from measured numbers only. No invented values."""
+    g_map = {r["label"]: r for r in (gguf_rows or []) if r.get("label")}
+    m_map = {r["label"]: r for r in (mlx_rows or []) if r.get("label")}
+    labels = []
+    for r in (gguf_rows or []) + (mlx_rows or []):
+        if r.get("label") and r["label"] not in labels:
+            labels.append(r["label"])
+    paragraphs = []
+    for label in labels:
+        g, m = g_map.get(label), m_map.get(label)
+        head = label.replace(" (5)", "").replace(" (2)", "").replace(" (1)", "")
+        head = head[0].lower() + head[1:] if head else label
+        if (g or {}).get("skipped") and (m or {}).get("skipped"):
+            reason = (g or m).get("reason") or "they would not fit the chat window."
+            paragraphs.append(f"On {head}, both sides were skipped — {reason}")
+            continue
+        if (g or {}).get("skipped") and m and not m.get("skipped") and m.get("specs"):
+            paragraphs.append(
+                f"On {head}, {gguf_name} was skipped — {g.get('reason')}. "
+                f"No comparison at this size."
+            )
+            continue
+        if (m or {}).get("skipped") and g and not g.get("skipped") and g.get("specs"):
+            paragraphs.append(
+                f"On {head}, {mlx_name} was skipped — {m.get('reason')}. "
+                f"No comparison at this size."
+            )
+            continue
+        gs, ms = (g or {}).get("specs") or {}, (m or {}).get("specs") or {}
+        if not gs or not ms:
+            continue
+        bits = []
+
+        def speed_bit(key, word):
+            a, b = gs.get(key), ms.get(key)
+            if not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
+                return
+            if a <= 0 or b <= 0:
+                return
+            rel = abs(a - b) / max(a, b)
+            if rel < 0.02:
+                bits.append(
+                    f"about the same at {word} "
+                    f"({_fmt_speed(a)} vs {_fmt_speed(b)} tok/s)"
+                )
+                return
+            if b > a:
+                winner, fast, slow = mlx_name, b, a
+            else:
+                winner, fast, slow = gguf_name, a, b
+            bits.append(
+                f"{winner} was faster at {word} "
+                f"({_fmt_pct(_pct(fast, slow))} faster, "
+                f"{_fmt_speed(fast)} vs {_fmt_speed(slow)} tok/s)"
+            )
+
+        def time_bit(key, word, unit_fmt=_fmt_time):
+            a, b = gs.get(key), ms.get(key)
+            if not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
+                return
+            if a <= 0 or b <= 0:
+                return
+            rel = abs(a - b) / max(a, b)
+            if rel < 0.02:
+                bits.append(
+                    f"{word} was about the same "
+                    f"({unit_fmt(a)} vs {unit_fmt(b)})"
+                )
+                return
+            if a < b:
+                winner, fast, slow = gguf_name, a, b
+            else:
+                winner, fast, slow = mlx_name, b, a
+            bits.append(
+                f"{winner}'s {word} was sooner "
+                f"({_fmt_pct((slow - fast) / slow * 100)} sooner, "
+                f"{unit_fmt(fast)} vs {unit_fmt(slow)})"
+            )
+
+        speed_bit("read_tok_s", "reading")
+        speed_bit("write_tok_s", "writing")
+        time_bit("ttft_s", "first token")
+        time_bit("total_s", "total time")
+        if bits:
+            # "On short prompts, X was ... and Y. Z."
+            if len(bits) == 1:
+                body = bits[0]
+            elif len(bits) == 2:
+                body = bits[0] + ", and " + bits[1]
+            else:
+                body = ", ".join(bits[:-1]) + ", and " + bits[-1]
+            paragraphs.append(f"On {head}, {body}.")
+    if not paragraphs:
+        return ""
+    return "\n".join(paragraphs) + "\n"
+
+
 def steps_text(gguf_id: str, mlx_id: str, port: int = DEFAULT_PORT,
-               *, gguf=None, mlx=None, query=None) -> str:
+               *, gguf=None, mlx=None, query=None,
+               run_short=True, run_long=True) -> str:
     """Exact commands Brenden can run. No invented numbers."""
     gid = gguf_id
     mid = mlx_id
+    flags = ""
+    if run_short and not run_long:
+        flags = " --short"
+    elif run_long and not run_short:
+        flags = " --long"
+    series = []
+    if run_short:
+        series.append("five short prompts")
+    if run_long:
+        series.append(
+            "a long-prompt series at about 1k, 4k, and 8k tokens "
+            "(two prompts at each size; sizes that will not fit the "
+            "model's chat window are skipped)"
+        )
+    series_txt = " and ".join(series) if series else "the prompt series"
     header = (
-        "This compares a GGUF model to its MLX counterpart using the same\n"
-        "prompts Auto-tune uses, and prints each side in the same wording as\n"
-        "the stats under a reply.\n"
+        "This compares a GGUF model to its MLX counterpart and prints\n"
+        "each side in the same wording as the stats under a reply.\n"
+        f"It runs {series_txt}. Each prompt starts with a unique\n"
+        "opening so a shared-start cache does not make later prompts\n"
+        "look faster. A short plain summary at the end says which is\n"
+        "faster, from the measured numbers only.\n"
     )
     if gguf and mlx:
         header += (
@@ -190,13 +425,13 @@ def steps_text(gguf_id: str, mlx_id: str, port: int = DEFAULT_PORT,
         "On the 1st Mac, with Caravan running and both models already\n"
         "downloaded:\n"
         "\n"
-        f"  caravan bench --gguf {gid} --mlx {mid} --yes\n"
+        f"  caravan bench --gguf {gid} --mlx {mid}{flags} --yes\n"
     )
     if query:
         header += (
             "\nOr, using the name:\n"
             "\n"
-            f'  caravan bench "{query}" --yes\n'
+            f'  caravan bench "{query}"{flags} --yes\n'
         )
     header += (
         "\nTo only print already-saved chat averages, without loading anything:\n"
@@ -235,7 +470,8 @@ def _restore_original(port, original_id, original_name, urlopen, notes):
 
 
 def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
-             gguf_name=None, mlx_name=None, prompts=None) -> dict:
+             gguf_name=None, mlx_name=None, prompts=None,
+             run_short=True, run_long=True) -> dict:
     try:
         st = status(port, urlopen=urlopen)
     except Exception:
@@ -255,13 +491,32 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
     lines = []
     notes = []
     err = None
+    g_rows, m_rows = [], []
     try:
         load_model(port, gguf_id, urlopen=urlopen)
-        g_specs = measure_chat(port, prompts=prompts, urlopen=urlopen)
-        lines.append(format_side(gguf_name or f"{gguf_id} (GGUF)", g_specs))
+        g_window = _running_window(port, urlopen)
+        g_rows = measure_series(
+            port, urlopen, run_short=run_short, run_long=run_long,
+            prompts=prompts, window=g_window,
+        )
+        lines.extend(format_series(gguf_name or f"{gguf_id} (GGUF)", g_rows))
         load_model(port, mlx_id, urlopen=urlopen)
-        m_specs = measure_chat(port, prompts=prompts, urlopen=urlopen)
-        lines.append(format_side(mlx_name or f"{mlx_id} (MLX)", m_specs))
+        m_window = _running_window(port, urlopen)
+        m_rows = measure_series(
+            port, urlopen, run_short=run_short, run_long=run_long,
+            prompts=prompts, window=m_window,
+        )
+        lines.extend(format_series(mlx_name or f"{mlx_id} (MLX)", m_rows))
+        summary = summarize(
+            g_rows, m_rows,
+            gguf_name=gguf_name or "GGUF",
+            mlx_name=mlx_name or "MLX",
+        )
+        if summary:
+            lines.append("")
+            lines.append(summary.rstrip())
+        lines.append("")
+        lines.append(P.CACHE_NOTE)
     except Exception as e:
         err = e
     finally:
@@ -271,6 +526,8 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
         "notes": notes,
         "error": err,
         "original": original_id,
+        "gguf_rows": g_rows,
+        "mlx_rows": m_rows,
     }
 
 
@@ -295,6 +552,12 @@ def _resolve(args, models=None):
         "mlx": _stub(args.mlx, "MLX", args.mlx_name),
         "messages": [],
     }
+
+
+def _run_flags(args):
+    short = bool(getattr(args, "short", False))
+    long = bool(getattr(args, "long", False))
+    return (short or not long, long or not short)
 
 
 def main(argv=None, *, models=None):
@@ -324,6 +587,14 @@ def main(argv=None, *, models=None):
              "is put back when the comparison finishes",
     )
     p.add_argument(
+        "--short", action="store_true",
+        help="run only the five short prompts",
+    )
+    p.add_argument(
+        "--long", action="store_true",
+        help="run only the long-prompt series (about 1k, 4k, and 8k tokens)",
+    )
+    p.add_argument(
         "--from-averages", action="store_true",
         help="print already-saved chat averages only; do not load or unload a model",
     )
@@ -331,6 +602,7 @@ def main(argv=None, *, models=None):
     p.add_argument("--gguf-name", default=None, help=argparse.SUPPRESS)
     p.add_argument("--mlx-name", default=None, help=argparse.SUPPRESS)
     args = p.parse_args(argv)
+    run_short, run_long = _run_flags(args)
     pair = _resolve(args, models=models)
     if not pair.get("ok"):
         text = "\n\n".join(pair.get("messages") or [])
@@ -353,12 +625,14 @@ def main(argv=None, *, models=None):
     if not args.yes:
         sys.stdout.write(steps_text(
             gid, mid, port=args.port, gguf=gguf, mlx=mlx, query=args.name,
+            run_short=run_short, run_long=run_long,
         ))
         return 0
     try:
         result = run_live(
             gid, mid, port=args.port,
             gguf_name=gname, mlx_name=mname,
+            run_short=run_short, run_long=run_long,
         )
     except Exception as e:
         sys.stderr.write(f"Could not finish the comparison: {e}\n")

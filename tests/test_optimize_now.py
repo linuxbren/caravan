@@ -262,7 +262,7 @@ class RunnerTest(unittest.TestCase):
         opt._send=send; opt.start('quick'); opt._thread.join(5)
         s=opt.snapshot(); self.assertEqual(s['phase'],'done',s)
         self.assertEqual(mgr.entry['winner'],{'kv_bits':8,'fuse_kernels':'off'})
-        self.assertEqual(s['prompts'],12)
+        self.assertEqual(s['prompts'],24)
         self.assertEqual(s['reloads'],3) # kv challenger; fuse challenger + rollback
         self.assertEqual([r['force']['kv_bits'] for r in mgr.reloads],[8,8,8])
         self.assertEqual(mgr.active['fuse_kernels'],'off')
@@ -297,7 +297,7 @@ class RunnerTest(unittest.TestCase):
         self.assertIn("first token 2.10s", got["lines"][0])
         self.assertIn("first token 1.20s", got["lines"][1])
         self.assertEqual(got["line"], "\n".join(got["lines"]))
-        self.assertEqual(opt.snapshot()["prompts"], 12)  # samples are not counted as trial prompts
+        self.assertEqual(opt.snapshot()["prompts"], 24)  # samples are not counted as trial prompts
 
     def test_unavailable_saved_keepalive_does_not_trigger_reload(self):
         mgr=FakeMgr();mgr.entry={"winner":{"keepalive":True}}
@@ -314,7 +314,7 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(opt.snapshot()['phase'],'canceled')
         self.assertFalse(mgr.entry.get('winner'))
         self.assertEqual(mgr.active['kv_bits'],16)
-        self.assertEqual(opt.snapshot()['prompts'],4)
+        self.assertEqual(opt.snapshot()['prompts'],7)
         self.assertEqual(opt.snapshot()['reloads'],2)
 
     def test_cancel_during_reload_finishes_and_restores_no_more_probes(self):
@@ -324,7 +324,7 @@ class RunnerTest(unittest.TestCase):
             orig(*args,**kw); opt.cancel()
         mgr.switch=switch; opt.start(); opt._thread.join(5)
         self.assertEqual(opt.snapshot()['phase'],'canceled')
-        self.assertEqual(opt.snapshot()['prompts'],3)
+        self.assertEqual(opt.snapshot()['prompts'],6)
         self.assertEqual(mgr.active['kv_bits'],16)
 
     def test_failed_challenger_load_recovers_without_loss(self):

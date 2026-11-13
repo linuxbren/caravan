@@ -7,10 +7,15 @@ the same wording as Auto-tune. Chat window is a Settings row with a
 sane Auto default from the model and this Mac's memory (8192 when
 unknown, never a jump to a much larger window). Two chats is available
 (`--parallel`, including on one Mac); Auto keeps one chat. `caravan
-models` lists downloaded models with their ids. `caravan bench`
-accepts a plain name, compares a GGUF model to its MLX counterpart in
-reply-stats wording without inventing numbers, and puts the original
-model back after a live run. This follow-up does not change
+models` lists downloaded models with their ids, including GGUF files
+the running page omitted. `caravan bench` accepts a plain name, runs
+five short prompts and a long-prompt series, compares a GGUF model to
+its MLX counterpart in reply-stats wording without inventing numbers,
+and puts the original model back after a live run. Auto-tune uses the
+same five short prompts plus one ~2k-token long prompt, and scores
+include long-prompt read speed. First measured bench on the 1st Mac
+(Qwen2.5 Coder 7B, two short prompts of that build): GGUF Q4_K_M
+Write 22.3 tok/s, MLX 4bit Write 23.5 tok/s. This follow-up does not change
 `agent/`, `runtime/`, or the requirements files, so a `caravan update`
 keeps a loaded model running; the web page still restarts. Details:
 [DAY25.md](DAY25.md).

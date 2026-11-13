@@ -13,8 +13,14 @@
 - `caravan bench` compares a GGUF model to its MLX counterpart in the
   same wording as the stats under a reply. It does not invent numbers.
   A plain name finds the matching pair; `--gguf` and `--mlx` still
-  work. After a live run, the original model is put back, even if a
-  measurement failed.
+  work. Default: five short prompts and a long-prompt series;
+  `--short` or `--long` for just one. After a live run, the original
+  model is put back. First measured result (1st Mac, Qwen2.5 Coder
+  7B): GGUF Q4_K_M Write 22.3 tok/s, MLX 4bit Write 23.5 tok/s. See
+  [Day 25](DAY25.md).
+- Auto-tune (MLX and GGUF) uses the same five short prompts plus one
+  ~2k-token long prompt, scores on medians including long-prompt
+  read speed, and still treats a garbled trial as a loss.
 - Does not change `agent/`, `runtime/`, or the requirements files, so
   a `caravan update` from the Day 24 pin keeps a loaded model running.
   The web page still restarts. See [Day 25](DAY25.md).
