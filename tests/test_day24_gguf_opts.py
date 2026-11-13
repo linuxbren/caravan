@@ -127,10 +127,19 @@ class SettingsRows(unittest.TestCase):
         self.assertEqual(cw["values"][0], "auto")
         self.assertIn("4096", cw["values"])
         self.assertIn("keep in mind", cw["help"])
-        for locked in ("guess_ahead", "prompt_lookup"):
-            o = next(x for x in WS.options_for("gguf") if x["id"] == locked)
-            self.assertTrue(o["locked"])
-            self.assertEqual(o["forced"], "off")
+        for unlocked in ("guess_ahead", "prompt_lookup"):
+            o = next(x for x in WS.options_for("gguf") if x["id"] == unlocked)
+            self.assertFalse(o.get("locked"))
+            self.assertNotIn("forced", o)
+            self.assertEqual(o["values"][0], "auto")
+            self.assertIn("off", o["values"])
+            self.assertIn("on", o["values"])
+            self.assertNotIn("mtp", o["values"])
+            self.assertNotIn("adaptive", o["values"])
+        ga = next(x for x in WS.options_for("gguf") if x["id"] == "guess_ahead")
+        self.assertIn("will not download", ga["disabled_values"]["on"])
+        pl = next(x for x in WS.options_for("gguf") if x["id"] == "prompt_lookup")
+        self.assertIn("Auto stays off until a test finds it is faster", pl["help"])
 
     def test_mlx_rows_unchanged(self):
         ids = [o["id"] for o in WS.options_for("mlx")]

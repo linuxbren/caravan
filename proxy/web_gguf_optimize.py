@@ -66,6 +66,30 @@ class GgufOptimizer:
             self.state["log"] = (self.state["log"] + [{"t": time.time(), "msg": msg}])[-60:]
         self._on_log(msg)
 
+    def _schedule_kw(self) -> dict:
+        """Safety gates Auto-tune uses for Prompt lookup: one chat, not pinned."""
+        s = dict(getattr(self, "settings", None) or {})
+        pinned = set()
+        if s.get("prompt_lookup") in ("on", "off"):
+            pinned.add("prompt_lookup")
+        n_slots = 1
+        try:
+            n_slots = int(s.get("pipeline_chats") or 1)
+        except (TypeError, ValueError):
+            n_slots = 1
+        if n_slots < 1:
+            n_slots = 1
+        # Two chats pin is "2"; Auto/1 is one chat. A loaded tune may
+        # also have n_slots.
+        entry = getattr(self, "entry", None) or {}
+        tun = entry.get("tune") or entry.get("tune_override") or {}
+        if s.get("pipeline_chats") in (None, "", "auto") and tun.get("n_slots"):
+            try:
+                n_slots = int(tun["n_slots"])
+            except (TypeError, ValueError):
+                pass
+        return {"n_slots": n_slots, "pinned": pinned}
+
     def start(self, source="optimize_now", fresh=True):
         with self._lock:
             if self.state["running"]:
@@ -88,10 +112,11 @@ class GgufOptimizer:
             # A fresh Tune again retries earlier losses; the on-disk record
             # is only updated when this run itself commits a result.
             losses = [] if self.fresh else list(e.get("losses") or [])
+            skw = self._schedule_kw()
             sched = [{"name": i["name"], "state": "skipped" if i["skip"] else "pending",
                       "skip": i["skip"], "reload": True, "incumbent": i["incumbent"],
                       "challenger": i["challenger"], "winner": None, "done_arms": 0}
-                     for i in G.gguf_schedule(e["best"], losses)]
+                     for i in G.gguf_schedule(e["best"], losses, **skw)]
             self._cancel.clear(); self._pause.clear()
             self.state = self._blank()
             self._tune_unchanged = False
@@ -216,6 +241,9 @@ class GgufOptimizer:
             tuner = self.tuner_cls(self.path, self.n_minis, restart=self._restart,
                                    measure=self._measure, store_path=self.store_path,
                                    log=self._log, cancelled=self._cancel.is_set)
+            # Real GgufTuner accepts this; test fakes may not.
+            if hasattr(tuner, "schedule_kw"):
+                tuner.schedule_kw = self._schedule_kw()
             res = tuner.run()
             status = res.get("status") or "done"
             source = getattr(self, "source", "optimize_now") or "optimize_now"

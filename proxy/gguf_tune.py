@@ -111,10 +111,13 @@ def specs_from_response(data: dict) -> dict:
 def as_specs(measure) -> dict:
     """A measure() return is either a write-speed float or a specs dict."""
     if isinstance(measure, dict):
-        return {k: float(v) for k, v in measure.items()
-                if k in ("write_tok_s", "read_tok_s", "long_read_tok_s",
-                         "ttft_s", "total_s")
-                and isinstance(v, (int, float))}
+        out = {k: float(v) for k, v in measure.items()
+               if k in ("write_tok_s", "read_tok_s", "long_read_tok_s",
+                        "ttft_s", "total_s")
+               and isinstance(v, (int, float))}
+        if measure.get("garbled"):
+            out["garbled"] = True
+        return out
     try:
         return {"write_tok_s": float(measure)}
     except (TypeError, ValueError):
@@ -266,19 +269,22 @@ class GgufTuner:
     def __init__(self, model_path, n_minis: int, *, restart: Callable[[dict], None],
                  measure: Callable, store_path: Optional[Path] = None,
                  log: Callable[[str], None] = print, cancelled: Callable[[], bool] = lambda: False,
-                 repeats: int = 1):
+                 repeats: int = 1, schedule_kw: Optional[dict] = None):
         self.key = entry_key(model_path, n_minis)
         self.restart, self.measure, self.log = restart, measure, log
         self.store_path, self.cancelled, self.repeats = store_path, cancelled, max(1, int(repeats))
+        self.schedule_kw = dict(schedule_kw or {})
 
     def _score(self, tune: dict) -> dict:
         self.restart(dict(tune))
         acc = [as_specs(self.measure()) for _ in range(self.repeats)]
         out = {}
-        for key in ("write_tok_s", "read_tok_s", "ttft_s"):
+        for key in ("write_tok_s", "read_tok_s", "long_read_tok_s", "ttft_s", "total_s"):
             med = _median(s[key] for s in acc if key in s)
             if med is not None:
                 out[key] = med
+        if any(s.get("garbled") for s in acc):
+            out["garbled"] = True
         return out
 
     def run(self) -> dict:
@@ -289,7 +295,7 @@ class GgufTuner:
                   "before": None, "after": None}
         scored = []  # (tune, specs)
         try:
-            for item in G.gguf_schedule(best, e["losses"]):
+            for item in G.gguf_schedule(best, e["losses"], **self.schedule_kw):
                 if self.cancelled():
                     result["status"] = "cancelled"
                     break

@@ -143,8 +143,12 @@ are used, with plain-word hints. Memory compression offers Auto, 16, and
 this Mac, falling back to the same default as before when that cannot be
 measured, and never jumping to a much larger window. Two chats Auto keeps
 one chat; set 2 and apply to let two chats share the model at the same
-time, including on one Mac. Guess-ahead and Prompt lookup stay off for
-now. Fused kernels and GPU keep-warm are hidden, because they do not
+time, including on one Mac. Guess-ahead and Prompt lookup are Auto,
+Off, or On, and Auto stays off until a test finds a winner. Guess-ahead
+On is only available when a smaller model of the same family is already
+on this Mac; Caravan will not download one for you. Auto-tune may try
+Prompt lookup when only one chat is in use, and it treats a garbled
+reply as a loss. Fused kernels and GPU keep-warm are hidden, because they do not
 apply. Self-tuning on a GGUF model learns from real chats, proposes one
 quiet trial, and reloads when you are not mid-reply. The same Before and
 After lines Auto-tune uses are filled. Auto-tune also compares 16-bit

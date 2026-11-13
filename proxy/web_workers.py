@@ -566,6 +566,7 @@ class WorkerManager:
                 tune = WS.apply_gguf_settings(
                     GT.best_tune(path, 1 + len(rpc)),
                     self.snapshot().get("settings") or {},
+                    model_path=path,
                 )
         except Exception:  # noqa: BLE001 - tuning is optional
             tune = {}

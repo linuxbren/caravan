@@ -11,6 +11,12 @@ a shorter bar is sooner, matching the label "First token (s, lower is
 better)". Reading and Writing bars are unchanged. The Day 25 sample
 chart was redrawn with the same numbers.
 
+GGUF Prompt lookup and Guess-ahead are Auto, Off, or On. Auto stays
+off until a test finds a winner. Auto-tune may try Prompt lookup last
+when only one chat is in use, and treats a garbled trial as a loss.
+Guess-ahead On needs a smaller same-family model already on this Mac;
+Caravan will not download one. Auto-tune does not try Guess-ahead.
+
 These follow-ups do not change `agent/`, `runtime/`, or the
 requirements files, so a `caravan update` from the Day 25 pin keeps a
 loaded model running; the web page still restarts. See

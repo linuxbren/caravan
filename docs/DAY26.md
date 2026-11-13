@@ -41,10 +41,33 @@ This follow-up does not change `agent/`, `runtime/`, or the
 requirements files, so a `caravan update` from the previous Day 26
 pin keeps a loaded model running.
 
+### GGUF Prompt lookup and a draft model
+
+Under Advanced, a GGUF model now has **Prompt lookup** and
+**Guess-ahead**, each Auto, Off, or On. Auto stays off until a test
+finds a winner (or you turn it on). Prompt lookup reuses words from
+your prompt to help with repeated text; it can help on repeated
+passages and can slow mixed chats. When it is on, Caravan asks the bundled engine to reuse words from
+your prompt. Auto-tune may try it last, only
+when it is safe: one chat (not Two chats), and the row is not already
+pinned. A garbled trial is a loss, even if it looks faster, and the
+previous setting is kept. Self-tuning does not try this option.
+Chat window and Two chats are still not flipped automatically.
+
+Guess-ahead uses a smaller model already on this Mac to guess upcoming
+words for the main model to check. On is only available when a smaller
+model of the same family is already on disk; Caravan will not download
+one for you. Auto-tune does not try Guess-ahead in this follow-up — turning it
+on is a deliberate choice, because it is often slower on a Mac and
+uses more memory. A missing or unknown helper is treated as off, and
+Caravan never passes a flag that would download weights.
+
+This follow-up does not change `agent/`, `runtime/`, or the
+requirements files, so a `caravan update` from the previous Day 26
+pin keeps a loaded model running. The web page still restarts.
+
 ## What is still ahead (same Day 26)
 
-- **GGUF Phase 3:** prompt lookup and a draft model, off by default,
-  measured per model.
 - **Voice:** listening first — a microphone in the chat box and a
   listen worker. Design notes only unless a clearly safe piece is
   ready.
@@ -63,3 +86,11 @@ New tests also cover the First token chart: the 0.28s bar is shorter
 than the 0.46s bar (about 61% as long), a longer wait is the longer
 bar at every size, Reading and Writing bars are unchanged, and
 `--ascii` and the block-character chart agree on which bar is shorter.
+
+New tests cover GGUF Prompt lookup and Guess-ahead: the launch flags
+(including that a missing helper and any download flag are refused),
+finding a smaller same-family model already on disk, Settings rows
+(Auto/Off/On, On disabled without a helper), Auto-tune trying Prompt
+lookup last and skipping it for Two chats or a pin, Self-tuning not
+trying it, and a faster but garbled Prompt lookup trial treated as a
+loss.

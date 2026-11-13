@@ -17,14 +17,14 @@ OPTIONS = [
      "values": ["auto", "off"]},
     {"id": "guess_ahead", "label": "Guess-ahead",
      "help": "A smaller model guesses upcoming words for the main MLX model to check. Needs a matching helper; up to ~33% faster writing one reply on a split model in our tests, but slower with two chats.",
-     "help_gguf": "A smaller model guesses upcoming words for the main model to check. Often slower on a Mac, so it stays off until a test says otherwise.",
+     "help_gguf": "A smaller model already on this Mac guesses upcoming words for the main model to check. Often slower, so Auto stays off until a test finds it is faster. On is only available when a smaller model of the same family is already on this Mac; Caravan will not download one for you.",
      "values": ["auto", "on", "off", "mtp"],
-     "locked_for_gguf": "off"},
+     "values_gguf": ["auto", "off", "on"]},
     {"id": "prompt_lookup", "label": "Prompt lookup (experimental)",
      "help": "Reuse words from your prompt to help the MLX model write repeated text. Up to ~44% faster in our tests on repeated text, but slower on mixed chats; one chat at a time.",
-     "help_gguf": "Reuse words from your prompt to help with repeated text. Can help on repeated passages and can slow mixed chats.",
+     "help_gguf": "Reuse words from your prompt to help with repeated text. Can help on repeated passages and can slow mixed chats. Auto stays off until a test finds it is faster.",
      "values": ["auto", "off", "adaptive"],
-     "locked_for_gguf": "off"},
+     "values_gguf": ["auto", "off", "on"]},
     {"id": "shared_start", "label": "Shared start (trim / rebuild)",
      "help": "Reuse the beginning of repeated system prompts so the model has less to read. MLX models only.",
      "help_gguf": "Reuse the start of a chat so later turns begin sooner.",
@@ -72,8 +72,9 @@ def normalize(settings) -> dict:
         if k not in _BY_ID:
             raise ValueError(f"unknown setting: {k}")
         v = str(v).strip().lower()
-        if v not in _BY_ID[k]["values"]:
-            raise ValueError(f"{k}: want one of {_BY_ID[k]['values']}, got {v!r}")
+        allowed = set(_BY_ID[k]["values"]) | set(_BY_ID[k].get("values_gguf") or [])
+        if v not in allowed:
+            raise ValueError(f"{k}: want one of {sorted(allowed)}, got {v!r}")
     for o in OPTIONS:
         out[o["id"]] = str(settings.get(o["id"], "auto")).strip().lower()
     return out
@@ -310,9 +311,12 @@ def merge_with_file(page: dict, fsets: dict):
 def options_for(source="mlx", model_dir=None, config=None, n_minis=1) -> list:
     """Settings rows for this model type, with the matching help and values.
 
-    GGUF hides Fused kernels and GPU keep-warm, drops 4-bit memory
-    compression, and marks Guess-ahead and Prompt lookup as locked off
-    for now. Two chats and Chat window are offered. On MLX, Memory
+    GGUF hides Fused kernels and GPU keep-warm, and drops 4-bit memory
+    compression. Guess-ahead and Prompt lookup are Auto/Off/On, with
+    Auto meaning off until a test finds a winner. Guess-ahead On is
+    offered only when a smaller same-family GGUF is already on this
+    Mac; Caravan will not download one. Two chats and Chat window are
+    offered. On MLX, Memory
     compression 4 is still listed but marked disabled when this model's
     chat memory is too compact for 4 to work well.
     """
@@ -360,17 +364,35 @@ def options_for(source="mlx", model_dir=None, config=None, n_minis=1) -> list:
                     "How much of the conversation the model can keep in mind at once. "
                     f"Auto is {ctx_auto} for this model."
                 )
+        if src == "gguf" and o.get("id") == "guess_ahead":
+            draft = None
+            if model_dir:
+                try:
+                    import gguf_split as G
+                    draft = G.find_gguf_draft(model_dir)
+                except Exception:
+                    draft = None
+            if not draft:
+                item["disabled_values"] = {
+                    "on": "Needs a smaller model of the same family already on this Mac. Caravan will not download one for you.",
+                }
+            else:
+                item["draft"] = {"name": draft.get("name"), "path": draft.get("path"),
+                                 "size_gb": draft.get("size_gb")}
         out.append(item)
     return out
 
 
-def apply_gguf_settings(tune: dict, settings) -> dict:
+def apply_gguf_settings(tune: dict, settings, *, model_path=None) -> dict:
     """Merge page Settings (pins) onto a learned GGUF tune. Pins win.
 
-    Auto leaves the learned/default value. Guess-ahead and Prompt lookup
-    cannot be turned on for GGUF here. Chat window and Two chats pins
+    Auto leaves the learned/default value. Prompt lookup On or Off is
+    applied as a pin; Auto leaves a learned result (or off). Guess-ahead
+    On is applied only together with a draft_path already on disk;
+    this never downloads a helper. Chat window and Two chats pins
     become ctx and n_slots; Auto leaves them unset so the loader picks
-    a sane window and one slot.
+    a sane window and one slot. Auto-tune and Self-tuning do not flip
+    Chat window or Two chats.
     """
     out = dict(tune or {})
     try:
@@ -405,6 +427,34 @@ def apply_gguf_settings(tune: dict, settings) -> dict:
         out["n_slots"] = int(pc)
     elif pc == "auto":
         out.pop("n_slots", None)
+    pl = s.get("prompt_lookup")
+    if pl == "on":
+        out["prompt_lookup"] = "on"
+    elif pl == "off":
+        out["prompt_lookup"] = "off"
+    # Auto leaves a learned value already in out, or stays off.
+    ga = s.get("guess_ahead")
+    if ga == "off":
+        out["guess_ahead"] = "off"
+        out.pop("draft_path", None)
+    elif ga == "on":
+        draft = None
+        raw = out.get("draft_path") or (out.get("draft") or {}).get("path")
+        try:
+            import gguf_split as G
+            draft = G._existing_draft_path(raw)
+            if not draft and model_path:
+                found = G.find_gguf_draft(model_path)
+                draft = (found or {}).get("path") if found else None
+        except Exception:
+            draft = None
+        if draft:
+            out["guess_ahead"] = "on"
+            out["draft_path"] = draft
+        else:
+            # On without a helper on disk is treated as off, never a download.
+            out["guess_ahead"] = "off"
+            out.pop("draft_path", None)
     return out
 
 
@@ -428,8 +478,9 @@ def gguf_active_settings(tune=None, settings=None, *, launch=None) -> dict:
     return {
         "backend": "llama",
         "self_tune": s.get("self_tune") != "off",
-        "guess_ahead": False,
-        "guess_ahead_loaded": False,
+        "guess_ahead": tune.get("guess_ahead") == "on" and bool(tune.get("draft_path")),
+        "guess_ahead_loaded": tune.get("guess_ahead") == "on" and bool(tune.get("draft_path")),
+        "prompt_lookup": {"enabled": tune.get("prompt_lookup") == "on"},
         "shared_start": tune.get("slot_save", True) is not False,
         "pipeline_chats": int(n_slots),
         "two_chats_available": True,

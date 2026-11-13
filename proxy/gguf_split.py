@@ -13,6 +13,8 @@ starts; Stop kills only those PIDs, after checking the command line.
 """
 from __future__ import annotations
 
+import re
+
 import os
 import shlex
 from pathlib import Path
@@ -381,8 +383,14 @@ def llama_args(model_path: str, *, port: int, peers: list, shares: list,
     the number of slots.
 
     tune: {"flash_attn": "on"|"off", "ubatch": int, "cache_type": "f16"|"q8_0",
-           "slot_save": bool, "ctx": int, "n_slots": 1|2}.
-    Use resolve_launch() for the resolved ctx, n_slots, and total_ctx.
+           "slot_save": bool, "ctx": int, "n_slots": 1|2,
+           "prompt_lookup": "on"|"off", "guess_ahead": "on"|"off",
+           "draft_path": str}.
+    Prompt lookup adds --spec-type ngram-mod (llama.cpp b12283). Guess-ahead
+    adds --spec-draft-model and --spec-type draft-simple only when draft_path
+    is a file already on disk; this never downloads a helper, and never
+    passes --spec-draft-hf or --fim-qwen-*-spec. Use resolve_launch() for
+    the resolved ctx, n_slots, and total_ctx.
     """
     tune = dict(tune or {})
     fa = tune.get("flash_attn", "on")
@@ -420,7 +428,144 @@ def llama_args(model_path: str, *, port: int, peers: list, shares: list,
         devs = ["MTL0"] + [f"RPC{i}" for i in range(len(peers))]
         args += ["--rpc", ",".join(peers), "--device", ",".join(devs),
                  "--tensor-split", ",".join(str(s) for s in shares)]
+    args += _speculative_args(tune)
     return args
+
+
+def _speculative_args(tune: Optional[dict]) -> list:
+    """llama-server speculative flags. Never a download, never a missing file."""
+    tune = dict(tune or {})
+    want_lookup = tune.get("prompt_lookup") == "on"
+    draft = _existing_draft_path(tune.get("draft_path"))
+    want_draft = tune.get("guess_ahead") == "on" and draft is not None
+    if not want_lookup and not want_draft:
+        return []
+    kinds = []
+    if want_lookup:
+        kinds.append("ngram-mod")
+    if want_draft:
+        kinds.append("draft-simple")
+    out = ["--spec-type", ",".join(kinds)]
+    if want_draft:
+        out += ["--spec-draft-model", draft]
+    return out
+
+
+def _existing_draft_path(path) -> Optional[str]:
+    """Absolute path of a GGUF file already on disk, or None. Never a URL."""
+    if not path:
+        return None
+    s = str(path).strip()
+    if not s or "://" in s or s.startswith("-"):
+        return None
+    p = Path(s).expanduser()
+    try:
+        if p.is_file() and p.suffix.lower() == ".gguf" and p.stat().st_size > 0:
+            return str(p.resolve())
+    except OSError:
+        return None
+    return None
+
+
+def _param_b(name: str):
+    """Parameter count in billions from a file or model name, or None."""
+    blob = str(name or "")
+    m = re.search(r'(?i)(\d+(?:\.\d+)?)\s*b\b', blob)
+    if m:
+        return float(m.group(1))
+    m = re.search(r'(?i)(\d+(?:\.\d+)?)\s*m\b', blob)
+    if m:
+        return float(m.group(1)) / 1000.0
+    return None
+
+
+def _family_id(*names) -> Optional[str]:
+    try:
+        from web_picker import family_of
+        fam = family_of(*names)
+        if fam and fam.get("id"):
+            return fam["id"]
+    except Exception:
+        pass
+    blob = " ".join(str(n) for n in names if n).lower().replace("_", "-")
+    for key in ("qwen", "llama", "gemma", "mistral", "deepseek", "phi",
+                "gpt-oss", "gptoss"):
+        if key in blob:
+            return "gpt-oss" if key in ("gpt-oss", "gptoss") else key
+    return None
+
+
+def find_gguf_draft(main_path, *, inventory=None) -> Optional[dict]:
+    """A smaller same-family GGUF already on this Mac, or None.
+
+    Never downloads. The helper must be a real file, the same family as
+    the main model, and clearly smaller (fewer parameters when the names
+    say so, otherwise a smaller file, at most half the main model's size).
+    The main model itself is never picked.
+    """
+    main = Path(str(main_path)).expanduser()
+    try:
+        main_res = main.resolve() if main.is_file() else main
+        main_size = main.stat().st_size if main.is_file() else 0
+    except OSError:
+        main_res, main_size = main, 0
+    main_fam = _family_id(main.name, main.stem, str(main))
+    if not main_fam:
+        return None
+    main_params = _param_b(main.name) or _param_b(main.stem)
+    cands = list(inventory or [])
+    if not cands:
+        try:
+            cands = scan_local()
+        except Exception:
+            cands = []
+        # Also look next to the main file (same folder, other GGUFs).
+        try:
+            if main.parent.is_dir():
+                for p in sorted(main.parent.glob("*.gguf")):
+                    cands.append({"path": str(p), "name": p.stem,
+                                  "size_gb": round(p.stat().st_size / 1e9, 2)})
+        except OSError:
+            pass
+    best = None
+    best_size = None
+    for item in cands:
+        if not isinstance(item, dict):
+            continue
+        raw = item.get("path") or item.get("lead_path")
+        path = _existing_draft_path(raw)
+        if not path:
+            continue
+        p = Path(path)
+        try:
+            if p.resolve() == main_res:
+                continue
+            size = p.stat().st_size
+        except OSError:
+            continue
+        if size < 50_000_000:
+            continue
+        if main_size and size >= main_size * 0.5:
+            continue
+        fam = _family_id(p.name, p.stem, item.get("name"), item.get("id"), path)
+        if fam != main_fam:
+            continue
+        params = _param_b(p.name) or _param_b(p.stem) or _param_b(item.get("name") or "")
+        if main_params and params is not None and not (params < main_params):
+            continue
+        if main_params and params is None:
+            # Name does not say the size; only accept a clearly smaller file.
+            if not main_size or size >= main_size * 0.35:
+                continue
+        if best is None or size < best_size:
+            best = {
+                "path": path,
+                "name": p.stem,
+                "family": main_fam,
+                "size_gb": round(size / 1e9, 2),
+            }
+            best_size = size
+    return best
 
 
 def _rpath(p: str) -> str:
@@ -603,20 +748,49 @@ def parse_seed(stdout: str) -> Optional[dict]:
     return None
 
 
-def gguf_schedule(best: dict, losses: list) -> list:
+def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
+                  pinned=None) -> list:
     """GGUF Optimize now plan: one llama-server option at a time (each needs a
-    reload), skipping recorded losers ("name=value"), same 3% margin as MLX."""
+    reload), skipping recorded losers ("name=value"), same 3% margin as MLX.
+
+    Prompt lookup is tried last, only when it is safe: one chat (not Two
+    chats), and the row is not pinned Off or On. Auto-tune does not try
+    a draft model; that needs a helper already on disk and a deliberate
+    choice. Self-tuning does not use this extra option (it reads
+    GGUF_KNOBS only).
+    """
+    defaults = {
+        "flash_attn": "on",
+        "ubatch": GGUF_DEFAULT_UBATCH,
+        "cache_type": "f16",
+        "prompt_lookup": "off",
+    }
     items = []
     for name, values in GGUF_KNOBS:
-        if name == "flash_attn":
-            inc = best.get(name, "on")
-        elif name == "ubatch":
-            inc = best.get(name, GGUF_DEFAULT_UBATCH)
-        else:
-            inc = best.get(name, "f16")
+        inc = best.get(name, defaults[name])
         alts = [v for v in values if v != inc and f"{name}={v}" not in losses]
         if name == "ubatch":
             alts.sort(key=lambda v: abs(v - inc))
         items.append({"name": name, "incumbent": inc, "challenger": alts[0] if alts else None,
                       "skip": None if alts else "already lost", "reload": True})
+    # Prompt lookup last, and only when it is safe.
+    inc = best.get("prompt_lookup", "off")
+    pinned_set = set(pinned or [])
+    skip = None
+    challenger = None
+    if int(n_slots or 1) > 1:
+        skip = "two chats"
+    elif "prompt_lookup" in pinned_set:
+        skip = "pinned"
+    else:
+        alts = [v for v in ("on", "off") if v != inc and f"prompt_lookup={v}" not in (losses or [])]
+        # We only ever trial turning it on (the default is off).
+        if inc == "off" and "on" in alts:
+            challenger = "on"
+        elif inc == "on" and "off" in alts:
+            challenger = "off"
+        else:
+            skip = "already lost"
+    items.append({"name": "prompt_lookup", "incumbent": inc,
+                  "challenger": challenger, "skip": skip, "reload": True})
     return items

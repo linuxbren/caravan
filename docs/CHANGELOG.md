@@ -12,6 +12,12 @@
   is better)". Reading and Writing bars are unchanged. `--ascii` uses
   the same scaling; `--details` is unchanged. The Day 25 sample chart
   was redrawn with the same numbers. See [Day 26](DAY26.md).
+
+- GGUF Prompt lookup and Guess-ahead are Auto, Off, or On under
+  Advanced. Auto stays off until a test finds a winner. Auto-tune may
+  try Prompt lookup last when only one chat is in use, and treats a
+  garbled trial as a loss. Guess-ahead On needs a smaller same-family
+  model already on this Mac; Caravan will not download one. See [Day 26](DAY26.md).
 - This follow-up does not change `agent/`, `runtime/`, or the
   requirements files, so a `caravan update` from the Day 25 pin
   keeps a loaded model running. The web page still restarts. No
