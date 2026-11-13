@@ -14,6 +14,7 @@ import optimize_schedule as AB
 import tuned_settings as TS
 import web_settings
 import web_tune_errors
+import web_tune_step
 
 AB_ARM = 3
 
@@ -120,7 +121,7 @@ class Optimizer:
         self.state = dict(running=False, mode=None, phase="idle", prompts=0, reloads=0,
                           started=None, eta_s=None, reply_s=None, reload_s=None,
                           schedule=[], results=[], log=[], summary=None, error=None,
-                          error_detail=None, source=None, paused=False)
+                          error_detail=None, source=None, paused=False, step=None)
 
     def snapshot(self):
         with self._lock:
@@ -129,7 +130,14 @@ class Optimizer:
             reloads = sum(2 for i in todo if i["reload"])
             if out["running"] and out["reply_s"] is not None and (not reloads or out["reload_s"] is not None):
                 out["eta_s"] = round(len(todo) * AB_ARM * 2 * out["reply_s"] + reloads * (out["reload_s"] or 0))
-            return out
+            return web_tune_step.decorate(out)
+
+    def _set_step(self, *, action="starting", knob=None, value=None,
+                  kind=None, index=None, total=None):
+        self._set(step=web_tune_step.format_step(
+            action=action, knob=knob, value=value,
+            kind=kind, index=index, total=total,
+        ))
 
     def _set(self, **values):
         with self._lock:
@@ -164,10 +172,12 @@ class Optimizer:
             self._cancel.clear()
             self._pause.clear()
             self.source = source or "optimize_now"
+            self._tune_unchanged = False
             self._set(running=True, mode="now", phase="starting", prompts=0, reloads=0,
                       started=time.time(), eta_s=None, reply_s=None, reload_s=None,
                       schedule=[], results=[], log=[], summary=None, error=None,
-                      error_detail=None, source=self.source, paused=False)
+                      error_detail=None, source=self.source, paused=False,
+                      step=web_tune_step.format_step(action="starting"))
             self._thread = threading.Thread(target=self._run_safe, daemon=True)
             self._thread.start()
             return self.snapshot()
@@ -190,7 +200,9 @@ class Optimizer:
         while self._pause.is_set() or self.inflight() > 0:
             if self._cancel.is_set():
                 raise Canceled()
-            self._set(phase="paused" if self._pause.is_set() else "waiting for your chat")
+            self._set(phase="paused" if self._pause.is_set() else "waiting for your chat",
+                      step=web_tune_step.format_step(
+                          action="paused" if self._pause.is_set() else "waiting"))
             self._sleep(0.1)
         if self._cancel.is_set():
             raise Canceled()
@@ -210,7 +222,21 @@ class Optimizer:
             # kill a user chat that arrived during the preceding reload.
             while self.inflight() > 0:
                 self._sleep(0.1)
-        self._set(phase="restoring winners" if restoring else "reloading one option")
+        if restoring:
+            self._set(phase="restoring winners",
+                      step=web_tune_step.format_step(action="reloading_winner"))
+        else:
+            cur = None
+            for i in (self.state.get("schedule") or []):
+                if i.get("state") == "running":
+                    cur = i
+                    break
+            knob = (cur or {}).get("name")
+            # Reloading to try the challenger of the option now running.
+            value = (cur or {}).get("challenger")
+            self._set(phase="reloading one option",
+                      step=web_tune_step.format_step(
+                          action="reloading", knob=knob, value=value))
         force = {n: values[n] for n in TS.RELOAD_TRIO if n in values}
         sweep = {"force": force, "packer_layers": values.get("packer_layers")}
         settings = experimental_settings(self.settings, values)
@@ -332,6 +358,14 @@ class Optimizer:
                     out["long_read_tok_s"] = med
         return out
 
+    def _arm_value(self, name, arm):
+        for i in self.state.get("schedule") or []:
+            if i.get("name") == name:
+                if arm == "challenger":
+                    return i.get("challenger")
+                return i.get("incumbent")
+        return arm
+
     def _measure(self, name, arm):
         scores = _Scores()
         scores_garbled = False
@@ -341,6 +375,11 @@ class Optimizer:
             for i in range(AB_ARM):
                 self._boundary()
                 self._set(phase=f"A/B {name}: {arm} {i + 1}/{AB_ARM}")
+                self._set_step(
+                    action="trying" if arm == "challenger" else "measuring",
+                    knob=name, value=self._arm_value(name, arm),
+                    kind="short", index=i + 1, total=AB_ARM,
+                )
                 result = self._one(prompt_plan(0))
                 if isinstance(result, dict) and result.get("garbled"):
                     scores_garbled = True
@@ -354,6 +393,11 @@ class Optimizer:
             for i in range(AB_ARM):
                 self._boundary()
                 self._set(phase=f"A/B {name}: {arm} {i + 1}/{AB_ARM}")
+                self._set_step(
+                    action="trying" if arm == "challenger" else "measuring",
+                    knob=name, value=self._arm_value(name, arm),
+                    kind="short", index=i + 1, total=AB_ARM,
+                )
                 t0 = time.monotonic()
                 # Only this knob needs simultaneous requests, not simultaneous
                 # option trials. Same pair is sent to both arm widths.
@@ -383,6 +427,21 @@ class Optimizer:
         for i, prompt in enumerate(prompts):
             self._boundary()
             self._set(phase=f"A/B {name}: {arm} {i + 1}/{len(prompts)}")
+            kind = kinds[i] if i < len(kinds) else "short"
+            if kind == "long":
+                self._set_step(
+                    action="trying" if arm == "challenger" else "measuring",
+                    knob=name, value=self._arm_value(name, arm),
+                    kind="long",
+                )
+            else:
+                n_short = sum(1 for k in kinds if k != "long")
+                short_i = sum(1 for k in kinds[:i + 1] if k != "long")
+                self._set_step(
+                    action="trying" if arm == "challenger" else "measuring",
+                    knob=name, value=self._arm_value(name, arm),
+                    kind="short", index=short_i, total=n_short or len(prompts),
+                )
             result = self._one([{"role": "user", "content": prompt}])
             if isinstance(result, dict) and result.get("garbled"):
                 scores_garbled = True
@@ -654,11 +713,24 @@ class Optimizer:
                     self._record_tune_result(before, after, unchanged=same)
                     if same:
                         self._log(web_speed.NOTHING_FASTER)
+                    self._tune_unchanged = same
                 except Exception:
                     pass
+            finished = complete and not failure and not canceled
+            if failure:
+                end_action = "error"
+                end_phase = "stopped (error)"
+            elif canceled:
+                end_action = "canceled"
+                end_phase = "canceled"
+            else:
+                end_action = "done"
+                end_phase = "done"
             self._set(running=False, paused=False, error=failure,
-                      phase="stopped (error)" if failure else "canceled" if canceled else "done",
+                      phase=end_phase,
+                      step=web_tune_step.format_step(action=end_action),
                       eta_s=0 if complete else None,
-                      summary=dict(winner=self.best, complete=complete and not failure and not canceled,
+                      summary=dict(winner=self.best, complete=finished,
+                                   unchanged=bool(getattr(self, "_tune_unchanged", False)),
                                    prompts=self.state["prompts"], reloads=self.state["reloads"],
                                    minutes=round((time.time() - self.state["started"]) / 60, 2)))

@@ -157,12 +157,14 @@ def beats(challenger, incumbent, margin: float = MARGIN) -> bool:
 
 def measure_http_specs(port: int, *, prompts=None, max_tokens: int = 192,
                        urlopen=None, timeout: float = 300.0,
-                       chat_window=None, prompt_kinds=None) -> dict:
+                       chat_window=None, prompt_kinds=None,
+                       on_prompt=None) -> dict:
     """Median write, read, first-token, and total over the Auto-tune prompts.
 
     Default is the five short prompts plus one ~2k-token long prompt when
     it fits the chat window. `long_read_tok_s` is the median read speed
-    of the long prompt(s) only.
+    of the long prompt(s) only. `on_prompt(index, total, kind)` is called
+    just before each prompt (index is 1-based within that kind).
     """
     import urllib.request
     urlopen = urlopen or urllib.request.urlopen
@@ -173,7 +175,17 @@ def measure_http_specs(port: int, *, prompts=None, max_tokens: int = 192,
     if len(kinds) < len(prompts):
         kinds = kinds + ["short"] * (len(prompts) - len(kinds))
     samples = []
-    for p in prompts:
+    n_short = sum(1 for k in kinds if k != "long")
+    short_i = 0
+    for i, p in enumerate(prompts):
+        kind = kinds[i] if i < len(kinds) else "short"
+        if kind == "long":
+            if on_prompt:
+                on_prompt(1, 1, "long")
+        else:
+            short_i += 1
+            if on_prompt:
+                on_prompt(short_i, n_short or len(prompts), "short")
         body = json.dumps({"messages": [{"role": "user", "content": p}],
                            "max_tokens": int(max_tokens), "temperature": 0,
                            "seed": 1, "stream": False}).encode()

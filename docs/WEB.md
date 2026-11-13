@@ -106,7 +106,23 @@ would look the same, the page shows one line instead: "Already at its
 fastest settings. Nothing faster found." The slot is reserved so the rows
 below do not jump. The lines stay empty until a run has finished for
 this model, and they are kept on the 1st node with the other speed
-averages. Every other optimization — Guess-ahead,
+averages. While a run is in progress, the Start or Tune again button
+becomes a disabled **Tuning…** state with a small campfire flicker
+(a static spark if you prefer reduced motion), and a live step line
+under it says what is happening, in plain words, with the elapsed
+time, for example "Measuring the current setup · short prompt 3 of
+5", "Trying Memory compression 8 · long prompt", or "Reloading with
+the winner…". The previous result lines are hidden for the length of
+the run and are replaced by the new result when it finishes; if the
+run fails or is cancelled, the previous lines come back. Reset
+tuning is disabled while a run is in progress. A small **Tuning…**
+badge sits next to the model name and in the chat header, so the run
+is visible from the chat page. When Self-tuning runs its quiet
+trial, a subtler **Self-tuning a setting…** note appears in the
+same place. When Auto-tune finishes, a brief **Done** highlight (or
+**Nothing faster found**, when that is the result) shows for a few
+seconds. 
+Every other optimization — Guess-ahead,
 Prompt lookup, Shared start, Two chats, Fused kernels, Memory compression,
 and GPU keep-warm — sits under an **Advanced** section that
 is closed until you open it, along with **Apply & restart**. There is no

@@ -21,7 +21,7 @@ long-prompt read speed. First measured bench on the 1st Mac
 (Qwen2.5 Coder 7B, two short prompts of that build): GGUF Q4_K_M
 Write 22.3 tok/s, MLX 4bit Write 23.5 tok/s. A later full-series run
 on the same Mac is in [DAY25.md](DAY25.md) and
-[BENCHMARKS.md](BENCHMARKS.md). This follow-up does not change
+[BENCHMARKS.md](BENCHMARKS.md). While Auto-tune runs, Settings shows a **Tuning…** button with a campfire flicker and a live plain-language step line; previous Before and After lines are hidden until the run finishes (restored on cancel or failure). A **Tuning…** badge is visible from the chat page, and Self-tuning shows a subtler note. This follow-up does not change
 `agent/`, `runtime/`, or the requirements files, so a `caravan update`
 keeps a loaded model running; the web page still restarts.
 

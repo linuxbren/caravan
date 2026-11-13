@@ -99,7 +99,10 @@ class PublicSnapshotTest(unittest.TestCase):
             "log": [{"msg": "secret"}],
         }
         out = TE.public_optimize_status(snap)
-        self.assertEqual(set(out), {"running", "mode", "phase", "eta_s", "error", "source"})
+        self.assertEqual(set(out), {
+            "running", "mode", "phase", "eta_s", "error", "source",
+            "step", "started", "elapsed_s", "paused", "unchanged",
+        })
         self.assertNotIn("error_detail", out)
         self.assertNotIn("log", out)
         self.assertIn("Self-tuning stopped", out["error"])

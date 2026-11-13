@@ -27,6 +27,7 @@
   one ~2k-token long prompt (skipped if it will not fit), scores on
   medians including long-prompt read speed, and still treats a
   garbled trial as a loss. The memory-check probe is still required.
+- While Auto-tune is running, the Start or Tune again button becomes a disabled **Tuning…** state with a small campfire flicker, and a live step line says what is happening (for example "Measuring the current setup · short prompt 3 of 5"). Previous Before and After lines are hidden until the run finishes (and come back if it fails or is cancelled). A **Tuning…** badge is visible from the chat page; Self-tuning shows a subtler "Self-tuning a setting…" note. A brief **Done** or **Nothing faster found** highlight appears when the run finishes. See [Day 25](docs/DAY25.md).
 - `caravan bench --yes` shows a small campfire animation on a
   terminal with the current step and elapsed time. Piped output,
   `NO_COLOR`, and `--quiet` use a plain step line or stay silent.

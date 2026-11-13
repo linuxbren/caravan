@@ -155,7 +155,13 @@ def public_optimize_status(snap: dict | None) -> dict:
         "running": snap.get("running"),
         "mode": snap.get("mode"),
         "phase": snap.get("phase"),
+        "step": snap.get("step"),
+        "started": snap.get("started"),
+        "elapsed_s": snap.get("elapsed_s"),
+        "paused": snap.get("paused"),
         "eta_s": snap.get("eta_s"),
         "error": err,
         "source": snap.get("source"),
+        "unchanged": (snap.get("summary") or {}).get("unchanged")
+        if isinstance(snap.get("summary"), dict) else snap.get("unchanged"),
     }

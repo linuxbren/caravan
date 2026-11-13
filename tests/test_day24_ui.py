@@ -638,9 +638,13 @@ class TuneBeforeAfter(unittest.TestCase):
         self.assertIn('JSON.stringify({ fresh: true })', HTML)
         # Both Auto-tune and Self-tuning results paint this one slot.
         self.assertIn("paintTuneResult(el, tuneResultText(tun))", HTML)
-        # Do not collapse the slot with hidden (that jumps the layout).
+        # The element is not hidden in the static HTML. While a new Auto-tune
+        # run is in progress the lines are hidden in JS; reserved height
+        # lives on .tune-slot so the layout does not jump.
         self.assertNotIn('tune-result" id="tuneResult" hidden', HTML)
-        self.assertNotIn(".tune-result[hidden]", HTML)
+        self.assertIn(".tune-result[hidden]", HTML)
+        self.assertIn("result.hidden = running", HTML)
+        self.assertIn("min-height: 2.25rem", HTML)
         self.assertIn("get_tuning", SERVER)
         self.assertIn("observe_tuning", SERVER)
         # paintTuneResult skips a write when the text is unchanged.

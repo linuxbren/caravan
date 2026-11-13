@@ -194,6 +194,25 @@ trial still loses, and the memory-check probe is still required.
 Shared start and Two chats keep their own measurements, because those
 knobs are about a cached prefix and two chats at once.
 
+### Auto-tune progress
+
+While Auto-tune is running, the Start or Tune again button becomes a
+disabled busy state, **Tuning…**, with a small campfire flicker that
+matches the theme (a static spark if you prefer reduced motion). A
+live step line under it says what is happening, in plain words, with
+the elapsed time, for example "Measuring the current setup · short
+prompt 3 of 5", "Trying Memory compression 8 · long prompt", or
+"Reloading with the winner…". The previous Before and After lines are
+hidden for the length of the run — only the busy state and the step
+line are shown — and are replaced by the new result when it finishes.
+If the run fails or is cancelled, the previous lines come back. Reset
+tuning is disabled while a run is in progress. A small **Tuning…**
+badge sits next to the model name and in the chat header, so the run
+is visible from the chat page even if Settings is closed. When
+Self-tuning runs its quiet trial, a subtler **Self-tuning a setting…** note appears in the same place. When Auto-tune finishes,
+a brief **Done** highlight (or **Nothing faster found**, when that
+is the result) shows for a few seconds.
+
 
 ## What is in Settings for a GGUF model
 
@@ -224,7 +243,10 @@ and a summary from measured numbers only), the default ASCII chart
 (from the 1st Mac Qwen2.5 Coder 7B figures, including `--ascii`,
 `--details`, skipped sizes, and `--from-averages`), and Auto-tune's
 same five short prompts plus one long prompt (a faster write that
-hurts long-prompt reading loses). The live progress animation is
+hurts long-prompt reading loses). The live Auto-tune progress (the
+Tuning… button, the step line, hiding previous Before and After
+lines, restoring them on cancel, and the chat-header badges) is
+tested from measured wording only. The live progress animation is
 tested on the non-TTY path, for step wording, and that the
 background thread stops, including on Ctrl-C (the original model is
 still put back). Existing tests were updated for the new prompt

@@ -16,6 +16,7 @@ from pathlib import Path
 import gguf_split as G
 import gguf_tune as GT
 import web_tune_errors
+import web_tune_step
 
 
 class GgufOptimizer:
@@ -35,7 +36,7 @@ class GgufOptimizer:
         return dict(running=False, mode=None, backend="llama", phase="idle", prompts=0,
                     reloads=0, started=None, eta_s=None, reply_s=None, reload_s=None,
                     schedule=[], results=[], log=[], summary=None, error=None,
-                    error_detail=None, source=None, paused=False)
+                    error_detail=None, source=None, paused=False, step=None)
 
     def snapshot(self):
         with self._lock:
@@ -47,7 +48,14 @@ class GgufOptimizer:
                 n = 2 - int(i.get("done_arms") or 0)
                 left += n * (out["reload_s"] + 2 * out["reply_s"])
             out["eta_s"] = round(left + out["reload_s"])  # + final restore of the winner
-        return out
+        return web_tune_step.decorate(out)
+
+    def _set_step(self, *, action="starting", knob=None, value=None,
+                  kind=None, index=None, total=None):
+        self._set(step=web_tune_step.format_step(
+            action=action, knob=knob, value=value,
+            kind=kind, index=index, total=total,
+        ))
 
     def _set(self, **kw):
         with self._lock:
@@ -86,8 +94,10 @@ class GgufOptimizer:
                      for i in G.gguf_schedule(e["best"], losses)]
             self._cancel.clear(); self._pause.clear()
             self.state = self._blank()
+            self._tune_unchanged = False
             self._set(running=True, mode="now", phase="starting", started=time.time(),
-                      schedule=sched, source=self.source)
+                      schedule=sched, source=self.source,
+                      step=web_tune_step.format_step(action="starting"))
             self._thread = threading.Thread(target=self._run_safe, daemon=True)
             self._thread.start()
             return self.snapshot()
@@ -111,7 +121,9 @@ class GgufOptimizer:
 
     def _boundary(self):
         while (self._pause.is_set() or self.inflight() > 0) and not self._cancel.is_set():
-            self._set(phase="paused" if self._pause.is_set() else "waiting for your chat")
+            self._set(phase="paused" if self._pause.is_set() else "waiting for your chat",
+                      step=web_tune_step.format_step(
+                          action="paused" if self._pause.is_set() else "waiting"))
             self._sleep(0.1)
 
     def _restart(self, tune):
@@ -121,9 +133,15 @@ class GgufOptimizer:
             if cur and not self._cancel.is_set():
                 cur["state"] = "running"
                 label = f"reloading with {cur['name']}={tune.get(cur['name'])}"
+                step = web_tune_step.format_step(
+                    action="reloading", knob=cur["name"],
+                    value=tune.get(cur["name"]),
+                )
             else:
                 label = "reloading with the best settings"
+                step = web_tune_step.format_step(action="reloading_winner")
             self.state["phase"] = label
+            self.state["step"] = step
         t0 = time.time()
         self.mgr.switch(self.model_id, wait=True, settings=self.settings,
                         entry=dict(self.entry, tune_override=dict(tune)))
@@ -138,6 +156,20 @@ class GgufOptimizer:
 
     def _measure(self):
         self._set(phase="measuring")
+        cur = self._current()
+        is_try = int((cur or {}).get("done_arms") or 0) >= 1
+        knob = (cur or {}).get("name")
+        value = (cur or {}).get("challenger" if is_try else "incumbent")
+        action = "trying" if is_try else "measuring"
+        self._set_step(action=action, knob=knob, value=value if is_try else None)
+
+        def on_prompt(index, total, kind="short"):
+            self._set_step(
+                action=action, knob=knob,
+                value=value if is_try else None,
+                kind=kind, index=index, total=total,
+            )
+
         t0 = time.time()
         window = None
         try:
@@ -145,9 +177,12 @@ class GgufOptimizer:
             window = P.chat_window_from(self.mgr.snapshot() or {})
         except Exception:
             window = None
-        raw = (self._measure_fn or (
-            lambda: GT.measure_http_specs(self.mgr.lead_port, chat_window=window)
-        ))()
+        if self._measure_fn:
+            raw = self._measure_fn()
+        else:
+            raw = GT.measure_http_specs(
+                self.mgr.lead_port, chat_window=window, on_prompt=on_prompt,
+            )
         dt = time.time() - t0
         try:
             import caravan_prompts as P
@@ -188,6 +223,7 @@ class GgufOptimizer:
                 try:
                     import web_speed
                     same = web_speed.tuning_bodies_match(res["before"], res["after"])
+                    self._tune_unchanged = same
                     web_speed.record_tuning(
                         self.model_id,
                         before=res["before"], after=res["after"],
@@ -198,6 +234,7 @@ class GgufOptimizer:
             if status in ("done", "cancelled"):
                 self._set(results=res.get("tried") or [], error=None, error_detail=None,
                           summary={"complete": status == "done", "winner": res.get("best") or {},
+                                   "unchanged": bool(getattr(self, "_tune_unchanged", False)),
                                    "minutes": round((time.time() - self.state["started"]) / 60, 1),
                                    "before": res.get("before"), "after": res.get("after")})
                 phase = "done" if status == "done" else "canceled"
@@ -210,6 +247,7 @@ class GgufOptimizer:
                 web_tune_errors.log_tune_error(raw, source=source)
                 self._set(results=res.get("tried") or [], error=plain, error_detail=raw,
                           summary={"complete": False, "winner": res.get("best") or {},
+                                   "unchanged": False,
                                    "minutes": round((time.time() - self.state["started"]) / 60, 1),
                                    "before": res.get("before"), "after": res.get("after")})
                 phase = "stopped (error)"
@@ -231,4 +269,7 @@ class GgufOptimizer:
             phase = getattr(self, "_pending_phase", "done")
             if self.state.get("error") and phase == "done":
                 phase = "stopped (error)"
-            self._set(running=False, phase=phase, paused=False, eta_s=None)
+            end_action = "error" if "error" in str(phase) else (
+                "canceled" if "cancel" in str(phase) else "done")
+            self._set(running=False, phase=phase, paused=False, eta_s=None,
+                      step=web_tune_step.format_step(action=end_action))

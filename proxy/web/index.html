@@ -649,6 +649,65 @@
     font-size: .72rem; color: var(--muted); line-height: 1.5; margin: 0;
     white-space: pre-line;
   }
+  .tune-result[hidden] { display: none; }
+  .tune-step {
+    font-size: .78rem; color: var(--fg); line-height: 1.45; margin: 8px 0 0;
+    min-height: 1.3em;
+  }
+  .tune-step[hidden] { display: none; }
+  .tune-done {
+    font-size: .78rem; color: var(--accent); line-height: 1.45; margin: 8px 0 0;
+    padding: 4px 8px; border-radius: var(--radius);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .tune-done[hidden] { display: none; }
+  button.primary.is-tuning {
+    opacity: .92; cursor: wait;
+  }
+  button.primary.is-tuning::before {
+    content: "✦";
+    display: inline-block;
+    margin-right: .4em;
+    animation: tune-campfire .9s steps(1) infinite;
+  }
+  @keyframes tune-campfire {
+    0%, 24% { content: "·"; }
+    25%, 49% { content: "✦"; }
+    50%, 74% { content: "✶"; }
+    75%, 100% { content: "✸"; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    button.primary.is-tuning::before {
+      animation: none;
+      content: "✦";
+    }
+  }
+  .tune-badge {
+    display: inline-flex; align-items: center; gap: .3em;
+    font-size: .68rem; letter-spacing: .02em;
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border-radius: 999px; padding: 2px 8px; margin-left: 8px;
+    vertical-align: middle; font-weight: 550;
+  }
+  .tune-badge[hidden] { display: none; }
+  .tune-badge.is-tuning::before {
+    content: "✦";
+    animation: tune-campfire .9s steps(1) infinite;
+  }
+  .tune-badge.is-self {
+    color: var(--muted);
+    border-color: color-mix(in srgb, var(--muted) 45%, transparent);
+    background: color-mix(in srgb, var(--muted) 10%, transparent);
+    font-weight: 450;
+  }
+  .tune-badge.is-self::before { content: none; animation: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .tune-badge.is-tuning::before { animation: none; content: "✦"; }
+  }
+  .chathead h2 { display: flex; align-items: center; flex-wrap: wrap; }
   .self-tune-note {
     font-size: .72rem; color: var(--muted); line-height: 1.5; margin: 8px 0 0;
   }
@@ -1453,13 +1512,14 @@
       <button type="button" data-theme="campfire">Campfire</button>
     </div>
     <div class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">starting…</span></div>
+    <span id="tuneHeaderBadge" class="tune-badge" hidden></span>
   </header>
 
   <!-- Amber Console: chat-first; settings in right drawer -->
 
   <main class="card chat tube a-chat">
     <div class="chathead">
-      <h2>Chat</h2>
+      <h2>Chat <span id="tuneBadge" class="tune-badge" hidden></span></h2>
       <div class="chathead-actions">
         <button type="button" class="btn-settings" id="btnOpenSettings">Settings</button>
         <button type="button" class="btn-picker" id="btnOpenPicker">Models</button>
@@ -1644,6 +1704,8 @@
             <button class="ghost drawer-control" id="btnOptCancel" hidden>Cancel</button>
           </div>
           <div class="help" id="autoTuneNote">Tune again runs fresh trials. Reset tuning forgets saved results for this model. The model stays loaded.</div>
+          <p class="tune-step" id="tuneStep" role="status" aria-live="polite" hidden></p>
+          <p class="tune-done" id="tuneDone" role="status" aria-live="polite" hidden></p>
           <div class="tune-slot" data-tune-slot="auto_tune">
             <p class="tune-result" id="tuneResult"></p>
           </div>
@@ -2129,9 +2191,11 @@
         ? `Self-tuning wants to try ${c.label} ${c.to} — click Apply &amp; restart (or Auto-tune) to try it.`
         : `${c.label} ${c.from} didn't win — Apply &amp; restart goes back to ${c.to}.`);
     }
-    if (opt && opt.running && /reloading/.test(opt.phase || "")) lines.unshift(`<b>${opt.phase}…</b>`);
     if (opt && opt.error && !opt.running) lines.push(escHtml(String(opt.error)));
     el.innerHTML = lines.join("<br>");
+    paintTuneBadges(opt, t);
+    // When only Self-tuning is active, the Auto-tune poll may be idle;
+    // still show the subtler chat-header note.
     // Trial errors belong in Auto-tune (tuneNote above). selfTuneNote is
     // only for the On/Off apply notice.
     const few = t && t.known && (t.replies_learned || 0) < 10;
@@ -2141,36 +2205,124 @@
       $("optTip").textContent = "";
     }
   }
+  let _tuneWasRunning = false;
+  let _tuneDoneTimer = null;
+  let _tunePollTimer = null;
+  let _tuneRunning = false;
+
+  function tuneElapsedText(j) {
+    let s = j && j.elapsed_s;
+    if ((s == null || s === "") && j && j.started) {
+      s = (Date.now() / 1000) - Number(j.started);
+    }
+    if (s == null || !isFinite(s) || s < 0) return "";
+    s = Math.floor(s);
+    if (s < 90) return s + "s";
+    const m = Math.floor(s / 60), r = s % 60;
+    return r ? (m + " min " + r + "s") : (m + " min");
+  }
+  function paintTuneBadges(opt, tun) {
+    const running = !!(opt && opt.running);
+    const self = !running && !!(tun && tun.trial);
+    const text = running ? "Tuning…" : (self ? "Self-tuning a setting…" : "");
+    for (const id of ["tuneBadge", "tuneHeaderBadge"]) {
+      const el = $(id);
+      if (!el) continue;
+      // An optimize-only poll passes tun=null; do not clear a Self-tuning
+      // note that refreshStatus will keep up to date.
+      if (!running && tun == null && el.classList.contains("is-self")) continue;
+      el.hidden = !text;
+      el.textContent = text;
+      el.classList.toggle("is-tuning", running);
+      el.classList.toggle("is-self", self);
+    }
+  }
+  function showTuneDone(msg) {
+    const el = $("tuneDone");
+    if (!el) return;
+    el.textContent = msg;
+    el.hidden = false;
+    clearTimeout(_tuneDoneTimer);
+    _tuneDoneTimer = setTimeout(() => { el.hidden = true; el.textContent = ""; }, 4000);
+  }
+  function paintTuneRunning(j) {
+    const running = !!(j && j.running);
+    _tuneRunning = running;
+    const btn = $("btnOptStart");
+    const loadOff = $("btnLoad") && $("btnLoad").disabled;
+    if (btn) {
+      btn.disabled = running || loadOff;
+      btn.classList.toggle("is-tuning", running);
+      if (running) {
+        if (btn.textContent !== "Tuning…") btn.textContent = "Tuning…";
+      }
+    }
+    if ($("btnTuneReset")) $("btnTuneReset").disabled = running || loadOff;
+    if ($("btnOptCancel")) {
+      $("btnOptCancel").disabled = !running;
+      $("btnOptCancel").hidden = !running;
+    }
+    if ($("btnOptPause")) {
+      $("btnOptPause").disabled = !running;
+      $("btnOptPause").hidden = !running;
+      $("btnOptPause").textContent = (j && j.paused) ? "Resume" : "Pause";
+    }
+    const result = $("tuneResult");
+    // Hide previous Before/After entirely while a new run is in progress.
+    // The text is kept so a failed or cancelled run can show it again.
+    if (result) result.hidden = running;
+    const step = $("tuneStep");
+    if (step) {
+      if (running) {
+        let line = (j && j.step) || "Tuning…";
+        const elapsed = tuneElapsedText(j || {});
+        if (elapsed) line += " · " + elapsed;
+        step.hidden = false;
+        step.textContent = line;
+      } else {
+        step.hidden = true;
+        step.textContent = "";
+      }
+    }
+    // Wordy per-option dump stays off the page; errors still go to tuneNote.
+    const prog = $("optProgress");
+    if (prog) prog.textContent = "";
+    if (j.error) {
+      const note = $("tuneNote");
+      if (note && !running) {
+        if (!note.textContent) note.textContent = String(j.error);
+      }
+    }
+    paintTuneBadges(j, null);
+    if (_tuneWasRunning && !running) {
+      const phase = String((j && j.phase) || "");
+      const failed = !!(j && (j.error || /cancel/i.test(phase) || /error/i.test(phase)));
+      if (failed) {
+        if (result) result.hidden = false;
+        refreshTuneResult();
+      } else {
+        const unchanged = !!(j && j.summary && j.summary.unchanged) || !!(j && j.unchanged);
+        showTuneDone(unchanged ? "Nothing faster found" : "Done");
+        if (result) result.hidden = false;
+        refreshTuneResult();
+      }
+    }
+    if (!running && !_tuneWasRunning) {
+      // Idle refresh of the saved lines (page load, after a previous finish).
+      if (result && result.hidden && result.textContent) result.hidden = false;
+    }
+    _tuneWasRunning = running;
+    scheduleTunePoll(running);
+  }
+  function scheduleTunePoll(running) {
+    if (_tunePollTimer) { clearTimeout(_tunePollTimer); _tunePollTimer = null; }
+    _tunePollTimer = setTimeout(() => { refreshOptimize(); }, running ? 1000 : 3000);
+  }
   async function refreshOptimize() {
     let j;
-    try { j = await api("/api/optimize"); } catch (e) { return; }
-    $("btnOptStart").disabled = !!j.running || $("btnLoad").disabled;
-    if ($("btnTuneReset")) $("btnTuneReset").disabled = !!j.running || $("btnLoad").disabled;
-    $("btnOptCancel").disabled = !j.running;
-    $("btnOptPause").disabled = !j.running;
-    $("btnOptPause").textContent = j.paused ? "Resume" : "Pause";
-    // Pause and Cancel belong in the Auto-tune block, and only while a run is underway.
-    $("btnOptPause").hidden = !j.running;
-    $("btnOptCancel").hidden = !j.running;
-    const el = $("optProgress");
-    if (!j.mode) { el.textContent = ""; return; }
-    const schedule = j.schedule || [];
-    const done = schedule.filter(i => ["kept", "skipped"].includes(i.state)).length;
-    let txt = `Auto-tune${j.backend === "llama" ? " (GGUF, each option reloads llama.cpp twice)" : ""}: ${j.phase} · ${j.prompts} prompts · ${j.reloads} reloads`;
-    if (schedule.length) txt += ` · ${done}/${schedule.length} options settled`;
-    for (const item of schedule) txt += `\n${item.name}: ${item.state}${item.skip ? " — " + item.skip : item.state === "kept" ? " — " + item.winner : ""}`;
-    if (j.running) txt += ` · about ${fmtMin(j.eta_s)} left`;
-    if (j.reply_s != null) txt += ` · ${j.reply_s}s per reply`;
-    if (j.reload_s != null) txt += ` · ${j.reload_s}s per reload`;
-    if (j.error) txt += `\n${j.error}`;
-    if (j.summary) {
-      const w = j.summary.winner || {};
-      const pick = Object.entries(w).map(([k, v]) => `${k}=${v === true ? "on" : v === false ? "off" : v}`).join(", ");
-      txt += `\n${j.summary.complete ? "Done" : "Stopped"} in ${j.summary.minutes} min. Learned winners (kept for this model): ${pick}`;
-    }
-    el.style.whiteSpace = "pre-line";
-    el.textContent = txt;
-    if (!j.running) refreshTuneResult();
+    try { j = await api("/api/optimize"); } catch (e) { scheduleTunePoll(false); return; }
+    paintTuneRunning(j || {});
+    if (!(j && j.running)) refreshTuneResult();
   }
   // Presentation-only mirror of web_settings.OPTIONS, checked by test_day17_web_labels.
   // Served from disk so copy updates need not interrupt an active remote worker.
@@ -2559,8 +2711,10 @@
     // "Start" until this model has a saved Auto-tune (or Self-tuning) result;
     // "Tune again" after that. Reset tuning clears the result and returns to Start.
     // The action is the same (fresh trials); only the label changes.
+    // While a run is in progress the button stays on the busy "Tuning…" label.
     const btn = $("btnOptStart");
     if (!btn) return;
+    if (btn.classList.contains("is-tuning") || _tuneRunning) return;
     const has = !!(tun && tuneResultText(tun));
     const label = has ? "Tune again" : "Start";
     if (btn.textContent !== label) btn.textContent = label;
@@ -2574,10 +2728,15 @@
       const q = new URLSearchParams({ model: mid });
       const j = await api("/api/speed-average?" + q.toString());
       const tun = j && j.tuning;
-      // One reserved slot in Auto-tune, for both Auto-tune and Self-tuning results.
-      paintTuneResult(el, tuneResultText(tun));
+      // While a run is in progress, keep the previous lines in memory but
+      // hidden. Overwriting them here would lose the text we restore on
+      // cancel or failure.
+      if (!_tuneRunning) {
+        paintTuneResult(el, tuneResultText(tun));
+        if (el) el.hidden = !tuneResultText(tun);
+      }
       paintOptStartLabel(tun);
-    } catch (_) { clear(); paintOptStartLabel(null); }
+    } catch (_) { if (!_tuneRunning) { clear(); } paintOptStartLabel(null); }
   }
   async function refreshAvgSpeed() {
     const mid = state.loadedModel;
@@ -3019,9 +3178,15 @@
     }
   };
   $("btnOptStart").onclick = async () => {
+    paintTuneRunning({ running: true, step: "Starting…", started: Date.now() / 1000, elapsed_s: 0 });
     try {
       await api("/api/optimize/start", { method: "POST", body: JSON.stringify({ fresh: true }) });
-    } catch (e) { $("optProgress").textContent = String(e.error || e.message || e); }
+    } catch (e) {
+      const note = $("tuneNote");
+      if (note) note.textContent = String(e.error || e.message || e);
+      paintTuneRunning({ running: false, error: String(e.error || e.message || e) });
+      return;
+    }
     refreshOptimize();
   };
   $("btnOptPause").onclick = async () => {
@@ -3030,7 +3195,7 @@
     refreshOptimize();
   };
   $("btnOptCancel").onclick = async () => { await api("/api/optimize/cancel", { method: "POST", body: "{}" }); refreshOptimize(); };
-  setInterval(refreshOptimize, 3000); refreshOptimize();
+  refreshOptimize();
   $("btnStop").onclick = async () => {
     cancelChat();
     await api("/api/models/stop", { method: "POST", body: "{}" });
