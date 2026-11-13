@@ -847,6 +847,8 @@ def make_handler(app: App):
                 return self._api_remote()
             if path == "/api/lan":
                 return self._api_lan()
+            if path == "/api/update":
+                return self._api_update()
             if path == "/api/helpers":
                 import web_helpers
                 return self._json(200, {"offer": web_helpers.offer(app.mgr.snapshot())})
@@ -1034,6 +1036,8 @@ def make_handler(app: App):
                 return self._api_remote(post=True, body=body)
             if path == "/api/lan":
                 return self._api_lan(post=True, body=body)
+            if path == "/api/update":
+                return self._api_update(post=True, body=body)
             return self._json(404, {"error": "not found"})
 
         def _serve_file(self, rel):
@@ -1629,6 +1633,93 @@ def make_handler(app: App):
                             _os.environ.setdefault("CARAVAN_WEB_KEEP_WORKERS", "1")
                             _os.execv(_sys.executable, [_sys.executable] + _sys.argv)
                         threading.Thread(target=_rebind, name="caravan-lan-rebind", daemon=True).start()
+            return self._json(200, payload)
+
+
+        def _api_update(self, post=False, body=None):
+            import sys as _sys
+            from pathlib import Path as _Path
+            tools = str(_Path(__file__).resolve().parents[1] / "tools")
+            if tools not in _sys.path:
+                _sys.path.insert(0, tools)
+            import caravan_update_check as UC
+            home = _Path(getattr(app, "update_home", None) or _Path.home())
+            repo = _Path(getattr(app, "update_repo", None) or _Path(__file__).resolve().parents[1])
+            opener = getattr(app, "update_opener", None)
+            nodes = None
+            try:
+                nodes = app.configured_nodes()
+            except Exception:
+                nodes = None
+            local = UC.is_local_owner(self)
+            busy, busy_msg = UC.busy_reason(app)
+            prefs = UC.load_prefs(home)
+            packaged = UC.is_package_install(repo)
+            result = None
+            if post:
+                body = body if isinstance(body, dict) else {}
+                action = str(body.get("action") or "").strip().lower()
+                if action == "set":
+                    if "check_daily" not in body and "enabled" not in body:
+                        return self._json(400, {"error": "Send check_daily true or false."})
+                    value = body.get("check_daily")
+                    if value is None:
+                        value = body.get("enabled")
+                    prefs = UC.save_prefs(home, check_daily=bool(value))
+                elif action == "check":
+                    result = UC.check(
+                        home, repo, force=True, opener=opener, nodes=nodes,
+                    )
+                elif action == "apply":
+                    if not local:
+                        return self._json(403, {
+                            "error": UC.NOT_LOCAL, "local": False, "can_apply": False,
+                        })
+                    if not packaged:
+                        return self._json(400, {"error": UC.SOURCE_CHECKOUT})
+                    if busy:
+                        return self._json(409, {"error": busy_msg, "busy": busy})
+                    result = UC.check(
+                        home, repo, force=False, opener=opener, nodes=nodes,
+                    )
+                    if not result.get("newer"):
+                        payload = UC.public_status(
+                            result, local=local, busy=busy, packaged=packaged,
+                            check_daily=prefs["check_daily"],
+                            progress=UC.resolve_progress(home, repo),
+                        )
+                        payload["error"] = UC.UP_TO_DATE
+                        return self._json(400, payload)
+                    existing = UC.resolve_progress(home, repo)
+                    if existing and existing.get("phase") == "updating":
+                        return self._json(409, {"error": UC.OPENING, "progress": existing})
+                    starter = getattr(app, "update_start", None) or UC.start_apply
+                    try:
+                        progress = starter(
+                            str(home), str(repo),
+                            name="web",
+                            python=getattr(app, "update_python", None),
+                            expected=result.get("available"),
+                        )
+                    except Exception:
+                        return self._json(500, {"error": UC.FAILED})
+                    payload = UC.public_status(
+                        result, local=local, busy=busy, progress=progress,
+                        packaged=packaged, check_daily=prefs["check_daily"],
+                    )
+                    return self._json(200, payload)
+                elif action:
+                    return self._json(400, {"error": "Send action check, set, or apply."})
+            if result is None:
+                result = UC.load_cache(home) or {}
+                result = dict(result)
+                result["check_daily"] = prefs["check_daily"]
+                result["helper"] = UC.has_helper(home, nodes=nodes)
+            progress = UC.resolve_progress(home, repo)
+            payload = UC.public_status(
+                result, local=local, busy=busy, progress=progress,
+                packaged=packaged, check_daily=prefs["check_daily"],
+            )
             return self._json(200, payload)
 
 
@@ -2616,6 +2707,24 @@ def main(argv=None):
     print(f"[caravan-web] open http://<this-mac-address>:{args.port}/", flush=True)
     print(f"[caravan-web] lead worker port {args.lead_port}; packer {args.packer_peer}", flush=True)
     app.restore.start(f"http://127.0.0.1:{httpd.server_port}")
+
+    def _schedule_update_check():
+        def _run():
+            import time as _time
+            _time.sleep(4)
+            try:
+                import caravan_update_check as _UC
+                _repo = _Path(args.repo)
+                _home = _Path.home()
+                _UC.resolve_progress(_home, _repo)
+                _UC.maybe_auto_check(_home, _repo)
+                while True:
+                    _time.sleep(3600)
+                    _UC.maybe_auto_check(_home, _repo)
+            except Exception as e:
+                print(f"[caravan-web] update check skipped: {e}", flush=True)
+        _threading.Thread(target=_run, name="caravan-update-check", daemon=True).start()
+    _schedule_update_check()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

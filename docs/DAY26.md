@@ -77,6 +77,49 @@ code is shipped in this follow-up. This does not change `agent/`,
 `runtime/`, or the requirements files, so a `caravan update` from the
 previous Day 26 pin keeps a loaded model running.
 
+### Daily update check and Update on the page
+
+Caravan checks once a day, and shortly after it starts, whether a newer
+version is published. The check is a short look at the published
+version list; it does not download the update until you ask. If this
+Mac is offline, the check stays quiet and keeps any earlier result.
+**Check for updates daily** is on by default in Settings, and
+**Check now** runs a check right away. In Terminal,
+`caravan update --check` does the same check and does not install
+anything.
+
+When a newer version is ready, an **Update available** badge appears
+in the header of the chat page, in the same style as the Tuning…
+badge, including on Campfire. Opening Settings shows an **Updates**
+section with the version on this Mac and the newer one, in plain
+dates such as November 12 and November 13 — no hashes up front.
+What's new is the short list of changes, when that is available.
+The section also says **Your model stays loaded** or **Caravan will reload the model**, using the same rule as `caravan update`: the
+model is reloaded only if the parts that run it changed.
+
+**Update now** runs the same update as `caravan update`, in the
+background. A campfire flicker and a short "Updating…" line show
+progress. The page comes back on its own and says Done, with the
+new version, or shows the error and that the previous version is
+still running. The button is off during a chat reply or Auto-tune;
+you can confirm before it starts. Because there is no login, Update
+now is only available when you open Caravan on this Mac itself
+(the same local page `caravan open` uses). On the local network, and
+over Tailscale from another device, the badge and the Updates section
+still appear, but the button is hidden and the page asks you to update
+on this Mac, or to run `caravan update` in Terminal. The daily check itself still
+runs on this Mac.
+
+On a two-Mac setup, this update covers this Mac only — the same as
+`caravan update`. The Settings section says the 2nd Mac needs the
+update too, and that after this Mac is done you should open Caravan
+on the 2nd Mac and click Update now, or run `caravan update` there.
+
+This follow-up does not change `agent/`, `runtime/`, or the
+requirements files, so a `caravan update` from the previous Day 26
+pin keeps a loaded model running. The web page still restarts. No
+`day26` tag yet.
+
 ## What is still ahead (same Day 26)
 
 - **Voice:** build listening first, following [VOICE](VOICE.md), when
@@ -108,3 +151,13 @@ loss.
 The Voice design notes are in the docs: listening first, words appear
 in the chat box, the chat model stays loaded, and no listening code is
 shipped yet.
+
+New tests cover the daily update check: a newer published version is
+detected, a fresh result is cached and an old one is checked again, an
+offline Mac keeps the last result and stays quiet, the daily switch
+skips automatic checks but still allows Check now, the model-stays-
+loaded preview follows the same path prefixes as `caravan update`,
+`caravan update --check` prints the plain result, Update now is refused
+from a local-network or Tailscale address and during a chat reply or
+Auto-tune, and the chat page has the Update available badge and the
+Updates section in Settings.

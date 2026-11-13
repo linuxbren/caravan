@@ -9,6 +9,8 @@
 | `requirements-mac.lock` | Exact versions for easy-package Python wheels |
 | `scripts/install.sh` | Source/environment and owned login-service installation |
 | `tools/caravan.py` | User command and safe single-service controls |
+| `tools/caravan_update.py` | Single-step package update and rollback |
+| `tools/caravan_update_check.py` | Daily update check, cache, and Update on the page |
 | `tools/caravan_doctor.py` | Read-only checks and human-readable fixes |
 | `scripts/package.sh` | Committed-tree source archive and checksum |
 

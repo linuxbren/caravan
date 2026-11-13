@@ -190,6 +190,30 @@ Self-tuning, the model is usually already back on the previous
 settings. The full detail is in the log (`caravan doctor`, then
 `status` for the path).
 
+## Updates
+
+Settings has an **Updates** section. **Check for updates daily** is on
+by default: Caravan looks once a day, and shortly after it starts,
+whether a newer version is published. The check does not download the
+update. **Check now** runs a check right away, and
+`caravan update --check` does the same in Terminal.
+
+When a newer version is ready, an **Update available** badge appears
+in the chat page header. The Updates section shows the version on this
+Mac and the newer one in plain dates, what's new when that is
+available, and whether **Your model stays loaded** or **Caravan will
+reload the model**. **Update now** runs the same update as
+`caravan update`. A short "Updating…" line with the campfire flicker
+shows progress; the page comes back and says Done, or shows the error
+and that the previous version is still running. The button is off
+during a chat reply or Auto-tune.
+
+Because there is no login, **Update now** is only shown when you open
+Caravan on this Mac itself. From another device on the local network,
+or over Tailscale, you still see that an update is ready, and the page
+asks you to update on this Mac. On a two-Mac setup, the 2nd Mac needs
+the same update after this Mac is done.
+
 The browser has no login. Fresh installs keep the page only on this Mac.
 You can turn on **Open on my local network** in Settings or run
 `caravan lan on`. Anyone on the same network can use Caravan, and there is no login. `caravan lan status` shows the address to open

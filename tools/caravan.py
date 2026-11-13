@@ -60,6 +60,7 @@ def main(argv=None):
     parser.add_argument("--full", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--everything", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--yes", action="store_true", help="with uninstall: confirm removal of all Caravan data")
+    parser.add_argument("--check", action="store_true", help="with update: only check for a newer version, do not install it")
     args = parser.parse_args(argv)
     try:
         if args.action == "remote":
@@ -82,6 +83,9 @@ def main(argv=None):
             print("On the new Mac, run the same install command. In Topology → Add a Mac on the new Mac, turn on Remote Login and show a code. Here, choose Add this Mac and enter that code. No manual SSH or settings-file edits.")
             return subprocess.run(["open", str(launch_file(plan["port"]))]).returncode
         if args.action == "update":
+            if args.check:
+                from caravan_update_check import cli_check
+                return cli_check(ROOT, name=args.name)
             if not (ROOT / ".caravan-package").exists():
                 raise ValueError("This is a source checkout. Update it with git pull --ff-only, then rerun scripts/install.sh with the same options. No checkout changed.")
             role_file = ROOT / ".caravan-role"

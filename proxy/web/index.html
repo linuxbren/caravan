@@ -1187,6 +1187,19 @@
   #settingsDrawer #lanAccessSwitch button:disabled { opacity: .5; cursor: not-allowed; }
   #settingsDrawer #lanAccessWarning { color: var(--accent2); margin: 0 0 6px; }
   #settingsDrawer #lanAccessStatus a { color: var(--accent2); }
+  #settingsDrawer #updateDailySwitch { display: flex; margin-bottom: 8px; }
+  #settingsDrawer #updateDailySwitch button { flex: 1; }
+  #settingsDrawer #updateChanges {
+    margin: 6px 0 8px 1.15em; padding: 0;
+    font-size: .72rem; line-height: 1.45; color: var(--text);
+  }
+  #settingsDrawer #updateChanges[hidden] { display: none; }
+  #settingsDrawer #updateChanges li { margin: 2px 0; }
+  #settingsDrawer #updateActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
+  #settingsDrawer #btnUpdateNow.is-tuning { cursor: wait; }
+  .update-badge { cursor: pointer; }
+  .update-badge:hover { border-color: var(--accent); }
+  .update-badge:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .opt.mlxoff { opacity: .45; }
   .opt.mlxoff .seg button { cursor: not-allowed; }
@@ -1518,6 +1531,7 @@
     </div>
     <div class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">starting…</span></div>
     <span id="tuneHeaderBadge" class="tune-badge" hidden></span>
+    <span id="updateHeaderBadge" class="tune-badge update-badge" hidden role="button" tabindex="0" title="Open Settings for this update"></span>
   </header>
 
   <!-- Amber Console: chat-first; settings in right drawer -->
@@ -1761,6 +1775,26 @@
       <div class="help" id="lanAccessWarning">Anyone on the same network can use Caravan, and there is no login.</div>
       <div class="help" id="lanAccessStatus" role="status" aria-live="polite">Checking…</div>
     </div>
+    <div class="optcard drawer-section" id="updatesCard">
+      <h2 class="drawer-section-title"><span class="tip" title="Caravan checks once a day for a newer version, and you can update from this page.">Updates</span></h2>
+      <div class="help" id="updateDailyLabel">Check for updates daily</div>
+      <div class="theme-switch" id="updateDailySwitch" title="Check for updates daily">
+        <button type="button" data-update-daily="off">Off</button>
+        <button type="button" data-update-daily="on" class="on">On</button>
+      </div>
+      <div class="help" id="updateStatus" role="status" aria-live="polite">Checking…</div>
+      <div class="help" id="updateChangesLabel" hidden>What's new</div>
+      <ul class="update-changes" id="updateChanges" hidden></ul>
+      <p class="help" id="updateModelNote" hidden></p>
+      <p class="help" id="updateHelperNote" hidden></p>
+      <p class="help" id="updateLocalNote" hidden></p>
+      <div class="row" id="updateActions">
+        <button class="ghost drawer-control" id="btnUpdateCheck" type="button">Check now</button>
+        <button class="primary drawer-control" id="btnUpdateNow" type="button" hidden>Update now</button>
+      </div>
+      <p class="tune-step" id="updateStep" role="status" aria-live="polite" hidden></p>
+      <p class="tune-done" id="updateDone" role="status" aria-live="polite" hidden></p>
+    </div>
     <div class="optcard drawer-section" id="topoBarsCard">
       <h2 class="drawer-section-title"><span class="tip" title="How Topology fills the CPU / GPU / RAM / Disk / Temp bars.">Topology bars</span></h2>
       <div class="theme-switch" id="barColorSwitch" title="Bar colors">
@@ -1806,6 +1840,7 @@
     refreshHfTokenStatus();
     refreshRemoteAccess();
     refreshLanAccess();
+    refreshUpdate();
     $("settingsDrawer").classList.add("open");
     const b = $("drawerBackdrop"); b.hidden = false; b.classList.add("open");
   };
@@ -1953,6 +1988,266 @@
     });
     refreshLanAccess();
   }
+
+  const UPDATE_PENDING_KEY = "caravan.update.pending";
+  let _updateInfo = null;
+  let _updatePoll = null;
+  let _updateDoneTimer = null;
+
+  function updatePending() {
+    try {
+      const raw = localStorage.getItem(UPDATE_PENDING_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return data && typeof data === "object" ? data : null;
+    } catch (_) { return null; }
+  }
+  function setUpdatePending(on) {
+    try {
+      if (on) localStorage.setItem(UPDATE_PENDING_KEY, JSON.stringify({ at: Date.now() }));
+      else localStorage.removeItem(UPDATE_PENDING_KEY);
+    } catch (_) {}
+  }
+  function openUpdates() {
+    openDrawer();
+    const card = $("updatesCard");
+    if (card && card.scrollIntoView) {
+      setTimeout(() => card.scrollIntoView({ block: "nearest", behavior: "smooth" }), 50);
+    }
+  }
+  function paintUpdateBadge(j) {
+    const el = $("updateHeaderBadge");
+    if (!el) return;
+    const phase = j && j.progress && j.progress.phase;
+    const pending = !!updatePending();
+    let text = "";
+    let tuning = false;
+    if (phase === "updating" || (pending && (!j || phase === "updating"))) {
+      text = "Updating…";
+      tuning = true;
+    } else if (phase === "done" && pending) {
+      text = "Done";
+    } else if (j && j.newer && phase !== "failed") {
+      text = "Update available";
+    }
+    el.hidden = !text;
+    el.textContent = text;
+    el.classList.toggle("is-tuning", tuning);
+    el.setAttribute("aria-hidden", text ? "false" : "true");
+  }
+  function updateButtonBusy() {
+    return !!(_tuneRunning || (window.state && state.streaming));
+  }
+  function renderUpdate(j) {
+    _updateInfo = j || {};
+    const on = j && j.check_daily !== false;
+    document.querySelectorAll("#updateDailySwitch button").forEach((b) => {
+      b.classList.toggle("on", (b.dataset.updateDaily === "on") === on);
+    });
+    const status = $("updateStatus");
+    const changes = $("updateChanges");
+    const modelNote = $("updateModelNote");
+    const helperNote = $("updateHelperNote");
+    const localNote = $("updateLocalNote");
+    const btnNow = $("btnUpdateNow");
+    const btnCheck = $("btnUpdateCheck");
+    const step = $("updateStep");
+    const done = $("updateDone");
+    const phase = j && j.progress && j.progress.phase;
+    const pending = !!updatePending();
+    paintUpdateBadge(j);
+
+    if (phase === "updating" || (pending && phase !== "done" && phase !== "failed")) {
+      if (status) status.textContent = (j && j.message) || "Updating Caravan, the page will be back in a few seconds.";
+      if (changes) { changes.hidden = true; changes.replaceChildren(); }
+      if ($("updateChangesLabel")) $("updateChangesLabel").hidden = true;
+      if (modelNote) { modelNote.hidden = true; modelNote.textContent = ""; }
+      if (helperNote) { helperNote.hidden = true; helperNote.textContent = ""; }
+      if (localNote) { localNote.hidden = true; localNote.textContent = ""; }
+      if (btnNow) { btnNow.hidden = true; btnNow.disabled = true; btnNow.classList.add("is-tuning"); btnNow.textContent = "Updating…"; }
+      if (btnCheck) btnCheck.disabled = true;
+      if (step) {
+        step.hidden = false;
+        step.textContent = (j && j.progress && j.progress.message) || "Updating Caravan, the page will be back in a few seconds.";
+        step.classList.add("is-tuning");
+      }
+      if (done) { done.hidden = true; done.textContent = ""; }
+      scheduleUpdatePoll(true);
+      return;
+    }
+    if (btnCheck) btnCheck.disabled = false;
+    if (step) { step.hidden = true; step.textContent = ""; step.classList.remove("is-tuning"); }
+
+    if (phase === "done" && pending) {
+      setUpdatePending(false);
+      const msg = (j && j.message) || "Done. This Mac is on the new version.";
+      if (done) {
+        done.hidden = false;
+        done.textContent = msg;
+        clearTimeout(_updateDoneTimer);
+        _updateDoneTimer = setTimeout(() => { done.hidden = true; }, 8000);
+      }
+      if (status) status.textContent = msg;
+      scheduleUpdatePoll(false);
+    } else if (phase === "failed") {
+      setUpdatePending(false);
+      if (status) status.textContent = (j && j.progress && j.progress.message) || (j && j.message) || "The update failed. The previous version is still running.";
+      scheduleUpdatePoll(false);
+    } else if (status) {
+      if (j && j.message) status.textContent = j.message;
+      else if (j && j.offline && !j.newer) status.textContent = "Couldn't check right now. Try again when this Mac is online.";
+      else if (j && j.current_label) status.textContent = "This Mac is on the " + j.current_label + " version.";
+      else if (j && j.packaged === false) status.textContent = j.message || "This copy is updated with git, not from this page.";
+      else status.textContent = "This Mac is on the version that's installed.";
+    }
+
+    if (changes) {
+      const lines = (j && j.newer && j.changes) ? j.changes : [];
+      changes.replaceChildren();
+      if (lines.length) {
+        const intro = document.createElement("span");
+        // Use a heading-like first item? Keep a simple list after a label via previous sibling.
+        lines.forEach((line) => {
+          const li = document.createElement("li");
+          li.textContent = line;
+          changes.appendChild(li);
+        });
+        changes.hidden = false;
+        changes.setAttribute("aria-label", "What's new");
+        if ($("updateChangesLabel")) $("updateChangesLabel").hidden = false;
+      } else {
+        changes.hidden = true;
+        if ($("updateChangesLabel")) $("updateChangesLabel").hidden = true;
+      }
+    }
+    if (modelNote) {
+      const keep = j && j.keep_model_text;
+      modelNote.textContent = (j && j.newer && keep) ? keep : "";
+      modelNote.hidden = !modelNote.textContent;
+    }
+    if (helperNote) {
+      const help = j && j.helper_text;
+      helperNote.textContent = (j && j.newer && help) ? help : "";
+      helperNote.hidden = !helperNote.textContent;
+    }
+    const showApply = !!(j && j.newer && j.local && phase !== "failed");
+    if (btnNow) {
+      btnNow.hidden = !showApply;
+      btnNow.textContent = "Update now";
+      btnNow.classList.remove("is-tuning");
+      const blocked = updateButtonBusy();
+      btnNow.disabled = !showApply || blocked || !j.can_apply;
+      if (showApply && blocked) btnNow.title = "Wait for the current reply or Auto-tune to finish.";
+      else btnNow.title = "";
+    }
+    if (localNote) {
+      const needLocal = !!(j && j.newer && !j.local);
+      localNote.textContent = needLocal ? (j.not_local_text || "To update, open Caravan on this Mac and click Update now, or run caravan update in Terminal.") : "";
+      localNote.hidden = !needLocal;
+    }
+  }
+  function scheduleUpdatePoll(on) {
+    if (_updatePoll) { clearInterval(_updatePoll); _updatePoll = null; }
+    if (on) _updatePoll = setInterval(() => { refreshUpdate().catch(() => {}); }, 2000);
+  }
+  async function refreshUpdate(opts) {
+    try {
+      const j = await api("/api/update");
+      renderUpdate(j);
+      return j;
+    } catch (e) {
+      if (updatePending()) {
+        paintUpdateBadge({ progress: { phase: "updating" } });
+        const status = $("updateStatus");
+        if (status) status.textContent = "Updating Caravan, the page will be back in a few seconds.";
+        const step = $("updateStep");
+        if (step) { step.hidden = false; step.textContent = "Updating Caravan, the page will be back in a few seconds."; }
+        scheduleUpdatePoll(true);
+      } else if ($("updateStatus") && opts && opts.force) {
+        $("updateStatus").textContent = (e && (e.error || e.message)) || "Could not check for updates right now.";
+      }
+      return null;
+    }
+  }
+  if ($("updateHeaderBadge")) {
+    const open = (e) => { e.preventDefault(); openUpdates(); };
+    $("updateHeaderBadge").addEventListener("click", open);
+    $("updateHeaderBadge").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") open(e);
+    });
+  }
+  if ($("updateDailySwitch")) {
+    $("updateDailySwitch").addEventListener("click", async (e) => {
+      const b = e.target.closest("button[data-update-daily]");
+      if (!b) return;
+      const enable = b.dataset.updateDaily === "on";
+      try {
+        renderUpdate(await api("/api/update", { method: "POST", body: JSON.stringify({ action: "set", check_daily: enable }) }));
+      } catch (err) {
+        $("updateStatus").textContent = (err && (err.error || err.message)) || "Could not change this setting.";
+      }
+    });
+  }
+  if ($("btnUpdateCheck")) {
+    $("btnUpdateCheck").addEventListener("click", async () => {
+      $("btnUpdateCheck").disabled = true;
+      $("updateStatus").textContent = "Checking…";
+      try {
+        renderUpdate(await api("/api/update", { method: "POST", body: JSON.stringify({ action: "check" }) }));
+      } catch (err) {
+        $("updateStatus").textContent = (err && (err.error || err.message)) || "Could not check for updates right now.";
+      } finally {
+        $("btnUpdateCheck").disabled = false;
+      }
+    });
+  }
+  if ($("btnUpdateNow")) {
+    $("btnUpdateNow").addEventListener("click", async () => {
+      const j = _updateInfo || {};
+      if (updateButtonBusy()) {
+        $("updateStatus").textContent = "Wait for the current reply or Auto-tune to finish, then try Update again.";
+        return;
+      }
+      let msg = "Update now? The page will be back in a few seconds.";
+      if (j.reload_model) msg += " Caravan will reload the model.";
+      else if (j.reload_model === false) msg += " Your model stays loaded.";
+      if (!confirm(msg)) return;
+      setUpdatePending(true);
+      $("btnUpdateNow").disabled = true;
+      $("btnUpdateNow").classList.add("is-tuning");
+      $("btnUpdateNow").textContent = "Updating…";
+      try {
+        const out = await api("/api/update", { method: "POST", body: JSON.stringify({ action: "apply" }) });
+        renderUpdate(out);
+      } catch (err) {
+        if (err && err.status === 409) {
+          setUpdatePending(false);
+          $("updateStatus").textContent = (err.error || err.message || "Wait a moment, then try Update again.");
+          $("btnUpdateNow").disabled = false;
+          $("btnUpdateNow").classList.remove("is-tuning");
+          $("btnUpdateNow").textContent = "Update now";
+          return;
+        }
+        if (err && err.status === 403) {
+          setUpdatePending(false);
+          $("updateStatus").textContent = err.error || "To update, open Caravan on this Mac.";
+          return;
+        }
+        // The page may have gone down mid-request; keep pending and poll.
+        paintUpdateBadge({ progress: { phase: "updating" } });
+        const step = $("updateStep");
+        if (step) { step.hidden = false; step.textContent = "Updating Caravan, the page will be back in a few seconds."; }
+        $("updateStatus").textContent = "Updating Caravan, the page will be back in a few seconds.";
+        scheduleUpdatePoll(true);
+      }
+    });
+  }
+  refreshUpdate();
+  setTimeout(() => { refreshUpdate().catch(() => {}); }, 5000);
+  setInterval(() => { refreshUpdate().catch(() => {}); }, 5 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshUpdate().catch(() => {});
+  });
   if (/[?&]settings=1\b/.test(location.search)) setTimeout(openDrawer, 300);
   $("btnCloseSettings").addEventListener("click", closeDrawer);
   $("drawerBackdrop").addEventListener("click", closeDrawer);
@@ -2002,6 +2297,7 @@
       state.chatAbort = null;
     }
     state.streaming = false;
+    if (typeof _updateInfo !== "undefined" && _updateInfo && typeof renderUpdate === "function") renderUpdate(_updateInfo);
   }
 
   function fmt(n, digits=2) {
@@ -2318,6 +2614,7 @@
     }
     _tuneWasRunning = running;
     scheduleTunePoll(running);
+    if (typeof _updateInfo !== "undefined" && _updateInfo) renderUpdate(_updateInfo);
   }
   function scheduleTunePoll(running) {
     if (_tunePollTimer) { clearTimeout(_tunePollTimer); _tunePollTimer = null; }
@@ -2675,8 +2972,14 @@
     } catch (e) {
       $("btnSend").disabled = true; $("input").disabled = true;
       window.dispatchEvent(new CustomEvent('caravan-worker-status-error'));
-      $("statusText").textContent = "UI server unreachable";
-      $("statusDot").className = "dot err";
+      if (typeof updatePending === "function" && updatePending()) {
+        $("statusText").textContent = "Updating…";
+        $("statusDot").className = "dot";
+        if (typeof paintUpdateBadge === "function") paintUpdateBadge({ progress: { phase: "updating" } });
+      } else {
+        $("statusText").textContent = "UI server unreachable";
+        $("statusDot").className = "dot err";
+      }
     }
   }
 
@@ -2958,6 +3261,7 @@
     state.chatAbort = ac;
     state.streaming = true;
     $("btnSend").disabled = true;
+    if (typeof _updateInfo !== "undefined" && _updateInfo && typeof renderUpdate === "function") renderUpdate(_updateInfo);
 
     if (!state.session) state.session = newSessionId();
     const sent = Date.now() / 1000;
@@ -3111,6 +3415,7 @@
       clearTimeout(totalTimer);
       if (state.chatAbort === ac) state.chatAbort = null;
       state.streaming = false;
+      if (typeof _updateInfo !== "undefined" && _updateInfo && typeof renderUpdate === "function") renderUpdate(_updateInfo);
       saveChat();
       refreshStatus();
     }

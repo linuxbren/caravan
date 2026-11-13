@@ -21,6 +21,14 @@
 
 - Voice design notes (listening first) are in [VOICE](VOICE.md).
   No listening code is shipped. See [Day 26](DAY26.md).
+
+- Caravan checks once a day for a newer version. An **Update available**
+  badge appears on the chat page, and Settings has an Updates section
+  with **Check for updates daily**, **Check now**, and **Update now**.
+  `caravan update --check` only checks. Update now is only available
+  on this Mac itself; from the local network or Tailscale, the page
+  asks you to update here. The 2nd Mac needs the same update after
+  this Mac is done. See [Day 26](DAY26.md).
 - This follow-up does not change `agent/`, `runtime/`, or the
   requirements files, so a `caravan update` from the Day 25 pin
   keeps a loaded model running. The web page still restarts. No

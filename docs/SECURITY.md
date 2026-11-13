@@ -7,6 +7,10 @@ model workers or RPC service directly to the public internet.
 - The easy install keeps the browser page only on this Mac. You can turn
   on **Open on my local network** in Settings or `caravan lan on`.
   Anyone on the same network can use Caravan, and there is no login.
+  **Update now** in Settings is only available when you open the page
+  on this Mac itself; from the local network or Tailscale, the page
+  can show that an update is ready, and asks you to update here or
+  run `caravan update` in Terminal.
   `caravan lan status` shows the address (`http://<lan-ip>:<port>`),
   and a clickable link appears under the Settings switch. This can be
   on at the same time as the opt-in Tailscale share; both addresses

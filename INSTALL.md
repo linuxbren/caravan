@@ -34,7 +34,7 @@ to install it. Setup keeps your existing models and settings.
 | `caravan stop` | Stops the browser service until your next login |
 | `caravan start` | Starts it again |
 | `caravan doctor` | Shows detailed checks when something goes wrong |
-| `caravan update` | Updates Caravan and brings the page back |
+| `caravan update` | Updates Caravan and brings the page back. `caravan update --check` only checks |
 | `caravan models` | Lists downloaded models, with a friendly name, GGUF or MLX, and the id to copy. Marks the currently loaded one |
 | `caravan bench` | Compare a GGUF model to its MLX counterpart by a plain name or by ids. Default: five short prompts and a long-prompt series (~1k, ~4k, ~8k); `--short` or `--long` for just one. Prints a compact chart of reading, writing, and first-token speed; `--details` adds the reply-stats lines; `--ascii` uses plain '#' bars. Without `--yes` it shows the pair and the exact command. After a live run it puts the original model back. On a terminal, a small campfire shows the current step and elapsed time (`--quiet` turns it off). Run `caravan bench --help` for details |
 
@@ -104,9 +104,19 @@ In Terminal:
 caravan update
 ```
 
+Or, on the chat page, open **Settings**. **Check for updates daily** is
+on by default. When a newer version is ready, an **Update available**
+badge appears, and **Update now** in the Updates section runs the same
+update. `caravan update --check` only checks, and does not install
+anything. **Update now** is available when you open Caravan on this
+Mac; from another device, run `caravan update` in Terminal on this
+Mac, or open the page here. On a two-Mac setup, update the 2nd Mac
+the same way after this Mac is done.
+
 Do not update during a chat. The page comes back on its own. If the code that
-runs the model changed, the last model is reloaded and Caravan says so.
-Previous source files are backed up; models and settings stay. If an update
+runs the model changed, the last model is reloaded and Caravan says so
+("Caravan will reload the model"); otherwise it says "Your model stays
+loaded." Previous source files are backed up; models and settings stay. If an update
 fails, Caravan goes back to the previous version, starts it, and tells you.
 
 ## Remove Caravan safely

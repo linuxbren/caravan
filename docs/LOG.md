@@ -1,3 +1,23 @@
+## 2026-11-13: Day 26 — Daily update check and Update on the page
+
+Caravan checks once a day, and shortly after it starts, whether a
+newer version is published. The check is a short look and does not
+download the update. **Check for updates daily** is on by default;
+**Check now** and `caravan update --check` run a check without
+installing. When a newer version is ready, an **Update available**
+badge appears on the chat page, and Settings shows the versions in
+plain dates, what's new, and whether **Your model stays loaded** or
+**Caravan will reload the model**. **Update now** runs the same
+update as `caravan update`, with a campfire "Updating…" line; the
+page comes back and says Done, or shows the error and that the
+previous version is still running. Because there is no login, Update
+now is only available on this Mac itself, not from the local network
+or Tailscale. On a two-Mac setup, the 2nd Mac needs the same update
+after this Mac is done. This follow-up does not change `agent/`,
+`runtime/`, or the requirements files, so a `caravan update` from the
+previous Day 26 pin keeps a loaded model running; the web page still
+restarts. See [DAY26.md](DAY26.md). No `day26` tag yet.
+
 ## 2026-11-12: Day 26 — Download progress under the model you clicked
 
 In the Models list, the download progress card appears right under the
