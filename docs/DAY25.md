@@ -165,21 +165,23 @@ Short  GGUF  ##############################################       22.2
        MLX   ###########################################          20.4  * +22%
 
 First token (s, lower is better)
-Short  GGUF  #################################################   0.28s  * +39%
-       MLX   ##############################                      0.46s
-~1k    GGUF  ##############################################      5.30s
-       MLX   #################################################   5.01s  * +5%
-~4k    GGUF  ############################################       23.40s
-       MLX   #################################################  20.96s  * +10%
-~8k    GGUF  ############################################       52.15s
-       MLX   #################################################  46.74s  * +10%
+Short  GGUF  ##############################                      0.28s  * +39%
+       MLX   #################################################   0.46s
+~1k    GGUF  #################################################   5.30s
+       MLX   ##############################################      5.01s  * +5%
+~4k    GGUF  #################################################  23.40s
+       MLX   ############################################       20.96s  * +10%
+~8k    GGUF  #################################################  52.15s
+       MLX   ############################################       46.74s  * +10%
 ```
 
 On those runs, MLX was faster at reading and at writing at every
 size (the largest writing lead was 22% on the ~8k prompts, 20.4 vs
 16.7 tok/s). GGUF's first token was sooner on the short prompts
 (39% sooner, 0.28s vs 0.46s); MLX's first token was sooner on the
-long prompts.
+long prompts. Day 26 redrew the First token bars so a shorter bar
+is sooner, matching the "lower is better" label; the numbers above
+are the same. See [Day 26](DAY26.md).
 
 ### Auto-tune prompts and scoring
 

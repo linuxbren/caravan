@@ -24,10 +24,25 @@ Models list until the model is visible again, then moves back under
 it. After a page refresh, a still-running download is re-attached
 the same way.
 
+### First token bars follow the seconds
+
+The `caravan bench` chart used to draw a longer First token bar for a
+sooner reply, which was easy to read the wrong way: 0.28s looked
+"bigger" than 0.46s. The bars now follow the printed number, the same
+way Reading and Writing already do. The label is still **First token
+(s, lower is better)**, and a shorter bar is sooner. The winner
+marker (`* +39%` on 0.28s vs 0.46s) is unchanged. `--ascii` uses the
+same scaling with '#' bars; `--details` (the reply-stats lines) is
+unchanged. The Day 25 sample chart in [DAY25](DAY25.md) and
+[BENCHMARKS](BENCHMARKS.md) was redrawn with this direction; the
+measured numbers are the same.
+
+This follow-up does not change `agent/`, `runtime/`, or the
+requirements files, so a `caravan update` from the previous Day 26
+pin keeps a loaded model running.
+
 ## What is still ahead (same Day 26)
 
-- **A clearer First-token chart** in `caravan bench`, so a longer
-  bar is not mistaken for a slower first token.
 - **GGUF Phase 3:** prompt lookup and a draft model, off by default,
   measured per model.
 - **Voice:** listening first — a microphone in the chat box and a
@@ -43,3 +58,8 @@ matching model, falls back to the top of the list when that model is
 not shown, is re-attached after the list is redrawn, stays visible
 when the row is closed, scrolls into view when a download starts,
 and is described that way in the Models and browser guides.
+
+New tests also cover the First token chart: the 0.28s bar is shorter
+than the 0.46s bar (about 61% as long), a longer wait is the longer
+bar at every size, Reading and Writing bars are unchanged, and
+`--ascii` and the block-character chart agree on which bar is shorter.

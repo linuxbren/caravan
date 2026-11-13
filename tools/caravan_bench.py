@@ -2,7 +2,8 @@
 
 Prints a compact chart of reading speed, writing speed, and time to
 the first token, with a short bar for GGUF and one for MLX at each
-prompt size. Full model names are at the top; the bars are labeled
+prompt size. Bar length follows the printed number, so a shorter
+First token bar is sooner (the label is "lower is better"). Full model names are at the top; the bars are labeled
 GGUF and MLX. Sizes that were not run are left out. On a terminal
 the bars use block characters (█ ▌); with `--ascii`, when output
 is not UTF-8, or with NO_COLOR, the bars are plain '#'. Subtle

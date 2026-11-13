@@ -4,9 +4,16 @@ In the Models list, the download progress card appears right under the
 model you clicked Download on, so it is clear which model is
 downloading. The card stays visible there even if you close the file
 list, and sits at the top of the list only when that model is not
-currently shown. This follow-up does not change `agent/`, `runtime/`,
-or the requirements files, so a `caravan update` from the Day 25 pin
-keeps a loaded model running; the web page still restarts. See
+currently shown.
+
+The `caravan bench` First token bars now follow the printed seconds:
+a shorter bar is sooner, matching the label "First token (s, lower is
+better)". Reading and Writing bars are unchanged. The Day 25 sample
+chart was redrawn with the same numbers.
+
+These follow-ups do not change `agent/`, `runtime/`, or the
+requirements files, so a `caravan update` from the Day 25 pin keeps a
+loaded model running; the web page still restarts. See
 [DAY26.md](DAY26.md). No `day26` tag yet.
 
 ## 2026-11-12: Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench

@@ -2,8 +2,12 @@
 
 Default output is a compact chart: full model names once at the top,
 short labels GGUF and MLX on the bars, one section each for reading,
-writing, and first token. Sizes that were not run are omitted. Block
-characters (█ ▌) are used when the stream is UTF-8; otherwise '#'.
+writing, and first token. Bar length always follows the printed
+number, so a longer Reading or Writing bar is faster, and a longer
+First token bar is a longer wait (the label "lower is better" matches
+the bars: a shorter bar is sooner). Sizes that were not run are
+omitted. Block characters (█ ▌) are used when the stream is UTF-8;
+otherwise '#'.
 """
 from __future__ import annotations
 
@@ -181,12 +185,6 @@ def _lead(a, b, *, higher_is_better) -> tuple:
     return "MLX", (a - b) / a * 100.0
 
 
-def _goodness(value, *, higher_is_better):
-    if value is None or value <= 0:
-        return 0.0
-    return float(value) if higher_is_better else 1.0 / float(value)
-
-
 def render_chart(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX",
                  ascii=None, color=None, stream=None, width=80) -> str:
     """Render a bar chart from measure_series rows. No invented numbers."""
@@ -235,13 +233,13 @@ def render_chart(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX",
         if not pairs:
             continue
         lines.append(title)
+        # Bars follow the printed number in every section: a higher
+        # tok/s is a longer bar, and a longer first-token wait is a
+        # longer bar. First token is scaled per size so a 0.28s vs
+        # 0.46s short-prompt pair is readable next to a 52s pair.
         if higher:
-            goodness = [
-                _goodness(v, higher_is_better=True)
-                for _, gv, mv in pairs
-                for v in (gv, mv)
-            ]
-            section_peak = max(goodness) if goodness else 1.0
+            magnitudes = [v for _, gv, mv in pairs for v in (gv, mv) if v]
+            section_peak = max(magnitudes) if magnitudes else 1.0
             if section_peak <= 0:
                 section_peak = 1.0
         else:
@@ -250,11 +248,7 @@ def render_chart(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX",
         for size, gv, mv in pairs:
             winner, pct = _lead(gv, mv, higher_is_better=higher)
             if section_peak is None:
-                peak = max(
-                    _goodness(gv, higher_is_better=higher),
-                    _goodness(mv, higher_is_better=higher),
-                    1e-12,
-                )
+                peak = max([v for v in (gv, mv) if v] or [1e-12])
             else:
                 peak = section_peak
             for side, val, paint in (
@@ -267,7 +261,7 @@ def render_chart(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX",
                     line = prefix + (" " * bar_w) + f"  {'':>{val_w}}"
                     lines.append(line.rstrip())
                     continue
-                frac = _goodness(val, higher_is_better=higher) / peak
+                frac = float(val) / peak
                 body = _paint(_bar(frac, bar_w, full, half), paint, use_color)
                 val_s = fmt(val)
                 mark = ""

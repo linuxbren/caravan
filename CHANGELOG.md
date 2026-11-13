@@ -4,6 +4,12 @@
   the model you clicked Download on. It stays visible there even if
   you close the file list, and moves to the top of the list only
   when that model is not currently shown. See [Day 26](docs/DAY26.md).
+
+- The `caravan bench` First token bars now follow the printed seconds:
+  a shorter bar is sooner, matching the label "First token (s, lower
+  is better)". Reading and Writing bars are unchanged. `--ascii` uses
+  the same scaling; `--details` is unchanged. The Day 25 sample chart
+  was redrawn with the same numbers. See [Day 26](docs/DAY26.md).
 - This follow-up does not change `agent/`, `runtime/`, or the
   requirements files, so a `caravan update` from the Day 25 pin
   keeps a loaded model running. The web page still restarts. No

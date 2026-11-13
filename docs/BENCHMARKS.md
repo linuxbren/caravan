@@ -63,21 +63,23 @@ Short  GGUF  ##############################################       22.2
        MLX   ###########################################          20.4  * +22%
 
 First token (s, lower is better)
-Short  GGUF  #################################################   0.28s  * +39%
-       MLX   ##############################                      0.46s
-~1k    GGUF  ##############################################      5.30s
-       MLX   #################################################   5.01s  * +5%
-~4k    GGUF  ############################################       23.40s
-       MLX   #################################################  20.96s  * +10%
-~8k    GGUF  ############################################       52.15s
-       MLX   #################################################  46.74s  * +10%
+Short  GGUF  ##############################                      0.28s  * +39%
+       MLX   #################################################   0.46s
+~1k    GGUF  #################################################   5.30s
+       MLX   ##############################################      5.01s  * +5%
+~4k    GGUF  #################################################  23.40s
+       MLX   ############################################       20.96s  * +10%
+~8k    GGUF  #################################################  52.15s
+       MLX   ############################################       46.74s  * +10%
 ```
 
 On those runs, MLX was faster at reading and at writing at every
 size (the largest writing lead was 22% on the ~8k prompts, 20.4 vs
 16.7 tok/s). GGUF's first token was sooner on the short prompts
 (39% sooner, 0.28s vs 0.46s); MLX's first token was sooner on the
-long prompts. The reply-stats lines behind the chart, as printed
+long prompts. Day 26 redrew the First token bars so a shorter bar
+is sooner, matching the "lower is better" label; the numbers above
+are the same. See [Day 26](DAY26.md). The reply-stats lines behind the chart, as printed
 by `--details`:
 
     GGUF Q4_K_M: Short(5) Read 77 tok at 182 tok/s · Write 145 at 22.2 · first 0.28s · total 6.76s; ~1k Read 1265 at 239 · Write 149 at 21.5 · first 5.30 · total 12.20; ~4k Read 5035 at 215 · Write 161 at 19.1 · first 23.40 · total 31.83; ~8k Read 10102 at 195 · Write 146 at 16.7 · first 52.15 · total 61.04.
