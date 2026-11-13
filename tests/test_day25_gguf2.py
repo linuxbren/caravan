@@ -25,6 +25,7 @@ import web_speed as S  # noqa: E402
 import caravan_bench as B  # noqa: E402
 import caravan_models as M  # noqa: E402
 import caravan_progress as PR  # noqa: E402
+import caravan_chart as CH  # noqa: E402
 
 
 def _decide_f16(*a, **k):
@@ -383,11 +384,26 @@ class Bench(unittest.TestCase):
         lines = B.run_from_averages(
             "gguf/qwen", "mlx/qwen",
             gguf_name="Qwen (GGUF)", mlx_name="Qwen (MLX)", store=store,
+            ascii=True,
         )
-        self.assertIn("Qwen (GGUF):", lines[0])
-        self.assertIn("Write 30 tok at 21.0 tok/s", lines[0])
-        self.assertIn("Qwen (MLX):", lines[1])
-        self.assertIn("Write 30 tok at 28.0 tok/s", lines[1])
+        text = "\n".join(lines)
+        self.assertIn("Qwen (GGUF)", text)
+        self.assertIn("Qwen (MLX)", text)
+        self.assertIn("Saved", text)
+        self.assertIn("Reading (tok/s, higher is better)", text)
+        self.assertIn("180", text)
+        self.assertIn("220", text)
+        self.assertIn("21", text)
+        self.assertIn("28", text)
+        self.assertNotIn("Write 30 tok", text)
+        detailed = B.run_from_averages(
+            "gguf/qwen", "mlx/qwen",
+            gguf_name="Qwen (GGUF)", mlx_name="Qwen (MLX)", store=store,
+            details=True, ascii=True,
+        )
+        dtext = "\n".join(detailed)
+        self.assertIn("Write 30 tok at 21.0 tok/s", dtext)
+        self.assertIn("Write 30 tok at 28.0 tok/s", dtext)
 
     def test_cli_without_yes_prints_steps(self):
         buf = io.StringIO()
@@ -722,7 +738,33 @@ class RestoreOriginal(unittest.TestCase):
         self.assertEqual(rc, 0)
         out = buf.getvalue()
         self.assertIn("Putting the original model back: Original Model.", out)
-        self.assertIn("Write 20 tok at 20.0 tok/s", out)
+        self.assertIn("Reading (tok/s, higher is better)", out)
+        self.assertIn("Writing (tok/s, higher is better)", out)
+        self.assertIn("First token (s, lower is better)", out)
+        self.assertNotIn("Write 20 tok at 20.0 tok/s", out)
+        # --details adds the reply-stats lines
+        buf2 = io.StringIO()
+        err2 = io.StringIO()
+        calls2 = []
+        loaded2 = {"id": "orig/model", "name": "Original Model"}
+        with mock.patch("sys.stdout", buf2), mock.patch("sys.stderr", err2):
+            urlopen = self._urlopen(loaded2, calls2)
+            real_live = B.run_live
+            def fake_live2(*a, **k):
+                k.setdefault("urlopen", urlopen)
+                k.setdefault("prompts", ["hi"])
+                return real_live(*a, **k)
+            with mock.patch.object(B, "run_live", side_effect=fake_live2):
+                rc2 = B.main(
+                    ["qwen2.5 coder 7b", "--yes", "--details", "--ascii"],
+                    models=models,
+                )
+        self.assertEqual(rc2, 0)
+        out2 = buf2.getvalue()
+        self.assertIn("Write 20 tok at 20.0 tok/s", out2)
+        self.assertIn("Write 20 tok at 30.0 tok/s", out2)
+        self.assertIn("Putting the original model back: Original Model.", out2)
+        self.assertIn("Reading (tok/s, higher is better)", out2)
 
 
 
@@ -847,7 +889,9 @@ class LongSeries(unittest.TestCase):
         text = B.steps_text("gguf/qwen", "mlx-community/qwen")
         self.assertIn("five short prompts", text)
         self.assertIn("1k, 4k, and 8k", text)
-        self.assertIn("unique", text.lower())
+        self.assertIn("chart", text.lower())
+        self.assertIn("--details", text)
+        self.assertIn("--ascii", text)
         self.assertIn("original model back", text)
         self.assertNotIn("tok/s", text)
         self.assertIn("--yes", text)
@@ -1151,7 +1195,162 @@ class ProgressAnimation(unittest.TestCase):
         self.assertIn("campfire", help_txt.lower())
         self.assertIn("--quiet", help_txt)
         self.assertIn("Ctrl-C", help_txt)
+        self.assertIn("--details", help_txt)
+        self.assertIn("--ascii", help_txt)
+        self.assertIn("chart", help_txt.lower())
 
+
+
+
+class Chart(unittest.TestCase):
+    """ASCII chart from Brenden's real 1st Mac Qwen2.5 Coder 7B figures."""
+
+    def test_fixture_ascii_is_stable_and_fits_80(self):
+        text = CH.fixture_chart(ascii=True)
+        expected = (
+            "GGUF  Qwen2.5 Coder 7B (GGUF Q4_K_M)\n"
+            "MLX   Qwen2.5 Coder 7B (MLX 4bit)\n"
+            "\n"
+            "Reading (tok/s, higher is better)\n"
+            "Short  GGUF  ###################################                   182\n"
+            "       MLX   #######################################               204  * +12%\n"
+            "~1k    GGUF  ##############################################        239\n"
+            "       MLX   #################################################     257  * +8%\n"
+            "~4k    GGUF  #########################################             215\n"
+            "       MLX   ##############################################        242  * +13%\n"
+            "~8k    GGUF  #####################################                 195\n"
+            "       MLX   ##########################################            218  * +12%\n"
+            "\n"
+            "Writing (tok/s, higher is better)\n"
+            "Short  GGUF  ##############################################       22.2\n"
+            "       MLX   #################################################    23.4  * +5%\n"
+            "~1k    GGUF  #############################################        21.5\n"
+            "       MLX   ################################################     22.9  * +7%\n"
+            "~4k    GGUF  ########################################             19.1\n"
+            "       MLX   ##############################################       21.8  * +14%\n"
+            "~8k    GGUF  ###################################                  16.7\n"
+            "       MLX   ###########################################          20.4  * +22%\n"
+            "\n"
+            "First token (s, lower is better)\n"
+            "Short  GGUF  #################################################   0.28s  * +39%\n"
+            "       MLX   ##############################                      0.46s\n"
+            "~1k    GGUF  ##############################################      5.30s\n"
+            "       MLX   #################################################   5.01s  * +5%\n"
+            "~4k    GGUF  ############################################       23.40s\n"
+            "       MLX   #################################################  20.96s  * +10%\n"
+            "~8k    GGUF  ############################################       52.15s\n"
+            "       MLX   #################################################  46.74s  * +10%\n"
+        )
+        self.assertEqual(text, expected)
+        for line in text.splitlines():
+            self.assertLessEqual(len(line), 80, line)
+        self.assertIn("#", text)
+        self.assertNotIn("█", text)
+        self.assertNotIn("★", text)
+
+    def test_unicode_uses_block_characters(self):
+        text = CH.fixture_chart(ascii=False, color=False)
+        self.assertIn("█", text)
+        self.assertIn("★", text)
+        self.assertNotIn("#", text)
+        self.assertIn("204  ★ +12%", text)
+        self.assertIn("20.4  ★ +22%", text)
+        self.assertIn("0.28s  ★ +39%", text)
+        for line in text.splitlines():
+            self.assertLessEqual(len(line), 80, line)
+
+    def test_color_only_when_asked_and_wraps_bars(self):
+        plain = CH.fixture_chart(ascii=True, color=False)
+        # NO_COLOR wins over color=True, as the CLI promises; clear it
+        # here so we can still check the paint wrapping.
+        env = {k: v for k, v in __import__("os").environ.items() if k != "NO_COLOR"}
+        with mock.patch.dict(__import__("os").environ, env, clear=True):
+            colored = CH.fixture_chart(ascii=True, color=True)
+        self.assertNotIn("\033[", plain)
+        self.assertIn(CH.AMBER, colored)
+        self.assertIn(CH.GREEN, colored)
+        self.assertIn(CH.RESET, colored)
+        # Stripping color codes yields the plain chart.
+        import re
+        stripped = re.sub(r"\033\[[0-9;]*m", "", colored)
+        self.assertEqual(stripped, plain)
+
+    def test_skipped_and_missing_sizes_are_omitted(self):
+        g = [
+            {"label": "Short prompts (5)", "specs": {
+                "read_tok_s": 182, "write_tok_s": 22.2, "ttft_s": 0.28,
+            }},
+            {"label": "Long prompts (~8k tok) (2)", "size": 8192,
+             "skipped": True, "reason": "would not fit"},
+        ]
+        m = [
+            {"label": "Short prompts (5)", "specs": {
+                "read_tok_s": 204, "write_tok_s": 23.4, "ttft_s": 0.46,
+            }},
+        ]
+        text = CH.render_chart(g, m, gguf_name="G", mlx_name="M", ascii=True, color=False)
+        self.assertIn("Short", text)
+        self.assertNotIn("~8k", text)
+        self.assertNotIn("~1k", text)
+        self.assertNotIn("~4k", text)
+        self.assertIn("182", text)
+        self.assertIn("204", text)
+
+    def test_one_sided_row_has_no_winner_mark(self):
+        g = [{"label": "Short prompts (5)", "specs": {
+            "read_tok_s": 182, "write_tok_s": 22.2, "ttft_s": 0.28,
+        }}]
+        text = CH.render_chart(g, [], gguf_name="G", mlx_name="M", ascii=True, color=False)
+        self.assertIn("182", text)
+        self.assertIn("22.2", text)
+        self.assertNotIn("*", text)
+        self.assertNotIn("+", text)
+        self.assertIn("GGUF  G", text)
+
+    def test_empty_rows_say_no_numbers(self):
+        text = CH.render_chart([], [], ascii=True)
+        self.assertEqual(text, "No speed numbers to chart yet.\n")
+
+    def test_no_color_forces_ascii_bars(self):
+        style = CH.decide_style(ascii=None, color=None, stream=io.StringIO())
+        # NO_COLOR is set in the official test environment; bars are '#'.
+        # Even if it is not, a non-TTY stream has no color.
+        self.assertFalse(style["color"])
+        forced = CH.decide_style(ascii=True, color=False)
+        self.assertEqual(forced["full"], "#")
+        self.assertEqual(forced["star"], "*")
+        uni = CH.decide_style(ascii=False, color=False)
+        self.assertEqual(uni["full"], "█")
+        self.assertEqual(uni["star"], "★")
+
+    def test_live_result_includes_a_chart(self):
+        calls = []
+        def urlopen(url, data=None, timeout=30, headers=None):
+            calls.append(url)
+            n_loads = sum(1 for c in calls if c.endswith("/api/models/load"))
+            if url.endswith("/api/status"):
+                mid = "gguf/a" if 0 < n_loads < 2 else ("mlx/b" if n_loads >= 2 else None)
+                return {"worker": {"status": "ready" if mid else "idle", "model_id": mid}}
+            if url.endswith("/api/models/load"):
+                return {"ok": True}
+            if url.endswith("/api/chat"):
+                write = 20.0 if n_loads < 2 else 30.0
+                return {"caravan_web": {"stats": {
+                    "write_tok_s": write, "read_tok_s": 100, "ttft_s": 0.20,
+                    "prompt_tokens": 50, "completion_tokens": 20, "total_s": 0.80,
+                }}}
+            raise AssertionError(url)
+        result = B.run_live("gguf/a", "mlx/b", urlopen=urlopen,
+                            gguf_name="G", mlx_name="M", prompts=["hi"])
+        chart = result["chart"]
+        self.assertIn("Reading (tok/s, higher is better)", chart)
+        self.assertIn("100", chart)
+        self.assertIn("20", chart)
+        self.assertIn("30", chart)
+        # Default lines still have the reply-stats wording for --details.
+        text = "\n".join(result["lines"])
+        self.assertIn("Write 20 tok at 20.0 tok/s", text)
+        self.assertIn("Write 20 tok at 30.0 tok/s", text)
 
 
 class Docs(unittest.TestCase):
@@ -1171,7 +1370,17 @@ class Docs(unittest.TestCase):
         self.assertIn("five short prompts", text)
         self.assertIn("long-prompt series", text)
         self.assertIn("campfire", text.lower())
+        self.assertIn("--details", text)
+        self.assertIn("--ascii", text)
+        self.assertIn("Reading (tok/s, higher is better)", text)
+        self.assertIn("* +22%", text)
+        self.assertIn("182", text)
+        self.assertIn("20.4", text)
         self.assertIn("2nd Mac", text)
+        bench = (ROOT / "docs/BENCHMARKS.md").read_text()
+        chart = CH.fixture_chart(ascii=True).rstrip()
+        self.assertIn(chart, bench)
+        self.assertIn(chart, text)
         for bad in ("prf-hays", "16 GB", "24 GB", "exo1", "exo2", "262144"):
             self.assertNotIn(bad, text)
         web = (ROOT / "docs/WEB.md").read_text()

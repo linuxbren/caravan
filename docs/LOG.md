@@ -10,15 +10,20 @@ unknown, never a jump to a much larger window). Two chats is available
 models` lists downloaded models with their ids, including GGUF files
 the running page omitted. `caravan bench` accepts a plain name, runs
 five short prompts and a long-prompt series, compares a GGUF model to
-its MLX counterpart in reply-stats wording without inventing numbers,
-and puts the original model back after a live run. On a terminal, `caravan bench --yes` shows a small campfire animation with the current step and elapsed time. Auto-tune uses the
-same five short prompts plus one ~2k-token long prompt, and scores
-include long-prompt read speed. First measured bench on the 1st Mac
+its MLX counterpart without inventing numbers, and puts the original
+model back after a live run. The default output is a compact chart of
+reading, writing, and first-token speed; `--details` adds the
+reply-stats lines; `--ascii` uses plain '#' bars. On a terminal,
+`caravan bench --yes` shows a small campfire animation with the
+current step and elapsed time. Auto-tune uses the same five short
+prompts plus one ~2k-token long prompt, and scores include
+long-prompt read speed. First measured bench on the 1st Mac
 (Qwen2.5 Coder 7B, two short prompts of that build): GGUF Q4_K_M
-Write 22.3 tok/s, MLX 4bit Write 23.5 tok/s. This follow-up does not change
+Write 22.3 tok/s, MLX 4bit Write 23.5 tok/s. A later full-series run
+on the same Mac is in [DAY25.md](DAY25.md) and
+[BENCHMARKS.md](BENCHMARKS.md). This follow-up does not change
 `agent/`, `runtime/`, or the requirements files, so a `caravan update`
-keeps a loaded model running; the web page still restarts. Details:
-[DAY25.md](DAY25.md).
+keeps a loaded model running; the web page still restarts.
 
 ## 2026-11-12: Day 24 live review — Campfire theme, and Start until a model is tuned
 

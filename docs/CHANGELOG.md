@@ -10,14 +10,18 @@
   Auto keeps one chat.
 - `caravan models` lists downloaded models with a friendly name, GGUF
   or MLX, and the id to copy, and marks the currently loaded one.
-- `caravan bench` compares a GGUF model to its MLX counterpart in the
-  same wording as the stats under a reply. It does not invent numbers.
-  A plain name finds the matching pair; `--gguf` and `--mlx` still
-  work. Default: five short prompts and a long-prompt series;
-  `--short` or `--long` for just one. After a live run, the original
-  model is put back. First measured result (1st Mac, Qwen2.5 Coder
-  7B): GGUF Q4_K_M Write 22.3 tok/s, MLX 4bit Write 23.5 tok/s. See
-  [Day 25](DAY25.md).
+- `caravan bench` compares a GGUF model to its MLX counterpart. It
+  does not invent numbers. The default output is a compact chart of
+  reading, writing, and first-token speed; `--details` (also
+  `--text`) adds the reply-stats lines; `--ascii` and `NO_COLOR` use
+  plain '#' bars. A plain name finds the matching pair; `--gguf` and
+  `--mlx` still work. Default: five short prompts and a long-prompt
+  series; `--short` or `--long` for just one. `--from-averages`
+  draws the same kind of chart. After a live run, the original model
+  is put back. First measured result (1st Mac, Qwen2.5 Coder 7B):
+  GGUF Q4_K_M Write 22.3 tok/s, MLX 4bit Write 23.5 tok/s. A later
+  full-series run on the same Mac is in [Day 25](DAY25.md) and
+  [BENCHMARKS](BENCHMARKS.md).
 - Auto-tune (MLX and GGUF) uses the same five short prompts plus one
   ~2k-token long prompt, scores on medians including long-prompt
   read speed, and still treats a garbled trial as a loss.

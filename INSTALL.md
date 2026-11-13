@@ -36,7 +36,7 @@ to install it. Setup keeps your existing models and settings.
 | `caravan doctor` | Shows detailed checks when something goes wrong |
 | `caravan update` | Updates Caravan and brings the page back |
 | `caravan models` | Lists downloaded models, with a friendly name, GGUF or MLX, and the id to copy. Marks the currently loaded one |
-| `caravan bench` | Compare a GGUF model to its MLX counterpart by a plain name or by ids. Default: five short prompts and a long-prompt series (~1k, ~4k, ~8k); `--short` or `--long` for just one. Prints reply-stats wording and a short summary. Without `--yes` it shows the pair and the exact command. After a live run it puts the original model back. On a terminal, a small campfire shows the current step and elapsed time (`--quiet` turns it off). Run `caravan bench --help` for details |
+| `caravan bench` | Compare a GGUF model to its MLX counterpart by a plain name or by ids. Default: five short prompts and a long-prompt series (~1k, ~4k, ~8k); `--short` or `--long` for just one. Prints a compact chart of reading, writing, and first-token speed; `--details` adds the reply-stats lines; `--ascii` uses plain '#' bars. Without `--yes` it shows the pair and the exact command. After a live run it puts the original model back. On a terminal, a small campfire shows the current step and elapsed time (`--quiet` turns it off). Run `caravan bench --help` for details |
 
 Use **Unload** in the browser to free the model's memory before stopping.
 After restarting your Mac, unlock it and log in. Caravan starts and brings

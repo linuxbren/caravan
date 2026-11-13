@@ -63,10 +63,25 @@ says so and lists what it can see on this Mac's disk.
 
 ### `caravan bench`
 
-Compares a GGUF model to its MLX counterpart and prints each side in
-the same wording as the stats under a reply:
+Compares a GGUF model to its MLX counterpart and prints a compact
+chart of reading speed, writing speed, and time to the first token.
+Full model names are at the top; the bars are labeled GGUF and MLX.
+Each size that was run (Short, ~1k, ~4k, ~8k) has a GGUF bar and an
+MLX bar, the measured value at the end, and a small marker on the
+winner (for example `* +22%`). Sizes that were not run are left out.
+The chart fits 80 columns. On a terminal the bars use block
+characters (█ ▌) in subtle amber (GGUF) and green (MLX); with
+`--ascii`, when output is not UTF-8, or with `NO_COLOR`, the bars
+are plain '#' and without color.
+
+`--details` (also `--text`) also prints each side in the same wording
+as the stats under a reply:
 
     Read X tok at Y tok/s · Write Z tok at W tok/s · first token A s · total B s
+
+and a note about the unique openings. `--from-averages` draws the
+same kind of chart from already-saved chat averages, without loading
+or unloading a model.
 
 It does not invent numbers. Pass a plain name, and Caravan finds the
 matching GGUF and MLX among downloaded models (it ignores case,
@@ -78,26 +93,21 @@ By default it runs five short prompts (the two Auto-tune has always
 used, plus a short code, explanation, and list prompt) and a
 long-prompt series at about 1k, 4k, and 8k tokens (two prompts at
 each size, reported as medians). Sizes that will not fit the model's
-chat window are skipped, with a short reason. `--short` or `--long`
-runs just one of those. Each prompt starts with a unique opening so a
-shared-start cache does not make later prompts look faster. For each
-model the output has a "Short prompts (5)" line and a "Long prompts
-(~N tok) (2)" line per size, then a short plain summary of which is
-faster at reading, writing, first token, and total, with the percent
-difference, from the measured numbers only.
+chat window are skipped. `--short` or `--long` runs just one of
+those. Each prompt starts with a unique opening so a shared-start
+cache does not make later prompts look faster.
 
 Without `--yes` it shows which two models it would compare and the
-exact command, and does not load anything. `--from-averages` prints
-already-saved chat averages without loading or unloading a model.
-`--yes` loads each model in turn on a running Caravan. When the
-comparison finishes, or if a measurement fails, Caravan puts the
-original model back, if one was loaded, and says so. On a terminal, a
-small campfire animation shows the current step in plain words (for
-example "Loading Qwen2.5 Coder 7B (GGUF)…", "GGUF · short prompt 3 of
-5", "MLX · long prompt ~4k, 1 of 2", "Putting the original model
-back…") and the elapsed time, on one line. When output is piped, or
-with `NO_COLOR` or `--quiet`, that is a plain step line or is silent.
-Ctrl-C stops the animation and still puts the original model back.
+exact command, and does not load anything. `--yes` loads each model
+in turn on a running Caravan. When the comparison finishes, or if a
+measurement fails, Caravan puts the original model back, if one was
+loaded, and says so. On a terminal, a small campfire animation shows
+the current step in plain words (for example "Loading Qwen2.5 Coder
+7B (GGUF)…", "GGUF · short prompt 3 of 5", "MLX · long prompt ~4k,
+1 of 2", "Putting the original model back…") and the elapsed time,
+on one line. When output is piped, or with `NO_COLOR` or `--quiet`,
+that is a plain step line or is silent. Ctrl-C stops the animation
+and still puts the original model back.
 
 On the 1st Mac, with both models already downloaded:
 
@@ -123,6 +133,53 @@ On those short prompts, MLX was faster at reading (16% faster, 182 vs
 157 tok/s) and at writing (5% faster, 23.5 vs 22.3 tok/s). GGUF's
 first token was sooner (33% sooner, 0.22s vs 0.33s). Total time was
 about the same (7.61s vs 7.65s).
+
+### Full series on the 1st Mac
+
+Brenden's first `caravan bench` of the five short prompts and the
+long-prompt series, on the 1st Mac, Qwen2.5 Coder 7B. Figures are as
+printed by the command with `--ascii`:
+
+```
+GGUF  Qwen2.5 Coder 7B (GGUF Q4_K_M)
+MLX   Qwen2.5 Coder 7B (MLX 4bit)
+
+Reading (tok/s, higher is better)
+Short  GGUF  ###################################                   182
+       MLX   #######################################               204  * +12%
+~1k    GGUF  ##############################################        239
+       MLX   #################################################     257  * +8%
+~4k    GGUF  #########################################             215
+       MLX   ##############################################        242  * +13%
+~8k    GGUF  #####################################                 195
+       MLX   ##########################################            218  * +12%
+
+Writing (tok/s, higher is better)
+Short  GGUF  ##############################################       22.2
+       MLX   #################################################    23.4  * +5%
+~1k    GGUF  #############################################        21.5
+       MLX   ################################################     22.9  * +7%
+~4k    GGUF  ########################################             19.1
+       MLX   ##############################################       21.8  * +14%
+~8k    GGUF  ###################################                  16.7
+       MLX   ###########################################          20.4  * +22%
+
+First token (s, lower is better)
+Short  GGUF  #################################################   0.28s  * +39%
+       MLX   ##############################                      0.46s
+~1k    GGUF  ##############################################      5.30s
+       MLX   #################################################   5.01s  * +5%
+~4k    GGUF  ############################################       23.40s
+       MLX   #################################################  20.96s  * +10%
+~8k    GGUF  ############################################       52.15s
+       MLX   #################################################  46.74s  * +10%
+```
+
+On those runs, MLX was faster at reading and at writing at every
+size (the largest writing lead was 22% on the ~8k prompts, 20.4 vs
+16.7 tok/s). GGUF's first token was sooner on the short prompts
+(39% sooner, 0.28s vs 0.46s); MLX's first token was sooner on the
+long prompts.
 
 ### Auto-tune prompts and scoring
 
@@ -163,9 +220,12 @@ quiet trial (keep, revert, pins, and a reload only when idle),
 plain-name matching for `caravan bench`, putting the original model
 back, five short prompts and the long-prompt series (sizing, skip
 when the window is too small, unique openings, `--short`/`--long`,
-and a summary from measured numbers only), and Auto-tune's same five
-short prompts plus one long prompt (a faster write that hurts
-long-prompt reading loses). The live progress animation is tested
-on the non-TTY path, for step wording, and that the background
-thread stops, including on Ctrl-C (the original model is still
-put back). Existing tests were updated for the new prompt counts.
+and a summary from measured numbers only), the default ASCII chart
+(from the 1st Mac Qwen2.5 Coder 7B figures, including `--ascii`,
+`--details`, skipped sizes, and `--from-averages`), and Auto-tune's
+same five short prompts plus one long prompt (a faster write that
+hurts long-prompt reading loses). The live progress animation is
+tested on the non-TTY path, for step wording, and that the
+background thread stops, including on Ctrl-C (the original model is
+still put back). Existing tests were updated for the new prompt
+counts.

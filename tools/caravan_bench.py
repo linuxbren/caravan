@@ -1,8 +1,16 @@
 """Compare a GGUF model to its MLX counterpart.
 
-Prints the same wording as the stats under each reply:
-
-    Read X tok at Y tok/s · Write Z tok at W tok/s · first token A s · total B s
+Prints a compact chart of reading speed, writing speed, and time to
+the first token, with a short bar for GGUF and one for MLX at each
+prompt size. Full model names are at the top; the bars are labeled
+GGUF and MLX. Sizes that were not run are left out. On a terminal
+the bars use block characters (█ ▌); with `--ascii`, when output
+is not UTF-8, or with NO_COLOR, the bars are plain '#'. Subtle
+amber (GGUF) and green (MLX) color is used only on a terminal
+without NO_COLOR. `--details` (also `--text`) adds the same wording
+as the stats under each reply, and a note about the unique openings.
+`--from-averages` draws the same kind of chart from already-saved
+chat averages, without loading a model.
 
 Does not invent numbers. Pass a plain name (for example
 `caravan bench "qwen2.5 coder 7b"`) or both `--gguf` and `--mlx` ids
@@ -11,15 +19,12 @@ and a long-prompt series at about 1k, 4k, and 8k tokens (two prompts
 at each size; sizes that will not fit the chat window are skipped).
 `--short` or `--long` runs just one of those. Without `--yes` it
 shows which two models it would compare and the exact command.
-`--from-averages` reads already-saved chat averages without loading
-or unloading any model. After a live comparison, the model that was
-loaded before is put back, even if a measurement failed. On a
-terminal, a small campfire animation shows the current step and
-elapsed time; when output is piped, or with NO_COLOR or --quiet,
-that is a plain step line or is silent. Ctrl-C stops the animation
-and still puts the original model back. Each prompt starts with a
-unique opening so a shared-start cache does not make later prompts
-look faster.
+After a live comparison, the model that was loaded before is put
+back, even if a measurement failed. On a terminal, a small campfire
+animation shows the current step and elapsed time; when output is
+piped, or with NO_COLOR or --quiet, that is a plain step line or is
+silent. Ctrl-C stops the animation and still puts the original
+model back.
 """
 from __future__ import annotations
 
@@ -55,6 +60,7 @@ from caravan_models import (  # noqa: E402
     model_id,
     resolve_pair,
 )
+from caravan_chart import decide_style, render_chart  # noqa: E402
 
 
 SPEED_STORE = Path("~/.caravan/speed_averages.json").expanduser()
@@ -439,11 +445,10 @@ def steps_text(gguf_id: str, mlx_id: str, port: int = DEFAULT_PORT,
     series_txt = " and ".join(series) if series else "the prompt series"
     header = (
         "This compares a GGUF model to its MLX counterpart and prints\n"
-        "each side in the same wording as the stats under a reply.\n"
-        f"It runs {series_txt}. Each prompt starts with a unique\n"
-        "opening so a shared-start cache does not make later prompts\n"
-        "look faster. A short plain summary at the end says which is\n"
-        "faster, from the measured numbers only.\n"
+        "a compact chart of reading, writing, and first-token speed.\n"
+        f"It runs {series_txt}. Sizes that were not run are left out.\n"
+        "Pass --details (or --text) to also print the reply-stats\n"
+        "lines. Pass --ascii for plain '#' bars.\n"
     )
     if gguf and mlx:
         header += (
@@ -477,13 +482,25 @@ def steps_text(gguf_id: str, mlx_id: str, port: int = DEFAULT_PORT,
 
 
 def run_from_averages(gguf_id: str, mlx_id: str, *, gguf_name=None, mlx_name=None,
-                      store=None) -> list:
+                      store=None, details=False, ascii=None, color=None,
+                      stream=None) -> list:
+    """Chart (and optional reply-stats lines) from already-saved averages."""
     g = averages_for(gguf_id, store=store)
     m = averages_for(mlx_id, store=store)
-    return [
-        format_side(gguf_name or f"{gguf_id} (GGUF)", g),
-        format_side(mlx_name or f"{mlx_id} (MLX)", m),
-    ]
+    gname = gguf_name or f"{gguf_id} (GGUF)"
+    mname = mlx_name or f"{mlx_id} (MLX)"
+    g_rows = [{"label": "Saved", "specs": g}] if g else []
+    m_rows = [{"label": "Saved", "specs": m}] if m else []
+    chart = render_chart(
+        g_rows, m_rows, gguf_name=gname, mlx_name=mname,
+        ascii=ascii, color=color, stream=stream,
+    )
+    lines = chart.rstrip("\n").split("\n")
+    if details:
+        lines.append("")
+        lines.append(format_side(gname, g))
+        lines.append(format_side(mname, m))
+    return lines
 
 
 def _restore_original(port, original_id, original_name, urlopen, notes,
@@ -552,7 +569,9 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
             prompts=prompts, window=g_window,
             progress=progress, side="GGUF",
         )
-        _emit(progress, lines, format_series(gname, g_rows), printed=printed)
+        # Collect the reply-stats wording for --details. Default output
+        # is the chart, printed once the campfire has stopped.
+        lines.extend(format_series(gname, g_rows))
         if progress:
             progress.set(loading_step(mname))
         load_model(port, mlx_id, urlopen=urlopen)
@@ -562,19 +581,17 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
             prompts=prompts, window=m_window,
             progress=progress, side="MLX",
         )
-        _emit(progress, lines, format_series(mname, m_rows), printed=printed)
+        lines.extend(format_series(mname, m_rows))
         summary = summarize(
             g_rows, m_rows,
             gguf_name=gguf_name or "GGUF",
             mlx_name=mlx_name or "MLX",
         )
-        tail = []
         if summary:
-            tail.append("")
-            tail.append(summary.rstrip())
-        tail.append("")
-        tail.append(P.CACHE_NOTE)
-        _emit(progress, lines, tail, printed=printed)
+            lines.append("")
+            lines.append(summary.rstrip())
+        lines.append("")
+        lines.append(P.CACHE_NOTE)
     except KeyboardInterrupt:
         err = KeyboardInterrupt()
         notes.append("Stopped.")
@@ -585,6 +602,9 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
             port, original_id, original_name, urlopen, notes,
             progress=progress,
         )
+    chart = render_chart(
+        g_rows, m_rows, gguf_name=gname, mlx_name=mname,
+    )
     return {
         "lines": lines,
         "notes": notes,
@@ -592,6 +612,7 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
         "original": original_id,
         "gguf_rows": g_rows,
         "mlx_rows": m_rows,
+        "chart": chart,
         "printed": printed[0],
     }
 
@@ -661,7 +682,16 @@ def main(argv=None, *, models=None):
     )
     p.add_argument(
         "--from-averages", action="store_true",
-        help="print already-saved chat averages only; do not load or unload a model",
+        help="draw a chart from already-saved chat averages only; "
+             "do not load or unload a model",
+    )
+    p.add_argument(
+        "--details", "--text", dest="details", action="store_true",
+        help="also print the reply-stats lines and the unique-opening note",
+    )
+    p.add_argument(
+        "--ascii", action="store_true",
+        help="use plain '#' bars instead of block characters",
     )
     p.add_argument(
         "--quiet", action="store_true",
@@ -688,7 +718,10 @@ def main(argv=None, *, models=None):
     gname = args.gguf_name or _side_label(gguf, "GGUF")
     mname = args.mlx_name or _side_label(mlx, "MLX")
     if args.from_averages:
-        for line in run_from_averages(gid, mid, gguf_name=gname, mlx_name=mname):
+        for line in run_from_averages(
+            gid, mid, gguf_name=gname, mlx_name=mname,
+            details=args.details, ascii=args.ascii,
+        ):
             print(line)
         return 0
     if not args.yes:
@@ -715,7 +748,15 @@ def main(argv=None, *, models=None):
         sys.stderr.write(f"Could not finish the comparison: {e}\n")
         return 1
     progress.stop()
-    if not result.get("printed"):
+    g_rows = result.get("gguf_rows") or []
+    m_rows = result.get("mlx_rows") or []
+    if g_rows or m_rows:
+        chart = render_chart(
+            g_rows, m_rows, gguf_name=gname, mlx_name=mname,
+            ascii=args.ascii,
+        )
+        sys.stdout.write(chart if chart.endswith("\n") else chart + "\n")
+    if args.details:
         for line in result.get("lines") or []:
             print(line)
     for note in result.get("notes") or []:

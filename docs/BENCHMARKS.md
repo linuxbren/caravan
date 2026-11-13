@@ -3,15 +3,19 @@
 Only measured numbers are listed here, each with where it came from. The
 raw step-by-step notes are in [LOG.md](LOG.md).
 
-To compare a GGUF model with its MLX counterpart on your own Macs, in
-the same wording as the stats under a reply, run `caravan models` to
-see downloaded models and their ids, then `caravan bench "qwen2.5
-coder 7b" --yes` (or another plain name). By default that runs five
+To compare a GGUF model with its MLX counterpart on your own Macs,
+run `caravan models` to see downloaded models and their ids, then
+`caravan bench "qwen2.5 coder 7b" --yes` (or another plain name).
+The default output is a compact chart of reading, writing, and
+first-token speed. `--details` (also `--text`) adds the reply-stats
+lines; `--ascii` uses plain '#' bars. By default that runs five
 short prompts and a long-prompt series at about 1k, 4k, and 8k
 tokens; `--short` or `--long` runs just one. Without `--yes` it shows
 which two it would compare and the exact command, and does not load a
-model. After a live run it puts the original model back. On a terminal, a small campfire shows the current step and elapsed time. See
-[Day 25](DAY25.md).
+model. `--from-averages` draws the same kind of chart from
+already-saved chat averages. After a live run it puts the original
+model back. On a terminal, a small campfire shows the current step
+and elapsed time. See [Day 25](DAY25.md).
 
 ## Day 25 — first `caravan bench` on the 1st Mac
 
@@ -26,6 +30,58 @@ On those short prompts, MLX was faster at reading (16% faster, 182 vs
 157 tok/s) and at writing (5% faster, 23.5 vs 22.3 tok/s). GGUF's
 first token was sooner (33% sooner, 0.22s vs 0.33s). Total time was
 about the same (7.61s vs 7.65s).
+
+## Day 25 — full series on the 1st Mac
+
+Qwen2.5 Coder 7B, measured on the 1st Mac with the five short prompts
+and the long-prompt series (~1k, ~4k, and ~8k, two prompts at each
+size; figures are medians). This is the chart `caravan bench` prints
+by default, shown here with `--ascii` (plain '#' bars):
+
+```
+GGUF  Qwen2.5 Coder 7B (GGUF Q4_K_M)
+MLX   Qwen2.5 Coder 7B (MLX 4bit)
+
+Reading (tok/s, higher is better)
+Short  GGUF  ###################################                   182
+       MLX   #######################################               204  * +12%
+~1k    GGUF  ##############################################        239
+       MLX   #################################################     257  * +8%
+~4k    GGUF  #########################################             215
+       MLX   ##############################################        242  * +13%
+~8k    GGUF  #####################################                 195
+       MLX   ##########################################            218  * +12%
+
+Writing (tok/s, higher is better)
+Short  GGUF  ##############################################       22.2
+       MLX   #################################################    23.4  * +5%
+~1k    GGUF  #############################################        21.5
+       MLX   ################################################     22.9  * +7%
+~4k    GGUF  ########################################             19.1
+       MLX   ##############################################       21.8  * +14%
+~8k    GGUF  ###################################                  16.7
+       MLX   ###########################################          20.4  * +22%
+
+First token (s, lower is better)
+Short  GGUF  #################################################   0.28s  * +39%
+       MLX   ##############################                      0.46s
+~1k    GGUF  ##############################################      5.30s
+       MLX   #################################################   5.01s  * +5%
+~4k    GGUF  ############################################       23.40s
+       MLX   #################################################  20.96s  * +10%
+~8k    GGUF  ############################################       52.15s
+       MLX   #################################################  46.74s  * +10%
+```
+
+On those runs, MLX was faster at reading and at writing at every
+size (the largest writing lead was 22% on the ~8k prompts, 20.4 vs
+16.7 tok/s). GGUF's first token was sooner on the short prompts
+(39% sooner, 0.28s vs 0.46s); MLX's first token was sooner on the
+long prompts. The reply-stats lines behind the chart, as printed
+by `--details`:
+
+    GGUF Q4_K_M: Short(5) Read 77 tok at 182 tok/s · Write 145 at 22.2 · first 0.28s · total 6.76s; ~1k Read 1265 at 239 · Write 149 at 21.5 · first 5.30 · total 12.20; ~4k Read 5035 at 215 · Write 161 at 19.1 · first 23.40 · total 31.83; ~8k Read 10102 at 195 · Write 146 at 16.7 · first 52.15 · total 61.04.
+    MLX 4bit: Short Read 77 at 204 · Write 141 at 23.4 · first 0.46 · total 6.45; ~1k Read 1265 at 257 · Write 148 at 22.9 · first 5.01 · total 11.44; ~4k Read 5035 at 242 · Write 167 at 21.8 · first 20.96 · total 28.57; ~8k Read 10102 at 218 · Write 89 at 20.4 · first 46.74 · total 51.08.
 
 ## Method
 
