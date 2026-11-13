@@ -16,6 +16,9 @@
   try Prompt lookup last when only one chat is in use, and treats a
   garbled trial as a loss. Guess-ahead On needs a smaller same-family
   model already on this Mac; Caravan will not download one. See [Day 26](docs/DAY26.md).
+
+- Voice design notes (listening first) are in [VOICE](docs/VOICE.md).
+  No listening code is shipped. See [Day 26](docs/DAY26.md).
 - This follow-up does not change `agent/`, `runtime/`, or the
   requirements files, so a `caravan update` from the Day 25 pin
   keeps a loaded model running. The web page still restarts. No

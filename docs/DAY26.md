@@ -1,4 +1,4 @@
-# Day 26 — Download progress under the model, a clearer First-token chart, and GGUF speed-ups
+# Day 26 — Download progress under the model, a clearer First-token chart, GGUF speed-ups, and Voice design notes
 
 Day 26 is in progress (Nov 12–13 2026, America/Chicago). There is no
 `day26` tag yet; that waits until Brenden has tried the work. Day 25
@@ -66,11 +66,21 @@ This follow-up does not change `agent/`, `runtime/`, or the
 requirements files, so a `caravan update` from the previous Day 26
 pin keeps a loaded model running. The web page still restarts.
 
+## Voice design notes (not running yet)
+
+Listening-first design notes are in [VOICE](VOICE.md): a microphone
+next to Send, words in the chat box so you can edit them, a listen
+worker on the 1st Mac that does not unload the chat model, and a
+planned "send a recording, get text back" address on the same URL as
+chat. Spoken replies wait until listening feels right. No listening
+code is shipped in this follow-up. This does not change `agent/`,
+`runtime/`, or the requirements files, so a `caravan update` from the
+previous Day 26 pin keeps a loaded model running.
+
 ## What is still ahead (same Day 26)
 
-- **Voice:** listening first — a microphone in the chat box and a
-  listen worker. Design notes only unless a clearly safe piece is
-  ready.
+- **Voice:** build listening first, following [VOICE](VOICE.md), when
+  Brenden is ready to try it.
 - Later: vision and voice models, a security review, FileVault and
   separate-account testing, and more than two Macs.
 
@@ -94,3 +104,7 @@ finding a smaller same-family model already on disk, Settings rows
 lookup last and skipping it for Two chats or a pin, Self-tuning not
 trying it, and a faster but garbled Prompt lookup trial treated as a
 loss.
+
+The Voice design notes are in the docs: listening first, words appear
+in the chat box, the chat model stays loaded, and no listening code is
+shipped yet.

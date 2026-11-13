@@ -17,6 +17,12 @@ when only one chat is in use, and treats a garbled trial as a loss.
 Guess-ahead On needs a smaller same-family model already on this Mac;
 Caravan will not download one. Auto-tune does not try Guess-ahead.
 
+Voice design notes (listening first) are in [VOICE](VOICE.md). A
+microphone would sit next to Send, the words would appear in the chat
+box, and a listen worker on the 1st Mac would not unload the chat
+model. Spoken replies wait. No listening code is shipped in this
+follow-up.
+
 These follow-ups do not change `agent/`, `runtime/`, or the
 requirements files, so a `caravan update` from the Day 25 pin keeps a
 loaded model running; the web page still restarts. See

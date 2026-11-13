@@ -39,7 +39,7 @@ is required. Never paste an old build-log command into your Mac unchanged.
 [MLX](MLX.md) · [Split models](MLX-SPLIT.md) · [File placement](FILES.md) ·
 [Client integration](INTEGRATING.md) · [Optimization](OPTIMIZE-NOW.md) ·
 [Measurement method](METHODOLOGY.md) · [Roadmap](ROADMAP.md) ·
-[Daily release checklist](RELEASES.md)
+[Daily release checklist](RELEASES.md) · [Voice design (listening first)](VOICE.md)
 
 ## History and evidence
 
