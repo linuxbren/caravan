@@ -386,7 +386,9 @@ def llama_args(model_path: str, *, port: int, peers: list, shares: list,
            "slot_save": bool, "ctx": int, "n_slots": 1|2,
            "prompt_lookup": "on"|"off", "guess_ahead": "on"|"off",
            "draft_path": str}.
-    Prompt lookup adds --spec-type ngram-mod (llama.cpp b12283). Guess-ahead
+    Prompt lookup adds --spec-type ngram-simple (llama.cpp b12283; Day 27
+    measured it well ahead of ngram-mod on code edits and no worse on
+    short chats, see docs/DAY27.md). Guess-ahead
     adds --spec-draft-model and --spec-type draft-simple only when draft_path
     is a file already on disk; this never downloads a helper, and never
     passes --spec-draft-hf or --fim-qwen-*-spec. Use resolve_launch() for
@@ -442,7 +444,7 @@ def _speculative_args(tune: Optional[dict]) -> list:
         return []
     kinds = []
     if want_lookup:
-        kinds.append("ngram-mod")
+        kinds.append("ngram-simple")
     if want_draft:
         kinds.append("draft-simple")
     out = ["--spec-type", ",".join(kinds)]

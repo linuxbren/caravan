@@ -1,3 +1,21 @@
+## 2026-11-13: Day 27 — Measured Guess-ahead, a helper offer, and GGUF closer to MLX
+
+Overnight on the 1st Mac with Qwen2.5 Coder 7B. A reply that used
+guesses now ends with "guesses kept N%", and `caravan bench --speedups`
+measures Off, Prompt lookup, Guess-ahead and Auto on short chats, code
+edits and long prompts. With a small 0.5B helper, GGUF Guess-ahead wrote
+about 93% faster on code edits and 34% faster on short chats; the first
+word on long prompts came about 10% later. GGUF Auto-tune now tries
+Guess-ahead when a helper is on this Mac (a scratch run kept it: 22.2 to
+27.5 tokens/s). GGUF Prompt lookup switched to a better guesser (code
+edits +95% instead of +42%, short chats unchanged). Settings offers a
+missing helper in one line under the model ("Download helper for faster
+replies?"), never downloads without a click, remembers Not now per
+model, and hides the line on the local network; `caravan bench` asks
+y/N. A GGUF helper must be the same model generation. None of this
+changes `agent/`, `runtime/`, or the requirements files, so `caravan
+update` keeps a loaded model. See [DAY27](DAY27.md). No `day27` tag yet.
+
 ## 2026-11-13: Day 26 — Documentation pass
 
 Day 26 is written up in one place: [DAY26](DAY26.md) opens with an "At a

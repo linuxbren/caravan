@@ -145,10 +145,16 @@ measured, and never jumping to a much larger window. Two chats Auto keeps
 one chat; set 2 and apply to let two chats share the model at the same
 time, including on one Mac. Guess-ahead and Prompt lookup are Auto,
 Off, or On, and Auto stays off until a test finds a winner. Guess-ahead
-On is only available when a smaller model of the same family is already
-on this Mac; Caravan will not download one for you. Auto-tune may try
-Prompt lookup when only one chat is in use, and it treats a garbled
-reply as a loss. Fused kernels and GPU keep-warm are hidden, because they do not
+On is only available when a small helper of the same model is already
+on this Mac. When the loaded model has a known helper that is missing,
+Settings shows one line under the model, "Download helper for faster
+replies?", with Download and Not now; Caravan will not download one for
+you without that click, remembers Not now for that model, and hides the
+line when the page is opened from another computer on your network.
+After a download Guess-ahead goes to Auto. Auto-tune tries Guess-ahead
+when a helper is on this Mac and may try Prompt lookup when only one
+chat is in use; it treats a garbled reply as a loss. A reply that used
+guesses ends with "guesses kept N%". See [Day 27](DAY27.md). Fused kernels and GPU keep-warm are hidden, because they do not
 apply. Self-tuning on a GGUF model learns from real chats, proposes one
 quiet trial, and reloads when you are not mid-reply. The same Before and
 After lines Auto-tune uses are filled. Auto-tune also compares 16-bit

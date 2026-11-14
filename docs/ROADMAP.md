@@ -39,23 +39,31 @@ and the daily logs, not mixed into current setup instructions.
   an update. A new version can take about 5 minutes to appear. See
   [DAY26](DAY26.md).
 
-## Day 27 candidates
+- **Day 27:** "guesses kept" under replies; `caravan bench --speedups`;
+  GGUF Guess-ahead measured (+93% code edits, +34% short chats with a
+  small helper) and tried by Auto-tune; a better GGUF Prompt lookup
+  guesser; "Download helper for faster replies?" under the model, only
+  with your click. See [DAY27](DAY27.md).
 
-1. **Measured Guess-ahead speed-ups.** Try Guess-ahead and Prompt lookup on
-   realistic chats with a hit-rate readout (how many guessed words were
-   kept), keep an ordinary baseline, and turn on only measured winners.
-2. **GGUF closer to MLX.** Narrow the reading, writing and first-token gap
-   between a GGUF model and its MLX counterpart, measured with
-   `caravan bench`.
-3. **A beginner switch for Advanced.** Hide the tuning rows behind one
+## Next candidates
+
+1. **Measure the other helpers.** Qwen2.5, Qwen3 and Llama 3.1 helpers
+   are offered but not yet measured; Auto-tune decides for now.
+2. **A helper for MLX on one Mac.** Today an MLX model uses a helper only
+   when it is split across Macs; on one Mac GGUF is the faster choice for
+   Qwen2.5 Coder 7B.
+3. **First token with Guess-ahead.** The helper also reads the prompt, so
+   the first word on long prompts comes about 10% later; Auto-tune could
+   weigh that.
+4. **A beginner switch for Advanced.** Hide the tuning rows behind one
    simple switch so a new user sees only what they need.
-4. **Vision and voice.** Image input for models that support it, and
+5. **Vision and voice.** Image input for models that support it, and
    listening first, following [VOICE](VOICE.md).
-5. **Terminal UI.** A friendly terminal interface for chat, status and
+6. **Terminal UI.** A friendly terminal interface for chat, status and
    updates.
-6. **Fresh install and FileVault.** Prove a clean account, a fresh install,
+7. **Fresh install and FileVault.** Prove a clean account, a fresh install,
    and a FileVault reboot end to end.
-7. **Security review.** An independent look at pairing, the browser page,
+8. **Security review.** An independent look at pairing, the browser page,
    the Tailscale share and the update path.
 
 Earlier development-order items (Days 22–25) are kept in

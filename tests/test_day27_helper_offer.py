@@ -272,3 +272,18 @@ class PageTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SpeedupsSingleMlxTests(unittest.TestCase):
+    def test_single_mac_mlx_guess_ahead_row_says_why(self):
+        import caravan_speedups as SU
+        st = {"split": False, "worker": {"split": False},
+              "active": {"guess_ahead": False, "two_chats_available": True}}
+        with mock.patch.object(SU, "load_with", return_value=st), \
+                mock.patch.object(SU, "run_set", return_value={"write_tok_s": 20.0}):
+            out = SU.run_side("mlx", "mlx-community/X", port=1, urlopen=None, status_fn=None,
+                              window_fn=lambda *a: 32768,
+                              sets_args={"run_short": True, "run_edits": False, "run_long": False})
+        ga = [r for r in out["rows"] if r["mode"] == "Guess-ahead"]
+        self.assertEqual(len(ga), 1)
+        self.assertIn("split models only", ga[0]["reason"])

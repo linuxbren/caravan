@@ -25,10 +25,16 @@
   terminal.
 - A GGUF helper must now be the same model generation as the main model
   (for example Qwen2.5 with Qwen2.5), not only the same family.
+- GGUF Prompt lookup uses a better guesser: in our tests about 95%
+  faster writing on code edits (the old one was about 42%), the same on
+  short chats, and about 2% slower on a long prompt. Takes effect on the
+  next model load.
+- The GGUF Guess-ahead and Prompt lookup help now gives the measured
+  numbers.
 - The GGUF Prompt lookup chip says "on" or "off" (it no longer shows the
   MLX-only "adaptive" wording).
-- This increment does not change `agent/`, `runtime/`, or the
-  requirements, so `caravan update` keeps a loaded model.
+- Day 27 does not change `agent/`, `runtime/`, or the requirements, so
+  `caravan update` keeps a loaded model.
 
 ## Day 26 — Download progress under the model you clicked
 

@@ -1,5 +1,43 @@
 # Changelog
 
+## Day 27 — Measured Guess-ahead, and GGUF closer to MLX
+
+- When a reply used Prompt lookup or Guess-ahead, the line under it now
+  ends with how many guessed words were kept, for example
+  "guesses kept 88%". GGUF reads this from llama.cpp; an MLX reply shows
+  the share of words that came from guesses. Replies with no guesses
+  show nothing new. See [Day 27](DAY27.md).
+- `caravan bench "<model>" --speedups --yes` measures Off, Prompt lookup,
+  Guess-ahead (when a helper is on this Mac) and Auto on the five short
+  prompts, five new code-edit prompts and the long-prompt series, with
+  medians, the change against Off, first token, and guesses kept. The
+  model that was loaded before is put back with its settings.
+- GGUF Auto-tune now also tries Guess-ahead when a smaller same-family
+  helper is already on this Mac (one chat, not pinned), and keeps it only
+  when it measures at least 3% better. Nothing is downloaded for you.
+- When the loaded model has a known small helper that is not on this
+  Mac, Settings shows one line under the model: "Download helper for
+  faster replies?" with Download and Not now. A GGUF model gets a GGUF
+  helper; a split MLX model gets its MLX helper. Download shows its
+  progress in that line and then puts Guess-ahead on Auto (Auto-tune
+  still keeps the helper only if replies get faster). Not now is
+  remembered for that model. Nothing downloads without your click, and
+  the line is hidden when the page is opened from another computer on
+  your network. `caravan bench` asks the same question (y/N) in a
+  terminal.
+- A GGUF helper must now be the same model generation as the main model
+  (for example Qwen2.5 with Qwen2.5), not only the same family.
+- GGUF Prompt lookup uses a better guesser: in our tests about 95%
+  faster writing on code edits (the old one was about 42%), the same on
+  short chats, and about 2% slower on a long prompt. Takes effect on the
+  next model load.
+- The GGUF Guess-ahead and Prompt lookup help now gives the measured
+  numbers.
+- The GGUF Prompt lookup chip says "on" or "off" (it no longer shows the
+  MLX-only "adaptive" wording).
+- Day 27 does not change `agent/`, `runtime/`, or the requirements, so
+  `caravan update` keeps a loaded model.
+
 ## Day 26 — Download progress under the model you clicked
 
 - In the Models list, the download progress card appears right under

@@ -187,8 +187,12 @@ def run_side(kind, model_id, *, port, urlopen, status_fn, window_fn,
             continue
         active = st.get("active") or {}
         note = _active_note(active)
-        single_mlx = (kind == "mlx" and isinstance(active, dict) and active
-                      and active.get("two_chats_available") is False)
+        worker = st.get("worker") if isinstance(st.get("worker"), dict) else {}
+        split = st.get("split") if "split" in st else worker.get("split")
+        single_mlx = kind == "mlx" and (
+            split is False
+            or (isinstance(active, dict) and active
+                and active.get("two_chats_available") is False))
         if mode == "Guess-ahead" and single_mlx:
             rows.append({"mode": mode, "skipped": True, "active": note,
                          "reason": "on one Mac, an MLX model does not use a helper "

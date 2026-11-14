@@ -39,7 +39,7 @@ class LlamaFlags(unittest.TestCase):
                          tune={"prompt_lookup": "on"}, decide=lambda **k: type("D", (), {
                              "cache_type_k": "f16", "cache_type_v": "f16"})())
         self.assertIn("--spec-type", a)
-        self.assertEqual(a[a.index("--spec-type") + 1], "ngram-mod")
+        self.assertEqual(a[a.index("--spec-type") + 1], "ngram-simple")
         self.assertNotIn("--spec-draft-model", a)
         self.assertNotIn("--spec-draft-hf", a)
         self.assertNotIn("--hf-repo-draft", a)
@@ -98,7 +98,7 @@ class LlamaFlags(unittest.TestCase):
                 "draft_path": str(draft),
             })
             self.assertEqual(args[args.index("--spec-type") + 1],
-                             "ngram-mod,draft-simple")
+                             "ngram-simple,draft-simple")
             self.assertIn(str(draft.resolve()), args)
 
 
@@ -302,7 +302,7 @@ class DocsAndPage(unittest.TestCase):
                       re.sub(r"\s+", " ", WEB.lower()))
         self.assertIn("auto stays off until a test finds a winner",
                       re.sub(r"\s+", " ", DAY.lower()))
-        self.assertIn("ngram-mod", SPLIT)
+        self.assertIn("ngram-simple", SPLIT)
         # No jargon hostnames or memory sizes in the new help.
         ga = next(o for o in WS.options_for("gguf") if o["id"] == "guess_ahead")
         for bad in ("prf-hays", "exo1", "16 GB", "llama.cpp", "ngram", "spec-type"):
