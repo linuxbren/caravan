@@ -108,29 +108,38 @@ you can confirm before it starts.
 and when you open it through this Mac's Tailscale share. Caravan
 checks that the share is on and that the address matches a live
 Tailscale address for this Mac, not just a name that looks like
-Tailscale. On the local network there is no login, so the button
-stays hidden and the page asks you to run `caravan update` in
-Terminal on this Mac. The daily check itself still runs on this Mac.
+Tailscale. On the local network there is no login, so the page shows
+no Updates section and no Update available badge at all; run
+`caravan update` in Terminal on this Mac. The daily check itself still
+runs on this Mac.
 
 **Update now** and `caravan update` on this Mac also update the other
 Macs Caravan already knows about — the 2nd Mac, 3rd Mac, and so on —
 over the connection already set up when each Mac was added. The other
 Macs are updated first, then this Mac, and the model comes back
 afterwards if it was loaded. If a Mac is off or the update doesn't
-finish, this Mac still updates. Settings lists each Mac's status, and
-when something goes wrong, step-by-step help appears right under that
-Mac: check that it's on and awake, check that it's on the same
-network or on Tailscale, click **Try again**, or on that Mac open
-Terminal and run `caravan update`, then load the model again. The
-daily check also shows when another Mac is on an older version, and
-the **Update available** badge appears in that case too.
+finish, this Mac still updates. The daily check also shows when
+another Mac is on an older version, and the **Update available** badge
+appears in that case too.
 
-The Updates section now has **Check now** next to its title, and
-one status line per Mac in the same format — for example
-"1st Mac: up to date", "2nd Mac: update available", "3rd Mac:
-updating…", or "2nd Mac: off or can't be reached". The date of a
-newer version is shown only when one is ready, as "A November 13
-update is ready."
+The Updates section is kept short: **Updates** with **Check now** next
+to it, the daily check switch, What's new only when an update is ready,
+and one line per Mac — "1st Mac: current", "2nd Mac: update available",
+or "2nd Mac: failed" (with "updating…" while it runs). **Update now**
+appears only when an update is ready, and **Try again** only when a
+Mac failed. A failed Mac has one short line, such as "On the 2nd Mac,
+run caravan update in Terminal.", and a small Details toggle with what
+that Mac printed. Each Mac's last error is also kept on the 1st Mac in
+`~/.caravan/web-ui/peer-update-errors.json` and the update log.
+
+Fixed: the first try at updating the other Macs never ran the update
+there. The command sent to the 2nd Mac started with
+`CARAVAN_UPDATE_LOCAL=1 if …`, which is a syntax error in the Mac's
+shell ("parse error near `if'"), so the 2nd Mac showed "failed" and
+Try again failed the same way. The command now runs the 2nd Mac's own
+`~/.caravan/bin/caravan update` with the flag set inside the `if`. The
+bug was on the 1st Mac's side, so once the 1st Mac has this version,
+Update now or Try again updates the 2nd Mac.
 
 `caravan bench --from-averages` no longer draws empty bars for a model
 with no numbers. It prints "No saved numbers for the GGUF model yet -
@@ -193,8 +202,8 @@ not stop the rest or this Mac, `--local-only` and a one-Mac
 environment flag do not ask the other Macs, and the daily check
 shows when a Mac is on an older version. When a Mac couldn't be
 reached, the update failed, it is still on the previous version, or
-the model didn't come back, Settings shows plain step-by-step help
-under that Mac, with Try again. Update now over Tailscale is allowed
+the model didn't come back, Settings shows that Mac as failed, with
+one short line and Try again. Update now over Tailscale is allowed
 only when the share is on and the address matches a live Tailscale
 address; a made-up Tailscale name and a local-network request are
 still refused.

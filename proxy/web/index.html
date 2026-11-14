@@ -1214,13 +1214,15 @@
     line-height: 1.4;
   }
   #settingsDrawer .update-help {
-    margin: 0 0 8px 1.15em;
+    margin: 0 0 6px;
     padding: 0;
     font-size: .72rem;
     line-height: 1.45;
     color: var(--muted);
   }
-  #settingsDrawer .update-help li { margin: 3px 0; }
+  #settingsDrawer .update-detail { font-size: .7rem; color: var(--muted); margin: 0 0 6px; }
+  #settingsDrawer .update-detail summary { cursor: pointer; }
+  #settingsDrawer .update-detail p { margin: 4px 0 0; word-break: break-word; }
   .update-badge { cursor: pointer; }
   .update-badge:hover { border-color: var(--accent); }
   .update-badge:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -1799,28 +1801,25 @@
       <div class="help" id="lanAccessWarning">Anyone on the same network can use Caravan, and there is no login.</div>
       <div class="help" id="lanAccessStatus" role="status" aria-live="polite">Checking…</div>
     </div>
-    <div class="optcard drawer-section" id="updatesCard">
+    <div class="optcard drawer-section" id="updatesCard" hidden>
       <div class="update-head">
-        <h2 class="drawer-section-title"><span class="tip" title="Caravan checks once a day for a newer version, and you can update from this page.">Updates</span></h2>
+        <h2 class="drawer-section-title">Updates</h2>
         <button class="ghost drawer-control" id="btnUpdateCheck" type="button">Check now</button>
       </div>
-      <div class="help" id="updateDailyLabel">Check for updates daily</div>
       <div class="theme-switch" id="updateDailySwitch" title="Check for updates daily">
         <button type="button" data-update-daily="off">Off</button>
         <button type="button" data-update-daily="on" class="on">On</button>
       </div>
-      <div class="help" id="updateStatus" role="status" aria-live="polite">Checking…</div>
+      <div class="help" id="updateDailyLabel">Check for updates daily</div>
+      <div class="help" id="updateStatus" role="status" aria-live="polite"></div>
       <div class="help" id="updateChangesLabel" hidden>What's new</div>
       <ul class="update-changes" id="updateChanges" hidden></ul>
-      <p class="help" id="updateModelNote" hidden></p>
-      <p class="help" id="updateHelperNote" hidden></p>
       <div id="updateMacs" hidden></div>
-      <p class="help" id="updateLocalNote" hidden></p>
       <div class="row" id="updateActions">
         <button class="primary drawer-control" id="btnUpdateNow" type="button" hidden>Update now</button>
+        <button class="ghost drawer-control" id="btnUpdateRetry" type="button" hidden>Try again</button>
       </div>
       <p class="tune-step" id="updateStep" role="status" aria-live="polite" hidden></p>
-      <p class="tune-done" id="updateDone" role="status" aria-live="polite" hidden></p>
     </div>
     <div class="optcard drawer-section" id="topoBarsCard">
       <h2 class="drawer-section-title"><span class="tip" title="How Topology fills the CPU / GPU / RAM / Disk / Temp bars.">Topology bars</span></h2>
@@ -2049,7 +2048,9 @@
     const pending = !!updatePending();
     let text = "";
     let tuning = false;
-    if (phase === "updating" || (pending && (!j || phase === "updating"))) {
+    if (j && j.show === false) {
+      text = "";
+    } else if (phase === "updating" || (pending && (!j || phase === "updating"))) {
       text = "Updating…";
       tuning = true;
     } else if (phase === "done" && pending) {
@@ -2067,162 +2068,113 @@
   }
   function renderUpdate(j) {
     _updateInfo = j || {};
-    const on = j && j.check_daily !== false;
+    const card = $("updatesCard");
+    // Local network: no update view at all (there is no login there).
+    if (!j || j.show === false) {
+      if (card) card.hidden = true;
+      paintUpdateBadge(j);
+      scheduleUpdatePoll(false);
+      return;
+    }
+    if (card) card.hidden = false;
+    const on = j.check_daily !== false;
     document.querySelectorAll("#updateDailySwitch button").forEach((b) => {
       b.classList.toggle("on", (b.dataset.updateDaily === "on") === on);
     });
     const status = $("updateStatus");
     const changes = $("updateChanges");
-    const modelNote = $("updateModelNote");
-    const helperNote = $("updateHelperNote");
-    const localNote = $("updateLocalNote");
     const btnNow = $("btnUpdateNow");
+    const btnRetry = $("btnUpdateRetry");
     const btnCheck = $("btnUpdateCheck");
     const step = $("updateStep");
-    const done = $("updateDone");
-    const phase = j && j.progress && j.progress.phase;
+    const phase = j.progress && j.progress.phase;
     const pending = !!updatePending();
+    const updating = !!(j.updating || phase === "updating" || (pending && phase !== "done" && phase !== "failed"));
     paintUpdateBadge(j);
+    if (step) { step.hidden = true; step.textContent = ""; }
+    if (phase === "done" || phase === "failed") setUpdatePending(false);
 
-    if (phase === "updating" || (pending && phase !== "done" && phase !== "failed")) {
-      if (status) status.textContent = (j && j.message) || "Updating Caravan, the page will be back in a few seconds.";
-      if (changes) { changes.hidden = true; changes.replaceChildren(); }
-      if ($("updateChangesLabel")) $("updateChangesLabel").hidden = true;
-      if (modelNote) { modelNote.hidden = true; modelNote.textContent = ""; }
-      if (helperNote) { helperNote.hidden = true; helperNote.textContent = ""; }
-      if (localNote) { localNote.hidden = true; localNote.textContent = ""; }
-      if (btnNow) { btnNow.hidden = true; btnNow.disabled = true; btnNow.classList.add("is-tuning"); btnNow.textContent = "Updating…"; }
-      if (btnCheck) btnCheck.disabled = true;
-      if (step) {
-        step.hidden = false;
-        step.textContent = (j && j.progress && j.progress.message) || "Updating Caravan, the page will be back in a few seconds.";
-        step.classList.add("is-tuning");
-      }
-      if (done) { done.hidden = true; done.textContent = ""; }
-      scheduleUpdatePoll(true);
-      return;
-    }
-    if (btnCheck) btnCheck.disabled = false;
-    if (step) { step.hidden = true; step.textContent = ""; step.classList.remove("is-tuning"); }
-
-    if (phase === "done" && pending) {
-      setUpdatePending(false);
-      const msg = (j && j.message) || "Done. This Mac is on the new version.";
-      if (done) {
-        done.hidden = false;
-        done.textContent = msg;
-        clearTimeout(_updateDoneTimer);
-        _updateDoneTimer = setTimeout(() => { done.hidden = true; }, 8000);
-      }
-      if (status) status.textContent = msg;
-      scheduleUpdatePoll(false);
-    } else if (phase === "failed") {
-      setUpdatePending(false);
-      if (status) status.textContent = (j && j.progress && j.progress.message) || (j && j.message) || "The update failed. The previous version is still running.";
-      scheduleUpdatePoll(false);
-    } else if (status) {
-      // One line per Mac below; the summary is only "A November 13 update is ready." or a problem.
-      if (j && j.message) status.textContent = j.message;
-      else if (j && j.packaged === false) status.textContent = "This copy is updated with git, not from this page.";
-      else if (j && j.macs && j.macs.length) status.textContent = "";
-      else if (j && j.offline && !j.newer) status.textContent = "Couldn't check right now. Try again when this Mac is online.";
-      else status.textContent = "";
-    }
+    // Only a problem gets a line here; each Mac has its own status below.
+    let note = "";
+    if (j.packaged === false) note = "This copy is updated with git, not from this page.";
+    else if (phase === "failed" && !updating) note = (j.progress && j.progress.message) || j.message || "";
+    if (status) status.textContent = note;
 
     if (changes) {
-      const lines = (j && j.newer && j.changes) ? j.changes : [];
+      const lines = (j.newer && j.changes) ? j.changes : [];
       changes.replaceChildren();
-      if (lines.length) {
-        const intro = document.createElement("span");
-        // Use a heading-like first item? Keep a simple list after a label via previous sibling.
-        lines.forEach((line) => {
-          const li = document.createElement("li");
-          li.textContent = line;
-          changes.appendChild(li);
-        });
-        changes.hidden = false;
-        changes.setAttribute("aria-label", "What's new");
-        if ($("updateChangesLabel")) $("updateChangesLabel").hidden = false;
-      } else {
-        changes.hidden = true;
-        if ($("updateChangesLabel")) $("updateChangesLabel").hidden = true;
+      lines.forEach((line) => {
+        const li = document.createElement("li");
+        li.textContent = line;
+        changes.appendChild(li);
+      });
+      changes.hidden = !lines.length;
+      const label = $("updateChangesLabel");
+      if (label) {
+        label.hidden = !lines.length;
+        label.textContent = j.available_label ? ("What's new (" + j.available_label + ")") : "What's new";
       }
     }
-    if (modelNote) {
-      const keep = j && j.keep_model_text;
-      modelNote.textContent = (j && j.newer && keep) ? keep : "";
-      modelNote.hidden = !modelNote.textContent;
-    }
-    if (helperNote) {
-      const help = j && j.helper_text;
-      const needs = !!(j && (j.newer || j.peers_behind));
-      helperNote.textContent = (needs && help) ? help : "";
-      helperNote.hidden = !helperNote.textContent;
-    }
     renderUpdateMacs(j);
-    const allowed = !!(j && (j.local || j.via_tailscale));
-    const needs = !!(j && (j.newer || j.peers_behind));
-    const showApply = !!(needs && allowed && phase !== "failed" && phase !== "updating");
+
+    const needs = !!(j.newer || j.peers_behind);
     if (btnNow) {
-      btnNow.hidden = !showApply;
-      btnNow.textContent = "Update now";
-      btnNow.classList.remove("is-tuning");
-      const blocked = updateButtonBusy();
-      btnNow.disabled = !showApply || blocked || !j.can_apply;
-      if (showApply && blocked) btnNow.title = "Wait for the current reply or Auto-tune to finish.";
-      else btnNow.title = "";
+      btnNow.hidden = !(needs || updating);
+      btnNow.classList.toggle("is-tuning", updating);
+      btnNow.textContent = updating ? "Updating…" : "Update now";
+      btnNow.disabled = updating || !j.can_apply || updateButtonBusy();
+      btnNow.title = (!updating && needs && updateButtonBusy()) ? "Wait for the current reply or Auto-tune to finish." : "";
     }
-    if (localNote) {
-      const needLocal = !!(needs && !allowed);
-      localNote.textContent = needLocal ? (j.not_local_text || "To update, open Caravan on this Mac or from a device on your Tailscale network, and click Update now. On the local network, run caravan update in Terminal on this Mac.") : "";
-      localNote.hidden = !needLocal;
+    if (btnRetry) {
+      btnRetry.hidden = !j.can_retry || updating;
+      btnRetry.disabled = updateButtonBusy();
     }
+    if (btnCheck) btnCheck.disabled = updating;
+    scheduleUpdatePoll(updating);
   }
   function renderUpdateMacs(j) {
     const box = $("updateMacs");
     if (!box) return;
-    const macs = (j && j.progress && j.progress.macs) || (j && j.macs) || [];
+    const macs = (j && j.macs) || [];
     box.replaceChildren();
-    if (!macs.length) { box.hidden = true; return; }
-    box.hidden = false;
+    box.hidden = !macs.length;
     macs.forEach((m) => {
       const row = document.createElement("div");
       row.className = "update-mac";
       const line = document.createElement("p");
       line.className = "update-mac-line";
-      const name = m.label || "Mac";
-      const st = m.status || m.phase || "";
-      line.textContent = st ? (name + ": " + st) : name;
+      line.textContent = (m.label || "Mac") + ": " + (m.status || "");
       row.appendChild(line);
-      const steps = m.help || [];
-      if (steps.length) {
-        const ol = document.createElement("ol");
-        ol.className = "update-help";
-        steps.forEach((step) => {
-          const li = document.createElement("li");
-          li.textContent = step;
-          ol.appendChild(li);
-        });
-        row.appendChild(ol);
+      const hint = (m.help || [])[0];
+      if (hint) {
+        const p = document.createElement("p");
+        p.className = "update-help";
+        p.textContent = hint;
+        row.appendChild(p);
       }
-      if (m.can_retry) {
-        const btn = document.createElement("button");
-        btn.className = "ghost drawer-control";
-        btn.type = "button";
-        btn.textContent = "Try again";
-        btn.addEventListener("click", () => retryUpdateMac(m.id));
-        row.appendChild(btn);
+      if (m.detail) {
+        const d = document.createElement("details");
+        d.className = "update-detail";
+        const s = document.createElement("summary");
+        s.textContent = "Details";
+        const pre = document.createElement("p");
+        pre.textContent = m.detail;
+        d.appendChild(s);
+        d.appendChild(pre);
+        row.appendChild(d);
       }
       box.appendChild(row);
     });
   }
-  async function retryUpdateMac(id) {
-    const status = $("updateStatus");
+  async function retryUpdateMacs() {
+    const btn = $("btnUpdateRetry");
+    if (btn) btn.disabled = true;
     try {
-      const out = await api("/api/update", { method: "POST", body: JSON.stringify({ action: "retry", mac: id }) });
-      renderUpdate(out);
+      renderUpdate(await api("/api/update", { method: "POST", body: JSON.stringify({ action: "retry" }) }));
     } catch (err) {
-      if (status) status.textContent = (err && (err.error || err.message)) || "Couldn't try that Mac again.";
+      const status = $("updateStatus");
+      if (status) status.textContent = (err && (err.error || err.message)) || "Couldn't try again.";
+      if (btn) btn.disabled = false;
     }
   }
   function scheduleUpdatePoll(on) {
@@ -2280,6 +2232,7 @@
       }
     });
   }
+  if ($("btnUpdateRetry")) $("btnUpdateRetry").addEventListener("click", retryUpdateMacs);
   if ($("btnUpdateNow")) {
     $("btnUpdateNow").addEventListener("click", async () => {
       const j = _updateInfo || {};

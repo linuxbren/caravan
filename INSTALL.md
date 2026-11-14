@@ -110,12 +110,13 @@ badge appears, and **Update now** in the Updates section runs the same
 update. `caravan update --check` only checks, and does not install
 anything. **Update now** is available when you open Caravan on this
 Mac, and when you open it through this Mac's Tailscale share. On the
-local network, run `caravan update` in Terminal on this Mac. That
+local network the page shows no Updates section; run `caravan update`
+in Terminal on this Mac. That
 update also covers the other Macs Caravan already knows about (the
 2nd Mac, 3rd Mac, and so on). Those Macs are updated first. If one is
-off or the update doesn't finish, this Mac still updates, and
-Settings shows step-by-step help under that Mac, with **Try again**,
-or you can run `caravan update` on that Mac.
+off or the update doesn't finish, this Mac still updates, Settings
+shows that Mac as failed with **Try again**, or you can run
+`caravan update` on that Mac.
 
 Do not update during a chat. The page comes back on its own. If the code that
 runs the model changed, the last model is reloaded and Caravan says so

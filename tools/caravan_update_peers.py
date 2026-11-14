@@ -198,11 +198,12 @@ def peer_update_command():
     CARAVAN_UPDATE_LOCAL is honored by this version and ignored by older
     ones, so a Mac that is not yet on this pin can still be updated.
     """
+    # The variable is set with env inside the if: "VAR=1 if …" is a
+    # parse error in zsh and bash (macOS login shells are zsh).
     return (
-        "CARAVAN_UPDATE_LOCAL=1 "
         "if [ -x \"$HOME/.caravan/bin/caravan\" ]; then "
-        "\"$HOME/.caravan/bin/caravan\" update; "
-        "else exit 127; fi"
+        "env CARAVAN_UPDATE_LOCAL=1 \"$HOME/.caravan/bin/caravan\" update; "
+        "else echo 'Caravan is not installed in ~/.caravan on this Mac.' >&2; exit 127; fi"
     )
 
 
@@ -239,23 +240,54 @@ def failure_help(kind, label):
     return []
 
 
-def _row(node, *, phase, kind=None, status=None, message=None, can_retry=None):
+STATUS_WORDS = {
+    "done": "current",
+    "current": "current",
+    "updating": "updating…",
+    "waiting": "update available",
+    "behind": "update available",
+    "offline": "failed",
+    "failed": "failed",
+    "still_old": "failed",
+    "no_model": "failed",
+}
+
+
+def short_help(kind, label):
+    """At most one short line under a Mac that failed."""
+    if kind == "no_model":
+        return [f"Load your model again in Models."]
+    if kind in ("offline", "failed", "still_old"):
+        return [f"On the {label}, run caravan update in Terminal."]
+    return []
+
+
+def _detail_text(result, node):
+    """Last few lines of what the other Mac printed, without its address."""
+    if result is None:
+        return ""
+    text = "\n".join(
+        s for s in ((getattr(result, "stderr", "") or ""), (getattr(result, "stdout", "") or "")) if s
+    )
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    tail = " ".join(lines[-3:])[-300:]
     label = node.get("label") or "Mac"
-    help_steps = failure_help(kind, label) if kind else []
+    for secret in {_ssh_target(node), (node.get("host") or "").strip()}:
+        if secret:
+            tail = tail.replace(secret, label)
+    code = getattr(result, "returncode", None)
+    if code not in (None, 0):
+        tail = (f"exit {code}: " + tail).strip().rstrip(":")
+    return tail
+
+
+def _row(node, *, phase, kind=None, status=None, message=None, can_retry=None, detail=None):
+    label = node.get("label") or "Mac"
+    help_steps = short_help(kind, label) if kind and phase != "behind" else []
     if can_retry is None:
         can_retry = bool(kind)
     if status is None:
-        status = {
-            "done": "done",
-            "updating": "updating…",
-            "waiting": "waiting",
-            "offline": "off or can't be reached",
-            "failed": "update failed",
-            "still_old": "still on the previous version",
-            "no_model": "updated, but the model didn't come back",
-            "behind": "update available",
-            "current": "up to date",
-        }.get(phase, phase)
+        status = STATUS_WORDS.get(phase, phase)
     if message is None:
         message = {
             "offline": f"Couldn't reach the {label}.",
@@ -278,6 +310,7 @@ def _row(node, *, phase, kind=None, status=None, message=None, can_retry=None):
         "message": message,
         "help": help_steps,
         "can_retry": can_retry,
+        "detail": detail or "",
     }
 
 
@@ -297,13 +330,14 @@ def check_peers(peers, published_ref, *, runner=None):
         ref = read_peer_ref(node, runner=runner)
         if ref is None:
             row = _row(node, phase="offline", kind="offline",
-                       message=f"Couldn't check the {node.get('label') or 'Mac'} right now.")
+                       message=f"Couldn't check the {node.get('label') or 'Mac'} right now.",
+                       detail="Couldn't reach it to read its version.")
             # Checking is not a failed update; still offer Try again to re-check / update.
             row["behind"] = False
             out.append(row)
             continue
         if published_ref and ref != published_ref:
-            row = _row(node, phase="behind", kind="still_old")
+            row = _row(node, phase="behind", can_retry=False)
             row["behind"] = True
             # still_old help is right when they're behind and an update is needed.
             # For "behind" before an update attempt, slightly milder help is the same steps.
@@ -324,24 +358,28 @@ def update_peer(node, *, expected=None, runner=None, timeout=UPDATE_TIMEOUT):
     label = node.get("label") or "Mac"
     probe = ssh_run(node, "true", runner=runner, timeout=CONNECT_TIMEOUT + 5)
     if probe is None or getattr(probe, "returncode", 1) != 0:
-        return _row(node, phase="offline", kind="offline")
+        return _row(node, phase="offline", kind="offline",
+                    detail=_detail_text(probe, node) or "Couldn't reach it.")
     result = ssh_run(
         node, peer_update_command(), runner=runner, timeout=timeout,
     )
     if result is None:
         return _row(node, phase="failed", kind="failed",
-                    message=f"The update on the {label} didn't finish.")
+                    message=f"The update on the {label} didn't finish.",
+                    detail="No answer before the time limit.")
     if result.returncode == 127:
         return _row(
             node, phase="failed", kind="failed",
-            message=f"Caravan on the {label} could not be found. On that Mac, open Terminal and run: caravan update",
+            message=f"Caravan on the {label} could not be found.",
+            detail=_detail_text(result, node),
         )
     if result.returncode != 0:
-        return _row(node, phase="failed", kind="failed")
+        return _row(node, phase="failed", kind="failed", detail=_detail_text(result, node))
     if expected:
         ref = read_peer_ref(node, runner=runner)
         if ref and ref != str(expected).strip().lower():
-            return _row(node, phase="still_old", kind="still_old")
+            return _row(node, phase="still_old", kind="still_old",
+                        detail="It finished, but is still on the previous version.")
     return _row(node, phase="done", can_retry=False)
 
 
@@ -397,14 +435,48 @@ def update_other_macs(
             on_progress(_row(node, phase="updating", can_retry=False))
         row = update_peer(node, expected=expected, runner=runner, timeout=timeout)
         rows.append(row)
+        record_peer_result(home, row)
         if out is not None:
             print(row["message"], file=out, flush=True)
-            if row.get("help"):
-                for step in row["help"]:
-                    print("  " + step, file=out, flush=True)
+            if row.get("detail"):
+                print("  " + row["detail"], file=out, flush=True)
+            for step in row.get("help") or []:
+                print("  " + step, file=out, flush=True)
         if on_progress:
             on_progress(row)
     return rows
+
+
+def peer_errors_path(home):
+    return Path(home) / ".caravan" / "web-ui" / "peer-update-errors.json"
+
+
+def record_peer_result(home, row):
+    """Keep each Mac's last update error so it can be read later."""
+    import json
+    if not home or not isinstance(row, dict) or not row.get("id"):
+        return
+    path = peer_errors_path(home)
+    try:
+        data = json.loads(path.read_text())
+        if not isinstance(data, dict):
+            data = {}
+    except (OSError, ValueError):
+        data = {}
+    if row.get("phase") in ("done", "current"):
+        data.pop(str(row["id"]), None)
+    else:
+        data[str(row["id"])] = {
+            "label": row.get("label"),
+            "phase": row.get("phase"),
+            "detail": row.get("detail") or "",
+            "at": time.time(),
+        }
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=2, sort_keys=True))
+    except OSError:
+        pass
 
 
 def model_did_not_return(home, *, status_fn=None, last_model_fn=None):
@@ -430,13 +502,7 @@ def model_did_not_return(home, *, status_fn=None, last_model_fn=None):
 
 
 def no_model_help(label="Macs"):
-    if label == "Macs":
-        return [
-            "The Macs updated, but the model didn't come back.",
-            "On this Mac, open Models and load your model again.",
-            "If that doesn't work, on each other Mac open Terminal and run: caravan update, then load the model again here.",
-        ]
-    return failure_help("no_model", label)
+    return short_help("no_model", label)
 
 
 if __name__ == "__main__":

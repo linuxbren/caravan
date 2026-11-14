@@ -567,9 +567,7 @@ def local_status_row(result, *, newer, peers=0):
     if newer:
         status = "update available"
     elif result.get("available") or (result.get("checked_at") and not result.get("error")):
-        status = "up to date"
-    elif result.get("offline"):
-        status = "couldn't check right now"
+        status = "current"
     else:
         return None
     return {
@@ -619,8 +617,20 @@ def public_status(
     # Otherwise no summary line: each Mac gets its own status line below.
     macs = []
     peer_rows = []
-    if progress and progress.get("macs"):
-        macs = list(progress["macs"])
+    # A finished run's rows are shown only while they are about the
+    # version that is still the newest one; a newer check replaces them.
+    expected = ((progress or {}).get("expected") or "").strip().lower()
+    use_progress = bool(progress and progress.get("macs") and (
+        phase == "updating"
+        or (expected and expected == str(result.get("available") or "").strip().lower())
+    ))
+    if use_progress:
+        macs = []
+        for m in progress["macs"]:
+            m = dict(m)
+            if m.get("mine") and m.get("phase") in ("done", "no_model"):
+                m["status"] = "current"
+            macs.append(m)
         peer_rows = [m for m in macs if not m.get("mine")]
     else:
         peer_rows = [m for m in (result.get("macs") or []) if not m.get("mine")]
@@ -631,6 +641,8 @@ def public_status(
     allowed = bool(local or via_tailscale)
     needs = bool(newer or peers_behind)
     can_apply = bool(packaged and needs and allowed and not busy and phase != "updating")
+    any_updating = phase == "updating" or any(m.get("phase") == "updating" for m in macs)
+    can_retry = bool(allowed and not busy and not any_updating and any(m.get("can_retry") for m in macs))
     payload = {
         "packaged": bool(packaged),
         "check_daily": bool(check_daily if result.get("check_daily") is None else result.get("check_daily")),
@@ -653,6 +665,9 @@ def public_status(
         "checked_at": result.get("checked_at"),
         "macs": macs,
         "peers_behind": peers_behind,
+        "show": allowed,
+        "can_retry": can_retry,
+        "updating": bool(any_updating),
     }
     return payload
 
@@ -999,6 +1014,7 @@ def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None
     if peers:
         P.update_other_macs(
             home, peers, expected=expected, runner=runner, on_progress=on_progress,
+            out=sys.stdout,
         )
 
     set_local("updating", OPENING)
@@ -1040,10 +1056,7 @@ def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None
             ("offline", "failed", "still_old", "no_model") for m in macs
         )
         if peer_trouble and local_phase != "no_model":
-            final_msg = (
-                "This Mac is updated. Some other Macs need attention — "
-                "see the steps below."
-            )
+            final_msg = "This Mac is updated. Some Macs failed."
         set_local(local_phase, final_msg, kind=("no_model" if local_phase == "no_model" else None))
         # Local no_model still means the update itself finished; page should show Done-ish help.
         progress["phase"] = "done"
@@ -1082,10 +1095,39 @@ def retry_peer(home, mac_id, *, expected=None, peers=None, runner=None, timeout=
         kw["timeout"] = timeout
     expected = expected or (progress.get("expected") or None)
     row = P.update_peer(node, expected=expected, runner=runner, **kw)
-    macs = P.replace_mac(macs, node.get("id"), row)
+    P.record_peer_result(home, row)
+    print(f"Try again on the {row.get('label')}: {row.get('status')}. {row.get('detail') or ''}".strip(), flush=True)
+    progress = load_progress(home) or progress
+    macs = P.replace_mac(list(progress.get("macs") or []), node.get("id"), row)
     progress["macs"] = macs
     save_progress(home, progress)
     return row
+
+
+def failed_mac_ids(home):
+    progress = load_progress(home) or {}
+    return [m.get("id") for m in progress.get("macs") or []
+            if not m.get("mine") and m.get("can_retry") and m.get("id")]
+
+
+def mark_retrying(home, mac_ids, *, peers=None):
+    """Show 'updating…' right away for the Macs being tried again."""
+    import caravan_update_peers as P
+    if peers is None:
+        try:
+            peers = P.load_nodes(home)
+        except Exception:
+            peers = []
+    progress = load_progress(home) or {}
+    macs = list(progress.get("macs") or [])
+    found = []
+    for node in peers:
+        if str(node.get("id")) in {str(i) for i in mac_ids}:
+            macs = P.replace_mac(macs, node.get("id"), P._row(node, phase="updating", can_retry=False))
+            found.append(node.get("id"))
+    progress["macs"] = macs
+    save_progress(home, progress)
+    return found
 
 
 def cli_check(repo, *, home=None, name="web", opener=None, file=None, nodes=None, ssh_runner=None):

@@ -210,15 +210,16 @@ during a chat reply or Auto-tune.
 
 **Update now** is shown when you open Caravan on this Mac itself, and
 when you open it through this Mac's Tailscale share. On the local
-network, you still see that an update is ready, and the page asks you
-to run `caravan update` in Terminal on this Mac. **Update now** and
+network there is no login, so the page shows no Updates section and no
+Update available badge; run `caravan update` in Terminal on this Mac.
+**Update now** and
 `caravan update` on this Mac also update the other Macs Caravan
 already knows about (the 2nd Mac, 3rd Mac, and so on). Those Macs are
 updated first, then this Mac. If a Mac is off or the update doesn't
-finish, this Mac still updates, and Settings shows step-by-step help
-under that Mac, with **Try again**, or you can run `caravan update` on
-that Mac. The daily check also shows when another Mac is on an older
-version.
+finish, this Mac still updates. Each Mac has one line: current, update
+available, or failed. **Try again** appears only when a Mac failed, and
+a failed Mac also says to run `caravan update` on that Mac. The daily
+check also shows when another Mac is on an older version.
 
 The browser has no login. Fresh installs keep the page only on this Mac.
 You can turn on **Open on my local network** in Settings or run

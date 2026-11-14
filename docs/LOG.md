@@ -1,3 +1,17 @@
+## 2026-11-13: Day 26 — The 2nd Mac update fix, and a shorter Updates section
+
+Updating the other Macs never ran the update there: the command sent
+to the 2nd Mac began with `CARAVAN_UPDATE_LOCAL=1 if …`, a syntax
+error in the Mac's shell ("parse error near `if'"). It now runs that
+Mac's own `~/.caravan/bin/caravan update` with the flag set inside the
+`if`, and each Mac's last error is kept. Settings > Updates is short:
+one line per Mac (current, update available, or failed), Update now
+only when an update is ready, and Try again only when a Mac failed. On
+the local network the Updates section and badge are not shown. This
+does not change `agent/`, `runtime/`, or the requirements files, so a
+`caravan update` from the previous Day 26 pin keeps a loaded model
+running. No `day26` tag yet.
+
 ## 2026-11-13: Day 26 — One status line per Mac in Updates
 
 Settings > Updates has **Check now** next to the title, and one status

@@ -243,21 +243,21 @@ class CacheAndOfflineTests(unittest.TestCase):
         self.assertIsNone(payload["message"])
         self.assertEqual(
             [(m["label"], m["status"]) for m in payload["macs"]],
-            [("My Mac", "up to date")],
+            [("My Mac", "current")],
         )
 
     def test_each_mac_gets_one_status_line_in_the_same_format(self):
         result = UC.check(self.home, self.repo, force=True, opener=opener_for())
         result["macs"] = [
-            {"id": "a", "label": "2nd Mac", "mine": False, "phase": "current", "status": "up to date", "help": []},
-            {"id": "b", "label": "3rd Mac", "mine": False, "phase": "offline", "status": "off or can't be reached", "help": ["x"]},
+            {"id": "a", "label": "2nd Mac", "mine": False, "phase": "current", "status": "current", "help": []},
+            {"id": "b", "label": "3rd Mac", "mine": False, "phase": "offline", "status": "failed", "help": ["x"]},
         ]
         payload = UC.public_status(result, packaged=True, local=True)
         self.assertEqual(payload["message"], "A November 13 update is ready.")
         self.assertEqual(
             [(m["label"], m["status"]) for m in payload["macs"]],
-            [("1st Mac", "update available"), ("2nd Mac", "up to date"),
-             ("3rd Mac", "off or can't be reached")],
+            [("1st Mac", "update available"), ("2nd Mac", "current"),
+             ("3rd Mac", "failed")],
         )
         self.assertNotIn("This Mac is on the", json.dumps(payload))
 
@@ -614,10 +614,11 @@ class UpdateApiTests(unittest.TestCase):
         UC.check(self.home, self.repo, force=True, opener=opener_for())
         code, j = self._get("/api/update", headers={"Host": "192.168.1.20:8190"})
         self.assertEqual(code, 200)
-        self.assertTrue(j["newer"])
-        self.assertFalse(j["local"])
-        self.assertFalse(j["can_apply"])
-        self.assertIn("on this Mac", j["not_local_text"])
+        # The local network gets no update view at all: nothing to render.
+        self.assertEqual(j, {"show": False})
+        code, j = self._post("/api/update", {"action": "check"}, headers={"Host": "192.168.1.20:8190"})
+        self.assertEqual(code, 403)
+        self.assertFalse(j["show"])
 
 
     def test_apply_from_verified_tailscale_is_allowed(self):
@@ -717,7 +718,7 @@ class PageAndDocsTests(unittest.TestCase):
         self.assertIn("renderUpdateMacs", self.page)
         # Check now sits in the Updates header row, next to the title.
         head = self.page.split('class="update-head"', 1)[1].split("</div>", 1)[0]
-        self.assertIn(">Updates</span></h2>", head)
+        self.assertIn(">Updates</h2>", head)
         self.assertIn('id="btnUpdateCheck"', head)
         self.assertEqual(self.page.count('id="btnUpdateCheck"'), 1)
         self.assertNotIn('"This Mac is on the " + j.current_label', self.page)

@@ -184,7 +184,12 @@ class FailureHelpTests(unittest.TestCase):
             row = P._row(node, phase=phase, kind=kind)
             self.assertEqual(row["label"], "2nd Mac")
             self.assertTrue(row["can_retry"])
-            self.assertEqual(row["help"], P.failure_help(kind, "2nd Mac"))
+            self.assertEqual(row["status"], "failed")
+            self.assertEqual(len(row["help"]), 1)
+            if kind == "no_model":
+                self.assertEqual(row["help"], ["Load your model again in Models."])
+            else:
+                self.assertEqual(row["help"], ["On the 2nd Mac, run caravan update in Terminal."])
             self.assertNotIn(NEW, json.dumps(row))
             self.assertNotIn("caravan-mac", row["label"])
 
@@ -193,9 +198,9 @@ class FailureHelpTests(unittest.TestCase):
         runner = ScriptedSSH({node["ssh"]: {"probe": Result(1)}})
         row = P.update_peer(node, expected=NEW, runner=runner)
         self.assertEqual(row["phase"], "offline")
-        self.assertEqual(row["status"], "off or can't be reached")
+        self.assertEqual(row["status"], "failed")
         self.assertTrue(row["can_retry"])
-        self.assertIn("on and awake", " ".join(row["help"]))
+        self.assertEqual(row["help"], ["On the 2nd Mac, run caravan update in Terminal."])
 
     def test_update_peer_failed(self):
         node = peer(1)
@@ -204,9 +209,10 @@ class FailureHelpTests(unittest.TestCase):
         })
         row = P.update_peer(node, expected=NEW, runner=runner)
         self.assertEqual(row["phase"], "failed")
-        self.assertEqual(row["status"], "update failed")
+        self.assertEqual(row["status"], "failed")
         self.assertTrue(row["can_retry"])
-        self.assertIn("didn't finish", " ".join(row["help"]))
+        # The other Mac's own error text is kept, with its exit code.
+        self.assertEqual(row["detail"], "exit 2: boom")
 
     def test_update_peer_still_old(self):
         node = peer(1)
@@ -219,9 +225,9 @@ class FailureHelpTests(unittest.TestCase):
         })
         row = P.update_peer(node, expected=NEW, runner=runner)
         self.assertEqual(row["phase"], "still_old")
-        self.assertEqual(row["status"], "still on the previous version")
+        self.assertEqual(row["status"], "failed")
         self.assertTrue(row["can_retry"])
-        self.assertIn("previous version", " ".join(row["help"]))
+        self.assertIn("previous version", row["detail"])
 
     def test_update_peer_done(self):
         node = peer(1)
@@ -245,7 +251,11 @@ class CheckPeersAndFanOutTests(unittest.TestCase):
         rows = P.check_peers(peers, NEW, runner=runner)
         self.assertEqual(rows[0]["phase"], "behind")
         self.assertTrue(rows[0]["behind"])
-        self.assertTrue(rows[0]["help"])
+        self.assertEqual(rows[0]["status"], "update available")
+        self.assertEqual(rows[0]["help"], [])
+        self.assertFalse(rows[0]["can_retry"])
+        self.assertEqual(rows[1]["status"], "failed")
+        self.assertEqual(rows[2]["status"], "current")
         self.assertEqual(rows[1]["phase"], "offline")
         self.assertFalse(rows[1].get("behind"))
         self.assertEqual(rows[2]["phase"], "current")
@@ -292,7 +302,7 @@ class CheckPeersAndFanOutTests(unittest.TestCase):
             self.assertEqual(code, 0)
             progress = UC.load_progress(home)
             self.assertEqual(progress["phase"], "done")
-            self.assertIn("need attention", progress["message"])
+            self.assertIn("Some Macs failed", progress["message"])
             by_id = {m["id"]: m for m in progress["macs"]}
             self.assertEqual(by_id[peers[0]["id"]]["phase"], "offline")
             self.assertTrue(by_id[peers[0]["id"]]["help"])
@@ -328,7 +338,7 @@ class CheckPeersAndFanOutTests(unittest.TestCase):
             local = next(m for m in progress["macs"] if m.get("mine"))
             self.assertEqual(local["phase"], "no_model")
             self.assertTrue(local["help"])
-            self.assertIn("load your model", " ".join(local["help"]))
+            self.assertEqual(local["help"], ["Load your model again in Models."])
 
     def test_retry_peer_does_not_update_this_mac(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -372,10 +382,10 @@ class CheckPeersAndFanOutTests(unittest.TestCase):
             self.assertTrue(payload["peers_behind"])
             self.assertTrue(payload["can_apply"])
             lines = [(m["label"], m["status"]) for m in payload["macs"]]
-            self.assertEqual(lines, [("1st Mac", "up to date"), ("2nd Mac", "update available")])
+            self.assertEqual(lines, [("1st Mac", "current"), ("2nd Mac", "update available")])
             self.assertNotIn(NEW, json.dumps(payload))
             self.assertNotIn(OLD, json.dumps(payload))
-            self.assertTrue(payload["macs"][1]["help"])
+            self.assertEqual(payload["macs"][1]["help"], [])
 
     def test_cli_local_only_does_not_fan_out(self):
         with tempfile.TemporaryDirectory() as root:
@@ -429,17 +439,21 @@ class CheckPeersAndFanOutTests(unittest.TestCase):
 
 
 class PageFollowUpTests(unittest.TestCase):
-    def test_page_lists_help_and_try_again(self):
+    def test_page_is_minimal(self):
         page = (ROOT / "proxy" / "web" / "index.html").read_text()
-        self.assertIn("Try again", page)
-        self.assertIn("updateMacs", page)
-        self.assertIn("m.help", page)
-        self.assertIn("can_retry", page)
-        self.assertIn("via_tailscale", page)
-        self.assertIn("peers_behind", page)
-        self.assertIn("caravan update", page)
-        self.assertIn("settings=1", page)
-        # One backslash before b, as in settings=1\b
+        card = page.split('id="updatesCard"', 1)[1].split('id="topoBarsCard"', 1)[0]
+        self.assertIn("hidden>", card.split("\n", 1)[0])  # hidden until the server says to show it
+        self.assertIn('id="btnUpdateCheck"', card)
+        self.assertIn('id="updateDailySwitch"', card)
+        self.assertIn('id="updateChanges"', card)
+        self.assertIn('id="updateMacs"', card)
+        self.assertIn('id="btnUpdateNow"', card)
+        self.assertIn('id="btnUpdateRetry"', card)
+        for gone in ("updateModelNote", "updateHelperNote", "updateLocalNote", "updateDone", "<ol"):
+            self.assertNotIn(gone, card)
+        self.assertIn("j.show === false", page)
+        self.assertIn("j.can_retry", page)
+        self.assertIn("Details", page)
         idx = page.find("settings=1")
         self.assertEqual(page[idx + len("settings=1")], "\\")
 
@@ -466,7 +480,92 @@ class DocsFollowUpTests(unittest.TestCase):
         self.assertNotIn("/home/brenden", day26)
         self.assertIn("Try again", day26)
         self.assertIn("Macs are updated first", day26)
-        self.assertIn("on and awake", day26)
+        self.assertIn("parse error", day26)
+
+
+class PeerCommandRootCauseTests(unittest.TestCase):
+    """Day 26 bug: "VAR=1 if …" is a parse error in zsh and bash, so the
+    2nd Mac never ran its update (exit 1, "parse error near `if'")."""
+
+    def test_command_parses_in_sh_and_bash(self):
+        import shutil
+        import subprocess
+        cmd = P.peer_update_command()
+        self.assertFalse(cmd.lstrip().startswith("CARAVAN_UPDATE_LOCAL="))
+        for shell in ("sh", "bash", "zsh"):
+            path = shutil.which(shell)
+            if not path:
+                continue
+            r = subprocess.run([path, "-n", "-c", cmd], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, (shell, r.stderr))
+
+    def test_old_form_was_a_parse_error(self):
+        import subprocess
+        old = 'CARAVAN_UPDATE_LOCAL=1 if [ -x "$HOME/x" ]; then echo y; else exit 127; fi'
+        r = subprocess.run(["bash", "-n", "-c", old], capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+
+    def test_runs_wrapper_with_the_flag_set(self):
+        import os
+        import subprocess
+        with tempfile.TemporaryDirectory() as home:
+            bin_dir = Path(home) / ".caravan" / "bin"
+            bin_dir.mkdir(parents=True)
+            wrapper = bin_dir / "caravan"
+            wrapper.write_text('#!/bin/sh\necho "flag=$CARAVAN_UPDATE_LOCAL args=$*"\n')
+            wrapper.chmod(0o755)
+            r = subprocess.run(["bash", "-c", P.peer_update_command()], capture_output=True,
+                               text=True, env={**os.environ, "HOME": home})
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(r.stdout.strip(), "flag=1 args=update")
+        with tempfile.TemporaryDirectory() as home:
+            r = subprocess.run(["bash", "-c", P.peer_update_command()], capture_output=True,
+                               text=True, env={**os.environ, "HOME": home})
+            self.assertEqual(r.returncode, 127)
+            self.assertIn("not installed", r.stderr)
+
+    def test_last_error_is_stored(self):
+        with tempfile.TemporaryDirectory() as home:
+            node = peer(1, ssh="caravan-secret-alias")
+            runner = ScriptedSSH({node["ssh"]: {"probe": Result(0), "update": Result(
+                1, "", "caravan-secret-alias: zsh:1: parse error near `if'")}})
+            rows = P.update_other_macs(Path(home), [node], expected=NEW, runner=runner)
+            self.assertEqual(rows[0]["status"], "failed")
+            self.assertIn("parse error", rows[0]["detail"])
+            self.assertNotIn("caravan-secret-alias", rows[0]["detail"])
+            saved = json.loads(P.peer_errors_path(home).read_text())
+            self.assertIn("parse error", saved[node["id"]]["detail"])
+            # A later success clears it.
+            ok = ScriptedSSH({node["ssh"]: {"probe": Result(0), "update": Result(0), "ref": NEW}})
+            P.update_other_macs(Path(home), [node], expected=NEW, runner=ok)
+            self.assertNotIn(node["id"], json.loads(P.peer_errors_path(home).read_text()))
+
+
+class MinimalStatusTests(unittest.TestCase):
+    def test_try_again_only_when_a_mac_failed(self):
+        base = {"newer": False, "available": NEW, "installed": NEW, "checked_at": 1}
+        ok = UC.public_status(dict(base, macs=[P._row(peer(1), phase="current", can_retry=False)]),
+                              packaged=True, local=True)
+        self.assertFalse(ok["can_retry"])
+        self.assertFalse(ok["can_apply"])
+        self.assertEqual([m["status"] for m in ok["macs"]], ["current", "current"])
+        failed = {"phase": "done", "expected": NEW, "macs": [
+            P.local_row(phase="done"), P._row(peer(1), phase="failed", kind="failed")]}
+        bad = UC.public_status(base, packaged=True, local=True, progress=failed)
+        self.assertTrue(bad["can_retry"])
+        self.assertEqual([m["status"] for m in bad["macs"]], ["current", "failed"])
+        lan = UC.public_status(base, packaged=True, local=False, progress=failed)
+        self.assertFalse(lan["show"])
+        self.assertFalse(lan["can_retry"])
+
+    def test_old_run_rows_give_way_to_a_newer_check(self):
+        old_run = {"phase": "done", "expected": OLD, "macs": [
+            P.local_row(phase="done"), P._row(peer(1), phase="failed", kind="failed")]}
+        result = {"newer": True, "available": NEW, "installed": OLD, "checked_at": 1,
+                  "macs": [P._row(peer(1), phase="behind", can_retry=False)]}
+        out = UC.public_status(result, packaged=True, local=True, progress=old_run)
+        self.assertEqual([m["status"] for m in out["macs"]], ["update available", "update available"])
+        self.assertFalse(out["can_retry"])
 
 
 if __name__ == "__main__":

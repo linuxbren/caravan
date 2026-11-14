@@ -11,8 +11,8 @@ model workers or RPC service directly to the public internet.
   this Mac itself, and when you open it through this Mac's Tailscale
   share (the share must be on, and the address must match a live
   Tailscale address for this Mac). From the local network, the page
-  can show that an update is ready, and asks you to run
-  `caravan update` in Terminal on this Mac.
+  shows no Updates section at all, and the update endpoint refuses;
+  run `caravan update` in Terminal on this Mac.
   `caravan lan status` shows the address (`http://<lan-ip>:<port>`),
   and a clickable link appears under the Settings switch. This can be
   on at the same time as the opt-in Tailscale share; both addresses

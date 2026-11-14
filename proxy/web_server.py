@@ -1675,6 +1675,12 @@ def make_handler(app: App):
             packaged = UC.is_package_install(repo)
             result = None
 
+            if not allowed:
+                # The local network has no login: no update view at all.
+                if post:
+                    return self._json(403, {"error": UC.NOT_LOCAL, "show": False})
+                return self._json(200, {"show": False})
+
             def payload_of(res, progress=None):
                 return UC.public_status(
                     res, local=local, via_tailscale=via_ts, busy=busy,
@@ -1704,15 +1710,28 @@ def make_handler(app: App):
                             "via_tailscale": False,
                         })
                     mac_id = body.get("mac") or body.get("id")
-                    if not mac_id:
-                        return self._json(400, {"error": "Choose a Mac to try again."})
+                    ids = [mac_id] if mac_id else UC.failed_mac_ids(home)
+                    if not ids:
+                        return self._json(400, {"error": "No Mac needs to be tried again."})
+                    if busy:
+                        return self._json(409, {"error": busy_msg, "busy": busy})
                     retry_fn = getattr(app, "update_retry", None) or UC.retry_peer
-                    try:
-                        row = retry_fn(home, mac_id, expected=None, runner=ssh_runner)
-                    except Exception:
-                        return self._json(500, {"error": "Couldn't try that Mac again."})
-                    if row is None:
-                        return self._json(404, {"error": "That Mac is not in this group."})
+                    if getattr(app, "update_retry", None) is None:
+                        if not UC.mark_retrying(home, ids):
+                            return self._json(404, {"error": "That Mac is not in this group."})
+
+                    def _run_retries():
+                        for one in ids:
+                            try:
+                                retry_fn(home, one, expected=None, runner=ssh_runner)
+                            except Exception:
+                                pass
+
+                    if getattr(app, "update_retry_sync", False):
+                        _run_retries()
+                    else:
+                        import threading as _threading
+                        _threading.Thread(target=_run_retries, daemon=True).start()
                     result = UC.load_cache(home) or {}
                     return self._json(200, payload_of(result))
                 elif action == "apply":

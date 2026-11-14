@@ -58,6 +58,15 @@
 - `caravan bench --from-averages` prints a plain "No saved numbers"
   line instead of empty bars, and prefers the last bench run for the
   pair ("Last bench") over saved chat averages ("Saved").
+- Fixed: updating the other Macs never ran the update there. The
+  command sent to the 2nd Mac was a shell syntax error ("parse error
+  near `if'"), so it showed failed and Try again failed too. Each
+  Mac's last error is kept and shown under a small Details toggle.
+- Settings > Updates is shorter: Check now, the daily switch, What's
+  new when an update is ready, and one line per Mac (current, update
+  available, or failed). Update now shows only when an update is ready,
+  Try again only when a Mac failed. On the local network there is no
+  Updates section or Update available badge at all.
 
 ## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
 
