@@ -577,6 +577,96 @@ def local_status_row(result, *, newer, peers=0):
     }
 
 
+FAILED_PHASES = ("offline", "failed", "still_old", "no_model")
+
+
+def _same_target(progress, result):
+    expected = str((progress or {}).get("expected") or "").strip().lower()
+    available = str((result or {}).get("available") or "").strip().lower()
+    return bool(expected and available and expected == available)
+
+
+def _current_rows(result, progress, *, newer, packaged=True):
+    """Per-Mac lines that say where each Mac is now, not how the last run went.
+
+    While a run is going, its live rows are shown. After it ends, a row
+    from that run is kept only when it is about the version that is still
+    the newest one: a failure stays "failed", a success reads "current".
+    Once a newer version is found, every Mac not on it reads
+    "update available". "done" is never a row status; the page flashes
+    Done once instead.
+    """
+    phase = (progress or {}).get("phase") if progress else None
+    live = phase == "updating" or any(
+        m.get("phase") == "updating" for m in (progress or {}).get("macs") or []
+    )
+    if progress and progress.get("macs") and live:
+        rows = []
+        for m in progress["macs"]:
+            m = dict(m)
+            if m.get("phase") in ("done", "current"):
+                m["status"] = "current"
+                m["behind"] = False
+            elif m.get("phase") in ("waiting", "behind"):
+                m["status"] = "update available"
+            rows.append(m)
+        return rows
+    peers = [dict(m) for m in (result.get("macs") or []) if not m.get("mine")]
+    for m in peers:
+        if m.get("phase") == "offline":
+            # Couldn't read its version: that is not a failed update.
+            m["status"] = "couldn't check"
+            m["can_retry"] = False
+            m["help"] = []
+            m["behind"] = False
+        elif m.get("phase") == "behind" or m.get("behind"):
+            m["status"] = "update available"
+            m["behind"] = True
+            m["can_retry"] = False
+        elif m.get("phase") in ("done", "current"):
+            m["status"] = "current"
+    mine = local_status_row(result, newer=newer, peers=len(peers) or _peer_count(progress, result)) if packaged else None
+    if progress and progress.get("macs") and _same_target(progress, result):
+        by_id = {str(m.get("id")): i for i, m in enumerate(peers)}
+        for row in progress["macs"]:
+            row = dict(row)
+            if row.get("mine"):
+                if mine is not None and row.get("phase") in FAILED_PHASES and (
+                    newer or row.get("phase") == "no_model"
+                ):
+                    row["status"] = "failed"
+                    row["label"] = mine["label"]
+                    mine = row
+                continue
+            p_phase = row.get("phase")
+            if p_phase in FAILED_PHASES:
+                row["status"] = "failed"
+                row["behind"] = False  # Try again is the button for it
+            elif p_phase in ("done", "current"):
+                row["status"] = "current"
+                row["behind"] = False
+                row["can_retry"] = False
+                row["help"] = []
+                row["detail"] = ""
+            else:
+                continue  # a leftover waiting/updating row from a run that stopped
+            key = str(row.get("id"))
+            if key in by_id:
+                peers[by_id[key]] = row
+            else:
+                by_id[key] = len(peers)
+                peers.append(row)
+    if mine is not None and peers and mine.get("label") == "My Mac":
+        mine = dict(mine, label="1st Mac", message=f"1st Mac: {mine.get('status')}.")
+    return ([mine] if mine else []) + peers
+
+
+def _peer_count(progress, result):
+    if progress and progress.get("macs") and _same_target(progress, result):
+        return sum(1 for m in progress["macs"] if not m.get("mine"))
+    return 0
+
+
 def public_status(
     result,
     *,
@@ -586,10 +676,15 @@ def public_status(
     progress=None,
     packaged=True,
     check_daily=True,
+    installed=None,
 ):
     """JSON-safe payload for GET /api/update. No hashes up front."""
     result = result or {}
     newer = bool(result.get("newer"))
+    installed = str(installed or "").strip().lower()
+    if installed and result.get("available"):
+        # The saved check may predate this Mac's own update.
+        newer = installed != str(result.get("available")).strip().lower()
     progress = progress or None
     phase = (progress or {}).get("phase") if progress else None
     message = None
@@ -599,44 +694,16 @@ def public_status(
         message = SOURCE_CHECKOUT
         newer = False
     elif phase == "updating":
-        message = (progress or {}).get("message") or OPENING
-    elif phase == "failed":
-        message = (progress or {}).get("message") or FAILED
-    elif phase == "done":
-        if (progress or {}).get("message"):
-            message = progress["message"]
-        elif current_label:
-            message = f"Done. This Mac is on the {current_label} version."
-        else:
-            message = "Done. This Mac is on the new version."
+        message = OPENING
     elif newer:
         if available_label:
             message = NEWER_PREFIX.format(label=available_label)
         else:
             message = "A newer version is ready."
-    # Otherwise no summary line: each Mac gets its own status line below.
-    macs = []
-    peer_rows = []
-    # A finished run's rows are shown only while they are about the
-    # version that is still the newest one; a newer check replaces them.
-    expected = ((progress or {}).get("expected") or "").strip().lower()
-    use_progress = bool(progress and progress.get("macs") and (
-        phase == "updating"
-        or (expected and expected == str(result.get("available") or "").strip().lower())
-    ))
-    if use_progress:
-        macs = []
-        for m in progress["macs"]:
-            m = dict(m)
-            if m.get("mine") and m.get("phase") in ("done", "no_model"):
-                m["status"] = "current"
-            macs.append(m)
-        peer_rows = [m for m in macs if not m.get("mine")]
-    else:
-        peer_rows = [m for m in (result.get("macs") or []) if not m.get("mine")]
-        mine = local_status_row(result, newer=newer, peers=len(peer_rows)) if packaged else None
-        macs = ([mine] if mine else []) + peer_rows
-    peers_behind = bool(result.get("peers_behind") or any(m.get("behind") for m in peer_rows))
+    # No summary sentences ("This Mac is updated…"): each Mac has its own line.
+    macs = _current_rows(result, progress, newer=newer, packaged=packaged)
+    peer_rows = [m for m in macs if not m.get("mine")]
+    peers_behind = any(m.get("behind") for m in peer_rows)
     via_tailscale = bool(via_tailscale)
     allowed = bool(local or via_tailscale)
     needs = bool(newer or peers_behind)
@@ -678,7 +745,7 @@ def public_status(
         "offline": bool(result.get("offline")),
         "message": message,
         "not_local_text": None if allowed else NOT_LOCAL,
-        "progress": progress,
+        "progress": ({k: v for k, v in progress.items() if k != "message"} if progress else progress),
         "checked_at": result.get("checked_at"),
         "macs": macs,
         "peers_behind": peers_behind,
@@ -1081,7 +1148,7 @@ def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None
             ("offline", "failed", "still_old", "no_model") for m in macs
         )
         if peer_trouble and local_phase != "no_model":
-            final_msg = "This Mac is updated. Some Macs failed."
+            final_msg = DONE  # each Mac's own line shows which one failed
         set_local(local_phase, final_msg, kind=("no_model" if local_phase == "no_model" else None))
         # Local no_model still means the update itself finished; page should show Done-ish help.
         progress["phase"] = "done"
@@ -1135,6 +1202,9 @@ def retry_peer(home, mac_id, *, expected=None, peers=None, runner=None, timeout=
 
 def failed_mac_ids(home):
     progress = load_progress(home) or {}
+    cache = load_cache(home) or {}
+    if cache.get("available") and progress.get("expected") and not _same_target(progress, cache):
+        return []  # that run was for an older version; a fresh Update now is the fix
     return [m.get("id") for m in progress.get("macs") or []
             if not m.get("mine") and m.get("can_retry") and m.get("id")]
 

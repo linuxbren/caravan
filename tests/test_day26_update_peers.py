@@ -302,7 +302,8 @@ class CheckPeersAndFanOutTests(unittest.TestCase):
             self.assertEqual(code, 0)
             progress = UC.load_progress(home)
             self.assertEqual(progress["phase"], "done")
-            self.assertIn("Some Macs failed", progress["message"])
+            self.assertNotIn("Some Macs failed", progress["message"])
+            self.assertNotIn("This Mac is updated", progress["message"])
             by_id = {m["id"]: m for m in progress["macs"]}
             self.assertEqual(by_id[peers[0]["id"]]["phase"], "offline")
             self.assertTrue(by_id[peers[0]["id"]]["help"])
@@ -566,6 +567,72 @@ class MinimalStatusTests(unittest.TestCase):
         out = UC.public_status(result, packaged=True, local=True, progress=old_run)
         self.assertEqual([m["status"] for m in out["macs"]], ["update available", "update available"])
         self.assertFalse(out["can_retry"])
+
+
+class CurrentRealityTests(unittest.TestCase):
+    """Rows say where each Mac is now, not how the last run went."""
+
+    NEWER = "c" * 40
+
+    def test_newer_version_after_a_completed_run_shows_update_available(self):
+        run = {"phase": "done", "expected": NEW, "message": "This Mac is updated. Some Macs failed.",
+               "macs": [P.local_row(phase="done"), P._row(peer(1), phase="done", can_retry=False),
+                        P._row(peer(2), phase="done", can_retry=False)]}
+        result = {"newer": True, "available": self.NEWER, "installed": NEW, "checked_at": 1,
+                  "macs": [P._row(peer(1), phase="behind", can_retry=False),
+                           P._row(peer(2), phase="behind", can_retry=False)]}
+        for p in result["macs"]:
+            p["behind"] = True
+        out = UC.public_status(result, packaged=True, local=True, progress=run, installed=NEW)
+        self.assertEqual([(m["label"], m["status"]) for m in out["macs"]],
+                         [("1st Mac", "update available"), ("2nd Mac", "update available"),
+                          ("3rd Mac", "update available")])
+        self.assertNotIn("done", json.dumps([m["status"] for m in out["macs"]]))
+        self.assertTrue(out["can_apply"])
+        self.assertFalse(out["can_retry"])
+        self.assertNotIn("This Mac is updated", json.dumps(out))
+        self.assertNotIn("attention", json.dumps(out))
+
+    def test_failed_peer_then_newer_version_reads_update_available(self):
+        with tempfile.TemporaryDirectory() as home:
+            run = {"phase": "done", "expected": NEW, "macs": [
+                P.local_row(phase="done"), P._row(peer(1), phase="failed", kind="failed", detail="exit 1")]}
+            UC.save_progress(home, run)
+            result = {"newer": True, "available": self.NEWER, "installed": NEW, "checked_at": 1,
+                      "macs": [dict(P._row(peer(1), phase="behind", can_retry=False), behind=True)]}
+            UC.save_cache(home, result)
+            out = UC.public_status(result, packaged=True, local=True, progress=run, installed=NEW)
+            self.assertEqual([m["status"] for m in out["macs"]], ["update available", "update available"])
+            self.assertFalse(out["can_retry"])
+            self.assertEqual(out["macs"][1]["help"], [])
+            self.assertEqual(UC.failed_mac_ids(home), [])
+
+    def test_failed_at_the_current_target_stays_failed_without_update_now(self):
+        run = {"phase": "done", "expected": NEW, "macs": [
+            P.local_row(phase="done"), P._row(peer(1), phase="failed", kind="failed")]}
+        result = {"newer": True, "available": NEW, "installed": OLD, "checked_at": 1,
+                  "macs": [dict(P._row(peer(1), phase="behind", can_retry=False), behind=True)]}
+        # The saved check is from before this Mac updated itself.
+        out = UC.public_status(result, packaged=True, local=True, progress=run, installed=NEW)
+        self.assertEqual([m["status"] for m in out["macs"]], ["current", "failed"])
+        self.assertTrue(out["can_retry"])
+        self.assertFalse(out["can_apply"])
+        self.assertFalse(out["newer"])
+
+    def test_done_is_never_a_row_status(self):
+        run = {"phase": "done", "expected": NEW, "macs": [
+            P.local_row(phase="done"), P._row(peer(1), phase="done", can_retry=False)]}
+        result = {"newer": False, "available": NEW, "installed": NEW, "checked_at": 1,
+                  "macs": [dict(P._row(peer(1), phase="behind", can_retry=False), behind=True)]}
+        out = UC.public_status(result, packaged=True, local=True, progress=run, installed=NEW)
+        self.assertEqual([m["status"] for m in out["macs"]], ["current", "current"])
+        self.assertFalse(out["can_apply"])
+
+    def test_page_has_no_summary_sentences(self):
+        page = (ROOT / "proxy" / "web" / "index.html").read_text()
+        self.assertNotIn("j.progress && j.progress.message", page)
+        self.assertNotIn("Other Macs need attention", page)
+        self.assertNotIn("Some other Macs need attention", page)
 
 
 class UpdateAnimationTests(unittest.TestCase):

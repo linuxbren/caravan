@@ -1,3 +1,15 @@
+## 2026-11-13: Day 26 — Update lines show where each Mac is now
+
+After Check now, the page said "This Mac is updated", "some other Macs
+need attention", and "1st Mac: done" even though a newer version was
+ready. Each Mac's line now comes from where that Mac is now: when a
+version newer than the last run's is found, every Mac not on it reads
+"update available", and lines from the last run are dropped. "failed"
+is only for a Mac whose last try at the newest version failed, and
+"done" is only the short "Done." flash after a run. The summary
+sentences are gone. Not shown on the local network. This does not
+change `agent/`, `runtime/`, or the requirements files. No `day26` tag yet.
+
 ## 2026-11-13: Day 26 — Update progress in the page
 
 While **Update now** or **Try again** runs, the button reads

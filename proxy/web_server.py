@@ -1685,6 +1685,7 @@ def make_handler(app: App):
                 return UC.public_status(
                     res, local=local, via_tailscale=via_ts, busy=busy,
                     packaged=packaged, check_daily=prefs["check_daily"],
+                    installed=UC.installed_ref(repo) if packaged else None,
                     progress=progress if progress is not None else UC.resolve_progress(home, repo),
                 )
 

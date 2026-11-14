@@ -257,8 +257,10 @@ class CacheAndOfflineTests(unittest.TestCase):
         self.assertEqual(
             [(m["label"], m["status"]) for m in payload["macs"]],
             [("1st Mac", "update available"), ("2nd Mac", "current"),
-             ("3rd Mac", "failed")],
+             ("3rd Mac", "couldn't check")],
         )
+        # Not reaching a Mac during a check is not a failed update.
+        self.assertFalse(payload["can_retry"])
         self.assertNotIn("This Mac is on the", json.dumps(payload))
 
     def test_check_daily_off_skips_automatic_check(self):

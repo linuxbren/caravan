@@ -2103,7 +2103,7 @@
       tuning = true;
     } else if (phase === "done" && pending) {
       text = "Done";
-    } else if (j && (j.newer || j.peers_behind) && phase !== "failed") {
+    } else if (j && (j.newer || j.peers_behind)) {
       text = "Update available";
     }
     el.hidden = !text;
@@ -2152,11 +2152,8 @@
     _updateWasBusy = updating;
     if (phase === "done" || phase === "failed") setUpdatePending(false);
 
-    // Only a problem gets a line here; each Mac has its own status below.
-    let note = "";
-    if (j.packaged === false) note = "This copy is updated with git, not from this page.";
-    else if (phase === "failed" && !updating) note = (j.progress && j.progress.message) || j.message || "";
-    if (status) status.textContent = note;
+    // No summary sentences: each Mac has its own line below.
+    if (status) status.textContent = j.packaged === false ? "This copy is updated with git, not from this page." : "";
 
     if (changes) {
       const lines = (j.newer && j.changes) ? j.changes : [];

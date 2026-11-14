@@ -72,6 +72,11 @@
   step line with elapsed time ("Updating the 2nd Mac… 0:42", then
   "1st Mac… restarting"). It reconnects after the restart and flashes
   "Done." Still not shown on the local network.
+- Each Mac's line shows where that Mac is now, not how the last update
+  went. When Check now finds a newer version, every Mac not on it reads
+  "update available"; "failed" is only for a Mac whose last try at that
+  version failed. "Done." is a short flash after a run, then "current".
+  The "This Mac is updated" and "Some Macs failed" sentences are gone.
 
 ## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
 

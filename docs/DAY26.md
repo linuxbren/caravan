@@ -139,6 +139,12 @@ such as "Updating the 2nd Mac… 0:42", then "1st Mac… restarting"
 while this Mac's page restarts. The page reconnects on its own and
 flashes "Done.", or shows the Mac that failed.
 
+Each line shows where that Mac is now, not how the last run went.
+When Check now finds a version newer than the last run's, every Mac
+not on it reads "update available", and old "failed" lines go away.
+"failed" is only for a Mac whose last try at the newest version
+failed. There are no summary sentences, only the lines for each Mac.
+
 Fixed: the first try at updating the other Macs never ran the update
 there. The command sent to the 2nd Mac started with
 `CARAVAN_UPDATE_LOCAL=1 if …`, which is a syntax error in the Mac's
