@@ -713,7 +713,7 @@ class PageAndDocsTests(unittest.TestCase):
         self.assertIn("Update available", self.page)
         self.assertIn("Your model stays loaded", self.page)
         self.assertIn("Caravan will reload the model", self.page)
-        self.assertIn("the page will be back in a few seconds", self.page)
+        self.assertIn("the page will be back in a few seconds", self.page.lower())
         self.assertIn("Try again", self.page)
         self.assertIn("renderUpdateMacs", self.page)
         # Check now sits in the Updates header row, next to the title.

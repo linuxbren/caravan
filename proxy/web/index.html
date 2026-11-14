@@ -2019,6 +2019,54 @@
   let _updateInfo = null;
   let _updatePoll = null;
   let _updateDoneTimer = null;
+  // Live step line: server text + elapsed, counted on from the last answer.
+  let _updateStepBase = null;
+  let _updateStepTimer = null;
+  let _updateWasBusy = false;
+  function fmtElapsed(s) {
+    s = Math.max(0, Math.floor(s || 0));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return m + ":" + (r < 10 ? "0" : "") + r;
+  }
+  function paintUpdateStep() {
+    const step = $("updateStep");
+    if (!step || !_updateStepBase) return;
+    const secs = _updateStepBase.elapsed + (Date.now() - _updateStepBase.at) / 1000;
+    step.hidden = false;
+    step.classList.remove("tune-done");
+    step.textContent = _updateStepBase.text + " " + fmtElapsed(secs);
+  }
+  function startUpdateStep(text, elapsed, keepClock) {
+    const same = keepClock && _updateStepBase;
+    _updateStepBase = {
+      text: text || "Updating…",
+      elapsed: same ? _updateStepBase.elapsed + (Date.now() - _updateStepBase.at) / 1000 : (elapsed || 0),
+      at: Date.now(),
+    };
+    clearTimeout(_updateDoneTimer);
+    paintUpdateStep();
+    if (!_updateStepTimer) _updateStepTimer = setInterval(paintUpdateStep, 1000);
+  }
+  function stopUpdateStep() {
+    _updateStepBase = null;
+    if (_updateStepTimer) { clearInterval(_updateStepTimer); _updateStepTimer = null; }
+  }
+  function flashUpdateDone(text) {
+    stopUpdateStep();
+    const step = $("updateStep");
+    if (!step) return;
+    step.hidden = false;
+    step.classList.add("tune-done");
+    step.textContent = text;
+    clearTimeout(_updateDoneTimer);
+    _updateDoneTimer = setTimeout(() => { step.hidden = true; step.classList.remove("tune-done"); }, 6000);
+  }
+  function restartingLabel() {
+    const macs = (_updateInfo && _updateInfo.macs) || [];
+    const mine = macs.find((m) => m.mine);
+    return (mine && mine.label) || "This Mac";
+  }
 
   function updatePending() {
     try {
@@ -2091,7 +2139,17 @@
     const pending = !!updatePending();
     const updating = !!(j.updating || phase === "updating" || (pending && phase !== "done" && phase !== "failed"));
     paintUpdateBadge(j);
-    if (step) { step.hidden = true; step.textContent = ""; }
+    const anyFailed = (j.macs || []).some((m) => m.status === "failed") || phase === "failed";
+    if (updating) {
+      const s = j.step || {};
+      startUpdateStep(s.text || "Updating…", s.elapsed_s || 0, false);
+    } else if (_updateWasBusy || (pending && (phase === "done" || phase === "failed"))) {
+      if (anyFailed) { stopUpdateStep(); if (step) step.hidden = true; }
+      else flashUpdateDone("Done.");
+    } else if (!_updateStepBase && step && !step.classList.contains("tune-done")) {
+      step.hidden = true;
+    }
+    _updateWasBusy = updating;
     if (phase === "done" || phase === "failed") setUpdatePending(false);
 
     // Only a problem gets a line here; each Mac has its own status below.
@@ -2169,6 +2227,7 @@
   async function retryUpdateMacs() {
     const btn = $("btnUpdateRetry");
     if (btn) btn.disabled = true;
+    startUpdateStep("Trying again…", 0, false);
     try {
       renderUpdate(await api("/api/update", { method: "POST", body: JSON.stringify({ action: "retry" }) }));
     } catch (err) {
@@ -2179,7 +2238,7 @@
   }
   function scheduleUpdatePoll(on) {
     if (_updatePoll) { clearInterval(_updatePoll); _updatePoll = null; }
-    if (on) _updatePoll = setInterval(() => { refreshUpdate().catch(() => {}); }, 2000);
+    if (on) _updatePoll = setInterval(() => { refreshUpdate().catch(() => {}); }, 1500);
   }
   async function refreshUpdate(opts) {
     try {
@@ -2189,10 +2248,10 @@
     } catch (e) {
       if (updatePending()) {
         paintUpdateBadge({ progress: { phase: "updating" } });
-        const status = $("updateStatus");
-        if (status) status.textContent = "Updating Caravan, the page will be back in a few seconds.";
-        const step = $("updateStep");
-        if (step) { step.hidden = false; step.textContent = "Updating Caravan, the page will be back in a few seconds."; }
+        startUpdateStep(restartingLabel() + "… restarting", 0, true);
+        _updateWasBusy = true;
+        const btn = $("btnUpdateNow");
+        if (btn) { btn.hidden = false; btn.disabled = true; btn.classList.add("is-tuning"); btn.textContent = "Updating…"; }
         scheduleUpdatePoll(true);
       } else if ($("updateStatus") && opts && opts.force) {
         $("updateStatus").textContent = (e && (e.error || e.message)) || "Could not check for updates right now.";
@@ -2268,9 +2327,8 @@
         }
         // The page may have gone down mid-request; keep pending and poll.
         paintUpdateBadge({ progress: { phase: "updating" } });
-        const step = $("updateStep");
-        if (step) { step.hidden = false; step.textContent = "Updating Caravan, the page will be back in a few seconds."; }
-        $("updateStatus").textContent = "Updating Caravan, the page will be back in a few seconds.";
+        startUpdateStep(restartingLabel() + "… restarting", 0, true);
+        _updateWasBusy = true;
         scheduleUpdatePoll(true);
       }
     });

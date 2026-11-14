@@ -568,5 +568,79 @@ class MinimalStatusTests(unittest.TestCase):
         self.assertFalse(out["can_retry"])
 
 
+class UpdateAnimationTests(unittest.TestCase):
+    def test_step_line_has_text_and_server_elapsed(self):
+        import time as _t
+        progress = {"phase": "updating", "expected": NEW, "started_at": _t.time() - 90,
+                    "step": {"text": "Updating the 2nd Mac…", "since": _t.time() - 42},
+                    "macs": [P.local_row(phase="waiting"), P._row(peer(1), phase="updating", can_retry=False)]}
+        out = UC.public_status({"newer": True, "available": NEW}, packaged=True, local=True, progress=progress)
+        self.assertTrue(out["updating"])
+        self.assertEqual(out["step"]["text"], "Updating the 2nd Mac…")
+        self.assertTrue(41 <= out["step"]["elapsed_s"] <= 44)
+        self.assertEqual([m["status"] for m in out["macs"]], ["update available", "updating…"])
+        self.assertFalse(out["can_retry"])
+        idle = UC.public_status({"newer": False, "available": NEW, "checked_at": 1}, packaged=True, local=True)
+        self.assertIsNone(idle["step"])
+
+    def test_apply_job_steps_through_each_mac(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            repo = write_package(Path(tmp) / "repo", ref=OLD)
+            home.mkdir()
+            UC.save_progress(home, {"expected": NEW, "old": OLD, "phase": "updating"})
+            peers = [peer(1), peer(2)]
+            seen = []
+            real_save = UC.save_progress
+
+            def spy(h, data):
+                step = (data.get("step") or {}).get("text")
+                if step and (not seen or seen[-1] != step):
+                    seen.append(step)
+                return real_save(h, data)
+
+            runner = ScriptedSSH({p["ssh"]: {"probe": Result(0), "update": Result(0), "ref": NEW} for p in peers})
+
+            def local_ok(repo, **kwargs):
+                write_package(repo, ref=NEW)
+                return 0
+
+            with mock.patch.object(UC, "save_progress", side_effect=spy), \
+                 mock.patch.object(UC, "_run_cli_update", side_effect=local_ok):
+                UC.apply_job(home, repo, peers=peers, runner=runner)
+            self.assertEqual(seen, ["Updating the 2nd Mac…", "Updating the 3rd Mac…", "Updating the 1st Mac…"])
+
+    def test_try_again_shows_a_step_then_clears_it(self):
+        with tempfile.TemporaryDirectory() as home:
+            node = peer(1)
+            UC.save_progress(home, {"phase": "done", "expected": NEW, "macs": [
+                P.local_row(phase="done"), P._row(node, phase="failed", kind="failed")]})
+            self.assertEqual(UC.mark_retrying(home, [node["id"]], peers=[node]), [node["id"]])
+            mid = UC.load_progress(home)
+            self.assertEqual(mid["step"]["text"], "Updating the 2nd Mac…")
+            out = UC.public_status({"available": NEW, "checked_at": 1}, packaged=True, local=True, progress=mid)
+            self.assertTrue(out["updating"])
+            runner = ScriptedSSH({node["ssh"]: {"probe": Result(0), "update": Result(0), "ref": NEW}})
+            with mock.patch("sys.stdout", io.StringIO()):
+                UC.retry_peer(home, node["id"], expected=NEW, peers=[node], runner=runner)
+            done = UC.load_progress(home)
+            self.assertNotIn("step", done)
+            out = UC.public_status({"available": NEW, "checked_at": 1}, packaged=True, local=True, progress=done)
+            self.assertFalse(out["updating"])
+            self.assertEqual([m["status"] for m in out["macs"]], ["current", "current"])
+
+    def test_page_has_campfire_step_and_survives_restart(self):
+        page = (ROOT / "proxy" / "web" / "index.html").read_text()
+        self.assertIn("function startUpdateStep", page)
+        self.assertIn("fmtElapsed", page)
+        self.assertIn('"… restarting"', page)
+        self.assertIn('flashUpdateDone("Done.")', page)
+        self.assertIn('btnNow.classList.toggle("is-tuning", updating)', page)
+        self.assertIn('textContent = updating ? "Updating…" : "Update now"', page)
+        self.assertIn("caravan.update.pending", page)
+        # Over the local network nothing is drawn at all.
+        self.assertIn("j.show === false", page)
+
+
 if __name__ == "__main__":
     unittest.main()

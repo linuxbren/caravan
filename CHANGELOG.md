@@ -65,6 +65,11 @@
   available, or failed). Update now shows only when an update is ready,
   Try again only when a Mac failed. On the local network there is no
   Updates section or Update available badge at all.
+- While an update runs, Settings > Updates shows a busy **Updating…**
+  button with the campfire flicker, each Mac's "updating…" line, and a
+  step line with elapsed time ("Updating the 2nd Mac… 0:42", then
+  "1st Mac… restarting"). It reconnects after the restart and flashes
+  "Done." Still not shown on the local network.
 
 ## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
 

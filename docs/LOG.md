@@ -1,3 +1,13 @@
+## 2026-11-13: Day 26 — Update progress in the page
+
+While **Update now** or **Try again** runs, the button reads
+**Updating…** with the campfire flicker, each Mac's line shows
+"updating…", and a step line counts up ("Updating the 2nd Mac… 0:42",
+then "1st Mac… restarting"). The page reconnects after the restart and
+flashes "Done.", or shows which Mac failed. Not shown on the local
+network. This does not change `agent/`, `runtime/`, or the requirements
+files, so the model stays loaded. No `day26` tag yet.
+
 ## 2026-11-13: Day 26 — The 2nd Mac update fix, and a shorter Updates section
 
 Updating the other Macs never ran the update there: the command sent

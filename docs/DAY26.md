@@ -132,6 +132,13 @@ run caravan update in Terminal.", and a small Details toggle with what
 that Mac printed. Each Mac's last error is also kept on the 1st Mac in
 `~/.caravan/web-ui/peer-update-errors.json` and the update log.
 
+While **Update now** or **Try again** runs, the button reads
+**Updating…** with the same campfire flicker as Auto-tune's Tuning…,
+each Mac's line shows "updating…", and one short step line counts up,
+such as "Updating the 2nd Mac… 0:42", then "1st Mac… restarting"
+while this Mac's page restarts. The page reconnects on its own and
+flashes "Done.", or shows the Mac that failed.
+
 Fixed: the first try at updating the other Macs never ran the update
 there. The command sent to the 2nd Mac started with
 `CARAVAN_UPDATE_LOCAL=1 if …`, which is a syntax error in the Mac's

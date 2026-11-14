@@ -642,6 +642,23 @@ def public_status(
     needs = bool(newer or peers_behind)
     can_apply = bool(packaged and needs and allowed and not busy and phase != "updating")
     any_updating = phase == "updating" or any(m.get("phase") == "updating" for m in macs)
+    step = None
+    if any_updating and progress:
+        now = time.time()
+        raw = progress.get("step") or {}
+        try:
+            started = float(progress.get("started_at") or raw.get("since") or now)
+        except (TypeError, ValueError):
+            started = now
+        try:
+            since = float(raw.get("since") or started)
+        except (TypeError, ValueError):
+            since = started
+        step = {
+            "text": raw.get("text") or "Updating…",
+            "elapsed_s": max(0, int(now - since)),
+            "total_s": max(0, int(now - started)),
+        }
     can_retry = bool(allowed and not busy and not any_updating and any(m.get("can_retry") for m in macs))
     payload = {
         "packaged": bool(packaged),
@@ -668,6 +685,7 @@ def public_status(
         "show": allowed,
         "can_retry": can_retry,
         "updating": bool(any_updating),
+        "step": step,
     }
     return payload
 
@@ -998,17 +1016,24 @@ def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None
         progress["macs"] = macs
         save_progress(home, progress)
 
+    def set_step(text):
+        progress["step"] = {"text": text, "since": time.time()}
+
     def set_local(phase, message=None, kind=None):
         nonlocal macs
         row = P.local_row(phase=phase, label=local_label, message=message, kind=kind)
         macs = P.replace_mac(macs, "local", row)
         if message:
             progress["message"] = message
+        if phase == "updating":
+            set_step(f"Updating the {local_label}…")
         persist()
 
     def on_progress(row):
         nonlocal macs
         macs = P.replace_mac(macs, row.get("id"), row)
+        if row.get("phase") == "updating":
+            set_step(f"Updating the {row.get('label') or 'Mac'}…")
         persist()
 
     if peers:
@@ -1094,12 +1119,16 @@ def retry_peer(home, mac_id, *, expected=None, peers=None, runner=None, timeout=
     if timeout is not None:
         kw["timeout"] = timeout
     expected = expected or (progress.get("expected") or None)
+    progress["step"] = {"text": f"Updating the {node.get('label') or 'Mac'}…", "since": time.time()}
+    save_progress(home, progress)
     row = P.update_peer(node, expected=expected, runner=runner, **kw)
     P.record_peer_result(home, row)
     print(f"Try again on the {row.get('label')}: {row.get('status')}. {row.get('detail') or ''}".strip(), flush=True)
     progress = load_progress(home) or progress
     macs = P.replace_mac(list(progress.get("macs") or []), node.get("id"), row)
     progress["macs"] = macs
+    if not any(m.get("phase") == "updating" for m in macs):
+        progress.pop("step", None)
     save_progress(home, progress)
     return row
 
@@ -1125,6 +1154,8 @@ def mark_retrying(home, mac_ids, *, peers=None):
         if str(node.get("id")) in {str(i) for i in mac_ids}:
             macs = P.replace_mac(macs, node.get("id"), P._row(node, phase="updating", can_retry=False))
             found.append(node.get("id"))
+            if len(found) == 1:
+                progress["step"] = {"text": f"Updating the {node.get('label') or 'Mac'}…", "since": time.time()}
     progress["macs"] = macs
     save_progress(home, progress)
     return found
