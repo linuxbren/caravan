@@ -2464,7 +2464,16 @@
       _seg("Write", st.completion_tokens, st.write_tok_s, 1),
       _ok(st.ttft_s) ? `first token ${fmt(st.ttft_s)}s` : null,
       _ok(st.total_s) ? `total ${fmt(st.total_s)}s` : null,
+      guessKeptText(st.guess_kept),
     ].filter(Boolean).join(" · ");
+  }
+  // Day 27: same wording as proxy/guess_stats.label ("guesses kept 88%").
+  function guessKeptText(g) {
+    if (!g || typeof g !== "object") return null;
+    const ok = (v) => v != null && Number.isFinite(Number(v));
+    if (ok(g.kept_pct)) return `guesses kept ${Number(g.kept_pct).toFixed(0)}%`;
+    if (ok(g.reply_pct)) return `${Number(g.reply_pct).toFixed(0)}% of words guessed`;
+    return null;
   }
   function fmtTs(seconds) {
     if (seconds === null || seconds === undefined) return "—";
@@ -2556,7 +2565,7 @@
     if (a.chat_window) items.chat_window = {id:"chat_window", text:`chat window ${a.chat_window}` + p("chat_window"), on:!!a.chat_window, hint:CHIP_HINTS.chat_window};
     if (a.flash_attn) items.flash_attn = {id:"flash_attn", text:`flash attention ${a.flash_attn}` + p("flash_attn"), on:a.flash_attn === "on" || a.flash_attn === true, hint:CHIP_HINTS.flash_attn};
     if (a.ubatch) items.ubatch = {id:"ubatch", text:`prompt batch ${a.ubatch}` + p("ubatch"), on:!!a.ubatch, hint:CHIP_HINTS.ubatch};
-    if (a.prompt_lookup) items.prompt_lookup = {id:"prompt_lookup", text:`prompt lookup: ${a.prompt_lookup.enabled ? "adaptive · overlap ≥ 0.50" : "off · experimental"}`, on:!!a.prompt_lookup.enabled, hint:CHIP_HINTS.prompt_lookup};
+    if (a.prompt_lookup) items.prompt_lookup = {id:"prompt_lookup", text:`prompt lookup: ${a.backend === "llama" ? (a.prompt_lookup.enabled ? "on" : "off") : (a.prompt_lookup.enabled ? "adaptive · overlap ≥ 0.50" : "off · experimental")}`, on:!!a.prompt_lookup.enabled, hint:CHIP_HINTS.prompt_lookup};
     items.kv_bits = {id:"kv_bits", text:`memory ${a.kv_bits}-bit`, on:!!(a.kv_bits && a.kv_bits < 16), hint:CHIP_HINTS.kv_bits};
     items.fuse_kernels = {id:"fuse_kernels", text:"fused " + (a.fuse_kernels || "off"), on:!!(a.fuse_kernels && a.fuse_kernels !== "off"), hint:CHIP_HINTS.fuse_kernels};
     if (a.keepalive != null) items.keepalive = {id:"keepalive", text:"keep-warm " + (a.keepalive ? "on" : "off"), on:!!a.keepalive, hint:CHIP_HINTS.keepalive};

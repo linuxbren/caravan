@@ -1,3 +1,23 @@
+## Day 27 — Measured Guess-ahead, and GGUF closer to MLX
+
+- When a reply used Prompt lookup or Guess-ahead, the line under it now
+  ends with how many guessed words were kept, for example
+  "guesses kept 88%". GGUF reads this from llama.cpp; an MLX reply shows
+  the share of words that came from guesses. Replies with no guesses
+  show nothing new. See [Day 27](docs/DAY27.md).
+- `caravan bench "<model>" --speedups --yes` measures Off, Prompt lookup,
+  Guess-ahead (when a helper is on this Mac) and Auto on the five short
+  prompts, five new code-edit prompts and the long-prompt series, with
+  medians, the change against Off, first token, and guesses kept. The
+  model that was loaded before is put back with its settings.
+- GGUF Auto-tune now also tries Guess-ahead when a smaller same-family
+  helper is already on this Mac (one chat, not pinned), and keeps it only
+  when it measures at least 3% better. Nothing is downloaded for you.
+- The GGUF Prompt lookup chip says "on" or "off" (it no longer shows the
+  MLX-only "adaptive" wording).
+- This increment does not change `agent/`, `runtime/`, or the
+  requirements, so `caravan update` keeps a loaded model.
+
 ## Day 26 — Download progress under the model you clicked
 
 - In the Models list, the download progress card appears right under

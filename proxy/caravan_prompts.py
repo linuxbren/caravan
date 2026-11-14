@@ -31,6 +31,70 @@ SHORT_PROMPTS = AUTO_TUNE_SHORT + (
     "List eight ways to keep a long-running program reliable, one sentence each.",
 )
 
+# Day 27: five "edit this code" prompts for the Guess-ahead bench. The
+# reply repeats much of the prompt, which is where Prompt lookup and a
+# helper model can help. Ordinary chats are the five short prompts above.
+_EDIT_CODE = (
+    "def load_rows(path):\n"
+    "    rows = []\n"
+    "    with open(path) as handle:\n"
+    "        for line in handle:\n"
+    "            line = line.strip()\n"
+    "            if not line or line.startswith('#'):\n"
+    "                continue\n"
+    "            name, count, price = line.split(',')\n"
+    "            rows.append({'name': name, 'count': int(count), 'price': float(price)})\n"
+    "    return rows\n"
+    "\n"
+    "\n"
+    "def total_value(rows):\n"
+    "    total = 0.0\n"
+    "    for row in rows:\n"
+    "        total += row['count'] * row['price']\n"
+    "    return total\n"
+    "\n"
+    "\n"
+    "def cheapest(rows):\n"
+    "    best = None\n"
+    "    for row in rows:\n"
+    "        if best is None or row['price'] < best['price']:\n"
+    "            best = row\n"
+    "    return best\n"
+    "\n"
+    "\n"
+    "def report(path):\n"
+    "    rows = load_rows(path)\n"
+    "    print('items:', len(rows))\n"
+    "    print('total value:', round(total_value(rows), 2))\n"
+    "    low = cheapest(rows)\n"
+    "    if low is not None:\n"
+    "        print('cheapest:', low['name'], low['price'])\n"
+)
+
+EDIT_PROMPTS = (
+    "Rename the variable `rows` to `items` everywhere in this code. "
+    "Return the whole file and nothing else.",
+    "Add a one-line docstring to every function in this code. "
+    "Return the whole file and nothing else.",
+    "Change every single-quoted string in this code to double quotes. "
+    "Return the whole file and nothing else.",
+    "Add Python type hints to every function in this code. "
+    "Return the whole file and nothing else.",
+    "Rename the function `report` to `print_report`. "
+    "Return the whole file and nothing else.",
+)
+
+
+def edit_prompts(*, tag_prefix: str = "Edit") -> list:
+    """Five code-edit prompts (favorable for guessing), each with a unique opening."""
+    out = []
+    n = len(EDIT_PROMPTS)
+    for i, p in enumerate(EDIT_PROMPTS):
+        body = p + "\n\n```python\n" + _EDIT_CODE + "```"
+        out.append(with_fresh_prefix(body, f"{tag_prefix} {i + 1} of {n}"))
+    return out
+
+
 # Bench long-prompt sizes, in tokens. Two prompts at each size.
 BENCH_LONG_SIZES = (1024, 4096, 8192)
 # Auto-tune uses one long prompt, skipped if it will not fit.

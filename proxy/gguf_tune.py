@@ -305,7 +305,13 @@ class GgufTuner:
                 name, inc, ch = item["name"], item["incumbent"], item["challenger"]
                 # Memory-compression trials always keep flash attention on.
                 extra = {"flash_attn": "on"} if name == "cache_type" else {}
+                if name == "guess_ahead":
+                    # Day 27: the helper already on disk rides along with
+                    # "on"; "off" never carries a helper path.
+                    extra = {"draft_path": item.get("draft_path")}
                 base = dict(best, **extra, **{name: inc})
+                if name == "guess_ahead" and inc != "on":
+                    base.pop("draft_path", None)
                 inc_specs = self._score(base)
                 scored.append((dict(base), dict(inc_specs)))
                 if result["before"] is None:
@@ -314,6 +320,8 @@ class GgufTuner:
                     result["status"] = "cancelled"
                     break
                 chal = dict(best, **extra, **{name: ch})
+                if name == "guess_ahead" and ch != "on":
+                    chal.pop("draft_path", None)
                 ch_specs = self._score(chal)
                 scored.append((dict(chal), dict(ch_specs)))
                 if ch_specs.get("garbled") and not inc_specs.get("garbled"):
@@ -339,6 +347,11 @@ class GgufTuner:
                 else:
                     best.setdefault(name, inc)
                     e["losses"].append(f"{name}={ch}")
+                if name == "guess_ahead":
+                    if best.get("guess_ahead") == "on":
+                        best["draft_path"] = item.get("draft_path")
+                    else:
+                        best.pop("draft_path", None)
                 inc_s = combined_score(inc_specs)
                 ch_s = combined_score(ch_specs)
                 self.log(f"gguf tune: {name} {inc}={inc_s:.1f} vs {ch}={ch_s:.1f} -> "

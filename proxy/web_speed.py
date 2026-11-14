@@ -137,13 +137,26 @@ def format_reply_stats(
     read_tok_s=None,
     completion_tokens=None,
     total_s=None,
+    guess_kept=None,
 ) -> str:
-    """Wording and rounding of the stats under each reply, or empty."""
+    """Wording and rounding of the stats under each reply, or empty.
+
+    guess_kept (Day 27) is a guess_stats readout; when a reply used
+    Prompt lookup or Guess-ahead it adds "guesses kept 88%".
+    """
+    guess = ""
+    if guess_kept:
+        try:
+            import guess_stats
+            guess = guess_stats.label(guess_kept)
+        except Exception:
+            guess = ""
     parts = [
         _seg("Read", prompt_tokens, read_tok_s, 0),
         _seg("Write", completion_tokens, write_tok_s, 1),
         f"first token {_fmt_fixed(ttft_s, 2)}s" if _ok_num(ttft_s) else None,
         f"total {_fmt_fixed(total_s, 2)}s" if _ok_num(total_s) else None,
+        guess or None,
     ]
     return " · ".join(p for p in parts if p)
 

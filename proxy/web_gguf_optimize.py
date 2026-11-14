@@ -72,6 +72,8 @@ class GgufOptimizer:
         pinned = set()
         if s.get("prompt_lookup") in ("on", "off"):
             pinned.add("prompt_lookup")
+        if s.get("guess_ahead") in ("on", "off"):
+            pinned.add("guess_ahead")
         n_slots = 1
         try:
             n_slots = int(s.get("pipeline_chats") or 1)
@@ -88,7 +90,16 @@ class GgufOptimizer:
                 n_slots = int(tun["n_slots"])
             except (TypeError, ValueError):
                 pass
-        return {"n_slots": n_slots, "pinned": pinned}
+        # Day 27: Guess-ahead is tried only with a helper already on this Mac.
+        draft = None
+        path = getattr(self, "path", None)
+        if path and "guess_ahead" not in pinned:
+            try:
+                found = G.find_gguf_draft(path)
+                draft = (found or {}).get("path")
+            except Exception:
+                draft = None
+        return {"n_slots": n_slots, "pinned": pinned, "draft_path": draft}
 
     def start(self, source="optimize_now", fresh=True):
         with self._lock:

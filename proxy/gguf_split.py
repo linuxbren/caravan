@@ -664,6 +664,14 @@ def usage_from_timings(usage: Optional[dict], timings: Optional[dict]) -> Option
         value = timings.get(source)
         if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0:
             cv.setdefault(key, round(value, 2))
+    # Day 27: how many guessed words were kept (Prompt lookup / Guess-ahead).
+    if "draft_n" in timings or "draft_n_accepted" in timings:
+        dn_ = timings.get("draft_n")
+        da_ = timings.get("draft_n_accepted")
+        spec = {"proposed": dn_, "accepted": da_, "from_draft": da_, "n_gen": dn}
+        if isinstance(da_, (int, float)) and isinstance(dn, (int, float)) and dn:
+            spec["accepted_frac"] = round(float(da_) / float(dn), 3)
+        cv.setdefault("speculate", spec)
     u["caravan"] = cv
     return u
 
@@ -749,15 +757,20 @@ def parse_seed(stdout: str) -> Optional[dict]:
 
 
 def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
-                  pinned=None) -> list:
+                  pinned=None, draft_path=None) -> list:
     """GGUF Optimize now plan: one llama-server option at a time (each needs a
     reload), skipping recorded losers ("name=value"), same 3% margin as MLX.
 
     Prompt lookup is tried last, only when it is safe: one chat (not Two
-    chats), and the row is not pinned Off or On. Auto-tune does not try
-    a draft model; that needs a helper already on disk and a deliberate
-    choice. Self-tuning does not use this extra option (it reads
-    GGUF_KNOBS only).
+    chats), and the row is not pinned Off or On.
+
+    Day 27: when draft_path names a smaller same-family helper already on
+    this Mac, Guess-ahead is tried after Prompt lookup with the same
+    gates (one chat, not pinned) and the same 3% margin, so Auto keeps
+    it only when it measured faster on the Auto-tune prompts. Nothing is
+    downloaded; with no helper there is no Guess-ahead step at all.
+    Self-tuning does not use these extra options (it reads GGUF_KNOBS
+    only).
     """
     defaults = {
         "flash_attn": "on",
@@ -793,4 +806,24 @@ def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
             skip = "already lost"
     items.append({"name": "prompt_lookup", "incumbent": inc,
                   "challenger": challenger, "skip": skip, "reload": True})
+    draft = _existing_draft_path(draft_path)
+    if draft:
+        inc = best.get("guess_ahead", "off")
+        if inc not in ("on", "off"):
+            inc = "off"
+        skip = None
+        challenger = None
+        if int(n_slots or 1) > 1:
+            skip = "two chats"
+        elif "guess_ahead" in pinned_set:
+            skip = "pinned"
+        else:
+            other = "on" if inc == "off" else "off"
+            if f"guess_ahead={other}" in (losses or []):
+                skip = "already lost"
+            else:
+                challenger = other
+        items.append({"name": "guess_ahead", "incumbent": inc,
+                      "challenger": challenger, "skip": skip, "reload": True,
+                      "draft_path": draft})
     return items

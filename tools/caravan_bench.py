@@ -803,6 +803,20 @@ def main(argv=None, *, models=None):
         "--quiet", action="store_true",
         help="no progress animation or step lines; still print the results",
     )
+    p.add_argument(
+        "--speedups", action="store_true",
+        help="measure Prompt lookup and Guess-ahead: Off, Prompt lookup, "
+             "Guess-ahead (when a helper is on this Mac) and Auto, on short, "
+             "code-edit and long prompts, with how many guesses were kept",
+    )
+    p.add_argument(
+        "--edits", action="store_true",
+        help="with --speedups, run only the five code-edit prompts",
+    )
+    p.add_argument(
+        "--only", choices=("gguf", "mlx"), default=None,
+        help="with --speedups, measure only one side",
+    )
     p.add_argument("--port", type=int, default=DEFAULT_PORT, help=argparse.SUPPRESS)
     p.add_argument("--gguf-name", default=None, help=argparse.SUPPRESS)
     p.add_argument("--mlx-name", default=None, help=argparse.SUPPRESS)
@@ -830,6 +844,8 @@ def main(argv=None, *, models=None):
         ):
             print(line)
         return 0
+    if args.speedups:
+        return _main_speedups(args, gid, mid, gname, mname)
     if not args.yes:
         sys.stdout.write(steps_text(
             gid, mid, port=args.port, gguf=gguf, mlx=mlx, query=args.name,
@@ -874,6 +890,70 @@ def main(argv=None, *, models=None):
         return 130
     if err:
         sys.stderr.write(f"Could not finish the comparison: {err}\n")
+        return 1
+    return 0
+
+
+def _main_speedups(args, gid, mid, gname, mname) -> int:
+    """caravan bench --speedups: Off / Prompt lookup / Guess-ahead / Auto."""
+    import caravan_speedups as SU
+    any_only = args.short or args.long or args.edits
+    sets_args = {
+        "run_short": bool(args.short or not any_only),
+        "run_edits": bool(args.edits or not any_only),
+        "run_long": bool(args.long or not any_only),
+    }
+    sides = (args.only,) if args.only else ("gguf", "mlx")
+    if not args.yes:
+        parts = []
+        if sets_args["run_short"]:
+            parts.append("the five short prompts")
+        if sets_args["run_edits"]:
+            parts.append("five code-edit prompts")
+        if sets_args["run_long"]:
+            parts.append("the long-prompt series")
+        names = [n for k, n in (("gguf", gname), ("mlx", mname)) if k in sides]
+        flags = " ".join(f for f, on in (("--short", args.short), ("--edits", args.edits),
+                                         ("--long", args.long)) if on)
+        only = f" --only {args.only}" if args.only else ""
+        q = f'"{args.name}" ' if args.name else f"--gguf {gid} --mlx {mid} "
+        sys.stdout.write(
+            "This measures Prompt lookup and Guess-ahead on "
+            + " and ".join(names) + ".\n"
+            "Each model is loaded once per mode (Off, Prompt lookup, Guess-ahead "
+            "when a helper is on this Mac, Auto) and runs "
+            + (", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0]) + ".\n"
+            "The model that is loaded now is put back at the end, with its settings.\n\n"
+            f"Run: caravan bench {q}--speedups{only}{(' ' + flags) if flags else ''} --yes\n"
+        )
+        return 0
+    progress = Progress(quiet=bool(args.quiet))
+    progress.start()
+    try:
+        result = SU.run_speedups(
+            gid, mid, port=args.port, urlopen=_urlopen, status_fn=status,
+            window_fn=_running_window, gguf_name=gname, mlx_name=mname,
+            sides=sides, sets_args=sets_args, progress=progress,
+        )
+    except KeyboardInterrupt:
+        progress.stop()
+        sys.stderr.write("Stopped.\n")
+        return 130
+    except Exception as e:
+        progress.stop()
+        sys.stderr.write(f"Could not finish the measurement: {e}\n")
+        return 1
+    progress.stop()
+    if result.get("sides"):
+        SU.save(result)
+    for line in SU.render(result):
+        print(line)
+    for note in result.get("notes") or []:
+        print(note)
+    if result.get("error") == "stopped":
+        return 130
+    if result.get("error"):
+        sys.stderr.write(f"Could not finish the measurement: {result['error']}\n")
         return 1
     return 0
 

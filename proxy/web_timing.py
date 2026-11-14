@@ -156,6 +156,13 @@ def reply_stats(usage: dict, wall_s: Optional[float] = None) -> dict:
             "accepted_frac": speculate.get("accepted_frac"),
         }
 
+    guess_kept = None
+    try:
+        import guess_stats
+        guess_kept = guess_stats.from_speculate(speculate, ct)
+    except Exception:
+        guess_kept = None
+
     learn = caravan.get("learn") or {}
     tuned = None
     if isinstance(learn, dict) and learn.get("winner"):
@@ -176,6 +183,8 @@ def reply_stats(usage: dict, wall_s: Optional[float] = None) -> dict:
         "how": how,
         "shared_start": shared_hit,
         "guess_ahead": guess,
+        # Day 27: guessed words proposed / kept (None when nothing was guessed).
+        "guess_kept": guess_kept,
         "tuned": tuned,
         "split": split,
         "peak_gb": caravan.get("peak_gb"),
