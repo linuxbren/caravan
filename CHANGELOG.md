@@ -79,6 +79,11 @@
   this Mac updates itself, the page checks again once, so the lines no
   longer say "current" next to What's new and Update now. The Updates
   section no longer says "Your model stays loaded."
+- After an update, open Caravan pages reload themselves, so the new
+  page is the one running. The page that started the update reloads
+  as soon as Caravan is back; other tabs (on this Mac or another one)
+  reload once nobody is typing or waiting on a reply. Update now shows
+  **Updating…** the moment it is clicked.
 
 ## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
 

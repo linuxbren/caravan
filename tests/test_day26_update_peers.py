@@ -717,6 +717,7 @@ class StaleCheckAfterOwnUpdateTests(unittest.TestCase):
                              [("1st Mac", "update needed"), ("2nd Mac", "update needed")])
             self.assertEqual(j["changes"], ["Day 26: Update lines show where each Mac is now"])
             self.assertIsNone(j["keep_model_text"])
+            self.assertTrue(j["page"])  # page tag for the auto-reload
             self.assertEqual(UC.load_cache(home)["installed"], self.NOW)
 
     def test_no_newer_release_after_own_update_reads_current_without_update_now(self):
@@ -740,6 +741,58 @@ class StaleCheckAfterOwnUpdateTests(unittest.TestCase):
             self.assertFalse(needs and "update needed" not in lines)
             self.assertEqual(lines, ["current", "current"])
             self.assertFalse(out["can_apply"])
+
+
+class AutoReloadAfterUpdateTests(unittest.TestCase):
+    """Open pages reload themselves once Caravan is updated underneath them."""
+
+    def setUp(self):
+        self.page = (ROOT / "proxy" / "web" / "index.html").read_text()
+        self.server = (ROOT / "proxy" / "web_server.py").read_text()
+
+    def test_page_tag_follows_the_page_file_not_the_version(self):
+        import web_server
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / "index.html"
+            f.write_text("<p>one</p>")
+            one = web_server.page_tag(f)
+            self.assertEqual(one, web_server.page_tag(f))
+            self.assertEqual(len(one), 10)
+            f.write_text("<p>two, a bit longer</p>")
+            self.assertNotEqual(one, web_server.page_tag(f))
+            self.assertIsNone(web_server.page_tag(Path(tmp) / "missing.html"))
+        self.assertTrue(web_server.page_tag())
+
+    def test_status_and_update_answers_carry_the_tag(self):
+        self.assertIn('"page": page_tag(),', self.server.split("def _api_status", 1)[1].split("def ", 1)[0])
+        self.assertIn('out["page"] = page_tag()', self.server)
+
+    def test_every_tab_checks_the_tag_and_waits_for_idle(self):
+        status = self.page.split("async function refreshStatus()", 1)[1][:400]
+        self.assertIn("checkPageTag(j && j.page)", status)
+        self.assertIn("if (pageIsStale(j)) return;", self.page)
+        check = self.page.split("function checkPageTag(tag)", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn("if (!updatePending() && !pageUserIdle()) return false;", check)
+        self.assertIn('sessionStorage.setItem("caravan.update.reloaded", tag)', check)
+        self.assertIn("if (tried === tag) return false;", check)
+        self.assertIn("location.reload()", check)
+        idle = self.page.split("function pageUserIdle()", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn('$("input")', idle)
+        self.assertIn("state.streaming", idle)
+        self.assertIn("_tuneRunning", idle)
+
+    def test_busy_state_shows_before_the_server_answers(self):
+        click = self.page.split('$("btnUpdateNow").addEventListener("click"', 1)[1]
+        click = click.split('action: "apply"', 1)[0]
+        self.assertIn('startUpdateStep("Updating…", 0, false)', click)
+        self.assertIn('classList.add("is-tuning")', click)
+        self.assertIn('textContent = "Updating…"', click)
+
+    def test_a_stuck_request_turns_into_restarting(self):
+        refresh = self.page.split("async function refreshUpdate(opts)", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn("setTimeout(() => ctl.abort(), 5000)", refresh)
+        self.assertIn('"… restarting"', refresh)
+        self.assertIn("_updatePollBusy", self.page)
 
 
 class UpdateAnimationTests(unittest.TestCase):

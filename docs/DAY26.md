@@ -150,6 +150,15 @@ before, so the page checks again once when it comes back. Without
 that, the page could show What's new and Update now from the old check
 while every line said "current".
 
+The page in a browser tab stays as it was loaded, even after Caravan
+updates underneath it, so an old tab kept running the old page and
+showed none of the update progress. Now every open page reloads itself
+when Caravan comes back on a new version: the page that started the
+update right away (it then flashes "Done."), any other tab once nobody
+is typing in the chat box or waiting on a reply. **Updating…** and the
+step line show the moment Update now is clicked, and if the page does
+not answer for 5 seconds the line reads "… restarting".
+
 Fixed: the first try at updating the other Macs never ran the update
 there. The command sent to the 2nd Mac started with
 `CARAVAN_UPDATE_LOCAL=1 if …`, which is a syntax error in the Mac's

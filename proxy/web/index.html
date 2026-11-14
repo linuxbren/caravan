@@ -2018,6 +2018,7 @@
   const UPDATE_PENDING_KEY = "caravan.update.pending";
   let _updateInfo = null;
   let _updatePoll = null;
+  let _updatePollBusy = false;
   let _updateDoneTimer = null;
   // Live step line: server text + elapsed, counted on from the last answer.
   let _updateStepBase = null;
@@ -2114,7 +2115,34 @@
   function updateButtonBusy() {
     return !!(_tuneRunning || (window.state && state.streaming));
   }
+  // The page in the browser stays as it was loaded, even after Caravan
+  // updates underneath it. When the server's page tag changes, reload so
+  // the new page (and its update animation) is the one running.
+  // Every open tab checks the tag (from /api/status and /api/update), so
+  // a tab on another Mac or one that did not start the update reloads too.
+  let _updatePage = null;
+  function pageUserIdle() {
+    const typing = !!(($("input") || {}).value || "").trim();
+    const el = document.activeElement;
+    const editing = !!(el && el !== document.body && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && el.id !== "input");
+    const busy = !!((window.state && state.streaming) || _tuneRunning);
+    return !(typing || editing || busy);
+  }
+  function checkPageTag(tag) {
+    if (!tag) return false;
+    if (!_updatePage) { _updatePage = tag; return false; }
+    if (tag === _updatePage) return false;
+    let tried = null;
+    try { tried = sessionStorage.getItem("caravan.update.reloaded"); } catch (_) {}
+    if (tried === tag) return false;  // never loop
+    if (!updatePending() && !pageUserIdle()) return false;  // try again on the next answer
+    try { sessionStorage.setItem("caravan.update.reloaded", tag); } catch (_) {}
+    location.reload();
+    return true;
+  }
+  function pageIsStale(j) { return !!(j && checkPageTag(j.page)); }
   function renderUpdate(j) {
+    if (pageIsStale(j)) return;
     _updateInfo = j || {};
     const card = $("updatesCard");
     // Local network: no update view at all (there is no login there).
@@ -2235,11 +2263,21 @@
   }
   function scheduleUpdatePoll(on) {
     if (_updatePoll) { clearInterval(_updatePoll); _updatePoll = null; }
-    if (on) _updatePoll = setInterval(() => { refreshUpdate().catch(() => {}); }, 1500);
+    if (on) _updatePoll = setInterval(() => {
+      if (_updatePollBusy) return;  // one request at a time while the page restarts
+      _updatePollBusy = true;
+      refreshUpdate().catch(() => {}).finally(() => { _updatePollBusy = false; });
+    }, 1500);
   }
   async function refreshUpdate(opts) {
+    let ctl = null, timer = null;
+    if (updatePending() && window.AbortController) {
+      ctl = new AbortController();
+      timer = setTimeout(() => ctl.abort(), 5000);
+    }
     try {
-      const j = await api("/api/update");
+      const j = await api("/api/update", ctl ? { signal: ctl.signal } : {});
+      if (timer) clearTimeout(timer);
       renderUpdate(j);
       return j;
     } catch (e) {
@@ -2301,9 +2339,13 @@
       if (j.reload_model) msg += " Caravan will reload the model.";
       if (!confirm(msg)) return;
       setUpdatePending(true);
+      // Show the busy state right away, before the server answers.
       $("btnUpdateNow").disabled = true;
       $("btnUpdateNow").classList.add("is-tuning");
       $("btnUpdateNow").textContent = "Updating…";
+      _updateWasBusy = true;
+      startUpdateStep("Updating…", 0, false);
+      paintUpdateBadge({ progress: { phase: "updating" } });
       try {
         const out = await api("/api/update", { method: "POST", body: JSON.stringify({ action: "apply" }) });
         renderUpdate(out);
@@ -3013,6 +3055,7 @@
   async function refreshStatus() {
     try {
       const j = await api("/api/status");
+      if (checkPageTag(j && j.page)) return;
       const restoreNotice = $("restoreNotice");
       if (restoreNotice) {
         const r = j.restore || {};

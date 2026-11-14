@@ -1,3 +1,21 @@
+## 2026-11-13: Day 26 — Pages reload themselves after an update
+
+Brenden saw no update animation. The 1st Mac's web log showed why: the
+browser tab was last loaded just before the 8:00 PM update, and pages
+never reloaded themselves, so the next updates ran the older page that
+had no step line. Every `/api/status` and `/api/update` answer now
+carries a short page tag (from the page file, not a version hash).
+When it changes, the page reloads: right away in the tab that started
+the update, and in other tabs (including another Mac's own page) once
+the chat box is empty and no reply or Auto-tune is running. A reload
+happens at most once per tag. **Updating…** and the step line now show
+the moment Update now is clicked, and a request with no answer after 5
+seconds shows "… restarting". Checked in a headless browser with three
+tabs: the starting tab reloaded and flashed Done, an idle tab
+reloaded, and a tab with text in the chat box waited until it was
+empty. This does not change `agent/`, `runtime/`, or the requirements
+files. No `day26` tag yet.
+
 ## 2026-11-13: Day 26 — "update needed" lines after this Mac updates itself
 
 When a new update was ready, the 1st Mac and 2nd Mac lines still said

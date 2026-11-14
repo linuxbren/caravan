@@ -710,6 +710,30 @@ class App:
 
 
 
+_PAGE_TAGS = {}
+
+
+def page_tag(path=None):
+    """Short tag for the page this server would send now (not a version hash).
+
+    An open page keeps the tag from its first answer. When a later answer
+    has a different tag, Caravan was updated underneath it, so the page
+    reloads itself (right away if the update was started there, otherwise
+    once nobody is typing or waiting on a reply).
+    """
+    path = Path(path) if path else Path(__file__).resolve().parent / "web" / "index.html"
+    try:
+        st = path.stat()
+        key = (str(path), st.st_size, st.st_mtime_ns)
+        if key not in _PAGE_TAGS:
+            import hashlib
+            _PAGE_TAGS.clear()
+            _PAGE_TAGS[key] = hashlib.sha256(b"caravan-page:" + path.read_bytes()).hexdigest()[:10]
+        return _PAGE_TAGS[key]
+    except OSError:
+        return None
+
+
 def make_handler(app: App):
     class H(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
@@ -1095,6 +1119,7 @@ def make_handler(app: App):
                 "split": split,
                 "active": active,
                 "uptime_s": round(time.time() - app.started, 1),
+                "page": page_tag(),
                 "ports": {"web": DEFAULT_PORT, "lead": app.mgr.lead_port,
                           "packer": (split or {}).get("peer") or app.mgr.packer_peer},
             })
@@ -1682,12 +1707,14 @@ def make_handler(app: App):
                 return self._json(200, {"show": False})
 
             def payload_of(res, progress=None):
-                return UC.public_status(
+                out = UC.public_status(
                     res, local=local, via_tailscale=via_ts, busy=busy,
                     packaged=packaged, check_daily=prefs["check_daily"],
                     installed=UC.installed_ref(repo) if packaged else None,
                     progress=progress if progress is not None else UC.resolve_progress(home, repo),
                 )
+                out["page"] = page_tag()
+                return out
 
             if post:
                 body = body if isinstance(body, dict) else {}
