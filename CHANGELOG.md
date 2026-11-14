@@ -53,6 +53,9 @@
   update available". "A November 13 update is ready." appears only
   when a newer version is ready. No change to `agent/`, `runtime/`,
   or the requirements files, so the model stays loaded.
+- `caravan bench --from-averages` prints a plain "No saved numbers"
+  line instead of empty bars, and prefers the last bench run for the
+  pair ("Last bench") over saved chat averages ("Saved").
 
 ## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
 

@@ -12,8 +12,11 @@ lines; `--ascii` uses plain '#' bars. By default that runs five
 short prompts and a long-prompt series at about 1k, 4k, and 8k
 tokens; `--short` or `--long` runs just one. Without `--yes` it shows
 which two it would compare and the exact command, and does not load a
-model. `--from-averages` draws the same kind of chart from
-already-saved chat averages. After a live run it puts the original
+model. `--from-averages` draws the same kind of chart without loading
+a model: from the last bench run for that pair, labeled "Last bench",
+or else from saved chat averages, labeled "Saved". If one side has no
+numbers, it prints "No saved numbers for the GGUF model yet - chat
+with it a bit, or run the bench." instead of empty bars. After a live run it puts the original
 model back. On a terminal, a small campfire shows the current step
 and elapsed time. See [Day 25](DAY25.md).
 

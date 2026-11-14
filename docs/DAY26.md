@@ -132,6 +132,13 @@ updating…", or "2nd Mac: off or can't be reached". The date of a
 newer version is shown only when one is ready, as "A November 13
 update is ready."
 
+`caravan bench --from-averages` no longer draws empty bars for a model
+with no numbers. It prints "No saved numbers for the GGUF model yet -
+chat with it a bit, or run the bench." instead. Each live bench run is
+saved for that GGUF and MLX pair, and `--from-averages` uses it first,
+labeled "Last bench", falling back to saved chat averages, labeled
+"Saved".
+
 This follow-up does not change `agent/`, `runtime/`, or the
 requirements files, so a `caravan update` from the previous Day 26
 pin keeps a loaded model running. The web page still restarts. No

@@ -8,6 +8,10 @@ only when a newer version is ready. This follow-up does not change
 from the previous Day 26 pin keeps a loaded model running. No `day26`
 tag yet.
 
+`caravan bench --from-averages` prints a plain "No saved numbers" line
+instead of empty bars, and uses the last bench run for the pair
+("Last bench") before saved chat averages ("Saved").
+
 ## 2026-11-13: Day 26 — Update the other Macs, and Update now over Tailscale
 
 **Update now** and `caravan update` on this Mac also update the other

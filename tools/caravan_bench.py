@@ -10,8 +10,10 @@ is not UTF-8, or with NO_COLOR, the bars are plain '#'. Subtle
 amber (GGUF) and green (MLX) color is used only on a terminal
 without NO_COLOR. `--details` (also `--text`) adds the same wording
 as the stats under each reply, and a note about the unique openings.
-`--from-averages` draws the same kind of chart from already-saved
-chat averages, without loading a model.
+`--from-averages` draws the same kind of chart without loading a model:
+from the last bench run for this pair ("Last bench") when there is
+one, otherwise from saved chat averages ("Saved"). A side with no
+numbers gets a plain line instead of empty bars.
 
 Does not invent numbers. Pass a plain name (for example
 `caravan bench "qwen2.5 coder 7b"`) or both `--gguf` and `--mlx` ids
@@ -65,6 +67,76 @@ from caravan_chart import decide_style, render_chart  # noqa: E402
 
 
 SPEED_STORE = Path("~/.caravan/speed_averages.json").expanduser()
+# Last live bench result per GGUF + MLX pair, next to the chat averages.
+LAST_BENCH_STORE = Path("~/.caravan/bench_last.json").expanduser()
+
+
+def _pair_key(gguf_id, mlx_id) -> str:
+    return f"{str(gguf_id or '').strip()}|{str(mlx_id or '').strip()}"
+
+
+def _clean_rows(rows) -> list:
+    out = []
+    for r in rows or []:
+        if isinstance(r, dict) and not r.get("skipped") and r.get("specs"):
+            item = {"label": r.get("label") or "", "specs": dict(r["specs"])}
+            if r.get("size") is not None:
+                item["size"] = r["size"]
+            out.append(item)
+    return out
+
+
+def load_last_bench(gguf_id, mlx_id, path=None) -> dict:
+    path = Path(path) if path else LAST_BENCH_STORE
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    entry = (data.get("pairs") or {}).get(_pair_key(gguf_id, mlx_id)) if isinstance(data, dict) else None
+    return entry if isinstance(entry, dict) else {}
+
+
+def save_last_bench(gguf_id, mlx_id, gguf_rows, mlx_rows, path=None, now=None) -> dict:
+    """Keep the newest numbers for each side; an empty side keeps its last numbers."""
+    path = Path(path) if path else LAST_BENCH_STORE
+    try:
+        data = json.loads(path.read_text())
+        if not isinstance(data, dict):
+            data = {}
+    except (OSError, ValueError):
+        data = {}
+    pairs = data.setdefault("pairs", {})
+    key = _pair_key(gguf_id, mlx_id)
+    entry = dict(pairs.get(key) or {})
+    g, m = _clean_rows(gguf_rows), _clean_rows(mlx_rows)
+    if not g and not m:
+        return entry
+    when = float(now if now is not None else time.time())
+    if g:
+        entry["gguf_rows"], entry["gguf_at"] = g, when
+    if m:
+        entry["mlx_rows"], entry["mlx_at"] = m, when
+    pairs[key] = entry
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, indent=2))
+        tmp.replace(path)
+    except OSError:
+        pass
+    return entry
+
+
+def _plain_day(ts) -> str:
+    try:
+        t = time.localtime(float(ts))
+    except (TypeError, ValueError):
+        return ""
+    return time.strftime("%B ", t) + str(t.tm_mday)
+
+
+def no_numbers_line(kind: str) -> str:
+    return f"No saved numbers for the {kind} model yet - chat with it a bit, or run the bench."
 
 
 def format_side(name: str, specs) -> str:
@@ -484,23 +556,56 @@ def steps_text(gguf_id: str, mlx_id: str, port: int = DEFAULT_PORT,
 
 def run_from_averages(gguf_id: str, mlx_id: str, *, gguf_name=None, mlx_name=None,
                       store=None, details=False, ascii=None, color=None,
-                      stream=None) -> list:
-    """Chart (and optional reply-stats lines) from already-saved averages."""
+                      stream=None, last_store=None) -> list:
+    """Chart from the last bench run for this pair, else saved chat averages.
+
+    Each side uses its last bench numbers when there are some ("Last
+    bench"), otherwise the saved chat average ("Saved"). A side with no
+    numbers gets a plain line instead of empty bars.
+    """
+    last = load_last_bench(gguf_id, mlx_id, path=last_store)
     g = averages_for(gguf_id, store=store)
     m = averages_for(mlx_id, store=store)
     gname = gguf_name or f"{gguf_id} (GGUF)"
     mname = mlx_name or f"{mlx_id} (MLX)"
-    g_rows = [{"label": "Saved", "specs": g}] if g else []
-    m_rows = [{"label": "Saved", "specs": m}] if m else []
-    chart = render_chart(
-        g_rows, m_rows, gguf_name=gname, mlx_name=mname,
-        ascii=ascii, color=color, stream=stream,
-    )
-    lines = chart.rstrip("\n").split("\n")
+    sources = []
+
+    def pick(kind, saved):
+        rows = _clean_rows(last.get(f"{kind.lower()}_rows"))
+        if rows:
+            day = _plain_day(last.get(f"{kind.lower()}_at"))
+            sources.append(f"{kind}: Last bench" + (f" ({day})" if day else ""))
+            return rows
+        if saved:
+            sources.append(f"{kind}: Saved chat average")
+            return [{"label": "Saved", "specs": saved}]
+        return []
+
+    g_rows = pick("GGUF", g)
+    m_rows = pick("MLX", m)
+    lines = []
+    if g_rows or m_rows:
+        chart = render_chart(
+            g_rows, m_rows, gguf_name=gname, mlx_name=mname,
+            ascii=ascii, color=color, stream=stream,
+        )
+        lines.extend(chart.rstrip("\n").split("\n"))
+        lines.append("")
+        lines.extend(sources)
+    if not g_rows:
+        lines.append(no_numbers_line("GGUF"))
+    if not m_rows:
+        lines.append(no_numbers_line("MLX"))
     if details:
         lines.append("")
-        lines.append(format_side(gname, g))
-        lines.append(format_side(mname, m))
+        if g_rows and not g:
+            lines.extend(format_series(gname, g_rows))
+        elif g_rows:
+            lines.append(format_side(gname, g))
+        if m_rows and not m:
+            lines.extend(format_series(mname, m_rows))
+        elif m_rows:
+            lines.append(format_side(mname, m))
     return lines
 
 
@@ -751,6 +856,8 @@ def main(argv=None, *, models=None):
     progress.stop()
     g_rows = result.get("gguf_rows") or []
     m_rows = result.get("mlx_rows") or []
+    if g_rows or m_rows:
+        save_last_bench(gid, mid, g_rows, m_rows)
     if g_rows or m_rows:
         chart = render_chart(
             g_rows, m_rows, gguf_name=gname, mlx_name=mname,

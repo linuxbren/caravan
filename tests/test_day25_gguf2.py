@@ -23,6 +23,10 @@ import kv_auto  # noqa: E402
 import web_settings as WS  # noqa: E402
 import web_speed as S  # noqa: E402
 import caravan_bench as B  # noqa: E402
+
+# Never touch the real ~/.caravan bench file from tests.
+_BENCH_TMP = tempfile.mkdtemp(prefix="caravan-bench-test-")
+B.LAST_BENCH_STORE = Path(_BENCH_TMP) / "bench_last.json"
 import caravan_models as M  # noqa: E402
 import caravan_progress as PR  # noqa: E402
 import caravan_chart as CH  # noqa: E402
@@ -384,7 +388,7 @@ class Bench(unittest.TestCase):
         lines = B.run_from_averages(
             "gguf/qwen", "mlx/qwen",
             gguf_name="Qwen (GGUF)", mlx_name="Qwen (MLX)", store=store,
-            ascii=True,
+            ascii=True, last_store=Path(tmp.name) / "none.json",
         )
         text = "\n".join(lines)
         self.assertIn("Qwen (GGUF)", text)
@@ -399,7 +403,7 @@ class Bench(unittest.TestCase):
         detailed = B.run_from_averages(
             "gguf/qwen", "mlx/qwen",
             gguf_name="Qwen (GGUF)", mlx_name="Qwen (MLX)", store=store,
-            details=True, ascii=True,
+            details=True, ascii=True, last_store=Path(tmp.name) / "none.json",
         )
         dtext = "\n".join(detailed)
         self.assertIn("Write 30 tok at 21.0 tok/s", dtext)

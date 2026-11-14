@@ -203,14 +203,12 @@ def render_chart(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX",
     g_title = gguf_name or "GGUF"
     m_title = mlx_name or "MLX"
     # Full names once, with the short labels used on the bars.
-    if not g_title.upper().startswith("GGUF"):
-        lines.append(f"GGUF  {g_title}")
-    else:
-        lines.append(g_title)
-    if not m_title.upper().startswith("MLX"):
-        lines.append(f"MLX   {m_title}")
-    else:
-        lines.append(m_title)
+    # A side with no numbers at all is left out, not drawn as empty bars.
+    show_g, show_m = bool(g_map), bool(m_map)
+    if show_g:
+        lines.append(g_title if g_title.upper().startswith("GGUF") else f"GGUF  {g_title}")
+    if show_m:
+        lines.append(m_title if m_title.upper().startswith("MLX") else f"MLX   {m_title}")
     lines.append("")
 
     # "Short  GGUF  " (5+2+4+2=13) + bar + "  " + value(6) + "  " + mark(8)
@@ -251,11 +249,10 @@ def render_chart(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX",
                 peak = max([v for v in (gv, mv) if v] or [1e-12])
             else:
                 peak = section_peak
-            for side, val, paint in (
-                ("GGUF", gv, AMBER),
-                ("MLX", mv, GREEN),
-            ):
-                size_cell = size if side == "GGUF" else ""
+            sides = [s for s in (("GGUF", gv, AMBER), ("MLX", mv, GREEN))
+                     if (s[0] == "GGUF" and show_g) or (s[0] == "MLX" and show_m)]
+            for n_side, (side, val, paint) in enumerate(sides):
+                size_cell = size if n_side == 0 else ""
                 prefix = f"{size_cell:<{size_w}}  {side:<{kind_w}}  "
                 if val is None:
                     line = prefix + (" " * bar_w) + f"  {'':>{val_w}}"
