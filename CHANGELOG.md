@@ -13,6 +13,18 @@
 - GGUF Auto-tune now also tries Guess-ahead when a smaller same-family
   helper is already on this Mac (one chat, not pinned), and keeps it only
   when it measures at least 3% better. Nothing is downloaded for you.
+- When the loaded model has a known small helper that is not on this
+  Mac, Settings shows one line under the model: "Download helper for
+  faster replies?" with Download and Not now. A GGUF model gets a GGUF
+  helper; a split MLX model gets its MLX helper. Download shows its
+  progress in that line and then puts Guess-ahead on Auto (Auto-tune
+  still keeps the helper only if replies get faster). Not now is
+  remembered for that model. Nothing downloads without your click, and
+  the line is hidden when the page is opened from another computer on
+  your network. `caravan bench` asks the same question (y/N) in a
+  terminal.
+- A GGUF helper must now be the same model generation as the main model
+  (for example Qwen2.5 with Qwen2.5), not only the same family.
 - The GGUF Prompt lookup chip says "on" or "off" (it no longer shows the
   MLX-only "adaptive" wording).
 - This increment does not change `agent/`, `runtime/`, or the

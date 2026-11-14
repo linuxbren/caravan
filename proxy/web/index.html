@@ -1055,6 +1055,10 @@
   .picker-status { color: var(--muted); margin: 6px 0; min-height: 1.2em; }
   .picker-jobs { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
   .picker-job { padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 6px; }
+  .helper-line { font-size: 13px; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .helper-line .bar { flex-basis: 100%; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+  .helper-line .bar > i { display: block; height: 100%; background: var(--accent); width: 0; }
+  .helper-line .j-sub { flex-basis: 100%; }
   .picker-job .bar { height: 4px; background: var(--bg3); border-radius: 2px; margin: 4px 0; overflow: hidden; }
   .picker-family-row { display: flex; gap: 8px; align-items: center; margin: 0 0 8px; font-size: .7rem; color: var(--muted); }
   .picker-family-row select { background: var(--bg3); color: var(--fg); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 4px; padding: 2px 6px; font: inherit; }
@@ -1733,6 +1737,7 @@
       <button class="ghost drawer-control" id="btnStop" title="Unload">Unload</button>
     </div>
     <div class="help" id="modelWarn" hidden></div>
+    <div class="helper-line" id="helperLine" role="status" aria-live="polite" hidden></div>
     <div class="optgrid" id="optWrap">
 <div class="optcard drawer-section">
       <h2 class="drawer-section-title"><span class="tip" title="Caravan learns which Optimizations help this model on your Minis.">Optimizations</span></h2>
@@ -4918,6 +4923,7 @@
   });
 
 </script>
+<script src="/helper_line.js"></script>
 <script src="/helpers.js"></script>
 <dialog id="loadNowDialog" aria-labelledby="loadNowTitle">
   <h3 id="loadNowTitle">Download finished</h3>

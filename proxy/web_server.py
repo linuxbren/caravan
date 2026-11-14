@@ -882,6 +882,8 @@ def make_handler(app: App):
                 return self._api_lan()
             if path == "/api/update":
                 return self._api_update()
+            if path == "/api/helper-offer":
+                return self._api_helper_offer()
             if path == "/api/helpers":
                 import web_helpers
                 return self._json(200, {"offer": web_helpers.offer(app.mgr.snapshot())})
@@ -1016,6 +1018,8 @@ def make_handler(app: App):
                 finally:
                     app.want_shutdown()
                 return
+            if path == "/api/helper-offer/answer":
+                return self._api_helper_offer(body=body)
             if path == "/api/helpers/answer":
                 import web_helpers
                 p = web_helpers.pairing(body.get("helper_id"))
@@ -1669,6 +1673,60 @@ def make_handler(app: App):
                         threading.Thread(target=_rebind, name="caravan-lan-rebind", daemon=True).start()
             return self._json(200, payload)
 
+
+        def _helper_gate(self):
+            """Helper downloads: this Mac or a verified Tailscale share only.
+            The plain-LAN view never sees the offer (same rule as updates)."""
+            import sys as _sys
+            from pathlib import Path as _Path
+            tools = str(_Path(__file__).resolve().parents[1] / "tools")
+            if tools not in _sys.path:
+                _sys.path.insert(0, tools)
+            import caravan_update_check as UC
+            if UC.is_local_owner(self):
+                return True
+            return UC.can_apply_from(self, inspect_info=self._update_inspect())[0]
+
+        def _api_helper_offer(self, body=None):
+            """Day 27 helper offer. GET ?model=<id>; POST {model, helper_id,
+            action: download|not_now}. Never downloads without a yes."""
+            import helper_offer as HO
+            from urllib.parse import parse_qs, urlparse
+            post = body is not None
+            if not self._helper_gate():
+                if post:
+                    return self._json(403, {"error": "Helper downloads are only offered on this Mac."})
+                return self._json(200, {"offer": None, "show": False, "lan": True})
+            snap = app.mgr.snapshot()
+            if post:
+                mid = (body or {}).get("model") or snap.get("model_id")
+            else:
+                mid = (parse_qs(urlparse(self.path).query).get("model") or [None])[0] or snap.get("model_id")
+            entry = catalog.get_model(mid) if mid else None
+            try:
+                jobs = web_picker.list_jobs()
+            except Exception:
+                jobs = []
+            offer = HO.offer_for(snap, entry, jobs=jobs)
+            if not post:
+                return self._json(200, {"offer": offer, "show": bool(offer)})
+            action = (body or {}).get("action")
+            if action not in ("download", "not_now"):
+                return self._json(400, {"error": "Unknown action"})
+            if action == "not_now":
+                HO.not_now(mid)
+                return self._json(200, {"ok": True, "remembered": True})
+            if not offer or offer.get("id") != (body or {}).get("helper_id"):
+                return self._json(409, {"error": "No helper to download for this model."})
+            if offer.get("kind") == "mlx":
+                try:
+                    import web_helpers
+                    web_helpers.answer(offer["id"], True)
+                except Exception:
+                    pass
+            if snap.get("model_id") == mid:
+                app.mgr.guess_ahead_auto()
+            return self._api_picker_download(body=HO.download_body(offer))
 
         def _update_inspect(self):
             hook = getattr(app, "update_inspect", None)

@@ -69,7 +69,8 @@
       paintHelperButton();
       wrote = true;
     }
-    if (offer && !offer.declined && shown !== offer.id) { shown = offer.id; show(); }
+    // Day 27: the one-line offer under the model (helper_line.js) replaces the pop-up.
+    if (offer && !offer.declined && shown !== offer.id && !window.caravanHelperLine) { shown = offer.id; show(); }
     return { changed: wrote || prevKey !== nextKey, wrote, offerKey: nextKey };
   }
 

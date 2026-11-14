@@ -1534,6 +1534,33 @@ class WorkerManager:
         except Exception as e:
             self._note(f"could not turn Self-tuning on for the adopted model: {e}")
 
+    def guess_ahead_auto(self) -> str:
+        """Day 27: after the user says yes to a helper download, put
+        Guess-ahead on Auto (unless they pinned On) on the page and in
+        last-model.json. Auto still decides by measurement."""
+        snap = self.snapshot()
+        page = dict(snap.get("page_settings") or {})
+        if page.get("guess_ahead") == "on":
+            return "on"
+        page["guess_ahead"] = "auto"
+        try:
+            self._set(page_settings=page)
+        except Exception:
+            pass
+        try:
+            from web_restore import Store
+            store = Store(self.state_dir / "last-model.json")
+            req = store.read()
+            if req and (not snap.get("model_id") or req.get("model_id") == snap.get("model_id")):
+                settings = dict(req.get("settings") or {})
+                if settings.get("guess_ahead") != "on":
+                    settings["guess_ahead"] = "auto"
+                    req["settings"] = settings
+                    store.write(req)
+        except Exception:
+            pass
+        return "auto"
+
     def reset_tuning(self) -> dict:
         """Clear saved winners, losses, and leftover Memory compression pins.
 

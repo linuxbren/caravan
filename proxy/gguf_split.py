@@ -495,6 +495,31 @@ def _family_id(*names) -> Optional[str]:
     return None
 
 
+_GENERATIONS = (
+    ("qwen3", r"qwen[-_ ]?3"),
+    ("qwen2.5", r"qwen[-_ ]?2\.5"),
+    ("qwen2", r"qwen[-_ ]?2(?![.\d])"),
+    ("llama3", r"llama[-_ ]?3"),
+    ("llama2", r"llama[-_ ]?2"),
+    ("gemma3", r"gemma[-_ ]?3"),
+    ("gemma2", r"gemma[-_ ]?2"),
+)
+
+
+def _generation(*names) -> Optional[str]:
+    """Model generation from a name ("qwen2.5", "qwen3", "llama3"...), or None.
+
+    Day 27: a helper must share the main model's tokenizer. Same family is
+    not enough (Qwen2.5 and Qwen3 are both "qwen"), so when both names say
+    their generation, the generations must match.
+    """
+    blob = " ".join(str(n) for n in names if n).lower()
+    for gen, pat in _GENERATIONS:
+        if re.search(pat, blob):
+            return gen
+    return None
+
+
 def find_gguf_draft(main_path, *, inventory=None) -> Optional[dict]:
     """A smaller same-family GGUF already on this Mac, or None.
 
@@ -513,6 +538,7 @@ def find_gguf_draft(main_path, *, inventory=None) -> Optional[dict]:
     if not main_fam:
         return None
     main_params = _param_b(main.name) or _param_b(main.stem)
+    main_gen = _generation(main.name)
     cands = list(inventory or [])
     if not cands:
         try:
@@ -549,6 +575,9 @@ def find_gguf_draft(main_path, *, inventory=None) -> Optional[dict]:
             continue
         fam = _family_id(p.name, p.stem, item.get("name"), item.get("id"), path)
         if fam != main_fam:
+            continue
+        gen = _generation(p.name)
+        if main_gen and gen and gen != main_gen:
             continue
         params = _param_b(p.name) or _param_b(p.stem) or _param_b(item.get("name") or "")
         if main_params and params is not None and not (params < main_params):

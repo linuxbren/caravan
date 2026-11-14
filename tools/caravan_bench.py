@@ -852,6 +852,7 @@ def main(argv=None, *, models=None):
             run_short=run_short, run_long=run_long,
         ))
         return 0
+    offer_helpers(args.port, [gid, mid])
     progress = Progress(quiet=bool(args.quiet))
     progress.start()
     try:
@@ -894,6 +895,80 @@ def main(argv=None, *, models=None):
     return 0
 
 
+def offer_helpers(port, model_ids, *, urlopen=_urlopen, ask=None, isatty=None,
+                  out=None, sleep=time.sleep, wait=1800) -> list:
+    """Day 27: ask (y/N) before downloading a missing Guess-ahead helper.
+
+    Never downloads without an explicit "y". Without a terminal it only
+    prints a note. "n" (or Enter) is remembered for that model and Caravan
+    does not ask again. Returns what happened per model, for tests.
+    """
+    out = out or sys.stdout
+    ask = ask or input
+    tty = sys.stdin.isatty() if isatty is None else bool(isatty)
+    from urllib.parse import quote
+    done = []
+    base = f"http://127.0.0.1:{int(port)}"
+    for mid in [m for m in model_ids if m]:
+        try:
+            data = urlopen(f"{base}/api/helper-offer?model={quote(mid, safe='')}", timeout=10) or {}
+        except Exception:
+            continue
+        offer = data.get("offer")
+        if not offer:
+            continue
+        size = offer.get("size_mb")
+        size_txt = (f" ({size / 1000:.1f} GB)" if size and size >= 1000
+                    else (f" ({size} MB)" if size else ""))
+        name = str(mid).split("/")[-1]
+        if not tty:
+            out.write(f"A helper{size_txt} can make {name} reply faster. "
+                      "Run caravan bench in a terminal to be asked, or use the web page.\n")
+            done.append((mid, "no-terminal"))
+            continue
+        try:
+            reply = str(ask(f"{name}: Download helper for faster replies?{size_txt} [y/N] ") or "")
+        except (EOFError, KeyboardInterrupt):
+            reply = ""
+            out.write("\n")
+        body = {"model": mid, "helper_id": offer.get("id")}
+        if reply.strip().lower() not in ("y", "yes"):
+            try:
+                urlopen(f"{base}/api/helper-offer/answer",
+                        data=json.dumps(dict(body, action="not_now")).encode(), timeout=10)
+            except Exception:
+                pass
+            out.write("Okay. Caravan will not ask again for this model.\n")
+            done.append((mid, "not_now"))
+            continue
+        try:
+            r = urlopen(f"{base}/api/helper-offer/answer",
+                        data=json.dumps(dict(body, action="download")).encode(), timeout=60) or {}
+        except Exception as e:
+            out.write(f"Could not start the helper download: {e}\n")
+            done.append((mid, "error"))
+            continue
+        job = r.get("job") or {}
+        status_txt = job.get("status") or "queued"
+        t0 = time.time()
+        while job.get("id") and status_txt in ("queued", "running", "cancelling") and time.time() - t0 < wait:
+            sleep(2)
+            try:
+                job = urlopen(f"{base}/api/picker/jobs/{job['id']}", timeout=10) or job
+            except Exception:
+                pass
+            status_txt = job.get("status") or status_txt
+            p = next(iter((job.get("progress") or {}).values()), {}) or {}
+            out.write(f"\rDownloading helper… {p.get('pct') or 0}%   ")
+            out.flush()
+        if status_txt == "done":
+            out.write("\rHelper ready. Guess-ahead is on Auto; Auto-tune keeps it only if it is faster.\n")
+        else:
+            out.write(f"\rHelper download did not finish ({status_txt}).\n")
+        done.append((mid, status_txt))
+    return done
+
+
 def _main_speedups(args, gid, mid, gname, mname) -> int:
     """caravan bench --speedups: Off / Prompt lookup / Guess-ahead / Auto."""
     import caravan_speedups as SU
@@ -927,6 +1002,7 @@ def _main_speedups(args, gid, mid, gname, mname) -> int:
             f"Run: caravan bench {q}--speedups{only}{(' ' + flags) if flags else ''} --yes\n"
         )
         return 0
+    offer_helpers(args.port, [m for k, m in (("gguf", gid), ("mlx", mid)) if k in sides])
     progress = Progress(quiet=bool(args.quiet))
     progress.start()
     try:
