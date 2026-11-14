@@ -155,7 +155,11 @@ After lines Auto-tune uses are filled. Auto-tune also compares 16-bit
 and 8-bit memory compression and scores how fast the model reads, how
 soon the first token arrives, and how fast it writes. To compare a GGUF
 model with its MLX counterpart, see `caravan models` and
-`caravan bench` in [Day 25](DAY25.md). Auto-tune uses the same five
+`caravan bench` in [Day 25](DAY25.md). In the bench chart a shorter
+First token bar is a sooner reply. Each live bench run is saved, and
+`caravan bench --from-averages` shows it as "Last bench" (or saved
+chat averages as "Saved"); with no numbers yet it says so instead of
+drawing empty bars. Auto-tune uses the same five
 short prompts plus one long prompt of about 2k tokens, and scores
 include long-prompt read speed so a setting that hurts reading is
 not picked.
@@ -196,30 +200,44 @@ Settings has an **Updates** section. **Check for updates daily** is on
 by default: Caravan looks once a day, and shortly after it starts,
 whether a newer version is published. The check does not download the
 update. **Check now** runs a check right away, and
-`caravan update --check` does the same in Terminal.
+`caravan update --check` does the same in Terminal. A new version can
+take about 5 minutes to show up after it is published, because GitHub
+keeps a short copy of the published version file.
 
 When a newer version is ready, an **Update available** badge appears
-in the chat page header. The Updates section shows the version on this
-Mac and the newer one in plain dates, what's new when that is
-available, and **Caravan will reload the model** when that is
-needed. **Update now** runs the same update as
-`caravan update`. A short "Updating…" line with the campfire flicker
-shows progress; the page comes back and says Done, or shows the error
-and that the previous version is still running. The button is off
-during a chat reply or Auto-tune.
+in the chat page header. The Updates section stays short: **Check
+now** next to the title, the daily switch, What's new (only when an
+update is ready), and one line per Mac — "1st Mac: current",
+"2nd Mac: update needed", or "2nd Mac: failed". Each line says where
+that Mac is now, not how the last update went. **Update now** appears
+only when an update is ready, and **Try again** only when a Mac
+failed. A failed Mac has one short line, such as "On the 2nd Mac, run
+caravan update in Terminal.", and a small Details toggle. Update now
+says **Caravan will reload the model** only when the parts that run it
+changed.
+
+**Update now** runs the same update as `caravan update`. On the 1st
+Mac it also updates the other Macs Caravan already knows about (the
+2nd Mac, 3rd Mac, and so on), one at a time, then this Mac. If a Mac
+is off or its update doesn't finish, this Mac still updates and that
+Mac shows as failed. The button is off during a chat reply or
+Auto-tune.
+
+As soon as you click it, the button reads **Updating…** with the same
+campfire flicker as Auto-tune's Tuning…, each Mac's line shows
+"updating…", and one short line counts up, such as "Updating the 2nd
+Mac… 0:42". While this Mac restarts, the line reads "1st Mac…
+restarting". When Caravan is back, the page reloads itself and
+flashes "Done.". Other open Caravan tabs, including another Mac's own
+page, reload too once nobody is typing in the chat box or waiting on a
+reply, so the new page is always the one running.
 
 **Update now** is shown when you open Caravan on this Mac itself, and
-when you open it through this Mac's Tailscale share. On the local
-network there is no login, so the page shows no Updates section and no
-Update available badge; run `caravan update` in Terminal on this Mac.
-**Update now** and
-`caravan update` on this Mac also update the other Macs Caravan
-already knows about (the 2nd Mac, 3rd Mac, and so on). Those Macs are
-updated first, then this Mac. If a Mac is off or the update doesn't
-finish, this Mac still updates. Each Mac has one line: current, update
-available, or failed. **Try again** appears only when a Mac failed, and
-a failed Mac also says to run `caravan update` on that Mac. The daily
-check also shows when another Mac is on an older version.
+when you open it through this Mac's Tailscale share (not a public
+Funnel address). On the local network there is no login, so the page
+shows no Updates section and no Update available badge, and the page
+refuses an update request from there; run `caravan update` in
+Terminal on this Mac.
 
 The browser has no login. Fresh installs keep the page only on this Mac.
 You can turn on **Open on my local network** in Settings or run

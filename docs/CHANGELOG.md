@@ -86,6 +86,9 @@
   as soon as Caravan is back; other tabs (on this Mac or another one)
   reload once nobody is typing or waiting on a reply. Update now shows
   **Updating…** the moment it is clicked.
+- A newly published version can take about 5 minutes to show up in
+  Check now, because GitHub keeps a short copy of the published version
+  file. Documented in the install, browser, and remote-access guides.
 
 ## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
 

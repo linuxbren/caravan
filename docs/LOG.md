@@ -1,3 +1,15 @@
+## 2026-11-13: Day 26 — Documentation pass
+
+Day 26 is written up in one place: [DAY26](DAY26.md) opens with an "At a
+glance" list, and the install, browser, remote-access and README guides
+describe the Updates card, Update now on this Mac and over Tailscale (not
+the local network or Funnel), the 1st Mac updating every Mac, the
+campfire Updating… line, the page reloading itself, saved bench results,
+and the roughly 5-minute delay before a new version shows up. The
+roadmap lists Day 26 under Available now and adds Day 27 candidates.
+Docs only: this does not change `agent/`, `runtime/`, or the requirements
+files. No `day26` tag yet.
+
 ## 2026-11-13: Day 26 — The page reloads after any update
 
 The page did not reload after the 24b9986 test update. The page tag
@@ -14,7 +26,7 @@ does not change `agent/`, `runtime/`, or the requirements files. No
 
 ## 2026-11-13: Day 26 — Pages reload themselves after an update
 
-Brenden saw no update animation. The 1st Mac's web log showed why: the
+The update animation did not show up. The 1st Mac's web log showed why: the
 browser tab was last loaded just before the 8:00 PM update, and pages
 never reloaded themselves, so the next updates ran the older page that
 had no step line. Every `/api/status` and `/api/update` answer now

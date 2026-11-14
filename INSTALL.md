@@ -36,7 +36,7 @@ to install it. Setup keeps your existing models and settings.
 | `caravan doctor` | Shows detailed checks when something goes wrong |
 | `caravan update` | Updates Caravan and brings the page back. `caravan update --check` only checks |
 | `caravan models` | Lists downloaded models, with a friendly name, GGUF or MLX, and the id to copy. Marks the currently loaded one |
-| `caravan bench` | Compare a GGUF model to its MLX counterpart by a plain name or by ids. Default: five short prompts and a long-prompt series (~1k, ~4k, ~8k); `--short` or `--long` for just one. Prints a compact chart of reading, writing, and first-token speed; `--details` adds the reply-stats lines; `--ascii` uses plain '#' bars. Without `--yes` it shows the pair and the exact command. After a live run it puts the original model back. On a terminal, a small campfire shows the current step and elapsed time (`--quiet` turns it off). Run `caravan bench --help` for details |
+| `caravan bench` | Compare a GGUF model to its MLX counterpart by a plain name or by ids. Default: five short prompts and a long-prompt series (~1k, ~4k, ~8k); `--short` or `--long` for just one. Prints a compact chart of reading, writing, and first-token speed; `--details` adds the reply-stats lines; `--ascii` uses plain '#' bars. A shorter First token bar is a sooner reply. Each live run is saved; `--from-averages` shows the last run ("Last bench") or saved chat averages ("Saved"), and says so when there are no numbers yet. Without `--yes` it shows the pair and the exact command. After a live run it puts the original model back. On a terminal, a small campfire shows the current step and elapsed time (`--quiet` turns it off). Run `caravan bench --help` for details |
 
 Use **Unload** in the browser to free the model's memory before stopping.
 After restarting your Mac, unlock it and log in. Caravan starts and brings
@@ -116,12 +116,16 @@ update also covers the other Macs Caravan already knows about (the
 2nd Mac, 3rd Mac, and so on). Those Macs are updated first. If one is
 off or the update doesn't finish, this Mac still updates, Settings
 shows that Mac as failed with **Try again**, or you can run
-`caravan update` on that Mac.
+`caravan update` on that Mac. While it runs, **Updating…** and a short
+step line with the elapsed time show progress; when Caravan is back,
+the page reloads itself and flashes "Done.". A newly published version
+can take about 5 minutes to show up in a check, because GitHub keeps a
+short copy of the published version file.
 
 Do not update during a chat. The page comes back on its own. If the code that
 runs the model changed, the last model is reloaded and Caravan says so
-("Caravan will reload the model"); otherwise it says "Your model stays
-loaded." Previous source files are backed up; models and settings stay. If an update
+("Caravan will reload the model"); otherwise `caravan update` says
+"Your model stays loaded." Previous source files are backed up; models and settings stay. If an update
 fails, Caravan goes back to the previous version, starts it, and tells you.
 
 ## Remove Caravan safely

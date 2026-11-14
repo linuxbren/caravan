@@ -26,29 +26,43 @@ and the daily logs, not mixed into current setup instructions.
 - Simple Mac bootstrap, private Python, locked binary dependency versions,
   doctor, safe per-user commands and prepared checksummed source packages.
   This is not a signed/notarized consumer application.
+- **Day 26:** download progress under the model you clicked; `caravan bench`
+  First token bars where shorter is sooner, saved bench results and
+  `--from-averages` ("Last bench" or "Saved"); GGUF Prompt lookup and
+  Guess-ahead (Auto, Off, On).
+- **Day 26 updates:** a daily update check, an Update available badge,
+  Check now and `caravan update --check`; Update now on this Mac and over
+  Tailscale (refused on the local network and on Funnel, and hidden on the
+  local network); the 1st Mac updates every other Mac first, then itself;
+  a short Updates card with one line per Mac and Try again; a campfire
+  Updating… button with a step line; and pages that reload themselves after
+  an update. A new version can take about 5 minutes to appear. See
+  [DAY26](DAY26.md).
 
-## Current development order
+## Day 27 candidates
 
-1. **Day 22 — independent GGUF storage and loading.** Each Mac should download
-   and load only its own assigned tensors, including small tensors. Do not
-   present incomplete GGUF files as ordinary standalone models. Experimental
-   sharding/loader work is not a bundled runtime or a new performance claim.
-2. **Day 23 — guess-ahead and speed improvements.** Test prompt lookup with an
-   acceptance-rate readout, matching-model multi-token prediction and other
-   acceleration ideas. Compare realistic prompts as well as favorable cases;
-   keep an ordinary baseline and reject regressions.
-3. **Day 24 — safe cleanup, repeated runs and model profiles.** Protect active
-   files/services, obtain explicit per-file cleanup approval, repeat matching
-   speed runs, and save settings separately for each model. Use identical
-   prompts/models, report medians and include prompt-reading time.
-4. **Day 25 — terminal UI and remaining packaging work.** A friendly terminal
-   interface, automatic trusted-Mac onboarding, clean-account/FileVault proof,
-   supported-macOS wheel checks, transactional update/rollback and a signed,
-   notarized Mac package/updater. Signing requires the publisher's Apple
-   Developer ID and secure signing workflow.
+1. **Measured Guess-ahead speed-ups.** Try Guess-ahead and Prompt lookup on
+   realistic chats with a hit-rate readout (how many guessed words were
+   kept), keep an ordinary baseline, and turn on only measured winners.
+2. **GGUF closer to MLX.** Narrow the reading, writing and first-token gap
+   between a GGUF model and its MLX counterpart, measured with
+   `caravan bench`.
+3. **A beginner switch for Advanced.** Hide the tuning rows behind one
+   simple switch so a new user sees only what they need.
+4. **Vision and voice.** Image input for models that support it, and
+   listening first, following [VOICE](VOICE.md).
+5. **Terminal UI.** A friendly terminal interface for chat, status and
+   updates.
+6. **Fresh install and FileVault.** Prove a clean account, a fresh install,
+   and a FileVault reboot end to end.
+7. **Security review.** An independent look at pairing, the browser page,
+   the Tailscale share and the update path.
+
+Earlier development-order items (Days 22–25) are kept in
+[roadmap history](history/ROADMAP-LAB.md) and the daily logs.
 
 Documentation, install instructions, package/source pins and deployment notes
-are maintained **every development day**, not deferred to Day 25. Follow
+are maintained **every development day**. Follow
 [the daily checklist](RELEASES.md). Change priorities when a newly observed
 correctness or safety problem needs attention.
 

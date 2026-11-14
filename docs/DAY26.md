@@ -1,9 +1,40 @@
-# Day 26 — Download progress under the model, a clearer First-token chart, GGUF speed-ups, and Voice design notes
+# Day 26 — Updates from the page, download progress under the model, a clearer First-token chart, and GGUF speed-ups
 
-Day 26 is in progress (Nov 12–13 2026, America/Chicago). There is no
-`day26` tag yet; that waits until Brenden has tried the work. Day 25
-remains tagged (`day25-2026-11-12`). The 1st Mac and 2nd Mac are not
-changed by this work: Brenden updates those Macs with `caravan update`.
+Day 26 ran Nov 12–13 2026 (America/Chicago). There is no `day26` tag
+yet; it waits until the work has been tried on real Macs. Day 25
+remains tagged (`day25-2026-11-12`).
+
+## At a glance
+
+- **Download progress under the model you clicked** in the Models list.
+- **First token bars follow the seconds** in `caravan bench`: a shorter
+  bar is a sooner reply.
+- **GGUF Prompt lookup and Guess-ahead**, each Auto, Off, or On under
+  Advanced.
+- **Saved bench results**: each live `caravan bench` run is saved, and
+  `--from-averages` shows "Last bench" or "Saved", or says there are no
+  numbers yet.
+- **Daily update check**, an **Update available** badge, **Check now**
+  in Settings, and `caravan update --check` in Terminal.
+- **Update now** on this Mac and over Tailscale. Refused on the local
+  network and on a public Funnel address; the local network shows no
+  Updates section at all.
+- **The 1st Mac updates every Mac**: the other Macs first, then itself.
+  The command sent to the other Macs was fixed so it really runs there.
+- **A short Updates card**: one line per Mac (current, update needed,
+  failed, updating…), Update now only when an update is ready, Try
+  again only when a Mac failed.
+- **Campfire Updating…** button, a step line with elapsed time, and
+  "restarting" while this Mac comes back.
+- **The page reloads itself after an update**, in every open tab once
+  nobody is typing or waiting on a reply.
+- A newly published version can take **about 5 minutes** to show up,
+  because GitHub keeps a short copy of the published version file.
+- **Voice design notes** (no listening code yet).
+
+Docs-only and page-only follow-ups do not change `agent/`, `runtime/`,
+or the requirements files, so `caravan update` keeps a loaded model
+running.
 
 This first follow-up does not change `agent/`, `runtime/`, or the
 requirements files, so a `caravan update` from the Day 25 pin keeps a
@@ -160,6 +191,12 @@ step line show the moment Update now is clicked, and if the page does
 not answer for 5 seconds the line reads "… restarting".
 Any update counts, even one that leaves the page itself unchanged.
 
+A newly published version can take about 5 minutes to show up in a
+check. GitHub keeps a short copy (up to 5 minutes) of the published
+version file, and `caravan update` reads its install script the same
+way, so Caravan waits for that copy to refresh rather than starting
+an update that would install the previous version.
+
 Fixed: the first try at updating the other Macs never ran the update
 there. The command sent to the 2nd Mac started with
 `CARAVAN_UPDATE_LOCAL=1 if …`, which is a syntax error in the Mac's
@@ -181,12 +218,12 @@ requirements files, so a `caravan update` from the previous Day 26
 pin keeps a loaded model running. The web page still restarts. No
 `day26` tag yet.
 
-## What is still ahead (same Day 26)
+## What is still ahead
 
-- **Voice:** build listening first, following [VOICE](VOICE.md), when
-  Brenden is ready to try it.
-- Later: vision and voice models, a security review, FileVault and
-  separate-account testing, and more than two Macs.
+Day 27 candidates are listed in the [roadmap](ROADMAP.md): measured
+Guess-ahead speed-ups with a hit-rate readout, GGUF closer to MLX, a
+beginner switch for Advanced, vision and voice, a terminal UI,
+fresh-install and FileVault testing, and a security review.
 
 ## Tests
 

@@ -36,6 +36,13 @@ is already signed in. Only devices on your Tailscale network can reach it.
 uninstall remove only Caravan's share. Details are in
 [the developer guide](DEVELOPMENT.md#open-from-other-devices-tailscale).
 
+Through the Tailscale share, Settings also shows **Updates**, and
+**Update now** works the same as on this Mac: it updates the other
+Macs first, then this Mac, and the page reloads itself when Caravan is
+back. Caravan checks that the share is on and that the address is a
+live Tailscale address for this Mac; a public Funnel address is
+refused.
+
 ## Open on your local network
 
 In addition to Tailscale, you can open the page from other devices on the
@@ -54,7 +61,9 @@ address.
 `caravan lan off` and uninstall turn it off, and the page goes back to
 this Mac only; the Tailscale share is unchanged. Turning it on or off
 does not unload a model that is already loaded, and the open page stays
-up. This never opens
+up. Over the local network the page has no Updates section and refuses
+update requests, because there is no login; run `caravan update` in
+Terminal on this Mac. This never opens
 the page to the public internet. Your Mac may ask whether to allow
 incoming connections; that is expected.
 
