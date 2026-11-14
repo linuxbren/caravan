@@ -1771,6 +1771,18 @@ def make_handler(app: App):
                     return self._json(400, {"error": "Send action check, set, apply, or retry."})
             if result is None:
                 result = UC.load_cache(home) or {}
+                mine_now = UC.installed_ref(repo) if packaged else None
+                if (mine_now and result.get("installed") and result.get("installed") != mine_now
+                        and prefs["check_daily"]):
+                    # The saved check is from before this Mac's own update:
+                    # its Mac lines and "newer" are stale, so check again once.
+                    try:
+                        result = UC.check(
+                            home, repo, force=False, opener=opener, nodes=nodes,
+                            ssh_runner=ssh_runner,
+                        )
+                    except Exception:
+                        pass
                 result = dict(result)
                 result["check_daily"] = prefs["check_daily"]
                 result["helper"] = UC.has_helper(home, nodes=nodes)

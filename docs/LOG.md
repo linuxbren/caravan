@@ -1,3 +1,21 @@
+## 2026-11-13: Day 26 — "update needed" lines after this Mac updates itself
+
+When a new update was ready, the 1st Mac and 2nd Mac lines still said
+"current". The cause was the saved check. The 1st Mac had checked on
+8e77bc9 and found 6a1c6db, then updated both Macs to 6a1c6db. Back on
+the new version, the page read the check from before the update:
+"newer" was still true, so What's new and Update now showed, but the
+Mac lines came from the finished run, so they said "current". The
+fixed page compares against the version that is installed now, and the
+first time it opens on a new version it checks again (the published
+version and each Mac's version). Every Mac not on the newest version
+reads "update needed". Versions are compared as the source commit on
+both sides (the published packaging-version and each Mac's
+.caravan-package), so the two always match up. The Updates section no
+longer says "Your model stays loaded" (`caravan update` still prints
+it). This does not change `agent/`, `runtime/`, or the requirements
+files. No `day26` tag yet.
+
 ## 2026-11-13: Day 26 — Update lines show where each Mac is now
 
 After Check now, the page said "This Mac is updated", "some other Macs

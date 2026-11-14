@@ -2299,7 +2299,6 @@
       let msg = "Update now? The page will be back in a few seconds.";
       if (j.macs && j.macs.some((m) => !m.mine)) msg += " The other Macs are updated first.";
       if (j.reload_model) msg += " Caravan will reload the model.";
-      else if (j.reload_model === false) msg += " Your model stays loaded.";
       if (!confirm(msg)) return;
       setUpdatePending(true);
       $("btnUpdateNow").disabled = true;

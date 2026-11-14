@@ -201,8 +201,8 @@ update. **Check now** runs a check right away, and
 When a newer version is ready, an **Update available** badge appears
 in the chat page header. The Updates section shows the version on this
 Mac and the newer one in plain dates, what's new when that is
-available, and whether **Your model stays loaded** or **Caravan will
-reload the model**. **Update now** runs the same update as
+available, and **Caravan will reload the model** when that is
+needed. **Update now** runs the same update as
 `caravan update`. A short "Updating…" line with the campfire flicker
 shows progress; the page comes back and says Done, or shows the error
 and that the previous version is still running. The button is off

@@ -565,7 +565,7 @@ def local_status_row(result, *, newer, peers=0):
     """This Mac's line, in the same format as the other Macs."""
     label = "1st Mac" if peers else "My Mac"
     if newer:
-        status = "update available"
+        status = "update needed"
     elif result.get("available") or (result.get("checked_at") and not result.get("error")):
         status = "current"
     else:
@@ -593,7 +593,7 @@ def _current_rows(result, progress, *, newer, packaged=True):
     from that run is kept only when it is about the version that is still
     the newest one: a failure stays "failed", a success reads "current".
     Once a newer version is found, every Mac not on it reads
-    "update available". "done" is never a row status; the page flashes
+    "update needed". "done" is never a row status; the page flashes
     Done once instead.
     """
     phase = (progress or {}).get("phase") if progress else None
@@ -608,7 +608,7 @@ def _current_rows(result, progress, *, newer, packaged=True):
                 m["status"] = "current"
                 m["behind"] = False
             elif m.get("phase") in ("waiting", "behind"):
-                m["status"] = "update available"
+                m["status"] = "update needed"
             rows.append(m)
         return rows
     peers = [dict(m) for m in (result.get("macs") or []) if not m.get("mine")]
@@ -620,7 +620,7 @@ def _current_rows(result, progress, *, newer, packaged=True):
             m["help"] = []
             m["behind"] = False
         elif m.get("phase") == "behind" or m.get("behind"):
-            m["status"] = "update available"
+            m["status"] = "update needed"
             m["behind"] = True
             m["can_retry"] = False
         elif m.get("phase") in ("done", "current"):
@@ -735,7 +735,7 @@ def public_status(
         "available_label": available_label,
         "changes": list(result.get("changes") or []),
         "reload_model": result.get("reload_model"),
-        "keep_model_text": keep_model_text(result.get("reload_model")),
+        "keep_model_text": None,  # not shown in the page
         "helper": bool(result.get("helper") or peer_rows),
         "helper_text": HELPER if (result.get("helper") or peer_rows) and needs else None,
         "local": bool(local),

@@ -251,7 +251,7 @@ class CheckPeersAndFanOutTests(unittest.TestCase):
         rows = P.check_peers(peers, NEW, runner=runner)
         self.assertEqual(rows[0]["phase"], "behind")
         self.assertTrue(rows[0]["behind"])
-        self.assertEqual(rows[0]["status"], "update available")
+        self.assertEqual(rows[0]["status"], "update needed")
         self.assertEqual(rows[0]["help"], [])
         self.assertFalse(rows[0]["can_retry"])
         self.assertEqual(rows[1]["status"], "failed")
@@ -383,7 +383,7 @@ class CheckPeersAndFanOutTests(unittest.TestCase):
             self.assertTrue(payload["peers_behind"])
             self.assertTrue(payload["can_apply"])
             lines = [(m["label"], m["status"]) for m in payload["macs"]]
-            self.assertEqual(lines, [("1st Mac", "current"), ("2nd Mac", "update available")])
+            self.assertEqual(lines, [("1st Mac", "current"), ("2nd Mac", "update needed")])
             self.assertNotIn(NEW, json.dumps(payload))
             self.assertNotIn(OLD, json.dumps(payload))
             self.assertEqual(payload["macs"][1]["help"], [])
@@ -565,7 +565,7 @@ class MinimalStatusTests(unittest.TestCase):
         result = {"newer": True, "available": NEW, "installed": OLD, "checked_at": 1,
                   "macs": [P._row(peer(1), phase="behind", can_retry=False)]}
         out = UC.public_status(result, packaged=True, local=True, progress=old_run)
-        self.assertEqual([m["status"] for m in out["macs"]], ["update available", "update available"])
+        self.assertEqual([m["status"] for m in out["macs"]], ["update needed", "update needed"])
         self.assertFalse(out["can_retry"])
 
 
@@ -585,8 +585,8 @@ class CurrentRealityTests(unittest.TestCase):
             p["behind"] = True
         out = UC.public_status(result, packaged=True, local=True, progress=run, installed=NEW)
         self.assertEqual([(m["label"], m["status"]) for m in out["macs"]],
-                         [("1st Mac", "update available"), ("2nd Mac", "update available"),
-                          ("3rd Mac", "update available")])
+                         [("1st Mac", "update needed"), ("2nd Mac", "update needed"),
+                          ("3rd Mac", "update needed")])
         self.assertNotIn("done", json.dumps([m["status"] for m in out["macs"]]))
         self.assertTrue(out["can_apply"])
         self.assertFalse(out["can_retry"])
@@ -602,7 +602,7 @@ class CurrentRealityTests(unittest.TestCase):
                       "macs": [dict(P._row(peer(1), phase="behind", can_retry=False), behind=True)]}
             UC.save_cache(home, result)
             out = UC.public_status(result, packaged=True, local=True, progress=run, installed=NEW)
-            self.assertEqual([m["status"] for m in out["macs"]], ["update available", "update available"])
+            self.assertEqual([m["status"] for m in out["macs"]], ["update needed", "update needed"])
             self.assertFalse(out["can_retry"])
             self.assertEqual(out["macs"][1]["help"], [])
             self.assertEqual(UC.failed_mac_ids(home), [])
@@ -635,6 +635,113 @@ class CurrentRealityTests(unittest.TestCase):
         self.assertNotIn("Some other Macs need attention", page)
 
 
+class StaleCheckAfterOwnUpdateTests(unittest.TestCase):
+    """Brenden's 1st Mac on Nov 13: the saved check was from before its own update.
+
+    Real values from that Mac: it had checked on 8e77bc9 and seen 6a1c6db,
+    updated both Macs to 6a1c6db (run marked done), and then the page read
+    the old check: "newer" was still true (What's new, Update now) while
+    the Mac lines came from the finished run and said "current".
+    """
+
+    BEFORE = "8e77bc9958bbb16c84598b0e9ebab2238f1a7ed3"
+    NOW = "6a1c6db9d2089ca62bae77170406e4f20fb75606"
+    LATEST = "1b8bd421371485655d8d319e2fea7305b265b8de"
+    LATEST_SHA = "4c43b83e5281675b8464d05140daf0d5cb250bc8d77e1f06d801879d97356e07"
+    NOW_SHA = "69dbf0630bdd69bf77acff71add818430bba667aba6580148e245f9afbbad6c4"
+    PEER_ID = "paired_dcbb9f1b9cd8cab4dcfa61388dffe4ec"
+
+    def _home(self, tmp):
+        home = Path(tmp) / "home"
+        repo = write_package(Path(tmp) / "repo", ref=self.NOW)
+        node = dict(peer(1), id=self.PEER_ID)
+        UC.save_cache(home, {
+            "installed": self.BEFORE, "available": self.NOW, "newer": True,
+            "available_label": "November 13", "current_label": "an earlier November 13 version",
+            "changes": ["Day 26: Update progress in the page"], "reload_model": False,
+            "checked_at": 1794621000.0, "error": None, "check_daily": True, "helper": True,
+            "macs": [dict(P._row(node, phase="behind", can_retry=False), behind=True)],
+            "peers_behind": True,
+        })
+        UC.save_progress(home, {
+            "phase": "done", "expected": self.NOW, "old": self.BEFORE, "new": self.NOW,
+            "message": "Done.", "started_at": 1794621565.3, "finished_at": 1794621606.7,
+            "macs": [P.local_row(phase="done"), P._row(node, phase="done", can_retry=False)],
+        })
+        return home, repo, node
+
+    def _opener(self, published, published_sha):
+        from test_day26_update_check import FakeOpener, compare_payload, commit_payload
+        return FakeOpener({
+            "packaging-version": f"{published} {published_sha}\n",
+            "compare/": compare_payload(["Day 26: Update lines show where each Mac is now"], ["proxy/web/index.html"]),
+            f"commits/{self.NOW}": commit_payload("2026-11-13T19:59:00Z"),
+            f"commits/{published}": commit_payload("2026-11-14T02:06:00Z"),
+        })
+
+    def _serve(self, home, repo, node, opener, ssh):
+        from test_day26_update_check import WorkerManager, web_server
+        from http.server import ThreadingHTTPServer
+        import threading
+        state = tempfile.TemporaryDirectory()
+        self.addCleanup(state.cleanup)
+        app = web_server.App(WorkerManager(
+            lead_port=8194, packer_peer="127.0.0.1:5560", packer_ssh="nobody@127.0.0.1",
+            state_dir=Path(state.name), repo=ROOT))
+        app.nodes = lambda: {"nodes": []}
+        app.configured_nodes = lambda: [node]
+        app.update_home, app.update_repo = home, repo
+        app.update_opener, app.update_ssh = opener, ssh
+        app.update_inspect = lambda: {}
+
+        class _S(ThreadingHTTPServer):
+            def server_bind(self):
+                import socketserver
+                socketserver.TCPServer.server_bind(self)
+                self.server_name, self.server_port = self.server_address[:2]
+        httpd = _S(("127.0.0.1", 0), web_server.make_handler(app))
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+        with urlopen(f"http://127.0.0.1:{httpd.server_address[1]}/api/update", timeout=10) as r:
+            return json.loads(r.read().decode())
+
+    def test_newer_release_after_own_update_marks_every_mac_update_needed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home, repo, node = self._home(tmp)
+            ssh = ScriptedSSH({node["ssh"]: {"ref": self.NOW}})  # the 2nd Mac is on 6a1c6db too
+            j = self._serve(home, repo, node, self._opener(self.LATEST, self.LATEST_SHA), ssh)
+            self.assertTrue(j["newer"])
+            self.assertTrue(j["can_apply"])
+            self.assertEqual([(m["label"], m["status"]) for m in j["macs"]],
+                             [("1st Mac", "update needed"), ("2nd Mac", "update needed")])
+            self.assertEqual(j["changes"], ["Day 26: Update lines show where each Mac is now"])
+            self.assertIsNone(j["keep_model_text"])
+            self.assertEqual(UC.load_cache(home)["installed"], self.NOW)
+
+    def test_no_newer_release_after_own_update_reads_current_without_update_now(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home, repo, node = self._home(tmp)
+            ssh = ScriptedSSH({node["ssh"]: {"ref": self.NOW}})
+            j = self._serve(home, repo, node, self._opener(self.NOW, self.NOW_SHA), ssh)
+            self.assertFalse(j["newer"])
+            self.assertFalse(j["can_apply"])
+            self.assertFalse(j["peers_behind"])
+            self.assertEqual([m["status"] for m in j["macs"]], ["current", "current"])
+
+    def test_stale_check_alone_never_shows_update_now_with_current_lines(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home, repo, node = self._home(tmp)
+            out = UC.public_status(UC.load_cache(home), packaged=True, local=True,
+                                   progress=UC.load_progress(home), installed=self.NOW)
+            needs = out["newer"] or out["peers_behind"]
+            lines = [m["status"] for m in out["macs"]]
+            # Either an update is needed and the lines say so, or nothing is offered.
+            self.assertFalse(needs and "update needed" not in lines)
+            self.assertEqual(lines, ["current", "current"])
+            self.assertFalse(out["can_apply"])
+
+
 class UpdateAnimationTests(unittest.TestCase):
     def test_step_line_has_text_and_server_elapsed(self):
         import time as _t
@@ -645,7 +752,7 @@ class UpdateAnimationTests(unittest.TestCase):
         self.assertTrue(out["updating"])
         self.assertEqual(out["step"]["text"], "Updating the 2nd Mac…")
         self.assertTrue(41 <= out["step"]["elapsed_s"] <= 44)
-        self.assertEqual([m["status"] for m in out["macs"]], ["update available", "updating…"])
+        self.assertEqual([m["status"] for m in out["macs"]], ["update needed", "updating…"])
         self.assertFalse(out["can_retry"])
         idle = UC.public_status({"newer": False, "available": NEW, "checked_at": 1}, packaged=True, local=True)
         self.assertIsNone(idle["step"])

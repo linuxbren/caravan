@@ -94,8 +94,9 @@ badge, including on Campfire. Opening Settings shows an **Updates**
 section with the version on this Mac and the newer one, in plain
 dates such as November 12 and November 13 — no hashes up front.
 What's new is the short list of changes, when that is available.
-The section also says **Your model stays loaded** or **Caravan will reload the model**, using the same rule as `caravan update`: the
-model is reloaded only if the parts that run it changed.
+Update now says **Caravan will reload the model** only when the parts
+that run it changed, the same rule as `caravan update` (which prints
+**Your model stays loaded** otherwise; the page leaves that line out).
 
 **Update now** runs the same update as `caravan update`, in the
 background. A campfire flicker and a short "Updating…" line show
@@ -124,7 +125,7 @@ appears in that case too.
 
 The Updates section is kept short: **Updates** with **Check now** next
 to it, the daily check switch, What's new only when an update is ready,
-and one line per Mac — "1st Mac: current", "2nd Mac: update available",
+and one line per Mac — "1st Mac: current", "2nd Mac: update needed",
 or "2nd Mac: failed" (with "updating…" while it runs). **Update now**
 appears only when an update is ready, and **Try again** only when a
 Mac failed. A failed Mac has one short line, such as "On the 2nd Mac,
@@ -141,9 +142,13 @@ flashes "Done.", or shows the Mac that failed.
 
 Each line shows where that Mac is now, not how the last run went.
 When Check now finds a version newer than the last run's, every Mac
-not on it reads "update available", and old "failed" lines go away.
+not on it reads "update needed", and old "failed" lines go away.
 "failed" is only for a Mac whose last try at the newest version
 failed. There are no summary sentences, only the lines for each Mac.
+After this Mac updates itself, the saved check is from the version
+before, so the page checks again once when it comes back. Without
+that, the page could show What's new and Update now from the old check
+while every line said "current".
 
 Fixed: the first try at updating the other Macs never ran the update
 there. The command sent to the 2nd Mac started with

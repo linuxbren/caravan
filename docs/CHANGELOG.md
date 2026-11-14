@@ -77,6 +77,10 @@
   "update available"; "failed" is only for a Mac whose last try at that
   version failed. "Done." is a short flash after a run, then "current".
   The "This Mac is updated" and "Some Macs failed" sentences are gone.
+- A Mac that needs the newest version now reads "update needed". After
+  this Mac updates itself, the page checks again once, so the lines no
+  longer say "current" next to What's new and Update now. The Updates
+  section no longer says "Your model stays loaded."
 
 ## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
 

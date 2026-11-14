@@ -256,7 +256,7 @@ class CacheAndOfflineTests(unittest.TestCase):
         self.assertEqual(payload["message"], "A November 13 update is ready.")
         self.assertEqual(
             [(m["label"], m["status"]) for m in payload["macs"]],
-            [("1st Mac", "update available"), ("2nd Mac", "current"),
+            [("1st Mac", "update needed"), ("2nd Mac", "current"),
              ("3rd Mac", "couldn't check")],
         )
         # Not reaching a Mac during a check is not a failed update.
@@ -533,7 +533,8 @@ class UpdateApiTests(unittest.TestCase):
         self.assertTrue(j["newer"])
         self.assertTrue(j["local"])
         self.assertTrue(j["can_apply"])
-        self.assertEqual(j["keep_model_text"], "Your model stays loaded.")
+        # The page no longer says "Your model stays loaded."
+        self.assertIsNone(j["keep_model_text"])
         self.assertIn("November 13", j["message"])
         self.assertIn("Daily update check", " ".join(j["changes"]))
         blob = json.dumps(j)
@@ -713,7 +714,7 @@ class PageAndDocsTests(unittest.TestCase):
         self.assertIn("Check now", self.page)
         self.assertIn("Update now", self.page)
         self.assertIn("Update available", self.page)
-        self.assertIn("Your model stays loaded", self.page)
+        self.assertNotIn("Your model stays loaded", self.page)
         self.assertIn("Caravan will reload the model", self.page)
         self.assertIn("the page will be back in a few seconds", self.page.lower())
         self.assertIn("Try again", self.page)
