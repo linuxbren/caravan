@@ -48,6 +48,12 @@
   model running. The web page still restarts. No `day26` tag yet.
   See [Day 26](docs/DAY26.md).
 
+- Settings > Updates has **Check now** next to the title and one
+  status line per Mac, such as "1st Mac: up to date" or "2nd Mac:
+  update available". "A November 13 update is ready." appears only
+  when a newer version is ready. No change to `agent/`, `runtime/`,
+  or the requirements files, so the model stays loaded.
+
 ## Day 25 — GGUF Self-tuning, Chat window, Two chats, and caravan bench
 
 - GGUF Self-tuning learns from real chats, proposes one quiet trial,

@@ -125,6 +125,13 @@ Terminal and run `caravan update`, then load the model again. The
 daily check also shows when another Mac is on an older version, and
 the **Update available** badge appears in that case too.
 
+The Updates section now has **Check now** next to its title, and
+one status line per Mac in the same format — for example
+"1st Mac: up to date", "2nd Mac: update available", "3rd Mac:
+updating…", or "2nd Mac: off or can't be reached". The date of a
+newer version is shown only when one is ready, as "A November 13
+update is ready."
+
 This follow-up does not change `agent/`, `runtime/`, or the
 requirements files, so a `caravan update` from the previous Day 26
 pin keeps a loaded model running. The web page still restarts. No

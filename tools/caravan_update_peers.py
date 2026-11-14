@@ -249,11 +249,11 @@ def _row(node, *, phase, kind=None, status=None, message=None, can_retry=None):
             "done": "done",
             "updating": "updating…",
             "waiting": "waiting",
-            "offline": "couldn't be reached",
+            "offline": "off or can't be reached",
             "failed": "update failed",
             "still_old": "still on the previous version",
             "no_model": "updated, but the model didn't come back",
-            "behind": "on an older version",
+            "behind": "update available",
             "current": "up to date",
         }.get(phase, phase)
     if message is None:

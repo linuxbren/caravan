@@ -239,7 +239,27 @@ class CacheAndOfflineTests(unittest.TestCase):
         self.assertFalse(result["newer"])
         self.assertEqual(result["available"], OLD)
         payload = UC.public_status(result, packaged=True)
-        self.assertIn("November 12", payload["message"] or "")
+        # No confusing "This Mac is on the … version." line: one line per Mac.
+        self.assertIsNone(payload["message"])
+        self.assertEqual(
+            [(m["label"], m["status"]) for m in payload["macs"]],
+            [("My Mac", "up to date")],
+        )
+
+    def test_each_mac_gets_one_status_line_in_the_same_format(self):
+        result = UC.check(self.home, self.repo, force=True, opener=opener_for())
+        result["macs"] = [
+            {"id": "a", "label": "2nd Mac", "mine": False, "phase": "current", "status": "up to date", "help": []},
+            {"id": "b", "label": "3rd Mac", "mine": False, "phase": "offline", "status": "off or can't be reached", "help": ["x"]},
+        ]
+        payload = UC.public_status(result, packaged=True, local=True)
+        self.assertEqual(payload["message"], "A November 13 update is ready.")
+        self.assertEqual(
+            [(m["label"], m["status"]) for m in payload["macs"]],
+            [("1st Mac", "update available"), ("2nd Mac", "up to date"),
+             ("3rd Mac", "off or can't be reached")],
+        )
+        self.assertNotIn("This Mac is on the", json.dumps(payload))
 
     def test_check_daily_off_skips_automatic_check(self):
         UC.save_prefs(self.home, check_daily=False)
@@ -695,6 +715,12 @@ class PageAndDocsTests(unittest.TestCase):
         self.assertIn("the page will be back in a few seconds", self.page)
         self.assertIn("Try again", self.page)
         self.assertIn("renderUpdateMacs", self.page)
+        # Check now sits in the Updates header row, next to the title.
+        head = self.page.split('class="update-head"', 1)[1].split("</div>", 1)[0]
+        self.assertIn(">Updates</span></h2>", head)
+        self.assertIn('id="btnUpdateCheck"', head)
+        self.assertEqual(self.page.count('id="btnUpdateCheck"'), 1)
+        self.assertNotIn('"This Mac is on the " + j.current_label', self.page)
         self.assertIn("other Macs", self.page)
         # Campfire busy style reused for the Update button.
         self.assertIn('btnUpdateNow', self.page)

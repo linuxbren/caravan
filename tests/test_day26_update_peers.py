@@ -193,7 +193,7 @@ class FailureHelpTests(unittest.TestCase):
         runner = ScriptedSSH({node["ssh"]: {"probe": Result(1)}})
         row = P.update_peer(node, expected=NEW, runner=runner)
         self.assertEqual(row["phase"], "offline")
-        self.assertEqual(row["status"], "couldn't be reached")
+        self.assertEqual(row["status"], "off or can't be reached")
         self.assertTrue(row["can_retry"])
         self.assertIn("on and awake", " ".join(row["help"]))
 
@@ -371,11 +371,11 @@ class CheckPeersAndFanOutTests(unittest.TestCase):
             payload = UC.public_status(result, packaged=True, local=True)
             self.assertTrue(payload["peers_behind"])
             self.assertTrue(payload["can_apply"])
-            self.assertIn("2nd Mac", payload["message"])
-            self.assertIn("older version", payload["message"])
+            lines = [(m["label"], m["status"]) for m in payload["macs"]]
+            self.assertEqual(lines, [("1st Mac", "up to date"), ("2nd Mac", "update available")])
             self.assertNotIn(NEW, json.dumps(payload))
             self.assertNotIn(OLD, json.dumps(payload))
-            self.assertTrue(payload["macs"][0]["help"])
+            self.assertTrue(payload["macs"][1]["help"])
 
     def test_cli_local_only_does_not_fan_out(self):
         with tempfile.TemporaryDirectory() as root:

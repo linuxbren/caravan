@@ -1197,6 +1197,10 @@
   #settingsDrawer #updateChanges li { margin: 2px 0; }
   #settingsDrawer #updateActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
   #settingsDrawer #btnUpdateNow.is-tuning { cursor: wait; }
+  #settingsDrawer .update-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  #settingsDrawer .update-head .drawer-section-title { margin: 0; }
+  #settingsDrawer .update-head #btnUpdateCheck { width: auto; padding: 4px 10px; }
+  #settingsDrawer #updateStatus:empty { display: none; }
   #settingsDrawer #updateMacs { margin: 10px 0 8px; }
   #settingsDrawer #updateMacs[hidden] { display: none; }
   #settingsDrawer .update-mac {
@@ -1796,7 +1800,10 @@
       <div class="help" id="lanAccessStatus" role="status" aria-live="polite">Checking…</div>
     </div>
     <div class="optcard drawer-section" id="updatesCard">
-      <h2 class="drawer-section-title"><span class="tip" title="Caravan checks once a day for a newer version, and you can update from this page.">Updates</span></h2>
+      <div class="update-head">
+        <h2 class="drawer-section-title"><span class="tip" title="Caravan checks once a day for a newer version, and you can update from this page.">Updates</span></h2>
+        <button class="ghost drawer-control" id="btnUpdateCheck" type="button">Check now</button>
+      </div>
       <div class="help" id="updateDailyLabel">Check for updates daily</div>
       <div class="theme-switch" id="updateDailySwitch" title="Check for updates daily">
         <button type="button" data-update-daily="off">Off</button>
@@ -1810,7 +1817,6 @@
       <div id="updateMacs" hidden></div>
       <p class="help" id="updateLocalNote" hidden></p>
       <div class="row" id="updateActions">
-        <button class="ghost drawer-control" id="btnUpdateCheck" type="button">Check now</button>
         <button class="primary drawer-control" id="btnUpdateNow" type="button" hidden>Update now</button>
       </div>
       <p class="tune-step" id="updateStep" role="status" aria-live="polite" hidden></p>
@@ -2115,11 +2121,12 @@
       if (status) status.textContent = (j && j.progress && j.progress.message) || (j && j.message) || "The update failed. The previous version is still running.";
       scheduleUpdatePoll(false);
     } else if (status) {
+      // One line per Mac below; the summary is only "A November 13 update is ready." or a problem.
       if (j && j.message) status.textContent = j.message;
+      else if (j && j.packaged === false) status.textContent = "This copy is updated with git, not from this page.";
+      else if (j && j.macs && j.macs.length) status.textContent = "";
       else if (j && j.offline && !j.newer) status.textContent = "Couldn't check right now. Try again when this Mac is online.";
-      else if (j && j.current_label) status.textContent = "This Mac is on the " + j.current_label + " version.";
-      else if (j && j.packaged === false) status.textContent = j.message || "This copy is updated with git, not from this page.";
-      else status.textContent = "This Mac is on the version that's installed.";
+      else status.textContent = "";
     }
 
     if (changes) {

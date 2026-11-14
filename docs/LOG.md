@@ -1,3 +1,13 @@
+## 2026-11-13: Day 26 — One status line per Mac in Updates
+
+Settings > Updates has **Check now** next to the title, and one status
+line per Mac in the same format, such as "1st Mac: up to date" and
+"2nd Mac: update available". "A November 13 update is ready." appears
+only when a newer version is ready. This follow-up does not change
+`agent/`, `runtime/`, or the requirements files, so a `caravan update`
+from the previous Day 26 pin keeps a loaded model running. No `day26`
+tag yet.
+
 ## 2026-11-13: Day 26 — Update the other Macs, and Update now over Tailscale
 
 **Update now** and `caravan update` on this Mac also update the other

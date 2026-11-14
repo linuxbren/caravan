@@ -561,6 +561,24 @@ def keep_model_text(reload_model):
     return None
 
 
+def local_status_row(result, *, newer, peers=0):
+    """This Mac's line, in the same format as the other Macs."""
+    label = "1st Mac" if peers else "My Mac"
+    if newer:
+        status = "update available"
+    elif result.get("available") or (result.get("checked_at") and not result.get("error")):
+        status = "up to date"
+    elif result.get("offline"):
+        status = "couldn't check right now"
+    else:
+        return None
+    return {
+        "id": "local", "label": label, "mine": True, "phase": "current" if not newer else "behind",
+        "kind": None, "status": status, "message": f"{label}: {status}.",
+        "help": [], "can_retry": False,
+    }
+
+
 def public_status(
     result,
     *,
@@ -598,31 +616,17 @@ def public_status(
             message = NEWER_PREFIX.format(label=available_label)
         else:
             message = "A newer version is ready."
-    elif result.get("offline") and not result.get("available"):
-        message = None  # automatic checks stay quiet
-    elif current_label:
-        message = f"This Mac is on the {current_label} version."
-    elif result.get("installed"):
-        message = "This Mac is on the version that's installed."
-        if not newer:
-            # After a successful check with no date and no newer pin.
-            if result.get("checked_at") and not result.get("error"):
-                message = UP_TO_DATE
+    # Otherwise no summary line: each Mac gets its own status line below.
     macs = []
+    peer_rows = []
     if progress and progress.get("macs"):
         macs = list(progress["macs"])
-    elif result.get("macs"):
-        macs = list(result["macs"])
-    peers_behind = bool(result.get("peers_behind") or any(m.get("behind") for m in macs))
-    if not packaged:
-        pass
-    elif not newer and peers_behind and phase not in ("updating", "failed", "done"):
-        behind = [m.get("label") for m in macs if m.get("behind")]
-        if len(behind) == 1:
-            message = f"This Mac is up to date. The {behind[0]} is on an older version."
-        elif behind:
-            names = ", ".join(behind[:-1]) + " and " + behind[-1]
-            message = f"This Mac is up to date. The {names} are on an older version."
+        peer_rows = [m for m in macs if not m.get("mine")]
+    else:
+        peer_rows = [m for m in (result.get("macs") or []) if not m.get("mine")]
+        mine = local_status_row(result, newer=newer, peers=len(peer_rows)) if packaged else None
+        macs = ([mine] if mine else []) + peer_rows
+    peers_behind = bool(result.get("peers_behind") or any(m.get("behind") for m in peer_rows))
     via_tailscale = bool(via_tailscale)
     allowed = bool(local or via_tailscale)
     needs = bool(newer or peers_behind)
@@ -636,8 +640,8 @@ def public_status(
         "changes": list(result.get("changes") or []),
         "reload_model": result.get("reload_model"),
         "keep_model_text": keep_model_text(result.get("reload_model")),
-        "helper": bool(result.get("helper") or macs),
-        "helper_text": HELPER if (result.get("helper") or macs) and needs else None,
+        "helper": bool(result.get("helper") or peer_rows),
+        "helper_text": HELPER if (result.get("helper") or peer_rows) and needs else None,
         "local": bool(local),
         "via_tailscale": via_tailscale,
         "can_apply": can_apply,
