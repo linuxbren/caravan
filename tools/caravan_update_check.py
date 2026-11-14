@@ -26,7 +26,7 @@ except ImportError:  # pragma: no cover
     ZoneInfo = None
 
 
-# Releases come from this branch (Nov 13 test bump).
+# Releases come from this branch (Nov 13 test bump 2).
 CHANNEL_BRANCH = "caravan-v3-mlx-split"
 CHANNEL_REPO = "linuxbren/caravan"
 MANIFEST_URL = (
