@@ -763,6 +763,29 @@ class AutoReloadAfterUpdateTests(unittest.TestCase):
             self.assertIsNone(web_server.page_tag(Path(tmp) / "missing.html"))
         self.assertTrue(web_server.page_tag())
 
+    def test_comment_only_update_changes_the_tag(self):
+        """24b9986 changed one comment and no page file: the tag must still change."""
+        import web_server
+        with tempfile.TemporaryDirectory() as tmp:
+            page = Path(tmp) / "index.html"
+            page.write_text("<p>same page in both versions</p>")
+            pkg = Path(tmp) / ".caravan-package"
+            pkg.write_text("93cfd7bb623ac5eaafdfbca67000bb6f1cf8f7b4\n")
+            before = web_server.page_tag(page, pkg)
+            pkg.write_text("703d5809d7e7bf34debec990178b9fd6a65c4909\n")
+            after = web_server.page_tag(page, pkg)
+            self.assertNotEqual(before, after)
+            self.assertNotIn("703d580", after)
+            self.assertEqual(after, web_server.page_tag(page, pkg))
+
+    def test_the_tab_that_ran_the_update_reloads_when_the_run_finishes(self):
+        render = self.page.split("function renderUpdate(j) {", 1)[1].split("const updating = ", 1)[0]
+        self.assertIn('if (pending && _updateWasBusy && phase === "done" && reloadAfterRun(j.progress)) return;', render)
+        run = self.page.split("function reloadAfterRun(progress)", 1)[1].split("\n  }\n", 1)[0]
+        self.assertIn('"caravan.update.reloadedRun"', run)
+        self.assertIn("if (tried === key) return false;", run)
+        self.assertIn("location.reload()", run)
+
     def test_status_and_update_answers_carry_the_tag(self):
         self.assertIn('"page": page_tag(),', self.server.split("def _api_status", 1)[1].split("def ", 1)[0])
         self.assertIn('out["page"] = page_tag()', self.server)

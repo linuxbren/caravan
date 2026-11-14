@@ -2141,6 +2141,15 @@
     return true;
   }
   function pageIsStale(j) { return !!(j && checkPageTag(j.page)); }
+  function reloadAfterRun(progress) {
+    const key = "run:" + ((progress && (progress.finished_at || progress.started_at)) || "");
+    let tried = null;
+    try { tried = sessionStorage.getItem("caravan.update.reloadedRun"); } catch (_) {}
+    if (tried === key) return false;  // once per run
+    try { sessionStorage.setItem("caravan.update.reloadedRun", key); } catch (_) {}
+    location.reload();
+    return true;
+  }
   function renderUpdate(j) {
     if (pageIsStale(j)) return;
     _updateInfo = j || {};
@@ -2165,6 +2174,9 @@
     const step = $("updateStep");
     const phase = j.progress && j.progress.phase;
     const pending = !!updatePending();
+    // This page watched the update run and it just finished: reload once so
+    // the new version is what's running, then flash Done on the fresh page.
+    if (pending && _updateWasBusy && phase === "done" && reloadAfterRun(j.progress)) return;
     const updating = !!(j.updating || phase === "updating" || (pending && phase !== "done" && phase !== "failed"));
     paintUpdateBadge(j);
     const anyFailed = (j.macs || []).some((m) => m.status === "failed") || phase === "failed";

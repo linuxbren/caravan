@@ -1,3 +1,17 @@
+## 2026-11-13: Day 26 — The page reloads after any update
+
+The page did not reload after the 24b9986 test update. The page tag
+was built only from the page file, and that update changed one comment
+in a Python file, so the tag stayed the same and no tab reloaded (the
+1st Mac's page file was byte-for-byte the same before and after). The
+tag now also includes the installed version, so every update changes
+it. And the tab that ran the update reloads once when the run is done,
+even if nothing else changed. Checked in a headless browser with a
+version-only change (all idle tabs reloaded, the typing tab waited) and
+with no change at all (only the tab that ran it reloaded, once). This
+does not change `agent/`, `runtime/`, or the requirements files. No
+`day26` tag yet.
+
 ## 2026-11-13: Day 26 — Pages reload themselves after an update
 
 Brenden saw no update animation. The 1st Mac's web log showed why: the

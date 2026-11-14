@@ -158,6 +158,7 @@ update right away (it then flashes "Done."), any other tab once nobody
 is typing in the chat box or waiting on a reply. **Updating…** and the
 step line show the moment Update now is clicked, and if the page does
 not answer for 5 seconds the line reads "… restarting".
+Any update counts, even one that leaves the page itself unchanged.
 
 Fixed: the first try at updating the other Macs never ran the update
 there. The command sent to the 2nd Mac started with

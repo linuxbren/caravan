@@ -713,22 +713,31 @@ class App:
 _PAGE_TAGS = {}
 
 
-def page_tag(path=None):
-    """Short tag for the page this server would send now (not a version hash).
+def page_tag(path=None, package=None):
+    """Short tag for the Caravan this server is running (not a version hash).
 
+    Built from the installed version (.caravan-package) and the page file,
+    so any update changes it, even one that leaves the page untouched.
     An open page keeps the tag from its first answer. When a later answer
     has a different tag, Caravan was updated underneath it, so the page
     reloads itself (right away if the update was started there, otherwise
     once nobody is typing or waiting on a reply).
     """
     path = Path(path) if path else Path(__file__).resolve().parent / "web" / "index.html"
+    package = Path(package) if package else Path(__file__).resolve().parents[1] / ".caravan-package"
+    try:
+        version = package.read_text().strip()
+    except OSError:
+        version = ""
     try:
         st = path.stat()
-        key = (str(path), st.st_size, st.st_mtime_ns)
+        key = (str(path), st.st_size, st.st_mtime_ns, version)
         if key not in _PAGE_TAGS:
             import hashlib
             _PAGE_TAGS.clear()
-            _PAGE_TAGS[key] = hashlib.sha256(b"caravan-page:" + path.read_bytes()).hexdigest()[:10]
+            _PAGE_TAGS[key] = hashlib.sha256(
+                b"caravan-page:" + version.encode() + b":" + path.read_bytes()
+            ).hexdigest()[:10]
         return _PAGE_TAGS[key]
     except OSError:
         return None
