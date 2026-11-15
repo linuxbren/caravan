@@ -223,7 +223,7 @@
   };
   $("balanceStop").onclick = async () => {
     if (!jobId) return;
-    $("balanceStop").disabled=true;
+    $("balanceStop").disabled=true; $("balanceJob").textContent='Stopping this fetch…';
     try { const r=await fetch('/api/picker/download/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:jobId})});
       if (!r.ok) throw new Error('Could not stop fetch; inspect Downloads');
     } catch(error) { $("balanceJob").textContent=error.message; }

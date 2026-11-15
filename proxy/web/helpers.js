@@ -10,7 +10,7 @@
   const stop = document.createElement('button'); stop.textContent='Stop download'; stop.hidden=true;
   const close = document.createElement('button'); close.textContent='Close'; close.onclick=()=>dialog.close();
   dialog.append(title, text, status, yes, no, stop, close); document.body.append(dialog);
-  stop.onclick = async () => { try { await api('/api/picker/download/cancel', {job_id:job.id}); } catch(e) {status.textContent=e.message;} };
+  stop.onclick = async () => { stop.disabled = true; status.textContent = 'Stopping download…'; try { await api('/api/picker/download/cancel', {job_id:job.id}); } catch(e) {status.textContent=e.message; stop.disabled = false;} };
   async function api(path, body) {
     const r = await fetch(path, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {});
     const j = await r.json(); if (!r.ok) throw Error(j.error || 'Request failed'); return j;

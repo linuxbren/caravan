@@ -980,7 +980,7 @@ def make_handler(app: App):
             if path == "/api/models/stop":
                 if hasattr(app,"restore"):app.restore.cancel()
                 if app.optimizer.snapshot().get("running"):
-                    return self._json(409, {"error": "Cancel Auto-tune and wait before unloading"})
+                    return self._json(409, {"error": "Cancel Auto-tune and wait before unloading", "code": "optimize_running"})
                 try:
                     app.mgr.stop(reason="ui")
                 except ManagedServiceError as e:
@@ -2424,7 +2424,7 @@ def make_handler(app: App):
                 except ManagedServiceError as e:
                     return self._json(409, error_payload(e))
             if app.optimizer.snapshot().get("running"):
-                return self._json(409, {"error": "Cancel Auto-tune and wait before loading"})
+                return self._json(409, {"error": "Cancel Auto-tune and wait before loading", "code": "optimize_running"})
             body = body or {}
             mid = body.get("model_id") or body.get("id")
             if not mid:

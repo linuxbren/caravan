@@ -48,6 +48,8 @@ class GgufOptimizer:
                 n = 2 - int(i.get("done_arms") or 0)
                 left += n * (out["reload_s"] + 2 * out["reply_s"])
             out["eta_s"] = round(left + out["reload_s"])  # + final restore of the winner
+        # Day 28: Cancel was pressed; the current step is finishing.
+        out["cancelling"] = bool(out.get("running") and self._cancel.is_set())
         return web_tune_step.decorate(out)
 
     def _set_step(self, *, action="starting", knob=None, value=None,

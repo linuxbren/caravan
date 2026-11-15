@@ -42,7 +42,7 @@
       el.innerHTML = '';
       el.hidden = true;
     }
-    el.querySelectorAll('[data-hl]').forEach((b) => { b.onclick = () => act(b.dataset.hl); });
+    el.querySelectorAll('[data-hl]').forEach((b) => { b.onclick = () => { el.querySelectorAll('[data-hl]').forEach((x) => { x.disabled = true; }); b.textContent = ({yes: 'Starting…', no: 'Not now', stop: 'Stopping…', resume: 'Resuming…', ok: 'OK'})[b.dataset.hl] || b.textContent; act(b.dataset.hl); }; });
   }
   async function act(what) {
     note = '';

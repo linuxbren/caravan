@@ -713,6 +713,22 @@
     font-weight: 450;
   }
   .tune-badge.is-self::before { content: none; animation: none; }
+  /* Day 28: Cancelling… holds a still mark; the end line lets the campfire
+     mark fade out once. Same fixed box, so nothing moves. */
+  .tune-badge.is-cancelling::before, .tune-badge.is-ended::before {
+    content: "✦";
+    display: inline-block; width: 1em; height: 1em; line-height: 1;
+    text-align: center; overflow: hidden;
+  }
+  .tune-badge.is-cancelling::before { opacity: .55; }
+  .tune-badge.is-ended::before { animation: tune-ember 1.2s ease-out forwards; }
+  @keyframes tune-ember { from { opacity: 1; } to { opacity: 0; } }
+  /* Same width for Tuning… / Cancelling… / Cancelled in the top bar, so
+     switching between them never re-wraps the bar above the chat. */
+  #tuneHeaderBadge { min-width: 6.6rem; justify-content: center; }
+  button.is-busy { cursor: progress; opacity: .8; }
+  .btn-result { font-size: .72rem; color: var(--muted); margin-left: 6px; }
+  .btn-result:empty { display: none; }
   @media (prefers-reduced-motion: reduce) {
     .tune-badge.is-tuning::before { animation: none; content: "✦"; }
   }
@@ -1921,20 +1937,27 @@
     $("btnHfTokenSave").addEventListener("click", async () => {
       const tok = ($("hfTokenInput").value || "").trim();
       if (!tok) { alert("Paste a token."); return; }
+      const b = $("btnHfTokenSave");
+      b.disabled = true; b.classList.add("is-busy"); b.textContent = "Saving…";
+      $("hfTokenStatus").textContent = "Saving on Minis…";
       try {
         const j = await api("/api/hf-token", { method: "POST", body: JSON.stringify({ token: tok }) });
         $("hfTokenInput").value = "";
         await refreshHfTokenStatus();
         if (j.nodes && j.nodes.some(n => !n.ok)) alert("Saved locally, but some Minis could not save it. Try saving again.");
-      } catch (e) { alert(e.error || e.message || e); }
+      } catch (e) { $("hfTokenStatus").textContent = "Not saved: " + (e.error || e.message || e); }
+      finally { b.disabled = false; b.classList.remove("is-busy"); b.textContent = "Save on Minis"; }
     });
     $("btnHfTokenClear").addEventListener("click", async () => {
       if (!confirm("Clear the Caravan HF token on all Minis?")) return;
+      const b = $("btnHfTokenClear");
+      b.disabled = true; b.classList.add("is-busy"); b.textContent = "Removing…";
       try {
         await api("/api/hf-token", { method: "POST", body: JSON.stringify({ clear: true }) });
         $("hfTokenInput").value = "";
         await refreshHfTokenStatus();
-      } catch (e) { alert(e.error || e.message || e); }
+      } catch (e) { $("hfTokenStatus").textContent = "Not removed: " + (e.error || e.message || e); }
+      finally { b.disabled = false; b.classList.remove("is-busy"); b.textContent = "Remove saved token"; }
     });
     refreshHfTokenStatus();
   }
@@ -1976,6 +1999,7 @@
       const b = e.target.closest("button[data-remote]");
       if (!b || b.disabled) return;
       const enable = b.dataset.remote === "on";
+      $("remoteAccessStatus").textContent = enable ? "Turning on…" : "Turning off…";
       try {
         renderRemoteAccess(await api("/api/remote", { method: "POST", body: JSON.stringify({ enabled: enable }) }));
       } catch (err) {
@@ -2021,6 +2045,7 @@
       const b = e.target.closest("button[data-lan]");
       if (!b || b.disabled) return;
       const enable = b.dataset.lan === "on";
+      $("lanAccessStatus").textContent = enable ? "Turning on…" : "Turning off…";
       try {
         renderLanAccess(await api("/api/lan", { method: "POST", body: JSON.stringify({ enabled: enable }) }));
       } catch (err) {
@@ -2710,6 +2735,8 @@
   let _tuneDoneTimer = null;
   let _tunePollTimer = null;
   let _tuneRunning = false;
+  let _tuneCancelling = false;  // Cancel pressed; waiting for the server to finish
+  let _applyWaiting = false;    // "Cancel Auto-tune and apply" in progress
 
   function tuneElapsedText(j) {
     let s = j && j.elapsed_s;
@@ -2724,27 +2751,69 @@
   }
   function paintTuneBadges(opt, tun) {
     const running = !!(opt && opt.running);
+    const cancelling = running && !!(_tuneCancelling || (opt && opt.cancelling));
     const self = !running && !!(tun && tun.trial);
-    const text = running ? "Tuning…" : (self ? "Self-tuning a setting…" : "");
+    const text = cancelling ? "Cancelling…" : running ? "Tuning…" : (self ? "Self-tuning a setting…" : "");
     for (const id of ["tuneBadge", "tuneHeaderBadge"]) {
       const el = $(id);
       if (!el) continue;
       // An optimize-only poll passes tun=null; do not clear a Self-tuning
       // note that refreshStatus will keep up to date.
       if (!running && tun == null && el.classList.contains("is-self")) continue;
+      // Keep the short "cancelled" end line up until its timer clears it.
+      if (!text && el.classList.contains("is-ended")) continue;
       el.hidden = !text;
       el.textContent = text;
-      el.classList.toggle("is-tuning", running);
+      el.classList.remove("is-ended");
+      el.classList.toggle("is-tuning", running && !cancelling);
+      el.classList.toggle("is-cancelling", cancelling);
       el.classList.toggle("is-self", self);
     }
   }
-  function showTuneDone(msg) {
+  // Day 28: a visible end state where the Tuning badge was.
+  let _tuneEndedTimer = null;
+  function paintTuneEnded(text, ms = 6000, shortText = "") {
+    for (const id of ["tuneBadge", "tuneHeaderBadge"]) {
+      const el = $(id);
+      if (!el) continue;
+      el.classList.remove("is-tuning", "is-self", "is-cancelling");
+      el.classList.add("is-ended");
+      // The top bar has little room: a longer word there wraps the bar and
+      // moves the chat, so it says just "Cancelled" (as wide as "Tuning…").
+      el.textContent = id === "tuneHeaderBadge" ? (shortText || text) : text;
+      el.hidden = false;
+    }
+    clearTimeout(_tuneEndedTimer);
+    _tuneEndedTimer = setTimeout(clearTuneEnded, ms);
+  }
+  function clearTuneEnded() {
+    clearTimeout(_tuneEndedTimer);
+    for (const id of ["tuneBadge", "tuneHeaderBadge"]) {
+      const el = $(id);
+      if (!el || !el.classList.contains("is-ended")) continue;
+      el.classList.remove("is-ended");
+      el.textContent = "";
+      el.hidden = true;
+    }
+  }
+  function tuneCancelledText(j) {
+    const kept = ((j && j.schedule) || []).some((i) => i && i.state === "kept");
+    return kept
+      ? "Auto-tune cancelled — kept the faster settings it found before you cancelled."
+      : "Auto-tune cancelled — your settings are unchanged.";
+  }
+  function showTuneDone(msg, ms = 4000) {
     const el = $("tuneDone");
     if (!el) return;
     el.textContent = msg;
     el.hidden = false;
     clearTimeout(_tuneDoneTimer);
-    _tuneDoneTimer = setTimeout(() => { el.hidden = true; el.textContent = ""; }, 4000);
+    _tuneDoneTimer = setTimeout(() => { el.hidden = true; el.textContent = ""; }, ms);
+  }
+  function hideTuneDone() {
+    const el = $("tuneDone");
+    clearTimeout(_tuneDoneTimer);
+    if (el) { el.hidden = true; el.textContent = ""; }
   }
   function paintTuneRunning(j) {
     const running = !!(j && j.running);
@@ -2758,13 +2827,18 @@
         if (btn.textContent !== "Tuning…") btn.textContent = "Tuning…";
       }
     }
+    if (!running) _tuneCancelling = false;
+    const cancelling = running && !!(_tuneCancelling || (j && j.cancelling));
     if ($("btnTuneReset")) $("btnTuneReset").disabled = running || loadOff;
     if ($("btnOptCancel")) {
-      $("btnOptCancel").disabled = !running;
-      $("btnOptCancel").hidden = !running;
+      const c = $("btnOptCancel");
+      c.disabled = !running || cancelling;
+      c.hidden = !running;
+      c.classList.toggle("is-busy", cancelling);
+      c.textContent = cancelling ? "Cancelling…" : "Cancel";
     }
     if ($("btnOptPause")) {
-      $("btnOptPause").disabled = !running;
+      $("btnOptPause").disabled = !running || cancelling;
       $("btnOptPause").hidden = !running;
       $("btnOptPause").textContent = (j && j.paused) ? "Resume" : "Pause";
     }
@@ -2774,7 +2848,10 @@
     if (result) result.hidden = running;
     const step = $("tuneStep");
     if (step) {
-      if (running) {
+      if (running && cancelling) {
+        step.hidden = false;
+        step.textContent = "Cancelling — the current step finishes, then the best settings so far are put back…";
+      } else if (running) {
         let line = (j && j.step) || "Tuning…";
         const elapsed = tuneElapsedText(j || {});
         if (elapsed) line += " · " + elapsed;
@@ -2797,8 +2874,15 @@
     paintTuneBadges(j, null);
     if (_tuneWasRunning && !running) {
       const phase = String((j && j.phase) || "");
+      const cancelled = !(j && j.error) && /cancel/i.test(phase);
       const failed = !!(j && (j.error || /cancel/i.test(phase) || /error/i.test(phase)));
-      if (failed) {
+      if (cancelled) {
+        // Day 28: say so plainly, here and where the Tuning badge was.
+        showTuneDone(tuneCancelledText(j), 10000);
+        paintTuneEnded("Auto-tune cancelled", 6000, "Cancelled");
+        if (result) result.hidden = false;
+        refreshTuneResult();
+      } else if (failed) {
         if (result) result.hidden = false;
         refreshTuneResult();
       } else {
@@ -2924,6 +3008,8 @@
             for (const o of state.opts) state.choice[o.id] = "auto";
           }
           renderOpts(); renderActive(state.active);
+          // Self-tuning Off clears its badge at once.
+          if (row.dataset.id === "self_tune" && b.dataset.v === "off") paintTuneBadges({ running: _tuneRunning }, {});
           if (row.dataset.id === "self_tune") applySelfTune(b.dataset.v);
         };
       }
@@ -3120,6 +3206,9 @@
 
     $("btnLoad").disabled = ["starting_lead","starting_packer","stopping"].includes(st) || !!window.caravanBalanceReloading;
     $("btnApply").disabled = $("btnLoad").disabled;
+    if (_applyWaiting) { $("btnLoad").disabled = true; $("btnApply").disabled = true; }
+    if (["starting_lead","starting_packer","stopping"].includes(st)) setApplyBusy("Applying…");
+    else if ($("btnApply").classList.contains("is-busy") && !_tuneCancelling && !_applyWaiting) setApplyBusy("");
     $("btnSend").disabled = st !== "ready" || state.streaming || !!window.caravanBalanceReloading;
     $("input").disabled = st !== "ready" || !!window.caravanBalanceReloading;
   }
@@ -3658,11 +3747,69 @@
   $("input").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); }
   });
-  $("btnLoad").onclick = async () => {
+  // Day 28: Load / Apply & restart while Auto-tune runs asks once, and
+  // "Cancel Auto-tune and apply" does both with the cancel shown on the page.
+  function askCancelTuneAndApply() {
+    return new Promise((resolve) => {
+      const d = $("tuneBlockDialog");
+      if (!d || typeof d.showModal !== "function") {
+        return resolve(window.confirm("Auto-tune is running. Cancel Auto-tune and apply?"));
+      }
+      const done = (v) => { try { d.close(); } catch (_) {} resolve(v); };
+      $("tuneBlockYes").onclick = () => done(true);
+      $("tuneBlockNo").onclick = () => done(false);
+      d.oncancel = (ev) => { ev.preventDefault(); done(false); };
+      d.showModal();
+    });
+  }
+  async function cancelTuneAndWait(maxMs = 20 * 60 * 1000) {
+    _tuneCancelling = true;
+    paintTuneRunning({ running: true, cancelling: true });
+    try { await api("/api/optimize/cancel", { method: "POST", body: "{}" }); }
+    catch (e) {
+      _tuneCancelling = false;
+      const note = $("tuneNote");
+      if (note) note.textContent = "Could not cancel Auto-tune: " + String(e.error || e.message || e);
+      refreshOptimize();
+      return false;
+    }
+    const t0 = Date.now();
+    while (Date.now() - t0 < maxMs) {
+      await new Promise((r) => setTimeout(r, 1000));
+      let j = null;
+      try { j = await api("/api/optimize"); } catch (_) { continue; }
+      paintTuneRunning(j || {});
+      if (!(j && j.running)) return true;
+    }
+    return false;
+  }
+  function setApplyBusy(text) {
+    for (const [id, idle] of [["btnApply", "Apply & restart"], ["btnLoad", "Load model"]]) {
+      const b = $(id);
+      if (!b) continue;
+      b.classList.toggle("is-busy", !!text);
+      b.textContent = text ? (id === "btnApply" ? text : text.replace("Applying", "Loading")) : idle;
+    }
+  }
+  async function loadPicked(askedAlready) {
     const id = $("modelSelect").value;
+    if (_applyWaiting) return;
+    if (_tuneRunning && !askedAlready) {
+      if (!await askCancelTuneAndApply()) return;
+      _applyWaiting = true;
+      setApplyBusy("Cancelling Auto-tune…");
+      $("btnLoad").disabled = true; $("btnApply").disabled = true;
+      let ok = false;
+      try { ok = await cancelTuneAndWait(); } finally { _applyWaiting = false; }
+      setApplyBusy("");
+      if (!ok) { refreshStatus(); return; }
+      askedAlready = true;
+    }
     cancelChat(); // never leave Send stuck disabled across a switch
     $("btnLoad").disabled = true;
+    $("btnApply").disabled = true;
     $("btnSend").disabled = true;
+    setApplyBusy("Applying…");
     try {
       const body = { model_id: id, settings: state.choice };
       if (!$("placeSelect").hidden && $("placeSelect").value) body.placement_id = $("placeSelect").value;
@@ -3671,25 +3818,44 @@
       resetHistory();
       saveChat();
     } catch (e) {
+      setApplyBusy("");
+      if (e && e.status === 409 && e.code === "optimize_running" && !askedAlready) {
+        // The page had not seen Auto-tune start yet; same choice as above.
+        _tuneRunning = true;
+        refreshStatus();
+        return loadPicked(false);
+      }
       alert(e.error || e.message || String(e));
     }
     refreshStatus();
     window.dispatchEvent(new CustomEvent("caravan-models-changed"));
-  };
-  $("btnApply").onclick = () => $("btnLoad").onclick();
+  }
+  $("btnLoad").onclick = () => loadPicked(false);
+  $("btnApply").onclick = () => loadPicked(false);
   $("btnTuneReset").onclick = async () => {
     const note = $("selfTuneNote");
+    const b = $("btnTuneReset");
+    b.disabled = true; b.classList.add("is-busy"); b.textContent = "Resetting…";
+    hideTuneDone();
     try {
       const j = await api("/api/settings/reset-tuning", { method: "POST", body: "{}" });
       if (note) { note.hidden = !j.notice; note.textContent = j.notice || ""; }
       paintTuneResult($("tuneResult"), "");
       paintOptStartLabel(null);
       refreshTuneResult();
+      showTuneDone("Tuning reset — saved results for this model are cleared.", 8000);
     } catch (e) {
-      if (note) { note.hidden = false; note.textContent = e.error || e.message || String(e); }
+      const msg = e.error || e.message || String(e);
+      if (note) { note.hidden = false; note.textContent = msg; }
+      showTuneDone("Reset failed: " + msg, 8000);
+    } finally {
+      b.classList.remove("is-busy"); b.textContent = "Reset tuning";
+      b.disabled = _tuneRunning || ($("btnLoad") && $("btnLoad").disabled);
     }
   };
   $("btnOptStart").onclick = async () => {
+    hideTuneDone();
+    clearTuneEnded();
     paintTuneRunning({ running: true, step: "Starting…", started: Date.now() / 1000, elapsed_s: 0 });
     try {
       await api("/api/optimize/start", { method: "POST", body: JSON.stringify({ fresh: true }) });
@@ -3702,15 +3868,48 @@
     refreshOptimize();
   };
   $("btnOptPause").onclick = async () => {
-    const j = await api("/api/optimize");
-    await api("/api/optimize/pause", {method: "POST", body: JSON.stringify({paused: !j.paused})});
+    const b = $("btnOptPause");
+    b.disabled = true; b.classList.add("is-busy");
+    try {
+      const j = await api("/api/optimize");
+      b.textContent = j.paused ? "Resuming…" : "Pausing…";
+      await api("/api/optimize/pause", {method: "POST", body: JSON.stringify({paused: !j.paused})});
+    } catch (e) {
+      const note = $("tuneNote");
+      if (note) note.textContent = "Could not pause: " + String(e.error || e.message || e);
+    } finally {
+      b.classList.remove("is-busy");
+      refreshOptimize();
+    }
+  };
+  $("btnOptCancel").onclick = async () => {
+    if (_tuneCancelling) return;
+    // Busy right away; the end line shows when the server confirms.
+    _tuneCancelling = true;
+    paintTuneRunning({ running: true, cancelling: true });
+    try {
+      await api("/api/optimize/cancel", { method: "POST", body: "{}" });
+    } catch (e) {
+      _tuneCancelling = false;
+      const note = $("tuneNote");
+      if (note) note.textContent = "Could not cancel Auto-tune: " + String(e.error || e.message || e);
+    }
     refreshOptimize();
   };
-  $("btnOptCancel").onclick = async () => { await api("/api/optimize/cancel", { method: "POST", body: "{}" }); refreshOptimize(); };
   refreshOptimize();
   $("btnStop").onclick = async () => {
     cancelChat();
-    await api("/api/models/stop", { method: "POST", body: "{}" });
+    const b = $("btnStop");
+    b.disabled = true; b.classList.add("is-busy"); b.textContent = "Unloading…";
+    try {
+      await api("/api/models/stop", { method: "POST", body: "{}" });
+    } catch (e) {
+      b.disabled = false; b.classList.remove("is-busy"); b.textContent = "Unload";
+      alert(e.error || e.message || String(e));
+      refreshStatus();
+      return;
+    }
+    b.disabled = false; b.classList.remove("is-busy"); b.textContent = "Unload";
     state.session = null;
     resetHistory();
     saveChat();
@@ -4690,10 +4889,11 @@
       card.innerHTML = head + rowsHtml + actions;
       const c = card.querySelector("[data-act=cancel]");
       if (c) c.onclick = async () => {
+        c.disabled = true; c.classList.add("is-busy"); c.textContent = "Stopping…";
         try {
           await api("/api/picker/download/cancel", { method: "POST", body: JSON.stringify({ job_id: j.id }) });
           if (!anyActiveJobs(j.id)) $("pickerStatus").textContent = "Stopping download…";
-        } catch (e) { alert(e.message); }
+        } catch (e) { c.disabled = false; c.classList.remove("is-busy"); c.textContent = "Stop"; alert(e.message); }
       };
       const rs = card.querySelector("[data-act=resume]");
       if (rs) rs.onclick = async () => {
@@ -4710,7 +4910,7 @@
       if (d) d.onclick = () => dismissJob(j.id);
       const l = card.querySelector("[data-act=load]");
       if (l) l.onclick = async () => {
-        l.disabled = true;
+        l.disabled = true; l.classList.add("is-busy"); l.textContent = "Loading…";
         try { await api("/api/models/load", { method: "POST", body: JSON.stringify({ model_id: j.load_id || j.repo_id }) }); $("pickerStatus").textContent = "Loading " + j.repo_id + "…"; }
         catch (e) { $("pickerStatus").textContent = "Could not load: " + String(e.error || e.message || "Please try again.").replace(/\s+/g, " ").trim(); l.disabled = false; }
       };
@@ -4855,7 +5055,12 @@
       del.type = "button"; del.textContent = "Delete";
       del.disabled = !!opts.disabled;
       del.title = opts.title || "";
-      if (opts.onDelete) del.addEventListener("click", opts.onDelete);
+      if (opts.onDelete) del.addEventListener("click", async (ev) => {
+        // Busy while the delete runs; the row goes away when it is done.
+        del.disabled = true; del.classList.add("is-busy"); del.textContent = "Deleting…";
+        try { await opts.onDelete(ev); }
+        finally { if (del.isConnected) { del.disabled = !!opts.disabled; del.classList.remove("is-busy"); del.textContent = "Delete"; } }
+      });
       row.appendChild(del);
       return row;
     }
@@ -4971,6 +5176,12 @@
 </script>
 <script src="/helper_line.js"></script>
 <script src="/helpers.js"></script>
+<dialog id="tuneBlockDialog" aria-labelledby="tuneBlockTitle">
+  <h3 id="tuneBlockTitle">Auto-tune is running</h3>
+  <p>Applying reloads the model, so Auto-tune has to stop first.</p>
+  <button type="button" class="primary" id="tuneBlockYes">Cancel Auto-tune and apply</button>
+  <button type="button" id="tuneBlockNo">Keep tuning</button>
+</dialog>
 <dialog id="loadNowDialog" aria-labelledby="loadNowTitle">
   <h3 id="loadNowTitle">Download finished</h3>
   <p>No model is loaded. Load <b id="loadNowName"></b> now?</p>

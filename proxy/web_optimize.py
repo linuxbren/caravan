@@ -130,6 +130,8 @@ class Optimizer:
             reloads = sum(2 for i in todo if i["reload"])
             if out["running"] and out["reply_s"] is not None and (not reloads or out["reload_s"] is not None):
                 out["eta_s"] = round(len(todo) * AB_ARM * 2 * out["reply_s"] + reloads * (out["reload_s"] or 0))
+            # Day 28: Cancel was pressed; the current step is finishing.
+            out["cancelling"] = bool(out.get("running") and self._cancel.is_set())
             return web_tune_step.decorate(out)
 
     def _set_step(self, *, action="starting", knob=None, value=None,

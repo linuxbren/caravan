@@ -1,5 +1,22 @@
 # Changelog
 
+## Day 27 fixes, round 3 — buttons say what they are doing
+
+- Cancel Auto-tune now shows "Cancelling…" on the button and the Tuning
+  badge right away, while the current step finishes. When it ends, the
+  Auto-tune section says "Auto-tune cancelled — your settings are
+  unchanged" (or that it kept the faster settings found before you
+  cancelled), the badge says Cancelled for a few seconds, the campfire
+  mark fades out, and the buttons come back. Nothing above the chat moves.
+- Load model or Apply & restart while Auto-tune runs now asks once, with
+  "Cancel Auto-tune and apply" doing both, instead of an error telling
+  you to cancel first.
+- More buttons show a busy word and a result: Reset tuning (Resetting…,
+  then "Tuning reset"), Pause/Resume, Unload, Hugging Face token Save and
+  Remove, Remote and LAN access, download Stop and Load, Delete in the
+  disk list, the helper download Stop, the helper line buttons, and Stop
+  this fetch.
+
 ## Day 27 fixes, round 2
 
 - Guess-ahead and Prompt lookup help no longer quotes results from one
