@@ -216,10 +216,12 @@ class SelfTune(unittest.TestCase):
         for _ in range(GST.MIN_SAMPLES):
             self._obs(self._fast(40))
         # Settling skip, then MIN_SAMPLES faster chats.
-        self._obs(self._fast(80))  # settling
+        # The trial reload ran: the model now uses the challenger (ubatch 256).
+        trial_used = {"flash_attn": "on", "ubatch": 256, "cache_type": "f16"}
+        self._obs(self._fast(80), used=trial_used)  # settling
         plan = None
         for _ in range(GST.MIN_SAMPLES):
-            plan = self._obs(self._fast(80))
+            plan = self._obs(self._fast(80), used=trial_used)
         self.assertEqual(plan["action"], "keep")
         self.assertTrue(plan["has_winners"])
         self.assertEqual(plan["before"]["write_tok_s"], 40)
@@ -238,10 +240,12 @@ class SelfTune(unittest.TestCase):
     def test_reverts_a_slower_trial(self):
         for _ in range(GST.MIN_SAMPLES):
             self._obs(self._fast(40))
-        self._obs(self._fast(10))  # settling
+        # The trial reload ran: the model now uses the challenger (ubatch 256).
+        trial_used = {"flash_attn": "on", "ubatch": 256, "cache_type": "f16"}
+        self._obs(self._fast(10), used=trial_used)  # settling
         plan = None
         for _ in range(GST.MIN_SAMPLES):
-            plan = self._obs(self._fast(10))
+            plan = self._obs(self._fast(10), used=trial_used)
         self.assertEqual(plan["action"], "reload")
         self.assertEqual(plan["reason"], "revert")
         self.assertEqual(plan["tune"]["ubatch"], 512)

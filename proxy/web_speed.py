@@ -346,6 +346,34 @@ def format_tuning_side(label: str, specs=None) -> str:
 NOTHING_FASTER = "Already at its fastest settings. Nothing faster found."
 
 
+def format_kept_detail(tried, margin_pct: int = 3) -> str:
+    """Day 28: one plain line under NOTHING_FASTER with what was measured.
+
+    ``tried`` is the GGUF Auto-tune trial list (incumbent_tps,
+    challenger_tps, name, challenger, won). Empty when there is nothing to say.
+    """
+    recs = [t for t in (tried or []) if isinstance(t, dict)]
+    if not recs or any(t.get("won") for t in recs):
+        return ""
+    inc = [float(t["incumbent_tps"]) for t in recs
+           if isinstance(t.get("incumbent_tps"), (int, float)) and t["incumbent_tps"] > 0]
+    chal = [t for t in recs
+            if isinstance(t.get("challenger_tps"), (int, float)) and t["challenger_tps"] > 0]
+    n = len(recs)
+    head = (f"Kept your current settings: tried {n} change{'s' if n != 1 else ''}, "
+            f"none was at least {margin_pct}% faster.")
+    if not inc or not chal:
+        return head
+    import web_tune_step as WTS
+    now = sum(inc) / len(inc)
+    best = max(chal, key=lambda t: t["challenger_tps"])
+    label = WTS.knob_label(best.get("name"))
+    val = WTS.friendly_value(best.get("name"), best.get("challenger"))
+    what = f"{label} {val}".strip()
+    return (f"{head} Current settings {now:.1f} tok/s writing; "
+            f"closest try ({what}) {float(best['challenger_tps']):.1f} tok/s.")
+
+
 def tuning_bodies_match(before=None, after=None) -> bool:
     """True when Before and After would print as the same visible line."""
     b = format_tuning_side("Before", before)
@@ -449,6 +477,8 @@ def _tuning_view(slot: dict) -> dict:
     unchanged = bool(slot.get("unchanged"))
     if unchanged:
         lines = [NOTHING_FASTER]
+        if isinstance(slot.get("detail"), str) and slot["detail"].strip():
+            lines.append(slot["detail"].strip())
     elif _has_specs(before) and _has_specs(after):
         lines = format_tuning_lines(before, after)
     else:
@@ -480,7 +510,7 @@ def get_tuning(model_id: str, path=None) -> dict:
 
 
 def record_tuning(model_id: str, *, before=None, after=None, source="optimize_now",
-                  unchanged=False, path=None) -> dict:
+                  unchanged=False, path=None, detail=None) -> dict:
     """Save a finished run's baseline and winner speeds. Per model, last run wins.
 
     When nothing was faster (or the two sides match), ``unchanged`` is stored
@@ -506,6 +536,8 @@ def record_tuning(model_id: str, *, before=None, after=None, source="optimize_no
         slot["after"] = a
     slot["source"] = source
     slot["unchanged"] = bool(same)
+    if same and isinstance(detail, str) and detail.strip():
+        slot["detail"] = detail.strip()
     slot["updated"] = time.time()
     _save(data, path)
     return _tuning_view(slot)

@@ -131,6 +131,7 @@ class GgufOptimizer:
             self._cancel.clear(); self._pause.clear()
             self.state = self._blank()
             self._tune_unchanged = False
+            self._tune_detail = ""
             self._set(running=True, mode="now", phase="starting", started=time.time(),
                       schedule=sched, source=self.source,
                       step=web_tune_step.format_step(action="starting"))
@@ -261,12 +262,20 @@ class GgufOptimizer:
             if res.get("before") and res.get("after") and getattr(self, "model_id", None):
                 try:
                     import web_speed
-                    same = web_speed.tuning_bodies_match(res["before"], res["after"])
+                    tried = [t for t in (res.get("tried") or []) if isinstance(t, dict)]
+                    # Day 28: when no trial won, the settings did not change.
+                    # "After" was just a later re-measure of the same settings,
+                    # so a little noise printed Before/After lines that looked
+                    # like tuning did nothing (or made it slower).
+                    same = (web_speed.tuning_bodies_match(res["before"], res["after"])
+                            or (status == "done" and bool(tried)
+                                and not any(t.get("won") for t in tried)))
                     self._tune_unchanged = same
+                    self._tune_detail = web_speed.format_kept_detail(tried) if same else ""
                     web_speed.record_tuning(
                         self.model_id,
                         before=res["before"], after=res["after"],
-                        source=source, unchanged=same,
+                        source=source, unchanged=same, detail=self._tune_detail,
                     )
                 except Exception as ex:  # noqa: BLE001
                     self._log(f"could not save before/after: {ex}")
@@ -274,6 +283,7 @@ class GgufOptimizer:
                 self._set(results=res.get("tried") or [], error=None, error_detail=None,
                           summary={"complete": status == "done", "winner": res.get("best") or {},
                                    "unchanged": bool(getattr(self, "_tune_unchanged", False)),
+                                   "detail": getattr(self, "_tune_detail", "") or "",
                                    "minutes": round((time.time() - self.state["started"]) / 60, 1),
                                    "before": res.get("before"), "after": res.get("after")})
                 phase = "done" if status == "done" else "canceled"

@@ -1,3 +1,25 @@
+## Day 27 fixes, round 2
+
+- Guess-ahead and Prompt lookup help no longer quotes results from one
+  particular model. It says what they are usually good at (code edits,
+  repeated text), that the first word on long prompts can come a little
+  later, and that gains vary by model and Mac.
+- The Auto-tune animation no longer makes the chat move. The animated
+  mark and the Tuning badge now keep a fixed size, and the chat header
+  keeps room for the badge even when it is hidden.
+- After Update now (or any web restart), a GGUF model that kept running
+  is fully picked up again: Auto-tune Start works instead of saying it
+  needs a GGUF model, and Reset clears that model's saved GGUF results.
+- Self-tuning only counts chats that really ran with the setting it is
+  trying. A trial whose reload never happened (for example the model was
+  switched or the page restarted) is asked for again instead of measuring
+  the old settings twice and finding nothing.
+- When Auto-tune finds nothing faster, it says so plainly and keeps your
+  settings, with one more line: how many changes were tried, that none
+  was at least 3% faster, the current writing speed, and the closest try.
+  Before, a little measuring noise could show Before/After lines that
+  looked like tuning did nothing or made things slower.
+
 ## Day 27 fixes
 
 - Update now no longer reloads the page the moment you click it. The page

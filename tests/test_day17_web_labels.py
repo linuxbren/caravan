@@ -14,7 +14,7 @@ class MeasuredLabels(unittest.TestCase):
 
     def test_badge_is_tested_but_not_a_general_speed_claim(self):
         html=(Path(__file__).resolve().parents[1]/'proxy/web/index.html').read_text()
-        self.assertIn('Qwen N2 tested, helper slower',html)
+        self.assertIn('measured on one split setup, helper slower',html)
         self.assertNotIn('split block verify · awaiting live benchmark',html)
 
     def test_settings_help_is_plain_and_qualified(self):

@@ -670,6 +670,10 @@
     content: "✦";
     display: inline-block;
     margin-right: .4em;
+    /* Fixed box: the four campfire glyphs differ in width and line height;
+       without this the button (and the chat under it) moved each tick. */
+    width: 1em; height: 1em; line-height: 1; text-align: center;
+    vertical-align: -0.1em; overflow: hidden;
     animation: tune-campfire .9s steps(1) infinite;
   }
   @keyframes tune-campfire {
@@ -690,12 +694,16 @@
     color: var(--accent);
     border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
     background: color-mix(in srgb, var(--accent) 12%, transparent);
-    border-radius: 999px; padding: 2px 8px; margin-left: 8px;
+    border-radius: 999px; padding: 0 8px; margin-left: 8px;
     vertical-align: middle; font-weight: 550;
+    /* Fixed height so the animation never changes the chat header height. */
+    box-sizing: border-box; height: 1.35rem; line-height: 1; white-space: nowrap;
   }
   .tune-badge[hidden] { display: none; }
   .tune-badge.is-tuning::before {
     content: "✦";
+    display: inline-block; width: 1em; height: 1em; line-height: 1;
+    text-align: center; overflow: hidden;
     animation: tune-campfire .9s steps(1) infinite;
   }
   .tune-badge.is-self {
@@ -708,7 +716,9 @@
   @media (prefers-reduced-motion: reduce) {
     .tune-badge.is-tuning::before { animation: none; content: "✦"; }
   }
-  .chathead h2 { display: flex; align-items: center; flex-wrap: wrap; }
+  /* Room for the Tuning badge even while it is hidden, so it showing or
+     hiding does not move the messages below. */
+  .chathead h2 { display: flex; align-items: center; flex-wrap: wrap; min-height: 1.35rem; }
   .self-tune-note {
     font-size: .72rem; color: var(--muted); line-height: 1.5; margin: 8px 0 0;
   }
@@ -2610,7 +2620,7 @@
     items.fuse_kernels = {id:"fuse_kernels", text:"fused " + (a.fuse_kernels || "off"), on:!!(a.fuse_kernels && a.fuse_kernels !== "off"), hint:CHIP_HINTS.fuse_kernels};
     if (a.keepalive != null) items.keepalive = {id:"keepalive", text:"keep-warm " + (a.keepalive ? "on" : "off"), on:!!a.keepalive, hint:CHIP_HINTS.keepalive};
     const extras = [];
-    if (a.multi_token_verify && a.two_chats_available) extras.push({id:"mtv", text:"split block verify · Qwen N2 tested, helper slower", on:false, hint:"A measured result for this setup, not a general promise."});
+    if (a.multi_token_verify && a.two_chats_available) extras.push({id:"mtv", text:"split block verify · measured on one split setup, helper slower", on:false, hint:"A measured result for this setup, not a general promise."});
     const order = (state.opts && state.opts.length)
       ? state.opts.map(o => o.id)
       : ["self_tune","guess_ahead","prompt_lookup","shared_start","pipeline_chats","fuse_kernels","kv_bits","keepalive"];
@@ -2833,8 +2843,8 @@
 };
   const SETTINGS_HELP_GGUF = {
   "self_tune": "Caravan learns from your chats and remembers faster settings for each model. Pinned choices stay yours. For GGUF, a change reloads the model when you are not mid-reply.",
-  "guess_ahead": "A smaller model guesses upcoming words for the main model to check. In our tests on Qwen2.5 Coder 7B with a small helper: about 93% faster writing on code edits and 34% on short chats, but the first word on long prompts came about 10% later. Auto uses it only when a test finds it faster. On needs a small helper of the same model on this Mac; Caravan offers one under the model and will not download one for you without your OK.",
-  "prompt_lookup": "Reuse words from your prompt to help with repeated text. In our tests on Qwen2.5 Coder 7B: about 95% faster writing when the reply repeats the prompt (whole-file code edits), no change on short chats, and about 2% slower on long prompts. Auto stays off until a test finds it is faster.",
+  "guess_ahead": "A smaller model of the same family guesses upcoming words for the main model to check. It is often faster on code edits and repeated text and helps less on short chats, and the first word on long prompts can come a little later. Gains vary by model and Mac. Auto uses it only when a test on your model finds it faster. On needs a small helper of the same family on this Mac; when Caravan knows one, it offers it under the model and will not download one for you without your OK.",
+  "prompt_lookup": "Reuse words from your prompt to help with repeated text. Often much faster when the reply repeats the prompt (for example whole-file code edits), little change on short chats, and slightly slower on long prompts. Gains vary by model. Auto stays off until a test finds it is faster.",
   "shared_start": "Reuse the start of a chat so later turns begin sooner.",
   "pipeline_chats": "Let two chats share the model at the same time. Auto keeps one chat.",
   "chat_window": "How much of the conversation the model can keep in mind at once. Auto picks a size that fits this model and this Mac.",

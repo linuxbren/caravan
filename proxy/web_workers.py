@@ -608,6 +608,12 @@ class WorkerManager:
         self._loaded_entry = dict({k: v for k, v in entry.items() if k != "tune_override"},
                                   gguf_shares=shares, _loaded_tune=tune,
                                   _launch=launch if launch else None)
+        # Day 28: keep the entry so a web restart (Update now) can adopt it.
+        try:
+            meta["entry"] = json.loads(json.dumps(self._loaded_entry, default=str))
+            self._write_gguf_meta(meta)
+        except (TypeError, ValueError, OSError):
+            pass
         self._set(status="ready", split=bool(peers))
         self._note("ready")
         self._start_gguf_watch(meta)
@@ -730,7 +736,11 @@ class WorkerManager:
             self._note(f"reopened tunnel 127.0.0.1:{t['port']} to {t.get('id')}")
         self._write_gguf_meta(meta)
         gb = meta.get("gguf") or {}
-        if meta.get('entry'):self._loaded_entry=meta['entry']
+        # Day 28: gguf.json never held an "entry", so after Update now (a web
+        # restart) the adopted GGUF model had no _loaded_entry. Auto-tune then
+        # answered 409 "needs a GGUF model loaded" and Reset could not clear
+        # the model's saved GGUF results. Rebuild the entry from the file.
+        self._loaded_entry = self._adopted_gguf_entry(meta)
         self._set(status="ready", model_id=meta.get("id"), model_name=meta.get("name"),
                   lead_pid=pid, split=gb.get("mode") == "split", backend="llama", gguf=gb,
                   error=None, error_detail=None)
@@ -738,6 +748,26 @@ class WorkerManager:
                    f"{len(meta.get('tunnels') or [])} tunnel(s) after web restart")
         self._start_gguf_watch(meta)
         return True
+
+    @staticmethod
+    def _adopted_gguf_entry(meta: dict) -> dict:
+        """The catalog row for the GGUF model recorded in gguf.json."""
+        if isinstance(meta.get("entry"), dict) and meta["entry"].get("source") == "gguf":
+            return dict(meta["entry"])
+        entry = None
+        try:
+            entry = catalog.gguf_entry(meta.get("id") or "")
+        except Exception:  # noqa: BLE001 - fall back to gguf.json fields
+            entry = None
+        if not entry or (meta.get("model") and str(Path(entry.get("lead_path") or "").expanduser())
+                         != str(Path(meta["model"]).expanduser())):
+            entry = {"id": meta.get("id") or "", "name": meta.get("name") or "",
+                     "hf": meta.get("id") or "", "source": "gguf", "backend": "llama",
+                     "lead_path": meta.get("model") or "", "usable": True,
+                     "available_lead": True}
+        if meta.get("shares") and not entry.get("gguf_shares"):
+            entry = dict(entry, gguf_shares=list(meta["shares"]))
+        return entry
 
     def _kill_gguf(self) -> None:
         """Stop only the llama-server, SSH tunnels and peer rpc-servers we recorded."""

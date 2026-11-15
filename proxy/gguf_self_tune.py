@@ -227,6 +227,26 @@ def observe(model_path, n_minis: int, specs, *, used=None, settings=None,
     # Mid-trial. The first reply after a reload is often a cold start
     # (especially after a memory-compression change), so skip it.
     trial = dict(trial)
+    # Day 28: a trial saved before its reload ran (model switched, web
+    # restarted for Update now) left the model on the old settings, and the
+    # next replies were counted as the challenger: the two sides measured the
+    # same settings, so Self-tuning "found nothing" or sat in "trial" for
+    # days. Only count replies that really ran with the challenger; otherwise
+    # ask for the trial reload again.
+    tname, tch = trial.get("name"), trial.get("challenger")
+    if tname and str(current.get(tname)) != str(tch):
+        trial.pop("settled", None)
+        trial["samples"] = {}
+        e["trial"] = trial
+        e["status"] = "trial"
+        save_store(store, path)
+        trial_tune = dict(current, **(trial.get("extra") or {}), **{tname: tch})
+        plan.update({
+            "action": "reload", "tune": trial_tune, "trial": dict(trial),
+            "before": _specs_of(e.get("baseline")), "reason": "trial",
+            "label": LABELS.get(tname, tname),
+        })
+        return plan
     if not trial.get("settled"):
         trial["settled"] = True
         e["trial"] = trial
