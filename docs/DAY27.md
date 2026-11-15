@@ -1,8 +1,8 @@
-# Day 27 — Measured Guess-ahead, a helper offer, and GGUF closer to MLX
+# Day 27 — Measured Guess-ahead, a helper offer, GGUF closer to MLX, and one-Mac Topology
 
-Day 27 ran Nov 13 2026 (America/Chicago), overnight. There is no `day27`
-tag yet; it waits until the work has been tried on real Macs. Every
-number below was measured on the 1st Mac with Qwen2.5 Coder 7B.
+Day 27 ran Nov 13–15 2026 (America/Chicago). It is published as
+`day27-2026-11-15`. Day 26 is tagged (`day26-2026-11-13`). Every
+speed number below was measured on the 1st Mac with Qwen2.5 Coder 7B.
 
 ## At a glance
 
@@ -20,6 +20,12 @@ number below was measured on the 1st Mac with Qwen2.5 Coder 7B.
   and keeps it only when it measures faster.
 - **GGUF Prompt lookup uses a better guesser**: about 95% faster on
   code edits (it was about 40%), no change on short chats.
+- **Cancel Auto-tune** shows Cancelling…, then a plain cancelled
+  line. Applying a setting while Auto-tune is running offers one
+  **Cancel Auto-tune and apply** action.
+- **One-Mac Topology:** with only one live Mac, Balance and
+  Thunderbolt are hidden. A Mac whose Caravan is off shows as
+  offline, with a grey light.
 
 None of the Day 27 changes touch `agent/`, `runtime/`, or the
 requirements files, so `caravan update` keeps a loaded model running.
@@ -208,3 +214,57 @@ GGUF model with Guess-ahead.
 none of them touch `agent/`, `runtime/`, or the requirements files. The
 web page restarts; press Cmd-R if a tab does not reload. A changed
 Prompt lookup or Guess-ahead takes effect on the next model load.
+Update now no longer reloads the page the moment you click it, and a
+GGUF model that kept running after an update is fully picked up again
+(Auto-tune and Reset work).
+
+## Fixes after the first overnight
+
+Tried on a real Mac after the overnight work:
+
+- Guess-ahead and Prompt lookup help no longer quotes results from one
+  particular model. It says what they are usually good at (code edits,
+  repeated text), that the first word on long prompts can come a
+  little later, and that gains vary by model and Mac.
+- Settings and the helper offer find the GGUF file for the loaded
+  model. Guess-ahead On can be picked when a helper is on this Mac
+  (Settings names it). The helper button says what is true for the
+  loaded model; nothing downloads without a yes.
+- Cancel Auto-tune shows **Cancelling…** on the button and the Tuning
+  badge right away. When it ends, the Auto-tune section says
+  "Auto-tune cancelled — your settings are unchanged" (or that it
+  kept the faster settings found before you cancelled). Nothing above
+  the chat moves.
+- Load model or Apply & restart while Auto-tune runs asks once, with
+  **Cancel Auto-tune and apply** doing both, instead of an error
+  telling you to cancel first.
+- More buttons show a busy word and a result, including Reset tuning
+  (Resetting…, then "Tuning reset"), Pause/Resume, Unload, and the
+  helper and download buttons.
+- When Auto-tune finds nothing faster, it says so plainly and keeps
+  your settings. Self-tuning only counts chats that really ran with
+  the setting it is trying.
+- Restarts no longer leave a leftover `dns-sd` announcement behind.
+
+## One-Mac Topology
+
+With only one live Mac in the group, Topology hides the Balance and
+Thunderbolt sections. They come back on their own when a second Mac
+is live again.
+
+A Mac whose Caravan is off, or whose stats have not updated for 15
+seconds, shows as offline (grey light). Those cards used to look live
+because CPU and temperature still arrived over SSH after Caravan was
+stopped. Offline Macs do not count toward the two-Mac sections.
+
+Uninstalling on one Mac does not remove it from the others. After
+Unload, use **Remove this Mac** on that card, or leave it showing as
+offline.
+
+## What is still ahead
+
+Day 28 is a one-Mac vs two-Mac speed test of Qwen3 30B-A3B, gpt-oss
+20B, and Llama 3.1 8B, on Caravan, LocalAI, Exo, and llama.cpp
+rpc-server, plus Caravan v0, with a video of the results. Day 29
+compares Caravan on llama.cpp b12283 with a llama.cpp v1.0.0 nightly.
+TensorFold is a later test day. See the [roadmap](ROADMAP.md).

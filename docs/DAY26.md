@@ -1,8 +1,7 @@
 # Day 26 — Updates from the page, download progress under the model, a clearer First-token chart, and GGUF speed-ups
 
-Day 26 ran Nov 12–13 2026 (America/Chicago). There is no `day26` tag
-yet; it waits until the work has been tried on real Macs. Day 25
-remains tagged (`day25-2026-11-12`).
+Day 26 ran Nov 12–13 2026 (America/Chicago). It is published as
+`day26-2026-11-13`. Day 25 remains tagged (`day25-2026-11-12`).
 
 ## At a glance
 
@@ -215,15 +214,12 @@ labeled "Last bench", falling back to saved chat averages, labeled
 
 This follow-up does not change `agent/`, `runtime/`, or the
 requirements files, so a `caravan update` from the previous Day 26
-pin keeps a loaded model running. The web page still restarts. No
-`day26` tag yet.
+pin keeps a loaded model running. The web page still restarts.
 
-## What is still ahead
+## What came next
 
-Day 27 candidates are listed in the [roadmap](ROADMAP.md): measured
-Guess-ahead speed-ups with a hit-rate readout, GGUF closer to MLX, a
-beginner switch for Advanced, vision and voice, a terminal UI,
-fresh-install and FileVault testing, and a security review.
+Day 27 is published as `day27-2026-11-15`. See [DAY27](DAY27.md) and
+the [roadmap](ROADMAP.md).
 
 ## Tests
 

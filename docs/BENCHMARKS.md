@@ -18,7 +18,26 @@ or else from saved chat averages, labeled "Saved". If one side has no
 numbers, it prints "No saved numbers for the GGUF model yet - chat
 with it a bit, or run the bench." instead of empty bars. After a live run it puts the original
 model back. On a terminal, a small campfire shows the current step
-and elapsed time. See [Day 25](DAY25.md).
+and elapsed time. `caravan bench "<model>" --speedups` measures Off,
+Prompt lookup, Guess-ahead, and Auto. See [Day 25](DAY25.md) and
+[Day 27](DAY27.md).
+
+## Day 27 — Guess-ahead on the 1st Mac
+
+Qwen2.5 Coder 7B GGUF (Q4_K_M) with the Qwen2.5 Coder 0.5B helper
+(Q8_0), measured on the 1st Mac with `caravan bench --speedups --only
+gguf`. Write speed in tokens/s, median of each set. Full tables are
+in [DAY27](DAY27.md).
+
+| Mode | Short (5) | Code edits (5) |
+|---|---|---|
+| Off | 22.3 | 22.3 |
+| Guess-ahead | **29.9** (+34%) | **42.9** (+93%) |
+| MLX Off (same model, no helper) | 23.4 | 23.5 |
+
+Auto-tune, run against a temporary server, kept Guess-ahead: write
+22.1 → 27.5 tokens/s (+25%). MLX still reads long prompts sooner
+(about 12% on ~8k) and writes faster on very long ones.
 
 ## Day 25 — first `caravan bench` on the 1st Mac
 

@@ -1,3 +1,42 @@
+## 2026-11-15: Day 27 wrap — docs, Day 26 tag, Day 27 tag
+
+Day 26 is tagged `day26-2026-11-13` at the documentation pin
+[f12edc4](https://github.com/linuxbren/caravan/commit/f12edc42b7bb66c357a945f0c0394cae6bd9b893).
+Day 27 docs now cover the overnight Guess-ahead work, the later
+fixes (cancel feedback, Cancel Auto-tune and apply, model-neutral
+wording, the helper offer that needs a yes, the early-reload fix,
+button busy words), and one-Mac Topology. The Day 28 plan is a
+one-Mac vs two-Mac shootout of Qwen3 30B-A3B, gpt-oss 20B, and
+Llama 3.1 8B on Caravan, LocalAI, Exo, and llama.cpp rpc-server,
+plus Caravan v0; Day 29 is llama.cpp b12283 vs a v1.0.0 nightly;
+TensorFold is a later test day. Docs only: this does not change
+`agent/`, `runtime/`, or the requirements files, so `caravan update`
+keeps a loaded model. See [DAY27](DAY27.md). Tagged
+`day27-2026-11-15` after this pin.
+
+## 2026-11-15: Day 27 follow-up — one-Mac Topology, and a stopped Mac looks offline
+
+With only one live Mac in the group, Topology hides the Balance and
+Thunderbolt sections; they come back when a second Mac is live again.
+A Mac whose Caravan is off, or whose stats have not updated for 15
+seconds, shows as offline (grey light). Those cards used to look live
+because CPU and temperature still arrived over SSH. Uninstalling on
+one Mac does not remove it from the others; after Unload, use Remove
+this Mac on that card. This does not change `agent/`, `runtime/`, or
+the requirements files, so `caravan update` keeps a loaded model.
+See [DAY27](DAY27.md).
+
+## 2026-11-14: Day 27 fixes — cancel feedback, Apply while tuning, and button busy words
+
+Cancel Auto-tune shows Cancelling…, then a plain cancelled line.
+Load or Apply & restart while Auto-tune runs offers one
+"Cancel Auto-tune and apply" action. More buttons show a busy word
+and a result. Guess-ahead help is model-neutral. Update now no
+longer reloads the page the moment you click it, and a GGUF model
+that kept running after an update is fully picked up again. This
+does not change `agent/`, `runtime/`, or the requirements files, so
+`caravan update` keeps a loaded model. See [DAY27](DAY27.md).
+
 ## 2026-11-13: Day 27 — Measured Guess-ahead, a helper offer, and GGUF closer to MLX
 
 Overnight on the 1st Mac with Qwen2.5 Coder 7B. A reply that used

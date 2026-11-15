@@ -1,4 +1,4 @@
-## Day 28 — one-Mac Topology, and a stopped Mac looks offline
+## Day 27 follow-up — one-Mac Topology, and a stopped Mac looks offline
 
 - With only one live Mac in the group, Topology hides the Balance and
   Thunderbolt sections. They come back on their own when a second Mac
@@ -139,8 +139,8 @@
   this Mac is done. See [Day 26](docs/DAY26.md).
 - This follow-up does not change `agent/`, `runtime/`, or the
   requirements files, so a `caravan update` from the Day 25 pin
-  keeps a loaded model running. The web page still restarts. No
-  `day26` tag yet.
+  keeps a loaded model running. The web page still restarts. Tagged
+  `day26-2026-11-13`.
 
 - **Update now** and `caravan update` on this Mac also update the
   other Macs Caravan already knows about (the 2nd Mac, 3rd Mac, and
@@ -155,7 +155,7 @@
   network the button stays off; use Terminal there. This follow-up
   does not change `agent/`, `runtime/`, or the requirements files,
   so a `caravan update` from the previous Day 26 pin keeps a loaded
-  model running. The web page still restarts. No `day26` tag yet.
+  model running. The web page still restarts. Tagged `day26-2026-11-13`.
   See [Day 26](docs/DAY26.md).
 
 - Settings > Updates has **Check now** next to the title and one

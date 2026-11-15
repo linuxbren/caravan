@@ -43,19 +43,27 @@ and the daily logs, not mixed into current setup instructions.
   GGUF Guess-ahead measured (+93% code edits, +34% short chats with a
   small helper) and tried by Auto-tune; a better GGUF Prompt lookup
   guesser; "Download helper for faster replies?" under the model, only
-  with your click. See [DAY27](DAY27.md).
+  with your click; Cancel Auto-tune feedback and one
+  "Cancel Auto-tune and apply" action; model-neutral Guess-ahead
+  wording; and one-Mac Topology (Balance and Thunderbolt hidden when
+  only one Mac is live; a stopped Mac shows as offline, with a grey
+  light). See [DAY27](DAY27.md).
 
 ## Planned dev days
 
-- **Day 28:** split-model shootout across both Macs (Qwen3 30B, Gemma 4
-  26B, gpt-oss 20B) against earlier Caravan versions and other tools.
+- **Day 28:** one Mac vs two Macs. The same tests on one Mac, then
+  with the model split across two Macs: Qwen3 30B-A3B, gpt-oss 20B,
+  and Llama 3.1 8B, on Caravan, LocalAI, Exo, and llama.cpp
+  rpc-server, plus Caravan v0 numbers against current Caravan, and a
+  video of the results.
 - **Day 29:** Caravan on its current llama.cpp build (b12283) against
-  Caravan on a llama.cpp v1.0 nightly build: write and read speed, long
-  chats, memory, first word, Guess-ahead and Prompt lookup, on one Mac and
-  split. Day 28 Caravan against Day 29 Caravan.
-- **TensorFold evaluation** (waiting for a go-ahead before anything is
-  installed): bench the Metal-native TensorFold engine against llama.cpp
-  and MLX on one Mac, then on both Macs.
+  Caravan on a llama.cpp v1.0.0 nightly build: write and read speed,
+  long chats, memory, first word, Guess-ahead and Prompt lookup, on
+  one Mac and split. Day 28 Caravan against Day 29 Caravan.
+- **TensorFold** is a later test day (waiting for a go-ahead before
+  anything is installed): bench the Metal-native TensorFold engine
+  ([ashhart/TensorFold](https://github.com/ashhart/TensorFold)) against
+  llama.cpp and MLX on one Mac, then on both Macs.
 
 ## Next candidates
 

@@ -61,7 +61,7 @@ Check whether Caravan is running with `caravan status`. Need help? Run `caravan 
 
 ## For developers / details
 
-[What's new (Day 26)](docs/DAY26.md) · [Developer setup](docs/DEVELOPMENT.md) · [Clean-install fixes and verification](docs/DAY23.md) · [Package status](docs/PACKAGING.md) · [Documentation index](docs/README.md) · [Changelog](CHANGELOG.md).
+[What's new (Day 27)](docs/DAY27.md) · [Developer setup](docs/DEVELOPMENT.md) · [Clean-install fixes and verification](docs/DAY23.md) · [Package status](docs/PACKAGING.md) · [Documentation index](docs/README.md) · [Changelog](CHANGELOG.md).
 
 The browser page is for your own Mac. Do not expose it to the public internet.
 

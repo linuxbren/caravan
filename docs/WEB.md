@@ -45,7 +45,14 @@ if you want their memory freed. See [safe removal](../INSTALL.md#remove-caravan-
 ## Balance work between Macs
 
 In Topology, **Balance** and **Thunderbolt** stay collapsed until you click
-them. Balance starts on Auto and shows memory use for each Mac.
+them. When only one Mac is live, both sections are hidden; they come
+back when a second Mac is live again. A Mac whose Caravan is off, or
+whose numbers have not updated for 15 seconds, shows as offline with a
+grey light, and does not count as live. Uninstalling on one Mac does
+not remove its card from the others; after Unload, use **Remove this
+Mac** on that card.
+
+Balance starts on Auto and shows memory use for each Mac.
 **Adjust** reveals the controls and a live preview. **Apply** is black when a
 changed plan is ready; it is grey when no change is needed or during reload.
 A quiet line says when this split is already applied, or when it is not safe
@@ -62,7 +69,8 @@ before a reload, not bypassed with a forced load.
 
 ## Thunderbolt checks
 
-The panel stays collapsed until you click it. It inspects configured, trusted
+The panel is hidden when only one Mac is live, and otherwise stays
+collapsed until you click it. It inspects configured, trusted
 Macs. Inventory and link checks are
 read-only. Requested checks show verified/unverified/failed and expire after
 30 seconds. A reachable port alone does not verify SSH identity. A plan preview
@@ -115,7 +123,12 @@ time, for example "Measuring the current setup · short prompt 3 of
 5", "Trying Memory compression 8 · long prompt", or "Reloading with
 the winner…". The previous result lines are hidden for the length of
 the run and are replaced by the new result when it finishes; if the
-run fails or is cancelled, the previous lines come back. Reset
+run fails or is cancelled, the previous lines come back. Cancel
+Auto-tune shows **Cancelling…** right away, then a plain line:
+"Auto-tune cancelled — your settings are unchanged" (or that it kept
+the faster settings found before you cancelled). Load model or
+**Apply & restart** while a run is in progress asks once, with
+**Cancel Auto-tune and apply** doing both. Reset
 tuning is disabled while a run is in progress. A small **Tuning…**
 badge sits next to the model name and in the chat header, so the run
 is visible from the chat page. When Self-tuning runs its quiet
