@@ -1,5 +1,23 @@
 # Changelog
 
+## Day 27 fixes
+
+- Update now no longer reloads the page the moment you click it. The page
+  remembers which update run was already finished, so only the new run
+  can reload the page or show Done, and Auto-tune or a reply no longer
+  repaints the Updates card while an update is starting.
+- GGUF models: Settings and the helper offer now find the GGUF file for
+  the loaded model. Guess-ahead On can be picked when a helper is on this
+  Mac (Settings names it), and the helper offer line works for GGUF.
+- The Helper download button now says what is true for the loaded model:
+  a GGUF model with its helper already on this Mac names the helper and
+  says to set Guess-ahead to On (or Auto and run Auto-tune); a GGUF model
+  without one offers the download; the split-MLX message shows only for
+  MLX.
+- Restarts (updates, LAN on or off) no longer leave a `dns-sd` process
+  behind. The web server stops its own announcement when it is stopped,
+  and on start it stops its own leftovers from earlier restarts.
+
 ## Day 27 — Measured Guess-ahead, and GGUF closer to MLX
 
 - When a reply used Prompt lookup or Guess-ahead, the line under it now

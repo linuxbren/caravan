@@ -521,10 +521,39 @@ def list_models() -> list:
     )
 
 
+def gguf_entry(model_id: str) -> Optional[dict]:
+    """A GGUF file on this Mac by its page id ("gguf/<file stem>"), or None.
+
+    The page names GGUF models "gguf/<stem>". Without this, get_model read
+    that id as a Hugging Face repo and returned an MLX-style row with no
+    file, so Settings and the helper offer never saw the GGUF file.
+    """
+    mid = str(model_id or "").strip()
+    if not mid.lower().startswith("gguf/"):
+        return None
+    try:
+        import gguf_split
+        found = gguf_split.scan_local()
+    except Exception:
+        return None
+    want = mid.lower()
+    for g in found:
+        if str(g.get("id") or "").lower() == want:
+            return {
+                "id": g["id"], "name": g["name"] + " (GGUF)", "hf": g["id"],
+                "source": "gguf", "backend": "llama", "lead_path": g["path"],
+                "size_gb": g.get("size_gb"), "usable": True, "available_lead": True,
+            }
+    return None
+
+
 def get_model(model_id: str) -> Optional[dict]:
     """Resolve a model for WorkerManager.switch — disk path required."""
     if not model_id:
         return None
+    g = gguf_entry(model_id)
+    if g:
+        return g
     meta = meta_for(model_id)
     scanned = inv.scan_local()
     hf = meta.get("hf")

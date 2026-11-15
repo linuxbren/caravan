@@ -668,6 +668,28 @@ class App:
         out.sort(key=lambda r: (0 if r.get("role") == "lead" else 1, r.get("id") or ""))
         return out
 
+    def model_entry(self, model_id):
+        """One lookup for a model id sent by the page (MLX or GGUF).
+
+        GGUF ids ("gguf/<stem>") resolve to the file on this Mac. If the
+        catalog has no file for the loaded model, use what was loaded.
+        """
+        if not model_id:
+            return None
+        entry = catalog.get_model(model_id)
+        if entry and entry.get("lead_path"):
+            return entry
+        try:
+            snap = self.mgr.snapshot()
+            loaded = getattr(self.mgr, "_loaded_entry", None) or {}
+        except Exception:
+            snap, loaded = {}, {}
+        if (snap.get("model_id") == model_id and isinstance(loaded, dict)
+                and loaded.get("lead_path")
+                and str(loaded.get("id") or model_id) == str(model_id)):
+            return dict(loaded)
+        return entry
+
     def list_loadable_models(self) -> list:
         """Settings dropdown: disk-backed usable MLX models (N-node aware)."""
         snap = self.mgr.snapshot()
@@ -1251,7 +1273,7 @@ def make_handler(app: App):
             snap = app.mgr.snapshot()
             q = parse_qs(urlparse(self.path).query)
             mid = (q.get("model") or [None])[0] or snap.get("model_id")
-            entry = catalog.get_model(mid) if mid else None
+            entry = app.model_entry(mid) if mid else None
             cfg = web_settings.load_config()
             fsets = web_settings.file_settings(mid, (entry or {}).get("lead_path"), cfg) if mid else {}
             try:
@@ -1702,15 +1724,21 @@ def make_handler(app: App):
                 mid = (body or {}).get("model") or snap.get("model_id")
             else:
                 mid = (parse_qs(urlparse(self.path).query).get("model") or [None])[0] or snap.get("model_id")
-            entry = catalog.get_model(mid) if mid else None
+            entry = app.model_entry(mid) if mid else None
             try:
                 jobs = web_picker.list_jobs()
             except Exception:
                 jobs = []
-            offer = HO.offer_for(snap, entry, jobs=jobs)
+            action = (body or {}).get("action") if post else None
+            # A Download click (line or Helper download button) is an explicit
+            # yes, so an earlier Not now does not block it.
+            offer = HO.offer_for(snap, entry, jobs=jobs, ignore_declined=(action == "download"))
             if not post:
-                return self._json(200, {"offer": offer, "show": bool(offer)})
-            action = (body or {}).get("action")
+                try:
+                    status = HO.helper_status(snap, entry)
+                except Exception:
+                    status = None
+                return self._json(200, {"offer": offer, "show": bool(offer), "helper": status})
             if action not in ("download", "not_now"):
                 return self._json(400, {"error": "Unknown action"})
             if action == "not_now":

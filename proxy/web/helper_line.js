@@ -89,5 +89,7 @@
     } catch (_) { /* web server restarting: try again next tick */ }
   }
   window.applyHelperOffer = applyHelperOffer;
+  // The Helper download button started a download: show its progress here.
+  window.helperLineShowJob = (j) => { if (j) { job = j; offer = null; stopped = false; paint(); } };
   setInterval(refresh, 4000); refresh();
 })();

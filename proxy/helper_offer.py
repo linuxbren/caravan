@@ -90,12 +90,13 @@ def _mb(n) -> int:
 
 
 def gguf_offer(model_id: str, lead_path, *, find_draft=None, jobs=None,
-               store_path=None) -> Optional[dict]:
+               store_path=None, ignore_declined=False) -> Optional[dict]:
     """Offer for a GGUF model, or None (no known helper, already on disk,
-    downloading, or Not now)."""
+    downloading, or Not now). ignore_declined: the user asked for it now
+    (Helper download button), so an earlier Not now does not hide it."""
     if not model_id or not lead_path:
         return None
-    if declined(model_id, store_path):
+    if not ignore_declined and declined(model_id, store_path):
         return None
     h = match_gguf(Path(str(lead_path)).name) or match_gguf(model_id)
     if not h:
@@ -133,18 +134,72 @@ def mlx_offer(snapshot: dict, store_path=None) -> Optional[dict]:
             "size_mb": o.get("size_mb"), "measured": False, "message": LINE}
 
 
+def _is_gguf(snap: dict, entry: dict) -> bool:
+    if entry.get("source") == "gguf":
+        return True
+    if entry.get("source"):
+        return False
+    # No catalog source: the page's GGUF id, or the loaded model on llama.cpp.
+    mid = str(entry.get("id") or snap.get("model_id") or "")
+    if mid.lower().startswith("gguf/"):
+        return True
+    return snap.get("backend") == "llama" and (not entry or mid == snap.get("model_id"))
+
+
 def offer_for(snapshot: dict, entry: Optional[dict], *, jobs=None, store_path=None,
-              find_draft=None) -> Optional[dict]:
+              find_draft=None, ignore_declined=False) -> Optional[dict]:
     """The one offer for the loaded (or named) model, or None."""
     snap = snapshot or {}
     entry = entry or {}
     mid = entry.get("id") or snap.get("model_id")
-    if (entry.get("source") == "gguf") or (snap.get("backend") == "llama" and not entry):
+    if _is_gguf(snap, entry):
         return gguf_offer(mid, entry.get("lead_path"), find_draft=find_draft,
-                          jobs=jobs, store_path=store_path)
+                          jobs=jobs, store_path=store_path,
+                          ignore_declined=ignore_declined)
     if snap.get("model_id") == mid:
         return mlx_offer(snap, store_path=store_path)
     return None
+
+
+def helper_status(snapshot: dict, entry: Optional[dict], *, find_draft=None) -> dict:
+    """What the Helper download button says for the loaded (or named) model.
+
+    GGUF: whether a helper is already on this Mac (and its name), or which
+    known helper could be downloaded. MLX: whether the model is split
+    (only a split MLX model uses a helper today).
+    """
+    snap = snapshot or {}
+    entry = entry or {}
+    mid = entry.get("id") or snap.get("model_id")
+    if not mid:
+        return {"kind": None, "model": None}
+    if not _is_gguf(snap, entry):
+        return {"kind": "mlx", "model": mid, "split": bool(snap.get("split"))}
+    path = entry.get("lead_path")
+    known = (match_gguf(Path(str(path)).name) if path else None) or match_gguf(mid)
+    present = None
+    if path:
+        if find_draft is None:
+            import gguf_split as G
+            find_draft = G.find_gguf_draft
+        try:
+            present = find_draft(path)
+        except Exception:
+            present = None
+    out = {"kind": "gguf", "model": mid,
+           "present": bool(present),
+           "present_name": (present or {}).get("name"),
+           "known_id": known["id"] if known else None,
+           "known_name": known["gguf_file"][:-len(".gguf")] if known else None,
+           "known_size_mb": _mb(known["bytes"]) if known else None}
+    if present:
+        out["message"] = (f"The Guess-ahead helper is already on this Mac ({out['present_name']}). "
+                          "Set Guess-ahead to On, or leave it on Auto and run Auto-tune.")
+    elif known:
+        out["message"] = f"A {out['known_size_mb']} MB helper ({out['known_name']}) can make this model write faster."
+    else:
+        out["message"] = "There is no known Guess-ahead helper for this GGUF model yet."
+    return out
 
 
 def download_body(offer: dict) -> dict:

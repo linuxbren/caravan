@@ -52,9 +52,39 @@
       b.textContent = 'Helper download…';
       slot.append(b);
     }
-    b.onclick = () => { if (offer) show(); else alert('No missing compatible helper for the loaded split MLX model.'); };
+    b.onclick = () => helperButtonClick();
     return b;
   }
+
+  // What the Helper download button says. GGUF: the helper is already on
+  // this Mac (named), or offer the download; MLX: the split-model offer,
+  // or why a one-Mac MLX model does not use a helper.
+  function helperButtonText(st) {
+    if (st && st.kind === 'gguf') {
+      if (st.present) return {say: 'The Guess-ahead helper is already on this Mac (' + (st.present_name || 'a smaller model of the same family') + '). Set Guess-ahead to On, or leave it on Auto and run Auto-tune.'};
+      if (st.known_id) return {ask: 'Download the ' + st.known_name + ' helper' + (st.known_size_mb ? ' (' + st.known_size_mb + ' MB)' : '') + ' for faster replies? It runs on this Mac and is used on the next load.'};
+      return {say: 'There is no known Guess-ahead helper for this GGUF model yet.'};
+    }
+    if (st && st.kind === 'mlx' && !st.split) return {say: 'On one Mac, MLX models do not use a Guess-ahead helper yet.'};
+    return {say: 'No missing compatible helper for the loaded split MLX model.'};
+  }
+  async function helperButtonClick() {
+    let data = null;
+    try { data = await api('/api/helper-offer'); } catch (_) { data = null; }
+    const st = data && data.helper;
+    if ((!st || st.kind !== 'gguf') && offer && !offer.declined) { show(); return; }
+    const t = helperButtonText(st);
+    if (t.ask) {
+      if (!confirm(t.ask)) return;
+      try {
+        const r = await api('/api/helper-offer/answer', {model: st.model, helper_id: st.known_id, action: 'download'});
+        if (window.helperLineShowJob) window.helperLineShowJob(r.job || null);
+      } catch (e) { alert(e.message); }
+      return;
+    }
+    alert(t.say);
+  }
+  window.helperButtonText = helperButtonText;
 
   // One /api/helpers response. Returns whether the button DOM was written.
   // Repeated identical polls with the button already present are a no-op.

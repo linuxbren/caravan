@@ -112,6 +112,39 @@ def host_key(path=None):
     except (OSError,ValueError): raise ValueError('Turn on Remote Login on this Mac first, then try again.') from None
 
 
+def stale_adverts(name, port, ps_output, uid=None):
+    """PIDs of this Mac's own leftover advertisers: `dns-sd -R <name>
+    _caravan._tcp local <port>` owned by this user whose parent is gone
+    (parent pid 1). Other names (another identity) are never matched."""
+    uid = os.getuid() if uid is None else uid
+    want = ['-R', str(name), '_caravan._tcp', 'local', str(port)]
+    out = []
+    for line in str(ps_output or '').splitlines():
+        parts = line.split()
+        if len(parts) < 4: continue
+        try: pid, ppid, owner = int(parts[0]), int(parts[1]), int(parts[2])
+        except ValueError: continue
+        cmd = parts[3:]
+        if ppid != 1 or owner != uid or pid == os.getpid(): continue
+        if os.path.basename(cmd[0]) == 'dns-sd' and cmd[1:] == want:
+            out.append(pid)
+    return out
+
+
+def stop_stale_adverts(name, port, *, run=subprocess.run, kill=os.kill):
+    """Stop our own leftover dns-sd advertisers (see stale_adverts)."""
+    import signal
+    try:
+        ps = run(['ps', '-axo', 'pid=,ppid=,uid=,command='], capture_output=True, text=True, timeout=5).stdout
+    except Exception:
+        return []
+    pids = stale_adverts(name, port, ps)
+    for pid in pids:
+        try: kill(pid, signal.SIGTERM)
+        except OSError: pass
+    return pids
+
+
 class Pairing:
     def __init__(self,store=None,*,port=PORT,ssh_port=22,host_key_path=None,clock=time.time,
                  active=lambda:False,baseline=lambda:(),metadata=None,verify_ssh=True):
@@ -397,7 +430,12 @@ class Pairing:
             try:
                 sys.path.insert(0,str(ROOT/'agent')) if str(ROOT/'agent') not in sys.path else None
                 from discovery import mdns
-                self.advert=mdns.advertise_start('Caravan-'+self.id[:12],self.port)
+                name='Caravan-'+self.id[:12]
+                # A web server that was stopped (update, restart) could not
+                # stop its dns-sd child; stop our own leftovers first.
+                stop_stale_adverts(name,self.port)
+                self.advert=mdns.advertise_start(name,self.port)
+                self._watch_exit()
             except Exception: self.advert=None
         threading.Thread(target=self._retry_removals,daemon=True).start()
         return self
@@ -410,9 +448,30 @@ class Pairing:
                     try: self.remove(row['id'])
                     except Exception: pass
 
+    def _stop_advert(self):
+        advert,self.advert=self.advert,None
+        if not advert: return
+        try:
+            advert.terminate()
+            try: advert.wait(timeout=2)
+            except subprocess.TimeoutExpired: advert.kill()
+        except OSError: pass
+
+    def _watch_exit(self):
+        """Stop the dns-sd child when this process ends, including SIGTERM
+        (launchd's stop, used by updates). Otherwise every restart left one
+        `dns-sd -R` running. Only adds the stop; the exit itself is unchanged."""
+        import atexit, signal
+        atexit.register(self._stop_advert)
+        try:
+            if signal.getsignal(signal.SIGTERM) is not signal.SIG_DFL: return
+            def on_term(signum, frame):
+                try: self._stop_advert()
+                finally:
+                    signal.signal(signum, signal.SIG_DFL); os.kill(os.getpid(), signum)
+            signal.signal(signal.SIGTERM, on_term)
+        except (ValueError, OSError): pass  # not the main thread
+
     def close(self):
         if self.httpd: self.httpd.shutdown();self.httpd.server_close();self.httpd=None
-        if self.advert:
-            self.advert.terminate()
-            try: self.advert.wait(timeout=2)
-            except subprocess.TimeoutExpired: self.advert.kill()
+        self._stop_advert()

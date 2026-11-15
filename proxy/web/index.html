@@ -2082,11 +2082,39 @@
       return data && typeof data === "object" ? data : null;
     } catch (_) { return null; }
   }
-  function setUpdatePending(on) {
+  // prev: started_at of the run that was already finished when Update now
+  // was clicked. Its "done" must never count as this click's run.
+  function setUpdatePending(on, prev) {
     try {
-      if (on) localStorage.setItem(UPDATE_PENDING_KEY, JSON.stringify({ at: Date.now() }));
+      if (on) localStorage.setItem(UPDATE_PENDING_KEY, JSON.stringify({ at: Date.now(), prev: prev == null ? null : String(prev) }));
       else localStorage.removeItem(UPDATE_PENDING_KEY);
     } catch (_) {}
+  }
+  // Is this progress the run this click started (not the one before it)?
+  function isNewRun(progress, pending) {
+    if (!progress || !progress.started_at) return false;
+    if (!pending || !Object.prototype.hasOwnProperty.call(pending, "prev")) return true;
+    return String(progress.started_at) !== String(pending.prev);
+  }
+  // While Update now is starting, the saved answer may still describe the
+  // previous run ("done"). Show it as updating instead, so nothing reloads
+  // or flashes Done for the old run. Give up after 3 minutes with no run.
+  const UPDATE_START_TIMEOUT_MS = 3 * 60 * 1000;
+  function updateView(j) {
+    const pending = updatePending();
+    if (!j || !pending || isNewRun(j.progress, pending)) return j;
+    if (Date.now() - (Number(pending.at) || 0) > UPDATE_START_TIMEOUT_MS) {
+      setUpdatePending(false);
+      return j;
+    }
+    return Object.assign({}, j, { progress: { phase: "updating" }, updating: true, step: null });
+  }
+  // Auto-tune and chat repaint the Update button (busy or not). While an
+  // update is starting or running, leave the update section alone.
+  var _updateStarting = false;
+  function repaintUpdate() {
+    if (_updateStarting || updatePending()) return;
+    if (_updateInfo) renderUpdate(_updateInfo);
   }
   function openUpdates() {
     openDrawer();
@@ -2157,6 +2185,7 @@
   }
   function renderUpdate(j) {
     if (pageIsStale(j)) return;
+    j = updateView(j);
     _updateInfo = j || {};
     const card = $("updatesCard");
     // Local network: no update view at all (there is no login there).
@@ -2355,7 +2384,11 @@
       if (j.macs && j.macs.some((m) => !m.mine)) msg += " The other Macs are updated first.";
       if (j.reload_model) msg += " Caravan will reload the model.";
       if (!confirm(msg)) return;
-      setUpdatePending(true);
+      // Forget the previous run: only a newer run may reload or say Done.
+      const prevRun = j.progress && j.progress.started_at;
+      setUpdatePending(true, prevRun == null ? "" : prevRun);
+      _updateInfo = Object.assign({}, j, { progress: { phase: "updating" } });
+      _updateStarting = true;
       // Show the busy state right away, before the server answers.
       $("btnUpdateNow").disabled = true;
       $("btnUpdateNow").classList.add("is-tuning");
@@ -2365,8 +2398,10 @@
       paintUpdateBadge({ progress: { phase: "updating" } });
       try {
         const out = await api("/api/update", { method: "POST", body: JSON.stringify({ action: "apply" }) });
+        _updateStarting = false;
         renderUpdate(out);
       } catch (err) {
+        _updateStarting = false;
         if (err && err.status === 409) {
           setUpdatePending(false);
           $("updateStatus").textContent = (err.error || err.message || "Wait a moment, then try Update again.");
@@ -2443,7 +2478,7 @@
       state.chatAbort = null;
     }
     state.streaming = false;
-    if (typeof _updateInfo !== "undefined" && _updateInfo && typeof renderUpdate === "function") renderUpdate(_updateInfo);
+    if (typeof repaintUpdate === "function") repaintUpdate();
   }
 
   function fmt(n, digits=2) {
@@ -2769,7 +2804,7 @@
     }
     _tuneWasRunning = running;
     scheduleTunePoll(running);
-    if (typeof _updateInfo !== "undefined" && _updateInfo) renderUpdate(_updateInfo);
+    if (typeof repaintUpdate === "function") repaintUpdate();
   }
   function scheduleTunePoll(running) {
     if (_tunePollTimer) { clearTimeout(_tunePollTimer); _tunePollTimer = null; }
@@ -2818,7 +2853,7 @@
     return JSON.stringify({
       mid, mtp,
       gguf: selRow.source === "gguf",
-      opts: (state.opts || []).map(o => [o.id, o.label, o.help, o.values, o.locked, o.forced, o.disabled_values, o.auto_value]),
+      opts: (state.opts || []).map(o => [o.id, o.label, o.help, o.values, o.locked, o.forced, o.disabled_values, o.auto_value, o.draft && o.draft.name]),
       choice: state.choice,
       pins: state.filePins,
       quality: state.qualityNotice || "",
@@ -2856,6 +2891,7 @@
           }).join("")}</span></div>
         <div class="help">${gguf ? (o.help || SETTINGS_HELP_GGUF[o.id] || "") : (SETTINGS_HELP_COPY[o.id] || o.help)}${!gguf && o.id === "guess_ahead" && $("modelSelect")?.selectedOptions[0]?.dataset.mtp === "true" ? " Native MTP uses the model's built-in predictor instead of a separate helper. Up to ~46% faster writing replies in our tests; needs a matching MTP head and one chat at a time." : ""}</div>
         ${disabledReason ? `<div class="help val-disabled">${disabledReason}</div>` : ""}
+        ${gguf && o.id === "guess_ahead" && o.draft && o.draft.name ? `<div class="help helper-here">Helper on this Mac: ${String(o.draft.name).replace(/[&<>"]/g, "")}</div>` : ""}
         ${qualityNote ? `<div class="help quality-note">${qualityNote}</div>` : ""}
         ${state.filePins[o.id] && state.choice[o.id] === "auto"
           ? `<div class="help filepin">config.toml: ${VAL_LABEL[state.filePins[o.id]] || state.filePins[o.id]} (used while this is Auto)</div>` : ""}
@@ -3417,7 +3453,7 @@
     state.chatAbort = ac;
     state.streaming = true;
     $("btnSend").disabled = true;
-    if (typeof _updateInfo !== "undefined" && _updateInfo && typeof renderUpdate === "function") renderUpdate(_updateInfo);
+    if (typeof repaintUpdate === "function") repaintUpdate();
 
     if (!state.session) state.session = newSessionId();
     const sent = Date.now() / 1000;
@@ -3571,7 +3607,7 @@
       clearTimeout(totalTimer);
       if (state.chatAbort === ac) state.chatAbort = null;
       state.streaming = false;
-      if (typeof _updateInfo !== "undefined" && _updateInfo && typeof renderUpdate === "function") renderUpdate(_updateInfo);
+      if (typeof repaintUpdate === "function") repaintUpdate();
       saveChat();
       refreshStatus();
     }

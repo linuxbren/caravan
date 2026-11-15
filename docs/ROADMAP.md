@@ -45,6 +45,18 @@ and the daily logs, not mixed into current setup instructions.
   guesser; "Download helper for faster replies?" under the model, only
   with your click. See [DAY27](DAY27.md).
 
+## Planned dev days
+
+- **Day 28:** split-model shootout across both Macs (Qwen3 30B, Gemma 4
+  26B, gpt-oss 20B) against earlier Caravan versions and other tools.
+- **Day 29:** Caravan on its current llama.cpp build (b12283) against
+  Caravan on a llama.cpp v1.0 nightly build: write and read speed, long
+  chats, memory, first word, Guess-ahead and Prompt lookup, on one Mac and
+  split. Day 28 Caravan against Day 29 Caravan.
+- **TensorFold evaluation** (waiting for a go-ahead before anything is
+  installed): bench the Metal-native TensorFold engine against llama.cpp
+  and MLX on one Mac, then on both Macs.
+
 ## Next candidates
 
 1. **Measure the other helpers.** Qwen2.5, Qwen3 and Llama 3.1 helpers
