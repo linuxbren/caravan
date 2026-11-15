@@ -154,6 +154,9 @@ class Pairing:
         self.id=self.store.identity();self.sessions={};self.lock=threading.RLock();self.httpd=None;self.advert=None
         self.candidates={};self.local_token=secrets.token_urlsafe(32)
         with self.store.locked():
+            # Older pairs on this Mac could not carry a GGUF split; upgrade them in place.
+            try: self.store.refresh_authorizations()
+            except (OSError,ValueError): pass
             control=read_json(self.store.root/'control.json')
             if control is None:
                 control={'capability':secrets.token_hex(32)}

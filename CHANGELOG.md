@@ -1,3 +1,17 @@
+## Day 28 fix — GGUF split works on a freshly paired Mac
+
+- A GGUF model split across a newly paired Mac failed with "Couldn't
+  reach <Mac> for the split". Pairing gave the lead's key on the other
+  Mac permission to reach Caravan's model port only, so the split's
+  tunnel to that Mac's rpc-server (port 50052) was refused. The
+  pairing key now also allows that one port. Nothing else changes: the
+  key still only works from private networks, with no shell features,
+  and can listen only on the model port.
+- Macs paired before this fix are upgraded in place the next time
+  Caravan starts on them (after Update). Only Caravan's own pairing
+  lines with the old settings are changed; your other SSH keys are
+  left alone. No need to pair again. MLX splits were not affected.
+
 ## Day 27 follow-up — one-Mac Topology, and a stopped Mac looks offline
 
 - With only one live Mac in the group, Topology hides the Balance and

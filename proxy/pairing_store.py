@@ -20,6 +20,30 @@ PRIVATE_CIDRS=('127.0.0.0/8','10.0.0.0/8','172.16.0.0/12','192.168.0.0/16','169.
 NETWORKS=tuple(ipaddress.ip_network(x) for x in PRIVATE_CIDRS)
 
 
+def rpc_port():
+    """Loopback port a GGUF split reaches on this Mac (proxy/gguf_split.RPC_PORT)."""
+    try: port = int(os.environ.get('CARAVAN_GGUF_RPC_PORT', '50052'))
+    except ValueError: port = 50052
+    return port if 0 < port < 65536 else 50052
+
+
+def key_options():
+    # Per-pair identity; private-network sources only; no PTY/agent/X11/user rc.
+    # The lead may open the model HTTP port and the GGUF rpc-server port on this
+    # Mac's loopback (the split's SSH tunnel), and may listen only on the model
+    # HTTP port. Nothing else is forwarded.
+    networks = ','.join(PRIVATE_CIDRS)
+    return (f'restrict,port-forwarding,permitopen="127.0.0.1:8194",permitopen="127.0.0.1:{rpc_port()}",'
+            f'permitlisten="127.0.0.1:8194",from="{networks}"')
+
+
+# Options written by earlier releases; refresh_authorizations upgrades only these.
+LEGACY_OPTIONS = frozenset({
+    'restrict,port-forwarding,permitopen="127.0.0.1:8194",permitlisten="127.0.0.1:8194",from="' + ','.join(PRIVATE_CIDRS) + '"',
+})
+OWNED_LINE = re.compile(r'^(?P<options>restrict,\S+) (?P<rest>ssh-ed25519 [A-Za-z0-9+/=]+ # caravan-pair:[a-f0-9]{32})\s*$')
+
+
 def private(value):
     try:
         addr=ipaddress.ip_address(str(value).split('%')[0])
@@ -137,15 +161,30 @@ class Store:
         if path.is_symlink(): raise ValueError('Linked authorized_keys needs a separate migration; nothing changed.')
         old = path.read_text() if path.exists() else ''
         lines = [line for line in old.splitlines(keepends=True) if not line.rstrip().endswith(marker)]
-        # Per-pair identity; private-network sources only; no PTY/agent/X11/user rc,
-        # both forwarding directions are limited to the model HTTP loopback port.
-        networks = ','.join(PRIVATE_CIDRS)
-        options = f'restrict,port-forwarding,permitopen="127.0.0.1:8194",permitlisten="127.0.0.1:8194",from="{networks}"'
         text = ''.join(lines)
         if text and not text.endswith('\n'): text += '\n'
-        text += options + ' ' + key + ' ' + marker + '\n'
+        text += key_options() + ' ' + key + ' ' + marker + '\n'
         self.private_dir(path.parent)
         atomic(path, text); return key
+
+    def refresh_authorizations(self):
+        """Bring this Mac's own pairing keys up to the current options.
+
+        Pairs made before Day 28 allowed only the model HTTP port, so a GGUF
+        split could not reach this Mac's rpc-server tunnel. Only lines that end
+        with a Caravan pairing marker and carry Caravan's own older options are
+        rewritten; the key and marker are kept, every other line is untouched.
+        Returns the number of lines changed."""
+        path = self.home/'.ssh/authorized_keys'
+        if not path.exists() or path.is_symlink(): return 0
+        old = path.read_text(); want = key_options(); changed = 0; out = []
+        for line in old.splitlines(keepends=True):
+            m = OWNED_LINE.match(line.rstrip('\n'))
+            if m and m.group('options') != want and m.group('options') in LEGACY_OPTIONS:
+                line = want + ' ' + m.group('rest') + '\n'; changed += 1
+            out.append(line)
+        if changed: atomic(path, ''.join(out))
+        return changed
 
     def unauthorize(self, peer):
         path = self.home/'.ssh/authorized_keys'; marker = self.marker(peer)
