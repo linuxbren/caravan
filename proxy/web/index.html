@@ -1871,6 +1871,7 @@
 </div>
 
 <div id="addMacBanner" class="add-mac-banner" hidden role="status">Have another Mac? Add it to run bigger models. <button type="button" class="primary" id="bannerAddMac">Add a Mac</button> <button type="button" class="ghost" id="dismissAddMac" aria-label="Dismiss add a Mac suggestion">×</button></div>
+<script src="/topo_live.js"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -3966,6 +3967,26 @@
   let nodesTimer = null;
   let nodesInflight = false;
   let topoOrder = [];       // stable card order from last successful poll
+  const Topo = window.CaravanTopoLive || { STALE_MS: 15000, isOffline: (n)=>!!(n&&n.offline), liveCount: (ns)=> (ns||[]).filter(n=>n&&!n.offline).length, shouldShowSplitSections: (ns)=>((ns||[]).filter(n=>n&&!n.offline).length>=2), offlineLabel: ()=>"offline" };
+  function syncSplitSections(nodes) {
+    const show = Topo.shouldShowSplitSections(nodes || [], Date.now(), nodeFreshAt);
+    for (const id of ["balancePanel", "thunderboltPanel"]) {
+      const el = document.getElementById(id);
+      if (el) el.hidden = !show;
+    }
+  }
+  function applyNodePresence(card, n, id) {
+    if (!card) return;
+    const stale = !!(nodeFreshAt[id] && (Date.now() - nodeFreshAt[id]) > Topo.STALE_MS);
+    const off = Topo.isOffline(n, Date.now(), nodeFreshAt[id]);
+    card.classList.toggle("offline", off);
+    card.classList.toggle("stale", stale);
+    card.classList.toggle("fresh", !stale && !off && !!nodeFreshAt[id]);
+    const led = card.querySelector("[data-led]");
+    if (led) led.classList.toggle("on", !off);
+    const meta = card.querySelector("[data-meta]");
+    if (meta) meta.textContent = off ? Topo.offlineLabel(n, stale && !(n && n.offline)) : "live";
+  }
   const esc = (t) => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   function barLevel(pct) {
     const p = Number(pct) || 0;
@@ -4044,15 +4065,7 @@
       if (!card) return;
       const roleEl = card.querySelector("[data-role]");
       if (roleEl) roleEl.textContent = roleTitle(Object.assign({}, n, { id }), idx);
-      card.classList.toggle("offline", !!n.offline);
-      const led = card.querySelector("[data-led]");
-      if (led) led.classList.toggle("on", !n.offline && !n.error);
-      const meta = card.querySelector("[data-meta]");
-      if (meta) {
-        if (n.offline) meta.textContent = "offline";
-        else if (n.error && n.cpu_pct == null) meta.textContent = "unreachable";
-        else meta.textContent = "live";
-      }
+      applyNodePresence(card, n, id);
     });
     // Remove cards for nodes no longer in config
     [...body.querySelectorAll(".node")].forEach((card) => {
@@ -4062,8 +4075,8 @@
   }
   function renderNode(n) {
     if (!n) return `<span class="err">waiting for first sample…</span>`;
-    if (n.offline && n.cpu_pct == null && !n.ram) {
-      return `<span class="err">offline${n.error ? ": " + esc(n.error) : ""}</span>`;
+    if (n.offline || n._staleOffline) {
+      return `<span class="err">${esc(Topo.offlineLabel(n, !!n._staleOffline))}</span>`;
     }
     const ram = n.ram || {}, dk = n.disk || {};
     const ramPct = ram.total_gb ? 100 * ram.used_gb / ram.total_gb : 0;
@@ -4104,22 +4117,23 @@
     const el = document.getElementById("nodeStats-" + id);
     if (!el) return;
     const cur = nodeLast[id];
-    el.innerHTML = renderNode(cur);
-    const gotFresh = n && (n.cpu_pct != null || n.gpu_pct != null || n.ram || n.temp_c != null);
+    const gotFresh = n && !n.offline && (n.cpu_pct != null || n.gpu_pct != null || n.ram || n.temp_c != null);
     if (gotFresh) nodeFreshAt[id] = Date.now();
-    const age = Date.now() - (nodeFreshAt[id] || 0);
-    const stale = !!(nodeFreshAt[id] && age > 5000);
-    el.classList.toggle("stale", stale);
+    const off = Topo.isOffline(n, Date.now(), nodeFreshAt[id]) || Topo.isOffline(cur, Date.now(), nodeFreshAt[id]);
+    const view = off ? Object.assign({}, cur, { offline: true, _staleOffline: !(n && n.offline) }) : cur;
+    el.innerHTML = renderNode(view);
+    el.classList.toggle("stale", !!(view && view._staleOffline));
     const card = el.closest(".node");
     if (card) {
-      card.classList.toggle("stale", stale);
-      card.classList.toggle("fresh", !stale && !!nodeFreshAt[id]);
-      card.classList.toggle("offline", !!(cur && cur.offline));
+      applyNodePresence(card, view, id);
       const nameEl = card.querySelector("[data-name]");
       if (nameEl) {
-        const nm = (cur && cur.model) ? String(cur.model).trim() : "";
-        if (nm) { nameEl.textContent = nm; nameEl.hidden = false; }
-        else { nameEl.textContent = ""; nameEl.hidden = true; }
+        if (off) { nameEl.textContent = ""; nameEl.hidden = true; }
+        else {
+          const nm = (cur && cur.model) ? String(cur.model).trim() : "";
+          if (nm) { nameEl.textContent = nm; nameEl.hidden = false; }
+          else { nameEl.textContent = ""; nameEl.hidden = true; }
+        }
       }
     }
   }
@@ -4136,17 +4150,25 @@
       if (window.updateAddMacBanner) window.updateAddMacBanner(nodes.length);
       if (window.paintPairingRemovals) window.paintPairingRemovals();
       for (const n of nodes) paintNode(n);
+      syncSplitSections(nodes);
     } catch (e) {
       for (const id of topoOrder) {
         const el = document.getElementById("nodeStats-" + id);
         if (!el) continue;
-        if (nodeLast[id]) {
-          el.innerHTML = renderNode(nodeLast[id]);
-          el.classList.add("stale");
-          const card = el.closest(".node");
-          if (card) { card.classList.add("stale"); card.classList.remove("fresh"); }
-        }
+        const cur = nodeLast[id];
+        if (!cur) continue;
+        const off = Topo.isOffline(cur, Date.now(), nodeFreshAt[id]);
+        const view = off ? Object.assign({}, cur, { offline: true, _staleOffline: !cur.offline }) : cur;
+        el.innerHTML = renderNode(view);
+        el.classList.toggle("stale", !!(view && view._staleOffline));
+        const card = el.closest(".node");
+        if (card) applyNodePresence(card, view, id);
       }
+      syncSplitSections(topoOrder.map((id) => {
+        const n = Object.assign({}, nodeLast[id] || { id }, { id });
+        if (Topo.isOffline(n, Date.now(), nodeFreshAt[id])) n.offline = true;
+        return n;
+      }));
     } finally {
       nodesInflight = false;
     }
@@ -4166,6 +4188,11 @@
     document.getElementById("topoDrawer").setAttribute("aria-hidden", "false");
     const btn = document.getElementById("btnOpenTopo");
     if (btn) { btn.classList.add("on"); btn.setAttribute("aria-pressed", "true"); }
+    syncSplitSections(topoOrder.map((id) => {
+      const n = Object.assign({}, nodeLast[id] || { id }, { id });
+      if (Topo.isOffline(n, Date.now(), nodeFreshAt[id])) n.offline = true;
+      return n;
+    }));
     if (document.visibilityState === "visible") startNodesPoll();
     if (window.refreshDisk) try { window.refreshDisk(); } catch (e) {}
   }

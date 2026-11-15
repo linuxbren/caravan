@@ -1,5 +1,20 @@
 # Changelog
 
+## Day 28 — one-Mac Topology, and a stopped Mac looks offline
+
+- With only one live Mac in the group, Topology hides the Balance and
+  Thunderbolt sections. They come back on their own when a second Mac
+  is live again.
+- Turning Caravan off on a Mac no longer leaves it looking live on the
+  others. Those cards were still getting fresh CPU and temperature
+  over SSH, even with the browser service stopped. A Mac whose
+  Caravan is off, or whose stats have not updated for 15 seconds, now
+  shows as offline (grey light). Offline Macs do not count toward the
+  two-Mac Balance and Thunderbolt sections.
+- A full "leave the group" action is not in this change: uninstalling
+  on one Mac does not remove it from the others. Use Remove this Mac
+  on its card after Unload, or leave it showing as offline.
+
 ## Day 27 fixes, round 3 — buttons say what they are doing
 
 - Cancel Auto-tune now shows "Cancelling…" on the button and the Tuning

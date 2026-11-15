@@ -11,7 +11,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import threading
+import urllib.request
 from pathlib import Path
 from typing import Optional
 
@@ -23,6 +25,65 @@ MAX_SPLIT_STAGES = int(os.environ.get("CARAVAN_MAX_SPLIT_STAGES", str(__import__
 
 def stage_limit(nodes):
     return min(MAX_SPLIT_STAGES, max(1, len(nodes)))
+
+
+# Topology treats a Mac as offline when its browser service is stopped, even
+# if the machine itself still answers SSH. Stats older than this many
+# seconds are also shown offline in the page (see proxy/web/topo_live.js).
+STALE_AFTER_S = 15
+OFF_REASON = "Caravan is off"
+
+# Self-contained remote check. The other Mac may still be on an older
+# checkout, so this cannot import this module over SSH.
+_REMOTE_STATS = """
+import json, os, pathlib, subprocess, sys, urllib.request
+port = 8190
+home = pathlib.Path.home()
+for rel in (".caravan/services/web.json", ".caravan/services/login/web.json"):
+    p = home / rel
+    if p.is_file():
+        try:
+            port = int(json.loads(p.read_text()).get("port") or port)
+            break
+        except Exception:
+            pass
+try:
+    urllib.request.urlopen("http://127.0.0.1:%d/api/status" % port, timeout=3)
+except Exception:
+    json.dump({"offline": True, "error": "Caravan is off"}, sys.stdout)
+    print()
+    sys.exit(0)
+repo = os.path.expanduser(REPO)
+sys.exit(subprocess.call(["/usr/bin/python3", os.path.join(repo, "proxy/node_stats.py")]))
+"""
+
+
+def web_is_running(*, home=None, urlopen=None, timeout=3) -> bool:
+    """True when this Mac's Caravan browser service answers on localhost."""
+    home = Path(home or Path.home())
+    port = 8190
+    for rel in (".caravan/services/web.json", ".caravan/services/login/web.json"):
+        p = home / rel
+        if p.is_file():
+            try:
+                port = int(json.loads(p.read_text()).get("port") or port)
+                break
+            except (OSError, ValueError, TypeError):
+                pass
+    opener = urlopen or urllib.request.urlopen
+    try:
+        opener(f"http://127.0.0.1:{port}/api/status", timeout=timeout)
+        return True
+    except Exception:
+        return False
+
+
+def remote_stats_command(repo=None) -> str:
+    """SSH command: report offline if Caravan is off, else run node_stats.py."""
+    repo = (repo or "~/cv3").rstrip("/")
+    script = _REMOTE_STATS.replace("REPO", json.dumps(repo), 1)
+    return "/usr/bin/python3 -c " + shlex.quote(script)
+
 
 DEFAULT_NODES = [
     {
@@ -176,9 +237,7 @@ def gather_node_stats(node: dict, *, ssh_fn=None, local_gather=None) -> dict:
         else:
             if ssh_fn is None:
                 raise RuntimeError("no ssh")
-            repo = (node.get("repo") or "~/cv3").rstrip("/")
-            # Prefer remote checkout's node_stats.py
-            cmd = f"/usr/bin/python3 {repo}/proxy/node_stats.py"
+            cmd = remote_stats_command(node.get("repo"))
             r = ssh_fn(node, cmd, timeout=25)
             if getattr(r, "returncode", 1) != 0:
                 raise RuntimeError((getattr(r, "stderr", None) or getattr(r, "stdout", None) or "ssh failed")[-200:])
@@ -186,6 +245,8 @@ def gather_node_stats(node: dict, *, ssh_fn=None, local_gather=None) -> dict:
             stats = json.loads(line)
         if not isinstance(stats, dict):
             raise RuntimeError("bad stats")
+        if stats.get("offline") or stats.get("caravan_running") is False:
+            return {**base, "offline": True, "error": stats.get("error") or OFF_REASON}
         out = dict(stats)
         out.update(base)
         out["offline"] = False
