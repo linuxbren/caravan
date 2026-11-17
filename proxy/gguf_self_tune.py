@@ -30,7 +30,13 @@ STORE = Path("~/.caravan/gguf-self-tune.json").expanduser()
 MIN_SAMPLES = 3
 # Learn in this order, matching the GGUF optimization plan.
 LEARN_ORDER = ("ubatch", "cache_type", "flash_attn")
+# Day 28 tuning fix: with a helper on this Mac and Guess-ahead on Auto
+# (and Auto-tune has not decided it yet), Self-tuning tries Guess-ahead
+# first, from real chats, judged like Auto-tune judges it (writing speed
+# and reply time, not prompt reading).
+SPEC_FIRST = ("guess_ahead",)
 LABELS = {
+    "guess_ahead": "Guess-ahead",
     "ubatch": "Prompt batch",
     "cache_type": "Memory compression",
     "flash_attn": "Flash attention",
@@ -96,10 +102,15 @@ def _label(name, value) -> str:
     return VALUE_LABELS.get((name, value), str(value))
 
 
-def pick_trial(used: dict, pinned: set, losses: list) -> Optional[dict]:
+def pick_trial(used: dict, pinned: set, losses: list, *, draft_path=None,
+               decided=()) -> Optional[dict]:
     """Next one-option challenger, or None when nothing is left to try."""
     losses = list(losses or [])
     used = dict(used or {})
+    if (draft_path and "guess_ahead" not in pinned and "guess_ahead" not in set(decided or ())
+            and used.get("guess_ahead", "off") != "on" and "guess_ahead=on" not in losses):
+        return {"name": "guess_ahead", "incumbent": "off", "challenger": "on",
+                "extra": {"draft_path": str(draft_path)}}
     knobs = dict(G.GGUF_KNOBS)
     for name in LEARN_ORDER:
         values = knobs.get(name)
@@ -134,6 +145,8 @@ def pinned_knobs(settings) -> set:
         out.add("ubatch")
     if s.get("kv_bits") in ("16", "8"):
         out.add("cache_type")
+    if s.get("guess_ahead") in ("on", "off", "mtp"):
+        out.add("guess_ahead")
     return out
 
 
@@ -151,12 +164,31 @@ def used_from_tune(tune: dict) -> dict:
     out["ubatch"] = ub if ub in G.GGUF_UBATCH else G.GGUF_DEFAULT_UBATCH
     ct = tune.get("cache_type")
     out["cache_type"] = ct if ct in G.GGUF_KV_TYPES else "f16"
+    # Day 28 tuning fix: carry the speculative settings through every
+    # Self-tuning reload. They used to be dropped here, so a Self-tuning
+    # trial or revert quietly turned an Auto-tune Guess-ahead win off.
+    if tune.get("prompt_lookup") in ("on", "off"):
+        out["prompt_lookup"] = tune["prompt_lookup"]
+    if tune.get("guess_ahead") == "on" and tune.get("draft_path"):
+        out["guess_ahead"] = "on"
+        out["draft_path"] = str(tune["draft_path"])
+    elif tune.get("guess_ahead") in ("on", "off"):
+        out["guess_ahead"] = "off"
     return out
+
+
+def _decided_by_autotune(model_path, n_minis: int, autotune_path=None) -> set:
+    """Options Auto-tune already measured for this model (it has the last word)."""
+    try:
+        best = (T.load_store(autotune_path).get(T.entry_key(model_path, n_minis)) or {}).get("best") or {}
+        return {k for k in ("guess_ahead", "prompt_lookup") if k in best}
+    except Exception:  # noqa: BLE001
+        return set()
 
 
 def observe(model_path, n_minis: int, specs, *, used=None, settings=None,
             self_tune_on=True, path=None, model_id=None,
-            speed_path=None) -> dict:
+            speed_path=None, autotune_path=None, find_draft=None) -> dict:
     """Fold one real-chat reply into the GGUF self-tune record.
 
     Returns a plan: action is "idle", "reload", or "keep"; reload includes
@@ -200,7 +232,14 @@ def observe(model_path, n_minis: int, specs, *, used=None, settings=None,
         if int((e["baseline"] or {}).get("write_n") or 0) < MIN_SAMPLES:
             plan["before"] = _specs_of(e["baseline"])
             return plan
-        nxt = pick_trial(current, pinned, e.get("losses") or [])
+        draft = None
+        if "guess_ahead" not in pinned:
+            try:
+                draft = (find_draft or (lambda mp: T.helper_on_disk(None, mp)))(model_path)
+            except Exception:  # noqa: BLE001
+                draft = None
+        nxt = pick_trial(current, pinned, e.get("losses") or [], draft_path=draft,
+                         decided=_decided_by_autotune(model_path, n_minis, autotune_path))
         if not nxt:
             # Nothing to try; leave the baseline as a one-sided record.
             plan["before"] = _specs_of(e["baseline"])
@@ -234,6 +273,17 @@ def observe(model_path, n_minis: int, specs, *, used=None, settings=None,
     # days. Only count replies that really ran with the challenger; otherwise
     # ask for the trial reload again.
     tname, tch = trial.get("name"), trial.get("challenger")
+    if tname == "guess_ahead" and (used or {}).get("helper_failed"):
+        # The helper could not run here (its first reply failed and the
+        # loader went on without it). That is a loss; nothing to reload.
+        if "guess_ahead=on" not in (e.get("losses") or []):
+            e.setdefault("losses", []).append("guess_ahead=on")
+        e["trial"] = None
+        e["status"] = "collecting"
+        e["used"] = current
+        save_store(store, path)
+        plan["reason"] = "helper failed"
+        return plan
     if tname and str(current.get(tname)) != str(tch):
         trial.pop("settled", None)
         trial["samples"] = {}
@@ -274,7 +324,7 @@ def observe(model_path, n_minis: int, specs, *, used=None, settings=None,
     base = _specs_of(e.get("baseline"))
     chal = _specs_of(trial["samples"])
     name, ch = trial["name"], trial["challenger"]
-    won = T.beats(chal, base) if S._has_specs(chal) and S._has_specs(base) else False
+    won = T.trial_won(name, chal, base) if S._has_specs(chal) and S._has_specs(base) else False
     if won:
         e["winners"][name] = ch
         e["used"] = dict(e.get("used") or {}, **(trial.get("extra") or {}), **{name: ch})
@@ -443,6 +493,15 @@ class Controller:
                         job.get("model_path"), job.get("n_minis") or 1,
                         job.get("trial") or {}, path=self.store_path,
                     )
+                    # Day 28 tuning fix: really put the previous settings back
+                    # (the note below used to say so while no model was loaded).
+                    back = {k: v for k, v in (job.get("entry") or {}).items()
+                            if k not in ("tune_override", "strict_tune")}
+                    try:
+                        self.mgr.switch(mid, wait=True, settings=job.get("settings") or {},
+                                        entry=back)
+                    except Exception:  # noqa: BLE001
+                        pass
                     self._note(
                         "That trial setting could not load. The model is "
                         "back on the previous settings."

@@ -174,7 +174,15 @@ def helper_status(snapshot: dict, entry: Optional[dict], *, find_draft=None) -> 
     if not mid:
         return {"kind": None, "model": None}
     if not _is_gguf(snap, entry):
-        return {"kind": "mlx", "model": mid, "split": bool(snap.get("split"))}
+        out = {"kind": "mlx", "model": mid, "split": bool(snap.get("split"))}
+        try:
+            import web_helpers
+            if web_helpers.balance_split(snap):
+                out["balance"] = True
+                out["message"] = web_helpers.BALANCE_NO_HELPER
+        except Exception:  # noqa: BLE001
+            pass
+        return out
     path = entry.get("lead_path")
     known = (match_gguf(Path(str(path)).name) if path else None) or match_gguf(mid)
     present = None

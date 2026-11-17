@@ -23,6 +23,7 @@ class GgufLoadedEntryTest(unittest.TestCase):
             for name in ("_kill_gguf", "_kill_lead", "_kill_packer", "_write_gguf_meta",
                          "_wait_lead_ready", "_start_gguf_watch"):
                 setattr(m, name, mock.Mock())
+            m._gguf_first_reply_error = lambda *a, **k: None
             m._gguf_nodes = lambda place: [{"id": "exo1", "label": "EXO1", "role": "lead"}]
             m._node_is_local = lambda n: True
             m._lead_log = lambda: d / "lead.log"

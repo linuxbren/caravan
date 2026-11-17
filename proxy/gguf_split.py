@@ -173,10 +173,39 @@ def model_context_length(model_path, meta_fn=None):
         return None
 
 
+MIB = 1024 * 1024
+
+
+def helper_overhead_mib(draft_path, total_ctx: int, ubatch: int = GGUF_DEFAULT_UBATCH,
+                        kv_type: str = "q8_0", meta_fn=None) -> float:
+    """GPU memory the Guess-ahead helper adds: its weights, its own chat
+    memory (q8_0, same window as the main model) and its compute buffer.
+
+    Day 28 tuning fix: this was not counted, so a 14B model with a 32k
+    window plus its helper ran out of GPU memory on the first reply while
+    Caravan said "ready". Unknown layout: weights plus a 1 GiB allowance.
+    """
+    try:
+        size = Path(str(draft_path)).expanduser().stat().st_size / MIB
+    except (OSError, TypeError, ValueError):
+        return 0.0
+    try:
+        import gguf_meta
+        import kv_auto
+        layout = kv_auto.kv_layout((meta_fn or gguf_meta.read_metadata)(draft_path))
+        kv = kv_auto.kv_bytes(layout, 1, int(total_ctx), int(ubatch), kv_type, kv_type) / MIB
+        return size + kv + kv_auto.compute_reserve_mib(layout, int(ubatch))
+    except Exception:  # noqa: BLE001
+        return size + 1024.0
+
+
 def ctx_estimate(model_path, ctx: int, *, n_slots: int = 1,
                  ubatch: int = GGUF_DEFAULT_UBATCH, n_devices: int = 1,
-                 decide=None):
-    """(need_q8_mib, budget_mib) from kv_auto, or (None, None) if unknown."""
+                 decide=None, extra_mib_fn=None, cache_type=None):
+    """(need_mib, budget_mib) from kv_auto, or (None, None) if unknown.
+
+    need is for q8_0 chat memory, or f16 when cache_type is pinned to f16,
+    plus extra_mib_fn(ctx * n_slots) (the Guess-ahead helper) when given."""
     try:
         import kv_auto
         fn = decide or kv_auto.decide
@@ -185,11 +214,14 @@ def ctx_estimate(model_path, ctx: int, *, n_slots: int = 1,
             n_ubatch=int(ubatch), n_devices=max(1, int(n_devices)),
         )
         est = d.estimate or {}
-        need = est.get("need_q8_0_mib")
+        need = est.get("need_f16_mib" if cache_type == "f16" else "need_q8_0_mib")
         budget = est.get("budget_mib")
         if need is None or budget is None:
             return None, None
-        return float(need), float(budget)
+        need = float(need)
+        if extra_mib_fn is not None:
+            need += float(extra_mib_fn(int(ctx) * max(1, int(n_slots))) or 0.0)
+        return need, float(budget)
     except Exception:
         return None, None
 
@@ -203,7 +235,8 @@ def ctx_fits_known(model_path, ctx: int, **kw):
 
 
 def auto_ctx(model_path, *, n_slots: int = 1, ubatch: int = GGUF_DEFAULT_UBATCH,
-             n_devices: int = 1, decide=None, meta_fn=None) -> int:
+             n_devices: int = 1, decide=None, meta_fn=None,
+             extra_mib_fn=None, cache_type=None) -> int:
     """Sane Chat window from this model and this Mac's memory.
 
     Keeps the trusted 8192 default when the file or memory cannot be
@@ -232,6 +265,7 @@ def auto_ctx(model_path, *, n_slots: int = 1, ubatch: int = GGUF_DEFAULT_UBATCH,
         fits = ctx_fits_known(
             model_path, c, n_slots=n_slots, ubatch=ubatch,
             n_devices=n_devices, decide=decide,
+            extra_mib_fn=extra_mib_fn, cache_type=cache_type,
         )
         if fits is True:
             best = c
@@ -274,6 +308,12 @@ def resolve_launch(model_path, *, tune=None, ctx=None, decide=None,
     except (TypeError, ValueError):
         n_slots = GGUF_DEFAULT_SLOTS
     n_slots = max(1, min(int(n_slots), GGUF_MAX_SLOTS))
+    draft = (_existing_draft_path(tune.get("draft_path"))
+             if tune.get("guess_ahead") == "on" else None)
+    extra = None
+    if draft:
+        def extra(total_ctx, _d=draft, _ub=ubatch):
+            return helper_overhead_mib(_d, total_ctx, _ub)
     raw = tune.get("ctx") if tune.get("ctx") is not None else ctx
     if raw is not None:
         try:
@@ -282,19 +322,29 @@ def resolve_launch(model_path, *, tune=None, ctx=None, decide=None,
             ctx_per = auto_ctx(
                 model_path, n_slots=n_slots, ubatch=ubatch,
                 n_devices=n_devices, decide=decide, meta_fn=meta_fn,
+                extra_mib_fn=extra, cache_type=tune.get("cache_type"),
             )
     else:
         ctx_per = auto_ctx(
             model_path, n_slots=n_slots, ubatch=ubatch,
             n_devices=n_devices, decide=decide, meta_fn=meta_fn,
+            extra_mib_fn=extra, cache_type=tune.get("cache_type"),
         )
     if ctx_per < 1:
         ctx_per = GGUF_CTX
-    return {
+    out = {
         "ctx": ctx_per,
         "n_slots": n_slots,
         "total_ctx": ctx_per * n_slots,
     }
+    if draft:
+        # A pinned window that leaves no room for the helper: run without it
+        # (llama_args drops the helper flags) instead of failing replies.
+        fits = ctx_fits_known(model_path, ctx_per, n_slots=n_slots, ubatch=ubatch,
+                              n_devices=n_devices, decide=decide,
+                              extra_mib_fn=extra, cache_type=tune.get("cache_type"))
+        out["helper_fits"] = fits is not False
+    return out
 
 
 def slot_save_dir(cache_type_k: str, cache_type_v: str, root=None,
@@ -430,12 +480,21 @@ def llama_args(model_path: str, *, port: int, peers: list, shares: list,
         devs = ["MTL0"] + [f"RPC{i}" for i in range(len(peers))]
         args += ["--rpc", ",".join(peers), "--device", ",".join(devs),
                  "--tensor-split", ",".join(str(s) for s in shares)]
-    args += _speculative_args(tune)
+    if launch.get("helper_fits") is False:
+        tune = dict(tune, guess_ahead="off")
+    args += _speculative_args(tune, split=bool(peers), flash_attn=fa)
     return args
 
 
-def _speculative_args(tune: Optional[dict]) -> list:
-    """llama-server speculative flags. Never a download, never a missing file."""
+def _speculative_args(tune: Optional[dict], *, split: bool = False,
+                      flash_attn: str = "on") -> list:
+    """llama-server speculative flags. Never a download, never a missing file.
+
+    Day 28 tuning fix: the helper keeps its chat memory in q8_0 (half of
+    f16; it was the same size as the main model's f16 memory), runs fully
+    on the GPU, and on a split it stays on this Mac's GPU (MTL0) so its
+    many small steps never cross the network.
+    """
     tune = dict(tune or {})
     want_lookup = tune.get("prompt_lookup") == "on"
     draft = _existing_draft_path(tune.get("draft_path"))
@@ -449,7 +508,11 @@ def _speculative_args(tune: Optional[dict]) -> list:
         kinds.append("draft-simple")
     out = ["--spec-type", ",".join(kinds)]
     if want_draft:
-        out += ["--spec-draft-model", draft]
+        out += ["--spec-draft-model", draft,
+                "--spec-draft-ngl", "999",
+                "-ctkd", "q8_0", "-ctvd", "q8_0" if flash_attn == "on" else "f16"]
+        if split:
+            out += ["--spec-draft-device", "MTL0"]
     return out
 
 

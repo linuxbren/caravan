@@ -1,3 +1,35 @@
+## Day 28 fix — tuning keeps the speed-ups that win, and never stalls
+
+- Guess-ahead and Prompt lookup are now judged on what you feel: how
+  fast the reply is written and how long the whole reply takes, on
+  chats and on code edits. Long-prompt reading is only a guard (a drop
+  of more than 15% loses). Before, a helper that wrote 9% faster lost
+  because reading a long prompt was a bit slower. Auto-tune now also
+  runs two code-edit prompts and two long prompts for these two options,
+  so Prompt lookup can win on code edits without making chats slower.
+- A kept Guess-ahead or Prompt lookup now stays on after a reload, a
+  Caravan restart and Update now. Before, the next load quietly turned
+  them off. If the helper file is gone, the model loads with Guess-ahead
+  off instead of failing.
+- The helper keeps its chat memory in the smaller q8_0 format, runs on
+  the GPU, and its memory is counted when Caravan picks the chat window.
+  On two Macs (GGUF) the helper stays on the lead Mac's GPU.
+- A load now asks the model for one tiny test reply before it says
+  Ready. If the reply fails with Guess-ahead or Prompt lookup on, the
+  model starts again without them and Auto stops trying the helper
+  until a fresh Auto-tune. Before, a 14B model with a 32k window and
+  its helper said Ready and then failed every reply.
+- Auto-tune counts an option that fails to load or reply as a loss and
+  goes on to the next option, then leaves the winner running. A fresh
+  Auto-tune retries options that lost before.
+- Self-tuning keeps Guess-ahead and Prompt lookup through its reloads
+  (they used to be dropped), tries the helper first when one is on this
+  Mac and Auto-tune has not decided it, and a failed trial reload really
+  puts the previous settings back.
+- An MLX model split with Balance does not use a helper, so Caravan no
+  longer offers to download one there and says why.
+- caravan bench --speedups --only gguf (or mlx) needs only that model.
+
 ## Day 28 fix — GGUF split works on a freshly paired Mac
 
 - A GGUF model split across a newly paired Mac failed with "Couldn't

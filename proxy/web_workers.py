@@ -572,40 +572,66 @@ class WorkerManager:
             tune = {}
         if tune:
             self._note("using saved GGUF settings")
-        args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares, tune=tune)
-        launch = G.resolve_launch(str(path), tune=tune, n_devices=1 + len(rpc))
-        if launch:
-            tune = dict(tune, ctx=launch["ctx"], n_slots=launch["n_slots"])
-        if "--slot-save-path" in args:
-            try:
-                Path(args[args.index("--slot-save-path") + 1]).mkdir(parents=True, exist_ok=True)
-            except OSError:
-                pass
-        self._set(status="starting_lead", packer_pid=None)
-        seeded = bool(meta.get("seed"))
-        if not rpc:
-            self._note("starting llama-server on the lead Mac (one Mini)")
-        elif meta.get("file_mode") == "balance-verified-peer-cache":
-            self._note("starting llama-server using verified peer-only tensor caches; small tensors and cache misses still cross RPC")
-        elif seeded:
-            self._note("starting llama-server on the lead Mac; peers with their own copy load from disk, others get their share over the link")
-        else:
-            self._note("starting llama-server on the lead Mac, peers get their share over the link (first load copies it, later loads use the peer cache)")
-        log_path = self._lead_log()
-        log_path.write_text("")
-        lf = open(log_path, "ab", buffering=0)
-        self._worker_node = None
-        self._lead_proc = subprocess.Popen(args, stdout=lf, stderr=subprocess.STDOUT,
-                                           start_new_session=True)
-        meta["lead_pid"] = self._lead_proc.pid
-        self._write_gguf_meta(meta)
-        self._set(lead_pid=self._lead_proc.pid)
         t0 = time.time()
-        self._wait_lead_ready(timeout=1200)
-        self._check_cancel()
+        for attempt in (1, 2):
+            args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares, tune=tune)
+            launch = G.resolve_launch(str(path), tune=tune, n_devices=1 + len(rpc))
+            if launch:
+                if launch.get("helper_fits") is False and tune.get("guess_ahead") == "on":
+                    self._note("Guess-ahead helper left off: it does not fit in memory with this chat window")
+                    tune = dict(tune, guess_ahead="off", helper_failed=True)
+                    tune.pop("draft_path", None)
+                tune = dict(tune, ctx=launch["ctx"], n_slots=launch["n_slots"])
+            if "--slot-save-path" in args:
+                try:
+                    Path(args[args.index("--slot-save-path") + 1]).mkdir(parents=True, exist_ok=True)
+                except OSError:
+                    pass
+            self._set(status="starting_lead", packer_pid=None)
+            seeded = bool(meta.get("seed"))
+            if not rpc:
+                self._note("starting llama-server on the lead Mac (one Mini)")
+            elif meta.get("file_mode") == "balance-verified-peer-cache":
+                self._note("starting llama-server using verified peer-only tensor caches; small tensors and cache misses still cross RPC")
+            elif seeded:
+                self._note("starting llama-server on the lead Mac; peers with their own copy load from disk, others get their share over the link")
+            else:
+                self._note("starting llama-server on the lead Mac, peers get their share over the link (first load copies it, later loads use the peer cache)")
+            log_path = self._lead_log()
+            log_path.write_text("")
+            lf = open(log_path, "ab", buffering=0)
+            self._worker_node = None
+            self._lead_proc = subprocess.Popen(args, stdout=lf, stderr=subprocess.STDOUT,
+                                               start_new_session=True)
+            meta["lead_pid"] = self._lead_proc.pid
+            self._write_gguf_meta(meta)
+            self._set(lead_pid=self._lead_proc.pid)
+            self._wait_lead_ready(timeout=1200)
+            self._check_cancel()
+            # Day 28 tuning fix: "health ok" is not enough. A helper that ran
+            # out of GPU memory left a server that answered /health but failed
+            # every reply. Ask for one tiny reply before saying ready.
+            err = self._gguf_first_reply_error()
+            if not err:
+                break
+            spec_on = tune.get("guess_ahead") == "on" or tune.get("prompt_lookup") == "on"
+            self._stop_gguf_lead()
+            if attempt == 1 and spec_on and not entry.get("strict_tune"):
+                self._note("The first test reply failed with Guess-ahead / Prompt lookup on "
+                           f"({err[:160]}); starting again without them")
+                if tune.get("guess_ahead") == "on":
+                    try:
+                        import gguf_tune as GT
+                        GT.record_helper_failure(path, 1 + len(rpc), err)
+                    except Exception:  # noqa: BLE001
+                        pass
+                tune = dict(tune, guess_ahead="off", prompt_lookup="off", helper_failed=True)
+                tune.pop("draft_path", None)
+                continue
+            raise RuntimeError(f"the model loaded but its first test reply failed: {err[:500]}")
         self._note(f"loaded in {time.time() - t0:.1f}s")
         # GGUF Optimize now reads this (it refused "needs a GGUF model loaded" before).
-        self._loaded_entry = dict({k: v for k, v in entry.items() if k != "tune_override"},
+        self._loaded_entry = dict({k: v for k, v in entry.items() if k not in ("tune_override", "strict_tune")},
                                   gguf_shares=shares, _loaded_tune=tune,
                                   _launch=launch if launch else None)
         # Day 28: keep the entry so a web restart (Update now) can adopt it.
@@ -768,6 +794,45 @@ class WorkerManager:
         if meta.get("shares") and not entry.get("gguf_shares"):
             entry = dict(entry, gguf_shares=list(meta["shares"]))
         return entry
+
+    def _gguf_first_reply_error(self, timeout: float = 180.0):
+        """None when llama-server writes a short reply, else a short reason."""
+        import urllib.request
+        body = json.dumps({"messages": [{"role": "user", "content": "Reply with the word ready."}],
+                           "max_tokens": 8, "temperature": 0, "stream": False}).encode()
+        req = urllib.request.Request(f"http://127.0.0.1:{self.lead_port}/v1/chat/completions",
+                                     data=body, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                d = json.loads(r.read().decode() or "{}")
+        except Exception as e:  # noqa: BLE001
+            detail = ""
+            try:
+                detail = e.read().decode(errors="replace")[:300]  # HTTPError body
+            except Exception:  # noqa: BLE001
+                pass
+            return f"{type(e).__name__}: {e} {detail}".strip()
+        if isinstance(d, dict) and d.get("error"):
+            return json.dumps(d["error"])[:300]
+        if not isinstance(d, dict) or not d.get("choices"):
+            return "no reply"
+        return None
+
+    def _stop_gguf_lead(self) -> None:
+        """Stop just this llama-server (peers' rpc-servers and tunnels stay up)."""
+        proc = self._lead_proc
+        if proc is None:
+            return
+        try:
+            proc.terminate()
+            proc.wait(timeout=15)
+        except Exception:  # noqa: BLE001
+            try:
+                proc.kill()
+                proc.wait(timeout=5)
+            except Exception:  # noqa: BLE001
+                pass
+        time.sleep(1.0)
 
     def _kill_gguf(self) -> None:
         """Stop only the llama-server, SSH tunnels and peer rpc-servers we recorded."""

@@ -9,9 +9,24 @@ def pairing(key):
     return next((p for p in G.load_table()['pairings'] if p['id'] == key), None)
 
 
+BALANCE_NO_HELPER = ("A Balance split of an MLX model does not use a Guess-ahead helper: "
+                     "every guess would wait on the other Mac, and in our tests the helper "
+                     "made split replies slower. A GGUF model can use its helper on two Macs.")
+
+
+def balance_split(snapshot) -> bool:
+    """True for an MLX model loaded through the Balance planner (N-stage)."""
+    b = (snapshot or {}).get('balance') or {}
+    return bool((snapshot or {}).get('split') and isinstance(b, dict) and b.get('counts'))
+
+
 def offer(snapshot):
     model = snapshot.get('model_id') or ''
     if not model or not snapshot.get('split') or (snapshot.get('settings') or {}).get('guess_ahead') in ('off', 'mtp'):
+        return None
+    if balance_split(snapshot):
+        # Day 28 tuning fix: a Balance split never loads a helper (see
+        # BALANCE_NO_HELPER), so do not offer a download it cannot use.
         return None
     p = G.find_pairing(Path(model.replace('/', '--')))
     if not p or p.get('skip') or p['draft'].get('vocab') in ('mismatch', 'incompatible'):

@@ -2481,7 +2481,7 @@ def make_handler(app: App):
                         return self._json(409, {"error": "Split needs files or more memory; nothing was changed", "balance": plan})
                     entry = plan["entry"]
                     if entry.get("source")=="gguf" and isinstance(body.get("gguf_tune"),dict):
-                        entry=dict(entry,tune_override={k:v for k,v in body["gguf_tune"].items() if k in ("flash_attn","ubatch","cache_type","slot_save","ctx","n_slots")})
+                        entry=dict(entry,tune_override=__import__("web_restore").restorable_gguf_tune(body["gguf_tune"],entry.get("lead_path")))
                 except (ValueError, OSError, KeyError, TypeError) as e:
                     return self._json(400, error_payload(e))
             balanced_msg = None

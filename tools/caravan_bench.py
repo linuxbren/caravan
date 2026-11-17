@@ -746,6 +746,28 @@ def _resolve(args, models=None):
     }
 
 
+def _resolve_one_side(args, side, models=None):
+    """{"ok", "model", "messages"} for one side (gguf or mlx) only."""
+    explicit = args.gguf if side == "gguf" else args.mlx
+    kind = "GGUF" if side == "gguf" else "MLX"
+    query = (args.name or "").strip() or None
+    if explicit and not query:
+        return {"ok": True, "model": _stub(explicit, kind,
+                                           args.gguf_name if side == "gguf" else args.mlx_name),
+                "messages": []}
+    if models is None:
+        cat = fetch_catalog(port=args.port)
+        models = cat.get("models") or []
+    pair = resolve_pair(models, query=query,
+                        gguf_id=args.gguf if side == "gguf" else None,
+                        mlx_id=args.mlx if side == "mlx" else None)
+    m = pair.get(side)
+    if m:
+        return {"ok": True, "model": m, "messages": []}
+    msgs = [x for x in (pair.get("messages") or []) if kind in x] or pair.get("messages") or []
+    return {"ok": False, "model": None, "messages": msgs}
+
+
 def _run_flags(args):
     short = bool(getattr(args, "short", False))
     long = bool(getattr(args, "long", False))
@@ -822,6 +844,19 @@ def main(argv=None, *, models=None):
     p.add_argument("--mlx-name", default=None, help=argparse.SUPPRESS)
     args = p.parse_args(argv)
     run_short, run_long = _run_flags(args)
+    if args.speedups and args.only:
+        # Day 28 tuning fix: measuring one side needs only that side.
+        side = _resolve_one_side(args, args.only, models=models)
+        if not side.get("ok"):
+            sys.stdout.write("\n\n".join(side.get("messages") or [
+                f"No {args.only.upper()} model found. Run caravan models to see ids."]) + "\n")
+            return 2
+        m = side["model"]
+        gid = model_id(m) if args.only == "gguf" else None
+        mid = model_id(m) if args.only == "mlx" else None
+        gname = (args.gguf_name or _side_label(m, "GGUF")) if gid else None
+        mname = (args.mlx_name or _side_label(m, "MLX")) if mid else None
+        return _main_speedups(args, gid, mid, gname, mname)
     pair = _resolve(args, models=models)
     if not pair.get("ok"):
         text = "\n\n".join(pair.get("messages") or [])
@@ -991,7 +1026,12 @@ def _main_speedups(args, gid, mid, gname, mname) -> int:
         flags = " ".join(f for f, on in (("--short", args.short), ("--edits", args.edits),
                                          ("--long", args.long)) if on)
         only = f" --only {args.only}" if args.only else ""
-        q = f'"{args.name}" ' if args.name else f"--gguf {gid} --mlx {mid} "
+        if args.name:
+            q = f'"{args.name}" '
+        elif args.only:
+            q = f"--{args.only} {gid if args.only == 'gguf' else mid} "
+        else:
+            q = f"--gguf {gid} --mlx {mid} "
         sys.stdout.write(
             "This measures Prompt lookup and Guess-ahead on "
             + " and ".join(names) + ".\n"

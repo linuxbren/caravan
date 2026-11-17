@@ -169,6 +169,7 @@ class GgufOptimizer:
         self._boundary()
         with self._lock:
             cur = self._current()
+            trial = bool(cur and not self._cancel.is_set())
             if cur and not self._cancel.is_set():
                 cur["state"] = "running"
                 label = f"reloading with {cur['name']}={tune.get(cur['name'])}"
@@ -182,8 +183,12 @@ class GgufOptimizer:
             self.state["phase"] = label
             self.state["step"] = step
         t0 = time.time()
+        # strict_tune: a trial whose first test reply fails must fail the
+        # reload (so the tuner counts it as a loss), not quietly fall back.
+        # The final reload with the winners is not strict: if it ever failed
+        # its test reply, the loader falls back instead of leaving no model.
         self.mgr.switch(self.model_id, wait=True, settings=self.settings,
-                        entry=dict(self.entry, tune_override=dict(tune)))
+                        entry=dict(self.entry, tune_override=dict(tune), strict_tune=trial))
         snap = self.mgr.snapshot()
         if snap.get("status") != "ready":
             raise RuntimeError(snap.get("error") or "reload failed")
@@ -216,8 +221,22 @@ class GgufOptimizer:
             window = P.chat_window_from(self.mgr.snapshot() or {})
         except Exception:
             window = None
+        spec = knob in GT.SPEC_KNOBS
+        plist = None
+        try:
+            import caravan_prompts as P
+            if spec:
+                plist = P.autotune_prompt_list(window, with_edits=True,
+                                               n_long=P.AUTOTUNE_SPEC_LONG)
+        except Exception:
+            plist = None
         if self._measure_fn:
             raw = self._measure_fn()
+        elif plist:
+            raw = GT.measure_http_specs(
+                self.mgr.lead_port, chat_window=window, on_prompt=on_prompt,
+                prompts=plist[0], prompt_kinds=plist[1],
+            )
         else:
             raw = GT.measure_http_specs(
                 self.mgr.lead_port, chat_window=window, on_prompt=on_prompt,
@@ -225,7 +244,7 @@ class GgufOptimizer:
         dt = time.time() - t0
         try:
             import caravan_prompts as P
-            n_prompts = len(P.autotune_prompt_list(window)[0])
+            n_prompts = len((plist or P.autotune_prompt_list(window))[0])
         except Exception:
             n_prompts = len(GT.BENCH_PROMPTS)
         with self._lock:
@@ -258,6 +277,8 @@ class GgufOptimizer:
             # Real GgufTuner accepts this; test fakes may not.
             if hasattr(tuner, "schedule_kw"):
                 tuner.schedule_kw = self._schedule_kw()
+            if hasattr(tuner, "fresh"):
+                tuner.fresh = bool(getattr(self, "fresh", True))
             res = tuner.run()
             status = res.get("status") or "done"
             source = getattr(self, "source", "optimize_now") or "optimize_now"

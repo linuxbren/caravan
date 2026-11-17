@@ -80,6 +80,38 @@ class Store:
         finally:tmp.unlink(missing_ok=True)
 
 
+GGUF_TUNE_KEYS = ("flash_attn", "ubatch", "cache_type", "slot_save", "ctx", "n_slots",
+                  "prompt_lookup", "guess_ahead", "draft_path")
+
+
+def restorable_gguf_tune(tune, model_path=None) -> dict:
+    """A saved GGUF tune that is safe to start again.
+
+    Day 28 tuning fix: Guess-ahead and Prompt lookup winners now survive a
+    restart, Update now and a Balance reload. Guess-ahead On comes back only
+    with a helper file still on disk (or the same family's helper found
+    again); otherwise it falls back to Off. Never a download."""
+    t = {k: v for k, v in dict(tune or {}).items() if k in GGUF_TUNE_KEYS}
+    if t.get("prompt_lookup") not in (None, "on", "off"):
+        t.pop("prompt_lookup", None)
+    if t.get("guess_ahead") == "on":
+        try:
+            import gguf_tune as GT
+            d = GT.helper_on_disk(t.get("draft_path"), model_path)
+        except Exception:  # noqa: BLE001
+            d = None
+        if d:
+            t["draft_path"] = d
+        else:
+            t["guess_ahead"] = "off"
+            t.pop("draft_path", None)
+    else:
+        if t.get("guess_ahead") not in (None, "off"):
+            t.pop("guess_ahead", None)
+        t.pop("draft_path", None)
+    return t
+
+
 def request_for(mgr, entry, snap, nodes):
     engine="gguf" if entry.get("source")=="gguf" else "mlx"
     out=dict(entry.get("_restore_request") or {},model_id=entry["id"],engine=engine,settings=snap.get("settings") or {})
@@ -161,7 +193,7 @@ def validate_placement(app, entry, body):
             if ids!=dep['node_ids'] or D.shares(shares)!=dep['shares']:raise ValueError('Saved own-part plan differs from the installed plan; use Balance, no automatic download was started')
         if len(shares)!=len(ids):raise ValueError("Saved GGUF shares do not match the Minis")
         out.update(placement={"mode":"split" if len(ids)>1 else "one","node_ids":ids},gguf_shares=shares)
-        if body.get("gguf_tune"):out["tune_override"]=body["gguf_tune"]
+        if body.get("gguf_tune"):out["tune_override"]=restorable_gguf_tune(body["gguf_tune"],entry.get("lead_path"))
     if not weights or any(c-weights*s/sum(shares)-1.3<1.75 for c,s in zip(caps,shares)):
         raise ValueError("Not enough free memory to restore this placement with 1.75 GB headroom; choose a smaller model or another split")
     return out

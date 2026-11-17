@@ -269,14 +269,34 @@ def autotune_long_prompt(chat_window=None) -> tuple:
     return build_long_prompt("document", target, series=10), None
 
 
-def autotune_prompt_list(chat_window=None, *, tag_prefix: str = "Auto-tune short") -> tuple:
-    """Five short prompts plus one long (~2k) if it fits. Returns (prompts, skip_note)."""
+# Day 28 tuning fix: Guess-ahead and Prompt lookup trials also run two
+# code-edit prompts (so Prompt lookup can win where it helps) and two long
+# prompts (the long-read guard uses their median, which is less noisy).
+AUTOTUNE_EDIT_PROMPTS = 2
+AUTOTUNE_SPEC_LONG = 2
+
+
+def autotune_prompt_list(chat_window=None, *, tag_prefix: str = "Auto-tune short",
+                         with_edits: bool = False, n_long: int = 1) -> tuple:
+    """Five short prompts plus one long (~2k) if it fits. Returns (prompts, kinds, skip_note).
+
+    with_edits adds AUTOTUNE_EDIT_PROMPTS code-edit prompts (kind "edit");
+    n_long > 1 adds more ~2k long prompts with different openings.
+    """
     prompts = short_prompts(tag_prefix=tag_prefix)
     kinds = ["short"] * len(prompts)
+    if with_edits:
+        edits = edit_prompts(tag_prefix=tag_prefix.replace("short", "edit"))
+        for e in edits[:AUTOTUNE_EDIT_PROMPTS]:
+            prompts.append(e)
+            kinds.append("edit")
     long_p, note = autotune_long_prompt(chat_window)
     if long_p:
         prompts.append(long_p)  # already has a unique opening
         kinds.append("long")
+        for i in range(1, max(1, int(n_long))):
+            prompts.append(build_long_prompt("code", AUTOTUNE_LONG_TOKENS, series=10 + i))
+            kinds.append("long")
     return prompts, kinds, note
 
 

@@ -55,7 +55,11 @@ class Tuner(unittest.TestCase):
                 raise RuntimeError("server died")
             return 100.0
         r, loads = self.run_with(sp)
-        self.assertTrue(r["status"].startswith("error"))
+        # Day 28 tuning fix: a failed trial is a loss; the run continues.
+        self.assertEqual(r["status"], "done")
+        self.assertEqual(r["tried"][0].get("failed"), "server died")
+        self.assertFalse(r["tried"][0]["won"])
+        self.assertGreater(len(r["tried"]), 1)
         self.assertEqual(loads[-1], r["best"])
 
     def test_best_tune_ignores_garbage(self):
