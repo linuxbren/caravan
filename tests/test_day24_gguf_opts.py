@@ -50,7 +50,9 @@ class WebLlamaArgs(unittest.TestCase):
         self.assertIn("slots", default[default.index("--slot-save-path") + 1])
         # Web context is not jumped to the agent path's larger window.
         self.assertEqual(a[a.index("-c") + 1], "8192")
-        self.assertNotIn("--parallel", a)
+        # Day 28 tuning fix 2: one chat is one slot (llama-server would open 4).
+        self.assertEqual(a[a.index("--parallel") + 1], "1")
+        self.assertNotIn("--no-kv-unified", a)
         self.assertNotIn("q4_0", a)
         self.assertNotIn("q4_1", a)
 

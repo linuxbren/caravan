@@ -63,7 +63,9 @@ class LaunchFlags(unittest.TestCase):
         a = G.llama_args("/m.gguf", port=8194, peers=[], shares=[1],
                          decide=_decide_f16, slot_root=self.root)
         self.assertEqual(a[a.index("-c") + 1], "8192")
-        self.assertNotIn("--parallel", a)
+        # Day 28 tuning fix 2: one chat is one slot (llama-server would open 4).
+        self.assertEqual(a[a.index("--parallel") + 1], "1")
+        self.assertNotIn("--no-kv-unified", a)
         self.assertNotIn("--no-kv-unified", a)
         self.assertTrue(a[a.index("--slot-save-path") + 1].endswith("f16_f16/"))
         launch = G.resolve_launch("/m.gguf", decide=_decide_f16)

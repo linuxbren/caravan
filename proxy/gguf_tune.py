@@ -256,6 +256,35 @@ def spec_verdict(challenger, incumbent, margin: float = MARGIN) -> dict:
     return {"won": False, "why": f"chats {100 * (cs_c / cs_i - 1):+.0f}%"}
 
 
+# Day 28 tuning fix 2: Auto-tune ends by measuring stock and its pick in the
+# same session, interleaved (stock, pick, stock, pick). The pick is kept only
+# when its chat writing speed is not below stock by more than FINAL_NOISE;
+# otherwise everything goes back to stock.
+FINAL_NOISE = 0.03
+STOCK_TUNE = {"flash_attn": "on", "ubatch": G.GGUF_DEFAULT_UBATCH, "cache_type": "f16",
+              "prompt_lookup": "off", "guess_ahead": "off"}
+
+
+def stock_tune(best=None, pinned=()) -> dict:
+    """Caravan's untuned settings; pinned rows keep their pinned value."""
+    out = dict(STOCK_TUNE)
+    for k in pinned or ():
+        if k in (best or {}) and k in out:
+            out[k] = best[k]
+            if k == "guess_ahead" and best.get("draft_path"):
+                out["draft_path"] = best["draft_path"]
+    return out
+
+
+def differs_from_stock(best, stock) -> bool:
+    return any((best or {}).get(k, v) != v for k, v in stock.items())
+
+
+def chat_write(specs) -> float:
+    s = specs or {}
+    return float(s.get("short_write_tok_s") or s.get("write_tok_s") or 0.0)
+
+
 def trial_won(name: str, challenger, incumbent, margin: float = MARGIN) -> bool:
     if name in SPEC_KNOBS:
         return bool(spec_verdict(challenger, incumbent, margin)["won"])
@@ -331,6 +360,10 @@ def measure_http_specs(port: int, *, prompts=None, max_tokens: int = 192,
                 msg = ch.get("message") or {}
                 if isinstance(msg.get("content"), str):
                     content += msg["content"]
+                # Thinking models (Qwen3) may spend the whole token budget
+                # thinking: empty content is not a garbled reply.
+                if isinstance(msg.get("reasoning_content"), str):
+                    content += msg["reasoning_content"]
             from garble import is_garbled
             if is_garbled(content):
                 specs["garbled"] = True
@@ -392,6 +425,51 @@ class GgufTuner:
         self.store_path, self.cancelled, self.repeats = store_path, cancelled, max(1, int(repeats))
         self.schedule_kw = dict(schedule_kw or {})
 
+    final_check = True
+
+    def _final_check(self, e, best, pinned, result, scored) -> dict:
+        """Stock vs the pick, interleaved, same session. Returns the tune to keep."""
+        stock = stock_tune(best, pinned)
+        if not differs_from_stock(best, stock):
+            return best
+        arms = {"stock": [], "pick": []}
+        failed = None
+        for arm in ("stock", "pick", "stock", "pick"):
+            if self.cancelled():
+                return best
+            try:
+                arms[arm].append(self._score(stock if arm == "stock" else best))
+            except Exception as ex:  # noqa: BLE001
+                failed = f"{arm}: {str(ex)[:200]}"
+                if arm == "pick":
+                    break
+        sw = _median(chat_write(x) for x in arms["stock"] if chat_write(x) > 0)
+        pw = _median(chat_write(x) for x in arms["pick"] if chat_write(x) > 0)
+        keep = bool(pw and sw and pw >= sw * (1 - FINAL_NOISE)) and not (failed and failed.startswith("pick"))
+        if sw is None and pw and not failed:
+            keep = True  # stock could not be measured; the pick replied fine
+        changed = {k: best.get(k) for k, v in stock.items() if best.get(k, v) != v}
+        why = (f"stock {sw or 0:.1f} vs pick {pw or 0:.1f} tok/s"
+               + (f" ({failed})" if failed else ""))
+        rec = {"name": "final_check", "incumbent": "stock", "challenger": dict(changed),
+               "incumbent_tps": round(sw or 0, 2), "challenger_tps": round(pw or 0, 2),
+               "won": keep, "why": why, "at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+        e["trials"].append(rec)
+        result["tried"].append(rec)
+        result["final_check"] = rec
+        self.log(f"gguf tune: final check {why} -> {'keep the pick' if keep else 'back to stock'}")
+        if keep:
+            for x in arms["pick"]:
+                scored.append((dict(best), dict(x)))
+            return best
+        for k, v in changed.items():
+            tag = f"{k}={v}"
+            if tag not in e["losses"]:
+                e["losses"].append(tag)
+        for x in arms["stock"]:
+            scored.append((dict(stock), dict(x)))
+        return dict(stock)
+
     def _score(self, tune: dict) -> dict:
         self.restart(dict(tune))
         acc = [as_specs(self.measure()) for _ in range(self.repeats)]
@@ -408,9 +486,13 @@ class GgufTuner:
     def run(self) -> dict:
         store = load_store(self.store_path)
         e = entry(store, self.key)
+        pinned = tuple(self.schedule_kw.get("pinned") or ())
         if self.fresh:
             e["losses"] = []
             e.pop("helper_failed", None)
+            # Day 28 tuning fix 2: a fresh Auto-tune starts from stock, so
+            # every option is measured against stock in this session.
+            e["best"] = stock_tune(e.get("best"), pinned)
         best = dict(e["best"])
         result = {"key": self.key, "tried": [], "best": best, "status": "done",
                   "before": None, "after": None}
@@ -472,7 +554,9 @@ class GgufTuner:
                 elif inc_specs.get("garbled") and not ch_specs.get("garbled"):
                     won = True
                 elif ch_specs.get("garbled") and inc_specs.get("garbled"):
-                    won = False
+                    # Both sides read the same way (for example a thinking
+                    # model's reply cut off by the token limit): judge speed.
+                    won = trial_won(name, ch_specs, inc_specs)
                 else:
                     won = trial_won(name, ch_specs, inc_specs)
                 rec = {"name": name, "incumbent": inc, "challenger": ch,
@@ -508,6 +592,8 @@ class GgufTuner:
                 save_store(store, self.store_path)
         except Exception as ex:  # noqa: BLE001 - always restore the winner
             result["status"] = f"error: {ex}"
+        if self.final_check and result["status"] == "done" and not self.cancelled():
+            best = self._final_check(e, best, pinned, result, scored)
         e["best"] = dict(best)
         save_store(store, self.store_path)
         try:

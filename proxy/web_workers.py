@@ -533,12 +533,33 @@ class WorkerManager:
             meta["peers"].append({"id": n.get("id"), "label": name, "ssh": target, "pid": pid})
             self._write_gguf_meta(meta)
             lp = G.tunnel_port(i)
-            tun = self._open_tunnel(target, lp)
-            meta["tunnels"].append({"pid": tun.pid, "port": lp, "ssh": target, "id": n.get("id")})
+            # Day 28 tuning fix 2: the split's model traffic goes over the
+            # Thunderbolt link when this Mac has one to the peer. It used to
+            # follow the peer's .local name, which can resolve to the home
+            # network (Wi-Fi: 15 ms, jittery), and writing speed on 2 Macs
+            # swung between 19 and 11 tok/s from one load to the next.
+            tun, route = self._open_tunnel(target, lp, node=n)
+            meta["tunnels"].append({"pid": tun.pid, "port": lp, "ssh": target, "id": n.get("id"),
+                                    "route": route, "args": list(getattr(tun, "args", None) or [])})
             self._write_gguf_meta(meta)
-            if not G.wait_port(lp, proc=tun, timeout=10):
+            if not G.wait_port(lp, proc=tun, timeout=10) and route == "thunderbolt":
+                self._note(f"Thunderbolt route to {name} did not open; using the network instead")
+                try:
+                    tun.terminate()
+                except Exception:  # noqa: BLE001
+                    pass
+                tun, route = self._open_tunnel(target, lp)
+                meta["tunnels"][-1].update(pid=tun.pid, route=route,
+                                           args=list(getattr(tun, "args", None) or []))
+                self._write_gguf_meta(meta)
+                if not G.wait_port(lp, proc=tun, timeout=10):
+                    err = (tun.stderr.read() if tun.poll() is not None and tun.stderr else b"") or b""
+                    raise RuntimeError(f"SSH tunnel to {name} failed: {err.decode(errors='replace')[:300]}")
+            elif tun.poll() is not None or not G.wait_port(lp, proc=tun, timeout=1):
                 err = (tun.stderr.read() if tun.poll() is not None and tun.stderr else b"") or b""
                 raise RuntimeError(f"SSH tunnel to {name} failed: {err.decode(errors='replace')[:300]}")
+            gblock.setdefault("routes", []).append(route)
+            self._set(gguf=gblock)
             rpc.append(f"127.0.0.1:{lp}")
             self._note(f"rpc-server on {name} up (pid {pid}), tunnel 127.0.0.1:{lp}")
         self._check_cancel()
@@ -680,10 +701,24 @@ class WorkerManager:
     def _write_gguf_meta(self, meta: dict) -> None:
         self._gguf_meta_path().write_text(json.dumps(meta))
 
-    def _open_tunnel(self, target: str, port: int):
+    def _open_tunnel(self, target: str, port: int, node: Optional[dict] = None):
+        """(process, route). route is "thunderbolt" when the peer has a
+        Thunderbolt address (ssh+tb:// peer, same SSH identity), else "network"."""
         import gguf_split as G
-        return subprocess.Popen(G.ssh_tunnel_args(target, port), stdout=subprocess.DEVNULL,
+        args, route = None, "network"
+        if node and str(node.get("peer") or "").startswith("ssh+tb://"):
+            try:
+                import web_gguf_shares
+                args = web_gguf_shares.tunnel_args(dict(node, ssh=target), port)
+                route = "thunderbolt" if any(str(a).startswith("HostName=") for a in args) else "network"
+            except Exception as ex:  # noqa: BLE001 - fall back to the plain route
+                self._note(f"Thunderbolt route not available ({str(ex)[:120]}); using the network")
+                args = None
+        if args is None:
+            args, route = G.ssh_tunnel_args(target, port), "network"
+        proc = subprocess.Popen(args, stdout=subprocess.DEVNULL,
                                 stderr=subprocess.PIPE, start_new_session=True)
+        return proc, route
 
     def _free_gb(self, node: dict):
         import gguf_split as G
@@ -756,7 +791,7 @@ class WorkerManager:
         for t in meta.get("tunnels") or []:
             if G.is_tunnel_cmd(G.pid_cmdline(t.get("pid"))):
                 continue
-            tun = (subprocess.Popen(t['args'],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,start_new_session=True) if t.get('args') else self._open_tunnel(t["ssh"], t["port"]))  # only the recorded route
+            tun = (subprocess.Popen(t['args'],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,start_new_session=True) if t.get('args') else self._open_tunnel(t["ssh"], t["port"])[0])  # only the recorded route
             t["pid"] = tun.pid
             G.wait_port(t["port"], proc=tun, timeout=10)
             self._note(f"reopened tunnel 127.0.0.1:{t['port']} to {t.get('id')}")

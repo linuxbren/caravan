@@ -473,6 +473,13 @@ def llama_args(model_path: str, *, port: int, peers: list, shares: list,
             "--cache-ram", "0", "--jinja"]
     if n_slots > 1:
         args += ["--parallel", str(n_slots), "--no-kv-unified"]
+    else:
+        # Day 28 tuning fix 2: one chat means one slot. Without --parallel,
+        # llama-server opens 4 slots sharing one memory pool; long prompts
+        # then rotate through slots, the pool fills with old prompts, and on
+        # 2 Macs the 2nd Mac's rpc-server hit a GPU address fault on an 8k
+        # prompt (reply failed, then HTTP 502). Stock llama.cpp runs used -np 1.
+        args += ["--parallel", "1"]
     if tune.get("slot_save", True) is not False:
         sp = slot_save_dir(ctk, ctv, root=slot_root, ctx=ctx_per, n_slots=n_slots)
         args += ["--slot-save-path", str(sp) + "/"]

@@ -1,3 +1,27 @@
+## Day 28 fix 2 — tuning never ends slower than stock; 2-Mac splits use Thunderbolt
+
+- A GGUF model split across two Macs now sends its model traffic over the
+  Thunderbolt link when the Macs are paired over it. It used to follow the
+  other Mac's network name, which could resolve to the home network
+  (Wi-Fi here: 15 ms and jittery, against 0.6 ms on Thunderbolt), so
+  writing speed on 2 Macs swung from about 19 to 11 tok/s between loads,
+  and Auto-tune measured on whichever it got. If the Thunderbolt route
+  does not open, the split still starts over the network.
+- Auto-tune now starts from stock settings and ends by measuring stock and
+  its pick again in the same session, in turn (stock, pick, stock, pick).
+  The pick is kept only when chat writing speed is within 3% of stock or
+  better; otherwise everything goes back to stock and the losing options
+  are noted.
+- Qwen3 (a thinking model) no longer looks like a "garbled" reply when its
+  thinking uses the whole test budget, and when both sides of a trial look
+  the same the faster one wins. Before, Qwen3 14B never kept its helper
+  even though it wrote about 40% faster with it.
+- One chat now really is one llama-server slot (--parallel 1, as stock
+  llama.cpp runs use). Without it llama-server opened 4 slots sharing one
+  memory pool; on 2 Macs a long (8k) prompt after other long prompts could
+  crash the other Mac's rpc-server (GPU address fault) and the reply came
+  back as HTTP 502.
+
 ## Day 28 fix — tuning keeps the speed-ups that win, and never stalls
 
 - Guess-ahead and Prompt lookup are now judged on what you feel: how
