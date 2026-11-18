@@ -59,6 +59,33 @@ Remove paired Macs first. `caravan uninstall` asks before removing all Caravan s
 
 Check whether Caravan is running with `caravan status`. Need help? Run `caravan doctor`, read [installation help](INSTALL.md#troubleshooting), or [open an issue](https://github.com/linuxbren/caravan/issues). Do not include passwords, tokens or private chats in reports.
 
+## How the Macs talk to each other
+
+When Caravan reaches another Mac (to split a model, start its part, read its
+stats or update it), it tries the links in this order and uses the first one
+that works:
+
+1. **Thunderbolt** cable between the Macs (fastest)
+2. **Wired Ethernet**
+3. **Wi-Fi**
+4. Anything else that still reaches it, such as Tailscale, last
+
+"Works" means both Macs are on that link, a connection over it answers, and
+the other Mac proves it is the Mac you paired. A faster-looking later link
+never jumps ahead of a working earlier one. Caravan checks again on every
+model load, so a Thunderbolt cable you plug in later is used the next time
+you load. Topology shows the link for each Mac (for example
+"Link: Thunderbolt · en2 · 0.6 ms"), and `caravan status` prints it too. If
+Caravan has to use Wi-Fi it says so: "Using Wi-Fi to reach 2nd Mac;
+Thunderbolt not found, splits will be slower."
+
+Why it matters: in Day 28 testing, a model split across two Macs went over
+Wi-Fi (about 15 ms per round trip, and jumpy) instead of the Thunderbolt
+cable (about 0.6 ms), because Caravan followed the other Mac's network name.
+Writing speed drifted from about 19 down to 11 tokens per second. Caravan no
+longer follows the name for model traffic; it connects to the address of the
+link it picked.
+
 ## For developers / details
 
 [What's new (Day 27)](docs/DAY27.md) · [Developer setup](docs/DEVELOPMENT.md) · [Clean-install fixes and verification](docs/DAY23.md) · [Package status](docs/PACKAGING.md) · [Documentation index](docs/README.md) · [Changelog](CHANGELOG.md).

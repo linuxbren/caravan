@@ -145,13 +145,21 @@ def load_nodes(home, repo=None):
 
 def ssh_argv(node, command):
     target = _ssh_target(node)
+    config = (node.get("ssh_config") or "").strip()
+    route_opts = []
+    if not config:
+        # Link-order fix: update-all-Macs uses the same link order as loads.
+        try:
+            import peer_route as PR
+            route_opts = PR.host_opts(target, (PR.route_for(target, label=node.get("label")) or {}).get("address"))
+        except Exception:  # noqa: BLE001 - never block an update on the picker
+            route_opts = []
     argv = [
-        "ssh",
+        "ssh", *route_opts,
         "-o", "BatchMode=yes",
         "-o", f"ConnectTimeout={CONNECT_TIMEOUT}",
         "-o", "StrictHostKeyChecking=yes",
     ]
-    config = (node.get("ssh_config") or "").strip()
     if config:
         argv += ["-F", config]
     argv += [target, command]

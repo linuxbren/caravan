@@ -34,8 +34,9 @@ STATE = Path(os.environ.get("CARAVAN_CLI_GGUF_STATE", "~/.caravan/cli-gguf.json"
 
 
 def ssh(target, cmd, timeout=40):
-    return subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", target, cmd],
-                          capture_output=True, text=True, timeout=timeout)
+    import peer_route as PR  # link order: Thunderbolt > wired > Wi-Fi > other
+    return PR.run_ssh(target, cmd, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+                      timeout=timeout, run=subprocess.run)
 
 
 def peers_from_config():
@@ -96,7 +97,10 @@ def start(a) -> int:
             st["peers"].append({"label": label, "ssh": target, "pid": pid})
             STATE.write_text(json.dumps(st))
             lp = G.tunnel_port(i)
-            tun = subprocess.Popen(G.ssh_tunnel_args(target, lp), stdout=subprocess.DEVNULL,
+            import peer_route as PR
+            targs = G.ssh_tunnel_args(target, lp)
+            targs[1:1] = PR.host_opts(target, (PR.route_for(target, fresh=True) or {}).get("address"))
+            tun = subprocess.Popen(targs, stdout=subprocess.DEVNULL,
                                    stderr=subprocess.DEVNULL, start_new_session=True)
             st["tunnels"].append({"pid": tun.pid, "port": lp, "ssh": target})
             STATE.write_text(json.dumps(st))

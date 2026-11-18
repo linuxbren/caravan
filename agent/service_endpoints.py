@@ -98,6 +98,15 @@ def address(ports, config, interface):
     return str(ip)
 
 
+def _control_ssh(target, *opts, command):
+    """Control SSH over the picked link (peer_route) when it is importable."""
+    try:
+        import peer_route as PR
+        return PR.ssh_argv(target, *opts, command=command)
+    except ImportError:
+        return ["ssh", *opts, target, command]
+
+
 def resolve(value, *, run=subprocess.run):
     spec = parse(value)
     if spec is None:
@@ -106,7 +115,7 @@ def resolve(value, *, run=subprocess.run):
     try:
         if target:
             command = "networksetup -listallhardwareports; printf "+shlex.quote("\n"+MARKER+"\n")+"; ifconfig "+shlex.quote(interface)
-            r = run(["ssh","-o","BatchMode=yes","-o","StrictHostKeyChecking=yes","-o","ConnectTimeout=5",target,command],
+            r = run(_control_ssh(target,"-o","BatchMode=yes","-o","StrictHostKeyChecking=yes","-o","ConnectTimeout=5",command=command),
                     capture_output=True,text=True,timeout=12)
             if r.returncode or r.stdout.count(MARKER) != 1:
                 raise RetryableReadinessError("Trusted SSH Thunderbolt discovery unavailable; no address/trust fallback", kind="thunderbolt")

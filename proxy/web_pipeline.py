@@ -111,12 +111,27 @@ def adopted_entry(mgr, cmd, pid):
 def resolve_nodes(mgr, nodes):
     """Resolve explicit per-node TB interfaces; retain concrete ownership records."""
     import service_endpoints as SE
+    import peer_route as PR
     out=[]
     for node in nodes:
         n=dict(node)
+        # Link-order fix: the lead<->Mac data link is the first working link in
+        # the fixed order Thunderbolt > wired Ethernet > Wi-Fi > other, re-checked
+        # on every load. Not a Mac / nothing checkable: the strict tb:// rules below.
+        route=None
+        target=(n.get("ssh") or n.get("host") or "").strip()
+        if target and not mgr._node_is_local(n) and any(n.get(k) for k in ("peer","listen")):
+            route=PR.route_for(target,fresh=True,label=n.get("label") or n.get("id"))
+            if route and route.get("warning"):
+                note=getattr(mgr,"_note",None)
+                if note:note(route["warning"])
         for key in ("peer","listen","upstream_peer"):
             value=n.get(key)
             if not value:continue
+            if key in ("peer","listen") and route and route.get("address"):
+                port=str(value).rsplit(":",1)[-1]
+                if port.isdigit():
+                    n[key]=f"{route['address']}:{port}";n["link"]=route["kind"];continue
             spec=SE.parse(value)
             if spec and spec[0] is None and not mgr._node_is_local(n):
                 target=n.get("ssh") or n.get("host")

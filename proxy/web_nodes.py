@@ -228,6 +228,13 @@ def gather_node_stats(node: dict, *, ssh_fn=None, local_gather=None) -> dict:
         "repo": node.get("repo"),
         "peer": node.get("peer"),
     }
+    if not is_local(node):
+        # Link-order fix: which link this Mac uses to reach it (Topology).
+        try:
+            import peer_route as PR
+            base["link"] = PR.summary(PR.recorded((node.get("ssh") or node.get("host") or "").strip()))
+        except Exception:  # noqa: BLE001 - display only
+            base["link"] = None
     try:
         if is_local(node):
             if local_gather is None:
@@ -327,10 +334,10 @@ def make_ssh_fn(mgr):
         if target == default and hasattr(mgr, "_ssh"):
             return mgr._ssh(cmd, timeout=timeout)
         import subprocess
-        return subprocess.run(
-            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", target, cmd],
-            capture_output=True, text=True, timeout=timeout,
-        )
+        import peer_route as PR
+        return PR.run_ssh(target, cmd, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+                          timeout=timeout, run=subprocess.run,
+                          label=node.get("label") or node.get("id"))
     return ssh_fn
 
 

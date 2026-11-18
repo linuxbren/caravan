@@ -49,6 +49,18 @@ and the daily logs, not mixed into current setup instructions.
   only one Mac is live; a stopped Mac shows as offline, with a grey
   light). See [DAY27](DAY27.md).
 
+- **Day 28 link order:** one route picker for every path between Macs.
+  Fixed order: Thunderbolt, then wired Ethernet, then Wi-Fi, then anything
+  else (Tailscale) last; the first link that answers and proves it is the
+  paired Mac wins, re-checked on every load. Used by GGUF split tunnels,
+  MLX split peer addresses, the remote-worker tunnel, stats, stop, update
+  and pairing. Topology and `caravan status` show the link; falling back
+  to Wi-Fi logs a warning. Found when a 2-Mac split drifted from about 19
+  to 11 tok/s over Wi-Fi (15 ms) instead of Thunderbolt (0.6 ms). Before
+  this the order was never written down or coded as one rule: Day 21
+  designed "Thunderbolt only, no silent fallback" for MLX, and the GGUF
+  tunnel followed the other Mac's network name.
+
 ## Planned dev days
 
 - **Day 28:** one Mac vs two Macs. The same tests on one Mac, then
@@ -104,6 +116,11 @@ correctness or safety problem needs attention.
 - Build for an ordered set of Macs, not hard-coded first/second-Mac aliases.
 
 ## Further work and known limits
+
+- Link order with three or more Macs: the picker checks the link from the
+  1st Mac to each other Mac. The hop between two other Macs in a 3+ Mac MLX
+  chain still uses its explicit Thunderbolt address (no fallback) until a
+  Mac can run the picker for its own next hop.
 
 - Authenticate model transport and turn verified link previews into safely
   applied plans. Read-only SSH verification alone is not transport security.

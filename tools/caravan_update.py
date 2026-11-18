@@ -237,8 +237,13 @@ def _term(pid, inspect=_command_of, send=os.kill, pause=time.sleep, timeout=8):
 def _ssh_stop(target, command, *, run_ssh=None, timeout=25):
     run_ssh = run_ssh or subprocess.run
     try:
+        try:
+            import peer_route as PR
+            argv = PR.ssh_argv(target, "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", command=command)
+        except Exception:  # noqa: BLE001 - never block an update on the picker
+            argv = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target, command]
         return run_ssh(
-            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target, command],
+            argv,
             capture_output=True,
             text=True,
             timeout=timeout,

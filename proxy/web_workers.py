@@ -542,8 +542,10 @@ class WorkerManager:
             meta["tunnels"].append({"pid": tun.pid, "port": lp, "ssh": target, "id": n.get("id"),
                                     "route": route, "args": list(getattr(tun, "args", None) or [])})
             self._write_gguf_meta(meta)
-            if not G.wait_port(lp, proc=tun, timeout=10) and route == "thunderbolt":
-                self._note(f"Thunderbolt route to {name} did not open; using the network instead")
+            if not G.wait_port(lp, proc=tun, timeout=10) and route != "network":
+                self._note(f"{route} route to {name} did not open; using its configured SSH name instead")
+                import peer_route as PR
+                PR.forget(target)
                 try:
                     tun.terminate()
                 except Exception:  # noqa: BLE001
@@ -702,14 +704,29 @@ class WorkerManager:
         self._gguf_meta_path().write_text(json.dumps(meta))
 
     def _open_tunnel(self, target: str, port: int, node: Optional[dict] = None):
-        """(process, route). route is "thunderbolt" when the peer has a
-        Thunderbolt address (ssh+tb:// peer, same SSH identity), else "network"."""
+        """(process, route). Link-order fix: the tunnel goes over the first
+        working link in the fixed order Thunderbolt > wired Ethernet > Wi-Fi >
+        other (peer_route.pick, re-checked on every load). route is that kind,
+        or "network" when nothing could be checked (configured SSH name)."""
         import gguf_split as G
+        import peer_route as PR
         args, route = None, "network"
-        if node and str(node.get("peer") or "").startswith("ssh+tb://"):
+        if node is not None:
+            name = (node or {}).get("label") or (node or {}).get("id") or target
+            picked = PR.route_for(target, fresh=True, label=name)
+            if picked is not None:
+                if picked.get("warning"):
+                    self._note(picked["warning"])
+                opts = PR.host_opts(target, picked.get("address"))
+                if opts:
+                    args = G.ssh_tunnel_args(target, port)
+                    args[1:1] = opts + ["-o", "StrictHostKeyChecking=yes"]
+                    route = picked["kind"]
+                    self._note(f"link to {name}: {PR.describe(picked)}")
+        if args is None and node and str(node.get("peer") or "").startswith("ssh+tb://"):
             try:
                 import web_gguf_shares
-                args = web_gguf_shares.tunnel_args(dict(node, ssh=target), port)
+                args = web_gguf_shares.tunnel_args(dict(node, ssh=target), port, pick=False)
                 route = "thunderbolt" if any(str(a).startswith("HostName=") for a in args) else "network"
             except Exception as ex:  # noqa: BLE001 - fall back to the plain route
                 self._note(f"Thunderbolt route not available ({str(ex)[:120]}); using the network")
@@ -914,8 +931,9 @@ class WorkerManager:
             if not target:
                 continue
             try:
-                r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target,
-                                    G.rpc_stop_command()], capture_output=True, text=True, timeout=30)
+                import peer_route as PR
+                r = PR.run_ssh(target, G.rpc_stop_command(), "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
+                               timeout=30, run=subprocess.run)
                 if r.returncode:
                     self._note(f"could not stop rpc-server on {p.get('id')}: {(r.stderr or '')[:200]}")
             except subprocess.SubprocessError as e:
@@ -1175,8 +1193,9 @@ class WorkerManager:
             if target:
                 cmd = self._remote_stop_command(meta.get("repo") or "~/cv3",
                     "~/.caravan/web-ui/remote-lead.pid", pid=meta.get("pid"), port=self.lead_port)
-                r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", target, cmd],
-                                   capture_output=True, text=True, timeout=25)
+                import peer_route as PR
+                r = PR.run_ssh(target, cmd, "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
+                               timeout=25, run=subprocess.run)
                 if r.returncode:
                     raise RuntimeError("could not stop tracked remote worker: " + (r.stderr or ""))
             meta_path.unlink()
@@ -1188,12 +1207,9 @@ class WorkerManager:
         self._worker_node = None
 
     def _ssh(self, remote_cmd: str, *, timeout: float = 60) -> subprocess.CompletedProcess:
-        cmd = [
-            "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
-            "-o", "StrictHostKeyChecking=accept-new",
-            self.packer_ssh, remote_cmd,
-        ]
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        import peer_route as PR
+        return PR.run_ssh(self.packer_ssh, remote_cmd, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+                          "-o", "StrictHostKeyChecking=accept-new", timeout=timeout, run=subprocess.run)
 
     def _assert_packer_unmanaged(self):
         script = ("import sys;from pathlib import Path;"
@@ -1312,9 +1328,10 @@ class WorkerManager:
         target = (node.get("ssh") or node.get("host") or self.packer_ssh or "").strip()
         if not target:
             raise RuntimeError("no ssh target for remote worker")
-        return subprocess.run(
-            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", target, cmd],
-            capture_output=True, text=True, timeout=timeout)
+        import peer_route as PR
+        return PR.run_ssh(target, cmd, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+                          timeout=timeout, run=subprocess.run,
+                          label=node.get("label") or node.get("id"))
 
     def _stop_tunnel(self, node=None) -> None:
         """Stop only Caravan's own ssh forward to this worker. Never a foreign pid."""

@@ -194,9 +194,17 @@ if BINARY in cmd and '-p PORT' in cmd:
 
 
 
-def tunnel_args(n,lp):
+def tunnel_args(n,lp,pick=True):
     import gguf_split as G
     target=n.get('ssh') or n.get('host');args=G.ssh_tunnel_args(target,lp)
+    # Link-order fix: first working link Thunderbolt > wired > Wi-Fi > other,
+    # re-checked on every load (peer_route). Not a Mac / unchecked: old rules.
+    if pick:
+        import peer_route as PR
+        r=PR.route_for(target,fresh=True,label=n.get('label') or n.get('id'))
+        opts=PR.host_opts(target,(r or {}).get('address'))
+        if opts:
+            args[1:1]=opts+['-o','StrictHostKeyChecking=yes'];return args
     # Existing MLX peer addresses may provide a link-local data route. Keep
     # the configured SSH identity as the host-key anchor, never accept a key.
     import ipaddress

@@ -145,6 +145,17 @@ def stop_stale_adverts(name, port, *, run=subprocess.run, kill=os.kill):
     return pids
 
 
+
+def record_route(alias,label=None):
+    """Link-order fix: right after pairing, check which link reaches the new
+    Mac (Thunderbolt > wired > Wi-Fi > other) so Topology shows it. Best effort."""
+    if not alias:return
+    try:
+        import threading,peer_route as PR
+        threading.Thread(target=PR.route_for,args=(alias,),kwargs={'fresh':True,'label':label},daemon=True).start()
+    except Exception:  # noqa: BLE001 - display only; loads re-check anyway
+        pass
+
 class Pairing:
     def __init__(self,store=None,*,port=PORT,ssh_port=22,host_key_path=None,clock=time.time,
                  active=lambda:False,baseline=lambda:(),metadata=None,verify_ssh=True):
@@ -315,6 +326,7 @@ class Pairing:
                 checked=subprocess.run(['ssh','-F',result['ssh_config'],result['alias'],'true'],capture_output=True,timeout=10)
                 if checked.returncode: raise ValueError('Pairing was checked, but Remote Login could not use this account. Check the allowed account in Remote Login, then try again.')
             row['state']='active';self.store.save(peer,row)
+            record_route(result.get('alias'),candidate.get('name'))
             return {'added':True,**result,'split':'auto'}
         except Exception:
             # Keep the durable revocation credential if the other Mac cannot be

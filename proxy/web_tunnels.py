@@ -214,10 +214,12 @@ def stop_owned(pid, target, port, *, inspect=None, send=None, pause=None, timeou
     return not cmd or not tunnel_matches(cmd, target, port)
 
 
-def tunnel_argv(target, port) -> list:
+def tunnel_argv(target, port, route=None) -> list:
     p = str(int(port))
+    import peer_route as PR
     return [
-        "ssh", "-o", "BatchMode=yes", "-o", "ExitOnForwardFailure=yes",
+        "ssh", *PR.host_opts(str(target), (route or {}).get("address")),
+        "-o", "BatchMode=yes", "-o", "ExitOnForwardFailure=yes",
         "-o", "ServerAliveInterval=15", "-N",
         "-L", f"{p}:127.0.0.1:{p}", str(target),
     ]
@@ -225,8 +227,10 @@ def tunnel_argv(target, port) -> list:
 
 def _spawn(target, port, *, popen=None):
     popen = popen or subprocess.Popen
+    # Link-order fix: (re)connecting re-checks the link (Thunderbolt first).
+    import peer_route as PR
     return popen(
-        tunnel_argv(target, port),
+        tunnel_argv(target, port, route=PR.route_for(str(target), fresh=True)),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         start_new_session=True,

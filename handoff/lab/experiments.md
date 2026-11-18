@@ -1,3 +1,50 @@
+## 2026-11-17 — Day 28: link order (Thunderbolt > wired > Wi-Fi), one picker
+
+**Finding.** Day 28 round 2: on 2 Macs the GGUF split's SSH tunnel dialled
+the 2nd Mac's `.local` name, which resolved to its Wi-Fi address on the
+home network (about 15 ms, jittery) instead of the Thunderbolt link
+(about 0.6 ms). 2-Mac writing speed drifted from 19 down to 11 tok/s
+between loads, and Auto-tune measured on whichever link it got. Fix 2
+(`4bdbd79`, pin `9e612db`) made that one tunnel prefer Thunderbolt when the
+node had an `ssh+tb://` peer, otherwise "network".
+
+**Was the order ever coded?** No. Nothing in git history, ROADMAP, README
+or the logs stated "Thunderbolt > wired > Wi-Fi". Day 21's design said
+"Thunderbolt-only data, no silent Wi-Fi/Tailscale fallback; any private
+Ethernet fallback must be opted in". The old stage-3 agent (not installed)
+used Thunderbolt fast paths, then Tailscale, then mDNS. Every other path
+used the configured SSH name (mDNS `.local` → Wi-Fi on these Macs, whose
+wired `en0` is unplugged).
+
+**Fix.** `proxy/peer_route.py`: classify interfaces from
+`networksetup -listallhardwareports` + `ifconfig -a` on both Macs
+(Thunderbolt N / bridge of them = thunderbolt; Ethernet / USB LAN /
+Thunderbolt Ethernet adapter = wired; Wi-Fi; utun/other last), pair
+interfaces on the same subnet (a path's kind is its worse end), then in
+order: TCP connect to port 22 bound to the interface (best of 3 RTT) +
+SSH login to that address with the paired host key and a nonce. First pass
+wins. Recorded in `~/.caravan/web-ui/peer-routes.json`; shown in Topology
+and `caravan status`; non-Thunderbolt logs a warning. Data paths pick
+fresh on every load; control SSH reuses a pick up to 5 min (failed pick
+30 s) and falls back to the alias if the address stops answering. Wired
+through GGUF tunnels, sharded GGUF tunnels, MLX pipeline peer/listen,
+remote-worker tunnel, `_ssh_node`/`_ssh`/rpc stop/remote stop, Topology
+stats, update-peers, `caravan update` stop, `service_endpoints` discovery
+SSH, `gguf_split_cli`, `tb_ssh_proxy` (fallback, `--tb-only`), pairing.
+
+**Live (read-only, 1st Mac, clone copy, `--no-save --probe-all`).** Local:
+`en2` Thunderbolt 169.254.110.94/16, `en1` Wi-Fi 192.168.1.79/24, `utun4`
+Tailscale 100.68.62.20; `en0` Ethernet inactive. Pick for the 2nd Mac:
+**Thunderbolt `en2` → 169.254.151.30, 0.42–0.5 ms, identity ok**. Not
+needed: Wi-Fi 192.168.1.38 5.4 ms, Tailscale 100.90.134.95 6.7 ms. What-if
+`--skip thunderbolt`: Wi-Fi 4.9 ms with the warning. (Quiet-moment RTTs;
+the 15 ms Wi-Fi figure was under split load.)
+
+**Tests.** `tests/test_day28_link_order.py` (ordering, TB down → wired,
+wired down → Wi-Fi, TB back → preferred, wrong Mac skipped, faster later
+link never jumps ahead, no `.local` on data paths, wiring per call site,
+raw-ssh guard).
+
 ## 2026-11-06 — Day 16: Topology N-node, self-tune, non-lead load
 
 **Goal.** Make the web Topology drawer work for any configured Mini count;

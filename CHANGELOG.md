@@ -1,3 +1,32 @@
+## Day 28 link order — Thunderbolt, then wired, then Wi-Fi, everywhere
+
+- One route picker (`proxy/peer_route.py`) now decides how this Mac reaches
+  another one, in a fixed order: Thunderbolt, wired Ethernet, Wi-Fi, then
+  anything else (Tailscale/VPN) last. Each link is checked (both Macs on
+  it, a timed connection to the other Mac's SSH port over that interface,
+  and an SSH login that shows the paired Mac's own host key and echoes a
+  fresh code); the first that passes wins, even if a later one looks
+  faster. It is re-checked on every model load or reconnect, so a cable
+  plugged in later is picked up next load.
+- Every path uses it: GGUF split tunnels (whole-file and per-Mac pieces),
+  MLX split peer and listen addresses, the remote MLX worker tunnel,
+  control SSH (start/stop, stats for Topology, health), update every Mac,
+  Thunderbolt address discovery, the dev split CLI, the SSH hop proxy
+  (now falls back to the next link instead of failing; `--tb-only` keeps
+  the old behaviour) and pairing (records the link right after pairing).
+- Model traffic never follows the other Mac's `.local` name any more: it
+  connects to the picked address, binds this Mac's address on that
+  interface, and keeps the paired SSH alias as the host-key check.
+- Topology shows "Link: Thunderbolt · en2 · 0.6 ms" (or wired / Wi-Fi,
+  marked slower) for each other Mac; `caravan status` prints the same.
+  Falling back logs "Using Wi-Fi to reach 2nd Mac; Thunderbolt not found,
+  splits will be slower".
+- Why: Day 28 round 2 found the 2-Mac GGUF split tunnel going over Wi-Fi
+  (15 ms, jittery) instead of Thunderbolt (0.6 ms), and writing speed
+  drifted from about 19 to 11 tok/s. Fix 2 made that one tunnel prefer
+  Thunderbolt; there was still no wired-vs-Wi-Fi rule and each path picked
+  addresses its own way.
+
 ## Day 28 fix 2 — tuning never ends slower than stock; 2-Mac splits use Thunderbolt
 
 - A GGUF model split across two Macs now sends its model traffic over the

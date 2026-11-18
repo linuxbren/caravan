@@ -37,7 +37,28 @@ def simple_status(name="web"):
         print(f"Caravan is not running: {problem.rstrip('.')}. Open Caravan and load the model again; run caravan doctor if it fails.")
         return 1
     print("Caravan is running")
+    for line in link_lines():
+        print(line)
     return 0
+
+
+def link_lines(home=None):
+    """Link-order fix: which link reaches each other Mac (from the last check)."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "proxy"))
+        import peer_route as PR
+        routes = PR.load_all()
+    except Exception:  # noqa: BLE001 - status must never fail on this
+        return []
+    out = []
+    for target, route in sorted(routes.items()):
+        if not isinstance(route, dict):
+            continue
+        name = route.get("label") or target
+        out.append(f"Link to {name}: {PR.describe(route)}")
+        if route.get("warning"):
+            out.append(f"  warning: {route['warning']}")
+    return out
 
 
 

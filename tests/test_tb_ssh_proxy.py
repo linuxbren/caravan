@@ -8,9 +8,19 @@ class Proxy(unittest.TestCase):
   resolve=mock.Mock(side_effect=["169.254.1.2:22","169.254.3.4:22"]);exe=mock.Mock()
   for _ in range(2):T.main(["user@peer","en2","22"],resolve_fn=resolve,exec_fn=exe)
   self.assertEqual(resolve.call_count,2);self.assertEqual(exe.call_args.args,("/usr/bin/nc",["nc","169.254.3.4","22"]))
- def test_discovery_failure_never_connects_to_another_route(self):
+ def test_tb_only_discovery_failure_never_connects_to_another_route(self):
+  exe=mock.Mock();fb=mock.Mock()
+  with self.assertRaises(ValueError):T.main(["user@peer","en2","22","--tb-only"],resolve_fn=mock.Mock(side_effect=ValueError("bad endpoint")),exec_fn=exe,fallback_fn=fb)
+  exe.assert_not_called();fb.assert_not_called()
+ def test_no_thunderbolt_falls_back_to_next_link_in_order(self):
+  # Link-order fix: Thunderbolt > wired > Wi-Fi; the fallback is peer_route's pick.
+  exe=mock.Mock();fb=mock.Mock(return_value="192.168.1.38:22")
+  T.main(["user@peer","en2","22"],resolve_fn=mock.Mock(side_effect=ValueError("no TB")),exec_fn=exe,fallback_fn=fb)
+  fb.assert_called_once_with("user@peer",22);self.assertEqual(exe.call_args.args,("/usr/bin/nc",["nc","192.168.1.38","22"]))
+ def test_fallback_without_a_working_link_never_connects(self):
   exe=mock.Mock()
-  with self.assertRaises(ValueError):T.main(["user@peer","en2","22"],resolve_fn=mock.Mock(side_effect=ValueError("bad endpoint")),exec_fn=exe)
+  with mock.patch("peer_route.pick",return_value={"address":None,"kind":"unknown"}):
+   with self.assertRaises(RuntimeError):T.main(["user@peer","en2","22"],resolve_fn=mock.Mock(side_effect=ValueError("no TB")),exec_fn=exe)
   exe.assert_not_called()
 
  def test_discovery_never_consumes_parent_ssh_stdin(self):
