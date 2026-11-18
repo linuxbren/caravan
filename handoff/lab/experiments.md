@@ -1,3 +1,106 @@
+## 2026-11-18 — Day 28: tuning round 2 results (4bdbd79)
+
+**Queue.** Round 2 Auto-tune reliability ran on source `4bdbd79` / pin
+`9e612db`. Started Nov 17 7:43 PM CT; **QUEUE DONE Nov 18 4:14 AM CT**
+(America/Chicago). All 7 cases (1 Mac: Llama 3.1 8B, Qwen3 14B, gpt-oss
+20B; 2 Macs: those three plus Qwen3 30B-A3B): Auto-tune passed three
+times, settings were kept across reload and a Caravan restart, and there
+were no prompt errors. Chat prompts (5 short, 2 each at about 1k / 4k /
+8k; medians). These numbers are **final for `4bdbd79`**, except 2-Mac
+Llama 8B tuned (helper not kept). 2-Mac figures will be re-checked in
+**round 3** on the link-order build (`057fcc1` / pin `d54c54f`) after
+the Llama helper-on-split fix. The Macs have not been updated to that
+build yet.
+
+**Write tok/s (untuned / tuned).**
+
+| Setup | Short | 1k | 4k | 8k | What Auto-tune kept |
+|---|---|---|---|---|---|
+| 1 Mac, Llama 3.1 8B | 21.49 / 25.97 | 20.91 / 23.71 | 18.99 / 20.78 | 16.94 / 18.65 | helper + Prompt lookup (59% guesses kept) |
+| 1 Mac, Qwen3 14B | 12.09 / 16.87 | 11.70 / 17.34 | 10.99 / 14.32 | 10.08 / 12.94 | helper (52% guesses kept) |
+| 1 Mac, gpt-oss 20B | 40.37 / 40.59 | 40.21 / 40.03 | 38.63 / 38.09 | 36.52 / 36.15 | no helper (none exists) |
+| 2 Macs, Llama 3.1 8B | 19.41 / 19.38 | 18.91 / 18.48 | 17.30 / 16.38 | 15.66 / 16.16 | Prompt lookup only (OPEN; 10% guesses kept) |
+| 2 Macs, Qwen3 14B | 11.22 / 14.90 | 11.09 / 15.91 | 10.30 / 12.99 | 9.45 / 11.80 | helper (52% guesses kept) |
+| 2 Macs, gpt-oss 20B | 33.11 / 33.01 | 32.79 / 32.79 | 31.71 / 31.71 | 30.62 / 30.58 | no helper (none exists) |
+| 2 Macs, Qwen3 30B-A3B | 34.50 / 33.50 | 33.12 / 31.96 | 29.25 / 28.28 | 25.16 / 24.42 | no helper (self-tune lost, within noise) |
+
+Short-prompt write: Llama 8B on 1 Mac +21%; Qwen3 14B on 1 Mac +40%;
+Qwen3 14B on 2 Macs +33%. gpt-oss is flat, as expected. 2-Mac Llama 8B
+is flat because the helper was not kept. 2-Mac Qwen3 30B (33.50 vs
+34.50) is within normal run-to-run variation. 2-Mac Llama 8B untuned
+write is back at 19.41, not the 11 seen when the tunnel drifted onto
+Wi-Fi.
+
+**Read tok/s (untuned / tuned).**
+
+| Setup | Short | 1k | 4k | 8k |
+|---|---|---|---|---|
+| 1 Mac, Llama 3.1 8B | 236.9 / 183.1 | 224.1 / 184.3 | 204.1 / 167.0 | 176.1 / 153.2 |
+| 1 Mac, Qwen3 14B | 62.4 / 77.2 | 106.8 / 103.1 | 102.3 / 97.7 | 95.3 / 90.6 |
+| 1 Mac, gpt-oss 20B | 273 / 295 | 436 / 436 | 416 / 391 | 368 / 360 |
+| 2 Macs, Llama 3.1 8B | 225 / 225 | 276 / 296 | 281 / 333 | 254 / 297 |
+| 2 Macs, Qwen3 14B | 59.2 / 72.9 | 146.7 / 145.0 | 167.0 / 159.7 | 157.1 / 144.7 |
+| 2 Macs, gpt-oss 20B | 233 / 251 | 450 / 444 | 612 / 586 | 617 / 579 |
+| 2 Macs, Qwen3 30B-A3B | 141.1 / 139.1 | 531 / 536 | 560 / 573 | 460 / 475 |
+
+The helper also reads the prompt, so 1-Mac Llama 8B long-prompt read is
+lower when Guess-ahead is on (176.1 → 153.2 at 8k). That is expected,
+and is why round 1's score used to throw the helper out.
+
+**First word, seconds (untuned / tuned).**
+
+| Setup | Short | 1k | 4k | 8k |
+|---|---|---|---|---|
+| 1 Mac, Llama 3.1 8B | 0.34 / 0.45 | 5.55 / 6.74 | 23.5 / 28.9 | 54.4 / 62.7 |
+| 1 Mac, Qwen3 14B | 0.88 / 0.72 | 11.6 / 12.1 | 49.3 / 51.7 | 106.7 / 112.6 |
+| 1 Mac, gpt-oss 20B | 0.42 / 0.40 | 2.93 / 2.93 | 11.6 / 12.4 | 26.0 / 26.6 |
+| 2 Macs, Llama 3.1 8B | 0.36 / 0.36 | 4.49 / 4.17 | 17.1 / 14.4 | 37.8 / 32.1 |
+| 2 Macs, Qwen3 14B | 0.93 / 0.78 | 8.42 / 8.52 | 30.0 / 31.4 | 64.8 / 70.5 |
+| 2 Macs, gpt-oss 20B | 0.49 / 0.47 | 2.82 / 2.85 | 7.88 / 8.23 | 15.5 / 16.5 |
+| 2 Macs, Qwen3 30B-A3B | 0.40 / 0.41 | 2.33 / 2.30 | 9.02 / 8.81 | 22.3 / 21.6 |
+
+**Round 1 bugs A–E**, fixed in source `860d216` / pin `ab39a69` (1,800
+tests): (A) the score penalized a helper that wrote faster because
+long-prompt read was a bit slower; (B) `best_tune()` dropped
+Guess-ahead, the helper path and Prompt lookup on reload; (C) Qwen3 14B
+plus a 32k window plus the helper ran out of memory, said Ready, and
+every reply failed; (D) the MLX Balance split forced Guess-ahead off but
+still offered the helper download; (E) minor bench and fresh-tune issues.
+The update kept the loaded model. The helper was kept only for Llama 8B
+on 1 Mac; 2-Mac tuned was slower than untuned (11.6 vs 19.0 on Llama 8B)
+and that column must not be used.
+
+**Round 2 root causes**, fixed in source `4bdbd79` / pin `9e612db`
+(1,817 tests): (1) the GGUF split tunnel used the other Mac's `.local`
+name, which resolved to Wi-Fi (about 15 ms, jumpy) instead of
+Thunderbolt (about 0.6 ms), so 2-Mac write drifted from 19 to 11 tok/s;
+(2) a fresh Auto-tune started from the old best setting, with no stock
+re-check; (3) Qwen3 thinking-only replies were flagged as garbled, so
+the helper's about +40% win was thrown out; (4) without `--parallel`,
+llama-server shared one KV cache across 4 slots, and the 2nd Mac's
+rpc-server faulted on 8k prompts with HTTP 502. The update kept the
+loaded model. Qwen3 14B now keeps its helper on 1 Mac and on 2 Macs.
+
+**Link order** is in the next entry (`057fcc1` / pin `d54c54f`, 1,863
+tests): Thunderbolt > wired Ethernet > Wi-Fi > Tailscale/other, one
+picker for every path. Brenden approved keeping the MLX Wi-Fi fallback,
+with the warning. The Macs are not on that build yet.
+
+**OPEN.** On 2 Macs, Llama 8B self-tune won with the helper, but
+Auto-tune kept no helper (write 19.38 vs 19.41). On 1 Mac the same
+helper is kept and writes about +21%. A fix is being worked on; remeasure
+in round 3.
+
+**Caveats.** gpt-oss 20B has no helper, so tuned equals untuned. Exo
+runs MLX; the other engines in the shootout run GGUF. LocalAI can't
+split. Qwen3 30B GGUF won't fit on 1 Mac. Chat vs code-edit gains
+differ (Guess-ahead +22–42% on chat, +48–92% on code edits; these
+tables use chat). The original shootout's 2-Mac tuned column compared
+MLX with GGUF, not tuned with stock. Splitting buys room and faster
+long-prompt reads, not faster writing. The development node lost its
+Grok connection from about 12:30 AM to about 11:20 AM CT on Nov 18; the
+queue was unaffected and had already finished at 4:14 AM CT.
+
 ## 2026-11-17 — Day 28: link order (Thunderbolt > wired > Wi-Fi), one picker
 
 **Finding.** Day 28 round 2: on 2 Macs the GGUF split's SSH tunnel dialled
