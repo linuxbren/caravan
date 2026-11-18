@@ -1,3 +1,15 @@
+## Day 28 tuning fix 3 — a measured helper win on two Macs is kept
+
+- On two Macs, Llama 8B's Guess-ahead helper wrote 17% faster (19.3 to 22.7
+  tok/s) but read a long prompt 16% slower. Self-tuning kept it (it only
+  looks at chats), then Auto-tune threw it away on a hard 15% long-read cut,
+  so the win disappeared. Past a 15% long-read drop the pick now has to make
+  a whole long-prompt reply (read ~2k tokens, write 192) no slower than stock;
+  past a 35% drop it is always rejected. Self-tuning and Auto-tune now agree
+  on this case.
+- Checked Qwen3 30B on two Macs (33.5 vs 34.5 tok/s): Auto-tune kept stock
+  settings, so the gap was run-to-run noise, not a slower setting.
+
 ## Day 28 link order — Thunderbolt, then wired, then Wi-Fi, everywhere
 
 - One route picker (`proxy/peer_route.py`) now decides how this Mac reaches

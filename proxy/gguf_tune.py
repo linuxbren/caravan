@@ -216,7 +216,9 @@ def beats(challenger, incumbent, margin: float = MARGIN) -> bool:
 # speed and total reply time on the chat prompts, with long-prompt read
 # only as a guard. A code-edit win also counts when chats are not slower.
 SPEC_KNOBS = ("guess_ahead", "prompt_lookup")
-LONG_READ_GUARD = 0.15   # reject when long-prompt read drops more than 15%
+LONG_READ_GUARD = 0.15   # past this drop, the long-prompt reply time decides
+LONG_READ_HARD = 0.35    # reject when long-prompt read drops more than 35%
+REPLY_TOKENS = 192       # reply length used for the long-prompt reply time
 EDIT_GAIN = 0.10         # code edits at least 10% faster ...
 CHAT_TOLERANCE = 0.02    # ... while chats are at most 2% slower (noise)
 
@@ -244,7 +246,23 @@ def spec_verdict(challenger, incumbent, margin: float = MARGIN) -> dict:
     ch, inc = as_specs(challenger), as_specs(incumbent)
     lr_c, lr_i = ch.get("long_read_tok_s"), inc.get("long_read_tok_s")
     if lr_c and lr_i and lr_c < lr_i * (1 - LONG_READ_GUARD):
-        return {"won": False, "why": f"long-prompt read {lr_c:.0f} vs {lr_i:.0f} tok/s (guard)"}
+        # Day 28 tuning fix 3: a helper on a 2-Mac split read the long prompt
+        # 16% slower but wrote 17% faster, and the hard 15% cut threw that
+        # win away while Self-tuning had already kept it. Past 15% the pick
+        # must still make a whole long-prompt reply (read the prompt, then
+        # write a reply) no slower; past LONG_READ_HARD it is always out.
+        hard = lr_c < lr_i * (1 - LONG_READ_HARD)
+        w_c = ch.get("short_write_tok_s") or ch.get("write_tok_s")
+        w_i = inc.get("short_write_tok_s") or inc.get("write_tok_s")
+        if not hard and w_c and w_i:
+            t_c = P.AUTOTUNE_LONG_TOKENS / lr_c + REPLY_TOKENS / w_c
+            t_i = P.AUTOTUNE_LONG_TOKENS / lr_i + REPLY_TOKENS / w_i
+            if t_c <= t_i * (1 + CHAT_TOLERANCE):
+                pass  # a long-prompt reply is not slower: judge on chats below
+            else:
+                return {"won": False, "why": f"long-prompt read {lr_c:.0f} vs {lr_i:.0f} tok/s, long reply {t_c:.1f}s vs {t_i:.1f}s (guard)"}
+        else:
+            return {"won": False, "why": f"long-prompt read {lr_c:.0f} vs {lr_i:.0f} tok/s (guard)"}
     cs_c, cs_i = chat_score(ch), chat_score(inc)
     if cs_i <= 0 or cs_c <= 0:
         return {"won": False, "why": "no chat measurement"}
