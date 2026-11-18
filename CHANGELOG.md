@@ -1,3 +1,31 @@
+## Day 28 — tuning round 2 results
+
+- The Auto-tune reliability queue on source `4bdbd79` / pin `9e612db`
+  finished Nov 18, 4:14 AM CT (America/Chicago). All 7 cases passed
+  Auto-tune three times and kept their settings across a reload and a
+  restart, with no prompt errors.
+- Short-prompt write tok/s, untuned vs tuned (final for this build,
+  except 2-Mac Llama 8B tuned): 1 Mac Llama 8B 21.49 vs 25.97 (helper);
+  1 Mac Qwen3 14B 12.09 vs 16.87 (helper); 1 Mac gpt-oss 20B 40.37 vs
+  40.59 (no helper); 2 Macs Llama 8B 19.41 vs 19.38; 2 Macs Qwen3 14B
+  11.22 vs 14.90 (helper); 2 Macs gpt-oss 20B 33.11 vs 33.01; 2 Macs
+  Qwen3 30B 34.50 vs 33.50 (self-tune lost, within noise). Full
+  short/1k/4k/8k write, read and first-word tables are in the
+  [experiment log](handoff/lab/experiments.md).
+- 2-Mac writing speed stayed around 19 tok/s on Llama 8B, not the 11
+  seen when the split had drifted onto Wi-Fi. 2-Mac tuned now matches
+  or beats untuned where a helper is kept. The round-1 2-Mac tuned
+  column (Llama 8B 11.6 vs 19.0, and the slower Qwen figures) should
+  not be used.
+- Open: on 2 Macs, Llama 8B's helper won self-tune, but Auto-tune did
+  not keep it. A fix is next, then a 2-Mac rerun (round 3) on the
+  link-order build below. The Macs have not been updated to that build
+  yet.
+- Earlier fixes in this day (bugs A–E in the first tuning fix; the
+  Thunderbolt tunnel, stock re-check, Qwen3 thinking replies, and the
+  8k HTTP 502 in fix 2; then one link-order picker) are unchanged and
+  described in the sections below.
+
 ## Day 28 link order — Thunderbolt, then wired, then Wi-Fi, everywhere
 
 - One route picker (`proxy/peer_route.py`) now decides how this Mac reaches
