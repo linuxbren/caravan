@@ -1,3 +1,20 @@
+## 2026-11-19: Day 31 — GGUF chat window at the model's full trained length
+
+"Context is important." Chat window Auto now picks the longest window
+that fits in memory, up to the model's trained window, with no 32K cap,
+and never less than the old rule. Learned speed settings never shorten
+it; a learned setting that would not fit falls back to the lighter one
+and Auto-tune skips those trials. Chat window adds 131072, 262144 and
+Native. Llama 3.1 8B and gpt-oss 20B get 131072 on one Mac; Qwen3
+models were already at their 32768. Short chats did not get slower;
+Llama 3.1 8B writes about 7% slower on long prompts because its full
+window needs 8-bit chat memory. Also: a 2-hour wait for a model's first
+bytes (a ~116K prompt took longer than the old 30 minutes on one Mac),
+and split loads that worked no longer say "Couldn't start the model on
+the other Mac", and `caravan bench` on the already-loaded model waits
+for its restart. TensorFold (Day 30) is shelved. Python in `proxy/`,
+`tools/` and tests only; `caravan update` keeps a loaded model. See [DAY31](DAY31.md).
+
 ## 2026-11-15: Day 27 wrap — docs, Day 26 tag, Day 27 tag
 
 Day 26 is tagged `day26-2026-11-13` at the documentation pin

@@ -101,7 +101,18 @@ class GgufOptimizer:
                 draft = (found or {}).get("path")
             except Exception:
                 draft = None
-        return {"n_slots": n_slots, "pinned": pinned, "draft_path": draft}
+        # Day 31: skip trials whose win would need a shorter chat window.
+        blocked = set()
+        if path and s.get("chat_window") in (None, "", "auto"):
+            try:
+                import gguf_self_tune as GST
+                blocked = G.window_blockers(
+                    path, n_slots=n_slots, n_devices=max(1, int(getattr(self, "n_minis", 1) or 1)),
+                    pins=GST.pinned_knobs(s))
+            except Exception:  # noqa: BLE001
+                blocked = set()
+        return {"n_slots": n_slots, "pinned": pinned, "draft_path": draft,
+                "blocked": sorted(blocked)}
 
     def start(self, source="optimize_now", fresh=True):
         with self._lock:

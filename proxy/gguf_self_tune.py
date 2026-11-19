@@ -238,7 +238,23 @@ def observe(model_path, n_minis: int, specs, *, used=None, settings=None,
                 draft = (find_draft or (lambda mp: T.helper_on_disk(None, mp)))(model_path)
             except Exception:  # noqa: BLE001
                 draft = None
-        nxt = pick_trial(current, pinned, e.get("losses") or [], draft_path=draft,
+        # Day 31: never trial a heavier setting that would need a shorter
+        # chat window (the window comes first).
+        blocked = []
+        if str((settings or {}).get("chat_window") or "auto") == "auto":
+            try:
+                blocked = sorted(G.window_blockers(model_path, n_devices=max(1, int(n_minis or 1)),
+                                                   pins=pinned))
+            except Exception:  # noqa: BLE001
+                blocked = []
+            # A two-value option whose heavier value is blocked has nothing
+            # left to compare.
+            for tag in list(blocked):
+                if tag == "cache_type=f16":
+                    blocked.append("cache_type=q8_0")
+                elif tag == "flash_attn=off":
+                    blocked.append("flash_attn=on")
+        nxt = pick_trial(current, pinned, list(e.get("losses") or []) + blocked, draft_path=draft,
                          decided=_decided_by_autotune(model_path, n_minis, autotune_path))
         if not nxt:
             # Nothing to try; leave the baseline as a one-sided record.

@@ -34,8 +34,8 @@ OPTIONS = [
      "help_gguf": "Let two chats share the model at the same time. Auto keeps one chat.",
      "values": ["auto", "1", "2"]},
     {"id": "chat_window", "label": "Chat window",
-     "help": "How much of the conversation the model can keep in mind at once. Auto picks a size that fits this model and this Mac.",
-     "values": ["auto", "4096", "8192", "16384", "32768", "65536"],
+     "help": "How much of the conversation the model can keep in mind at once. Auto uses the longest window that fits in memory, up to the full window the model was trained for. Native is that full window.",
+     "values": ["auto", "4096", "8192", "16384", "32768", "65536", "131072", "262144", "native"],
      "backends": ("gguf",)},
     {"id": "fuse_kernels", "label": "Fused kernels",
      "help": "Combine small GPU steps when running an MLX model. Experimental — no meaningful speed gain in our tests; some models are incompatible.",
@@ -43,7 +43,7 @@ OPTIONS = [
      "backends": ("mlx",)},
     {"id": "kv_bits", "label": "Memory compression",
      "help": "Store MLX chat memory more compactly to save RAM; 16 leaves it uncompressed. May lower quality and slow reading; not supported by every model or Native MTP.",
-     "help_gguf": "Store the chat's working memory more compactly. Auto uses the lighter option only when the full one will not fit.",
+     "help_gguf": "Store the chat's working memory more compactly. Auto uses the lighter option only when the full one will not fit with the longest chat window. Pinning 16 can make Auto pick a shorter chat window.",
      "values": ["auto", "16", "8", "4"],
      "values_gguf": ["auto", "16", "8"]},
     {"id": "keepalive", "label": "GPU keep-warm",
@@ -360,10 +360,25 @@ def options_for(source="mlx", model_dir=None, config=None, n_minis=1) -> list:
                 item["disabled_values"] = dict(ctx_disabled)
             if ctx_auto:
                 item["auto_value"] = int(ctx_auto)
+                trained = None
+                try:
+                    trained = G.native_ctx(model_dir)
+                except Exception:  # noqa: BLE001
+                    trained = None
+                if trained and int(ctx_auto) >= int(trained):
+                    tail = f"Auto is {ctx_auto} for this model, its full trained window."
+                elif trained:
+                    tail = (f"Auto is {ctx_auto} for this model: the longest that fits in memory. "
+                            f"Its full trained window is {trained}.")
+                else:
+                    tail = f"Auto is {ctx_auto} for this model."
                 item["help"] = (
                     "How much of the conversation the model can keep in mind at once. "
-                    f"Auto is {ctx_auto} for this model."
+                    "Auto uses the longest window that fits in memory, up to the full "
+                    "window the model was trained for. " + tail
                 )
+                if trained:
+                    item["native_value"] = int(trained)
         if src == "gguf" and o.get("id") == "guess_ahead":
             draft = None
             if model_dir:
@@ -418,8 +433,23 @@ def apply_gguf_settings(tune: dict, settings, *, model_path=None) -> dict:
     elif ss == "on":
         out["slot_save"] = True
     cw = s.get("chat_window")
-    if cw in ("4096", "8192", "16384", "32768", "65536"):
+    if cw in ("4096", "8192", "16384", "32768", "65536", "131072", "262144"):
         out["ctx"] = int(cw)
+        out.pop("ctx_auto", None)
+    elif cw == "native":
+        # Day 31: the model's own trained window; Auto when the file does not say.
+        trained = None
+        if model_path:
+            try:
+                import gguf_split as G
+                trained = G.native_ctx(model_path)
+            except Exception:  # noqa: BLE001
+                trained = None
+        if trained:
+            out["ctx"] = int(trained)
+            out.pop("ctx_auto", None)
+        else:
+            out.pop("ctx", None)
     elif cw == "auto":
         out.pop("ctx", None)
     pc = s.get("pipeline_chats")

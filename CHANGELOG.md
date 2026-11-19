@@ -1,3 +1,33 @@
+## Day 31 — GGUF chat window at the model's full trained length
+
+- Chat window Auto picks the longest window that fits in memory, up to
+  the model's trained window, with no 32K cap. Llama 3.1 8B and gpt-oss
+  20B now get 131072 on one Mac (they had 32768). Auto never picks less
+  than before, and still uses 8192 when it cannot measure.
+- Learned speed settings (16-bit chat memory, flash attention off, a
+  bigger prompt batch, the Guess-ahead helper) never shorten the Auto
+  window; a learned setting that would not fit falls back to the lighter
+  one, and Auto-tune and Self-tuning skip those trials. Pinned settings
+  still count.
+- Chat window adds 131072, 262144 and Native; sizes past the trained
+  window or that will not fit are greyed out with a plain reason.
+- A window saved from an Auto load is sized again after a restart or
+  Update now. The web chat keeps history up to the real GGUF window.
+- Caravan waits up to 2 hours (was 30 minutes) for a model's first
+  bytes, so a prompt near a 128K window is not cut off
+  (`CARAVAN_REPLY_TIMEOUT_S`).
+- Split loads that worked no longer show "Couldn't start the model on
+  the other Mac"; load notes name the other Mac in plain words.
+- `caravan bench` on the model that is already loaded waits for its
+  restart instead of measuring a stopped server (HTTP 502) and then
+  failing to put it back (HTTP 400).
+- Measured cost: no change on short chats; Llama 3.1 8B writes about 7%
+  slower on a ~29K prompt (its full window needs 8-bit chat memory);
+  gpt-oss 20B unchanged. Near the full window one Mac is slow: Llama
+  3.1 8B read a 115,593-token prompt in 44 minutes and wrote at 3.65
+  tok/s. See [DAY31](docs/DAY31.md).
+- TensorFold is shelved until it supports M4 Macs and Qwen3 MoE.
+
 ## Day 28 — Qwen3 30B 8k split write was the pre-fix Wi-Fi tunnel
 
 - The first Day 28 shootout measured Qwen3 30B 8k split write at 17.5

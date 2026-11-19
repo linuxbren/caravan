@@ -77,10 +77,15 @@ and the daily logs, not mixed into current setup instructions.
   Caravan on a llama.cpp v1.0.0 nightly build: write and read speed,
   long chats, memory, first word, Guess-ahead and Prompt lookup, on
   one Mac and split. Day 28 Caravan against Day 29 Caravan.
-- **TensorFold** is a later test day (waiting for a go-ahead before
-  anything is installed): bench the Metal-native TensorFold engine
-  ([ashhart/TensorFold](https://github.com/ashhart/TensorFold)) against
-  llama.cpp and MLX on one Mac, then on both Macs.
+- **TensorFold: shelved** (Day 30). TensorFold 1.2.10
+  ([ashhart/TensorFold](https://github.com/ashhart/TensorFold)) could not
+  run any of the three test models on these Macs: its native Llama engine
+  needs an M5 or later, and it has no engine yet for Qwen3 MoE or
+  gpt-oss. It was removed from the test Macs. Revisit when it supports M4
+  Macs and Qwen3 MoE.
+- **Native context for GGUF (Day 31, done):** Chat window Auto now runs a
+  GGUF model as close to its trained window as memory allows, with no
+  fixed 32K cap. See [DAY31](DAY31.md).
 
 ## Next candidates
 

@@ -495,7 +495,16 @@ class WorkerManager:
         nodes = self._gguf_nodes(place)
         peers = [n for n in nodes if not self._node_is_local(n)]
         mode = "split" if peers else "single"
-        label = " + ".join(n.get("label") or n.get("id") for n in nodes)
+        # Day 31: friendly Mac names in load notes (a hostname label used to
+        # be scrubbed to nothing: "split across My Mac + ").
+        def _friendly(n):
+            if self._node_is_local(n):
+                return n.get("label") or "this Mac"
+            try:
+                return self._mac_name(n) or n.get("label") or n.get("id")
+            except Exception:  # noqa: BLE001
+                return n.get("label") or n.get("id")
+        label = " + ".join(_friendly(n) for n in nodes)
         gblock = {"nodes": [n.get("id") for n in nodes], "labels": [n.get("label") for n in nodes],
                   "mode": mode}
         self._set(status="stopping", error=None, error_detail=None, model_id=entry["id"],
@@ -520,7 +529,7 @@ class WorkerManager:
         rpc = []
         for i, n in enumerate(peers):
             self._check_cancel()
-            name = n.get("label") or n.get("id")
+            name = _friendly(n)
             target = (n.get("ssh") or n.get("host") or "").strip()
             if not target:
                 raise RuntimeError(f"no SSH target for {name}; set ssh in [web.nodes.{n.get('id')}]")
@@ -573,7 +582,7 @@ class WorkerManager:
                 raise ValueError('invalid explicit GGUF shares')
         if peers:
             self._note("free RAM now: " + ", ".join(
-                f"{n.get('label')} {f if f is not None else '?'} GB" for n, f in zip(nodes, free))
+                f"{_friendly(n)} {f if f is not None else '?'} GB" for n, f in zip(nodes, free))
                 + " → split " + ":".join(str(x) for x in shares)
                 + ("" if all(f for f in free) else " (equal: free RAM unknown)"))
         meta["shares"] = shares
@@ -583,14 +592,28 @@ class WorkerManager:
         try:
             import gguf_tune as GT
             import web_settings as WS
+            try:
+                page = self.snapshot().get("settings") or {}
+            except Exception:  # noqa: BLE001
+                page = {}
             if isinstance(entry.get("tune_override"), dict):
                 tune = dict(entry["tune_override"])
+                # Day 31: a window saved from an Auto load (restore, Update
+                # now, Self-tuning) is sized again, so it can use the full
+                # window this version allows.
+                if tune.get("ctx") is not None and str(page.get("chat_window") or "auto") == "auto":
+                    tune["ctx_auto"] = True
             else:
                 tune = WS.apply_gguf_settings(
-                    GT.best_tune(path, 1 + len(rpc)),
-                    self.snapshot().get("settings") or {},
-                    model_path=path,
+                    GT.best_tune(path, 1 + len(rpc)), page, model_path=path,
                 )
+            # Day 31: only the settings you pinned may shorten the window.
+            import gguf_self_tune as GST
+            pk = sorted(GST.pinned_knobs(page))
+            if pk:
+                tune["pinned_knobs"] = pk
+            else:
+                tune.pop("pinned_knobs", None)
         except Exception:  # noqa: BLE001 - tuning is optional
             tune = {}
         if tune:
@@ -604,7 +627,15 @@ class WorkerManager:
                     self._note("Guess-ahead helper left off: it does not fit in memory with this chat window")
                     tune = dict(tune, guess_ahead="off", helper_failed=True)
                     tune.pop("draft_path", None)
-                tune = dict(tune, ctx=launch["ctx"], n_slots=launch["n_slots"])
+                lighter = launch.get("lighter") or {}
+                if lighter and attempt == 1:
+                    words = {"cache_type": "8-bit chat memory", "flash_attn": "flash attention on",
+                             "ubatch": f"prompt batch {lighter.get('ubatch')}"}
+                    self._note("Kept the full chat window of " + str(launch["ctx"]) + ": using "
+                               + ", ".join(words.get(k, k) for k in lighter)
+                               + " instead of the learned setting, which would not fit")
+                tune = dict(tune, ctx=launch["ctx"], n_slots=launch["n_slots"],
+                            ctx_auto=bool(launch.get("ctx_auto")), **lighter)
             if "--slot-save-path" in args:
                 try:
                     Path(args[args.index("--slot-save-path") + 1]).mkdir(parents=True, exist_ok=True)
@@ -679,20 +710,24 @@ class WorkerManager:
             # GGUF stage 2: a peer with its own copy fills its rpc cache from disk.
             self._check_cancel()
             name = n.get("label") or n.get("id")
+            try:  # Day 31: friendly name in notes, never a hostname
+                who = self._mac_name(n) or name
+            except Exception:  # noqa: BLE001
+                who = name
             try:
                 r = self._ssh_node(n, G.seed_command(path.name, path.stat().st_size, shares, i + 1,
                                                      repo=n.get("repo") or "~/cv3"), timeout=1800)
                 rep = G.parse_seed(r.stdout)
             except Exception as e:  # noqa: BLE001 - stage 2 is an optimisation only
                 rep, r = None, None
-                self._note(f"{name}: local seed skipped ({e})")
+                self._note(f"{who}: local seed skipped ({e})")
             if rep:
                 meta.setdefault("seed", {})[n.get("id") or name] = rep
-                self._note(f"{name} loads its share from its own disk: {rep['tensors']} tensors, "
+                self._note(f"{who} loads its share from its own disk: {rep['tensors']} tensors, "
                            f"{rep['bytes'] / 1e9:.1f} GB ({rep['new']} new, {rep['have']} cached) "
                            f"in {rep['s']}s")
             elif r is not None:
-                self._note(f"{name}: no complete local {path.name}; existing RPC tensor cache is still used, "
+                self._note(f"{who}: no complete local {path.name}; existing RPC tensor cache is still used, "
                            "and cache misses / small tensors may cross the link")
 
     def _check_cancel(self):
@@ -714,6 +749,10 @@ class WorkerManager:
         if node is not None:
             name = (node or {}).get("label") or (node or {}).get("id") or target
             picked = PR.route_for(target, fresh=True, label=name)
+            try:  # Day 31: friendly name in the note, never a hostname
+                name = self._mac_name(node) or name
+            except Exception:  # noqa: BLE001
+                pass
             if picked is not None:
                 if picked.get("warning"):
                     self._note(picked["warning"])

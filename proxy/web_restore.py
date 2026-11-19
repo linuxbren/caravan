@@ -81,7 +81,7 @@ class Store:
 
 
 GGUF_TUNE_KEYS = ("flash_attn", "ubatch", "cache_type", "slot_save", "ctx", "n_slots",
-                  "prompt_lookup", "guess_ahead", "draft_path")
+                  "prompt_lookup", "guess_ahead", "draft_path", "ctx_auto")
 
 
 def restorable_gguf_tune(tune, model_path=None) -> dict:

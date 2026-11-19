@@ -357,6 +357,11 @@ _HIDDEN = re.compile(
 )
 
 
+_FAILED = re.compile(r"fail|error|already in use|cannot|could not|couldn't|denied|refused|"
+                     r"did not|timed out|no route|closed", re.I)
+_HOSTLIKE = re.compile(r"prf-hays[\w.-]*|caravan-[0-9a-f]{16,}|paired_[0-9a-f]{8,}|EXO\d+", re.I)
+
+
 def plain_load_status(msg: str, *, mac: str = "") -> str:
     """Drop hostnames, paired ids, and paths from a load-progress line."""
     s = " ".join(str(msg or "").split())
@@ -368,10 +373,16 @@ def plain_load_status(msg: str, *, mac: str = "") -> str:
         who = (mac or "the other Mac").strip()
         if "single-mini" in low or "single mini" in low:
             return f"starting single-Mini worker on {who}" if who else "starting single-Mini worker"
-        if "tunnel" in low or "forward" in low or "already in use" in low:
+        # Day 31: only a line that reports a failure becomes the failure
+        # message. The success line "rpc-server on <Mac> up (pid ..),
+        # tunnel 127.0.0.1:port" used to match "tunnel" and showed
+        # "Couldn't start the model on the other Mac" on loads that worked.
+        if ("tunnel" in low or "forward" in low or "already in use" in low) and _FAILED.search(s):
             return plain_tunnel_error(s, mac=mac)
-        # Strip hidden tokens and leftover punctuation.
-        cleaned = _HIDDEN.sub("", s)
+        # Hostnames and ids become the friendly Mac name; paths and ssh
+        # noise are dropped.
+        cleaned = _HOSTLIKE.sub(who or "the other Mac", s)
+        cleaned = _HIDDEN.sub("", cleaned)
         cleaned = re.sub(r"\s{2,}", " ", cleaned)
         cleaned = re.sub(r"\(\s*\)", "", cleaned).strip(" ·-:")
         return cleaned or (f"starting the model on {who}" if who else "starting the model")

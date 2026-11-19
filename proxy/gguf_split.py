@@ -24,11 +24,16 @@ from llama_runtime import bin_dir as llama_bin_dir
 LLAMA_BIN = str(llama_bin_dir())
 RPC_PORT = int(os.environ.get("CARAVAN_GGUF_RPC_PORT", "50052"))
 GGUF_CTX = int(os.environ.get("CARAVAN_GGUF_CTX", "8192"))
-# Offered Chat window sizes. Auto never jumps past AUTO_CAP, and never
-# to the agent path's much larger window. 8192 stays the fallback when
-# the model or memory cannot be measured.
-GGUF_CTX_CHOICES = (4096, 8192, 16384, 32768, 65536)
-GGUF_CTX_AUTO_CAP = 32768
+# Offered Chat window sizes, plus "native" (the model's own trained
+# window). Day 31: Auto picks the largest window that fits memory, up to
+# the model's trained window, with no fixed cap. 8192 stays the fallback
+# when the model or memory cannot be measured.
+GGUF_CTX_CHOICES = (4096, 8192, 16384, 32768, 65536, 131072, 262144)
+GGUF_CTX_NATIVE = "native"
+# Before Day 31 Auto stopped here. Auto never picks less than that old
+# rule did (it is the floor), it just no longer stops at it.
+GGUF_CTX_LEGACY_AUTO_CAP = 32768
+GGUF_CTX_AUTO_CAP = None  # Day 31: no cap; kept so old imports still work.
 GGUF_DEFAULT_SLOTS = 1
 GGUF_MAX_SLOTS = 2
 GGUF_ROOTS = [Path(p).expanduser() for p in os.environ.get(
@@ -199,13 +204,50 @@ def helper_overhead_mib(draft_path, total_ctx: int, ubatch: int = GGUF_DEFAULT_U
         return size + 1024.0
 
 
+def _head_count(model_path, meta_fn=None) -> int:
+    """Attention heads from the GGUF header (for the flash-off scratch size)."""
+    try:
+        import gguf_meta
+        meta = (meta_fn or gguf_meta.read_metadata)(model_path)
+        arch = meta.get("general.architecture") or ""
+        v = meta.get(f"{arch}.attention.head_count")
+        if isinstance(v, (list, tuple)):
+            v = max(int(x) for x in v) if v else 0
+        n = int(v or 0)
+        return n if n > 0 else 32
+    except Exception:  # noqa: BLE001
+        return 32
+
+
+def attention_scratch_mib(model_path, total_ctx: int, *, ubatch: int = GGUF_DEFAULT_UBATCH,
+                          flash_attn: str = "on", n_devices: int = 1, meta_fn=None) -> float:
+    """Working memory llama.cpp reserves that grows with the window.
+
+    Day 31: with long windows this is no longer small. llama.cpp reserves
+    its compute graph for a full window: the attention mask is window x
+    prompt batch (counted at 4 bytes), on every Mac that holds layers. With
+    flash attention off it also holds the full score matrix, heads x window
+    x prompt batch x 4 bytes, which is many GB at 128K. Kept out of the old
+    (pre-Day 31) floor so Auto never picks less than it used to.
+    """
+    total_ctx = max(0, int(total_ctx))
+    ub = max(1, int(ubatch))
+    per_device = total_ctx * ub * 4 / MIB
+    if flash_attn == "off":
+        per_device += _head_count(model_path, meta_fn) * total_ctx * ub * 4 / MIB
+    return per_device * max(1, int(n_devices))
+
+
 def ctx_estimate(model_path, ctx: int, *, n_slots: int = 1,
                  ubatch: int = GGUF_DEFAULT_UBATCH, n_devices: int = 1,
-                 decide=None, extra_mib_fn=None, cache_type=None):
+                 decide=None, extra_mib_fn=None, cache_type=None,
+                 flash_attn=None, meta_fn=None):
     """(need_mib, budget_mib) from kv_auto, or (None, None) if unknown.
 
     need is for q8_0 chat memory, or f16 when cache_type is pinned to f16,
-    plus extra_mib_fn(ctx * n_slots) (the Guess-ahead helper) when given."""
+    plus extra_mib_fn(ctx * n_slots) (the Guess-ahead helper) when given.
+    flash_attn ("on"/"off") adds the window-sized attention scratch
+    (Day 31); None leaves it out, as before Day 31."""
     try:
         import kv_auto
         fn = decide or kv_auto.decide
@@ -221,6 +263,10 @@ def ctx_estimate(model_path, ctx: int, *, n_slots: int = 1,
         need = float(need)
         if extra_mib_fn is not None:
             need += float(extra_mib_fn(int(ctx) * max(1, int(n_slots))) or 0.0)
+        if flash_attn in ("on", "off"):
+            need += attention_scratch_mib(
+                model_path, int(ctx) * max(1, int(n_slots)), ubatch=int(ubatch),
+                flash_attn=flash_attn, n_devices=n_devices, meta_fn=meta_fn)
         return need, float(budget)
     except Exception:
         return None, None
@@ -234,27 +280,30 @@ def ctx_fits_known(model_path, ctx: int, **kw):
     return need <= budget
 
 
-def auto_ctx(model_path, *, n_slots: int = 1, ubatch: int = GGUF_DEFAULT_UBATCH,
-             n_devices: int = 1, decide=None, meta_fn=None,
-             extra_mib_fn=None, cache_type=None) -> int:
-    """Sane Chat window from this model and this Mac's memory.
+def ctx_candidates(trained) -> list:
+    """Window sizes Auto may pick for a model trained for `trained` tokens:
+    the offered sizes up to it, plus the trained window itself (native)."""
+    if not trained:
+        return []
+    trained = int(trained)
+    out = [c for c in GGUF_CTX_CHOICES if c <= trained]
+    if trained not in out:
+        out.append(trained)
+    return sorted(out)
 
-    Keeps the trusted 8192 default when the file or memory cannot be
-    measured. Never returns more than GGUF_CTX_AUTO_CAP, and never the
-    agent path's much larger window. May pick a shorter window when the
-    model was trained for less, or a longer one (up to the cap) when
-    both the model and memory allow it.
-    """
+
+def legacy_auto_ctx(model_path, *, n_slots: int = 1, ubatch: int = GGUF_DEFAULT_UBATCH,
+                    n_devices: int = 1, decide=None, meta_fn=None,
+                    extra_mib_fn=None, cache_type=None) -> int:
+    """The pre-Day 31 Auto rule: start at 8192, grow while known to fit,
+    never past 32768. Day 31 Auto never picks less than this."""
     trained = model_context_length(model_path, meta_fn=meta_fn)
     if not trained:
         return GGUF_CTX
-    cap = min(int(trained), GGUF_CTX_AUTO_CAP)
+    cap = min(int(trained), GGUF_CTX_LEGACY_AUTO_CAP)
     choices = [c for c in GGUF_CTX_CHOICES if c <= cap]
     if not choices:
         return max(1, cap)
-    # Start at the trusted default when the model allows it. If the model
-    # was trained for less, start at the largest offered size within that
-    # window. Grow past the default only when memory is known to fit.
     if GGUF_CTX <= cap and GGUF_CTX in choices:
         best = GGUF_CTX
     else:
@@ -270,28 +319,88 @@ def auto_ctx(model_path, *, n_slots: int = 1, ubatch: int = GGUF_DEFAULT_UBATCH,
         if fits is True:
             best = c
         else:
-            # Unknown or too large: do not grow further.
             break
     return best
+
+
+def auto_ctx(model_path, *, n_slots: int = 1, ubatch: int = GGUF_DEFAULT_UBATCH,
+             n_devices: int = 1, decide=None, meta_fn=None,
+             extra_mib_fn=None, cache_type=None, flash_attn: str = "on") -> int:
+    """Chat window for Auto: as close to the model's trained window as memory allows.
+
+    Day 31 (Brenden: "Context is important"): the largest window that fits
+    this model's weights, its chat memory at the given memory compression
+    (q8_0 unless cache_type pins f16), the working memory and the safety
+    margin, on one Mac or across the split (n_devices), up to the model's
+    trained window. No fixed cap. Never less than the pre-Day 31 rule
+    (legacy_auto_ctx), and still 8192 when the file or memory cannot be
+    measured.
+    """
+    floor = legacy_auto_ctx(
+        model_path, n_slots=n_slots, ubatch=ubatch, n_devices=n_devices,
+        decide=decide, meta_fn=meta_fn, extra_mib_fn=extra_mib_fn,
+        cache_type=cache_type,
+    )
+    trained = model_context_length(model_path, meta_fn=meta_fn)
+    for c in reversed(ctx_candidates(trained)):
+        if c <= floor:
+            break
+        fits = ctx_fits_known(
+            model_path, c, n_slots=n_slots, ubatch=ubatch,
+            n_devices=n_devices, decide=decide, extra_mib_fn=extra_mib_fn,
+            cache_type=cache_type, flash_attn=flash_attn, meta_fn=meta_fn,
+        )
+        if fits is True:
+            return c
+    return floor
+
+
+def native_ctx(model_path, meta_fn=None):
+    """The model's trained window, or None when the file does not say."""
+    return model_context_length(model_path, meta_fn=meta_fn)
 
 
 def disabled_ctx_values(model_path, *, n_slots: int = 1,
                         ubatch: int = GGUF_DEFAULT_UBATCH, n_devices: int = 1,
                         decide=None, meta_fn=None) -> dict:
-    """{value: plain reason} for Chat window sizes that stay listed but unusable."""
+    """{value: plain reason} for Chat window sizes that stay listed but unusable.
+
+    Day 31: sizes past the model's trained window, sizes that will not fit
+    memory even with the lighter chat memory, and "native" when the file
+    does not say its window or the full window will not fit."""
     out = {}
     trained = model_context_length(model_path, meta_fn=meta_fn)
     for c in GGUF_CTX_CHOICES:
         if trained and c > trained:
-            out[str(c)] = "This model was trained for a shorter window."
+            out[str(c)] = f"This model was trained for a shorter window ({trained})."
             continue
         fits = ctx_fits_known(
             model_path, c, n_slots=n_slots, ubatch=ubatch,
-            n_devices=n_devices, decide=decide,
+            n_devices=n_devices, decide=decide, flash_attn="on", meta_fn=meta_fn,
         )
         if fits is False:
-            out[str(c)] = "This window will not fit in this Mac's memory with this model."
+            out[str(c)] = "This window will not fit in memory with this model."
+    if not trained:
+        out[GGUF_CTX_NATIVE] = "This model file does not say how long a window it was trained for."
+    else:
+        fits = ctx_fits_known(
+            model_path, int(trained), n_slots=n_slots, ubatch=ubatch,
+            n_devices=n_devices, decide=decide, flash_attn="on", meta_fn=meta_fn,
+        )
+        if fits is False:
+            out[GGUF_CTX_NATIVE] = (f"The full trained window ({trained}) will not fit "
+                                    "in memory with this model.")
     return out
+
+
+# Learned (not pinned) settings that may use more memory, each with the
+# lighter value Caravan falls back to when the chat window would not fit.
+_LIGHTER = (("flash_attn", "off", "on"), ("cache_type", "f16", "q8_0"),
+            ("ubatch", 1024, GGUF_DEFAULT_UBATCH))
+
+
+def _pins(tune) -> set:
+    return set((tune or {}).get("pinned_knobs") or ())
 
 
 def resolve_launch(model_path, *, tune=None, ctx=None, decide=None,
@@ -301,8 +410,17 @@ def resolve_launch(model_path, *, tune=None, ctx=None, decide=None,
 
     Pins on the tune win. Auto Chat window uses auto_ctx(). Auto Two chats
     is one slot. -c passed to llama-server is window times slots.
+
+    Day 31: the window comes first. Auto sizes the window with only the
+    settings you pinned (tune["pinned_knobs"]); learned speed choices
+    (16-bit chat memory, flash attention off, a bigger prompt batch, the
+    Guess-ahead helper) never make Auto pick a shorter window. A learned
+    choice that does not fit with the chosen window falls back to the
+    lighter one ("lighter" lists what changed); the helper is left off.
+    "native" is the model's trained window.
     """
     tune = dict(tune or {})
+    pins = _pins(tune)
     try:
         n_slots = int(tune["n_slots"]) if tune.get("n_slots") is not None else GGUF_DEFAULT_SLOTS
     except (TypeError, ValueError):
@@ -314,37 +432,99 @@ def resolve_launch(model_path, *, tune=None, ctx=None, decide=None,
     if draft:
         def extra(total_ctx, _d=draft, _ub=ubatch):
             return helper_overhead_mib(_d, total_ctx, _ub)
+    fa = tune.get("flash_attn") if tune.get("flash_attn") in ("on", "off") else "on"
+    ct = tune.get("cache_type")
+    # Settings Auto sizes the window with: pins as they are, learned
+    # choices at their lightest.
+    size_fa = fa if "flash_attn" in pins else "on"
+    size_ct = ct if "cache_type" in pins else None
+    size_ub = int(ubatch) if "ubatch" in pins else min(int(ubatch), GGUF_DEFAULT_UBATCH)
+    size_extra = extra if "guess_ahead" in pins else None
+
+    def _auto():
+        return auto_ctx(
+            model_path, n_slots=n_slots, ubatch=size_ub,
+            n_devices=n_devices, decide=decide, meta_fn=meta_fn,
+            extra_mib_fn=size_extra, cache_type=size_ct, flash_attn=size_fa,
+        )
     raw = tune.get("ctx") if tune.get("ctx") is not None else ctx
-    if raw is not None:
+    ctx_auto = False
+    if raw is not None and str(raw).strip().lower() == GGUF_CTX_NATIVE:
+        ctx_per = native_ctx(model_path, meta_fn=meta_fn) or _auto()
+    elif raw is not None and not tune.get("ctx_auto"):
         try:
             ctx_per = int(raw)
         except (TypeError, ValueError):
-            ctx_per = auto_ctx(
-                model_path, n_slots=n_slots, ubatch=ubatch,
-                n_devices=n_devices, decide=decide, meta_fn=meta_fn,
-                extra_mib_fn=extra, cache_type=tune.get("cache_type"),
-            )
+            ctx_per, ctx_auto = _auto(), True
     else:
-        ctx_per = auto_ctx(
-            model_path, n_slots=n_slots, ubatch=ubatch,
-            n_devices=n_devices, decide=decide, meta_fn=meta_fn,
-            extra_mib_fn=extra, cache_type=tune.get("cache_type"),
-        )
+        ctx_per, ctx_auto = _auto(), True
     if ctx_per < 1:
         ctx_per = GGUF_CTX
     out = {
         "ctx": ctx_per,
         "n_slots": n_slots,
         "total_ctx": ctx_per * n_slots,
+        "ctx_auto": ctx_auto,
     }
+    # Learned heavier choices fall back to lighter ones until this window
+    # fits (pins stay as they are). Unknown memory changes nothing.
+    eff = {"flash_attn": fa, "cache_type": ct, "ubatch": int(ubatch)}
+
+    def _fits(with_extra=None):
+        return ctx_fits_known(
+            model_path, ctx_per, n_slots=n_slots, ubatch=eff["ubatch"],
+            n_devices=n_devices, decide=decide, extra_mib_fn=with_extra,
+            cache_type=eff["cache_type"] if eff["cache_type"] == "f16" else None,
+            flash_attn=eff["flash_attn"], meta_fn=meta_fn,
+        )
+    lighter = {}
+    if _fits() is False:
+        for name, heavy, light in _LIGHTER:
+            if name in pins or eff.get(name) != heavy:
+                continue
+            eff[name] = light
+            lighter[name] = light
+            if _fits() is not False:
+                break
+    if lighter:
+        out["lighter"] = lighter
+        out.update({k: eff[k] for k in lighter})
     if draft:
-        # A pinned window that leaves no room for the helper: run without it
+        # A window that leaves no room for the helper: run without it
         # (llama_args drops the helper flags) instead of failing replies.
-        fits = ctx_fits_known(model_path, ctx_per, n_slots=n_slots, ubatch=ubatch,
-                              n_devices=n_devices, decide=decide,
-                              extra_mib_fn=extra, cache_type=tune.get("cache_type"))
+        fits = _fits(extra)
         out["helper_fits"] = fits is not False
     return out
+
+
+def window_blockers(model_path, *, n_slots: int = 1, n_devices: int = 1,
+                    pins=(), decide=None, meta_fn=None) -> set:
+    """Heavier settings ("name=value") that would not fit with the Auto
+    window. Day 31: Auto-tune and Self-tuning skip those trials, because
+    keeping such a win would need a shorter chat window."""
+    pins = set(pins or ())
+    try:
+        w = auto_ctx(model_path, n_slots=n_slots, n_devices=n_devices,
+                     decide=decide, meta_fn=meta_fn)
+    except Exception:  # noqa: BLE001
+        return set()
+    out = set()
+    for name, heavy, _light in _LIGHTER:
+        if name in pins:
+            continue
+        kw = {"flash_attn": "on", "cache_type": None, "ubatch": GGUF_DEFAULT_UBATCH}
+        kw[name] = heavy
+        fits = ctx_fits_known(
+            model_path, w, n_slots=n_slots, n_devices=n_devices, decide=decide,
+            meta_fn=meta_fn, ubatch=int(kw["ubatch"]), flash_attn=kw["flash_attn"],
+            cache_type=kw["cache_type"],
+        )
+        if fits is False:
+            out.add(f"{name}={heavy}")
+    return out
+
+
+WINDOW_SKIP = "needs a shorter chat window"
 
 
 def slot_save_dir(cache_type_k: str, cache_type_v: str, root=None,
@@ -458,6 +638,16 @@ def llama_args(model_path: str, *, port: int, peers: list, shares: list,
         n_devices=n_devices, ubatch=ub, meta_fn=meta_fn,
     )
     ctx_per, n_slots, total_c = launch["ctx"], launch["n_slots"], launch["total_ctx"]
+    # Day 31: a learned heavier choice that does not fit this window was
+    # swapped for the lighter one (the window wins).
+    lighter = launch.get("lighter") or {}
+    if lighter:
+        tune = dict(tune, **lighter)
+        if "flash_attn" in lighter:
+            fa = lighter["flash_attn"]
+        if "ubatch" in lighter:
+            ub = int(lighter["ubatch"])
+            batch = max(ub, GGUF_DEFAULT_BATCH)
     ctk, ctv = resolve_web_kv(
         flash_attn=fa, cache_type=tune.get("cache_type"),
         cache_type_k=tune.get("cache_type_k"), cache_type_v=tune.get("cache_type_v"),
@@ -858,7 +1048,7 @@ def parse_seed(stdout: str) -> Optional[dict]:
 
 
 def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
-                  pinned=None, draft_path=None) -> list:
+                  pinned=None, draft_path=None, blocked=None) -> list:
     """GGUF Optimize now plan: one llama-server option at a time (each needs a
     reload), skipping recorded losers ("name=value"), same 3% margin as MLX.
 
@@ -872,6 +1062,10 @@ def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
     downloaded; with no helper there is no Guess-ahead step at all.
     Self-tuning does not use these extra options (it reads GGUF_KNOBS
     only).
+
+    Day 31: blocked lists heavier values ("cache_type=f16") that would not
+    fit with the full Auto chat window (window_blockers); a trial of or
+    against one is skipped, because keeping it would shorten the window.
     """
     defaults = {
         "flash_attn": "on",
@@ -880,13 +1074,21 @@ def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
         "prompt_lookup": "off",
     }
     items = []
+    blocked = set(blocked or ())
     for name, values in GGUF_KNOBS:
         inc = best.get(name, defaults[name])
-        alts = [v for v in values if v != inc and f"{name}={v}" not in losses]
+        alts = [v for v in values if v != inc and f"{name}={v}" not in losses
+                and f"{name}={v}" not in blocked]
         if name == "ubatch":
             alts.sort(key=lambda v: abs(v - inc))
-        items.append({"name": name, "incumbent": inc, "challenger": alts[0] if alts else None,
-                      "skip": None if alts else "already lost", "reload": True})
+        skip = None if alts else "already lost"
+        if f"{name}={inc}" in blocked:
+            skip = WINDOW_SKIP
+        elif not alts and any(f"{name}={v}" in blocked for v in values if v != inc):
+            skip = WINDOW_SKIP
+        items.append({"name": name, "incumbent": inc,
+                      "challenger": alts[0] if alts and not skip else None,
+                      "skip": skip, "reload": True})
     # Prompt lookup last, and only when it is safe.
     inc = best.get("prompt_lookup", "off")
     pinned_set = set(pinned or [])

@@ -183,22 +183,58 @@ def status(port: int, urlopen=_urlopen) -> dict:
     return urlopen(f"http://127.0.0.1:{int(port)}/api/status", timeout=5)
 
 
-def load_model(port: int, model_id: str, urlopen=_urlopen, wait=300) -> dict:
-    urlopen(
-        f"http://127.0.0.1:{int(port)}/api/models/load",
-        data=json.dumps({"id": model_id}).encode(),
-        timeout=30,
-    )
-    deadline = time.time() + wait
+def _fresh_ready(worker: dict, model_id: str, since: float) -> bool:
+    """Ready with this model, and the ready note is from this load.
+
+    Asking for the model that is already loaded restarts it, but the first
+    status replies still say "ready" from before the restart; measuring then
+    hits a stopped server. Status without progress notes keeps the old rule.
+    """
+    if worker.get("status") != "ready" or worker.get("model_id") != model_id:
+        return False
+    notes = worker.get("progress")
+    if not isinstance(notes, list) or not notes:
+        return True
+    last = notes[-1] if isinstance(notes[-1], dict) else {}
+    try:
+        t = float(last.get("t"))
+    except (TypeError, ValueError):
+        return True
+    return t >= since and str(last.get("msg") or "").startswith(("ready", "loaded"))
+
+
+def load_model(port: int, model_id: str, urlopen=_urlopen, wait=300,
+               clock=time.time, sleep=time.sleep) -> dict:
+    since = clock() - 1.0
+    try:
+        urlopen(
+            f"http://127.0.0.1:{int(port)}/api/models/load",
+            data=json.dumps({"id": model_id}).encode(),
+            timeout=30,
+        )
+    except urllib.error.HTTPError as e:
+        # A load or switch already running (for example the bench's own
+        # load still restarting): wait for it instead of giving up.
+        if e.code not in (400, 409):
+            raise
+        body = ""
+        try:
+            body = e.read().decode(errors="replace")
+        except Exception:
+            pass
+        if "in progress" not in body:
+            raise
+        since = 0.0
+    deadline = clock() + wait
     last = {}
-    while time.time() < deadline:
+    while clock() < deadline:
         last = status(port, urlopen=urlopen)
         worker = (last or {}).get("worker") or last
-        if worker.get("status") == "ready" and worker.get("model_id") == model_id:
+        if _fresh_ready(worker, model_id, since):
             return last
         if worker.get("status") in ("error", "stopped") and worker.get("error"):
             raise RuntimeError(worker.get("error") or "load failed")
-        time.sleep(1)
+        sleep(1)
     raise TimeoutError("The model did not become ready in time.")
 
 

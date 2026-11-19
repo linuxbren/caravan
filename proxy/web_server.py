@@ -25,6 +25,11 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+# Day 31: how long Caravan waits for the model's first bytes. With Auto now
+# using a model's full trained window, reading a prompt near a 128K window on
+# one Mac can take more than the old 30 minutes (Llama 3.1 8B: ~45 min).
+REPLY_TIMEOUT_S = float(os.environ.get("CARAVAN_REPLY_TIMEOUT_S", "7200"))
+
 HERE = Path(__file__).resolve().parent
 WEB_DIR = HERE / "web"
 sys.path.insert(0, str(HERE))
@@ -2568,7 +2573,7 @@ def make_handler(app: App):
 
             stream = bool(body.get("stream"))
             try:
-                upstream = urlopen(req, timeout=1800)
+                upstream = urlopen(req, timeout=REPLY_TIMEOUT_S)
             except HTTPError as e:
                 err = e.read().decode(errors="replace")[:500]
                 return self._json(e.code, {"error": err})
