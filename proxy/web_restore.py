@@ -21,6 +21,17 @@ import web_settings
 from service_endpoints import RetryableReadinessError, error_payload
 
 
+def mac_name(node,nid,inventory):
+    """"The 2nd Mac" (or the Mac's own name) for restore wait messages."""
+    import web_nodes
+    try:
+        label=web_nodes.friendly_mac_label(node,node_id=nid,inventory=inventory)
+    except Exception:
+        label="Mac"
+    if label in ("Mac",str(nid)) or label.startswith("paired_"):label="other Mac"
+    return ("The "+label) if (label[:1].isdigit() or label in ("My Mac","other Mac")) else label
+
+
 def canonical(request):
     if not isinstance(request, dict) or not isinstance(request.get("model_id"), str) or not request["model_id"].strip():
         raise ValueError("last-model record needs a model ID")
@@ -165,10 +176,13 @@ def validate_placement(app, entry, body):
     caps=[]
     for nid in ids:
         node=configured[nid];stats=web_nodes.gather_node_stats(node,ssh_fn=app._ssh_fn())
-        if stats.get("offline"):raise RetryableReadinessError(f"Mini {nid} is unavailable; bring it online and press Load", kind="mini")
+        # Plain Mac name ("the 2nd Mac"), never the internal paired_… id: the
+        # page's wording filter turned that id into a bare "Mac" (Day 33).
+        name=mac_name(node,nid,list(configured.values()))
+        if stats.get("offline"):raise RetryableReadinessError(f"{name} is not reachable yet", kind="mini")
         available=(stats.get("ram") or {}).get("available_gb",(stats.get("ram") or {}).get("free_gb"))
         if isinstance(available,bool) or not isinstance(available,(int,float)) or not math.isfinite(available) or available<=0:
-            raise RetryableReadinessError(f"Live free memory is unknown for {nid}; nothing was loaded", kind="memory")
+            raise RetryableReadinessError(f"Free memory on {name[0].lower()+name[1:] if name.startswith('The ') else name} is unknown for now; nothing was loaded", kind="memory")
         current=live.get(nid,{})
         footprint=float(current.get("active_gb") or current.get("weights_gb") or 0) if app.mgr.snapshot().get("status")=="ready" and current.get("model") else 0
         caps.append(float(available)+max(0,footprint))

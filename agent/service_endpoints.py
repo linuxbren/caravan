@@ -32,10 +32,10 @@ class RetryableReadinessError(ValueError):
         if self.kind == "thunderbolt":
             lead = "Waiting for Thunderbolt link…"
         elif self.kind == "memory":
-            lead = "Waiting for Mini memory info…"
+            lead = "Waiting for memory info from your other Macs…"
         else:
-            lead = "Waiting for Minis"
-        return f"{lead} (attempt {attempt}); retry in {pause:g}s: {self}"
+            lead = "Waiting for your other Macs to start…"
+        return f"{lead} (attempt {attempt}); trying again in {pause:g}s: {self}"
 
     def timeout_message(self, budget):
         if self.kind == "thunderbolt":

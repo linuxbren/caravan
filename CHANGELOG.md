@@ -1,3 +1,14 @@
+## Day 33 — Power-loss recovery test
+
+- Pulled the power on both Macs during a busy Qwen3 30B split. Both came
+  back by themselves and Caravan restored the split model over Thunderbolt
+  76 s after power-up; the first long prompt after it was answered. Files
+  and the model were intact. See [DAY33](docs/DAY33.md).
+- While boot restore waits for another Mac, the page says "Waiting for your
+  other Macs to start… trying again in 4s: The 2nd Mac is not reachable
+  yet" instead of "Mini Mac is unavailable; bring it online and press Load".
+- A restored GGUF model shows its Memory compression in Settings again.
+
 ## Day 32 — Caravan lives on main
 
 - Install, `caravan update`, Update now and the daily update check read

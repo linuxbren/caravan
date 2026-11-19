@@ -498,7 +498,7 @@ def gguf_active_settings(tune=None, settings=None, *, launch=None) -> dict:
     launch = dict(launch or {})
     ctx = launch.get("ctx") or tune.get("ctx")
     n_slots = launch.get("n_slots") or tune.get("n_slots") or 1
-    ct = tune.get("cache_type")
+    ct = tune.get("cache_type") or launch.get("cache_type")
     if ct == "f16":
         kv = 16
     elif ct == "q8_0":

@@ -636,6 +636,14 @@ class WorkerManager:
                                + " instead of the learned setting, which would not fit")
                 tune = dict(tune, ctx=launch["ctx"], n_slots=launch["n_slots"],
                             ctx_auto=bool(launch.get("ctx_auto")), **lighter)
+            # Day 33: report the chat memory llama-server really got. A boot
+            # restore's saved tune has no cache_type, so the Settings chip
+            # showed no Memory compression after a power-loss restore.
+            if "-ctk" in args:
+                try:
+                    launch = dict(launch or {}, cache_type=args[args.index("-ctk") + 1])
+                except IndexError:
+                    pass
             if "--slot-save-path" in args:
                 try:
                     Path(args[args.index("--slot-save-path") + 1]).mkdir(parents=True, exist_ok=True)

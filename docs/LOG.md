@@ -1,3 +1,13 @@
+## 2026-11-19: Day 33 — Power-loss recovery test
+
+Power pulled on both Macs at 14:56 during a busy Qwen3 30B split; plugged
+back in about 14:57. Macs booted 14:57:08 / 14:57:13, Caravan's page
+answered 14:57:28, the restore loaded the model at 14:57:42 and it was
+ready split over Thunderbolt at 14:58:24 (76 s after power-up), with no
+hand needed. Fixed the restore's waiting text (no "Mini Mac … press
+Load") and the empty Memory compression chip after a restore. See
+[DAY33](DAY33.md).
+
 ## 2026-11-19: Day 32 — Caravan lives on main
 
 Everything moves to `main`. Install, `caravan update`, Update now and the

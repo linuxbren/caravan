@@ -179,7 +179,7 @@ class PlacementSafetyTest(unittest.TestCase):
     def test_single_exact_remote_placement_uses_verified_inventory_path(self):
         got=self.validate(dict(ram={"available_gb":8}));self.assertEqual(got["lead_path"],self.model["path"]);self.assertEqual(got["placement"]["node_ids"],["n2"]);self.assertEqual(got["run_mode"],"single")
     def test_offline_mini_is_not_replaced_by_another(self):
-        with self.assertRaisesRegex(ValueError,"unavailable"):self.validate(dict(offline=True))
+        with self.assertRaisesRegex(ValueError,"not reachable yet"):self.validate(dict(offline=True))
     def test_missing_full_files_block_no_auto_fetch(self):
         self.model["full_ok"]=False
         with self.assertRaisesRegex(ValueError,"files are missing"):self.validate(dict(ram={"available_gb":8}))
