@@ -1,3 +1,26 @@
+## Day 28 — tuning round 3 results
+
+- The Auto-tune reliability queue on source `40b2bad` / pin `9f95528`
+  (1,869 tests) finished Nov 18, 5:46 PM CT (America/Chicago). The
+  four 2-Mac cases, plus a 1-Mac Llama 8B recheck, all passed Auto-tune
+  three times and kept their settings across a reload and a restart,
+  with no prompt errors. The link between the Macs was Thunderbolt at
+  about 0.3 ms.
+- Short-prompt write tok/s, untuned vs tuned: 2 Macs Llama 8B 19.44 vs
+  23.03 (helper + Prompt lookup kept 3 of 3); 2 Macs Qwen3 14B 11.15
+  vs 14.90 (helper); 2 Macs gpt-oss 20B 33.41 vs 33.10 (no helper);
+  2 Macs Qwen3 30B 34.62 vs 34.61 (no helper); 1 Mac Llama 8B recheck
+  21.52 vs 25.27 (helper; other 1-Mac rows remain the round-2 figures).
+  Full short/1k/4k/8k write, read and first-word tables are in the
+  [experiment log](handoff/lab/experiments.md).
+- The open item from round 2 is closed: Auto-tune now keeps a helper
+  win on a 2-Mac split when the whole long-prompt reply is not slower
+  than stock (hard stop at a 35% read drop). The tradeoff on 2-Mac
+  Llama 8B at 8k is a later first word (39.6 s vs 30.7 s) and a slower
+  read (241 vs 311 tok/s), in exchange for faster writing.
+- The Qwen3 30B 2-Mac gap from round 2 (33.50 vs 34.50) was noise;
+  round 3 is 34.61 vs 34.62.
+
 ## Day 28 tuning fix 3 — a measured helper win on two Macs is kept
 
 - On two Macs, Llama 8B's Guess-ahead helper wrote 17% faster (19.3 to 22.7

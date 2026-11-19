@@ -63,16 +63,12 @@ and the daily logs, not mixed into current setup instructions.
 
 ## Planned dev days
 
-- **Day 28 (shootout and tuning rounds 1–2 are done):** one Mac vs
+- **Day 28 (shootout and tuning rounds 1–3 are done):** one Mac vs
   two Macs on Qwen3 30B-A3B, gpt-oss 20B, Qwen3 14B and Llama 3.1 8B,
   on Caravan, LocalAI, Exo and llama.cpp rpc-server, plus Caravan v0.
-  Auto-tune now keeps the helper on 1-Mac Llama 8B and on Qwen3 14B
-  (1 and 2 Macs). Results and the remaining open item are in the
+  Auto-tune keeps the helper on 1-Mac and 2-Mac Llama 8B and on
+  Qwen3 14B (1 and 2 Macs). Final numbers are in the
   [experiment log](../handoff/lab/experiments.md).
-- **Day 28 round 3:** rerun the 2-Mac Auto-tune cases on the
-  link-order build, after the Llama 8B helper-on-split fix (self-tune
-  won the helper on 2 Macs, Auto-tune did not keep it). The Macs have
-  not been updated to the link-order build yet.
 - **Day 29:** Caravan on its current llama.cpp build (b12283) against
   Caravan on a llama.cpp v1.0.0 nightly build: write and read speed,
   long chats, memory, first word, Guess-ahead and Prompt lookup, on
@@ -84,25 +80,21 @@ and the daily logs, not mixed into current setup instructions.
 
 ## Next candidates
 
-1. **Keep the Llama 8B helper on a 2-Mac GGUF split.** Round 2: self-tune
-   won the helper, but Auto-tune kept Prompt lookup only, so 2-Mac write
-   stayed flat (19.38 vs 19.41). On 1 Mac the same helper is kept and
-   writes about +21%. Fix this, then remeasure in Day 28 round 3.
-2. **A helper for MLX on one Mac.** Today an MLX model uses a helper only
+1. **A helper for MLX on one Mac.** Today an MLX model uses a helper only
    when it is split across Macs; on one Mac GGUF is the faster choice for
    Qwen2.5 Coder 7B.
-3. **First token with Guess-ahead.** The helper also reads the prompt, so
+2. **First token with Guess-ahead.** The helper also reads the prompt, so
    the first word on long prompts comes about 10% later; Auto-tune could
    weigh that.
-4. **A beginner switch for Advanced.** Hide the tuning rows behind one
+3. **A beginner switch for Advanced.** Hide the tuning rows behind one
    simple switch so a new user sees only what they need.
-5. **Vision and voice.** Image input for models that support it, and
+4. **Vision and voice.** Image input for models that support it, and
    listening first, following [VOICE](VOICE.md).
-6. **Terminal UI.** A friendly terminal interface for chat, status and
+5. **Terminal UI.** A friendly terminal interface for chat, status and
    updates.
-7. **Fresh install and FileVault.** Prove a clean account, a fresh install,
+6. **Fresh install and FileVault.** Prove a clean account, a fresh install,
    and a FileVault reboot end to end.
-8. **Security review.** An independent look at pairing, the browser page,
+7. **Security review.** An independent look at pairing, the browser page,
    the Tailscale share and the update path.
 
 Earlier development-order items (Days 22–25) are kept in

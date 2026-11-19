@@ -1,3 +1,99 @@
+## 2026-11-18 — Day 28: tuning round 3 results (40b2bad)
+
+**Queue.** Round 3 Auto-tune reliability ran on source `40b2bad` / pin
+`9f95528` (1,869 tests; includes the link-order picker `057fcc1` and
+fix 3). Queue ended Nov 18, 5:46 PM CT (America/Chicago). The 2-Mac
+cases (Llama 3.1 8B, Qwen3 14B, gpt-oss 20B, Qwen3 30B-A3B) were rerun,
+plus a 1-Mac Llama 8B recheck. All 5 cases: Auto-tune passed three
+times, settings were kept across reload and a Caravan restart, and
+there were no prompt errors. Chat prompts (5 short, 2 each at about
+1k / 4k / 8k; medians). The link between the Macs was Thunderbolt at
+about 0.3 ms (0.31 ms). These 2-Mac numbers, and the 1-Mac Llama 8B
+recheck, are **final**. Other 1-Mac rows stay the round-2 figures
+below (`4bdbd79`).
+
+**Why 2-Mac Llama 8B lost its helper in round 2.** The helper wrote
+about 17% faster (19.3 → 22.7 tok/s) but read a long prompt about 16%
+slower. Auto-tune had a hard 15% cut on long-prompt read and threw the
+win away, while Self-tuning only measured short prompts and said it
+won. Fix 3 (`gguf_tune.spec_verdict`): past a 15% slower read, judge
+the whole long-prompt reply (about 2k read + 192 write); hard stop at
+35%. Self-tuning and Auto-tune now agree.
+
+**Short-prompt write tok/s, untuned → tuned (final).**
+
+| Setup | Untuned | Tuned | What Auto-tune kept | Source |
+|---|---|---|---|---|
+| 1 Mac, Llama 3.1 8B | 21.49 | 25.97 | helper + Prompt lookup (60% guesses kept) | round 2 (recheck: 21.52 → 25.27) |
+| 1 Mac, Qwen3 14B | 12.09 | 16.87 | helper, Qwen3 0.6B (52% guesses kept) | round 2 |
+| 1 Mac, gpt-oss 20B | 40.37 | 40.59 | no helper (none exists) | round 2 |
+| 2 Macs, Llama 3.1 8B | 19.44 | 23.03 | helper + Prompt lookup (60% guesses kept; 3 of 3) | round 3 |
+| 2 Macs, Qwen3 14B | 11.15 | 14.90 | helper, Qwen3 0.6B (52% guesses kept) | round 3 |
+| 2 Macs, gpt-oss 20B | 33.41 | 33.10 | no helper (none exists) | round 3 |
+| 2 Macs, Qwen3 30B-A3B | 34.62 | 34.61 | no helper | round 3 |
+
+(Qwen3 30B-A3B does not fit on 1 Mac as GGUF.) gpt-oss and Qwen3 30B:
+tuned is the same as untuned, within noise.
+
+**2 Macs, write tok/s at each prompt size (untuned / tuned).**
+
+| Case | Short | 1k | 4k | 8k |
+|---|---|---|---|---|
+| Llama 3.1 8B | 19.44 / 23.03 | 18.85 / 21.79 | 17.31 / 19.61 | 15.66 / 17.05 |
+| Qwen3 14B | 11.15 / 14.90 | 11.05 / 15.84 | 10.26 / 13.00 | 9.44 / 11.78 |
+| gpt-oss 20B | 33.41 / 33.10 | 32.72 / 32.76 | 31.73 / 31.69 | 30.62 / 30.34 |
+| Qwen3 30B-A3B | 34.62 / 34.61 | 33.04 / 32.94 | 29.31 / 29.32 | 25.21 / 25.18 |
+
+**2 Macs, read tok/s (untuned / tuned).**
+
+| Case | Short | 1k | 4k | 8k |
+|---|---|---|---|---|
+| Llama 3.1 8B | 224 / 172 | 297 / 253 | 333 / 273 | 311 / 241 |
+| Qwen3 14B | 59.0 / 72.1 | 152.6 / 147.8 | 180.9 / 165.1 | 168.9 / 149.3 |
+| gpt-oss 20B | 237 / 250 | 450 / 450 | 613 / 613 | 618 / 618 |
+| Qwen3 30B-A3B | 141 / 143 | 531 / 531 | 561 / 560 | 459 / 461 |
+
+**2 Macs, first word, seconds (untuned / tuned).**
+
+| Case | Short | 1k | 4k | 8k |
+|---|---|---|---|---|
+| Llama 3.1 8B | 0.36 / 0.48 | 4.16 / 4.89 | 14.4 / 17.5 | 30.7 / 39.6 |
+| Qwen3 14B | 0.93 / 0.77 | 8.09 / 8.35 | 27.7 / 30.4 | 60.1 / 68.3 |
+| gpt-oss 20B | 0.49 / 0.46 | 2.82 / 2.82 | 7.86 / 7.86 | 15.5 / 15.5 |
+| Qwen3 30B-A3B | 0.40 / 0.40 | 2.33 / 2.33 | 9.01 / 9.02 | 22.4 / 22.3 |
+
+**1 Mac, Llama 3.1 8B recheck (untuned / tuned).** Short-prompt write
+21.52 / 25.27 (round 2 was 21.49 / 25.97). Helper + Prompt lookup kept
+3 of 3. At each prompt size:
+
+|  | Short | 1k | 4k | 8k |
+|---|---|---|---|---|
+| Write tok/s | 21.52 / 25.27 | 20.74 / 23.31 | 18.84 / 20.80 | 17.05 / 18.64 |
+| Read tok/s | 237 / 183 | 216 / 184 | 194 / 167 | 176 / 153 |
+| First word s | 0.34 / 0.45 | 5.75 / 6.76 | 24.8 / 28.9 | 54.4 / 62.7 |
+
+**In plain words.** Auto-tune now turns the helper on whenever it
+really wins, on 1 Mac and on 2 Macs. 2-Mac Llama 8B short-prompt write
+is 23.03 vs 19.44 (+18%). Qwen3 14B on 2 Macs is 14.90 vs 11.15.
+gpt-oss 20B and Qwen3 30B stay flat (no helper, or the helper does not
+win). The 1-Mac Llama 8B recheck is in line with round 2.
+
+With the helper on, writing is faster but reading a long prompt is
+slower. On 2-Mac Llama 8B that is about 22% slower read at 8k (311 →
+241 tok/s). The first word at 8k comes after 39.6 s instead of 30.7 s.
+That is the expected tradeoff, not a bug. 2-Mac Qwen3 30B: the round-2
+gap (33.50 vs 34.50) was noise. Round 3 is 34.61 vs 34.62.
+
+**Caveats.** gpt-oss 20B has no helper, so tuned equals untuned. Exo
+runs MLX; the other engines in the shootout run GGUF. LocalAI can't
+split. Qwen3 30B GGUF won't fit on 1 Mac. Chat vs code-edit gains
+differ (Guess-ahead +22–42% on chat, +48–92% on code edits; these
+tables use chat). The original shootout's 2-Mac tuned column compared
+MLX with GGUF, not tuned with stock. Splitting buys room and faster
+long-prompt reads, not faster writing. Do not use the round-1 2-Mac
+tuned column, or the round-2 2-Mac Llama 8B tuned row (helper not
+kept). The 2-Mac tables in this entry replace those 2-Mac rows.
+
 ## 2026-11-18 — Day 28: tuning round 2 results (4bdbd79)
 
 **Queue.** Round 2 Auto-tune reliability ran on source `4bdbd79` / pin
@@ -6,11 +102,10 @@
 20B; 2 Macs: those three plus Qwen3 30B-A3B): Auto-tune passed three
 times, settings were kept across reload and a Caravan restart, and there
 were no prompt errors. Chat prompts (5 short, 2 each at about 1k / 4k /
-8k; medians). These numbers are **final for `4bdbd79`**, except 2-Mac
-Llama 8B tuned (helper not kept). 2-Mac figures will be re-checked in
-**round 3** on the link-order build (`057fcc1` / pin `d54c54f`) after
-the Llama helper-on-split fix. The Macs have not been updated to that
-build yet.
+8k; medians). These numbers are **final for `4bdbd79`**, except the 2-Mac
+rows, which were redone in round 3 (see the entry above) after the
+Llama helper-on-split fix. 2-Mac Llama 8B tuned on this build did not
+keep the helper (19.38 vs 19.41).
 
 **Write tok/s (untuned / tuned).**
 
@@ -84,12 +179,13 @@ loaded model. Qwen3 14B now keeps its helper on 1 Mac and on 2 Macs.
 **Link order** is in the next entry (`057fcc1` / pin `d54c54f`, 1,863
 tests): Thunderbolt > wired Ethernet > Wi-Fi > Tailscale/other, one
 picker for every path. Brenden approved keeping the MLX Wi-Fi fallback,
-with the warning. The Macs are not on that build yet.
+with the warning. Round 3 ran on that picker over Thunderbolt.
 
-**OPEN.** On 2 Macs, Llama 8B self-tune won with the helper, but
-Auto-tune kept no helper (write 19.38 vs 19.41). On 1 Mac the same
-helper is kept and writes about +21%. A fix is being worked on; remeasure
-in round 3.
+**Closed in round 3.** On this build, 2-Mac Llama 8B self-tune won with
+the helper, but Auto-tune kept no helper (write 19.38 vs 19.41). On 1
+Mac the same helper was kept and wrote about +21%. Fix 3 and the
+round-3 remeasurement are in the entry above (helper kept 3 of 3,
+23.03 vs 19.44).
 
 **Caveats.** gpt-oss 20B has no helper, so tuned equals untuned. Exo
 runs MLX; the other engines in the shootout run GGUF. LocalAI can't
