@@ -128,7 +128,26 @@ opt-out, endpoint wiring, CLI).
 
 ### Live check with a fake crash
 
-Run on the 1st Mac after installing this release; the results are added here in the next commit.
+Release 7b33dc8 on both Macs, Qwen3 30B split, all Auto. A streamed
+~7.3K-token chat was sent to `/v1/chat/completions` on the 1st Mac, then
+llama-server and the Caravan web process were killed with `kill -9`
+mid-request. launchd started the web again by itself; boot restore
+reloaded the split model.
+
+| Run | Sent | Killed | What was cut | Ready again | Run again | Finished |
+|---|---|---|---|---|---|---|
+| 1 | 15:20:22 | 15:20:35 | while reading the prompt | ~15:20:59 | 15:20:59 (try 1) | 15:21:21, 200 tokens (all thinking; `max_tokens` 200) |
+| 2 | 15:21:46 | 15:22:09 | nothing: the reply had finished | 15:22:37 | not run again (done) | — |
+| 3 | 15:22:52 | 15:23:22 | mid-reply, ~418 stream events written | ~15:23:43 | 15:23:43 (try 1) | 15:24:44, 1,200 tokens, 5,721 characters |
+
+Each client saw `X-Caravan-Job` and the first line `: caravan-job <id>`
+before the kill. After it, `GET /api/jobs/<id>` and `caravan jobs <id>` on
+the 1st Mac returned the whole reply with "Finished after a restart …
+from the start (try 1)". The re-run read all 7,316 prompt tokens again
+(nothing cached). Run 3 finished 82 s after the kill. The watcher's tiny
+chat that was in flight at run 1 was also run again and finished. Run 2
+shows a finished job is not run again. Journal folder `drwx------`,
+files `-rw-------`.
 
 ## Fixed
 
