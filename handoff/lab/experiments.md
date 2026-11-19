@@ -84,6 +84,12 @@ slower. On 2-Mac Llama 8B that is about 22% slower read at 8k (311 →
 That is the expected tradeoff, not a bug. 2-Mac Qwen3 30B: the round-2
 gap (33.50 vs 34.50) was noise. Round 3 is 34.61 vs 34.62.
 
+The first Day 28 shootout's Qwen3 30B 8k split write of 17.5 tok/s was
+measured before the Thunderbolt-first fix, when the GGUF split tunnel
+used `.local` and went over Wi-Fi. After the fix, the round-3 8k write
+above is 25.21 / 25.18, faster than v0's 22.4. A matched
+v0-vs-current confirmation run is still pending.
+
 **Caveats.** gpt-oss 20B has no helper, so tuned equals untuned. Exo
 runs MLX; the other engines in the shootout run GGUF. LocalAI can't
 split. Qwen3 30B GGUF won't fit on 1 Mac. Chat vs code-edit gains

@@ -68,7 +68,11 @@ and the daily logs, not mixed into current setup instructions.
   on Caravan, LocalAI, Exo and llama.cpp rpc-server, plus Caravan v0.
   Auto-tune keeps the helper on 1-Mac and 2-Mac Llama 8B and on
   Qwen3 14B (1 and 2 Macs). Final numbers are in the
-  [experiment log](../handoff/lab/experiments.md).
+  [experiment log](../handoff/lab/experiments.md). The first-shootout
+  Qwen3 30B 8k split write of 17.5 tok/s was the pre-fix Wi-Fi tunnel,
+  not a remaining regression; after the Thunderbolt-first fix, round 3
+  measured 25.18, faster than v0's 22.4. A matched v0-vs-current
+  confirmation run is still pending.
 - **Day 29:** Caravan on its current llama.cpp build (b12283) against
   Caravan on a llama.cpp v1.0.0 nightly build: write and read speed,
   long chats, memory, first word, Guess-ahead and Prompt lookup, on

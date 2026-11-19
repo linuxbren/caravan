@@ -1,3 +1,14 @@
+## Day 28 — Qwen3 30B 8k split write was the pre-fix Wi-Fi tunnel
+
+- The first Day 28 shootout measured Qwen3 30B 8k split write at 17.5
+  tok/s, slower than v0's 22.4. That run was before the Thunderbolt-first
+  fix, when the GGUF split tunnel used the other Mac's `.local` name and
+  went over Wi-Fi.
+- After the fix, round 3 (`40b2bad`, Thunderbolt) measured 25.21 untuned
+  / 25.18 tuned (raw 25.205 / 25.175 in
+  `reliability3/split-qwen30b.json`), faster than v0's 22.4 (+12%). A
+  matched v0-vs-current confirmation run is still pending.
+
 ## Day 28 — tuning round 3 results
 
 - The Auto-tune reliability queue on source `40b2bad` / pin `9f95528`
