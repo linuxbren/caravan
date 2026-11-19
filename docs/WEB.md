@@ -298,6 +298,48 @@ and in Settings before you chat, for example "Memory compression 4
 gave wrong answers on this model, so it was turned back to 16." An
 Auto-tune trial must pass this check to be kept.
 
+## Chats after a power loss or crash
+
+If the 1st Mac loses power, crashes, or Caravan is stopped while a reply is
+being written, Caravan finishes that chat once the model is back. It does
+this by running the request again **from the start**. It does not continue
+mid-sentence: the words written before the power loss are thrown away and
+the model writes the whole reply again, so the new reply can differ unless
+the request fixed a seed and temperature 0.
+
+How it works: every chat sent to the page (`/api/chat` and
+`/v1/chat/completions`, streamed or not) is saved to
+`~/.caravan/web-ui/jobs` before the model sees it, and marked done when the
+reply finishes. After a restart, when the same model is ready again (boot
+restore loads it by itself), Caravan runs each unfinished chat again and
+saves the whole reply. In the chat, it appears as a reply with the note
+"Finished after a restart". From Terminal, `caravan jobs` lists recent
+chats and `caravan jobs <id>` prints a saved reply.
+
+For scripts: each reply carries its job id in the `X-Caravan-Job` header.
+A streamed reply also starts with the SSE comment line
+`: caravan-job <id>` (SSE clients ignore comments) and the final
+`caravan.meta` event has `"job"`; a non-streamed reply has
+`caravan_web.job`. If the model stops mid-reply while the page is still
+running, the stream ends with an error event of type
+`caravan_interrupted` that names the job. Fetch the answer later with
+`GET /api/jobs/<id>` (`status` is `done` and `reply` holds the text;
+`recovered` is true for a chat that was run again). `GET /api/jobs` lists
+recent jobs without their prompts.
+
+Limits: a chat older than 1 hour when the model comes back is not run
+again (`expired`). Each chat is run again at most 2 times (`gave_up`).
+Requests over 4 MB are not saved. A finished chat is never run again, and a
+chat you stopped (Stop, or the client closed the connection) is not run
+again. Finished jobs are deleted after 3 days (at most 500 are kept).
+Requests sent to the 1st Mac while it is still loading are answered "no
+model loaded" and are not saved; send them again once it is ready.
+
+Privacy: the saved chats stay on the 1st Mac in `~/.caravan/web-ui/jobs`,
+readable only by your account, and `caravan uninstall` removes them. To
+turn this off, add `[jobs]` `resume = false` to `~/.caravan/config.toml`
+(see [CONFIGURATION](CONFIGURATION.md#chats-after-a-power-loss-jobs)).
+
 ## Developer details and history
 
 The page is served by `proxy/web_server.py`; model processes are managed through

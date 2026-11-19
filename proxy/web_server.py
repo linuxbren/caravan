@@ -89,6 +89,10 @@ class App:
         mgr.gguf_self_tuner = self.gguf_self_tuner
         import web_restore
         self.restore = web_restore.Controller(self)
+        import request_journal
+        self.jobs = request_journal.Journal(os.environ.get("CARAVAN_JOBS_DIR") or None)
+        self.jobs_enabled = request_journal.enabled
+        self.job_replayer = None
 
     # ---- ROADMAP #14: live node view (GET /api/nodes) -------------------
     NODES_TTL = 0.4
@@ -783,6 +787,7 @@ def make_handler(app: App):
             self.send_header("Access-Control-Allow-Headers",
                              "Content-Type, X-Caravan-Session, X-Caravan-Sent")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Expose-Headers", "X-Caravan-Job")
 
         def _friendly_job(self, job):
             """Same friendly Mac name on MLX and GGUF job cards; never a hostname."""
@@ -794,11 +799,13 @@ def make_handler(app: App):
                 inv = []
             return web_nodes.friendly_job(job, inventory=inv)
 
-        def _json(self, code, obj):
+        def _json(self, code, obj, headers=None):
             data = json.dumps(obj, default=str).encode()
             self.send_response(code)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data)))
+            for k, v in (headers or {}).items():
+                self.send_header(k, v)
             self._cors()
             self.end_headers()
             self.wfile.write(data)
@@ -858,6 +865,8 @@ def make_handler(app: App):
                 return self._api_time()
             if path == "/api/status":
                 return self._api_status()
+            if path == "/api/jobs" or path.startswith("/api/jobs/"):
+                return self._api_jobs(path)
             if path == "/api/models":
                 models = app.list_loadable_models()
                 snap = app.mgr.snapshot()
@@ -1029,11 +1038,14 @@ def make_handler(app: App):
                 return self._json(200, app.optimizer.pause((body or {}).get("paused", True)))
             if path == "/api/optimize/cancel":
                 return self._json(200, app.optimizer.cancel())
+            if path.startswith("/api/jobs/") and path.endswith("/seen"):
+                rec = app.jobs.mark_seen(path[len("/api/jobs/"):-len("/seen")])
+                return self._json(200 if rec else 404, {"ok": bool(rec)})
             if path in ("/api/chat", "/v1/chat/completions"):
                 # /v1 path too so tools can hit the UI port.
                 app.chat_begin()
                 try:
-                    return self._api_chat(body=body, openai_shape=(path != "/api/chat"))
+                    return self._api_chat(body=body, openai_shape=(path != "/api/chat"), endpoint=path)
                 finally:
                     app.chat_end()
             if path == "/api/shutdown":
@@ -2540,7 +2552,33 @@ def make_handler(app: App):
                 snap = dict(snap, balance_note=balanced_msg)
             return self._json(200, snap)
 
-        def _api_chat(self, body=None, openai_shape=False):
+        def _api_jobs(self, path):
+            """Day 33: chat jobs from the request journal (request_journal.py)."""
+            import request_journal as RJ
+            from urllib.parse import parse_qs, urlparse
+            q = parse_qs(urlparse(self.path).query)
+            if path.rstrip("/") == "/api/jobs":
+                recs = list(reversed(app.jobs.all()))
+                if q.get("recovered", [""])[0] in ("1", "true"):
+                    recs = [r for r in recs if r.get("recovered")]
+                if q.get("unseen", [""])[0] in ("1", "true"):
+                    recs = [r for r in recs if r.get("recovered") and not r.get("seen")]
+                try:
+                    limit = max(1, min(500, int(q.get("limit", ["50"])[0])))
+                except ValueError:
+                    limit = 50
+                return self._json(200, {
+                    "enabled": bool(app.jobs_enabled()),
+                    "jobs": [RJ.summary(r) for r in recs[:limit]],
+                    "limits": {"max_age_s": RJ.MAX_AGE_S, "max_replays": RJ.MAX_REPLAYS,
+                               "max_body_bytes": RJ.MAX_BODY_BYTES, "keep_s": RJ.KEEP_S},
+                })
+            rec = app.jobs.read(path[len("/api/jobs/"):].strip("/"))
+            if rec is None:
+                return self._json(404, {"error": "unknown job"})
+            return self._json(200, RJ.public(rec))
+
+        def _api_chat(self, body=None, openai_shape=False, endpoint="/api/chat"):
             # body already drained in do_POST (keep-alive safe).
             snap = app.mgr.snapshot()
             if snap.get("status") != "ready":
@@ -2572,23 +2610,51 @@ def make_handler(app: App):
             }, method="POST")
 
             stream = bool(body.get("stream"))
+            # Day 33: journal the request (fsync'd) before the model sees it,
+            # so a power loss mid-reply can be run again after restore.
+            job_id = None
+            jobs = getattr(app, "jobs", None)
+            if jobs is not None:
+                try:
+                    if app.jobs_enabled():
+                        rec = jobs.begin(body, endpoint=endpoint, model=snap.get("model_id"),
+                                         session=session, stream=stream)
+                        job_id = rec["id"] if rec else None
+                except Exception as e:  # noqa: BLE001 — never block a chat on the journal
+                    print(f"[caravan-web] request journal skipped: {e}", flush=True)
+            job_hdr = {"X-Caravan-Job": job_id} if job_id else None
+
+            def _job(method, *a, **kw):
+                if job_id:
+                    try:
+                        getattr(jobs, method)(job_id, *a, **kw)
+                    except Exception as e:  # noqa: BLE001
+                        print(f"[caravan-web] request journal {method} failed: {e}", flush=True)
+
+            def _later(msg):
+                return (msg + f" Caravan will run it again when the model is back; fetch the reply from /api/jobs/{job_id}."
+                        if job_id else msg)
             try:
                 upstream = urlopen(req, timeout=REPLY_TIMEOUT_S)
             except HTTPError as e:
                 err = e.read().decode(errors="replace")[:500]
-                return self._json(e.code, {"error": err})
+                _job("fail", f"HTTP {e.code}: {err}")
+                return self._json(e.code, {"error": err}, headers=job_hdr)
             except URLError as e:
-                return self._json(502, {"error": f"lead unreachable: {e}"})
+                _job("fail", f"lead unreachable: {e}")
+                return self._json(502, {"error": f"lead unreachable: {e}"}, headers=job_hdr)
             except (OSError, http.client.HTTPException) as e:
-                return self._json(502, {"error": "The model stopped before replying. Check the status line.",
-                                        "detail": str(e)[:300]})
+                _job("interrupt", f"model stopped before replying: {e}")
+                return self._json(502, {"error": _later("The model stopped before replying. Check the status line."),
+                                        "detail": str(e)[:300], "job": job_id}, headers=job_hdr)
 
             if not stream:
                 try:
                     data = json.loads(upstream.read().decode())
                 except (OSError, ValueError, http.client.HTTPException) as e:
-                    return self._json(502, {"error": "The model stopped mid-reply. Check the status line.",
-                                            "detail": str(e)[:300]})
+                    _job("interrupt", f"model stopped mid-reply: {e}")
+                    return self._json(502, {"error": _later("The model stopped mid-reply. Check the status line."),
+                                            "detail": str(e)[:300], "job": job_id}, headers=job_hdr)
                 finally:
                     upstream.close()
                 t_done = time.time()
@@ -2605,15 +2671,19 @@ def make_handler(app: App):
                         "done_mini": t_done,
                     },
                     "stats": stats, "settings": app.mgr.snapshot().get("settings"),
-                    "session": session,
+                    "session": session, "job": job_id,
                 }
                 raw_text = ""
                 for ch in data.get("choices") or []:
                     msg = ch.get("message") or {}
                     raw_text += msg.get("content") or ""
+                import request_journal as RJ
+                reply_, reasoning_, usage_, finish_ = RJ.collect_reply(data)
+                _job("finish", reply=reply_, reasoning=reasoning_, response=data,
+                     usage=usage_, finish_reason=finish_)
                 import web_garble
                 web_garble.attach_garble(app, raw_text, data["caravan_web"])
-                return self._json(200, data)
+                return self._json(200, data, headers=job_hdr)
 
             # Streamed: re-emit SSE, inject a caravan-meta event at the end.
             self.close_connection = True
@@ -2622,12 +2692,23 @@ def make_handler(app: App):
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Connection", "close")
             self.send_header("Transfer-Encoding", "chunked")
+            if job_id:
+                self.send_header("X-Caravan-Job", job_id)
             self._cors()
             self.end_headers()
 
             def send_chunk(payload: bytes):
                 self.wfile.write(b"%x\r\n%s\r\n" % (len(payload), payload))
                 self.wfile.flush()
+
+            if job_id:
+                # SSE comment: every SSE client ignores it; a script can read the id.
+                try:
+                    send_chunk(b": caravan-job " + job_id.encode() + b"\n\n")
+                except (BrokenPipeError, ConnectionResetError):
+                    _job("cancel")
+                    upstream.close()
+                    return
 
             def _scrub_frame(frame: bytes) -> bytes:
                 """Strip end/channel markers from delta.content before forward."""
@@ -2665,10 +2746,18 @@ def make_handler(app: App):
             timings_ = None
             buf = b""
             raw_parts = []
+            reasoning_parts = []
+            finish_reason = None
+            saw_done = False
             cancelled = False
+            upstream_error = None
             try:
                 while True:
-                    chunk = upstream.read(1024)
+                    try:
+                        chunk = upstream.read(1024)
+                    except (OSError, http.client.HTTPException) as e:
+                        upstream_error = e
+                        break
                     if not chunk:
                         break
                     buf += chunk
@@ -2680,6 +2769,7 @@ def make_handler(app: App):
                                 continue
                             payload = line[6:].strip()
                             if payload == b"[DONE]":
+                                saw_done = True
                                 continue
                             try:
                                 obj = json.loads(payload)
@@ -2695,6 +2785,12 @@ def make_handler(app: App):
                             delta = ch0.get("delta") or ch0.get("message") or {}
                             if isinstance(delta.get("content"), str):
                                 raw_parts.append(delta["content"])
+                            for rk in ("reasoning_content", "reasoning"):
+                                if isinstance(delta.get(rk), str):
+                                    reasoning_parts.append(delta[rk])
+                                    break
+                            if ch0.get("finish_reason"):
+                                finish_reason = ch0["finish_reason"]
                             if obj.get("usage"):
                                 usage = obj["usage"]
                             if obj.get("timings"):
@@ -2703,6 +2799,7 @@ def make_handler(app: App):
                         send_chunk(_scrub_frame(frame) + b"\n\n")
             except (BrokenPipeError, ConnectionResetError):
                 cancelled = True
+                _job("cancel")
                 return
             finally:
                 try:
@@ -2710,6 +2807,18 @@ def make_handler(app: App):
                 except Exception:
                     pass
 
+            if job_id and not (finish_reason or saw_done):
+                # The model went away mid-reply (crash, kill): keep the job open.
+                _job("interrupt", f"model stopped mid-reply: {upstream_error or 'stream ended early'}")
+                try:
+                    err = {"error": {"message": _later("The model stopped mid-reply."), "type": "caravan_interrupted"},
+                           "caravan_job": job_id}
+                    send_chunk(f"data: {json.dumps(err)}\n\n".encode())
+                    self.wfile.write(b"0\r\n\r\n")
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, OSError):
+                    pass
+                return
             t_done = time.time()
             if t_first is None:
                 # No content tokens (e.g. empty) — treat first == done.
@@ -2737,9 +2846,17 @@ def make_handler(app: App):
                 "memory_guard": (stats or {}).get("memory_guard"),
                 "settings": app.mgr.snapshot().get("settings"),
                 "session": session,
+                "job": job_id,
             }
+            reply_text = "".join(raw_parts)
+            _job("finish", reply=reply_text, reasoning="".join(reasoning_parts),
+                 response={"object": "chat.completion", "model": body.get("model"),
+                           "choices": [{"index": 0, "finish_reason": finish_reason,
+                                        "message": {"role": "assistant", "content": reply_text}}],
+                           "usage": usage},
+                 usage=usage, finish_reason=finish_reason)
             import web_garble
-            web_garble.attach_garble(app, "".join(raw_parts), meta, cancelled=cancelled)
+            web_garble.attach_garble(app, reply_text, meta, cancelled=cancelled)
             try:
                 send_chunk(f"data: {json.dumps(meta)}\n\n".encode())
                 send_chunk(b"data: [DONE]\n\n")
@@ -2900,6 +3017,25 @@ def main(argv=None):
     print(f"[caravan-web] open http://<this-mac-address>:{args.port}/", flush=True)
     print(f"[caravan-web] lead worker port {args.lead_port}; packer {args.packer_peer}", flush=True)
     app.restore.start(f"http://127.0.0.1:{httpd.server_port}")
+
+    # Day 33: run chats that a power loss or crash cut off, once ready.
+    import request_journal as _RJ
+
+    def _replay_send(body, session):
+        req = Request(f"http://127.0.0.1:{app.mgr.lead_port}/v1/chat/completions",
+                      data=json.dumps(body).encode(), method="POST",
+                      headers={"Content-Type": "application/json",
+                               "X-Caravan-Session": session or uuid.uuid4().hex[:16]})
+        app.chat_begin()
+        try:
+            with urlopen(req, timeout=REPLY_TIMEOUT_S) as r:
+                return json.loads(r.read().decode())
+        finally:
+            app.chat_end()
+
+    app.job_replayer = _RJ.Replayer(app.jobs, snapshot=app.mgr.snapshot, send=_replay_send,
+                                    is_enabled=app.jobs_enabled)
+    app.job_replayer.start()
 
     def _schedule_update_check():
         def _run():

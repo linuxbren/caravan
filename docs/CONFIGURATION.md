@@ -464,6 +464,23 @@ login. Prefer `caravan lan on` / Settings over editing this by hand.
 Toggling restarts only the web page; a loaded model stays loaded.
 See [REMOTE-ACCESS](REMOTE-ACCESS.md).
 
+## Chats after a power loss (`[jobs]`)
+
+On by default. Caravan saves each chat request on the 1st Mac before the
+model sees it and runs unfinished ones again from the start after a
+restart (see [WEB](WEB.md#chats-after-a-power-loss-or-crash)). To turn it
+off:
+
+```toml
+[jobs]
+resume = false
+```
+
+`CARAVAN_RESUME_JOBS=0` in the web service environment also turns it off
+(`1` forces it on). `CARAVAN_JOBS_DIR` moves the journal (default
+`~/.caravan/web-ui/jobs`). Limits are fixed: 1 hour age, 2 tries, 4 MB per
+request, finished jobs kept 3 days, at most 500.
+
 ## Hugging Face token
 
 Unauthenticated Hugging Face downloads are rate-limited. Caravan resolves a

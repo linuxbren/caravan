@@ -3388,6 +3388,34 @@
     }
   }
 
+  // Day 33: chats a power loss or crash cut off are run again after restore.
+  // Show each finished one once, with a plain note (request_journal.py).
+  async function showRecoveredJobs() {
+    let list;
+    try {
+      const r = await fetch("/api/jobs?unseen=1&limit=20");
+      if (!r.ok) return;
+      list = (await r.json()).jobs || [];
+    } catch { return; }
+    for (const j of list.slice().reverse()) {
+      if (j.status !== "done") continue;
+      let full = null;
+      try { full = await (await fetch("/api/jobs/" + encodeURIComponent(j.id))).json(); } catch { continue; }
+      const el = addMsg("assistant", stripMarkers((full && full.reply) || ""));
+      el.dataset.job = j.id;
+      el.classList.add("recovered");
+      const nd = document.createElement("div");
+      nd.className = "garble-note recovered-note";
+      nd.setAttribute("role", "status");
+      const asked = j.prompt_preview ? ` — you asked: “${j.prompt_preview}${j.prompt_preview.length >= 120 ? "…" : ""}”` : "";
+      nd.textContent = "Finished after a restart. Caravan ran this request again from the start" + asked;
+      el.insertBefore(nd, el.querySelector(".body"));
+      try { await fetch("/api/jobs/" + encodeURIComponent(j.id) + "/seen", { method: "POST" }); } catch {}
+    }
+  }
+  setTimeout(() => { showRecoveredJobs(); }, 1500);
+  setInterval(() => { if (!state.streaming) showRecoveredJobs(); }, 10000);
+
   function addMsg(role, text) {
     $("emptyState")?.remove();
     const el = document.createElement("div");
@@ -3608,6 +3636,10 @@
         const err = await r.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${r.status}`);
       }
+      // Day 33: the request journal's id for this reply (GET /api/jobs/<id>).
+      const jobId = r.headers.get("X-Caravan-Job");
+      if (jobId) asst.dataset.job = jobId;
+      let streamErr = "";
       const reader = r.body.getReader();
       const dec = new TextDecoder();
       let buf = "";
@@ -3626,6 +3658,7 @@
             let obj;
             try { obj = JSON.parse(data); } catch { continue; }
             if (obj.object === "caravan.meta") { meta = obj; continue; }
+            if (obj.error) { streamErr = (obj.error.message || String(obj.error)); continue; }
             const ch = (obj.choices || [])[0] || {};
             const delta = ch.delta || {};
             let piece = delta.content || "";
@@ -3691,6 +3724,13 @@
           gd.textContent = meta.garble.message;
           asst.appendChild(gd);
         }
+      } else if (streamErr) {
+        const ed = document.createElement("div");
+        ed.className = "garble-note";
+        ed.setAttribute("role", "status");
+        ed.textContent = streamErr;
+        asst.appendChild(ed);
+        if (!full) bodyEl.textContent = "(reply cut off)";
       } else if (!full) {
         bodyEl.textContent = "(no reply — try again, or reload the model)";
       }

@@ -36,6 +36,7 @@ to install it. Setup keeps your existing models and settings.
 | `caravan doctor` | Shows detailed checks when something goes wrong |
 | `caravan update` | Updates Caravan and brings the page back. `caravan update --check` only checks |
 | `caravan models` | Lists downloaded models, with a friendly name, GGUF or MLX, and the id to copy. Marks the currently loaded one |
+| `caravan jobs` | Lists recent chats Caravan saved, and `caravan jobs <id>` prints one saved reply. A chat cut off by a power loss or crash is run again from the start once the model is back and shows "finished after a restart" |
 | `caravan bench` | Compare a GGUF model to its MLX counterpart by a plain name or by ids. Default: five short prompts and a long-prompt series (~1k, ~4k, ~8k); `--short` or `--long` for just one. Prints a compact chart of reading, writing, and first-token speed; `--details` adds the reply-stats lines; `--ascii` uses plain '#' bars. A shorter First token bar is a sooner reply. Each live run is saved; `--from-averages` shows the last run ("Last bench") or saved chat averages ("Saved"), and says so when there are no numbers yet. Without `--yes` it shows the pair and the exact command. After a live run it puts the original model back. On a terminal, a small campfire shows the current step and elapsed time (`--quiet` turns it off). Run `caravan bench --help` for details |
 
 Use **Unload** in the browser to free the model's memory before stopping.

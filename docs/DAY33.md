@@ -1,5 +1,14 @@
 # Day 33 — Power-loss recovery test
 
+**Result: partial.** Restore passed: both Macs came back by themselves and
+the split model was ready over Thunderbolt about 80 s after power came
+back. Resuming the work failed: the reply being written at the cut was
+lost, and the prompts after recovery were new ones sent by the test
+script, not Caravan finishing the lost one. The point of the test is that
+Caravan *continues the work* after power returns, so Day 33 is recorded as
+partial, and Caravan now journals chats and runs unfinished ones again
+(see "Resume after a power loss" below). A second plug-pull test follows.
+
 Day 33 ran Nov 19 2026 (America/Chicago). The owner pulled the power on
 both Mac minis at once while a split model was busy, then plugged them back
 in. Both Macs have "Start up automatically after a power failure" and
@@ -43,10 +52,16 @@ check round was written (rounds take 5–9 s while Macs are down).
 | First tiny chat answered (queued behind that prompt) | 14:59:37 | +157 s | +149 s |
 | Manual check "Reply with the single word OK" → "OK" | 15:02:04 | — | — |
 
-**Result: pass.** Caravan brought the split model back over Thunderbolt by
-itself, 76 seconds after the 1st Mac powered up, with no one touching
-either Mac. The restore's first attempt found the 2nd Mac not yet
-reachable and retried after 2 s, then 4 s, as designed.
+**Restore: pass.** Caravan brought the split model back over Thunderbolt
+by itself, 76 s after the 1st Mac powered up (about 80 s after the plugs
+went back in), with no one touching either Mac. The restore's first
+attempt found the 2nd Mac not yet reachable and retried after 2 s, then
+4 s, as designed.
+
+**Work resume: fail.** Request 2 below was being answered at the cut. It
+was lost: Caravan had no record of it, so nothing ran it again, and the
+client only got an ssh timeout. The later successful replies (6 and 7)
+were new prompts from the test loop.
 
 ## Load loop
 
@@ -73,6 +88,48 @@ The loop was stopped at 15:03 after recovery was confirmed.
   (`peer-routes.json`). Only the test watcher had the old address hard-coded;
   it was restarted at 14:59:08 to read the current one.
 
+## Resume after a power loss (new)
+
+Built after the test, to make Caravan finish the work:
+
+- **Journal.** Every chat sent to the page (`/api/chat` and
+  `/v1/chat/completions`, streamed or not) is written to
+  `~/.caravan/web-ui/jobs/<id>.json` before the model sees it: one file per
+  job, written to a temp file, fsync'd, renamed, and the folder fsync'd, so
+  a power loss leaves either the old or the new record, never half of one.
+  It is marked done, with the whole reply, when the reply finishes.
+  Caravan has no Anthropic-style `/v1/messages` endpoint today, so there is
+  nothing else to journal.
+- **Run again.** Once the same model is ready (boot restore loads it by
+  itself), Caravan runs each unfinished job again **from the start**, not
+  mid-sentence, and saves the reply. A try is counted before it starts, so
+  a second power loss mid-replay still counts.
+- **Getting the answer.** `X-Caravan-Job` header; a streamed reply starts
+  with the SSE comment `: caravan-job <id>`; `GET /api/jobs` and
+  `GET /api/jobs/<id>`; `caravan jobs [<id>]`. The chat shows a recovered
+  reply once, with the note "Finished after a restart".
+- **Limits.** Older than 1 hour when the model is back: not run
+  (`expired`). At most 2 tries (`gave_up`). Requests over 4 MB are not
+  saved. Done jobs never run again; a job the client cancelled is not run
+  again. Finished jobs are deleted after 3 days, at most 500 kept.
+- **Opt-out.** `[jobs] resume = false` in `~/.caravan/config.toml`, or
+  `CARAVAN_RESUME_JOBS=0`. Default on.
+- **Privacy.** The journal holds prompts and replies, stays on the 1st Mac
+  (owner-only folder and files), and `caravan uninstall` removes it with
+  `~/.caravan`.
+- Not covered: requests sent while the 1st Mac is still loading get "no
+  model loaded" and are not saved (the client must send them again). If
+  the power goes after the reply finished but before "done" was written,
+  that one reply runs again (at least once, not exactly once).
+
+See [WEB](WEB.md#chats-after-a-power-loss-or-crash). Tests:
+`tests/test_day33_jobs.py` (journal crash safety, run-again-once, limits,
+opt-out, endpoint wiring, CLI).
+
+### Live check with a fake crash
+
+Run on the 1st Mac after installing this release; the results are added here in the next commit.
+
 ## Fixed
 
 - **Plain wording while the restore waits.** The page showed "Waiting for
@@ -87,6 +144,6 @@ The loop was stopped at 15:03 after recovery was confirmed.
   flash attention and prompt batch. Caravan now reports the chat memory
   llama-server was actually started with (16-bit here).
 
-Tests: `tests/test_day33_power_restore.py`; the full suite passes.
+Tests: `tests/test_day33_power_restore.py` and `tests/test_day33_jobs.py`; the full suite passes.
 Nothing in `agent/` worker code or the requirements changed (one message
 in `agent/service_endpoints.py`), so `caravan update` keeps a loaded model.
