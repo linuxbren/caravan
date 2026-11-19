@@ -1,3 +1,12 @@
+## 2026-11-19: Day 32 — Caravan lives on main
+
+Everything moves to `main`. Install, `caravan update`, Update now and the
+update check read `main`; the old branch names are fast-forwarded with
+every release so installs from before today keep updating, and no branch
+is deleted. Docs, the pairing help link and the website use the new
+install line. Compatibility names (`com.caravan.v3.*`, `~/cv3`) and
+history are unchanged. See [DAY32](DAY32.md).
+
 ## 2026-11-19: Day 31 — GGUF chat window at the model's full trained length
 
 "Context is important." Chat window Auto now picks the longest window

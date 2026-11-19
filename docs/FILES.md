@@ -61,7 +61,7 @@ blocks loading incomplete models). Choose a model, then adjust a layer boundary:
   After stopping a rediscovered transfer, refresh the same Balance counts and
   Fetch again to resume; completed job history is not rebuilt after a restart.
 
-All participating nodes need this branch and a working Caravan Python/HF setup.
+All participating nodes need the same Caravan release and a working Caravan Python/HF setup.
 Unchanged jobs are blocked from racing a second download for the same repo.
 Disk usage includes metadata and partial/cache files below the model folder;
 allocated bytes dedupe hard links, and symlinks are listed, not followed. Linked

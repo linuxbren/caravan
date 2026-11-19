@@ -24,9 +24,7 @@ The config file path can be changed with `CARAVAN_CONFIG` (the agent and
 the standalone cleanup also take `--config`). A missing file is fine. An
 unreadable file is reported with a warning and ignored.
 
-All names below were checked against the v3 code (branch
-`caravan-v3-mlx-split`). Everything except the MLX split section is the
-same on `main` (v2.1).
+All names below are checked against the code on `main`.
 
 ## The config file
 
@@ -263,7 +261,7 @@ Split flags (v3; see the next section):
 `com.caravan.mlx-server`, log `~/.caravan/logs/mlx-server.log`) from the
 same settings. Loading it into launchd is a manual step.
 
-## MLX split across two Macs (v3)
+## MLX split across two Macs
 
 One MLX model can run across two Macs: Packer 1 runs the first layers and
 the lead runs the rest. How it works: [MLX-SPLIT.md](MLX-SPLIT.md).

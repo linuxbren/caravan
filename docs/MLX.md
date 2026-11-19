@@ -28,7 +28,7 @@ request whose `model` is an MLX id goes to the **Caravan MLX worker**
 One worker serves one model. The worker takes 6–9 s to start (plain
 `mlx_lm.server`: about 1.6 s).
 
-**Too big for one Mac?** Since v3 the same worker can split one model
+**Too big for one Mac?** The same worker can split one model
 across two Macs: Packer 1 runs the first layers and the lead runs the rest
 and serves the API (`--split-role packer|lead`). See
 [MLX-SPLIT.md](MLX-SPLIT.md).
@@ -166,7 +166,7 @@ limit 0 -> 19069665280 bytes (held for process lifetime)`. Options are
 | POST | `/caravan/cache/restore` | `{"key": fp}` → `warm`, `restored`, `miss` or `rejected`. |
 | POST | `/caravan/cache/save` | `{"key": fp}`: write the session's checkpoint to disk. |
 | POST | `/caravan/cache/drop` | `{"keys": [...]}`: forget sessions in memory. |
-| GET | `/caravan/split` | v3, lead only: both halves' layers and memory, and the link stats. Reports `lead` and `packers` (plus the deprecated `head` / `front` keys). |
+| GET | `/caravan/split` | Lead only: both halves' layers and memory, and the link stats. Reports `lead` and `packers` (plus the deprecated `head` / `front` keys). |
 | POST | `/v1/chat/completions`, `/v1/completions` | OpenAI-compatible, streaming or not. |
 
 ## Results
@@ -183,11 +183,11 @@ Single Mac mini, through the proxy; see the benchmark log for exact hardware. Fu
 
 ## Limits
 
-- **One model per worker.** On one Mac, or split across two with v3
+- **One model per worker.** On one Mac, or split across two
   ([MLX-SPLIT.md](MLX-SPLIT.md); slower, and started by hand for now).
 - **Qwen3 30B at 16k doesn't fit** on the tested single Mac with a plain f16 cache,
   not even with `--kv-bits 8`. Use 4k–8k chats, the GGUF build of the
-  model, or the v3 split across two Macs (about 10.5 GB per Mac).
+  model, or the MLX split across two Macs (about 10.5 GB per Mac).
 - **Gemma 4 reads short prompts about 8% slower** than with plain
   `mlx_lm.server` (397 vs 430 tok/s on a 512-token prompt, side by side).
   The likely cause is the checkpoint snapshot of its sliding-window

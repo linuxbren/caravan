@@ -1,4 +1,4 @@
-# MLX split across two Macs (Caravan v3)
+# MLX split across two Macs
 
 > **Day 19 (2026-11-08):** An experimental N-stage path now exists through
 > Topology → Balance and `--split-counts` / `--split-stage-index` /
@@ -41,7 +41,7 @@ splits a GGUF:
   at it), runs the last layers and picks each token.
 - The **packers** are the other Macs, numbered in layer order: Packer 1
   runs the first layers, then Packer 2, and so on, and the lead finishes.
-  v3 has exactly one, Packer 1.
+  The two-Mac split has exactly one, Packer 1.
 - The **string** is the whole group (lead plus packers).
 
 Earlier drafts called these "head" and "front" (and the llama.cpp RPC
@@ -161,7 +161,7 @@ faster.
 return the two commands above. `caravan_agent.py --apply` and
 `render_mlx_plist.py` don't use it yet: they still start a one-Mac
 worker, so start both halves by hand for now. All flags and settings:
-[CONFIGURATION.md](CONFIGURATION.md#mlx-split-across-two-macs-v3).
+[CONFIGURATION.md](CONFIGURATION.md#mlx-split-across-two-macs).
 `GET /caravan/split` on the lead shows both stages' memory and the link
 stats; every reply's `usage.caravan.split` has the per-request network
 cost (calls, MB each way, time waiting on the packer, network time).

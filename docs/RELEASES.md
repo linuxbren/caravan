@@ -9,9 +9,25 @@ If a correction needs a new release, append `-fix1`, `-fix2`, and explain it.
 1. Finish docs, CHANGELOG and the Obsidian day note. Keep every test result,
    including failures. Update INSTALL.md if setup changes.
 2. Run `PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests`.
-3. Commit as linuxbren. Push `caravan-v3-mlx-split`, then fast-forward `main`
-   to the same commit. Check ancestry first; never force or rewrite history.
-   Keep the working branch on `caravan-v3-mlx-split`.
+3. Commit as linuxbren on `main` (the only working branch since Day 32):
+   the source commit, then the pin commit that sets `packaging-version` to
+   that source commit and its codeload SHA-256. Push `main` (ff-only).
+   **Transition:** installs from before Day 32 read `packaging-version` and
+   the `install` script from `caravan-v3-mlx-split` (and older ones from
+   `clean-install-fixes`). With every release, fast-forward both to the same
+   commit as `main`; check ancestry first, never force, never delete them:
+
+   ```sh
+   git fetch origin
+   for b in caravan-v3-mlx-split clean-install-fixes; do
+     git merge-base --is-ancestor "origin/$b" main || { echo "$b is not behind main"; exit 1; }
+   done
+   git push origin main main:caravan-v3-mlx-split main:clean-install-fixes
+   ```
+
+   An install picks up `main` as its channel after its first update to a
+   Day 32 or later build. Keep the fast-forwards until the owner decides
+   no older installs are left.
 4. Build clean packages from the committed tree (not the working directory):
 
 ```sh
@@ -55,7 +71,8 @@ passing the stdlib suite proves a clean Mac installation or hardware speed.
 - [ ] Set `packaging-version` to the codeload SHA and SHA-256 of that exact
   committed tree; verify the published curl path after pushing. The bootstrap
   follows a moving channel but always verifies a specific source commit.
-- [ ] Push branch, fast-forward main; never move existing tags or replace old
+- [ ] Push `main`, fast-forward `caravan-v3-mlx-split` and
+  `clean-install-fixes` to it (transition, step 3); never move existing tags or replace old
   release assets with newer code. Prepare follow-up artifacts for the next
   authorized release, or a clearly named correction release.
 - [ ] ff-only pull each intended Mac checkout using its verified actual path,

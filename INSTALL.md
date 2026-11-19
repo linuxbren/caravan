@@ -10,7 +10,7 @@ Macs, lets you run bigger models. Caravan checks what fits.
 2. Paste this command and press **Return**:
 
 ```sh
-(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install | bash)
+(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/main/install | bash)
 ```
 
 3. Wait for the browser to open. Setup gets everything Caravan needs. No Git,

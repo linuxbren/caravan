@@ -14,7 +14,8 @@ usage() {
 ROLE=lead
 WEB_PORT=8190
 REPO="$HOME/.caravan/src/caravan"
-REF=caravan-v3-mlx-split
+REF=main
+REF_GIVEN=0
 PYTHON=""
 DRY=0
 START=1
@@ -36,7 +37,7 @@ while [ "$#" -gt 0 ]; do
     --role|--repo|--ref|--python)
       [ "$#" -ge 2 ] || fail "$1 needs a value."
       case "$1" in
-        --role) ROLE=$2 ;; --repo) REPO=$2 ;; --ref) REF=$2 ;; --python) PYTHON=$2 ;;
+        --role) ROLE=$2 ;; --repo) REPO=$2 ;; --ref) REF=$2; REF_GIVEN=1 ;; --python) PYTHON=$2 ;;
       esac
       shift 2 ;;
     --model|--counts|--stage-index|--listen|--upstream|--peer|--name|--port|--host|--lead-port)
@@ -99,6 +100,15 @@ if [ -d "$REPO/.git" ]; then
   esac
   [ -z "$(git -C "$REPO" status --porcelain)" ] || fail 'Your checkout has local changes. Keep them; commit or choose a different folder before installing.'
   CURRENT=$(git -C "$REPO" symbolic-ref --short -q HEAD || git -C "$REPO" describe --tags --exact-match HEAD || true)
+  # Checkouts made before Day 32 follow an old branch name. Those branches are
+  # fast-forwarded to main with every release, so keep pulling the branch the
+  # checkout is on instead of refusing it (no branch is switched).
+  if [ "$REF_GIVEN" = 0 ] && [ "$CURRENT" != "$REF" ]; then
+    case "$CURRENT" in caravan-v3-mlx-split|clean-install-fixes)
+      say "This checkout follows the old branch name $CURRENT; it gets the same releases as main."
+      REF=$CURRENT ;;
+    esac
+  fi
   [ "$CURRENT" = "$REF" ] || fail "Checkout is $CURRENT, not $REF. No branch was changed."
   if [ "$UPDATE" = 1 ]; then
     git -C "$REPO" symbolic-ref -q HEAD >/dev/null || fail 'A release tag is immutable; choose a new install folder to change releases.'

@@ -1,3 +1,16 @@
+## Day 32 — Caravan lives on main
+
+- Install, `caravan update`, Update now and the daily update check read
+  `main`. New install line:
+  `(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/main/install | bash)`.
+- Installs from before Day 32 keep updating: each release also
+  fast-forwards `caravan-v3-mlx-split` and `clean-install-fixes` to `main`.
+  Source checkouts on an old branch keep pulling it.
+- Docs, the pairing help link and the website point at `main`; "v3" is
+  gone where it was only the branch or a legacy label. Compatibility names
+  (`com.caravan.v3.*`, `~/cv3`) and history are unchanged.
+  See [DAY32](docs/DAY32.md).
+
 ## Day 31 — GGUF chat window at the model's full trained length
 
 - Chat window Auto picks the longest window that fits in memory, up to

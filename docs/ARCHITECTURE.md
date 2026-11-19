@@ -1,7 +1,6 @@
 # Architecture
 
-How Caravan is put together: v2.1 on `main`, plus the v3 MLX split on
-the `caravan-v3-mlx-split` branch. For settings see
+How Caravan is put together. Everything lives on `main`. For settings see
 [CONFIGURATION.md](CONFIGURATION.md). For the MLX worker in depth see
 [MLX.md](MLX.md), and for the MLX split [MLX-SPLIT.md](MLX-SPLIT.md).
 
@@ -12,7 +11,7 @@ to: it serves the API, runs the last layers and picks each token. The
 **packers** are the other Macs, numbered in layer order (Packer 1 runs the
 first layers, then Packer 2, and so on; the lead finishes). The whole group
 is the **string**. For llama.cpp RPC the packer is the Mac running
-`ggml-rpc-server`; for the MLX split (v3) it's the Mac running the
+`ggml-rpc-server`; for the MLX split it's the Mac running the
 worker with `--split-role packer`. Older log entries and some internal
 code names (`supervisor.build_head_command()`, `build_tail_command()`,
 role values `head` / `front` / `tail`) still use the old words "head",
@@ -54,7 +53,7 @@ flowchart LR
 | Agent | `agent/caravan_agent.py` and friends | Runs the same way on every Mac. It finds peers, picks a role (lead, packer or MLX), builds the server command, and supervises it. It also serves `/health` on port 8091. |
 | llama.cpp | `~/dev/llama.cpp` (fork `linuxbren/llama.cpp`, branch `caravan-patches`) | `llama-server` on the lead and `ggml-rpc-server` on the packer. |
 | MLX worker | `agent/mlx_worker.py`, launched via `agent/mlx_backend.py` | Caravan's own OpenAI-compatible MLX server with per-session caches. See [MLX.md](MLX.md). |
-| MLX split (v3) | `agent/mlx_split.py`, `agent/mlx_worker.py --split-role`, `agent/mlx_split_fetch.py` | One MLX model across two Macs: Packer 1 runs the first layers, the lead runs the rest and serves the API, over one TCP connection on the Thunderbolt cable. Split download prototype. See [MLX-SPLIT.md](MLX-SPLIT.md). |
+| MLX split | `agent/mlx_split.py`, `agent/mlx_worker.py --split-role`, `agent/mlx_split_fetch.py` | One MLX model across two Macs: Packer 1 runs the first layers, the lead runs the rest and serves the API, over one TCP connection on the Thunderbolt cable. Split download prototype. See [MLX-SPLIT.md](MLX-SPLIT.md). |
 | launchd | `launchd/` | Plists for the agent, the proxy, and a manual per-role setup. The llama-server and MLX plists can be rendered from the agent's own command builders (`render_llama_plist.py`, `render_mlx_plist.py`). |
 | Paused C++ experiment | `docs/history/cpp/` | Parked to focus on the current Python/browser Mac app; not installed or built by the package. |
 
@@ -336,7 +335,8 @@ Flag names in this repo were checked against `caravan-patches`.
 6. **v2 / v2.1** (Oct 31). The Caravan MLX worker with per-session caches
    saved to disk, clean GPT-OSS replies, the per-Mac cap, then the wired
    limit held from startup.
-7. **v3** (Oct 31, branch `caravan-v3-mlx-split`, not merged yet). One MLX
+7. **MLX split** (Oct 31, then called v3 on its own branch; on `main` since
+   Day 32). One MLX
    model split across two Macs over Caravan's own TCP link, chat memory
    on both halves, a split-download prototype, and the lead / packer /
    string names.

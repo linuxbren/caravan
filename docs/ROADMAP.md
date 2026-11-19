@@ -86,6 +86,10 @@ and the daily logs, not mixed into current setup instructions.
 - **Native context for GGUF (Day 31, done):** Chat window Auto now runs a
   GGUF model as close to its trained window as memory allows, with no
   fixed 32K cap. See [DAY31](DAY31.md).
+- **One branch, `main` (Day 32, done):** install and update read `main`;
+  the old branch names are fast-forwarded with each release for older
+  installs. Retire those fast-forwards once no older installs are left.
+  See [DAY32](DAY32.md).
 
 ## Next candidates
 

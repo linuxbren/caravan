@@ -135,7 +135,8 @@ def main(argv=None):
                 except Exception as peer_error:
                     print(f"Couldn't update the other Macs ({peer_error}). This Mac will still update.", flush=True)
             # Fetch to a file: a failed HTTP request can never run a partial shell script.
-            with urllib.request.urlopen("https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install?channel=" + str(time.time_ns()), timeout=30) as response:
+            from caravan_update_check import INSTALL_URL
+            with urllib.request.urlopen(INSTALL_URL + "?channel=" + str(time.time_ns()), timeout=30) as response:
                 data = response.read()
             with tempfile.NamedTemporaryFile(suffix=".sh") as script:
                 script.write(data); script.flush()

@@ -18,7 +18,7 @@ Run a big AI model across your Macs at home. Your chats run on your own Macs, no
 Open **Terminal** (find it with Spotlight), paste this, and press **Return**:
 
 ```sh
-(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/caravan-v3-mlx-split/install | bash)
+(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/main/install | bash)
 ```
 
 Setup checks your Mac, prepares what Caravan needs, and opens your browser. Open a new Terminal window afterward to use `caravan status`. You do not need Homebrew, Git, an administrator password, or developer tools. The command downloads and runs a script; [read it first](install) if you prefer. Downloads need internet access.
@@ -88,7 +88,7 @@ link it picked.
 
 ## For developers / details
 
-[What's new (Day 27)](docs/DAY27.md) · [Developer setup](docs/DEVELOPMENT.md) · [Clean-install fixes and verification](docs/DAY23.md) · [Package status](docs/PACKAGING.md) · [Documentation index](docs/README.md) · [Changelog](CHANGELOG.md).
+[What's new (Day 32)](docs/DAY32.md) · [Developer setup](docs/DEVELOPMENT.md) · [Clean-install fixes and verification](docs/DAY23.md) · [Package status](docs/PACKAGING.md) · [Documentation index](docs/README.md) · [Changelog](CHANGELOG.md).
 
 The browser page is for your own Mac. Do not expose it to the public internet.
 

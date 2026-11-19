@@ -490,7 +490,7 @@ class InstallerScriptTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             folder=Path(root)/"repo"
             subprocess.run(["git","init","-q",str(folder)],check=True)
-            subprocess.run(["git","-C",str(folder),"symbolic-ref","HEAD","refs/heads/caravan-v3-mlx-split"],check=True)
+            subprocess.run(["git","-C",str(folder),"symbolic-ref","HEAD","refs/heads/main"],check=True)
             subprocess.run(["git","-C",str(folder),"remote","add","origin","https://github.com/linuxbren/caravan.git"],check=True)
             result=self.script(root,"--dry-run","--python",sys.executable,"--repo",str(folder))
             self.assertEqual(result.returncode,0,result.stderr)

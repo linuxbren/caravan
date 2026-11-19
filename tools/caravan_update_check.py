@@ -26,9 +26,15 @@ except ImportError:  # pragma: no cover
     ZoneInfo = None
 
 
-# Releases come from this branch (Nov 13 test bump 3).
-CHANNEL_BRANCH = "caravan-v3-mlx-split"
+# Releases come from main (Day 32). Installs from before Day 32 still read
+# the pin from the old branch names, so each release also fast-forwards
+# LEGACY_CHANNEL_BRANCHES to main (docs/RELEASES.md). Nothing here reads them.
+CHANNEL_BRANCH = "main"
+LEGACY_CHANNEL_BRANCHES = ("caravan-v3-mlx-split", "clean-install-fixes")
 CHANNEL_REPO = "linuxbren/caravan"
+INSTALL_URL = (
+    f"https://raw.githubusercontent.com/{CHANNEL_REPO}/{CHANNEL_BRANCH}/install"
+)
 MANIFEST_URL = (
     f"https://raw.githubusercontent.com/{CHANNEL_REPO}/{CHANNEL_BRANCH}/"
     "packaging-version"

@@ -9,7 +9,7 @@ if you are reading older build logs.
 Use a folder you own. Do not point development work at an active installation.
 
 ```sh
-git clone --branch caravan-v3-mlx-split https://github.com/linuxbren/caravan.git "$HOME/projects/caravan"
+git clone --branch main https://github.com/linuxbren/caravan.git "$HOME/projects/caravan"
 cd "$HOME/projects/caravan"
 ```
 
@@ -226,9 +226,15 @@ ports and service names**:
 ```sh
 cd /your/existing/caravan
 # Check/commit your own edits first. Never reset them.
-git pull --ff-only origin caravan-v3-mlx-split
+git pull --ff-only origin main
 bash scripts/install.sh --use-existing --repo "$PWD" --python /absolute/path/to/python3
 ```
+
+A checkout made before Day 32 may still be on `caravan-v3-mlx-split` or
+`clean-install-fixes`. Those branches get every release too (they are
+fast-forwarded to `main`), so `git pull --ff-only` keeps working and
+`scripts/install.sh --update` pulls the branch the checkout is on. To move
+to the plain name: `git fetch origin && git switch main`.
 
 Python must be native Apple Silicon 3.10+. `scripts/install.sh --dry-run`
 previews commands without writing; `--check` runs read-only doctor checks.
