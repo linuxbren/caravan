@@ -1,4 +1,4 @@
-## Day 31 (in progress) — placement counts the chat window
+## Day 31 (in progress) — placement counts the chat window; load list shows only downloaded models
 
 See [DAY31](docs/DAY31.md).
 
@@ -16,6 +16,11 @@ See [DAY31](docs/DAY31.md).
 - A Mac whose memory cannot be read no longer counts as a fit for GGUF.
 - Fixed: the chat-memory estimate counted only the first part of a
   multi-part GGUF download.
+- Fixed: the Settings list of models to load showed models that were not
+  downloaded (partial downloads, a split missing its other half, the loaded
+  model after its files were gone, GGUF share records with a missing part).
+  It now lists only models whose files are complete on the Mac or Macs
+  that will run them. Deleting a model updates the list right away.
 
 ## Day 30 (v0.9.0) — Power-loss resume, full GGUF chat window, one main branch
 

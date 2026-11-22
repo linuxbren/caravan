@@ -1,9 +1,10 @@
-# Day 31 — placement counts the chat window
+# Day 31 — placement counts the chat window; load list shows only downloaded models
 
 Day 31 started Nov 21 2026 (America/Chicago). One dev session is one Day;
 this page grows as the Day goes on.
 
 1. [Part A: placement counts the chat window](#part-a-placement-counts-the-chat-window)
+2. [Part B: the Settings load list shows only downloaded models](#part-b-the-settings-load-list-shows-only-downloaded-models)
 
 ## Part A: placement counts the chat window
 
@@ -120,3 +121,82 @@ The GGUF windows match what Chat window Auto picked on Day 30.
   Mac. With matching Macs (the tested setup) they agree exactly.
 - The Guess-ahead helper is not counted in the plan; at load it is left off
   if it does not fit with the chosen window, as before.
+
+### Live check after publish
+
+Published as source `24c7a9b`, pin `ece5456`, and installed with
+`caravan update` on the 1st Mac. The Settings list (`/api/models`) then
+showed the new placement notes, matching the table above:
+
+- Llama 3.2 1B and Llama 3.1 8B GGUF: "Fits on 1 Mac with the full 128K
+  window."
+- gpt-oss 20B GGUF: 1 Mac, full 128K window.
+- Qwen3 30B-A3B GGUF: "Split across 2 Macs for the full 32K window."
+- MLX: Qwen3 30B-A3B 4-bit was the only MLX model still on disk (the
+  others were deleted from the page during the check), so the MLX rows
+  above come from the pre-publish check with the real configs.
+
+## Part B: the Settings load list shows only downloaded models
+
+Brenden saw many models in the Settings list of models to load, including
+ones that were not downloaded. Rule: a model whose files are not complete
+on the Mac or Macs that will run it never appears there.
+
+### Cause
+
+Not the installed-models cache: the server builds the list live from each
+Mac's disk on every request. The list came from the full catalog, built
+with "include models that can't load" turned on so the page could show a
+reason. That kept rows whose files were **not** complete:
+
+- partial downloads (any weight file present, others missing);
+- a split whose other Mac's half was missing or deleted, and a saved
+  one-Mac placement whose Mac no longer had the files;
+- the loaded model, kept even after its files were gone;
+- saved GGUF share records whose part or Mac was missing.
+
+They showed greyed out, which still looks like "this is here". A GGUF file
+whose later parts were still downloading could also be listed. After a
+delete, the page refreshed only the disk panel, so the deleted model stayed
+in the list until the next 5-second refresh (which only runs while the page
+is visible).
+
+### Fix
+
+- Each catalog row now says whether its files are complete on every Mac
+  its load plan needs. The Settings list keeps only those rows. A
+  downloaded model that can't run (too big, unsupported) still shows with
+  its reason.
+- The loaded model stays only if its folder is really there (so a slow
+  inventory from the other Mac doesn't hide it).
+- GGUF share records show only when every part and Mac is ready; a GGUF
+  file with a part still downloading is skipped.
+- Deleting a model refreshes the Settings list right away.
+
+### Live check
+
+Read only: nothing was deleted to test. The list was compared with each
+Mac's model folders.
+
+| Mac | Before (list / on disk) | After (list / on disk) |
+|---|---|---|
+| 1st Mac | 13 / 13 (during Brenden's deletes), then 9 / 9 | AFTER1 |
+| 2nd Mac | 1 / 1 | AFTER2 |
+
+At the time of the check every listed model was on disk: the models that
+had shown up without files were gone after the deletes, so the bug was
+fixed from the code paths above and covered by tests rather than
+reproduced live.
+
+### Tests
+
+- `tests/test_day31_load_list.py` (14 tests): a complete model is listed; a
+  partial download, a split missing its other half, a one-Mac placement
+  without its copy, a folder with only metadata, the loaded model without
+  files and the built-in catalog are not; the loaded model missed by a slow
+  inventory stays; a downloaded but too-big model still shows with its
+  reason; GGUF share records with a missing part and GGUF files still
+  downloading are not listed; delete refreshes the list; the server filters
+  the list.
+- Full suite: 2,007 tests, OK.
+

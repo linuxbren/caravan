@@ -93,6 +93,11 @@ you had previously chosen Nebula, the page opens in Campfire instead.
 
 ## Settings and optimization
 
+The list of models to load shows only models whose files are complete on
+the Mac or Macs that will run them: no partial downloads, no split missing
+its other half. A downloaded model that can't run here still shows, with
+the reason. Deleting a model removes it from the list right away.
+
 **Self-tuning** stays visible in Settings and is on by default: Caravan learns
 from your chats and remembers faster settings for each model; pinned choices
 stay yours. Below a thin divider, **Auto-tune** sits outside Advanced,

@@ -315,6 +315,13 @@ def build_entries_from_inventories(
             elif fit.get("nodes_needed") and fit["nodes_needed"] >= 2:
                 need_split = True
 
+        # Day 31 part B: reasons added from here to the architecture check
+        # are about missing files; a row with any of them is not downloaded
+        # and never belongs in the Settings load list.
+        n_before_files = len(reasons)
+        files_ok = bool(per) and any(
+            isinstance(st, dict) and st.get("downloaded") is not False for st in per.values())
+
         # Completeness requirements — honor saved placement when present.
         place_mode = (placement or {}).get("mode")
         place_ids = set((placement or {}).get("node_ids") or [])
@@ -430,6 +437,11 @@ def build_entries_from_inventories(
                     why = st.get("reason") or (f"missing shards on {label}" if st else f"not on {label}")
                     reasons.append(why)
 
+        if len(reasons) > n_before_files:
+            files_ok = False
+        if is_current and not files_ok and lead_path and Path(str(lead_path)).expanduser().is_dir():
+            files_ok = True  # the running model, missed by a slow inventory
+
         # Architecture support (e.g. qwen3_5_text remapped; truly unknown flagged)
         try:
             from mlx_arch import architecture_status
@@ -482,6 +494,8 @@ def build_entries_from_inventories(
             "packer_path": packer_path,
             "available_lead": bool(lead_path) and usable,
             "usable": usable,
+            # Day 31: complete files on every Mac its load plan needs.
+            "files_ready": bool(files_ok),
             "disabled": not usable,
             "disabled_reason": disabled_reason,
             "weights_gb": weights,

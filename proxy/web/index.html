@@ -5207,6 +5207,8 @@
               try {
                 await api("/api/picker/delete", { method: "POST", body: JSON.stringify({ id: m.id, confirm: true }) });
                 refreshDisk();
+                // Day 31: the Settings load list drops the deleted model right away.
+                if (window.refreshCaravanModels) window.refreshCaravanModels();
               } catch (e) { alert(e.message); }
             },
           }));

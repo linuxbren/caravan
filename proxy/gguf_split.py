@@ -79,6 +79,10 @@ def scan_local(roots=None) -> list:
                 nearby = {str(f.relative_to(p.parent)): f.stat().st_size for f in p.parent.glob("*.gguf")}
                 parts = members(p.name, nearby)
                 size = sum(nearby[n] for n in parts)
+                # Day 31: a part still downloading is not a downloaded model.
+                dl = p.parent / ".cache" / "huggingface" / "download"
+                if any((dl / (n + ".incomplete")).exists() for n in parts):
+                    continue
                 # If downloaded here, insist on the exact verified byte counts too.
                 import json
                 receipt = p.parent / 'caravan-gguf-source.json'

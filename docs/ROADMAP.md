@@ -105,6 +105,9 @@ and the daily logs, not mixed into current setup instructions.
     smallest placement that holds the full window; one Mac when it does.
     GGUF placement and Chat window Auto use the same numbers, MLX uses
     the model's real config, and unknown memory fails closed.
+  - **Part B, load list shows only downloaded models:** the Settings list
+    of models to load lists only models whose files are complete on the
+    Mac or Macs that will run them, and updates right after a delete.
 
 ## Next candidates
 

@@ -716,7 +716,7 @@ class App:
             max_split_stages=web_nodes.stage_limit(self.configured_nodes()),
             include_unusable=True,
         )
-        return rows + self.gguf_entries(live or self.configured_nodes(), current)
+        return loadable_only(rows + self.gguf_entries(live or self.configured_nodes(), current))
 
     def gguf_entries(self, nodes: list, current=None) -> list:
         """GGUF files on the lead Mini. llama.cpp RPC ships each peer its share
@@ -746,6 +746,28 @@ class App:
         import web_gguf_shares
         return out + web_gguf_shares.entries(nodes,current)
 
+
+
+def loadable_only(rows: list) -> list:
+    """Day 31 part B (Brenden): the Settings load list shows only models
+    whose files are complete on the Mac or Macs that will run them.
+
+    Before, partial downloads, a split whose other half was deleted, the
+    loaded model after its files were gone and saved GGUF share records
+    whose files or Macs were missing were all listed (greyed out or not).
+    A downloaded model that can't run (too big, unsupported) still shows,
+    with its reason."""
+    out = []
+    for r in rows or []:
+        if not isinstance(r, dict):
+            continue
+        if r.get("sharded"):
+            if not r.get("usable"):
+                continue  # share record: a Mac or its part is missing
+        elif r.get("source") != "gguf" and not r.get("files_ready", True):
+            continue
+        out.append(r)
+    return out
 
 
 _PAGE_TAGS = {}

@@ -1,3 +1,14 @@
+## 2026-11-21: Day 31 — Settings load list shows only downloaded models (part B)
+
+The Settings load list was the whole catalog with "include models that
+can't load" on, so partial downloads, splits missing a half, the loaded
+model without files and GGUF share records with a missing part were
+listed (greyed). Now only rows whose files are complete on the Macs that
+will run them are listed; too-big or unsupported downloaded models still
+show with a reason. Delete refreshes the list at once. Read-only live check
+on both Macs: list matched disk. Suite 2,007 OK. See
+[DAY31](DAY31.md#part-b-the-settings-load-list-shows-only-downloaded-models).
+
 ## 2026-11-21: Day 31 — Placement counts the chat window (part A)
 
 Deciding between one Mac and a split now counts the memory for the model's
