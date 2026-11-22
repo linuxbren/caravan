@@ -150,6 +150,11 @@ and the daily logs, not mixed into current setup instructions.
     finishes (also after an error or Stop), shown as a small strip along
     the bottom of the answer, one chip per message with a × to cancel. A
     queued message is journaled only when it sends.
+  - **API keys for cloud models in Settings (waiting on approval, not
+    built):** Caravan has no working cloud provider today (Ollama Cloud is
+    listed in Models but "framework-only", key only from the
+    `OLLAMA_API_KEY` environment variable). Proposal in
+    [DAY32](DAY32.md#proposal-api-keys-for-cloud-models).
   - **Localization (main theme, not started):** pull every web page, CLI and installer string
     into one English strings file keyed by name, with lookups that fall
     back to English for a missing key or language. First languages:

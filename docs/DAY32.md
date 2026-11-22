@@ -8,6 +8,7 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 2. [Plan: localization](#plan-localization)
 3. [Part A: version label](#part-a-version-label)
 4. [Part A fix: daily update check (v0.9.5)](#part-a-fix-daily-update-check-v095)
+5. [Proposal: API keys for cloud models](#proposal-api-keys-for-cloud-models)
 
 ## Status of every Day 32 request
 
@@ -17,6 +18,7 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 | Daily-check-off fix and daily check audit ([v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5)) | Done, released, on both Macs, checked live with the switch on and off |
 | Header layout: model/status pill above and outside the chat card's top-left corner (just outside its border, where the CHAT label was); **Update available** right of the theme picker; nothing wraps at narrow widths (long model names end in "…", full name on hover) | In progress on a local branch; waiting on Brenden's approval before release |
 | Chat message queue: Send reads **Queue** while the model answers; queued messages send in order when the answer finishes (also after an error or Stop); a small strip along the bottom of the answer, one chip per message with a × to cancel; a queued message is journaled only when it sends; Stop still works | In progress on a local branch; waiting on Brenden's approval before release |
+| API keys for cloud models in Settings: a place to enter keys for cloud model providers ([findings and proposal](#proposal-api-keys-for-cloud-models)) | Waiting on approval; not built |
 | Localization (main theme): one English strings file keyed by name, English fallback, then Spanish, Simplified Chinese, Japanese, then German | Not started |
 
 ## Plan: localization
@@ -160,3 +162,47 @@ wrap commit. Notes: [release-notes/day32-v0.9.5.md](release-notes/day32-v0.9.5.m
   status to `v0.9.5` and the Mac lines at once, with no page reload; on
   again brought them back within a few seconds. The switch was left as it
   was found (off).
+
+## Proposal: API keys for cloud models
+
+Brenden: Settings needs a place to enter API keys for cloud models, if one
+doesn't exist yet. Status: **waiting on approval, not built.**
+
+What Caravan has today (checked in the code, nothing changed):
+
+- **No working cloud provider.** Chats only go to the model on your Macs
+  (`/api/chat` → the local worker). There is no OpenAI, Anthropic or
+  OpenRouter client.
+- **Ollama Cloud is listed but "framework-only".** The Models picker has a
+  **Cloud** source with a fixed list of Ollama Cloud models labeled CLOUD
+  (`proxy/web_picker.py`). Choosing one shows "Ollama Cloud is
+  framework-only for now. Set OLLAMA_API_KEY in config/env", and the server
+  refuses to "download" it. The key is read only from the
+  `OLLAMA_API_KEY` (or `CARAVAN_OLLAMA_API_KEY`) environment variable at
+  start, and is used only to report "key configured".
+- **The only key Settings stores is the Hugging Face token.** It is saved
+  to `~/.caravan/hf_token` with 0600 permissions, copied to the other Macs
+  over SSH, never sent back to the page (only "set / not set"), and
+  removable from Settings. A webhook key for alerts
+  (`CARAVAN_ALERT_WEBHOOK_KEY`) is environment-only.
+
+Proposal (to approve before any work):
+
+- **Providers, first:** OpenAI, Anthropic and OpenRouter (OpenRouter covers
+  many models with one key), plus the existing Ollama Cloud entry. Later,
+  any OpenAI-compatible endpoint (base URL + key).
+- **Settings → "Cloud models" card:** one row per provider with a masked
+  key field (shows only "set · ends in …abcd"), **Save**, **Test** (one
+  tiny request, plain result) and **Remove**. Only from this Mac or
+  Tailscale, like Update now; not from the local network.
+- **Storage:** one file per provider under `~/.caravan/keys/`
+  (directory 0700, files 0600), written atomically, on the 1st Mac only
+  (cloud calls don't need the other Macs). Environment variables still win,
+  as today.
+- **Never shown or logged:** the API never returns a key, logs and errors
+  redact it, it is not in the request journal, saved chats, crash reports
+  or `caravan doctor` output (only "set / not set").
+- **Plain consent:** cloud models stay labeled CLOUD, and the first chat
+  with one says the message goes to that provider (docs/SECURITY.md
+  already says optional cloud features send data to the provider you
+  choose).
