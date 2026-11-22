@@ -63,7 +63,7 @@ and the daily logs, not mixed into current setup instructions.
 
 ## Planned dev days
 
-- **Day 28 (shootout and tuning rounds 1–3 are done):** one Mac vs
+- **Day 28 (done):** shootout and tuning rounds 1–3, one Mac vs
   two Macs on Qwen3 30B-A3B, gpt-oss 20B, Qwen3 14B and Llama 3.1 8B,
   on Caravan, LocalAI, Exo and llama.cpp rpc-server, plus Caravan v0.
   Auto-tune keeps the helper on 1-Mac and 2-Mac Llama 8B and on
@@ -71,12 +71,12 @@ and the daily logs, not mixed into current setup instructions.
   [experiment log](../handoff/lab/experiments.md). The first-shootout
   Qwen3 30B 8k split write of 17.5 tok/s was the pre-fix Wi-Fi tunnel,
   not a remaining regression; after the Thunderbolt-first fix, round 3
-  measured 25.18, faster than v0's 22.4. A matched v0-vs-current
-  confirmation run is still pending.
-- **Day 29:** Caravan on its current llama.cpp build (b12283) against
-  Caravan on a llama.cpp v1.0.0 nightly build: write and read speed,
-  long chats, memory, first word, Guess-ahead and Prompt lookup, on
-  one Mac and split. Day 28 Caravan against Day 29 Caravan.
+  measured 25.18, faster than v0's 22.4.
+- **Day 29 (done):** Caravan on its llama.cpp build (b12283) against a
+  llama.cpp v1.0.0 build, benched on Nov 19 on one Mac and split. v1.0.0
+  was no faster: short writes within ±2% on all four setups, and the
+  first word on long prompts 1–4% slower with the helper. It is not
+  rolled in; the pin stays b12283.
 - **TensorFold: shelved** (Day 30). TensorFold 1.2.10
   ([ashhart/TensorFold](https://github.com/ashhart/TensorFold)) could not
   run any of the three test models on these Macs: its native Llama engine
@@ -90,6 +90,15 @@ and the daily logs, not mixed into current setup instructions.
   the old branch names are fast-forwarded with each release for older
   installs. Retire those fast-forwards once no older installs are left.
   See [DAY32](DAY32.md).
+- **Power-loss resume (Day 33, done, v0.9.0):** a request journal saves
+  each chat before the model sees it, and after a power loss or crash
+  Caravan runs unfinished chats again from the start once the model is
+  back (`/api/jobs`, `caravan jobs`, "Finished after a restart"). Restores
+  wait up to 60 s for Thunderbolt when it worked before, and a split left
+  on Wi-Fi gets a note when Thunderbolt comes up. Passed a plug pull on
+  both Macs and a five-prompt crash series. Released as
+  [v0.9.0](https://github.com/linuxbren/caravan/releases/tag/v0.9.0).
+  See [DAY33](DAY33.md).
 
 ## Next candidates
 
