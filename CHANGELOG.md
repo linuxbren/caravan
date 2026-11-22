@@ -26,11 +26,12 @@ See [DAY30](docs/DAY30.md).
   other Macs to start… trying again in 4s: The 2nd Mac is not reachable
   yet" instead of "Mini Mac is unavailable; bring it online and press Load".
 - A restored GGUF model shows its Memory compression in Settings again.
-- Crash series with medium prompts (3.3K–7.5K tokens): five chats cut by
+- Crash series with medium prompts (2.5K–7.6K tokens): five chats cut by
   `kill -9` during prompt reading, early, mid or late in the reply all
   came back by themselves over Thunderbolt and finished ("Finished after a
   restart"). Averages: model ready 22.0 s after the crash, re-run 1.1 s
-  later, about 32 s lost per crash, same write speed.
+  later; each crash cost about 31 s over an uninterrupted run; same write
+  speed.
 
 ### Caravan lives on main
 

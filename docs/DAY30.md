@@ -513,7 +513,7 @@ in `agent/service_endpoints.py`), so `caravan update` keeps a loaded model.
 Brenden asked for a series of medium prompts instead of one long one. Same
 setup as the plug-pull test: Qwen3 30B (GGUF) split over Thunderbolt, all
 11 settings Auto (Auto window 32768), release 2a155f9. Five real-ish tasks,
-3.3K–7.5K prompt tokens, replies capped at 700 tokens (/no_think,
+2.5K–7.6K prompt tokens, replies capped at 700 tokens (/no_think,
 temperature 0), streamed to `/v1/chat/completions` on the 1st Mac by
 `tools/medium_series.py`. Each prompt ran once uninterrupted, then again
 with a new opening (so nothing was cached) and `kill -9` of llama-server
