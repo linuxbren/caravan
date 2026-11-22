@@ -133,7 +133,24 @@ and the daily logs, not mixed into current setup instructions.
     `caravan doctor` show the same version. The number comes from a
     `VERSION` file in each release's source and the build from the
     installed pin, never from the page.
-  - **Localization (next):** pull every web page, CLI and installer string
+  - **Part A fix, daily update check
+    ([v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5)),
+    done:** with **Check for updates daily** off, the label, badge and Mac
+    lines show no update status (live, no reload); an audit of the daily
+    check also fixed a loop that stopped after one error, offline answers
+    that kept saying "up to date", broken replies and a wrong-clock case.
+  - **Header layout (in progress, waiting on approval before release):**
+    the model/status pill moves above and outside the chat card's top-left
+    corner, just outside its border (where the CHAT label was); **Update
+    available** moves right of the theme picker; nothing wraps at narrow
+    widths (long model names end in "…" with the full name on hover).
+  - **Chat message queue (in progress, waiting on approval before
+    release):** while the model answers, the prompt box stays typeable and
+    Send reads **Queue**. Queued messages send in order when the answer
+    finishes (also after an error or Stop), shown as a small strip along
+    the bottom of the answer, one chip per message with a × to cancel. A
+    queued message is journaled only when it sends.
+  - **Localization (main theme, not started):** pull every web page, CLI and installer string
     into one English strings file keyed by name, with lookups that fall
     back to English for a missing key or language. First languages:
     Spanish, Simplified Chinese and Japanese, then German to test long

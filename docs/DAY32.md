@@ -1,10 +1,23 @@
 # Day 32 — localization; part A: version label
 
 Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
-[v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4).
+[v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4), its fix as
+[v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5).
 
-1. [Plan: localization](#plan-localization)
-2. [Part A: version label](#part-a-version-label)
+1. [Status of every Day 32 request](#status-of-every-day-32-request)
+2. [Plan: localization](#plan-localization)
+3. [Part A: version label](#part-a-version-label)
+4. [Part A fix: daily update check (v0.9.5)](#part-a-fix-daily-update-check-v095)
+
+## Status of every Day 32 request
+
+| Request | Status |
+|---|---|
+| Part A: version label next to Settings ([v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4)) | Done, released, on both Macs |
+| Daily-check-off fix and daily check audit ([v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5)) | Done, released, on both Macs, checked live with the switch on and off |
+| Header layout: model/status pill above and outside the chat card's top-left corner (just outside its border, where the CHAT label was); **Update available** right of the theme picker; nothing wraps at narrow widths (long model names end in "…", full name on hover) | In progress on a local branch; waiting on Brenden's approval before release |
+| Chat message queue: Send reads **Queue** while the model answers; queued messages send in order when the answer finishes (also after an error or Stop); a small strip along the bottom of the answer, one chip per message with a × to cancel; a queued message is journaled only when it sends; Stop still works | In progress on a local branch; waiting on Brenden's approval before release |
+| Localization (main theme): one English strings file keyed by name, English fallback, then Spanish, Simplified Chinese, Japanese, then German | Not started |
 
 ## Plan: localization
 
@@ -134,3 +147,16 @@ Full suite: 2,078 tests, OK.
 Release: source `7251223`, pin `f5b6842`; tag
 [v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5) on the
 wrap commit. Notes: [release-notes/day32-v0.9.5.md](release-notes/day32-v0.9.5.md).
+
+### Live update (v0.9.5)
+
+- Before updating: nothing downloading or tuning, Qwen3 32B 4-bit ready,
+  the last chat finished minutes earlier and nothing was running.
+- `caravan update --yes` on the 1st Mac updated both Macs; all three
+  commands say v0.9.5 (`7251223`). The model process was not restarted by
+  the update and Qwen3 32B 4-bit stayed loaded and ready.
+- On the live page, with the switch on the label read
+  `v0.9.5 · up to date` with both Mac lines; switching off cleared the
+  status to `v0.9.5` and the Mac lines at once, with no page reload; on
+  again brought them back within a few seconds. The switch was left as it
+  was found (off).
