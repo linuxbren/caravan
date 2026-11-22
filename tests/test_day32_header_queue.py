@@ -152,9 +152,9 @@ eq(sent, ["one"], "sent");
 # ---- End to end in a headless browser (skipped without node + chromium) ----
 
 class _Mock(BaseHTTPRequestHandler):
-    protocol_version = "HTTP/1.0"  # one request per connection: no stuck keep-alive sockets
+    protocol_version = "HTTP/1.1"
     posts: list = []
-    stream_s = 1.2
+    release = threading.Event()  # the driver ends the first reply when it is done queuing
 
     def log_message(self, *a):
         pass
@@ -171,6 +171,9 @@ class _Mock(BaseHTTPRequestHandler):
         p = self.path.split("?")[0]
         if p == "/":
             p = "/index.html"
+        if p == "/__release":
+            type(self).release.set()
+            return self._json(200, {})
         if p == "/api/status":
             return self._json(200, {"worker": {"status": "ready", "model_id": "m", "model_name": "Mock Model"},
                                     "optimize": {"running": False}, "tuning": {}, "restore": {}, "split": {}})
@@ -206,13 +209,20 @@ class _Mock(BaseHTTPRequestHandler):
         self.end_headers()
         steps = 12
         try:
+            if msg == "first":
+                n = 0
+                while not self.release.wait(0.3) and n < 300:
+                    chunk = {"choices": [{"delta": {"content": f"first-{n} "}}]}
+                    self.wfile.write(b"data: " + json.dumps(chunk).encode() + b"\n\n")
+                    self.wfile.flush()
+                    n += 1
             for i in range(steps):
                 if msg == "cut" and i == 4:
                     break  # the reply is cut off mid-way
                 chunk = {"choices": [{"delta": {"content": f"{msg}-{i} "}}]}
                 self.wfile.write(b"data: " + json.dumps(chunk).encode() + b"\n\n")
                 self.wfile.flush()
-                time.sleep(self.stream_s / steps)
+                time.sleep(0.6 / steps)
             if msg != "cut":
                 self.wfile.write(b"data: [DONE]\n\n")
         except OSError:
@@ -222,64 +232,74 @@ class _Mock(BaseHTTPRequestHandler):
 
 DRIVER = r"""
 const {spawn} = require('node:child_process');
-const port = +process.argv[2], url = process.argv[3];
+const fs = require('node:fs'), os = require('node:os');
+const url = process.argv[2];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-(async () => {
-  const dir = require('node:fs').mkdtempSync(require('node:os').tmpdir() + '/cdpq-');
+let portSeq = +process.argv[3];
+// A fresh browser for each page: reloading in one headless tab stalled.
+async function browser(width) {
+  const port = portSeq++;
+  const dir = fs.mkdtempSync(os.tmpdir() + '/cdpq-');
   const ch = spawn(process.env.CHROMIUM, ['--headless=new', '--remote-debugging-port=' + port, '--user-data-dir=' + dir, 'about:blank'], {stdio: 'ignore'});
+  let tabs; for (let i = 0; i < 80; i++) { try { tabs = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); break; } catch { await sleep(250); } }
+  const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl);
+  await new Promise(r => ws.onopen = r);
+  let id = 0; const pend = {};
+  ws.onmessage = e => { const m = JSON.parse(e.data);
+    if (m.method === 'Page.javascriptDialogOpening') ws.send(JSON.stringify({id: 999999, method: 'Page.handleJavaScriptDialog', params: {accept: true}}));
+    if (pend[m.id]) { pend[m.id](m); delete pend[m.id]; } };
+  const send = (method, params = {}) => new Promise(r => { const i = ++id; pend[i] = r; ws.send(JSON.stringify({id: i, method, params})); });
+  const ev = async x => (await send('Runtime.evaluate', {expression: x, returnByValue: true, awaitPromise: true})).result.result.value;
+  const until = async (x, ms = 15000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await ev(x)) return true; await sleep(100); } return false; };
+  await send('Page.enable');
+  await send('Emulation.setDeviceMetricsOverride', {width, height: 800, deviceScaleFactor: 1, mobile: false});
+  await send('Page.navigate', {url});
+  await until(`(document.getElementById("statusText").textContent||"").startsWith("ready")`);
+  return {ev, until, close: () => { ws.close(); ch.kill('SIGKILL'); }};
+}
+(async () => {
   const out = {};
   try {
-    let tabs; for (let i = 0; i < 60; i++) { try { tabs = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); break; } catch { await sleep(250); } }
-    const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl);
-    await new Promise(r => ws.onopen = r);
-    let id = 0; const pend = {};
-    ws.onmessage = e => { const m = JSON.parse(e.data); if (pend[m.id]) { pend[m.id](m); delete pend[m.id]; } };
-    const send = (method, params = {}) => new Promise(r => { const i = ++id; pend[i] = r; ws.send(JSON.stringify({id: i, method, params})); });
-    const ev = async x => (await send('Runtime.evaluate', {expression: x, returnByValue: true, awaitPromise: true})).result.result.value;
-    const until = async (x, ms = 15000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await ev(x)) return true; await sleep(100); } return false; };
     const S = 'document.getElementById';
-    const type = async (t, how) => { await ev(`(()=>{const i=${S}("input"); i.value=${JSON.stringify(t)};})()`);
-      if (how === 'enter') await ev(`${S}("input").dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}))`);
-      else await ev(`${S}("btnSend").click()`); };
-    const view = () => ev(`JSON.stringify({btn:${S}("btnSend").textContent, dis:${S}("btnSend").disabled, inDis:${S}("input").disabled, strip:${S}("queueStrip").hidden, chips:[...${S}("queueStrip").children].map(c=>c.title)})`).then(JSON.parse);
     for (const w of [375, 768, 1024, 1280]) {
-      await send('Emulation.setDeviceMetricsOverride', {width: w, height: 800, deviceScaleFactor: 1, mobile: false});
-      await send('Page.navigate', {url});
-      await until(`(${S}("statusText").textContent||"").startsWith("ready")`);
-      await ev(`${S}("statusText").textContent = "ready · " + "Qwen3 Coder 30B A3B Instruct 4bit DWQ Long Context ".repeat(2)`);
-      await ev(`(()=>{const b=${S}("updateHeaderBadge"); b.hidden=false; b.textContent="Update available";})()`);
-      out['w' + w] = await ev(`(()=>{const p=${S}("statusPill"), t=${S}("statusText"), th=${S}("themeSwitch"), u=${S}("updateHeaderBadge"), c=document.querySelector("main.card.chat");
+      const b = await browser(w);
+      await b.ev(`${S}("statusText").textContent = "ready · " + "Qwen3 Coder 30B A3B Instruct 4bit DWQ Long Context ".repeat(5)`);
+      await b.ev(`(()=>{const u=${S}("updateHeaderBadge"); u.hidden=false; u.textContent="Update available";})()`);
+      out['w' + w] = await b.ev(`(()=>{const p=${S}("statusPill"), t=${S}("statusText"), th=${S}("themeSwitch"), u=${S}("updateHeaderBadge"), c=document.querySelector("main.card.chat");
         const r=e=>e.getBoundingClientRect(); const lh=parseFloat(getComputedStyle(t).lineHeight)||16;
         return JSON.stringify({pillH:r(p).height, textH:r(t).height, lh, truncated:t.scrollWidth>t.clientWidth,
           pillBottom:r(p).bottom, cardTop:r(c).top, pillLeft:r(p).left, cardLeft:r(c).left,
           themeTop:r(th).top, themeH:r(th).height, updTop:r(u).top, updLeft:r(u).left, themeRight:r(th).right, updH:r(u).height,
           overflowX: document.documentElement.scrollWidth > innerWidth})})()`).then(JSON.parse);
+      b.close();
     }
-    await send('Emulation.setDeviceMetricsOverride', {width: 1280, height: 800, deviceScaleFactor: 1, mobile: false});
-    await send('Page.navigate', {url});
-    await until(`(${S}("statusText").textContent||"").startsWith("ready")`);
+    const b = await browser(1280);
+    const type = async (t, how) => { await b.ev(`(()=>{const i=${S}("input"); i.value=${JSON.stringify(t)};})()`);
+      if (how === 'enter') await b.ev(`${S}("input").dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}))`);
+      else await b.ev(`${S}("btnSend").click()`); };
+    const view = () => b.ev(`JSON.stringify({btn:${S}("btnSend").textContent, dis:${S}("btnSend").disabled, inDis:${S}("input").disabled, strip:${S}("queueStrip").hidden, chips:[...${S}("queueStrip").children].map(c=>c.title)})`).then(JSON.parse);
     await sleep(300);
     out.idle = await view();
     await type('first');
-    await until(`${S}("btnSend").textContent === "Queue"`, 3000);
+    await b.until(`${S}("btnSend").textContent === "Queue"`, 3000);
     out.streaming = await view();
     await type('second', 'enter');
     await type('third');
     await type('fourth');
     out.queued = await view();
-    await ev(`[...${S}("queueStrip").children].find(c=>c.title==="fourth").querySelector(".q-x").click()`);
+    await b.ev(`[...${S}("queueStrip").children].find(c=>c.title==="fourth").querySelector(".q-x").click()`);
     out.afterCancel = await view();
-    await until(`${S}("btnSend").textContent === "Send" && ${S}("queueStrip").hidden`, 20000);
+    await fetch(url + '__release');
+    await b.until(`${S}("btnSend").textContent === "Send" && ${S}("queueStrip").hidden`, 20000);
     out.done = await view();
     // An error and a cut-off reply: the next queued message still goes.
     await type('boom'); await sleep(50);
     await type('cut'); await type('after');
-    await until(`${S}("btnSend").textContent === "Send" && ${S}("queueStrip").hidden`, 20000);
+    await b.until(`${S}("btnSend").textContent === "Send" && ${S}("queueStrip").hidden`, 20000);
     out.afterErrors = await view();
-    out.bubbles = await ev(`JSON.stringify([...document.querySelectorAll("#messages .msg.user .body, #messages .user .body")].map(e=>e.textContent))`).then(JSON.parse);
-    ws.close();
+    out.bubbles = await b.ev(`JSON.stringify([...document.querySelectorAll("#messages .msg.user .body")].map(e=>e.textContent))`).then(JSON.parse);
+    b.close();
   } catch (e) { out.error = String(e && e.stack || e); }
-  ch.kill('SIGKILL');
   console.log(JSON.stringify(out));
   process.exit(0);
 })();
@@ -300,7 +320,11 @@ class EndToEndInBrowser(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         _Mock.posts = []
-        cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), _Mock)
+        _Mock.release.clear()
+        class _Server(ThreadingHTTPServer):
+            request_queue_size = 128  # the page opens many connections at once
+            daemon_threads = True
+        cls.httpd = _Server(("127.0.0.1", 0), _Mock)
         threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
         url = f"http://127.0.0.1:{cls.httpd.server_address[1]}/"
         with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
@@ -309,13 +333,15 @@ class EndToEndInBrowser(unittest.TestCase):
         import socket
         s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
         env = dict(os.environ, CHROMIUM=_chromium())
-        proc = subprocess.run([shutil.which("node"), drv, str(port), url], capture_output=True, text=True, timeout=240, env=env)
+        proc = subprocess.run([shutil.which("node"), drv, url, str(port)], capture_output=True, text=True, timeout=240, env=env)
         os.unlink(drv)
         cls.httpd.shutdown()
         cls.httpd.server_close()
         lines = [l for l in proc.stdout.splitlines() if l.startswith("{")]
         cls.out = json.loads(lines[-1]) if lines else {"error": proc.stdout + proc.stderr}
         cls.posts = [m for _, m in _Mock.posts]
+        if os.environ.get("CARAVAN_E2E_DEBUG"):
+            print(json.dumps(cls.out), _Mock.posts)
 
     def test_driver_ran(self):
         self.assertNotIn("error", self.out, self.out.get("error"))
