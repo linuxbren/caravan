@@ -1,3 +1,22 @@
+## Day 31 (in progress) — placement counts the chat window
+
+See [DAY31](docs/DAY31.md).
+
+- Choosing between one Mac and a split now counts the memory for the
+  model's chat window, not just its files. The window is the one the model
+  was trained for (8K when it does not say). The recommended placement is
+  the smallest one that holds the full window: "Fits on 1 Mac with the full
+  128K window.", or "Fits on 1 Mac with a 64K window. Split across 2 Macs
+  for the full 128K window." The one-Mac choice stays available.
+- GGUF placement uses the same numbers as Chat window Auto, so the window
+  after Load matches the plan. Before a GGUF download, Caravan reads the
+  file's header from the download source to learn its window.
+- MLX fit uses the model's real config (also inside `text_config`) instead
+  of guessing 8% of the file size for an 8K window.
+- A Mac whose memory cannot be read no longer counts as a fit for GGUF.
+- Fixed: the chat-memory estimate counted only the first part of a
+  multi-part GGUF download.
+
 ## Day 30 (v0.9.0) — Power-loss resume, full GGUF chat window, one main branch
 
 Released as [v0.9.0](https://github.com/linuxbren/caravan/releases/tag/v0.9.0).

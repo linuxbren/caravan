@@ -98,6 +98,14 @@ and the daily logs, not mixed into current setup instructions.
     left on Wi-Fi gets a note when Thunderbolt comes up. Passed a plug
     pull on both Macs and a five-prompt crash series.
 
+- **Day 31 (in progress):** see [DAY31](DAY31.md).
+  - **Part A, placement counts the chat window:** deciding between one
+    Mac and a split now counts the memory for the model's default chat
+    window (its trained window), not just its files. The default is the
+    smallest placement that holds the full window; one Mac when it does.
+    GGUF placement and Chat window Auto use the same numbers, MLX uses
+    the model's real config, and unknown memory fails closed.
+
 ## Next candidates
 
 1. **A helper for MLX on one Mac.** Today an MLX model uses a helper only

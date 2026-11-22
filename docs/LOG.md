@@ -1,3 +1,15 @@
+## 2026-11-21: Day 31 — Placement counts the chat window (part A)
+
+Deciding between one Mac and a split now counts the memory for the model's
+default chat window (its trained window), not just the files plus 1.5 GB
+(GGUF) or 8% of the files for 8K (MLX). Default = smallest placement that
+holds the full window. GGUF placement reuses Chat window Auto's math so
+the two agree; MLX uses the real config.json; unknown memory fails closed.
+Checked against real headers/configs: Llama 3.1 8B and gpt-oss 20B GGUF
+stay on 1 Mac with the full 128K window, Qwen3 30B GGUF splits (32K), MLX
+Llama 3.1 8B gets 64K on 1 Mac so a split is recommended for 128K. Suite
+1,993 OK. See [DAY31](DAY31.md).
+
 ## 2026-11-21: Day 30 — Crash series with medium prompts
 
 Five medium prompts (2.5K–7.6K tokens, real-ish tasks) on the Qwen3 30B

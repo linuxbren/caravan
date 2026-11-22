@@ -90,18 +90,28 @@ def read_metadata(path) -> dict:
     """{key: value} for every GGUF header key (long arrays -> SkippedArray).
     Raises GGUFError / OSError."""
     with open(Path(path).expanduser(), "rb") as f:
-        if _read(f, 4) != b"GGUF":
-            raise GGUFError(f"{path}: not a GGUF file")
-        (version,) = struct.unpack("<I", _read(f, 4))
-        if version < 2:
-            raise GGUFError(f"{path}: GGUF v{version} not supported")
-        _n_tensors, n_kv = struct.unpack("<QQ", _read(f, 16))
-        meta = {"GGUF.version": version}
-        for _ in range(n_kv):
-            key = _read_str(f)
-            (vtype,) = struct.unpack("<I", _read(f, 4))
-            meta[key] = _read_value(f, vtype)
-        return meta
+        return read_metadata_from(f, name=str(path))
+
+
+def read_metadata_from(f, name: str = "GGUF") -> dict:
+    """Same as read_metadata, from an open binary file (or BytesIO holding
+    the start of a file). Day 31: placement reads a not-yet-downloaded
+    model's header from the first bytes of the download source. A buffer
+    that ends inside the header raises GGUFError("truncated GGUF header")."""
+    if _read(f, 4) != b"GGUF":
+        raise GGUFError(f"{name}: not a GGUF file")
+    (version,) = struct.unpack("<I", _read(f, 4))
+    if version < 2:
+        raise GGUFError(f"{name}: GGUF v{version} not supported")
+    _n_tensors, n_kv = struct.unpack("<QQ", _read(f, 16))
+    meta = {"GGUF.version": version}
+    for _ in range(n_kv):
+        key = _read_str(f)
+        (vtype,) = struct.unpack("<I", _read(f, 4))
+        meta[key] = _read_value(f, vtype)
+        if hasattr(f, "getbuffer") and f.tell() > len(f.getbuffer()):
+            raise GGUFError("truncated GGUF header")
+    return meta
 
 
 if __name__ == "__main__":

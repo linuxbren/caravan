@@ -298,9 +298,14 @@ def build_entries_from_inventories(
         need_split = False
         fit = None
         if weights and fit_nodes:
+            # Day 31: size the chat window from the model's own config.json.
+            cfg_path = lead_path or next(
+                (st.get("path") for st in per.values() if isinstance(st, dict) and st.get("path")), None)
             fit = web_picker.fit_check(
                 weights_gb=float(weights),
                 nodes=fit_nodes,
+                cfg=web_picker.local_config(cfg_path) if cfg_path else None,
+                n_layers=n_layers,
                 split_ok=True,
                 max_split_stages=max_split_stages,
             )

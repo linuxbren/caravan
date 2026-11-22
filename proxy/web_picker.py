@@ -451,6 +451,99 @@ def _http_json(url: str, timeout: float = 25) -> object:
         return json.loads(r.read().decode("utf-8"))
 
 
+def fetch_config(repo_id: str, *, opener=None) -> Optional[dict]:
+    """A model's config.json from the download source (cached), or None.
+
+    Day 31: the picker, placement and download checks size the chat memory
+    from the real config (layers, key/value heads, head size, trained
+    window), not a guess from the file size."""
+    if not repo_id or ".." in str(repo_id):
+        return None
+    key = f"config:{repo_id}"
+    hit = _cache_get(key)
+    if hit is not None:
+        return hit or None
+    url = "https://huggingface.co/%s/resolve/main/config.json" % repo_id
+    try:
+        req = urllib.request.Request(url, headers=_hf_headers())
+        with (opener or urllib.request.urlopen)(req, timeout=15) as r:
+            blob = json.loads(r.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001 - unknown config means the old estimate
+        blob = None
+    blob = blob if isinstance(blob, dict) else None
+    _cache_set(key, blob or {})
+    return blob
+
+
+def local_config(model_dir) -> Optional[dict]:
+    """config.json of a downloaded MLX model folder, or None."""
+    try:
+        blob = json.loads((Path(model_dir).expanduser() / "config.json").read_text())
+    except (OSError, ValueError, TypeError):
+        return None
+    return blob if isinstance(blob, dict) else None
+
+
+def trained_ctx(cfg: Optional[dict]) -> Optional[int]:
+    """Trained window from an MLX/HF config, including wrapped decoders
+    (Qwen3.5 and other multimodal models keep it in text_config)."""
+    if not isinstance(cfg, dict):
+        return None
+    for blob in (cfg, cfg.get("text_config") if isinstance(cfg.get("text_config"), dict) else None):
+        if not blob:
+            continue
+        for k in ("max_position_embeddings", "max_sequence_length", "n_positions",
+                  "seq_length", "n_ctx"):
+            try:
+                n = int(blob.get(k) or 0)
+            except (TypeError, ValueError):
+                continue
+            if n >= 512:
+                return n
+    return None
+
+
+GGUF_HEADER_READS = (4 << 20, 16 << 20, 64 << 20)
+
+
+def fetch_gguf_header(repo_id: str, filename: str, *, opener=None) -> Optional[dict]:
+    """Header keys of a GGUF file at the download source, read from its first
+    few MB (never the weights), or None. Day 31: lets placement size the
+    chat window before the model is downloaded."""
+    if not repo_id or not filename or ".." in filename or filename.startswith("/") \
+            or not filename.endswith(".gguf"):
+        return None
+    key = f"gguf-header:{repo_id}:{filename}"
+    hit = _cache_get(key)
+    if hit is not None:
+        return hit or None
+    try:
+        import io
+        import gguf_meta
+    except ImportError:
+        return None
+    url = "https://huggingface.co/%s/resolve/main/%s" % (repo_id, urllib.parse.quote(filename))
+    meta = None
+    for n in GGUF_HEADER_READS:
+        try:
+            req = urllib.request.Request(url, headers=dict(_hf_headers(), Range=f"bytes=0-{n - 1}"))
+            with (opener or urllib.request.urlopen)(req, timeout=30) as r:
+                data = r.read(n)
+        except Exception:  # noqa: BLE001
+            break
+        try:
+            meta = gguf_meta.read_metadata_from(io.BytesIO(data), name=filename)
+            break
+        except gguf_meta.GGUFError as e:
+            if "truncated" in str(e) and len(data) >= n:
+                continue
+            break
+        except Exception:  # noqa: BLE001
+            break
+    _cache_set(key, meta or {})
+    return meta
+
+
 def _parse_quant(repo_id: str, tags=None) -> Optional[str]:
     blob = repo_id + " " + " ".join(tags or [])
     m = _QUANT_RE.search(blob.replace("-", "_"))
@@ -642,13 +735,30 @@ def _node_label(n: dict, idx: int) -> str:
     return n.get("label") or n.get("role") or f"Mini{idx+1}"
 
 
+_WINDOW_SIZES = (4096, 8192, 16384, 32768, 65536, 131072, 262144)
+
+
+def _window_candidates(target: int) -> list:
+    """Window sizes a placement may hold: the usual sizes up to the target,
+    plus the target itself (same list Chat window Auto picks from)."""
+    out = [c for c in _WINDOW_SIZES if c <= int(target)]
+    if int(target) not in out:
+        out.append(int(target))
+    return sorted(out)
+
+
+def _fmt_window(tokens) -> str:
+    n = int(tokens or 0)
+    return f"{n // 1024}K" if n >= 1024 else str(n)
+
+
 def fit_check(
     *,
     weights_gb: float,
     nodes: list,
     cfg: Optional[dict] = None,
     n_layers: Optional[int] = None,
-    ctx_tokens: int = DEFAULT_CTX,
+    ctx_tokens: Optional[int] = None,
     safety_gb: float = DEFAULT_SAFETY_GB,
     kv_bits: int = 16,
     split_ok: bool = True,
@@ -688,11 +798,31 @@ def fit_check(
     # Single-node setups cannot split.
     can_split = bool(split_ok) and n_count >= 2
 
-    kv_full = 0.0
-    if MG and cfg and n_layers:
-        kv_full = MG.estimate_kv_gb(cfg, ctx_tokens, int(n_layers), kv_bits=kv_bits)
-    else:
-        kv_full = max(0.3, weights_gb * 0.08 * (ctx_tokens / 8192))
+    # Day 31: the model's own window. With a real config the chat memory
+    # comes from its layers / key-value heads / head size (memory_guard,
+    # the same estimate the worker trims chats with) at its trained window
+    # (max_position_embeddings, including text_config). Unknown config:
+    # the old 8K window and 8%-of-weights estimate. `ctx_tokens` still
+    # overrides the window.
+    trained = trained_ctx(cfg)
+    target = int(ctx_tokens) if ctx_tokens else int(trained or DEFAULT_CTX)
+    if MG and cfg and not n_layers:
+        try:
+            n_layers = MG.model_layer_count(cfg) or None
+        except Exception:  # noqa: BLE001
+            n_layers = None
+    real_kv = bool(MG and cfg and n_layers and MG.kv_elems_per_token(cfg) > 0)
+
+    def kv_at(tokens: int) -> float:
+        if real_kv:
+            return MG.estimate_kv_gb(cfg, int(tokens), int(n_layers), kv_bits=kv_bits)
+        return max(0.3, weights_gb * 0.08 * (int(tokens) / 8192))
+
+    # Fitting at all needs the short window (8K, or the whole trained window
+    # when shorter). The full window decides the recommendation.
+    short_ctx = min(DEFAULT_CTX, target)
+    kv_full = kv_at(short_ctx)
+    kv_target = kv_at(target)
 
     need_1 = weights_gb + kv_full + safety_gb
 
@@ -822,9 +952,52 @@ def fit_check(
             reason = disk_block
             limit = "disk"
 
+    # Day 31: the window each placement holds, and the recommendation: the
+    # smallest placement that holds the full window (one Mac when it does).
+    windows = {}
+    for k in fits_on:
+        if k > max_stages:
+            continue
+        best = None
+        for t in _window_candidates(target):
+            if all(a >= weights_gb / k + kv_at(t) / k + safety_gb for a in caps_sorted[:k]):
+                best = t
+        if best:
+            windows[k] = best
+    recommended = needed
+    if windows:
+        full = [k for k in sorted(windows) if windows[k] >= target]
+        if full:
+            recommended = full[0]
+        else:
+            top = max(windows.values())
+            recommended = min(k for k in windows if windows[k] == top)
+    if windows and (real_kv and (trained or ctx_tokens)) and color != "red":
+        w_rec = windows[recommended]
+        size = _fmt_window(target)
+        if recommended == 1:
+            reason = (f"Fits on 1 Mac with the full {size} window." if w_rec >= target
+                      else f"Fits on 1 Mac with a {_fmt_window(w_rec)} window.")
+            color = "green" if w_rec >= target else "yellow"
+        else:
+            tail = (f"for the full {size} window." if w_rec >= target
+                    else f"for a {_fmt_window(w_rec)} window.")
+            if 1 in windows:
+                reason = (f"Fits on 1 Mac with a {_fmt_window(windows[1])} window. "
+                          f"Split across {recommended} Macs {tail}")
+            else:
+                reason = f"Split across {recommended} Macs {tail}"
+            color = "yellow"
+
     return {
         "color": color,
         "nodes_needed": needed,
+        "recommended_nodes": recommended,
+        "window_ctx": {str(k): v for k, v in sorted(windows.items())},
+        "trained_ctx": trained,
+        "target_ctx": target,
+        "kv_gb_full": round(kv_target, 2),
+        "kv_source": "config" if real_kv else "estimate",
         "fits_on": fits_on,
         "need_gb_1": round(need_1, 2),
         "need_gb_split": round(need_split_each, 2) if need_split_each is not None else None,
@@ -1346,8 +1519,13 @@ def attach_fit(groups: list, nodes: list) -> list:
                 w = float(qq["weights_gb"])
                 gguf = qq.get("source") == "gguf"
                 split_ok = qq.get("source") == "hf-mlx" or gguf
+                # Day 31: a config already fetched for this repo (placement
+                # step, download) sizes the full window; search never waits
+                # on one fetch per row.
+                cached = None if gguf else _cache_get(f"config:{qq.get('repo_id')}")
                 qq["fit"] = fit_check(
                     weights_gb=w, nodes=nodes, split_ok=split_ok,
+                    cfg=cached or None,
                     safety_gb=DEFAULT_SAFETY_GB,
                     # llama.cpp RPC splits across any number of Minis.
                     max_split_stages=(max(len(nodes), 1) if gguf else MAX_SPLIT_STAGES),

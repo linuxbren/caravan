@@ -723,8 +723,14 @@ class App:
         at load, so only the lead needs the file; any online Mini can join."""
         import gguf_split
         out = []
+        try:
+            page = (self.mgr.snapshot() or {}).get("settings") or {}
+        except Exception:  # noqa: BLE001
+            page = {}
         for g in gguf_split.scan_local():
-            place = gguf_split.placement_options(g["size_gb"], nodes)
+            # Day 31: count the chat window Auto would give it on each option.
+            place = gguf_split.placement_options(
+                g["size_gb"], nodes, model_path=g["path"], settings=page)
             out.append({
                 "id": g["id"], "name": g["name"] + " (GGUF)", "hf": g["id"],
                 "source": "gguf", "backend": "llama", "lead_path": g["path"],
@@ -734,7 +740,8 @@ class App:
                 "placement_options": place["options"],
                 "default_placement": place["default_id"],
                 "current": g["id"] == current,
-                "note": "Downloaded and ready to load",
+                "note": place.get("summary") or "Downloaded and ready to load",
+                "placement_summary": place.get("summary") or "",
             })
         import web_gguf_shares
         return out + web_gguf_shares.entries(nodes,current)
@@ -1936,14 +1943,13 @@ def make_handler(app: App):
                 online = app.configured_nodes()
             weights = float(body.get("weights_gb") or 0)
             if body.get("source") == "gguf":
-                import gguf_split
-                return self._json(200, gguf_split.placement_options(weights, online))
+                return self._json(200, self._gguf_source_placement(body, weights, online))
             fit = web_picker.fit_check(
                 weights_gb=weights,
                 nodes=online,
-                cfg=body.get("cfg"),
+                cfg=self._picker_cfg(body),
                 n_layers=body.get("n_layers"),
-                ctx_tokens=int(body.get("ctx_tokens") or web_picker.DEFAULT_CTX),
+                ctx_tokens=int(body["ctx_tokens"]) if body.get("ctx_tokens") else None,
                 split_ok=bool(body.get("split_ok", True)),
                 max_split_stages=web_nodes.stage_limit(app.configured_nodes()),
             )
@@ -1955,6 +1961,33 @@ def make_handler(app: App):
             )
             return self._json(200, {"fit": fit, **opts})
 
+        def _picker_cfg(self, body):
+            """Day 31: the model's real config.json (sent, or fetched from the
+            download source and cached) so fit sizes the full chat window."""
+            cfg = body.get("cfg")
+            if isinstance(cfg, dict) and cfg:
+                return cfg
+            repo = (body.get("repo_id") or body.get("id") or "").strip()
+            return web_picker.fetch_config(repo) if repo else None
+
+        def _gguf_source_placement(self, body, weights, nodes):
+            """GGUF placement before download: the header (first MB of the
+            file at the download source) gives the trained window and the
+            chat-memory layout, so the plan matches Chat window Auto."""
+            import gguf_split
+            repo = (body.get("repo_id") or "").strip()
+            fname = (body.get("gguf_file") or "").strip()
+            meta = web_picker.fetch_gguf_header(repo, fname) if repo and fname else None
+            try:
+                page = (app.mgr.snapshot() or {}).get("settings") or {}
+            except Exception:  # noqa: BLE001
+                page = {}
+            if not meta:
+                return gguf_split.placement_options(weights, nodes)
+            return gguf_split.placement_options(
+                weights, nodes, model_path=f"{repo}/{fname}", meta_fn=lambda _p, _m=meta: _m,
+                weights_bytes=int(float(weights or 0) * 1e9) or None, settings=page)
+
         def _api_picker_fit(self, body=None):
             body = body or {}
             nodes = (app.nodes() or {}).get("nodes") or []
@@ -1962,9 +1995,9 @@ def make_handler(app: App):
             fit = web_picker.fit_check(
                 weights_gb=float(body.get("weights_gb") or 0),
                 nodes=online,
-                cfg=body.get("cfg"),
+                cfg=self._picker_cfg(body),
                 n_layers=body.get("n_layers"),
-                ctx_tokens=int(body.get("ctx_tokens") or web_picker.DEFAULT_CTX),
+                ctx_tokens=int(body["ctx_tokens"]) if body.get("ctx_tokens") else None,
                 split_ok=bool(body.get("split_ok", True)),
                 max_split_stages=web_nodes.stage_limit(app.configured_nodes()),
             )
@@ -2012,11 +2045,16 @@ def make_handler(app: App):
                 body = dict(body, gguf_file=gguf_file, weights_gb=sum(sizes[n] for n in parts)/1e9)
                 import gguf_split
                 live_nodes = (app.nodes() or {}).get('nodes') or app.configured_nodes()
-                places = gguf_split.placement_options(body['weights_gb'], live_nodes)
+                places = self._gguf_source_placement(
+                    dict(body, repo_id=repo, gguf_file=gguf_file), body['weights_gb'], live_nodes)
                 chosen = next((o for o in places['options'] if o['id'] == places['default_id']), None)
                 if not chosen:
                     return self._json(400, {'error': 'This model will not fit on your available Macs. Choose a smaller model or add a Mac.'})
-                if chosen['mode'] == 'split' and len(parts) == 1:
+                # Day 31: a split chosen only for a longer chat window keeps the
+                # whole file on the lead (it can still run on one Mac); the
+                # per-Mac share download is for models that can't run on one.
+                one_ok = any(o.get('mode') == 'one' and o.get('enabled') for o in places['options'])
+                if chosen['mode'] == 'split' and len(parts) == 1 and not one_ok:
                     try:
                         import web_gguf_shares, web_files
                         plan = web_gguf_shares.preview(app, dict(body, repo_id=repo, node_ids=chosen['node_ids']), fresh=True)
@@ -2081,6 +2119,7 @@ def make_handler(app: App):
                     weights = 0.0
             fit = web_picker.fit_check(
                 weights_gb=weights, nodes=online, split_ok=True,
+                cfg=None if gguf_file else self._picker_cfg(dict(body, repo_id=repo)),
                 max_split_stages=web_nodes.stage_limit(app.configured_nodes()),
             )
             from placement import placement_options, resolve_option

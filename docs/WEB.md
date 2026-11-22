@@ -13,6 +13,10 @@ capacity and files for you. Start with a small model. Download, then **Load**.
 While a download runs, its progress card appears right under the model
 you clicked. No model is bundled with the installer. Publisher terms may apply.
 
+Each placement says the chat window it holds, for example "Fits on 1 Mac
+with the full 128K window." The recommended one is the smallest that holds
+the model's full trained window; see [fit](MODEL_PICKER.md#sources-and-fit).
+
 A one-Mac placement uses only the selected Mac. A split placement runs different
 parts on participating Macs. A copy on every Mac is not the same as a split.
 Only select Macs you configured and trust. See [models/downloads](MODEL_PICKER.md)

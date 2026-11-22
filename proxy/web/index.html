@@ -3162,10 +3162,13 @@
       const opt = document.createElement("option");
       opt.value = o.id;
       opt.disabled = !o.enabled;
-      opt.textContent = o.label + (o.id === m.default_placement ? " · recommended" : "") + (o.enabled ? "" : " — " + (o.reason || "won't fit"));
+      // Day 31: each choice says the chat window it holds.
+      const win = o.enabled && o.window_note ? " · " + o.window_note.replace(/\.$/, "") : "";
+      opt.textContent = o.label + (o.id === m.default_placement ? " · recommended" : "") + win + (o.enabled ? "" : " — " + (o.reason || "won't fit"));
       ps.appendChild(opt);
     }
     ps.value = keep || m.default_placement || (opts.find(o => o.enabled) || {}).id || "";
+    if (m.placement_summary) ps.title = m.placement_summary;
   }
 
   function paintIntro(snap) {
@@ -4672,7 +4675,7 @@
         if (q.fit && q.fit.color === "red") {
           try {
             const place = await api("/api/picker/placement", {method: "POST",
-              body: JSON.stringify({source: "gguf", weights_gb: q.weights_gb || 0, repo_id: q.repo_id})});
+              body: JSON.stringify({source: "gguf", weights_gb: q.weights_gb || 0, repo_id: q.repo_id, gguf_file: q.gguf_file})});
             if (!await choosePlacement(place, q, anchor)) return;
           } catch (e) { $("pickerStatus").textContent = "Could not check your Macs: " + e.message; return; }
         }
@@ -4760,7 +4763,7 @@
         openPicker({resume: true});
         try {
           place = await api("/api/picker/placement", {method: "POST",
-            body: JSON.stringify({weights_gb: q.weights_gb || 0, repo_id: q.repo_id, source: q.source})});
+            body: JSON.stringify({weights_gb: q.weights_gb || 0, repo_id: q.repo_id, source: q.source, gguf_file: q.gguf_file})});
         } catch (e) {
           $("pickerStatus").textContent = "Could not refresh Macs: " + e.message;
           return null; // never silently download against an outdated placement
@@ -4782,12 +4785,14 @@
           <div class="step-sub">${escapeHtml(q.repo_id)}${q.weights_gb ? " · " + q.weights_gb + " GB" : ""}</div>`;
         const wontFit = !opts.some(o => o.enabled) || (place.fit || {}).color === "red";
         const addMac = `<button type="button" id="btnPlaceAddMac" class="${wontFit ? "primary" : "ghost"}">+ Add a Mac</button>`;
+        // Day 31: one plain line on where it goes and the chat window it gets.
+        if (place && place.summary) html += `<div class="step-sub place-summary">${escapeHtml(place.summary)}</div>`;
         html += `<div class="step-sub">${wontFit ? "This model needs more memory. Add a Mac, then choose again." : "Have another Mac? Add it before choosing."}</div>` + addMac;
         for (const o of opts) {
           const dis = !o.enabled;
           html += `<label class="${dis ? "disabled" : ""}">
             <input type="radio" name="placement" value="${escapeHtml(o.id)}" ${o.id===def && !dis ? "checked" : ""} ${dis ? "disabled" : ""} />
-            <span><b>${escapeHtml(o.label)}</b>${o.id===def && !dis ? '<span class="rec">recommended</span>' : ""}${dis && o.reason ? `<div class="why">${escapeHtml(o.reason)}</div>` : ""}</span>
+            <span><b>${escapeHtml(o.label)}</b>${o.id===def && !dis ? '<span class="rec">recommended</span>' : ""}${!dis && o.window_note ? `<div class="why">${escapeHtml(o.window_note)}</div>` : ""}${dis && o.reason ? `<div class="why">${escapeHtml(o.reason)}</div>` : ""}</span>
           </label>`;
         }
         html += `<div class="step-actions">

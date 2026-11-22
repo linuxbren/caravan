@@ -116,42 +116,279 @@ def rpc_host(node: dict) -> str:
     return h.split("@", 1)[-1]
 
 
-def placement_options(weights_gb: float, nodes: list) -> dict:
+# Day 31: placement counts the chat window. A placement must hold at least
+# this window (or the model's whole trained window when that is shorter) to
+# count as fitting at all; the default placement is the smallest one that
+# holds the full window Chat window Auto would give the model.
+PLACEMENT_MIN_CTX = 8192
+
+
+def fmt_window(tokens) -> str:
+    """Plain window size: 131072 -> "128K", 40960 -> "40K"."""
+    try:
+        n = int(tokens or 0)
+    except (TypeError, ValueError):
+        return ""
+    if n >= 1024:
+        return f"{n // 1024}K"
+    return str(n)
+
+
+def lead_limit_mib() -> Optional[float]:
+    """GPU memory per Mac that Chat window Auto plans with on this Mac
+    (kv_auto: CARAVAN_GPU_WORKING_SET_MIB, else Metal's saved answer).
+
+    Never asks Metal here: placement runs inside page requests. None when
+    neither is known; placement then uses 75% of each Mac's RAM."""
+    e = os.environ.get("CARAVAN_GPU_WORKING_SET_MIB", "").strip()
+    try:
+        if e:
+            return float(e)
+    except ValueError:
+        pass
+    try:
+        import json
+        import kv_auto
+        v = json.loads(Path(kv_auto.GPU_LIMIT_CACHE).read_text())
+        v = float(v["recommended_max_working_set_mib"])
+        return v if v > 0 else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _ram_gb(node) -> Optional[float]:
+    try:
+        v = float(((node or {}).get("ram") or {}).get("total_gb") or 0)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
+
+def node_budget_mib(node: dict, lead: Optional[dict] = None,
+                    lead_limit: Optional[float] = None) -> Optional[float]:
+    """GPU budget for one Mac in a placement, in MiB, or None if unknown.
+
+    The lead uses the same limit Chat window Auto uses; another Mac gets the
+    same limit scaled by its RAM (so two matching Macs plan exactly like
+    Auto does across two devices). Without that limit: 75% of RAM."""
+    ram = _ram_gb(node)
+    if ram is None:
+        return None
+    lead_ram = _ram_gb(lead) if lead is not None else None
+    if lead_limit and lead_ram:
+        return float(lead_limit) * ram / lead_ram
+    return ram * GPU_FRACTION * 1e9 / MIB
+
+
+def window_prefs(settings: Optional[dict] = None) -> dict:
+    """The page settings that change how Chat window Auto sizes the window
+    (the same pins resolve_launch honors): Chat window, 16-bit Memory
+    compression, Flash attention off, Prompt batch and Two chats."""
+    s = {k: str(v).strip().lower() for k, v in (settings or {}).items()}
+    out = {"cache_type": None, "flash_attn": "on", "ubatch": GGUF_DEFAULT_UBATCH,
+           "n_slots": GGUF_DEFAULT_SLOTS, "ctx": None}
+    if s.get("kv_bits") == "16":
+        out["cache_type"] = "f16"
+    if s.get("flash_attn") == "off":
+        out["flash_attn"] = "off"
+    if s.get("ubatch", "auto").isdigit():
+        out["ubatch"] = int(s["ubatch"])
+    if s.get("pipeline_chats") == "2":
+        out["n_slots"] = 2
+    cw = s.get("chat_window", "auto")
+    if cw.isdigit() and int(cw) > 0:
+        out["ctx"] = int(cw)
+    return out
+
+
+def window_plan(model_path, n_devices: int, budget_mib: float, *, meta_fn=None,
+                weights_bytes=None, prefs: Optional[dict] = None) -> Optional[dict]:
+    """What window this model gets with `n_devices` Macs sharing `budget_mib`.
+
+    Uses Chat window Auto's own math (auto_ctx / ctx_estimate / kv_auto:
+    weights, chat memory at 8-bit unless 16-bit is pinned, sliding-window
+    layers, working memory and the safety margin). Returns
+    {"fits", "ctx", "target", "trained", "full"}, or None when the model's
+    layout cannot be read (callers fall back to the weights-only rule).
+    """
+    import functools
+    import kv_auto
+    prefs = dict(window_prefs(), **(prefs or {}))
+    k = max(1, int(n_devices))
+    per = float(budget_mib) / k
+    kw_decide = {"limit_fn": lambda _explicit=None, _per=per: (_per, "placement")}
+    if meta_fn is not None:
+        kw_decide["meta_fn"] = meta_fn
+    if weights_bytes:
+        kw_decide["weights_bytes"] = int(weights_bytes)
+    decide = functools.partial(kv_auto.decide, **kw_decide)
+    trained = model_context_length(model_path, meta_fn=meta_fn)
+    target = int(prefs["ctx"] or trained or GGUF_CTX)
+    kw = dict(n_slots=prefs["n_slots"], ubatch=prefs["ubatch"], n_devices=k,
+              decide=decide, meta_fn=meta_fn, cache_type=prefs["cache_type"])
+    smallest = min(PLACEMENT_MIN_CTX, target)
+    fits = ctx_fits_known(model_path, smallest, flash_attn=prefs["flash_attn"], **kw)
+    if fits is None:
+        return None
+    out = {"fits": bool(fits), "ctx": None, "target": target, "trained": trained,
+           "full": False}
+    if not fits:
+        return out
+    if prefs["ctx"]:
+        # A pinned Chat window is used as it is; say how much would fit.
+        if ctx_fits_known(model_path, target, flash_attn=prefs["flash_attn"], **kw):
+            ctx = target
+        else:
+            ctx = smallest
+            for c in ctx_candidates(target):
+                if c > smallest and ctx_fits_known(
+                        model_path, c, flash_attn=prefs["flash_attn"], **kw):
+                    ctx = c
+    else:
+        ctx = auto_ctx(model_path, flash_attn=prefs["flash_attn"], **kw)
+    out["ctx"] = int(ctx)
+    out["full"] = int(ctx) >= target
+    return out
+
+
+def _window_note(k: int, plan: Optional[dict]) -> str:
+    if not plan or not plan.get("fits") or not plan.get("ctx"):
+        return ""
+    macs = "1 Mac" if k == 1 else f"{k} Macs"
+    if plan.get("full"):
+        return f"Fits on {macs} with the full {fmt_window(plan['target'])} window."
+    return f"Fits on {macs} with a {fmt_window(plan['ctx'])} window."
+
+
+def placement_summary(opts: list, default_id) -> str:
+    """One plain line for the page: where the model goes and what window it
+    gets. A model that holds its full window on one Mac gets no split talk."""
+    by_id = {o["id"]: o for o in opts}
+    d = by_id.get(default_id)
+    if not d or not d.get("ctx"):
+        return ""
+    k = len(d.get("node_ids") or [])
+    full = fmt_window(d.get("target_ctx"))
+    one = next((o for o in opts if o.get("mode") == "one"), None)
+    if k == 1:
+        return d.get("window_note") or ""
+    if d.get("full_window"):
+        if one and one.get("enabled") and one.get("ctx"):
+            return (f"Fits on 1 Mac with a {fmt_window(one['ctx'])} window. "
+                    f"Split across {k} Macs for the full {full} window.")
+        return f"Split across {k} Macs for the full {full} window."
+    return f"Split across {k} Macs with a {fmt_window(d['ctx'])} window."
+
+
+def placement_options(weights_gb: float, nodes: list, *, model_path=None,
+                      meta_fn=None, weights_bytes=None, settings=None,
+                      lead_limit=None) -> dict:
     """one-Mini per node, then split across the first K online Minis (lead first).
 
-    Default = the smallest option that fits (one Mini beats a split).
+    Day 31: with `model_path` (a local file, or any name plus `meta_fn` for
+    a not-yet-downloaded model's header) an option fits when the weights,
+    the chat memory for at least an 8K window, working memory and the
+    safety margin fit; each option also says the window Chat window Auto
+    would give it there. The default is the smallest option that holds the
+    full window (the model's trained window, or the pinned Chat window);
+    if none does, the one with the longest window. Without a model file
+    (or when its layout can't be read) it is the old rule: weights + 1.5 GB
+    against 75% of RAM, smallest option that fits. A Mac whose memory is
+    unknown never counts as a fit.
     """
     online = [n for n in nodes or [] if isinstance(n, dict)
               and not n.get("offline") and not n.get("error")]
     lead = [n for n in online if n.get("role") == "lead"][:1]
     ordered = lead + [n for n in online if n not in lead]
+    lead_node = lead[0] if lead else None
     need = float(weights_gb or 0) + HEADROOM_GB
+    prefs = window_prefs(settings)
+    limit = None
+    if model_path is not None:
+        limit = lead_limit if lead_limit is not None else lead_limit_mib()
+        if weights_bytes is None and meta_fn is None:
+            try:
+                import kv_auto
+                weights_bytes = kv_auto.model_weights_bytes(model_path)
+            except Exception:  # noqa: BLE001
+                weights_bytes = None
+        if not weights_bytes and weights_gb:
+            weights_bytes = int(float(weights_gb) * 1e9)
+
+    def _check(grp):
+        """(ok, plan, reason_suffix)"""
+        budgets = [node_budget_mib(n, lead_node, limit) for n in grp]
+        missing = [n for n, b in zip(grp, budgets) if b is None]
+        if missing:
+            who = missing[0].get("label") or missing[0].get("id")
+            return False, None, f"can't read how much memory {who} has yet", None
+        total = sum(budgets)
+        plan = None
+        if model_path is not None:
+            try:
+                plan = window_plan(model_path, len(grp), total, meta_fn=meta_fn,
+                                   weights_bytes=weights_bytes, prefs=prefs)
+            except Exception:  # noqa: BLE001
+                plan = None
+        if plan is None:
+            gb = total * MIB / 1e9
+            return gb >= need, None, None, gb
+        return plan["fits"], plan, None, total * MIB / 1e9
+
+    def _fill(o, ok, plan, why, gb, k):
+        o["enabled"] = o["fits"] = bool(ok)
+        if plan:
+            o.update(ctx=plan["ctx"], target_ctx=plan["target"], trained_ctx=plan["trained"],
+                     full_window=bool(plan["full"]), window_note=_window_note(k, plan))
+        if ok:
+            o["reason"] = ""
+        elif why:
+            o["reason"] = why[0].upper() + why[1:] + "."
+        elif plan:
+            where = "this Mac" if k == 1 else f"these {k} Macs"
+            o["reason"] = (f"Won't fit on {where}, even with the shortest chat window "
+                           f"({fmt_window(min(PLACEMENT_MIN_CTX, plan['target']))}).")
+        return o
+
     opts = []
     for n in lead:  # GGUF runs llama-server on the lead; the file lives there
-        cap = node_gpu_gb(n)
-        ok = cap is None or cap >= need
-        opts.append({
+        ok, plan, why, gb = _check([n])
+        o = {
             "id": f"one:{n['id']}", "mode": "one", "node_ids": [n["id"]],
             "node_labels": [n.get("label") or n["id"]],
             "label": f"One Mini · {n.get('label') or n['id']}",
-            "enabled": ok, "fits": ok,
-            "reason": "" if ok else f"needs ~{need:.1f} GB, {n.get('label')} has ~{cap:.1f} GB for the GPU",
-        })
+            "reason": "" if ok or why or plan else
+            f"needs ~{need:.1f} GB, {n.get('label')} has ~{gb:.1f} GB for the GPU",
+        }
+        opts.append(_fill(o, ok, plan, why, gb, 1))
     for k in range(2, len(ordered) + 1):
         grp = ordered[:k]
-        caps = [node_gpu_gb(n) for n in grp]
-        total = sum(c for c in caps if c) if all(caps) else None
-        ok = total is None or total >= need
+        ok, plan, why, gb = _check(grp)
         labels = [n.get("label") or n["id"] for n in grp]
-        opts.append({
+        o = {
             "id": "split:" + ",".join(n["id"] for n in grp), "mode": "split",
             "node_ids": [n["id"] for n in grp], "node_labels": labels,
             "label": f"Split across {k} Minis · {' + '.join(labels)}",
-            "enabled": ok, "fits": ok,
-            "reason": "" if ok else f"needs ~{need:.1f} GB, these Minis have ~{total:.1f} GB together",
-        })
-    default = next((o["id"] for o in opts if o["enabled"]), None)
-    return {"options": opts, "default_id": default, "weights_gb": weights_gb}
+            "reason": "" if ok or why or plan else
+            f"needs ~{need:.1f} GB, these Minis have ~{gb:.1f} GB together",
+        }
+        opts.append(_fill(o, ok, plan, why, gb, k))
+    enabled = [o for o in opts if o["enabled"]]
+    default = None
+    if any(o.get("ctx") for o in enabled):
+        full = [o for o in enabled if o.get("full_window")]
+        if full:
+            default = full[0]["id"]
+        else:
+            best = max(o.get("ctx") or 0 for o in enabled)
+            default = next(o["id"] for o in enabled if (o.get("ctx") or 0) == best)
+    elif enabled:
+        default = enabled[0]["id"]
+    out = {"options": opts, "default_id": default, "weights_gb": weights_gb}
+    summary = placement_summary(opts, default)
+    if summary:
+        out["summary"] = summary
+    return out
 
 
 def tensor_split(nodes: list) -> list:

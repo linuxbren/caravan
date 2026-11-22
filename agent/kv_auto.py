@@ -40,6 +40,7 @@ term so a wrong call is easy to spot and override.
 """
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import NamedTuple, Optional
@@ -206,10 +207,25 @@ def _env_or(cfg: dict, key: str, env: str):
     return cfg.get(key)
 
 
+def model_weights_bytes(model_path) -> int:
+    """File size of a GGUF model, summing every part of a split download
+    (name-00001-of-00003.gguf ...). Day 31: only the first part was counted,
+    so a multi-part model looked far smaller than it is."""
+    p = Path(model_path).expanduser()
+    m = re.match(r"^(.*)-(\d{5})-of-(\d{5})\.gguf$", p.name)
+    if not m:
+        return p.stat().st_size
+    total = 0
+    for i in range(1, int(m.group(3)) + 1):
+        total += (p.parent / f"{m.group(1)}-{i:05d}-of-{m.group(3)}.gguf").stat().st_size
+    return total
+
+
 def decide(model_path, n_slots: int, ctx_per_slot: int, n_ubatch: int,
            cache_type_k: str = "auto", cache_type_v: str = "auto", n_devices: int = 1,
            swa_full: bool = False, cfg: Optional[dict] = None,
-           limit_fn=gpu_working_set_mib, meta_fn=gguf_meta.read_metadata) -> KvDecision:
+           limit_fn=gpu_working_set_mib, meta_fn=gguf_meta.read_metadata,
+           weights_bytes: Optional[int] = None) -> KvDecision:
     """Resolves "auto" K/V types. `cfg` is the "kv_auto" config section:
     gpu_working_set_mib, compute_reserve_mib, safety_margin_mib (env
     CARAVAN_GPU_WORKING_SET_MIB / CARAVAN_COMPUTE_RESERVE_MIB /
@@ -221,7 +237,7 @@ def decide(model_path, n_slots: int, ctx_per_slot: int, n_ubatch: int,
     fallback_k = "q8_0" if auto_k else cache_type_k
     fallback_v = "q8_0" if auto_v else cache_type_v
     try:
-        weights = Path(model_path).expanduser().stat().st_size
+        weights = int(weights_bytes) if weights_bytes else model_weights_bytes(model_path)
         layout = kv_layout(meta_fn(model_path))
     except Exception as e:  # noqa: BLE001 -- any failure means "can't estimate"
         return KvDecision(fallback_k, fallback_v, f"q8_0 fallback: can't estimate ({e})", {})

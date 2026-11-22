@@ -90,6 +90,21 @@ def placement_options(
     """Build UI choices. Default = smallest placement that fits."""
     ranked = _caps(nodes)
     fits_on = list(fit.get("fits_on") or [])
+    # Day 31: fit_check recommends the smallest placement that holds the
+    # model's full chat window; each option says the window it holds.
+    rec = fit.get("recommended_nodes")
+    windows = fit.get("window_ctx") or {}
+    target = fit.get("target_ctx")
+
+    def _note(k):
+        w = windows.get(str(k))
+        if not w or not target or fit.get("kv_source") != "config":
+            return ""
+        macs = "1 Mac" if k == 1 else f"{k} Macs"
+        size = f"{int(w) // 1024}K" if int(w) >= 1024 else str(w)
+        if int(w) >= int(target):
+            return f"Fits on {macs} with the full {size} window."
+        return f"Fits on {macs} with a {size} window."
     color = fit.get("color") or "gray"
     options = []
 
@@ -113,7 +128,12 @@ def placement_options(
             "enabled": bool(enabled),
             "reason": reason,
             "full_copy": True,
-            "default_candidate": bool(best_one and r["id"] == best_one["id"] and enabled),
+            "default_candidate": bool(best_one and r["id"] == best_one["id"] and enabled
+                                      and (rec in (None, 1) or not any(
+                                          k == rec and 2 <= k <= int(max_split_stages)
+                                          for k in fits_on))),
+            "window_note": _note(1) if enabled else "",
+            "ctx": windows.get("1") if enabled else None,
         })
 
     # --- K-way split (only runtime-supported K that fit) ---
@@ -138,9 +158,11 @@ def placement_options(
             "enabled": bool(enabled),
             "reason": reason,
             "full_copy": False,
-            "default_candidate": bool(enabled and not one_fits and k == min(
-                [x for x in fits_on if 2 <= x <= max_split_stages] or [999]
-            )),
+            "default_candidate": bool(enabled and (k == rec if rec and rec >= 2 else (
+                not one_fits and k == min(
+                    [x for x in fits_on if 2 <= x <= max_split_stages] or [999])))),
+            "window_note": _note(k) if enabled else "",
+            "ctx": windows.get(str(k)) if enabled else None,
         })
 
     # --- copy to all ---
@@ -184,6 +206,7 @@ def placement_options(
     return {
         "options": options,
         "default_id": default_id,
+        "summary": fit.get("reason") if fit.get("kv_source") == "config" and windows else "",
         "fits_on": fits_on,
         "color": color,
         "max_split_stages": int(max_split_stages),
