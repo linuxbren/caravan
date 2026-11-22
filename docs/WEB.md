@@ -340,6 +340,19 @@ readable only by your account, and `caravan uninstall` removes them. To
 turn this off, add `[jobs]` `resume = false` to `~/.caravan/config.toml`
 (see [CONFIGURATION](CONFIGURATION.md#chats-after-a-power-loss-jobs)).
 
+## Thunderbolt after a power loss
+
+After a power loss or restart, both Macs bring Wi-Fi up a little before
+the Thunderbolt link. When Thunderbolt has worked to the other Mac before,
+a load waits up to 60 seconds for it ("Waiting for the Thunderbolt link to
+2nd Mac…") instead of running the split over Wi-Fi, which reads prompts
+about half as fast. Stop still works while it waits. If Thunderbolt does
+not answer in time, the split uses Wi-Fi and says so. If Thunderbolt starts
+working later, a note says "Thunderbolt to the 2nd Mac is working now, but
+this model is still using Wi-Fi" and suggests Unload and Load when no chat
+is running. Caravan does not reload the model by itself, so a reply being
+written is never stopped for this.
+
 ## Developer details and history
 
 The page is served by `proxy/web_server.py`; model processes are managed through

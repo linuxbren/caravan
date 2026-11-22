@@ -1,9 +1,9 @@
-## Day 33 — Power-loss test (partial) and finishing chats after a restart
+## Day 33 — Power-loss test passes: Caravan finishes the cut chat
 
-- Pulled the power on both Macs during a busy Qwen3 30B split. Restore
-  passed: both came back by themselves and Caravan had the split model
-  ready over Thunderbolt about 80 s later. Resuming the work failed: the
-  reply being written at the cut was lost. Recorded as partial. See
+- Second plug pull on both Macs during a busy Qwen3 30B split: Caravan
+  restored the split and ran the chat the power loss cut off again by
+  itself, from the start, and saved the whole reply for the client to
+  fetch. The first pull was partial (the reply in flight was lost); see
   [DAY33](docs/DAY33.md).
 - New: Caravan saves each chat request on the 1st Mac before the model
   sees it and, after a power loss, crash or restart, runs unfinished ones
@@ -12,6 +12,11 @@
   `caravan jobs <id>`; the chat shows it with "Finished after a restart".
   Limits: 1 hour, 2 tries, 4 MB, kept 3 days. Turn off with
   `[jobs] resume = false`. See [WEB](docs/WEB.md#chats-after-a-power-loss-or-crash).
+- After a power loss, a load waits up to 60 s for the Thunderbolt link to
+  the other Mac (when it worked before) instead of settling for Wi-Fi
+  because Thunderbolt comes up a little later. If a split still ends up on
+  Wi-Fi and Thunderbolt starts working, a note says so and how to switch;
+  Caravan does not reload by itself.
 - While boot restore waits for another Mac, the page says "Waiting for your
   other Macs to start… trying again in 4s: The 2nd Mac is not reachable
   yet" instead of "Mini Mac is unavailable; bring it online and press Load".

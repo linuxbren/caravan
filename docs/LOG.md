@@ -1,16 +1,23 @@
+## 2026-11-21: Day 33 — Power-loss test passes
+
+Second plug pull (18:07 CST, back 18:08): both Macs booted by 18:08:17,
+the split was ready at 18:09:37 and Caravan ran the cut chat
+`job_1795305954_fbdda1c009` again by itself at 18:09:39; it finished at
+18:12:26 (159 tokens) and was fetched with `/api/jobs/<id>` and
+`caravan jobs <id>`. Pass. The restore picked Wi-Fi because it checked the
+link before Thunderbolt was up; loads now wait up to 60 s for Thunderbolt
+when it worked before, and a split left on Wi-Fi gets a note when
+Thunderbolt starts working. See [DAY33](DAY33.md).
+
 ## 2026-11-19: Day 33 — Power-loss test (partial); finishing chats after a restart
 
 Power pulled on both Macs at 14:56 during a busy Qwen3 30B split; plugged
-back in about 14:57. Macs booted 14:57:08 / 14:57:13, Caravan's page
-answered 14:57:28, the restore loaded the model at 14:57:42 and it was
-ready split over Thunderbolt at 14:58:24, with no hand needed: restore
-passed. The reply in flight at the cut was lost and nothing ran it again:
-work resume failed, so the day is partial (the first release note,
-06f970c, called it a pass; corrected here). Added a durable request journal
-that runs unfinished chats again from the start after a restart, with
-`/api/jobs`, `caravan jobs` and a "Finished after a restart" note in chat.
-Also fixed the restore's waiting text and the empty Memory compression chip
-after a restore. See [DAY33](DAY33.md).
+back in about 14:57. The restore passed (ready split over Thunderbolt at
+14:58:24, no hands), but the reply in flight at the cut was lost: partial.
+Added a durable request journal that runs unfinished chats again from the
+start after a restart, with `/api/jobs`, `caravan jobs` and a "Finished
+after a restart" note in chat. Also fixed the restore's waiting text and
+the empty Memory compression chip after a restore. See [DAY33](DAY33.md).
 
 ## 2026-11-19: Day 32 — Caravan lives on main
 

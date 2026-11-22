@@ -1,20 +1,89 @@
 # Day 33 — Power-loss recovery test
 
-**Result: partial.** Restore passed: both Macs came back by themselves and
-the split model was ready over Thunderbolt about 80 s after power came
-back. Resuming the work failed: the reply being written at the cut was
-lost, and the prompts after recovery were new ones sent by the test
-script, not Caravan finishing the lost one. The point of the test is that
-Caravan *continues the work* after power returns, so Day 33 is recorded as
-partial, and Caravan now journals chats and runs unfinished ones again
-(see "Resume after a power loss" below). A second plug-pull test follows.
+**Result: pass** (second plug pull, Nov 21). Both Macs came back by
+themselves, Caravan restored the split model, then ran the chat that the
+power loss cut off again by itself and saved the whole reply, which the
+client fetched afterwards. The first plug pull (Nov 19) was partial:
+restore passed, but the reply in flight was lost because Caravan had no
+record of it. The request journal built after it closed that gap.
+
+One problem showed up on Nov 21 and is fixed: the restore checked the link
+to the 2nd Mac before Thunderbolt was up, so the split ran over Wi-Fi.
 
 Day 33 ran Nov 19 2026 (America/Chicago). The owner pulled the power on
 both Mac minis at once while a split model was busy, then plugged them back
 in. Both Macs have "Start up automatically after a power failure" and
 automatic login on.
 
-## Setup
+## Second plug pull (Nov 21): pass
+
+Release 7b33dc8 on both Macs. Qwen3 30B split over Thunderbolt, all Auto.
+A test loop streamed ~29K-token chats to `/v1/chat/completions` on the 1st
+Mac and logged each job id from the stream's first line. After a cut it sent
+nothing new and only asked `/api/jobs/<id>` about the cut job.
+
+Plugs pulled about 18:07, back in about 18:08 (CST).
+
+| Event | Time | After plug-in |
+|---|---|---|
+| Last good check, both Macs | 18:07:49 | — |
+| Both Macs stop answering | 18:07:54 | — |
+| Chat `job_1795305954_fbdda1c009` cut (sent 18:05:54) | 18:08:11 | — |
+| 1st Mac / 2nd Mac boot | 18:08:14 / 18:08:17 | +14 / +17 s |
+| 1st Mac answers ping and ssh | 18:08:27 | +27 s |
+| Page answers: "Waiting for your other Macs to start… (attempt 2); trying again in 4s: The 2nd Mac is not reachable yet" | 18:08:32 | +32 s |
+| 2nd Mac's model server and tunnel up (over Wi-Fi, see below) | 18:08:42 | +42 s |
+| Qwen3 30B ready, split | 18:09:37 | +97 s |
+| Caravan runs the cut chat again by itself (try 1 of 2) | 18:09:39 | +99 s |
+| Cut chat finished: 159 tokens, 754 characters, `stop` | 18:12:26 | +266 s |
+
+The whole prompt (29,201 tokens) was read again, as designed: it runs from
+the start, not mid-sentence. `GET /api/jobs/<id>` returned status `done`,
+`recovered: true`, note "Finished after a restart"; `caravan jobs <id>` on
+the 1st Mac printed "Finished after a restart: Caravan ran the request again
+from the start (try 1)" and the reply. Settings after the restore showed
+Memory compression 16. No one touched either Mac.
+
+### Found: the restore picked Wi-Fi
+
+The restore's link check ran at about 18:08:40, before either Mac had its
+new Thunderbolt link-local address (they change on every boot: here
+169.254.17.245 and 169.254.6.11). It found only Wi-Fi ("link to 2nd Mac:
+Wi-Fi, en1, 4.83 ms") and kept it for the whole load, although Thunderbolt
+answered at 0.39 ms a minute later. Reading the prompt fell from about 550
+to about 200 tokens per second, so the cut chat took about 2.8 minutes
+instead of about 1.5. On Nov 19 the check happened to run after
+Thunderbolt was up.
+
+### Fixed: wait for Thunderbolt, then say so if it comes late
+
+- **Wait.** When a load opens the link to another Mac and Thunderbolt has
+  worked to that Mac in the last 30 days, Caravan now waits up to 60 s for
+  Thunderbolt before settling for Wi-Fi or Ethernet. Every 5 s it reads both
+  Macs' interfaces again, so the new link-local addresses are found. The
+  page shows "Waiting for the Thunderbolt link to 2nd Mac (15s of
+  60s)…", Stop still works, and if Thunderbolt never answers the note says
+  "Thunderbolt to 2nd Mac did not answer within 60s; using Wi-Fi, splits
+  will be slower". A Mac that never had Thunderbolt does not wait.
+  `CARAVAN_TB_WAIT_S` changes the limit (0 turns the wait off).
+- **Late Thunderbolt.** While a split runs on Wi-Fi or Ethernet, Caravan
+  checks once a minute whether Thunderbolt to that Mac answers now. If it
+  does, it shows one note: "Thunderbolt to the 2nd Mac is working now, but
+  this model is still using Wi-Fi. To switch to Thunderbolt, Unload and Load
+  the model again when no chat is running." It does not switch by itself:
+  switching means starting the model again, which would stop a reply being
+  written and make the model unavailable for about a minute at a moment the
+  user did not choose. The note lets the user pick the moment.
+
+Tests: `tests/test_day33_thunderbolt_wait.py`.
+
+### Thunderbolt check after the fix
+
+Checked on both Macs after installing this release; the results are added here in the next commit.
+
+## First plug pull (Nov 19): partial
+
+### Setup
 
 - Qwen3 30B-A3B Q4_K_M (GGUF) split across the 1st and 2nd Mac over
   Thunderbolt, every setting on Auto (window 32768, 16-bit chat memory,
@@ -26,7 +95,7 @@ automatic login on.
   1st Mac to the 2nd, the Caravan status on the 1st Mac, and a tiny chat
   once ready.
 
-## Timeline (CST)
+### Timeline (CST)
 
 Plug-in is the owner's "about 14:57"; power-up is each Mac's kernel boot
 time (1st Mac 14:57:08, 2nd Mac 14:57:13). Watcher times are when that
@@ -63,7 +132,7 @@ was lost: Caravan had no record of it, so nothing ran it again, and the
 client only got an ssh timeout. The later successful replies (6 and 7)
 were new prompts from the test loop.
 
-## Load loop
+### Load loop
 
 | # | Sent | Ended | Result |
 |---|---|---|---|
@@ -75,7 +144,7 @@ were new prompts from the test loop.
 
 The loop was stopped at 15:03 after recovery was confirmed.
 
-## Files after the power loss
+### Files after the power loss
 
 - `last-model.json`, `gguf-tuned.json`, `gguf-self-tune.json`,
   `speed_averages.json`, `bench_speedups.json`, `mlx/tuned-settings.json`,
@@ -163,6 +232,6 @@ files `-rw-------`.
   flash attention and prompt batch. Caravan now reports the chat memory
   llama-server was actually started with (16-bit here).
 
-Tests: `tests/test_day33_power_restore.py` and `tests/test_day33_jobs.py`; the full suite passes.
+Tests: `tests/test_day33_power_restore.py`, `tests/test_day33_jobs.py` and `tests/test_day33_thunderbolt_wait.py`; the full suite passes.
 Nothing in `agent/` worker code or the requirements changed (one message
 in `agent/service_endpoints.py`), so `caravan update` keeps a loaded model.

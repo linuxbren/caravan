@@ -56,6 +56,11 @@ SSH_PORT = 22
 MARK = "CARAVAN_PEER_ROUTE_V1"
 CONTROL_TTL_S = 300.0     # control SSH reuses a pick this young
 NEGATIVE_TTL_S = 30.0     # ...and a failed pick this long (offline Mac: no probe storm)
+# Day 33: after a power loss the Macs bring Wi-Fi up before the Thunderbolt
+# link-local addresses, so a load that checks too early falls back to Wi-Fi.
+TB_WAIT_S = float(os.environ.get("CARAVAN_TB_WAIT_S", "60"))
+TB_WAIT_INTERVAL_S = 5.0
+TB_REMEMBER_S = 30 * 24 * 3600.0   # wait only if Thunderbolt worked to this Mac recently
 IP_BOUND_IF = 25          # Darwin <netinet/in.h>
 
 _TB_PORT = re.compile(r"^Thunderbolt( \d+| Bridge)$", re.I)
@@ -308,6 +313,16 @@ def load_all() -> dict:
 
 def _save(target: str, route: dict) -> None:
     with _lock:
+        # Day 33: remember when Thunderbolt last worked to this Mac, across
+        # picks that fell back to a slower link (see pick_waiting).
+        if route.get("kind") == "thunderbolt":
+            route["thunderbolt_seen_at"] = route.get("checked_at") or round(time.time(), 1)
+        elif not route.get("thunderbolt_seen_at"):
+            prev = _mem.get(target) or load_all().get(target) or {}
+            seen = prev.get("thunderbolt_seen_at") or (
+                prev.get("checked_at") if prev.get("kind") == "thunderbolt" else None)
+            if seen:
+                route["thunderbolt_seen_at"] = seen
         _mem[target] = route
         p = store_path()
         try:
@@ -434,8 +449,57 @@ def pick(target: str, *, label: Optional[str] = None, run: Optional[Callable] = 
     return route
 
 
+def thunderbolt_seen_at(target: str) -> Optional[float]:
+    rec = recorded(target) or {}
+    seen = rec.get("thunderbolt_seen_at") or (rec.get("checked_at") if rec.get("kind") == "thunderbolt" else None)
+    try:
+        return float(seen) if seen else None
+    except (TypeError, ValueError):
+        return None
+
+
+def pick_waiting(target: str, *, label: Optional[str] = None, wait_s: Optional[float] = None,
+                 interval: float = TB_WAIT_INTERVAL_S, sleep: Callable = time.sleep,
+                 now: Callable = time.time, on_wait: Optional[Callable] = None,
+                 save: bool = True, **kw) -> dict:
+    """pick(), but give a late Thunderbolt link up to `wait_s` to appear.
+
+    Only when Thunderbolt worked to this Mac before (TB_REMEMBER_S). Each
+    try is a full pick(): both Macs' interfaces are read again, so the new
+    link-local addresses a reboot gives Thunderbolt are found. on_wait(waited,
+    wait_s) runs before each pause; it may raise to stop (load cancelled).
+    """
+    label = label or target
+    wait_s = TB_WAIT_S if wait_s is None else float(wait_s)
+    seen = thunderbolt_seen_at(target)
+    start = now()
+    should_wait = bool(wait_s > 0 and seen and start - seen < TB_REMEMBER_S)
+    route = pick(target, label=label, save=False, now=now, **kw)
+    tries = 1
+    while route.get("kind") != "thunderbolt" and should_wait and now() - start < wait_s:
+        if on_wait is not None:
+            on_wait(now() - start, wait_s)
+        sleep(interval)
+        route = pick(target, label=label, save=False, now=now, **kw)
+        tries += 1
+    if should_wait:
+        route["thunderbolt_wait"] = {"waited_s": round(now() - start, 1), "tries": tries,
+                                     "limit_s": wait_s, "found": route.get("kind") == "thunderbolt"}
+        if route.get("kind") != "thunderbolt":
+            slower = LABELS.get(route.get("kind"), "its configured name")
+            route["warning"] = (f"Thunderbolt to {label} did not answer within {wait_s:g}s; "
+                                f"using {slower}, splits will be slower")
+            log.warning(route["warning"])
+    if seen and route.get("kind") != "thunderbolt":
+        route["thunderbolt_seen_at"] = seen
+    if save:
+        _save(target, route)
+    return route
+
+
 def route_for(target: str, *, fresh: bool = False, label: Optional[str] = None,
-              enabled: Optional[bool] = None, **kw) -> Optional[dict]:
+              enabled: Optional[bool] = None, wait_thunderbolt: bool = False,
+              on_wait: Optional[Callable] = None, **kw) -> Optional[dict]:
     """Fresh pick for data paths; a recent pick (or a new one) for control SSH.
 
     Returns None where picking is off (not a Mac, CARAVAN_PEER_ROUTE=off),
@@ -450,6 +514,8 @@ def route_for(target: str, *, fresh: bool = False, label: Optional[str] = None,
         ttl = CONTROL_TTL_S if (prev or {}).get("address") else NEGATIVE_TTL_S
         if prev and time.time() - float(prev.get("checked_at") or 0) < ttl:
             return prev
+    if wait_thunderbolt:
+        return pick_waiting(target, label=label, on_wait=on_wait, **kw)
     return pick(target, label=label, **kw)
 
 

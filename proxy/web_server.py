@@ -3037,6 +3037,12 @@ def main(argv=None):
                                     is_enabled=app.jobs_enabled)
     app.job_replayer.start()
 
+    # Day 33: a split that loaded on Wi-Fi before Thunderbolt came up gets a
+    # plain note once Thunderbolt answers (no automatic reload; see module).
+    import link_upgrade as _LU
+    app.link_monitor = _LU.Monitor(app.mgr)
+    app.link_monitor.start()
+
     def _schedule_update_check():
         def _run():
             import time as _time

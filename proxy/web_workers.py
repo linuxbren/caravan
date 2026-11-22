@@ -756,11 +756,22 @@ class WorkerManager:
         args, route = None, "network"
         if node is not None:
             name = (node or {}).get("label") or (node or {}).get("id") or target
-            picked = PR.route_for(target, fresh=True, label=name)
             try:  # Day 31: friendly name in the note, never a hostname
                 name = self._mac_name(node) or name
             except Exception:  # noqa: BLE001
                 pass
+            # Day 33: right after a power loss Thunderbolt comes up after
+            # Wi-Fi. If it worked to this Mac before, wait up to a minute
+            # for it (re-reading the new link-local addresses each try).
+            noted = {"at": -99.0}
+
+            def _tb_wait(waited, limit, _name=name):
+                self._check_cancel()
+                if waited - noted["at"] >= 15:
+                    noted["at"] = waited
+                    self._note(f"Waiting for the Thunderbolt link to {_name} "
+                               f"({int(waited)}s of {int(limit)}s)…")
+            picked = PR.route_for(target, fresh=True, label=name, wait_thunderbolt=True, on_wait=_tb_wait)
             if picked is not None:
                 if picked.get("warning"):
                     self._note(picked["warning"])
