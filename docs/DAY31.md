@@ -384,3 +384,18 @@ KeyError: 'model.layers.17.mlp.up_proj.weight'
   [v0.9.3](https://github.com/linuxbren/caravan/releases/tag/v0.9.3) on the
   wrap commit. Notes:
   [release-notes/day31-v0.9.3.md](release-notes/day31-v0.9.3.md).
+- Website: the Caravan page shows v0.9.3 with a "4-bit MLX models split
+  cleanly" line.
+- Update: the first `caravan update` stopped with "Installed source has
+  edits" (the local fix on the Macs), as designed. The edited file was
+  copied aside on each Mac, the released file put back, and the update ran:
+  both Macs on pin `a0e8cfe`'s source `4b48b85`, `agent/mlx_split.py`
+  identical to the release.
+- Live check, Qwen3 32B 4-bit split 24/40 layers over Thunderbolt: the
+  reload after the update took about 11 s (the 1st Mac's stage loaded in
+  5.4 s) and the load log said "head stage: left 1 piece(s) of the other
+  Mac's layers unquantized (weight in a shard this Mac does not hold):
+  model.layers.17.mlp.up_proj". Short chat (17-token prompt, 160 tokens
+  out): first token 0.96 s, writing 5.5 tok/s. Long prompt (3,542 tokens,
+  300 out): reading 51 tok/s, first token 69.7 s, writing 5.1 tok/s.
+  Replies were coherent. The model was left loaded.

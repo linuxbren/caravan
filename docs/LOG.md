@@ -10,7 +10,9 @@ during a split stage's load and leave such pieces unquantized) is now in
 `agent/mlx_split.py` as `partial_quant_guard`, with a `getattr` lookup for
 older mlx_lm and a load-log line naming skipped pieces. New
 `tests/test_day31_split_quant_shards.py` (5 tests). Suite 2,038 OK.
-Source `4b48b85`, pin `a0e8cfe`, tag v0.9.3.
+Source `4b48b85`, pin `a0e8cfe`, tag v0.9.3. Both Macs updated; Qwen3 32B
+4-bit split loads and chats (5.5 tok/s writing, 51 tok/s reading a
+3.5K-token prompt) and stays loaded.
 Details: [DAY31](DAY31.md#follow-up-4-bit-mlx-split-load-fix-v093).
 
 ## 2026-11-22: Day 31 follow-up — the app says "context" (v0.9.2)
