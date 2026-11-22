@@ -19,8 +19,8 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 | Daily-check-off fix and daily check audit ([v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5)) | Done, released, on both Macs, checked live with the switch on and off |
 | Header layout: model/status pill above and outside the chat card's top-left corner (just outside its border, where the CHAT label was); **Update available** right of the theme picker; nothing wraps at narrow widths (long model names end in "…", full name on hover) | Built and tested on a local branch (not pushed); waiting on Brenden's review before release |
 | Chat message queue: Send reads **Queue** while the model answers; queued messages send in order when the answer finishes (also after an error or Stop); a floating strip just above the prompt box, one chip per message (full text on hover) with a × to cancel; a queued message is journaled only when it sends; Stop still works | Built and tested on a local branch (not pushed); waiting on Brenden's review before release |
-| API keys for cloud models: a **Cloud API keys** section in Settings (one row per provider, masked, editable, removable); an inline key prompt when a cloud model's provider has no key; cloud models say **Load**, not Download ([what was built](#cloud-api-keys-built-waiting-on-review)) | Approved; built and tested on a local branch (not pushed); waiting on Brenden's review before release |
-| Sending chats to a cloud model (routing `/api/chat` to the provider) | Not built; outside the approved scope; needs its own approval |
+| API keys for cloud models: a **Cloud API keys** section in Settings (Ollama Cloud only, the one cloud source Models can search; masked, editable, removable); an inline key prompt when a cloud model's provider has no key; cloud models say **Load**, not Download ([what was built](#cloud-api-keys-built-waiting-on-review)) | Approved; built and tested on a local branch (not pushed); waiting on Brenden's review before release |
+| Chatting with Ollama Cloud models (routing `/api/chat` to Ollama Cloud) | Not for Day 32 (Brenden); the key is saved now, cloud chat comes later. On the [ROADMAP](ROADMAP.md) as a future item |
 | Localization (main theme): one English strings file keyed by name, English fallback, then Spanish, Simplified Chinese, Japanese, then German | Not started |
 
 ## Plan: localization
@@ -219,12 +219,17 @@ built on the local branch `day32-header-layout` (with the header layout
 and the chat queue). Nothing is pushed or released and the Macs are not
 changed until Brenden reviews it.
 
-1. **Settings → Cloud API keys.** One row per provider: OpenAI,
-   Anthropic, OpenRouter and Ollama Cloud. Each row shows "Not set" or
-   "Set · ends in abcd", has a password field with **Save**, and has
-   **Remove** for a key saved from Settings. A key set by an environment
-   variable shows "From OPENAI_API_KEY" (for example). It can't be edited
-   from the page, because the environment variable wins.
+1. **Settings → Cloud API keys.** One row: **Ollama Cloud**. Ollama Cloud
+   is the only cloud source the Models picker can search, so it is the
+   only key needed (Brenden trimmed OpenAI, Anthropic and OpenRouter).
+   Adding a provider later is one entry in `PROVIDERS` in
+   `proxy/cloud_keys.py`; Settings shows one row per entry. The row shows
+   "Not set" or "Set · ends in abcd", has a password field with **Save**,
+   and has **Remove** for a key saved from Settings. A key set by
+   `OLLAMA_API_KEY` (or `CARAVAN_OLLAMA_API_KEY`) shows "From
+   OLLAMA_API_KEY". It can't be edited from the page, because the
+   environment variable wins. The section's note says: "The key is saved now;
+   chatting with cloud models comes in a later update."
 2. **Inline key prompt.** In Models → Cloud, pressing **Load** on a cloud
    model whose provider has no key opens a small box in that row: "… runs
    on Ollama Cloud. Add your Ollama Cloud API key to load it. It's saved
@@ -250,12 +255,15 @@ How keys are kept:
 - A cached Models search refreshes each cloud row's "key set" flag, so it
   never shows an old "no key".
 
-Differs from the proposal: there is one file, not one per provider, and
-there is no **Test** button yet.
+Differs from the proposal: Ollama Cloud only (no OpenAI, Anthropic or
+OpenRouter), one file rather than one per provider, and no **Test**
+button yet.
 
-**Not built: sending chats to a cloud model.** That would route
-`/api/chat` to the provider and add a first-chat notice that the message
-leaves your Macs. It needs its own approval. Until then, after the key is
+**The key is saved, but cloud chat comes later.** Chatting with Ollama
+Cloud models is not part of Day 32 (Brenden). It would route `/api/chat`
+to Ollama Cloud and add a first-chat notice that the message leaves your
+Macs; it is listed on the [ROADMAP](ROADMAP.md) under Next candidates.
+Until then, after the key is
 saved the picker says so plainly: "Ollama Cloud key ready (ends in abcd).
 Chatting with cloud models isn't built yet, so … can't load in chat yet."
 
@@ -266,7 +274,8 @@ Settings section and picker prompt in `proxy/web/index.html`.
 Tests: `tests/test_day32_cloud_keys.py` has 13 tests. They cover 0600
 storage, last 4 only, replace and remove, refusing a bad key without
 echoing it, the environment winning, a broken file, the API never
-returning or logging a key, the local network getting no access, picker
+returning or logging a key, the local network getting no access, other
+providers (OpenAI, Anthropic, OpenRouter) being refused as unknown, picker
 rows, and the page contract. The full suite on the branch passes: 2,104
 tests.
 

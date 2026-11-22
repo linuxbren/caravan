@@ -153,12 +153,12 @@ and the daily logs, not mixed into current setup instructions.
     queued message is journaled only when it sends.
   - **Cloud API keys (approved; built on a local branch, waiting on
     Brenden's review before release):** Settings gets a **Cloud API keys**
-    section (OpenAI, Anthropic, OpenRouter, Ollama Cloud; masked, editable,
-    removable). Picking a cloud model with no key asks for it inline, then
+    section for the Ollama Cloud key (the only cloud source Models can
+    search; masked, editable, removable). Picking a cloud model with no key asks for it inline, then
     carries on. Cloud models say **Load**, not Download. Keys are kept in
     `~/.caravan/cloud-keys.json` (0600), never logged, and the page sees
-    only the last 4 characters. Sending chats to a cloud model is not built
-    and needs its own approval. See
+    only the last 4 characters. The key is saved now; chatting with Ollama
+    Cloud models comes later (see Next candidates). See
     [DAY32](DAY32.md#cloud-api-keys-built-waiting-on-review).
   - **Localization (main theme, not started):** pull every web page, CLI and installer string
     into one English strings file keyed by name, with lookups that fall
@@ -184,6 +184,12 @@ and the daily logs, not mixed into current setup instructions.
    and a FileVault reboot end to end.
 7. **Security review.** An independent look at pairing, the browser page,
    the Tailscale share and the update path.
+8. **Chat with Ollama Cloud models.** Day 32 saves the Ollama Cloud key
+   (Settings → Cloud API keys) and cloud models say **Load**, but chats
+   still only go to the Macs. Next: route `/api/chat` to Ollama Cloud when
+   a CLOUD model is picked, with a first-chat notice that the message
+   leaves your Macs, and keep the key out of logs, the journal and saved
+   chats. Other providers come only if Models can search them.
 
 Earlier development-order items (Days 22–25) are kept in
 [roadmap history](history/ROADMAP-LAB.md) and the daily logs.
