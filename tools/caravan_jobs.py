@@ -1,4 +1,4 @@
-"""`caravan jobs`: chats Caravan saved in its request journal (Day 33).
+"""`caravan jobs`: chats Caravan saved in its request journal (Day 30).
 
     caravan jobs              recent chats, newest first
     caravan jobs <id>         the saved reply of one chat

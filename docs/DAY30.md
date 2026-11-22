@@ -1,4 +1,260 @@
-# Day 33 — Power-loss recovery test
+# Day 30 — llama.cpp 1.0, TensorFold, full chat window, one branch, power-loss resume (v0.9.0)
+
+Day 30 ran Nov 19–21 2026 (America/Chicago) and is released as
+[v0.9.0](https://github.com/linuxbren/caravan/releases/tag/v0.9.0).
+It covers five pieces of work:
+
+1. [llama.cpp 1.0](#llamacpp-10-no-gain-not-rolled-in): benched, no faster, not rolled in.
+2. [TensorFold](#tensorfold-shelved): could not run our models on these Macs, shelved.
+3. [Full chat window for GGUF](#gguf-chat-window-runs-at-the-models-full-trained-length): Auto uses the model's trained window when memory allows.
+4. [One branch, `main`](#caravan-lives-on-main): install and update read `main`.
+5. [Power-loss resume](#power-loss-resume-thunderbolt-wait-and-crash-series): Caravan finishes chats a power loss or crash cut off, waits for Thunderbolt after a restart, and passed a plug pull and a five-prompt crash series.
+
+## llama.cpp 1.0: no gain, not rolled in
+
+Benched Nov 19 (1:40–3:58 AM). Caravan on its pinned llama.cpp build
+(b12283) against llama.cpp v1.0.0 (official macOS arm64 build b12359,
+commit b1b770d90), installed side by side. Small set: 1 Mac Llama 3.1 8B
+and Qwen3 14B; 2 Macs (Thunderbolt) Llama 3.1 8B and Qwen3 30B-A3B. Each
+case: fresh Auto-tune, reload and restart check, then 3 bench runs of 5
+short + 2 × 8k prompts (max_tokens 192, temperature 0). The b12283 side is
+the Day 28 Auto-tuned numbers.
+
+| Case | Short write b12283 → 1.0 | 8k first word s | 8k total s | 8k write | Helper (1.0) |
+|---|---|---|---|---|---|
+| 1 Mac, Llama 3.1 8B | 25.27 → 25.74 (+1.9%) | 62.69 → 63.11 (+0.7%) | 70.47 → 71.07 (+0.9%) | 18.64 → 18.23 (−2.2%) | on (61% kept) |
+| 1 Mac, Qwen3 14B | 16.87 → 16.86 (−0.1%) | 112.58 → 115.34 (+2.5%) | 127.37 → 130.31 (+2.3%) | 12.94 → 12.79 (−1.2%) | on (51% kept) |
+| 2 Macs, Llama 3.1 8B | 23.03 → 23.24 (+0.9%) | 39.62 → 41.08 (+3.7%) | 48.12 → 49.59 (+3.1%) | 17.05 → 17.02 (−0.2%) | on (61% kept) |
+| 2 Macs, Qwen3 30B-A3B | 34.61 → 34.56 (−0.1%) | 22.27 → 21.47 (−3.6%) | 29.88 → 29.13 (−2.5%) | 25.18 → 25.05 (−0.5%) | off (as before) |
+
+- **No speed gain.** Short writes are within ±2% on all four setups,
+  which is run-to-run noise. The first word on long prompts is 1–4%
+  slower in the three cases that use the helper, and 3.6% sooner on the
+  Qwen3 30B split.
+- **Nothing broke.** Same flags (1.0 only removed `--defrag-thold`, which
+  Caravan does not use), the RPC split works over Thunderbolt, Auto-tune
+  passed every case with the same picks, settings survived reload and
+  restart, 0 request errors.
+- **Not rolled in.** The pin stays b12283. Moving later is a one-line pin
+  change (`runtime/llama-release.json`) plus the pin test.
+
+## TensorFold: shelved
+
+Tried Nov 19 (8:00–11:23 AM). TensorFold 1.2.10
+([ashhart/TensorFold](https://github.com/ashhart/TensorFold)), official
+macOS arm64 archive, installed side by side on both Macs and pointed at the
+same MLX files as Day 28.
+
+| Model | Result |
+|---|---|
+| Llama 3.1 8B | refused: its native Llama engine needs Metal 4 tensor units (M5 or later) |
+| gpt-oss 20B | refused: no engine for `gpt_oss` yet |
+| Qwen3 30B-A3B | refused: no engine for `qwen3_moe` yet |
+
+No tokens were produced, so there is nothing to compare. TensorFold's
+two-Mac mode is for other models on M5 Ultras, not a general split. Each
+`serve` refused in under a second and left nothing running. Removed from
+both Macs; shelved until it supports M4 Macs and Qwen3 MoE (and gpt-oss).
+
+## GGUF chat window runs at the model's full trained length
+
+This part ran Nov 19. Goal from the owner:
+"Context is important." A GGUF model should run as close to the window
+it was trained for as memory allows, and Caravan should not cut the
+window to gain speed.
+
+### At a glance
+
+- **Chat window Auto has no 32K cap any more.** It picks the longest
+  window that fits in memory, up to the model's trained window: Llama 3.1
+  8B and gpt-oss 20B now get their full 131072 on one Mac (they had
+  32768). Qwen3 30B-A3B and Qwen3 14B were trained for 32768, so they
+  were already at their full window and do not change.
+- **Auto never picks less than before.** The old rule is kept as the
+  floor, and the trusted 8192 default still applies when the model file
+  or memory cannot be measured.
+- **The window comes first.** Settings Caravan learned for speed
+  (16-bit chat memory, flash attention off, a bigger prompt batch, the
+  Guess-ahead helper) never make Auto pick a shorter window. If one would
+  not fit, Caravan uses the lighter choice and the load log says so, for
+  example: "Kept the full chat window of 131072: using 8-bit chat memory
+  instead of the learned setting, which would not fit". Auto-tune and
+  Self-tuning skip trials whose win would need a shorter window. Settings
+  you pin yourself still count, so pinning Memory compression 16 can give
+  a shorter Auto window.
+- **More Chat window choices.** 131072, 262144 and **Native** (the
+  model's own trained window, which can be a size not in the list, such
+  as 40960). Sizes past the trained window, or that will not fit in
+  memory, stay greyed out with a plain reason.
+- **Restores and updates resize too.** A window saved from an Auto load
+  (restart, Update now, Self-tuning reload) is sized again on the next
+  load instead of staying at the old 32768.
+- **The web chat keeps history up to the real window.** It used to trim
+  every model's history at about 32K tokens; a GGUF chat now trims at
+  its actual window.
+- **Long reads are not cut off.** Caravan waited at most 30 minutes for a
+  model's first bytes. Reading a prompt close to a 128K window on one
+  Mac takes longer than that, so the wait is now 2 hours
+  (`CARAVAN_REPLY_TIMEOUT_S` changes it).
+- **Split loads no longer say "Couldn't start the model on the other
+  Mac" when they worked.** The success line for the other Mac's model
+  server mentions its link, and the plain-wording filter turned every
+  such line into the failure message. Only lines that report a failure
+  become that message now, and the load notes name the other Mac in
+  plain words ("2nd Mac") instead of dropping its name.
+- **`caravan bench` works on the model that is already loaded.** Asking
+  for the loaded model restarts it, but the first status replies still
+  said "ready" from before the restart, so the bench measured a stopped
+  server (HTTP 502) and then could not put the model back ("a model
+  switch is already in progress", HTTP 400). It now waits for a ready
+  note from its own load, and waits out a switch that is already
+  running. Found by the bench check for this change.
+
+### How Auto sizes the window
+
+The estimate per candidate window is: model weights, plus chat memory
+for that window (8-bit unless you pin 16), plus llama.cpp's working
+memory for a full prompt batch, plus a window-sized attention mask on
+each Mac (window × prompt batch × 4 bytes), plus the existing safety
+margin. With flash attention off, llama.cpp also keeps the full score
+matrix (heads × window × prompt batch × 4 bytes, about 8 GiB for Llama
+3.1 8B at 128K), so a learned "flash attention off" is never kept at a
+long window. The budget is the GPU working-set limit of each Mac the
+model uses, added up for a split. Auto tries the model's trained window
+first and steps down through 262144, 131072, 65536, 32768 … until one
+fits, never below the old rule's pick.
+
+### Measured (Nov 19, 1st and 2nd Mac, Auto settings)
+
+Old = the published build before this change (Auto capped at 32768). New =
+the new build. Each row: model loaded with every setting on Auto,
+the saved Auto-tune winners applied (Llama 3.1 8B keeps its helper and
+Prompt lookup), 6 short prompts (median write speed), one long prompt
+at about 29K tokens, and on the new build one at about 90% of the new
+window. Memory is the rise in wired (GPU) memory after loading. Swap use
+did not change in any run.
+
+| Model | Setup | Build | Auto window | Chat memory | Memory rise | Short write tok/s | ~29K prompt: first word / write | Near-window prompt |
+|---|---|---|---|---|---|---|---|---|
+| Llama 3.1 8B | 1 Mac | old | 32768 | 16-bit | 11.2 GB | 25.17 | 268 s / 12.45 tok/s | can't (window 32768) |
+| Llama 3.1 8B | 1 Mac | new | 131072 | 8-bit | 18.5 GB | 25.56 | 268 s / 11.57 tok/s | 115,593 tokens: first word 2669 s (44 min), write 3.65 tok/s |
+| gpt-oss 20B | 1 Mac | old | 32768 | 16-bit | 12.3 GB | 39.53 | 104 s / 29.39 tok/s | can't (window 32768) |
+| gpt-oss 20B | 1 Mac | new | 131072 | 16-bit | 14.9 GB | 39.44 | 103 s / 29.39 tok/s | 115,626 tokens: first word 916 s, write 16.40 tok/s |
+| Qwen3 30B-A3B | 2 Macs | old | 32768 | 16-bit | 11.7 + 10.3 GB | 34.64 | 117 s / 15.76 tok/s | already the full window |
+| Qwen3 30B-A3B | 2 Macs | new | 32768 | 16-bit | 11.7 + 10.3 GB | 34.59 | 117 s / 15.74 tok/s | already the full window |
+
+What it costs:
+
+- **Short chats: no cost.** Within ±1.5% on all three models.
+- **gpt-oss 20B:** no speed cost; its 128K chat memory still fits in
+  16-bit (sliding-window layers keep it small). About 2.6 GB more memory.
+- **Llama 3.1 8B:** the full window only fits with 8-bit chat memory, so
+  writing on a long (~29K) prompt is about 7% slower (11.57 vs 12.45
+  tok/s); reading is the same. About 7.4 GB more memory, and the helper
+  still fits. Pin Chat window 32768 (or Memory compression 16) to get the
+  old behaviour back. Near the full window it works but is slow on one
+  Mac: a 115,593-token prompt took 44 minutes to read (43 tok/s on
+  average, falling from about 145 to 45 tok/s as the prompt grew) and
+  wrote at 3.65 tok/s. Wired memory stayed at about 20.7 GB with no swap
+  use. The first try at this prompt was cut off by the 30-minute reply
+  wait; that is the fix above.
+- **Qwen3 30B-A3B split:** unchanged (already at its trained window).
+
+### Checks
+
+- Full test suite: 1,900 tests, OK (`PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests`, 63 s).
+- Fresh Auto-tune on Llama 3.1 8B, 1st Mac, window 131072: finished in
+  15.1 minutes (Day 28 on the old build: 19.6). Flash attention and chat
+  memory were skipped with "needs a shorter chat window"; prompt batch
+  512, Prompt lookup and the helper were kept, as on Day 28. Short write
+  20.2 → 24.3 tok/s; the long-prompt check passed (long read 217 → 182
+  tok/s with the helper, inside the Day 28 guard). It reloaded at 131072
+  with 8-bit chat memory and the "Kept the full chat window" note.
+- `caravan bench "llama 3.1 8b" --only gguf --yes` on the 1st Mac with
+  that GGUF already loaded: the first try failed (HTTP 502, then 400
+  putting the model back; the fix is above). With the fix it finished
+  in 9.5 minutes and put the GGUF back. GGUF at 131072 with 8-bit chat
+  memory: short write 26.0 tok/s, ~8k prompt read 153 tok/s, write
+  16.5 tok/s, first token 62.4 s. MLX on the same run: 22.0, 196, 17.1,
+  48.8 s.
+
+### Compatibility
+
+Python files in `proxy/`, `tools/caravan_bench.py` and `tests/` only,
+plus docs. Nothing in
+`agent/`, `runtime/` or the requirements files changed, so `caravan
+update` keeps a loaded model. The next load of a GGUF model on Auto
+uses the new window.
+
+## Caravan lives on `main`
+
+This part ran Nov 19. Owner: "Let's just get it into
+main and update all of the code that requires a change to be made for a
+successful update to be had." The working branch name
+`caravan-v3-mlx-split` no longer described Caravan. From now on everything
+is on `main`, under the plain name Caravan.
+
+### Install line
+
+```sh
+(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/main/install | bash)
+```
+
+### What changed
+
+- **Install and update read `main`.** The curl installer (`install`) reads
+  `packaging-version` from `main`; `caravan update` and Update now fetch
+  the installer from `main`; the daily update check reads the pin from
+  `main` (`tools/caravan_update_check.py`: `CHANNEL_BRANCH = "main"`, one
+  `INSTALL_URL` shared with `caravan update`). `scripts/install.sh`
+  defaults to `--ref main`.
+- **Older installs keep updating.** An install from before Day 30 reads
+  the pin and installer from `caravan-v3-mlx-split` (older ones from
+  `clean-install-fixes`). Every release now fast-forwards both branches to
+  the same commit as `main` ([release steps](RELEASES.md), step 3), so
+  they get the same release. After that first update their new code
+  follows `main`. No branch is deleted. A source checkout still on an old
+  branch keeps pulling that branch with `scripts/install.sh --update`
+  instead of being refused; `--ref` given by hand is still strict.
+- **Docs and website.** README, INSTALL, DEVELOPMENT, RELEASES,
+  ARCHITECTURE, CONFIGURATION, MLX, MLX-SPLIT and FILES, the pairing page's
+  help link, and the project website (install command, doc links, video
+  links) point at `main`. "v3" was dropped where it was only the branch or
+  a legacy label (for example "MLX split across two Macs (Caravan v3)" is
+  now "MLX split across two Macs").
+- **Tests.** `tests/test_day30_main_channel.py`: the update check, `caravan
+  update`, the curl installer, `scripts/install.sh`, README and INSTALL all
+  point at `main`; no live code or current guide names an old branch
+  outside the documented transition list; old-branch checkouts keep
+  updating without a branch switch.
+
+### Kept on purpose
+
+- `caravan-v3-mlx-split` and `clean-install-fixes` stay on GitHub and are
+  fast-forwarded with every release until the owner says older installs
+  are gone. They are named only in `LEGACY_CHANNEL_BRANCHES`, the
+  old-checkout case in `scripts/install.sh`, the release steps,
+  DEVELOPMENT (how to move an old checkout), and the main-branch test.
+- Compatibility names are unchanged: LaunchAgent labels
+  `com.caravan.v3.*`, the uninstall marker "Caravan managed service v3",
+  and the `~/cv3` default checkout path for paired Macs. Renaming them
+  would leave old services behind on every Mac.
+- History is unchanged: dated day notes, LOG, CHANGELOG, BENCHMARKS,
+  `handoff/`, `docs/history/`, the page's journey chart (v0 … v3 labels)
+  and video file names.
+
+### Checks
+
+- Full test suite: 1,910 tests, OK (`PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests`).
+- The new install line resolves: the `install` script and
+  `packaging-version` on `main` both fetch over HTTPS on the development
+  node (fetch only, not run).
+- Live check (after publishing): `caravan update` on the 1st Mac updates
+  the 2nd Mac and then itself from the old-branch pin (old code), and the
+  update check on both Macs then reads `main`. This file ships in that
+  release, so the live result is recorded in the Obsidian diary.
+
+## Power-loss resume, Thunderbolt wait and crash series
 
 **Result: pass** (second plug pull, Nov 21). Both Macs came back by
 themselves, Caravan restored the split model, then ran the chat that the
@@ -10,12 +266,12 @@ record of it. The request journal built after it closed that gap.
 One problem showed up on Nov 21 and is fixed: the restore checked the link
 to the 2nd Mac before Thunderbolt was up, so the split ran over Wi-Fi.
 
-Day 33 ran Nov 19 2026 (America/Chicago). The owner pulled the power on
+The first plug pull ran Nov 19, the second Nov 21. The owner pulled the power on
 both Mac minis at once while a split model was busy, then plugged them back
 in. Both Macs have "Start up automatically after a power failure" and
 automatic login on.
 
-## Second plug pull (Nov 21): pass
+### Second plug pull (Nov 21): pass
 
 Release 7b33dc8 on both Macs. Qwen3 30B split over Thunderbolt, all Auto.
 A test loop streamed ~29K-token chats to `/v1/chat/completions` on the 1st
@@ -44,7 +300,7 @@ the 1st Mac printed "Finished after a restart: Caravan ran the request again
 from the start (try 1)" and the reply. Settings after the restore showed
 Memory compression 16. No one touched either Mac.
 
-### Found: the restore picked Wi-Fi
+#### Found: the restore picked Wi-Fi
 
 The restore's link check ran at about 18:08:40, before either Mac had its
 new Thunderbolt link-local address (they change on every boot: here
@@ -55,7 +311,7 @@ to about 200 tokens per second, so the cut chat took about 2.8 minutes
 instead of about 1.5. On Nov 19 the check happened to run after
 Thunderbolt was up.
 
-### Fixed: wait for Thunderbolt, then say so if it comes late
+#### Fixed: wait for Thunderbolt, then say so if it comes late
 
 - **Wait.** When a load opens the link to another Mac and Thunderbolt has
   worked to that Mac in the last 30 days, Caravan now waits up to 60 s for
@@ -75,9 +331,9 @@ Thunderbolt was up.
   written and make the model unavailable for about a minute at a moment the
   user did not choose. The note lets the user pick the moment.
 
-Tests: `tests/test_day33_thunderbolt_wait.py`.
+Tests: `tests/test_day30_thunderbolt_wait.py`.
 
-### Thunderbolt check after the fix
+#### Thunderbolt check after the fix
 
 Release 2a155f9 on both Macs (Nov 21, no power pull):
 
@@ -97,9 +353,9 @@ Release 2a155f9 on both Macs (Nov 21, no power pull):
   power pull; the unit tests cover it with addresses that change between
   tries.
 
-## First plug pull (Nov 19): partial
+### First plug pull (Nov 19): partial
 
-### Setup
+#### Setup
 
 - Qwen3 30B-A3B Q4_K_M (GGUF) split across the 1st and 2nd Mac over
   Thunderbolt, every setting on Auto (window 32768, 16-bit chat memory,
@@ -111,7 +367,7 @@ Release 2a155f9 on both Macs (Nov 21, no power pull):
   1st Mac to the 2nd, the Caravan status on the 1st Mac, and a tiny chat
   once ready.
 
-### Timeline (CST)
+#### Timeline (CST)
 
 Plug-in is the owner's "about 14:57"; power-up is each Mac's kernel boot
 time (1st Mac 14:57:08, 2nd Mac 14:57:13). Watcher times are when that
@@ -148,7 +404,7 @@ was lost: Caravan had no record of it, so nothing ran it again, and the
 client only got an ssh timeout. The later successful replies (6 and 7)
 were new prompts from the test loop.
 
-### Load loop
+#### Load loop
 
 | # | Sent | Ended | Result |
 |---|---|---|---|
@@ -160,7 +416,7 @@ were new prompts from the test loop.
 
 The loop was stopped at 15:03 after recovery was confirmed.
 
-### Files after the power loss
+#### Files after the power loss
 
 - `last-model.json`, `gguf-tuned.json`, `gguf-self-tune.json`,
   `speed_averages.json`, `bench_speedups.json`, `mlx/tuned-settings.json`,
@@ -173,7 +429,7 @@ The loop was stopped at 15:03 after recovery was confirmed.
   (`peer-routes.json`). Only the test watcher had the old address hard-coded;
   it was restarted at 14:59:08 to read the current one.
 
-## Resume after a power loss (new)
+### Resume after a power loss (new)
 
 Built after the test, to make Caravan finish the work:
 
@@ -208,10 +464,10 @@ Built after the test, to make Caravan finish the work:
   that one reply runs again (at least once, not exactly once).
 
 See [WEB](WEB.md#chats-after-a-power-loss-or-crash). Tests:
-`tests/test_day33_jobs.py` (journal crash safety, run-again-once, limits,
+`tests/test_day30_jobs.py` (journal crash safety, run-again-once, limits,
 opt-out, endpoint wiring, CLI).
 
-### Live check with a fake crash
+#### Live check with a fake crash
 
 Release 7b33dc8 on both Macs, Qwen3 30B split, all Auto. A streamed
 ~7.3K-token chat was sent to `/v1/chat/completions` on the 1st Mac, then
@@ -234,7 +490,7 @@ chat that was in flight at run 1 was also run again and finished. Run 2
 shows a finished job is not run again. Journal folder `drwx------`,
 files `-rw-------`.
 
-## Fixed
+### Fixed
 
 - **Plain wording while the restore waits.** The page showed "Waiting for
   Minis (attempt 2); retry in 4s: Mini Mac is unavailable; bring it online
@@ -248,11 +504,11 @@ files `-rw-------`.
   flash attention and prompt batch. Caravan now reports the chat memory
   llama-server was actually started with (16-bit here).
 
-Tests: `tests/test_day33_power_restore.py`, `tests/test_day33_jobs.py` and `tests/test_day33_thunderbolt_wait.py`; the full suite passes.
+Tests: `tests/test_day30_power_restore.py`, `tests/test_day30_jobs.py` and `tests/test_day30_thunderbolt_wait.py`; the full suite passes.
 Nothing in `agent/` worker code or the requirements changed (one message
 in `agent/service_endpoints.py`), so `caravan update` keeps a loaded model.
 
-## Medium prompts: crash series (Nov 21, 19:11–19:18 CST)
+### Medium prompts: crash series (Nov 21, 19:11–19:18 CST)
 
 Brenden asked for a series of medium prompts instead of one long one. Same
 setup as the plug-pull test: Qwen3 30B (GGUF) split over Thunderbolt, all

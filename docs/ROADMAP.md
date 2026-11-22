@@ -72,33 +72,31 @@ and the daily logs, not mixed into current setup instructions.
   Qwen3 30B 8k split write of 17.5 tok/s was the pre-fix Wi-Fi tunnel,
   not a remaining regression; after the Thunderbolt-first fix, round 3
   measured 25.18, faster than v0's 22.4.
-- **Day 29 (done):** Caravan on its llama.cpp build (b12283) against a
-  llama.cpp v1.0.0 build, benched on Nov 19 on one Mac and split. v1.0.0
-  was no faster: short writes within ±2% on all four setups, and the
-  first word on long prompts 1–4% slower with the helper. It is not
-  rolled in; the pin stays b12283.
-- **TensorFold: shelved** (Day 30). TensorFold 1.2.10
-  ([ashhart/TensorFold](https://github.com/ashhart/TensorFold)) could not
-  run any of the three test models on these Macs: its native Llama engine
-  needs an M5 or later, and it has no engine yet for Qwen3 MoE or
-  gpt-oss. It was removed from the test Macs. Revisit when it supports M4
-  Macs and Qwen3 MoE.
-- **Native context for GGUF (Day 31, done):** Chat window Auto now runs a
-  GGUF model as close to its trained window as memory allows, with no
-  fixed 32K cap. See [DAY31](DAY31.md).
-- **One branch, `main` (Day 32, done):** install and update read `main`;
-  the old branch names are fast-forwarded with each release for older
-  installs. Retire those fast-forwards once no older installs are left.
-  See [DAY32](DAY32.md).
-- **Power-loss resume (Day 33, done, v0.9.0):** a request journal saves
-  each chat before the model sees it, and after a power loss or crash
-  Caravan runs unfinished chats again from the start once the model is
-  back (`/api/jobs`, `caravan jobs`, "Finished after a restart"). Restores
-  wait up to 60 s for Thunderbolt when it worked before, and a split left
-  on Wi-Fi gets a note when Thunderbolt comes up. Passed a plug pull on
-  both Macs and a five-prompt crash series. Released as
-  [v0.9.0](https://github.com/linuxbren/caravan/releases/tag/v0.9.0).
-  See [DAY33](DAY33.md).
+- **Day 30 (done, released as
+  [v0.9.0](https://github.com/linuxbren/caravan/releases/tag/v0.9.0)):**
+  see [DAY30](DAY30.md).
+  - **llama.cpp 1.0:** benched on Nov 19 against the pinned b12283 and
+    no faster (short writes within ±2% on all four setups, first word on
+    long prompts 1–4% slower with the helper). Not rolled in; the pin
+    stays b12283.
+  - **TensorFold: shelved.** TensorFold 1.2.10
+    ([ashhart/TensorFold](https://github.com/ashhart/TensorFold)) could
+    not run any of the three test models on these Macs: its native Llama
+    engine needs an M5 or later, and it has no engine yet for Qwen3 MoE
+    or gpt-oss. Removed from the test Macs. Revisit when it supports M4
+    Macs and Qwen3 MoE.
+  - **Native context for GGUF:** Chat window Auto runs a GGUF model as
+    close to its trained window as memory allows, with no fixed 32K cap.
+  - **One branch, `main`:** install and update read `main`; the old
+    branch names are fast-forwarded with each release for older
+    installs. Retire those fast-forwards once no older installs are left.
+  - **Power-loss resume:** a request journal saves each chat before the
+    model sees it, and after a power loss or crash Caravan runs
+    unfinished chats again from the start once the model is back
+    (`/api/jobs`, `caravan jobs`, "Finished after a restart"). Restores
+    wait up to 60 s for Thunderbolt when it worked before, and a split
+    left on Wi-Fi gets a note when Thunderbolt comes up. Passed a plug
+    pull on both Macs and a five-prompt crash series.
 
 ## Next candidates
 

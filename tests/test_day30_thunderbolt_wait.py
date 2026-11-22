@@ -1,4 +1,4 @@
-"""Day 33 rerun: after a power loss the restore picked Wi-Fi because the
+"""Day 30 rerun: after a power loss the restore picked Wi-Fi because the
 Thunderbolt link-local addresses were not up yet. Boot loads now wait up to
 a minute for Thunderbolt when it worked before, re-reading the addresses on
 each try; a split stuck on Wi-Fi gets a plain note once Thunderbolt answers.

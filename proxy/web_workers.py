@@ -495,7 +495,7 @@ class WorkerManager:
         nodes = self._gguf_nodes(place)
         peers = [n for n in nodes if not self._node_is_local(n)]
         mode = "split" if peers else "single"
-        # Day 31: friendly Mac names in load notes (a hostname label used to
+        # Day 30: friendly Mac names in load notes (a hostname label used to
         # be scrubbed to nothing: "split across My Mac + ").
         def _friendly(n):
             if self._node_is_local(n):
@@ -598,7 +598,7 @@ class WorkerManager:
                 page = {}
             if isinstance(entry.get("tune_override"), dict):
                 tune = dict(entry["tune_override"])
-                # Day 31: a window saved from an Auto load (restore, Update
+                # Day 30: a window saved from an Auto load (restore, Update
                 # now, Self-tuning) is sized again, so it can use the full
                 # window this version allows.
                 if tune.get("ctx") is not None and str(page.get("chat_window") or "auto") == "auto":
@@ -607,7 +607,7 @@ class WorkerManager:
                 tune = WS.apply_gguf_settings(
                     GT.best_tune(path, 1 + len(rpc)), page, model_path=path,
                 )
-            # Day 31: only the settings you pinned may shorten the window.
+            # Day 30: only the settings you pinned may shorten the window.
             import gguf_self_tune as GST
             pk = sorted(GST.pinned_knobs(page))
             if pk:
@@ -636,7 +636,7 @@ class WorkerManager:
                                + " instead of the learned setting, which would not fit")
                 tune = dict(tune, ctx=launch["ctx"], n_slots=launch["n_slots"],
                             ctx_auto=bool(launch.get("ctx_auto")), **lighter)
-            # Day 33: report the chat memory llama-server really got. A boot
+            # Day 30: report the chat memory llama-server really got. A boot
             # restore's saved tune has no cache_type, so the Settings chip
             # showed no Memory compression after a power-loss restore.
             if "-ctk" in args:
@@ -718,7 +718,7 @@ class WorkerManager:
             # GGUF stage 2: a peer with its own copy fills its rpc cache from disk.
             self._check_cancel()
             name = n.get("label") or n.get("id")
-            try:  # Day 31: friendly name in notes, never a hostname
+            try:  # Day 30: friendly name in notes, never a hostname
                 who = self._mac_name(n) or name
             except Exception:  # noqa: BLE001
                 who = name
@@ -756,11 +756,11 @@ class WorkerManager:
         args, route = None, "network"
         if node is not None:
             name = (node or {}).get("label") or (node or {}).get("id") or target
-            try:  # Day 31: friendly name in the note, never a hostname
+            try:  # Day 30: friendly name in the note, never a hostname
                 name = self._mac_name(node) or name
             except Exception:  # noqa: BLE001
                 pass
-            # Day 33: right after a power loss Thunderbolt comes up after
+            # Day 30: right after a power loss Thunderbolt comes up after
             # Wi-Fi. If it worked to this Mac before, wait up to a minute
             # for it (re-reading the new link-local addresses each try).
             noted = {"at": -99.0}

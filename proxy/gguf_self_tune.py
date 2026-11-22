@@ -238,7 +238,7 @@ def observe(model_path, n_minis: int, specs, *, used=None, settings=None,
                 draft = (find_draft or (lambda mp: T.helper_on_disk(None, mp)))(model_path)
             except Exception:  # noqa: BLE001
                 draft = None
-        # Day 31: never trial a heavier setting that would need a shorter
+        # Day 30: never trial a heavier setting that would need a shorter
         # chat window (the window comes first).
         blocked = []
         if str((settings or {}).get("chat_window") or "auto") == "auto":

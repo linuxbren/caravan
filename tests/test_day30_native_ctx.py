@@ -1,4 +1,4 @@
-"""Day 31: GGUF Auto chat window runs as close to the trained window as memory allows."""
+"""Day 30: GGUF Auto chat window runs as close to the trained window as memory allows."""
 from __future__ import annotations
 
 import json
@@ -71,7 +71,7 @@ class AutoWindow(unittest.TestCase):
         self.assertEqual(G.auto_ctx("/m.gguf", decide=tight, meta_fn=_meta(131072)), 65536)
 
     def test_never_below_the_old_rule(self):
-        # Nothing fits: the old rule kept 8192; so does Day 31.
+        # Nothing fits: the old rule kept 8192; so does Day 30.
         none_fit = _decide(budget=100.0)
         self.assertEqual(G.auto_ctx("/m.gguf", decide=none_fit, meta_fn=_meta(131072)), 8192)
         for budget in (100.0, 5000.0, 7000.0, 9500.0, 18000.0, 10 ** 7):
@@ -265,7 +265,7 @@ class TuningKeepsTheWindow(unittest.TestCase):
         self.assertIsNone(items["cache_type"]["challenger"])
         self.assertEqual(items["flash_attn"]["skip"], G.WINDOW_SKIP)
         self.assertIsNone(items["ubatch"]["skip"])
-        # Nothing blocked: same plan as before Day 31.
+        # Nothing blocked: same plan as before Day 30.
         plain = {i["name"]: i for i in G.gguf_schedule({}, [])}
         self.assertEqual(plain["cache_type"]["challenger"], "q8_0")
         self.assertEqual(plain["flash_attn"]["challenger"], "off")
@@ -288,7 +288,7 @@ class UiTrim(unittest.TestCase):
 
 
 class SplitLoadNotes(unittest.TestCase):
-    """Day 31: a split load that worked showed "Couldn't start the model on
+    """Day 30: a split load that worked showed "Couldn't start the model on
     the other Mac" because its rpc-server success line names the tunnel."""
 
     def test_success_line_is_not_turned_into_a_failure(self):
@@ -317,7 +317,7 @@ class SplitLoadNotes(unittest.TestCase):
 
 
 class LongReadTimeout(unittest.TestCase):
-    """Day 31 live test: a ~116K-token prompt on one Mac (Llama 3.1 8B) was
+    """Day 30 live test: a ~116K-token prompt on one Mac (Llama 3.1 8B) was
     cut off by the 30-minute wait for the model's first bytes."""
 
     def test_chat_wait_is_long_enough_for_a_full_window(self):
@@ -331,7 +331,7 @@ class LongReadTimeout(unittest.TestCase):
 
 
 class BenchReloadOfLoadedModel(unittest.TestCase):
-    """Day 31 live check: `caravan bench` on the model that was already
+    """Day 30 live check: `caravan bench` on the model that was already
     loaded measured while it restarted (HTTP 502), then could not put it
     back ("a model switch is already in progress", HTTP 400)."""
 

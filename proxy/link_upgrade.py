@@ -1,4 +1,4 @@
-"""Day 33: tell the user when Thunderbolt comes up under a split on Wi-Fi.
+"""Day 30: tell the user when Thunderbolt comes up under a split on Wi-Fi.
 
 A split that loaded while the Thunderbolt link was not up yet (for example
 right after a power loss) keeps using Wi-Fi or Ethernet: the tunnels to the

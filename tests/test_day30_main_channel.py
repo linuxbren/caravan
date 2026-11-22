@@ -1,4 +1,4 @@
-"""Day 32: Caravan lives on main. Install and update read main; older
+"""Day 30: Caravan lives on main. Install and update read main; older
 installs keep working because the old branch names are fast-forwarded."""
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ class UpdateAndInstallPointAtMain(unittest.TestCase):
             "scripts/install.sh",             # accepts old-branch checkouts
             "docs/RELEASES.md",               # transition fast-forward step
             "docs/DEVELOPMENT.md",            # how to move an old checkout
-            "tests/test_day32_main_channel.py",
+            "tests/test_day30_main_channel.py",
         }
         paths = ["install", "README.md", "INSTALL.md"]
         for folder in ("tools", "proxy", "agent", "scripts", "runtime", "tests"):

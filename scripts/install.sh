@@ -100,7 +100,7 @@ if [ -d "$REPO/.git" ]; then
   esac
   [ -z "$(git -C "$REPO" status --porcelain)" ] || fail 'Your checkout has local changes. Keep them; commit or choose a different folder before installing.'
   CURRENT=$(git -C "$REPO" symbolic-ref --short -q HEAD || git -C "$REPO" describe --tags --exact-match HEAD || true)
-  # Checkouts made before Day 32 follow an old branch name. Those branches are
+  # Checkouts made before Day 30 follow an old branch name. Those branches are
   # fast-forwarded to main with every release, so keep pulling the branch the
   # checkout is on instead of refusing it (no branch is switched).
   if [ "$REF_GIVEN" = 0 ] && [ "$CURRENT" != "$REF" ]; then

@@ -1,4 +1,4 @@
-## 2026-11-21: Day 33 — Crash series with medium prompts
+## 2026-11-21: Day 30 — Crash series with medium prompts
 
 Five medium prompts (3.3K–7.5K tokens, real-ish tasks) on the Qwen3 30B
 Thunderbolt split, all Auto. Each ran once uninterrupted, then with
@@ -8,9 +8,9 @@ finished by themselves ("Finished after a restart", 1 replay each), all
 over Thunderbolt, all fetched with `/api/jobs` and `caravan jobs`.
 Averages: model ready 22.0 s after the kill, re-run 1.1 s later, crash
 total 54.5 s vs 23.4 s uninterrupted (about 32 s lost), same write speed
-(29 tok/s). No code change. See [DAY33](DAY33.md).
+(29 tok/s). No code change. See [DAY30](DAY30.md#power-loss-resume-thunderbolt-wait-and-crash-series).
 
-## 2026-11-21: Day 33 — Power-loss test passes
+## 2026-11-21: Day 30 — Power-loss test passes
 
 Second plug pull (18:07 CST, back 18:08): both Macs booted by 18:08:17,
 the split was ready at 18:09:37 and Caravan ran the cut chat
@@ -19,9 +19,9 @@ the split was ready at 18:09:37 and Caravan ran the cut chat
 `caravan jobs <id>`. Pass. The restore picked Wi-Fi because it checked the
 link before Thunderbolt was up; loads now wait up to 60 s for Thunderbolt
 when it worked before, and a split left on Wi-Fi gets a note when
-Thunderbolt starts working. See [DAY33](DAY33.md).
+Thunderbolt starts working. See [DAY30](DAY30.md#power-loss-resume-thunderbolt-wait-and-crash-series).
 
-## 2026-11-19: Day 33 — Power-loss test (partial); finishing chats after a restart
+## 2026-11-19: Day 30 — Power-loss test (partial); finishing chats after a restart
 
 Power pulled on both Macs at 14:56 during a busy Qwen3 30B split; plugged
 back in about 14:57. The restore passed (ready split over Thunderbolt at
@@ -29,18 +29,18 @@ back in about 14:57. The restore passed (ready split over Thunderbolt at
 Added a durable request journal that runs unfinished chats again from the
 start after a restart, with `/api/jobs`, `caravan jobs` and a "Finished
 after a restart" note in chat. Also fixed the restore's waiting text and
-the empty Memory compression chip after a restore. See [DAY33](DAY33.md).
+the empty Memory compression chip after a restore. See [DAY30](DAY30.md#power-loss-resume-thunderbolt-wait-and-crash-series).
 
-## 2026-11-19: Day 32 — Caravan lives on main
+## 2026-11-19: Day 30 — Caravan lives on main
 
 Everything moves to `main`. Install, `caravan update`, Update now and the
 update check read `main`; the old branch names are fast-forwarded with
 every release so installs from before today keep updating, and no branch
 is deleted. Docs, the pairing help link and the website use the new
 install line. Compatibility names (`com.caravan.v3.*`, `~/cv3`) and
-history are unchanged. See [DAY32](DAY32.md).
+history are unchanged. See [DAY30](DAY30.md#caravan-lives-on-main).
 
-## 2026-11-19: Day 31 — GGUF chat window at the model's full trained length
+## 2026-11-19: Day 30 — GGUF chat window at the model's full trained length
 
 "Context is important." Chat window Auto now picks the longest window
 that fits in memory, up to the model's trained window, with no 32K cap,
@@ -54,8 +54,19 @@ window needs 8-bit chat memory. Also: a 2-hour wait for a model's first
 bytes (a ~116K prompt took longer than the old 30 minutes on one Mac),
 and split loads that worked no longer say "Couldn't start the model on
 the other Mac", and `caravan bench` on the already-loaded model waits
-for its restart. TensorFold (Day 30) is shelved. Python in `proxy/`,
-`tools/` and tests only; `caravan update` keeps a loaded model. See [DAY31](DAY31.md).
+for its restart. TensorFold is shelved (see below). Python in `proxy/`,
+`tools/` and tests only; `caravan update` keeps a loaded model. See [DAY30](DAY30.md#gguf-chat-window-runs-at-the-models-full-trained-length).
+
+## 2026-11-19: Day 30 — llama.cpp 1.0 benched (no gain); TensorFold shelved
+
+llama.cpp v1.0.0 (build b12359) was benched against the pinned b12283 on
+1 Mac (Llama 3.1 8B, Qwen3 14B) and 2 Macs (Llama 3.1 8B, Qwen3 30B-A3B),
+Auto-tuned: short writes within ±2% on all four, first word on long
+prompts 1–4% slower with the helper. Nothing broke, but it is not faster,
+so it is not rolled in and the pin stays b12283. TensorFold 1.2.10 could
+not run any of the three test models on these M4 Macs (Llama needs an M5;
+no engine for gpt-oss or Qwen3 MoE); removed from the Macs and shelved.
+Day 30 is released as v0.9.0. See [DAY30](DAY30.md).
 
 ## 2026-11-15: Day 27 wrap — docs, Day 26 tag, Day 27 tag
 

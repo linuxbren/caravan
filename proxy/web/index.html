@@ -3388,7 +3388,7 @@
     }
   }
 
-  // Day 33: chats a power loss or crash cut off are run again after restore.
+  // Day 30: chats a power loss or crash cut off are run again after restore.
   // Show each finished one once, with a plain note (request_journal.py).
   async function showRecoveredJobs() {
     let list;
@@ -3504,7 +3504,7 @@
     return out;
   }
   function chatWindowTokens() {
-    // Day 31: a GGUF model's real chat window (Auto can be its full trained
+    // Day 30: a GGUF model's real chat window (Auto can be its full trained
     // window, or smaller than 32768); other models keep the old trim size.
     const a = state.active || {};
     const w = Number(a.chat_window || 0);
@@ -3636,7 +3636,7 @@
         const err = await r.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${r.status}`);
       }
-      // Day 33: the request journal's id for this reply (GET /api/jobs/<id>).
+      // Day 30: the request journal's id for this reply (GET /api/jobs/<id>).
       const jobId = r.headers.get("X-Caravan-Job");
       if (jobId) asst.dataset.job = jobId;
       let streamErr = "";

@@ -1,4 +1,4 @@
-"""Day 33: request journal — finish chat work after a power loss.
+"""Day 30: request journal — finish chat work after a power loss.
 
 Covers crash safety of the journal files, run-again-once, the limits
 (age, tries, size, retention), the opt-out, the /api/chat and
@@ -419,7 +419,7 @@ class CliAndDocs(unittest.TestCase):
         self.assertIn('argv[0] == "jobs"', src)
 
     def test_docs_say_from_the_start(self):
-        for doc in ("docs/WEB.md", "docs/DAY33.md"):
+        for doc in ("docs/WEB.md", "docs/DAY30.md"):
             self.assertIn("from the start", (REPO / doc).read_text(), doc)
 
     def test_page_shows_recovered_note(self):

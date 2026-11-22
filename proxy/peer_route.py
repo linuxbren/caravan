@@ -56,7 +56,7 @@ SSH_PORT = 22
 MARK = "CARAVAN_PEER_ROUTE_V1"
 CONTROL_TTL_S = 300.0     # control SSH reuses a pick this young
 NEGATIVE_TTL_S = 30.0     # ...and a failed pick this long (offline Mac: no probe storm)
-# Day 33: after a power loss the Macs bring Wi-Fi up before the Thunderbolt
+# Day 30: after a power loss the Macs bring Wi-Fi up before the Thunderbolt
 # link-local addresses, so a load that checks too early falls back to Wi-Fi.
 TB_WAIT_S = float(os.environ.get("CARAVAN_TB_WAIT_S", "60"))
 TB_WAIT_INTERVAL_S = 5.0
@@ -313,7 +313,7 @@ def load_all() -> dict:
 
 def _save(target: str, route: dict) -> None:
     with _lock:
-        # Day 33: remember when Thunderbolt last worked to this Mac, across
+        # Day 30: remember when Thunderbolt last worked to this Mac, across
         # picks that fell back to a slower link (see pick_waiting).
         if route.get("kind") == "thunderbolt":
             route["thunderbolt_seen_at"] = route.get("checked_at") or round(time.time(), 1)

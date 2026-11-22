@@ -101,7 +101,7 @@ class GgufOptimizer:
                 draft = (found or {}).get("path")
             except Exception:
                 draft = None
-        # Day 31: skip trials whose win would need a shorter chat window.
+        # Day 30: skip trials whose win would need a shorter chat window.
         blocked = set()
         if path and s.get("chat_window") in (None, "", "auto"):
             try:

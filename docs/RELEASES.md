@@ -9,10 +9,10 @@ If a correction needs a new release, append `-fix1`, `-fix2`, and explain it.
 1. Finish docs, CHANGELOG and the Obsidian day note. Keep every test result,
    including failures. Update INSTALL.md if setup changes.
 2. Run `PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests`.
-3. Commit as linuxbren on `main` (the only working branch since Day 32):
+3. Commit as linuxbren on `main` (the only working branch since Day 30):
    the source commit, then the pin commit that sets `packaging-version` to
    that source commit and its codeload SHA-256. Push `main` (ff-only).
-   **Transition:** installs from before Day 32 read `packaging-version` and
+   **Transition:** installs from before Day 30 read `packaging-version` and
    the `install` script from `caravan-v3-mlx-split` (and older ones from
    `clean-install-fixes`). With every release, fast-forward both to the same
    commit as `main`; check ancestry first, never force, never delete them:
@@ -26,7 +26,7 @@ If a correction needs a new release, append `-fix1`, `-fix2`, and explain it.
    ```
 
    An install picks up `main` as its channel after its first update to a
-   Day 32 or later build. Keep the fast-forwards until the owner decides
+   Day 30 or later build. Keep the fast-forwards until the owner decides
    no older installs are left.
 4. Build clean packages from the committed tree (not the working directory):
 

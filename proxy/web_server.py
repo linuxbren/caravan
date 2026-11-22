@@ -25,7 +25,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-# Day 31: how long Caravan waits for the model's first bytes. With Auto now
+# Day 30: how long Caravan waits for the model's first bytes. With Auto now
 # using a model's full trained window, reading a prompt near a 128K window on
 # one Mac can take more than the old 30 minutes (Llama 3.1 8B: ~45 min).
 REPLY_TIMEOUT_S = float(os.environ.get("CARAVAN_REPLY_TIMEOUT_S", "7200"))
@@ -2553,7 +2553,7 @@ def make_handler(app: App):
             return self._json(200, snap)
 
         def _api_jobs(self, path):
-            """Day 33: chat jobs from the request journal (request_journal.py)."""
+            """Day 30: chat jobs from the request journal (request_journal.py)."""
             import request_journal as RJ
             from urllib.parse import parse_qs, urlparse
             q = parse_qs(urlparse(self.path).query)
@@ -2610,7 +2610,7 @@ def make_handler(app: App):
             }, method="POST")
 
             stream = bool(body.get("stream"))
-            # Day 33: journal the request (fsync'd) before the model sees it,
+            # Day 30: journal the request (fsync'd) before the model sees it,
             # so a power loss mid-reply can be run again after restore.
             job_id = None
             jobs = getattr(app, "jobs", None)
@@ -3018,7 +3018,7 @@ def main(argv=None):
     print(f"[caravan-web] lead worker port {args.lead_port}; packer {args.packer_peer}", flush=True)
     app.restore.start(f"http://127.0.0.1:{httpd.server_port}")
 
-    # Day 33: run chats that a power loss or crash cut off, once ready.
+    # Day 30: run chats that a power loss or crash cut off, once ready.
     import request_journal as _RJ
 
     def _replay_send(body, session):
@@ -3037,7 +3037,7 @@ def main(argv=None):
                                     is_enabled=app.jobs_enabled)
     app.job_replayer.start()
 
-    # Day 33: a split that loaded on Wi-Fi before Thunderbolt came up gets a
+    # Day 30: a split that loaded on Wi-Fi before Thunderbolt came up gets a
     # plain note once Thunderbolt answers (no automatic reload; see module).
     import link_upgrade as _LU
     app.link_monitor = _LU.Monitor(app.mgr)

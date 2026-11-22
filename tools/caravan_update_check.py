@@ -26,7 +26,7 @@ except ImportError:  # pragma: no cover
     ZoneInfo = None
 
 
-# Releases come from main (Day 32). Installs from before Day 32 still read
+# Releases come from main (Day 30). Installs from before Day 30 still read
 # the pin from the old branch names, so each release also fast-forwards
 # LEGACY_CHANNEL_BRANCHES to main (docs/RELEASES.md). Nothing here reads them.
 CHANNEL_BRANCH = "main"

@@ -437,7 +437,7 @@ def apply_gguf_settings(tune: dict, settings, *, model_path=None) -> dict:
         out["ctx"] = int(cw)
         out.pop("ctx_auto", None)
     elif cw == "native":
-        # Day 31: the model's own trained window; Auto when the file does not say.
+        # Day 30: the model's own trained window; Auto when the file does not say.
         trained = None
         if model_path:
             try:

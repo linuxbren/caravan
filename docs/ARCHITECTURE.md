@@ -336,7 +336,7 @@ Flag names in this repo were checked against `caravan-patches`.
    saved to disk, clean GPT-OSS replies, the per-Mac cap, then the wired
    limit held from startup.
 7. **MLX split** (Oct 31, then called v3 on its own branch; on `main` since
-   Day 32). One MLX
+   Day 30). One MLX
    model split across two Macs over Caravan's own TCP link, chat memory
    on both halves, a split-download prototype, and the lead / packer /
    string names.

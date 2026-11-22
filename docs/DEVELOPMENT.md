@@ -230,7 +230,7 @@ git pull --ff-only origin main
 bash scripts/install.sh --use-existing --repo "$PWD" --python /absolute/path/to/python3
 ```
 
-A checkout made before Day 32 may still be on `caravan-v3-mlx-split` or
+A checkout made before Day 30 may still be on `caravan-v3-mlx-split` or
 `clean-install-fixes`. Those branches get every release too (they are
 fast-forwarded to `main`), so `git pull --ff-only` keeps working and
 `scripts/install.sh --update` pulls the branch the checkout is on. To move

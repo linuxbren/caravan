@@ -156,7 +156,7 @@ are used, with plain-word hints. Memory compression offers Auto, 16, and
 memory (on one Mac, or across the Macs a model is split over), up to the
 full window the model was trained for, and falls back to the same default
 as before when that cannot be measured. It never picks less than it did
-before Day 31. A setting Caravan learned for speed (16-bit memory, flash
+before Day 30. A setting Caravan learned for speed (16-bit memory, flash
 attention off, a bigger prompt batch, the Guess-ahead helper) never makes
 Auto pick a shorter window; if it would not fit, Caravan uses the lighter
 choice and says so in the load log. Settings you pin yourself still count.

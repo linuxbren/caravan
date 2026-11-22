@@ -1,10 +1,15 @@
-## Day 33 — Power-loss test passes: Caravan finishes the cut chat
+## Day 30 (v0.9.0) — Power-loss resume, full GGUF chat window, one main branch
+
+Released as [v0.9.0](https://github.com/linuxbren/caravan/releases/tag/v0.9.0).
+See [DAY30](docs/DAY30.md).
+
+### Finishing chats after a power loss or crash
 
 - Second plug pull on both Macs during a busy Qwen3 30B split: Caravan
   restored the split and ran the chat the power loss cut off again by
   itself, from the start, and saved the whole reply for the client to
   fetch. The first pull was partial (the reply in flight was lost); see
-  [DAY33](docs/DAY33.md).
+  [DAY30](docs/DAY30.md#power-loss-resume-thunderbolt-wait-and-crash-series).
 - New: Caravan saves each chat request on the 1st Mac before the model
   sees it and, after a power loss, crash or restart, runs unfinished ones
   again from the start (not mid-sentence) once the model is back. Get the
@@ -21,21 +26,26 @@
   other Macs to start… trying again in 4s: The 2nd Mac is not reachable
   yet" instead of "Mini Mac is unavailable; bring it online and press Load".
 - A restored GGUF model shows its Memory compression in Settings again.
+- Crash series with medium prompts (3.3K–7.5K tokens): five chats cut by
+  `kill -9` during prompt reading, early, mid or late in the reply all
+  came back by themselves over Thunderbolt and finished ("Finished after a
+  restart"). Averages: model ready 22.0 s after the crash, re-run 1.1 s
+  later, about 32 s lost per crash, same write speed.
 
-## Day 32 — Caravan lives on main
+### Caravan lives on main
 
 - Install, `caravan update`, Update now and the daily update check read
   `main`. New install line:
   `(set -o pipefail; curl -fsSL https://raw.githubusercontent.com/linuxbren/caravan/main/install | bash)`.
-- Installs from before Day 32 keep updating: each release also
+- Installs from before Day 30 keep updating: each release also
   fast-forwards `caravan-v3-mlx-split` and `clean-install-fixes` to `main`.
   Source checkouts on an old branch keep pulling it.
 - Docs, the pairing help link and the website point at `main`; "v3" is
   gone where it was only the branch or a legacy label. Compatibility names
   (`com.caravan.v3.*`, `~/cv3`) and history are unchanged.
-  See [DAY32](docs/DAY32.md).
+  See [DAY30](docs/DAY30.md#caravan-lives-on-main).
 
-## Day 31 — GGUF chat window at the model's full trained length
+### GGUF chat window at the model's full trained length
 
 - Chat window Auto picks the longest window that fits in memory, up to
   the model's trained window, with no 32K cap. Llama 3.1 8B and gpt-oss
@@ -62,7 +72,13 @@
   slower on a ~29K prompt (its full window needs 8-bit chat memory);
   gpt-oss 20B unchanged. Near the full window one Mac is slow: Llama
   3.1 8B read a 115,593-token prompt in 44 minutes and wrote at 3.65
-  tok/s. See [DAY31](docs/DAY31.md).
+  tok/s. See [DAY30](docs/DAY30.md#gguf-chat-window-runs-at-the-models-full-trained-length).
+
+### llama.cpp 1.0 and TensorFold
+
+- llama.cpp v1.0.0 was benched against the pinned b12283 on four setups
+  and was no faster (short writes within ±2%, first word on long prompts
+  1–4% slower with the helper). Not rolled in; the pin stays b12283.
 - TensorFold is shelved until it supports M4 Macs and Qwen3 MoE.
 
 ## Day 28 — Qwen3 30B 8k split write was the pre-fix Wi-Fi tunnel

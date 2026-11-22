@@ -25,15 +25,15 @@ LLAMA_BIN = str(llama_bin_dir())
 RPC_PORT = int(os.environ.get("CARAVAN_GGUF_RPC_PORT", "50052"))
 GGUF_CTX = int(os.environ.get("CARAVAN_GGUF_CTX", "8192"))
 # Offered Chat window sizes, plus "native" (the model's own trained
-# window). Day 31: Auto picks the largest window that fits memory, up to
+# window). Day 30: Auto picks the largest window that fits memory, up to
 # the model's trained window, with no fixed cap. 8192 stays the fallback
 # when the model or memory cannot be measured.
 GGUF_CTX_CHOICES = (4096, 8192, 16384, 32768, 65536, 131072, 262144)
 GGUF_CTX_NATIVE = "native"
-# Before Day 31 Auto stopped here. Auto never picks less than that old
+# Before Day 30 Auto stopped here. Auto never picks less than that old
 # rule did (it is the floor), it just no longer stops at it.
 GGUF_CTX_LEGACY_AUTO_CAP = 32768
-GGUF_CTX_AUTO_CAP = None  # Day 31: no cap; kept so old imports still work.
+GGUF_CTX_AUTO_CAP = None  # Day 30: no cap; kept so old imports still work.
 GGUF_DEFAULT_SLOTS = 1
 GGUF_MAX_SLOTS = 2
 GGUF_ROOTS = [Path(p).expanduser() for p in os.environ.get(
@@ -223,12 +223,12 @@ def attention_scratch_mib(model_path, total_ctx: int, *, ubatch: int = GGUF_DEFA
                           flash_attn: str = "on", n_devices: int = 1, meta_fn=None) -> float:
     """Working memory llama.cpp reserves that grows with the window.
 
-    Day 31: with long windows this is no longer small. llama.cpp reserves
+    Day 30: with long windows this is no longer small. llama.cpp reserves
     its compute graph for a full window: the attention mask is window x
     prompt batch (counted at 4 bytes), on every Mac that holds layers. With
     flash attention off it also holds the full score matrix, heads x window
     x prompt batch x 4 bytes, which is many GB at 128K. Kept out of the old
-    (pre-Day 31) floor so Auto never picks less than it used to.
+    (pre-Day 30) floor so Auto never picks less than it used to.
     """
     total_ctx = max(0, int(total_ctx))
     ub = max(1, int(ubatch))
@@ -247,7 +247,7 @@ def ctx_estimate(model_path, ctx: int, *, n_slots: int = 1,
     need is for q8_0 chat memory, or f16 when cache_type is pinned to f16,
     plus extra_mib_fn(ctx * n_slots) (the Guess-ahead helper) when given.
     flash_attn ("on"/"off") adds the window-sized attention scratch
-    (Day 31); None leaves it out, as before Day 31."""
+    (Day 30); None leaves it out, as before Day 30."""
     try:
         import kv_auto
         fn = decide or kv_auto.decide
@@ -295,8 +295,8 @@ def ctx_candidates(trained) -> list:
 def legacy_auto_ctx(model_path, *, n_slots: int = 1, ubatch: int = GGUF_DEFAULT_UBATCH,
                     n_devices: int = 1, decide=None, meta_fn=None,
                     extra_mib_fn=None, cache_type=None) -> int:
-    """The pre-Day 31 Auto rule: start at 8192, grow while known to fit,
-    never past 32768. Day 31 Auto never picks less than this."""
+    """The pre-Day 30 Auto rule: start at 8192, grow while known to fit,
+    never past 32768. Day 30 Auto never picks less than this."""
     trained = model_context_length(model_path, meta_fn=meta_fn)
     if not trained:
         return GGUF_CTX
@@ -328,11 +328,11 @@ def auto_ctx(model_path, *, n_slots: int = 1, ubatch: int = GGUF_DEFAULT_UBATCH,
              extra_mib_fn=None, cache_type=None, flash_attn: str = "on") -> int:
     """Chat window for Auto: as close to the model's trained window as memory allows.
 
-    Day 31 (Brenden: "Context is important"): the largest window that fits
+    Day 30 (Brenden: "Context is important"): the largest window that fits
     this model's weights, its chat memory at the given memory compression
     (q8_0 unless cache_type pins f16), the working memory and the safety
     margin, on one Mac or across the split (n_devices), up to the model's
-    trained window. No fixed cap. Never less than the pre-Day 31 rule
+    trained window. No fixed cap. Never less than the pre-Day 30 rule
     (legacy_auto_ctx), and still 8192 when the file or memory cannot be
     measured.
     """
@@ -365,7 +365,7 @@ def disabled_ctx_values(model_path, *, n_slots: int = 1,
                         decide=None, meta_fn=None) -> dict:
     """{value: plain reason} for Chat window sizes that stay listed but unusable.
 
-    Day 31: sizes past the model's trained window, sizes that will not fit
+    Day 30: sizes past the model's trained window, sizes that will not fit
     memory even with the lighter chat memory, and "native" when the file
     does not say its window or the full window will not fit."""
     out = {}
@@ -411,7 +411,7 @@ def resolve_launch(model_path, *, tune=None, ctx=None, decide=None,
     Pins on the tune win. Auto Chat window uses auto_ctx(). Auto Two chats
     is one slot. -c passed to llama-server is window times slots.
 
-    Day 31: the window comes first. Auto sizes the window with only the
+    Day 30: the window comes first. Auto sizes the window with only the
     settings you pinned (tune["pinned_knobs"]); learned speed choices
     (16-bit chat memory, flash attention off, a bigger prompt batch, the
     Guess-ahead helper) never make Auto pick a shorter window. A learned
@@ -500,7 +500,7 @@ def resolve_launch(model_path, *, tune=None, ctx=None, decide=None,
 def window_blockers(model_path, *, n_slots: int = 1, n_devices: int = 1,
                     pins=(), decide=None, meta_fn=None) -> set:
     """Heavier settings ("name=value") that would not fit with the Auto
-    window. Day 31: Auto-tune and Self-tuning skip those trials, because
+    window. Day 30: Auto-tune and Self-tuning skip those trials, because
     keeping such a win would need a shorter chat window."""
     pins = set(pins or ())
     try:
@@ -638,7 +638,7 @@ def llama_args(model_path: str, *, port: int, peers: list, shares: list,
         n_devices=n_devices, ubatch=ub, meta_fn=meta_fn,
     )
     ctx_per, n_slots, total_c = launch["ctx"], launch["n_slots"], launch["total_ctx"]
-    # Day 31: a learned heavier choice that does not fit this window was
+    # Day 30: a learned heavier choice that does not fit this window was
     # swapped for the lighter one (the window wins).
     lighter = launch.get("lighter") or {}
     if lighter:
@@ -1063,7 +1063,7 @@ def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
     Self-tuning does not use these extra options (it reads GGUF_KNOBS
     only).
 
-    Day 31: blocked lists heavier values ("cache_type=f16") that would not
+    Day 30: blocked lists heavier values ("cache_type=f16") that would not
     fit with the full Auto chat window (window_blockers); a trial of or
     against one is skipped, because keeping it would shorten the window.
     """

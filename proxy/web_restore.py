@@ -177,7 +177,7 @@ def validate_placement(app, entry, body):
     for nid in ids:
         node=configured[nid];stats=web_nodes.gather_node_stats(node,ssh_fn=app._ssh_fn())
         # Plain Mac name ("the 2nd Mac"), never the internal paired_… id: the
-        # page's wording filter turned that id into a bare "Mac" (Day 33).
+        # page's wording filter turned that id into a bare "Mac" (Day 30).
         name=mac_name(node,nid,list(configured.values()))
         if stats.get("offline"):raise RetryableReadinessError(f"{name} is not reachable yet", kind="mini")
         available=(stats.get("ram") or {}).get("available_gb",(stats.get("ram") or {}).get("free_gb"))

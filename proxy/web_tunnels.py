@@ -373,7 +373,7 @@ def plain_load_status(msg: str, *, mac: str = "") -> str:
         who = (mac or "the other Mac").strip()
         if "single-mini" in low or "single mini" in low:
             return f"starting single-Mini worker on {who}" if who else "starting single-Mini worker"
-        # Day 31: only a line that reports a failure becomes the failure
+        # Day 30: only a line that reports a failure becomes the failure
         # message. The success line "rpc-server on <Mac> up (pid ..),
         # tunnel 127.0.0.1:port" used to match "tunnel" and showed
         # "Couldn't start the model on the other Mac" on loads that worked.

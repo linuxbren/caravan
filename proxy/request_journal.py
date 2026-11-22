@@ -1,4 +1,4 @@
-"""Day 33: finish chat work after a power loss or crash.
+"""Day 30: finish chat work after a power loss or crash.
 
 Every chat request that reaches the Caravan page (/api/chat and
 /v1/chat/completions, streamed or not) is written to a journal on the

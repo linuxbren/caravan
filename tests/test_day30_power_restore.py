@@ -1,4 +1,4 @@
-"""Day 33 power-loss test: boot restore waits for the 2nd Mac in plain words."""
+"""Day 30 power-loss test: boot restore waits for the 2nd Mac in plain words."""
 import sys, unittest
 from pathlib import Path
 from types import SimpleNamespace as NS
@@ -59,7 +59,7 @@ class RestoreWaitWording(unittest.TestCase):
 
 
 class RestoredChipShowsChatMemory(unittest.TestCase):
-    """After the Day 33 restore the Settings chip had kv_bits None: the saved
+    """After the Day 30 restore the Settings chip had kv_bits None: the saved
     tune only holds flash attention and prompt batch."""
 
     def test_launch_cache_type_fills_in(self):

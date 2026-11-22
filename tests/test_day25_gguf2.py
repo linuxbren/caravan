@@ -100,7 +100,7 @@ class LaunchFlags(unittest.TestCase):
         fits = _decide(lambda ctx, slots: (10, 10000))
         self.assertEqual(
             G.auto_ctx("/m.gguf", decide=fits, meta_fn=_meta(32768)), 32768)
-        # Day 31: trained far above 32768 and memory fits: Auto is the full
+        # Day 30: trained far above 32768 and memory fits: Auto is the full
         # trained window (no 32768 cap any more).
         self.assertEqual(
             G.auto_ctx("/m.gguf", decide=fits, meta_fn=_meta(262144)), 262144)
@@ -137,7 +137,7 @@ class LaunchFlags(unittest.TestCase):
         self.assertEqual(seen["ctx"], 16384)
 
     def test_auto_window_is_the_trained_window_in_llama_args(self):
-        # Day 31: memory fits, so Auto uses the model's full trained window.
+        # Day 30: memory fits, so Auto uses the model's full trained window.
         fits = _decide(lambda ctx, slots: (10, 10000))
         a = G.llama_args("/m.gguf", port=1, peers=[], shares=[1],
                          decide=fits, meta_fn=_meta(262144), slot_root=self.root)
