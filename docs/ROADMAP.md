@@ -139,22 +139,27 @@ and the daily logs, not mixed into current setup instructions.
     lines show no update status (live, no reload); an audit of the daily
     check also fixed a loop that stopped after one error, offline answers
     that kept saying "up to date", broken replies and a wrong-clock case.
-  - **Header layout (in progress, waiting on approval before release):**
+  - **Header layout (built on a local branch, waiting on Brenden's review
+    before release):**
     the model/status pill moves above and outside the chat card's top-left
     corner, just outside its border (where the CHAT label was); **Update
     available** moves right of the theme picker; nothing wraps at narrow
     widths (long model names end in "…" with the full name on hover).
-  - **Chat message queue (in progress, waiting on approval before
-    release):** while the model answers, the prompt box stays typeable and
+  - **Chat message queue (built on a local branch, waiting on Brenden's
+    review before release):** while the model answers, the prompt box stays typeable and
     Send reads **Queue**. Queued messages send in order when the answer
-    finishes (also after an error or Stop), shown as a small strip along
-    the bottom of the answer, one chip per message with a × to cancel. A
+    finishes (also after an error or Stop), shown as a floating strip just
+    above the prompt box, one chip per message with a × to cancel. A
     queued message is journaled only when it sends.
-  - **API keys for cloud models in Settings (waiting on approval, not
-    built):** Caravan has no working cloud provider today (Ollama Cloud is
-    listed in Models but "framework-only", key only from the
-    `OLLAMA_API_KEY` environment variable). Proposal in
-    [DAY32](DAY32.md#proposal-api-keys-for-cloud-models).
+  - **Cloud API keys (approved; built on a local branch, waiting on
+    Brenden's review before release):** Settings gets a **Cloud API keys**
+    section (OpenAI, Anthropic, OpenRouter, Ollama Cloud; masked, editable,
+    removable). Picking a cloud model with no key asks for it inline, then
+    carries on. Cloud models say **Load**, not Download. Keys are kept in
+    `~/.caravan/cloud-keys.json` (0600), never logged, and the page sees
+    only the last 4 characters. Sending chats to a cloud model is not built
+    and needs its own approval. See
+    [DAY32](DAY32.md#cloud-api-keys-built-waiting-on-review).
   - **Localization (main theme, not started):** pull every web page, CLI and installer string
     into one English strings file keyed by name, with lookups that fall
     back to English for a missing key or language. First languages:

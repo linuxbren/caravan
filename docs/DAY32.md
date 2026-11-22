@@ -9,6 +9,7 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 3. [Part A: version label](#part-a-version-label)
 4. [Part A fix: daily update check (v0.9.5)](#part-a-fix-daily-update-check-v095)
 5. [Proposal: API keys for cloud models](#proposal-api-keys-for-cloud-models)
+6. [Cloud API keys: built, waiting on review](#cloud-api-keys-built-waiting-on-review)
 
 ## Status of every Day 32 request
 
@@ -16,9 +17,10 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 |---|---|
 | Part A: version label next to Settings ([v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4)) | Done, released, on both Macs |
 | Daily-check-off fix and daily check audit ([v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5)) | Done, released, on both Macs, checked live with the switch on and off |
-| Header layout: model/status pill above and outside the chat card's top-left corner (just outside its border, where the CHAT label was); **Update available** right of the theme picker; nothing wraps at narrow widths (long model names end in "…", full name on hover) | In progress on a local branch; waiting on Brenden's approval before release |
-| Chat message queue: Send reads **Queue** while the model answers; queued messages send in order when the answer finishes (also after an error or Stop); a small strip along the bottom of the answer, one chip per message with a × to cancel; a queued message is journaled only when it sends; Stop still works | In progress on a local branch; waiting on Brenden's approval before release |
-| API keys for cloud models in Settings: a place to enter keys for cloud model providers ([findings and proposal](#proposal-api-keys-for-cloud-models)) | Waiting on approval; not built |
+| Header layout: model/status pill above and outside the chat card's top-left corner (just outside its border, where the CHAT label was); **Update available** right of the theme picker; nothing wraps at narrow widths (long model names end in "…", full name on hover) | Built and tested on a local branch (not pushed); waiting on Brenden's review before release |
+| Chat message queue: Send reads **Queue** while the model answers; queued messages send in order when the answer finishes (also after an error or Stop); a floating strip just above the prompt box, one chip per message (full text on hover) with a × to cancel; a queued message is journaled only when it sends; Stop still works | Built and tested on a local branch (not pushed); waiting on Brenden's review before release |
+| API keys for cloud models: a **Cloud API keys** section in Settings (one row per provider, masked, editable, removable); an inline key prompt when a cloud model's provider has no key; cloud models say **Load**, not Download ([what was built](#cloud-api-keys-built-waiting-on-review)) | Approved; built and tested on a local branch (not pushed); waiting on Brenden's review before release |
+| Sending chats to a cloud model (routing `/api/chat` to the provider) | Not built; outside the approved scope; needs its own approval |
 | Localization (main theme): one English strings file keyed by name, English fallback, then Spanish, Simplified Chinese, Japanese, then German | Not started |
 
 ## Plan: localization
@@ -166,7 +168,10 @@ wrap commit. Notes: [release-notes/day32-v0.9.5.md](release-notes/day32-v0.9.5.m
 ## Proposal: API keys for cloud models
 
 Brenden: Settings needs a place to enter API keys for cloud models, if one
-doesn't exist yet. Status: **waiting on approval, not built.**
+doesn't exist yet. Status: **approved and built on a local branch,
+waiting on review** (see [below](#cloud-api-keys-built-waiting-on-review)).
+The proposal below is kept as written; what was built differs in a few
+places, listed in the next section.
 
 What Caravan has today (checked in the code, nothing changed):
 
@@ -206,3 +211,65 @@ Proposal (to approve before any work):
   with one says the message goes to that provider (docs/SECURITY.md
   already says optional cloud features send data to the provider you
   choose).
+
+## Cloud API keys: built, waiting on review
+
+Brenden approved the cloud keys request with three parts. All three are
+built on the local branch `day32-header-layout` (with the header layout
+and the chat queue). Nothing is pushed or released and the Macs are not
+changed until Brenden reviews it.
+
+1. **Settings → Cloud API keys.** One row per provider: OpenAI,
+   Anthropic, OpenRouter and Ollama Cloud. Each row shows "Not set" or
+   "Set · ends in abcd", has a password field with **Save**, and has
+   **Remove** for a key saved from Settings. A key set by an environment
+   variable shows "From OPENAI_API_KEY" (for example). It can't be edited
+   from the page, because the environment variable wins.
+2. **Inline key prompt.** In Models → Cloud, pressing **Load** on a cloud
+   model whose provider has no key opens a small box in that row: "… runs
+   on Ollama Cloud. Add your Ollama Cloud API key to load it. It's saved
+   only on this Mac." It has **Save and load** and **Cancel**. After
+   saving, it carries on with the load.
+3. **Load, not Download.** Cloud rows in the Models picker say **Load**.
+   If a cloud model ever shows in the Settings model list, it says "cloud
+   — open Models to Load" instead of "not downloaded".
+
+How keys are kept:
+
+- They are stored in `~/.caravan/cloud-keys.json` on the 1st Mac only,
+  with 0600 permissions. The file is written atomically (temp file,
+  chmod 0600, then rename). `CARAVAN_CLOUD_KEYS_PATH` can move it, and
+  tests use that.
+- The page and API only ever get the last 4 characters. Keys are never
+  logged and never echoed in an error. A bad key gets "That doesn't look
+  like an API key" with nothing repeated back. The page clears the field
+  after Save, whether it worked or not.
+- Keys can only be read or changed from this Mac or over Tailscale, the
+  same rule as Update now. From the local network, GET returns
+  `show: false` with no providers, and POST returns 403.
+- A cached Models search refreshes each cloud row's "key set" flag, so it
+  never shows an old "no key".
+
+Differs from the proposal: there is one file, not one per provider, and
+there is no **Test** button yet.
+
+**Not built: sending chats to a cloud model.** That would route
+`/api/chat` to the provider and add a first-chat notice that the message
+leaves your Macs. It needs its own approval. Until then, after the key is
+saved the picker says so plainly: "Ollama Cloud key ready (ends in abcd).
+Chatting with cloud models isn't built yet, so … can't load in chat yet."
+
+Code: `proxy/cloud_keys.py` (new), `GET/POST /api/cloud-keys` in
+`proxy/web_server.py`, the key flag in `proxy/web_picker.py`, and the
+Settings section and picker prompt in `proxy/web/index.html`.
+
+Tests: `tests/test_day32_cloud_keys.py` has 13 tests. They cover 0600
+storage, last 4 only, replace and remove, refusing a bad key without
+echoing it, the environment winning, a broken file, the API never
+returning or logging a key, the local network getting no access, picker
+rows, and the page contract. The full suite on the branch passes: 2,104
+tests.
+
+Screenshots, for review only, are not in the repo: Settings section,
+inline prompt, the Load button and the message after saving, at 375 and
+1280 px.
