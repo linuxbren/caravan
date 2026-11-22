@@ -1176,6 +1176,21 @@
   .placement-box label.disabled { opacity: .45; cursor: not-allowed; }
   .placement-box .why { color: var(--muted); font-size: .65rem; }
   #hfTokenCard [hidden] { display: none !important; }
+  /* Day 32: Cloud API keys and the inline key prompt in Models. */
+  .cloud-keys-card[hidden], .cloud-key-row [hidden] { display: none !important; }
+  .cloud-key-row { padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+  .cloud-key-row:first-child { border-top: 0; }
+  .cloud-key-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+  .cloud-key-name { font-family: var(--mono); font-size: .78rem; color: var(--text); }
+  .cloud-key-state { font-family: var(--mono); font-size: .68rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .cloud-key-state.is-set { color: var(--accent); }
+  .cloud-key-edit { display: flex; gap: 6px; margin-top: 6px; min-width: 0; }
+  .cloud-key-edit input { flex: 1 1 auto; min-width: 0; }
+  .cloud-key-edit button { flex: 0 0 auto; }
+  .cloud-key-prompt { margin: 4px 10px 8px 26px; padding: 8px 10px; border: 1px solid color-mix(in srgb, #7ec8ff 45%, transparent); border-radius: var(--radius); background: color-mix(in srgb, #7ec8ff 8%, transparent); }
+  .cloud-key-prompt p { margin: 0 0 6px; font-size: .72rem; color: var(--text); }
+  .cloud-key-prompt .cloud-key-edit { margin-top: 0; }
+  .cloud-key-prompt .cloud-key-err { color: var(--rose); font-size: .7rem; margin-top: 4px; }
   .hf-token-card input[type=password] { width: 100%; background: var(--bg3); color: var(--fg); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 4px; padding: 4px 8px; font: inherit; }
 
   /* Topology bar colors: Theme (accent phosphor) or Heat (green/yellow/red). */
@@ -1874,6 +1889,13 @@
       </div>
       <small>Also used: <code>HF_TOKEN</code> env, or <code>~/.cache/huggingface/token</code> from <code>huggingface-cli login</code>.</small>
     </div>
+    <!-- Day 32: keys for cloud models. Never shown back in full. -->
+    <div class="optcard drawer-section cloud-keys-card" id="cloudKeysCard" hidden>
+      <h2 class="drawer-section-title"><span class="tip" title="Saved only on this Mac in ~/.caravan/cloud-keys.json, readable only by you. The page only ever sees the last 4 characters. An environment variable, if set, is used instead.">Cloud API keys</span></h2>
+      <div class="help">For cloud models (labeled CLOUD). Chats with them go to that provider.</div>
+      <div id="cloudKeyRows"></div>
+      <div class="help" id="cloudKeysStatus" role="status" aria-live="polite"></div>
+    </div>
     <div class="optcard drawer-section" id="remoteAccessCard">
       <h2 class="drawer-section-title"><span class="tip" title="Only devices on your Tailscale network can open this page. The page itself stays on this Mac.">Open from my other devices</span></h2>
       <div class="theme-switch" id="remoteAccessSwitch" title="Open from my other devices">
@@ -1953,8 +1975,106 @@
     });
   })();
 
+  // Day 32: Cloud API keys (Settings) and the inline prompt in Models.
+  // The server never sends a key back: only set / where from / last 4.
+  let _cloudKeys = null;
+  function cloudKeyState(p) {
+    if (!p || !p.set) return "Not set";
+    if (p.source === "environment") return "From " + (p.env_name || "the environment") + (p.last4 ? " · ends in " + p.last4 : "");
+    return "Set · ends in " + (p.last4 || "····");
+  }
+  function cloudKeyEditor(p, onSaved, opts) {
+    opts = opts || {};
+    const wrap = document.createElement("div");
+    wrap.className = "cloud-key-edit";
+    const input = document.createElement("input");
+    input.type = "password";
+    input.className = "drawer-control";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.placeholder = p.set ? "Paste a new key to replace it" : "Paste your " + p.label + " API key";
+    input.setAttribute("aria-label", p.label + " API key");
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "primary drawer-control";
+    save.textContent = opts.saveText || "Save";
+    const err = opts.errEl || null;
+    const doSave = async () => {
+      const key = input.value.trim();
+      if (!key) { input.focus(); return; }
+      save.disabled = true;
+      try {
+        const j = await api("/api/cloud-keys", { method: "POST", body: JSON.stringify({ action: "set", provider: p.id, key }) });
+        input.value = "";
+        _cloudKeys = j;
+        if (err) err.textContent = "";
+        onSaved && onSaved(j);
+      } catch (e) {
+        input.value = "";
+        const msg = (e && (e.error || e.message)) || "Could not save the key.";
+        if (err) err.textContent = msg; else $("cloudKeysStatus").textContent = msg;
+      } finally { save.disabled = false; }
+    };
+    save.addEventListener("click", doSave);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); doSave(); } });
+    wrap.appendChild(input);
+    wrap.appendChild(save);
+    return { wrap, input, save };
+  }
+  function renderCloudKeys(j) {
+    _cloudKeys = j || null;
+    const card = $("cloudKeysCard");
+    const rows = $("cloudKeyRows");
+    if (!card || !rows) return;
+    if (!j || j.show === false) { card.hidden = true; return; }
+    card.hidden = false;
+    rows.replaceChildren();
+    (j.providers || []).forEach((p) => {
+      const row = document.createElement("div");
+      row.className = "cloud-key-row";
+      row.dataset.provider = p.id;
+      const head = document.createElement("div");
+      head.className = "cloud-key-head";
+      const name = document.createElement("span");
+      name.className = "cloud-key-name";
+      name.textContent = p.label;
+      const st = document.createElement("span");
+      st.className = "cloud-key-state" + (p.set ? " is-set" : "");
+      st.textContent = cloudKeyState(p);
+      head.appendChild(name);
+      head.appendChild(st);
+      row.appendChild(head);
+      if (p.editable !== false) {
+        const ed = cloudKeyEditor(p, (out) => { renderCloudKeys(out); $("cloudKeysStatus").textContent = p.label + " key saved."; });
+        if (p.set && p.source === "settings") {
+          const rm = document.createElement("button");
+          rm.type = "button";
+          rm.className = "ghost drawer-control";
+          rm.textContent = "Remove";
+          rm.addEventListener("click", async () => {
+            if (!confirm("Remove the " + p.label + " API key from this Mac?")) return;
+            try {
+              renderCloudKeys(await api("/api/cloud-keys", { method: "POST", body: JSON.stringify({ action: "remove", provider: p.id }) }));
+              $("cloudKeysStatus").textContent = p.label + " key removed.";
+            } catch (e) { $("cloudKeysStatus").textContent = (e && (e.error || e.message)) || "Could not remove the key."; }
+          });
+          ed.wrap.appendChild(rm);
+        }
+        row.appendChild(ed.wrap);
+      }
+      rows.appendChild(row);
+    });
+  }
+  async function refreshCloudKeys() {
+    try { renderCloudKeys(await api("/api/cloud-keys")); }
+    catch (e) { if ($("cloudKeysStatus")) $("cloudKeysStatus").textContent = "Could not check cloud API keys."; }
+    return _cloudKeys;
+  }
+  window.caravanCloudKeys = { refresh: refreshCloudKeys, editor: cloudKeyEditor, state: cloudKeyState, current: () => _cloudKeys };
+
   const openDrawer = () => {
     refreshHfTokenStatus();
+    refreshCloudKeys();
     refreshRemoteAccess();
     refreshLanAccess();
     refreshUpdate();
@@ -3277,7 +3397,7 @@
       const usable = m.usable !== false && (m.available_lead || m.usable);
       let label = (usable ? "● " : "○ ") + m.name;
       if (m.sharded) label += " — each Mac keeps only its part";
-      if (!usable) label += " — " + (m.available_lead === false && !m.lead_path ? "not downloaded — open Models to Download" : (m.disabled_reason || "not ready"));
+      if (!usable) label += " — " + (m.cloud ? "cloud — open Models to Load" : m.available_lead === false && !m.lead_path ? "not downloaded — open Models to Download" : (m.disabled_reason || "not ready"));
       const warns = m.warnings || [];
       if (warns.length || m.split_note) label += " ⚠";
       opt.textContent = label;
@@ -4864,7 +4984,8 @@
           const nodes = qfit.nodes_needed == null ? "—" : (qfit.nodes_needed === 0 ? "cloud" : qfit.nodes_needed + "n");
           const size = q.weights_gb != null ? `${q.weights_gb} GB` : "size unknown";
           const conv = q.needs_conversion ? " · needs conversion" : "";
-          btn.innerHTML = `Download <span class="p-dot ${qfit.color || "gray"}"></span>
+          // Day 32: cloud models run at the provider: Load, not Download.
+          btn.innerHTML = `${q.cloud ? "Load" : "Download"} <span class="p-dot ${qfit.color || "gray"}"></span>
             <span class="q-name">${escapeHtml(q.quant || q.name || q.repo_id)}${conv}</span>
             <span class="q-size">${size}</span>
             <span class="q-nodes">${nodes}</span>`;
@@ -4891,15 +5012,66 @@
       showJobs();
     }
 
+    // Day 32: a cloud model needs its provider's API key. If there is none
+    // yet, ask for it right here in the row, save it, then continue.
+    async function loadCloudModel(q, anchor) {
+      const provider = q.provider || "ollama";
+      const row = anchor && anchor.closest(".p-row");
+      const slot = row && row.querySelector(".picker-job-slot");
+      let keys = null;
+      try { keys = await window.caravanCloudKeys.refresh(); } catch (_) {}
+      if (!keys || keys.show === false) {
+        $("pickerStatus").textContent = "Open Caravan on this Mac or over Tailscale to add a cloud API key.";
+        return;
+      }
+      const p = (keys.providers || []).find((x) => x.id === provider);
+      if (!p) { $("pickerStatus").textContent = "This cloud provider isn't supported yet."; return; }
+      if (!p.set) {
+        if (!slot) return;
+        slot.querySelectorAll(".cloud-key-prompt").forEach((n) => n.remove());
+        const box = document.createElement("div");
+        box.className = "cloud-key-prompt";
+        box.setAttribute("role", "group");
+        box.setAttribute("aria-label", p.label + " API key");
+        const msg = document.createElement("p");
+        msg.textContent = (q.name || q.repo_id) + " runs on " + p.label + ". Add your " + p.label + " API key to load it. It's saved only on this Mac.";
+        const err = document.createElement("div");
+        err.className = "cloud-key-err";
+        err.setAttribute("role", "alert");
+        const ed = window.caravanCloudKeys.editor(p, (out) => {
+          box.remove();
+          const now = (out.providers || []).find((x) => x.id === provider) || {};
+          continueCloudLoad(q, now);
+        }, { saveText: "Save and load", errEl: err });
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.className = "ghost drawer-control";
+        cancel.textContent = "Cancel";
+        cancel.addEventListener("click", () => box.remove());
+        ed.wrap.appendChild(cancel);
+        box.appendChild(msg);
+        box.appendChild(ed.wrap);
+        box.appendChild(err);
+        slot.appendChild(box);
+        row.classList.add("open");
+        setTimeout(() => ed.input.focus(), 0);
+        return;
+      }
+      continueCloudLoad(q, p);
+    }
+    function continueCloudLoad(q, p) {
+      // Sending chats to a cloud provider is not built yet (Day 32: keys
+      // first). Say so plainly instead of pretending it loaded.
+      $("pickerStatus").textContent = p.label + " key ready" + (p.last4 ? " (ends in " + p.last4 + ")" : "") +
+        ". Chatting with cloud models isn't built yet, so " + (q.name || q.repo_id) + " can't load in chat yet.";
+    }
+
     function escapeHtml(s) {
       return String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
     }
 
     async function pickQuant(q, anchor) {
-      if (q.cloud) {
-        alert("Ollama Cloud is framework-only for now. Set OLLAMA_API_KEY in config/env.");
-        return;
-      }
+      if (q.cloud) return loadCloudModel(q, anchor);
       if (q.source === "gguf") {
         // Plan first; every Mac downloads only its own ranges from the source.
         if (!q.gguf_file) { alert("Pick one quant file for this GGUF repo."); return; }

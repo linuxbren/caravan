@@ -410,6 +410,15 @@ _FILTER_SEARCH = {
     },
 }
 
+def _cloud_key_set(provider):
+    """Day 32: a key saved in Settings or set in the environment."""
+    try:
+        import cloud_keys
+        return bool(cloud_keys.resolve(provider))
+    except Exception:
+        return bool(OLLAMA_API_KEY) if provider == "ollama" else False
+
+
 # Static Ollama Cloud catalog (labeled CLOUD; framework only until phase 5).
 _OLLAMA_CLOUD = [
     {"id": "gpt-oss:120b-cloud", "name": "gpt-oss 120B Cloud", "note": "Ollama Cloud"},
@@ -1252,6 +1261,15 @@ def _parse_hf_time(s) -> float:
         return 0.0
 
 
+def _fresh_cloud_keys(out):
+    """Day 32: a cached search must not show an old "no key" for cloud rows."""
+    for g in out.get("groups") or []:
+        for row in [g] + list(g.get("quants") or []):
+            if isinstance(row, dict) and row.get("cloud") and row.get("provider"):
+                row["api_key_configured"] = _cloud_key_set(row["provider"])
+    return out
+
+
 def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
                   filt: str = "", newer: bool = False) -> dict:
     """Search HF. source: all|hf-mlx|gguf|cloud. filt: chat|coding|new|… chip."""
@@ -1267,7 +1285,7 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
     key = f"search:{source}:{query}:{limit}:{filt_key}:new={int(bool(newer))}"
     hit = _cache_get(key)
     if hit is not None:
-        return hit
+        return _fresh_cloud_keys(hit)
 
     rows = []
     errors = []
@@ -1321,7 +1339,8 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
                 "needs_conversion": False,
                 "cloud": True,
                 "cloud_label": "CLOUD",
-                "api_key_configured": bool(OLLAMA_API_KEY),
+                "api_key_configured": _cloud_key_set("ollama"),
+                "provider": "ollama",
                 "note": c.get("note") or "Ollama Cloud · framework only",
             })
         # cloud-only short-circuit
@@ -1391,7 +1410,8 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
                     "needs_conversion": False,
                     "cloud": True,
                     "cloud_label": "CLOUD",
-                    "api_key_configured": bool(OLLAMA_API_KEY),
+                    "api_key_configured": _cloud_key_set("ollama"),
+                    "provider": "ollama",
                     "note": c.get("note") or "Ollama Cloud · framework only",
                 })
 

@@ -297,7 +297,7 @@ class StartupAndDiscoveryTests(unittest.TestCase):
 class UiContractTests(unittest.TestCase):
     def test_no_hidden_download_option_and_quant_is_download(self):
         text=(ROOT/'proxy/web/index.html').read_text()
-        self.assertNotIn('ggufFullFallback',text);self.assertIn('btn.innerHTML = `Download ',text)
+        self.assertNotIn('ggufFullFallback',text);self.assertIn('btn.innerHTML = `${q.cloud ? "Load" : "Download"} ',text)  # Day 32: cloud rows say Load
         self.assertIn('Could not load:',text);self.assertIn('e.error || e.message',text)
         self.assertIn('not downloaded',text)
 

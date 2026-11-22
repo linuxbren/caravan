@@ -972,6 +972,8 @@ def make_handler(app: App):
                 return self._api_speed_average()
             if path == "/api/hf-token":
                 return self._api_hf_token_get()
+            if path == "/api/cloud-keys":
+                return self._api_cloud_keys()
             if path == "/api/remote":
                 return self._api_remote()
             if path == "/api/lan":
@@ -1168,6 +1170,8 @@ def make_handler(app: App):
                 return self._api_picker_placement(body=body)
             if path == "/api/hf-token":
                 return self._api_hf_token_set(body=body)
+            if path == "/api/cloud-keys":
+                return self._api_cloud_keys(post=True, body=body)
             if path == "/api/remote":
                 return self._api_remote(post=True, body=body)
             if path == "/api/lan":
@@ -1610,6 +1614,43 @@ def make_handler(app: App):
             )
             out["stopped_jobs"] = stopped
             return self._json(200 if out.get("ok") else 400, out)
+
+        def _api_cloud_keys(self, post=False, body=None):
+            """Day 32: cloud model API keys. Only from this Mac or Tailscale;
+            never returns or logs a key (only set / last 4 characters)."""
+            import sys as _sys
+            from pathlib import Path as _Path
+            tools = str(_Path(__file__).resolve().parents[1] / "tools")
+            if tools not in _sys.path:
+                _sys.path.insert(0, tools)
+            import caravan_update_check as UC
+            import cloud_keys as CK
+            allowed, _how = UC.can_apply_from(self, inspect_info=self._update_inspect())
+            home = getattr(app, "cloud_keys_home", None)
+            if not allowed:
+                if post:
+                    return self._json(403, {"error": "Open Caravan on this Mac or over Tailscale to change API keys.", "show": False})
+                return self._json(200, {"show": False, "providers": []})
+            try:
+                if post:
+                    body = body if isinstance(body, dict) else {}
+                    action = str(body.get("action") or "set").strip().lower()
+                    provider = str(body.get("provider") or "").strip().lower()
+                    if action == "remove":
+                        out = CK.remove(provider, home=home)
+                    elif action == "set":
+                        out = CK.save(provider, str(body.get("key") or ""), home=home)
+                    else:
+                        return self._json(400, {"error": "Send action set or remove."})
+                else:
+                    out = CK.status(home=home)
+            except CK.CloudKeyError as e:
+                return self._json(400, {"error": str(e)})
+            except OSError:
+                return self._json(500, {"error": "Could not save the key file in ~/.caravan."})
+            out = dict(out)
+            out["show"] = True
+            return self._json(200, out)
 
         def _api_hf_token_get(self):
             try:
