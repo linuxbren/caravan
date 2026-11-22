@@ -1,4 +1,6 @@
-## Day 31 (in progress) — placement counts the chat window; Settings and Topology list what is on disk
+## Day 31 (v0.9.1) — placement counts the chat window; Settings and Topology list what is on disk
+
+Released as [v0.9.1](https://github.com/linuxbren/caravan/releases/tag/v0.9.1).
 
 See [DAY31](docs/DAY31.md).
 

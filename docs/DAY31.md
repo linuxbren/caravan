@@ -1,7 +1,7 @@
 # Day 31 — placement counts the chat window; Settings and Topology list what is on disk
 
-Day 31 started Nov 21 2026 (America/Chicago). One dev session is one Day;
-this page grows as the Day goes on.
+Day 31 ran Nov 21 2026 (America/Chicago) and is released as
+[v0.9.1](https://github.com/linuxbren/caravan/releases/tag/v0.9.1).
 
 1. [Part A: placement counts the chat window](#part-a-placement-counts-the-chat-window)
 2. [Part B: the Settings load list shows only downloaded models](#part-b-the-settings-load-list-shows-only-downloaded-models)

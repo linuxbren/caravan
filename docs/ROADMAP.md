@@ -98,7 +98,9 @@ and the daily logs, not mixed into current setup instructions.
     left on Wi-Fi gets a note when Thunderbolt comes up. Passed a plug
     pull on both Macs and a five-prompt crash series.
 
-- **Day 31 (in progress):** see [DAY31](DAY31.md).
+- **Day 31 (done, released as
+  [v0.9.1](https://github.com/linuxbren/caravan/releases/tag/v0.9.1)):**
+  see [DAY31](DAY31.md).
   - **Part A, placement counts the chat window:** deciding between one
     Mac and a split now counts the memory for the model's default chat
     window (its trained window), not just its files. The default is the
@@ -111,6 +113,8 @@ and the daily logs, not mixed into current setup instructions.
   - **Part C, Topology agrees with Settings:** Topology's On disk list uses
     the same scans as Settings (GGUF models included, no `caches` folder),
     marks models Settings can't load, and can delete GGUF models.
+  - **Code folder fallback:** a Mac without a saved code path falls back
+    to the install folder, not an old developer folder.
 
 ## Next candidates
 

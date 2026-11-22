@@ -1,3 +1,10 @@
+## 2026-11-21: Day 31 wrap — released as v0.9.1
+
+Day 31 (placement counts the chat window, Settings lists only downloaded
+models, Topology matches Settings, code folder fallback) is released as
+[v0.9.1](https://github.com/linuxbren/caravan/releases/tag/v0.9.1). Notes:
+[release-notes/day31.md](release-notes/day31.md). See [DAY31](DAY31.md).
+
 ## 2026-11-21: Day 31 — Code folder fallback is the install folder
 
 A Mac without `repo` in config.toml got `~/cv3` (an old dev checkout) as
