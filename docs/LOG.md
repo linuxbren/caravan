@@ -7,7 +7,8 @@ the Settings chip, load-log notes, bench skip reasons and `caravan bench
 --help`. Logic unchanged. New `tests/test_day31_context_wording.py` pins
 the exact line "Fits on 1 Mac with a 64K context. Split across 2 Macs for
 the full 128K context." Suite 2,033 OK. Source `12d82a4`, pin `640670d`,
-tag v0.9.2. Details:
+tag v0.9.2. Website shows v0.9.2. Macs not updated yet (a model download
+was running on the 1st Mac). Details:
 [DAY31](DAY31.md#follow-up-the-app-says-context-v092).
 
 ## 2026-11-21: Day 31 wrap — released as v0.9.1

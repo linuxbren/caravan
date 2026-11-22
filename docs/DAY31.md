@@ -320,3 +320,12 @@ context. Wording only; placement, fit and launch math are unchanged.
   [v0.9.2](https://github.com/linuxbren/caravan/releases/tag/v0.9.2) on the
   wrap commit. Notes:
   [release-notes/day31-v0.9.2.md](release-notes/day31-v0.9.2.md).
+- Check: the v0.9.2 tag's source download, extracted fresh, has INSTALL.md
+  and passes the full suite (2,033 tests, OK). `packaging-version` on `main`
+  and `caravan-v3-mlx-split` is the new pin.
+- Website: the Caravan page shows v0.9.2, with a "One word: context" line
+  in "new in v0.9.2 · Day 31" and the v0.9.1 lines reworded to "context".
+  The install box still wraps on a phone-width screen with its Copy button.
+- The two Macs were not updated with this release: a model download was
+  running on the 1st Mac, and an update restarts Caravan. They pick it up
+  with the next `caravan update`.
