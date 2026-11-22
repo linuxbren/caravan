@@ -61,3 +61,15 @@ Brenden: "Lets first do the version for 32 so that I can use it now."
 - Source `61d6c09`, pin `33caff0`; tag
   [v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4) on the
   wrap commit. Notes: [release-notes/day32-v0.9.4.md](release-notes/day32-v0.9.4.md).
+
+### Live update
+
+- Before updating: nothing was downloading or tuning, Qwen3 32B 4-bit was
+  ready, and the last chat request had been many hours earlier.
+- `caravan update --yes` on the 1st Mac updated the 2nd Mac first, then
+  itself. Both Macs: `caravan --version`, `caravan status` and
+  `caravan doctor` all say v0.9.4 (`61d6c09`).
+- The update only restarted the page. The model process kept running, and
+  Qwen3 32B 4-bit stayed loaded and ready.
+- Settings shows `SETTINGS v0.9.4 · up to date` in the dim mono style next
+  to the title.
