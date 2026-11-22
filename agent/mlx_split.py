@@ -1008,6 +1008,29 @@ class MissingWeightsError(RuntimeError):
     pass
 
 
+def partial_quant_guard(infer, skipped):
+    """Wrap mlx_lm.utils.infer_quant_config for a split stage's load.
+
+    Day 31 (v0.9.3), found on the Macs (Claude's local fix for
+    Qwen3-32B-4bit): a stage holds only its own shard files. When one
+    piece's ".weight" sits in a shard this Mac lacks but its ".scales" sit
+    in a shard it has (Qwen3-32B-4bit: layer 17's mlp.up_proj, owned by
+    the other Mac), mlx_lm's quant inference raised KeyError. Such a piece
+    is treated like one with no ".scales": left unquantized. It belongs to
+    the other stage and is dropped after load; this stage's own layers are
+    still checked by check_local_shards and _assert_loaded. Pieces with
+    their weight present go to mlx_lm unchanged. Skipped paths are added
+    to `skipped` for the load log."""
+    def _guarded(path, module, weights):
+        if f"{path}.weight" not in weights:
+            skipped.append(path)
+            return False
+        return infer(path, module, weights)
+    return _guarded
+
+
+
+
 class Stage:
     """Loads only this stage's layers (lazy load, then evaluate just the
     needed weights) and runs them. Works for qwen3_moe, qwen3_5(_moe),
@@ -1023,17 +1046,29 @@ class Stage:
         check_local_shards(model_dir, role, front_layers, counts, stage_index)
         loaded_keys = set()
         import mlx.nn as _nn
+        import mlx_lm.utils as _mlx_utils
         _orig_lw = _nn.Module.load_weights
+        # Older mlx_lm has no infer_quant_config; leave its load untouched.
+        _orig_iqc = getattr(_mlx_utils, "infer_quant_config", None)
+        skipped_quant = []
 
         def _spy(mod, file_or_weights, *a, **kw):
             if isinstance(file_or_weights, list):
                 loaded_keys.update(k for k, _ in file_or_weights)
             return _orig_lw(mod, file_or_weights, *a, **kw)
         _nn.Module.load_weights = _spy
+        if _orig_iqc is not None:
+            _mlx_utils.infer_quant_config = partial_quant_guard(_orig_iqc, skipped_quant)
         try:
             model, self.config = load_model(model_dir, lazy=True, strict=False)
         finally:
             _nn.Module.load_weights = _orig_lw
+            if _orig_iqc is not None:
+                _mlx_utils.infer_quant_config = _orig_iqc
+        if skipped_quant:
+            _stage_log(f"{role} stage: left {len(skipped_quant)} piece(s) of the other Mac's layers "
+                       f"unquantized (weight in a shard this Mac does not hold): "
+                       + ", ".join(skipped_quant[:8]) + (" ..." if len(skipped_quant) > 8 else ""))
         self._loaded_keys = loaded_keys
         try:
             import os as _os, sys as _sys

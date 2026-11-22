@@ -1,3 +1,19 @@
+## Day 31 follow-up (v0.9.3) — 4-bit MLX models load when split across Macs
+
+Released as [v0.9.3](https://github.com/linuxbren/caravan/releases/tag/v0.9.3).
+
+See [DAY31](docs/DAY31.md#follow-up-4-bit-mlx-split-load-fix-v093).
+
+- Fixed: Qwen3 32B (MLX, 4-bit) failed to load split across two Macs with
+  `KeyError: 'model.layers.17.mlp.up_proj.weight'`. One piece of a layer
+  the other Mac runs had its weight in a file only that Mac holds and its
+  4-bit scales in a file both hold, and the loader needed both. That piece
+  is now left alone (it is dropped after load anyway), and the load log
+  names it. The fix was first made on the Macs during setup and is now
+  part of Caravan.
+- Older MLX loaders without that check load as before. Loads on one Mac
+  and models that aren't pre-quantized are unchanged.
+
 ## Day 31 follow-up (v0.9.2) — the app says "context"
 
 Released as [v0.9.2](https://github.com/linuxbren/caravan/releases/tag/v0.9.2).

@@ -3,13 +3,16 @@
 Day 31 ran Nov 21 2026 (America/Chicago) and is released as
 [v0.9.1](https://github.com/linuxbren/caravan/releases/tag/v0.9.1); the
 "context" wording follow-up is
-[v0.9.2](https://github.com/linuxbren/caravan/releases/tag/v0.9.2).
+[v0.9.2](https://github.com/linuxbren/caravan/releases/tag/v0.9.2), and the
+4-bit MLX split load fix is
+[v0.9.3](https://github.com/linuxbren/caravan/releases/tag/v0.9.3).
 
 1. [Part A: placement counts the chat window](#part-a-placement-counts-the-chat-window)
 2. [Part B: the Settings load list shows only downloaded models](#part-b-the-settings-load-list-shows-only-downloaded-models)
 3. [Part C: Topology agrees with Settings](#part-c-topology-agrees-with-settings)
 4. [Code folder shown for each Mac](#code-folder-shown-for-each-mac)
 5. [Follow-up: the app says "context" (v0.9.2)](#follow-up-the-app-says-context-v092)
+6. [Follow-up: 4-bit MLX split load fix (v0.9.3)](#follow-up-4-bit-mlx-split-load-fix-v093)
 
 ## Part A: placement counts the chat window
 
@@ -329,3 +332,51 @@ context. Wording only; placement, fit and launch math are unchanged.
 - The two Macs were not updated with this release: a model download was
   running on the 1st Mac, and an update restarts Caravan. They pick it up
   with the next `caravan update`.
+
+## Follow-up: 4-bit MLX split load fix (v0.9.3)
+
+Setting up `mlx-community/Qwen3-32B-4bit` as a split across both Macs, the
+download was fine, but the load stopped on the 1st Mac:
+
+```
+mlx_split.py Stage.__init__ -> mlx_lm.utils.load_model(lazy=True, strict=False)
+  -> _quantize -> nn.quantize -> class_predicate -> infer_quant_config
+KeyError: 'model.layers.17.mlp.up_proj.weight'
+```
+
+### Cause
+
+- mlx_lm 0.32.2 works out each quantized piece's bits and group size from
+  its saved tensors. It skips a piece whose `.scales` are not loaded, but
+  when the `.scales` are there it also reads the `.weight`.
+- A split stage loads only its own shard files and drops the other
+  stage's layers after `load_model`. In this model exactly one piece
+  straddles two shards: layer 17's `mlp.up_proj` has its weight in shard 1
+  and its scales and biases in shard 2.
+- The 1st Mac runs layers 24-63 and holds shards 2-4, so it had the scales
+  of layer 17's `up_proj` but not its weight. The 2nd Mac (layers 0-23,
+  shards 1-2) had both. Whether a model hits this depends on where its
+  shard boundaries fall, so earlier 4-bit MLX splits loaded fine.
+
+### Fix
+
+- First made on the Macs during setup (a local edit to the installed
+  `agent/mlx_split.py`): while a split stage runs `load_model`,
+  `infer_quant_config` is wrapped so a piece whose weight is not loaded is
+  left unquantized, like a piece without scales. That piece belongs to the
+  other Mac and is dropped after load. The stage's own layers are still
+  checked by `check_local_shards` and `_assert_loaded`.
+- In Caravan as `partial_quant_guard`, plus: a `getattr` lookup so an older
+  mlx_lm without `infer_quant_config` loads as before, the original is put
+  back in `finally`, and a load-log line names the skipped pieces. Loads on
+  one Mac and models that aren't pre-quantized never reach it.
+
+### Tests
+
+- `tests/test_day31_split_quant_shards.py` (5 tests, no mlx): a
+  Qwen3-32B-like shard map with the straddling piece; mlx_lm 0.32.2's
+  logic raises the same KeyError on the 1st Mac's shards without the guard;
+  with it, only that piece is skipped and the 1st Mac's own layers get the
+  same 4-bit settings as before; with every shard present the guard changes
+  nothing; the 2nd Mac's shards skip nothing; Stage restores the original.
+- Full suite: 2,038 tests, OK.

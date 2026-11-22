@@ -119,6 +119,10 @@ and the daily logs, not mixed into current setup instructions.
     ([v0.9.2](https://github.com/linuxbren/caravan/releases/tag/v0.9.2)):**
     the app says "context" instead of "window" everywhere it means the
     model's context; the Settings row is now **Context**.
+  - **Follow-up, 4-bit MLX split load fix
+    ([v0.9.3](https://github.com/linuxbren/caravan/releases/tag/v0.9.3)):**
+    a pre-quantized MLX model loads split across Macs even when one piece
+    of the other Mac's layers straddles two shard files (Qwen3 32B 4-bit).
 
 ## Next candidates
 

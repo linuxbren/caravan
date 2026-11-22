@@ -1,3 +1,17 @@
+## 2026-11-22: Day 31 follow-up — 4-bit MLX split load fix (v0.9.3)
+
+`mlx-community/Qwen3-32B-4bit` split across two Macs crashed on the 1st
+Mac with `KeyError: 'model.layers.17.mlp.up_proj.weight'` in mlx_lm
+0.32.2's `load_model` quant inference (`infer_quant_config`). Layer 17's
+`mlp.up_proj` weight is in shard 1 (only on the 2nd Mac) and its scales and
+biases in shard 2 (on both); mlx_lm needs the weight whenever the scales
+are loaded. A fix made on the Macs during setup (wrap `infer_quant_config`
+during a split stage's load and leave such pieces unquantized) is now in
+`agent/mlx_split.py` as `partial_quant_guard`, with a `getattr` lookup for
+older mlx_lm and a load-log line naming skipped pieces. New
+`tests/test_day31_split_quant_shards.py` (5 tests). Suite 2,038 OK.
+Details: [DAY31](DAY31.md#follow-up-4-bit-mlx-split-load-fix-v093).
+
 ## 2026-11-22: Day 31 follow-up — the app says "context" (v0.9.2)
 
 Brenden: "Let's just keep it consistent." User-facing "window" (meaning
