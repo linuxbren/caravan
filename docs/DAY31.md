@@ -1,10 +1,11 @@
-# Day 31 — placement counts the chat window; load list shows only downloaded models
+# Day 31 — placement counts the chat window; Settings and Topology list what is on disk
 
 Day 31 started Nov 21 2026 (America/Chicago). One dev session is one Day;
 this page grows as the Day goes on.
 
 1. [Part A: placement counts the chat window](#part-a-placement-counts-the-chat-window)
 2. [Part B: the Settings load list shows only downloaded models](#part-b-the-settings-load-list-shows-only-downloaded-models)
+3. [Part C: Topology agrees with Settings](#part-c-topology-agrees-with-settings)
 
 ## Part A: placement counts the chat window
 
@@ -202,4 +203,51 @@ reproduced live.
   downloading are not listed; delete refreshes the list; the server filters
   the list.
 - Full suite: 2,007 tests, OK.
+
+## Part C: Topology agrees with Settings
+
+After part B, Brenden saw that Topology and the Settings load list still
+disagreed.
+
+### What the two showed (read only, before the fix)
+
+| Mac | Settings load list | Topology "On disk" |
+|---|---|---|
+| 1st Mac | 9: Qwen3 30B-A3B (MLX) and 8 GGUF models | 2: Qwen3 30B-A3B (MLX) and "caches" (0 GB) |
+| 2nd Mac | 1: Qwen3 30B-A3B (MLX) | 2: Qwen3 30B-A3B (MLX) and "caches" (0 GB) |
+
+### Cause
+
+Topology's On disk list was built by an older scan than Settings:
+
+- It looked for GGUF files in `~/.caravan/gguf` and `~/.ollama/models`.
+  Caravan downloads GGUF models to `~/.caravan/models`, which is where the
+  Settings list looks, so none of the GGUF models showed in Topology.
+- It listed every folder under `~/.exo/models` as a model, including exo's
+  own `caches` folder (shown as a 0 GB model) and empty leftovers.
+- The Balance "Model to inspect" list still said "including incomplete
+  downloads", but since part B it is the Settings list.
+
+### Fix
+
+- Topology now reads GGUF models with the same scan as Settings (all parts,
+  finished downloads only), and counts only real model folders (weights or
+  `config.json`) under the MLX folders, the same test each Mac's disk scan
+  uses.
+- A model that is on disk but not in the Settings list (for example a
+  partial download) is still shown in Topology, so it can be deleted, with
+  "Not in Settings: files incomplete".
+- Delete now works for GGUF models too: it removes every part of that
+  model from the 1st Mac (GGUF models live only there) and refuses the
+  loaded model, symlinks and anything outside Caravan's GGUF folder.
+
+### Tests
+
+- `tests/test_day31_topology_models.py` (15 tests): GGUF models from
+  Caravan's folder are listed with the same ids as Settings; a multi-part
+  GGUF is one row with its full size; a GGUF still downloading and exo's
+  `caches`, `drafts` and empty folders are not listed; the Settings flag and
+  note; GGUF delete removes every part, keeps other models in the folder,
+  refuses the loaded model and symlinks; server and page wiring.
+- Full suite: 2,022 tests, OK.
 

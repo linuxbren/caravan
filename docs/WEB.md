@@ -97,6 +97,10 @@ The list of models to load shows only models whose files are complete on
 the Mac or Macs that will run them: no partial downloads, no split missing
 its other half. A downloaded model that can't run here still shows, with
 the reason. Deleting a model removes it from the list right away.
+Topology's On disk list shows the same models plus any that are on disk
+but can't be loaded yet (for example a partial download), marked "Not in
+Settings: files incomplete", so you can delete them. GGUF models can be
+deleted there too; they live only on the 1st Mac.
 
 **Self-tuning** stays visible in Settings and is on by default: Caravan learns
 from your chats and remembers faster settings for each model; pinned choices

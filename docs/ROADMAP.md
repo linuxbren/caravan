@@ -108,6 +108,9 @@ and the daily logs, not mixed into current setup instructions.
   - **Part B, load list shows only downloaded models:** the Settings list
     of models to load lists only models whose files are complete on the
     Mac or Macs that will run them, and updates right after a delete.
+  - **Part C, Topology agrees with Settings:** Topology's On disk list uses
+    the same scans as Settings (GGUF models included, no `caches` folder),
+    marks models Settings can't load, and can delete GGUF models.
 
 ## Next candidates
 

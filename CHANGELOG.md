@@ -1,4 +1,4 @@
-## Day 31 (in progress) — placement counts the chat window; load list shows only downloaded models
+## Day 31 (in progress) — placement counts the chat window; Settings and Topology list what is on disk
 
 See [DAY31](docs/DAY31.md).
 
@@ -21,6 +21,10 @@ See [DAY31](docs/DAY31.md).
   model after its files were gone, GGUF share records with a missing part).
   It now lists only models whose files are complete on the Mac or Macs
   that will run them. Deleting a model updates the list right away.
+- Fixed: Topology's On disk list missed every GGUF model (it looked in old
+  folders) and listed exo's `caches` folder as a model. It now uses the same
+  scans as Settings, marks a model Settings can't load ("Not in Settings:
+  files incomplete"), and can delete GGUF models.
 
 ## Day 30 (v0.9.0) — Power-loss resume, full GGUF chat window, one main branch
 

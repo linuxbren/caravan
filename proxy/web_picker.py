@@ -1562,14 +1562,15 @@ def list_installed(*, packer_sizes: Optional[dict] = None) -> list:
     """Models on this Mini's disk. packer_sizes maps repo_folder -> gb on the helper Mac."""
     packer_sizes = packer_sizes or {}
     found = {}
+    from picker_disk_sizes import _looks_like_model
     for root in MLX_MODEL_ROOTS:
         if not root.is_dir():
             continue
         for p in root.iterdir():
-            if not p.is_dir():
+            # Day 31 part C: only model folders (not exo's caches/, drafts/
+            # or empty leftovers), the same test as each Mac's disk scan.
+            if not _looks_like_model(p):
                 continue
-            if p.name == "drafts":
-                continue  # shown as cleanup row
             key = p.name
             repo = key.replace("--", "/")
             e = found.setdefault(repo, {
@@ -1581,20 +1582,19 @@ def list_installed(*, packer_sizes: Optional[dict] = None) -> list:
             })
             e["paths"]["lead"] = str(p)
             e["size_gb"]["lead"] = round(_dir_size_gb(p), 2)
-    for root in GGUF_ROOTS:
-        if not root.is_dir():
-            continue
-        for p in root.rglob("*.gguf"):
-            repo = f"gguf/{p.stem}"
-            e = found.setdefault(repo, {
-                "id": repo,
-                "name": p.name,
-                "source": "gguf",
-                "paths": {},
-                "size_gb": {},
-            })
-            e["paths"]["lead"] = str(p)
-            e["size_gb"]["lead"] = round(p.stat().st_size / 1e9, 2)
+    # Day 31 part C: GGUF files come from the same scan as the Settings
+    # list (~/.caravan/models, all parts, finished downloads only). The old
+    # roots here (~/.caravan/gguf, ~/.ollama/models) are not where Caravan
+    # downloads, so Topology showed none of the GGUF models Settings did.
+    import gguf_split
+    for g in gguf_split.scan_local():
+        found.setdefault(g["id"], {
+            "id": g["id"],
+            "name": Path(g["path"]).name,
+            "source": "gguf",
+            "paths": {"lead": g["path"]},
+            "size_gb": {"lead": g["size_gb"]},
+        })
     for repo, gb in packer_sizes.items():
         e = found.setdefault(repo, {
             "id": repo, "name": repo.split("/")[-1], "source": "hf-mlx",
@@ -1614,6 +1614,8 @@ def delete_model(repo_or_path: str, *, current_model_id: Optional[str],
     folder = rid.replace("/", "--")
     if cur and (cur == rid.lower() or cur in rid.lower() or folder.lower() in cur):
         return {"ok": False, "error": "refuse: model is currently loaded"}
+    if rid.startswith("gguf/"):
+        return delete_gguf(rid)
     removed = []
     for root in MLX_MODEL_ROOTS:
         p = root / folder
@@ -1635,6 +1637,39 @@ def delete_model(repo_or_path: str, *, current_model_id: Optional[str],
         return {"ok": False, "error": "not found on disk", "remote": remote}
     return {"ok": True, "removed": removed, "remote": remote}
 
+
+
+def delete_gguf(rid: str) -> dict:
+    """Day 31 part C: delete one GGUF model (every part) from this Mac.
+
+    GGUF files live only on the 1st Mac; llama.cpp sends each Mac its share
+    at load. Only files the Settings scan lists can be deleted, and only
+    inside Caravan's GGUF folder. The caller refuses the loaded model."""
+    import gguf_split
+    from gguf_sets import members
+    hit = next((g for g in gguf_split.scan_local() if g["id"] == rid), None)
+    if not hit:
+        return {"ok": False, "error": "not found on disk"}
+    p = Path(hit["path"])
+    roots = [r.resolve() for r in gguf_split.GGUF_ROOTS]
+    if not any(p.resolve().is_relative_to(r) and p.resolve() != r for r in roots) or p.is_symlink():
+        return {"ok": False, "error": "refuse: not in Caravan's GGUF folder"}
+    folder = p.parent
+    nearby = {f.name: f.stat().st_size for f in folder.glob("*.gguf")}
+    removed = []
+    for name in members(p.name, nearby):
+        (folder / name).unlink()
+        removed.append(str(folder / name))
+    if not any(folder.glob("*.gguf")) and folder.resolve() not in roots:
+        for extra in ("caravan-gguf-source.json", "caravan-placement.json"):
+            if (folder / extra).is_file():
+                (folder / extra).unlink()
+        shutil.rmtree(folder / ".cache", ignore_errors=True)
+        try:
+            folder.rmdir()
+        except OSError:
+            pass  # something else lives here; leave it
+    return {"ok": True, "removed": removed, "remote": None}
 
 
 def _path_size_gb(path: Path) -> float:

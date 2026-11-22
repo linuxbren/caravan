@@ -699,14 +699,15 @@ class App:
             return dict(loaded)
         return entry
 
-    def list_loadable_models(self) -> list:
+    def list_loadable_models(self, invs=None, with_gguf=True) -> list:
         """Settings dropdown: disk-backed usable MLX models (N-node aware)."""
         snap = self.mgr.snapshot()
         current = snap.get("model_id")
         # Prefer HF id if present on snap
         current_hf = (snap.get("model_hf") or None) if current else None
         live = (self.nodes() or {}).get("nodes") or []
-        invs = self.gather_model_inventories()
+        if invs is None:
+            invs = self.gather_model_inventories()
         rows = catalog.build_entries_from_inventories(
             node_inventories=invs,
             nodes=live or self.configured_nodes(),
@@ -716,6 +717,8 @@ class App:
             max_split_stages=web_nodes.stage_limit(self.configured_nodes()),
             include_unusable=True,
         )
+        if not with_gguf:
+            return loadable_only(rows)
         return loadable_only(rows + self.gguf_entries(live or self.configured_nodes(), current))
 
     def gguf_entries(self, nodes: list, current=None) -> list:
@@ -746,6 +749,19 @@ class App:
         import web_gguf_shares
         return out + web_gguf_shares.entries(nodes,current)
 
+
+
+def mark_in_settings(entry: dict, listed: set) -> dict:
+    """Day 31 part C: Topology's On disk row says when Settings can't load it.
+
+    GGUF rows come from the Settings scan itself, so they are always listed.
+    An MLX folder is listed only when its files are complete on every Mac
+    its load plan needs (part B)."""
+    rid = entry.get("id")
+    entry["in_settings"] = entry.get("source") == "gguf" or rid in listed
+    if not entry["in_settings"]:
+        entry["settings_note"] = "Not in Settings: files incomplete"
+    return entry
 
 
 def loadable_only(rows: list) -> list:
@@ -1479,6 +1495,11 @@ def make_handler(app: App):
                     if rid in part_by:
                         e["incomplete_on"] = part_by[rid]
                     e["n_nodes"] = len(cfg_nodes)
+                # Day 31 part C: say whether each model on disk is in the
+                # Settings load list, from the same inventories.
+                listed = {r.get("hf") or r.get("id") for r in app.list_loadable_models(invs, with_gguf=False)}
+                for e in models:
+                    mark_in_settings(e, listed)
             except Exception:
                 pass
 

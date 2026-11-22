@@ -1,3 +1,12 @@
+## 2026-11-21: Day 31 — Topology agrees with Settings (part C)
+
+Topology's On disk list scanned `~/.caravan/gguf` and `~/.ollama/models`
+for GGUF (Caravan uses `~/.caravan/models`), so it showed none of the 8
+GGUF models Settings listed on the 1st Mac, and it listed exo's `caches`
+folder as a 0 GB model on both Macs. Now it uses the Settings scans, flags
+models Settings can't load, and deletes GGUF models (every part, 1st Mac
+only). Suite 2,022 OK. See [DAY31](DAY31.md#part-c-topology-agrees-with-settings).
+
 ## 2026-11-21: Day 31 — Settings load list shows only downloaded models (part B)
 
 The Settings load list was the whole catalog with "include models that

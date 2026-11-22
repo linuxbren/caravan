@@ -1671,7 +1671,7 @@
     <p id="balanceIdleStatus" class="balance-idle" hidden></p>
     <p class="balance-help">Apply reloads the model. Nothing changes until you apply.</p>
     <details id="balanceDetails"><summary>Technical details · layers, files &amp; stages</summary>
-      <label>Model to inspect (including incomplete downloads)
+      <label>Model to inspect (models in the Settings list)
         <select id="balanceModel" class="drawer-control"><option value="">Use Settings model</option></select>
       </label>
       <details><summary>GGUF source (already saved for own-part models)</summary>
@@ -5117,6 +5117,8 @@
       else loc = labs.join(", ");
       const part = m.incomplete_on || [];
       if (part.length) loc += (loc ? " · " : "") + "partial on " + part.join(", ");
+      // Day 31: same rule as the Settings load list.
+      if (m.in_settings === false) loc += (loc ? " · " : "") + (m.settings_note || "Not in Settings: files incomplete");
       return loc;
     }
     window.refreshDisk = () => refreshDisk();
