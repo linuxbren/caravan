@@ -2169,8 +2169,11 @@
   // the status from the daily update check (/api/update).
   let _verInfo = null;
   let _verUpd = null;
+  // Daily checks off: just the version (the server sends daily_hidden and
+  // no checked_at), unless Check now was used after turning them off.
   function versionState(u) {
     if (!u || u.show === false || u.packaged === false) return "";
+    if (u.daily_hidden) return "";
     if (u.newer || u.peers_behind) return "update";
     if (u.checked_at && !u.offline) return "ok";
     return "";
@@ -2443,6 +2446,20 @@
       const b = e.target.closest("button[data-update-daily]");
       if (!b) return;
       const enable = b.dataset.updateDaily === "on";
+      // Live, no reload: off clears the label, badge and Mac lines right
+      // away; on shows them again from the server's answer (a fresh saved
+      // check, or a new one).
+      if (!enable && _updateInfo && !updatePending() && !_updateStarting) {
+        const p = _updateInfo.progress;
+        if (!(p && p.phase === "updating")) {
+          renderUpdate(Object.assign({}, _updateInfo, {
+            check_daily: false, daily_hidden: true, newer: false, peers_behind: false,
+            checked_at: null, offline: false, macs: [], changes: [], can_apply: false, can_retry: false,
+          }));
+        }
+      } else if (enable && $("updateStatus")) {
+        $("updateStatus").textContent = "Checking…";
+      }
       try {
         renderUpdate(await api("/api/update", { method: "POST", body: JSON.stringify({ action: "set", check_daily: enable }) }));
       } catch (err) {

@@ -73,3 +73,60 @@ Brenden: "Lets first do the version for 32 so that I can use it now."
   Qwen3 32B 4-bit stayed loaded and ready.
 - Settings shows `SETTINGS v0.9.4 · up to date` in the dim mono style next
   to the title.
+
+## Part A fix: daily update check (v0.9.5)
+
+A review of v0.9.4 found that turning **Check for updates daily** off did
+not do what this page says: once a check had run, the label kept saying
+"up to date" (and the **Update available** badge and the Mac lines stayed
+too) after the switch was turned off. Brenden also asked whether the daily
+check works as intended at all, so the whole check was audited.
+
+Confirmed and fixed:
+
+- **Daily off now hides the status.** With the switch off, the server sends
+  no update status: no badge, no Mac lines, no "checked" time, so the label
+  shows just the version. **Check now** (or `caravan update --check`) used
+  after turning it off still shows its answer. An update that is running is
+  always shown. The current switch setting now always wins over the one
+  saved with the last check.
+- **Live, no reload.** Turning it off clears the label, badge and Mac lines
+  at once. Turning it on shows the last answer if it is less than a day
+  old, or checks right away instead of up to an hour later.
+- **One error stopped daily checks until a restart.** The hourly loop sat
+  inside one `try`, so any unexpected error ended it for good. Now each
+  round is caught and logged, and the loop goes on (`run_daily_loop`).
+- **A broken reply counted as an error, not offline.** A cut-off HTTP reply
+  (`http.client.HTTPException`, e.g. `IncompleteRead`) was not caught by
+  the fetches. Now it is treated like being offline.
+- **Offline kept saying "up to date".** When a check failed, the older
+  answer was returned but not saved as offline, so the page and the label
+  kept showing "up to date" from an old check. Now the offline state and
+  the time of the try are saved (the last good check time is kept), and it
+  is retried hourly, also after a failed Check now.
+- **A check time in the future blocked checks.** If the clock was wrong
+  when a check was saved, no check ran until that time came. Such a check
+  is now always due.
+
+Checked and fine as it was:
+
+- It runs about 4 seconds after the page starts, then every hour, and only
+  fetches when the switch is on and the saved check is a day old (or this
+  Mac's version changed, e.g. right after an update).
+- The saved check survives restarts (`~/.caravan/web-ui/update-check.json`),
+  so restarting the page does not cause an extra fetch.
+- It compares the installed pin (`.caravan-package`) with the published
+  `packaging-version` on `main`, and the page re-checks against the
+  installed pin, so a check saved before this Mac's own update never says
+  "update available" afterwards.
+
+Tests: `tests/test_day32_daily_check.py` (27 tests): daily off hides a
+newer and an up-to-date answer, Check now while off still shows, a check
+from before turning off stays hidden, the current setting wins, a running
+update still shows, turning back on uses a fresh answer without a fetch or
+checks a stale one right away (through `/api/update`), once a day,
+restarts, the future clock, offline saved and retried hourly, a broken
+HTTP reply, the pin comparison, the loop surviving a failed round and
+honoring the switch, and `versionState` in Node.
+
+Full suite: 2,078 tests, OK.

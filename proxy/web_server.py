@@ -1888,6 +1888,7 @@ def make_handler(app: App):
                 out = UC.public_status(
                     res, local=local, via_tailscale=via_ts, busy=busy,
                     packaged=packaged, check_daily=prefs["check_daily"],
+                    daily_changed_at=prefs.get("changed_at") or 0,
                     installed=UC.installed_ref(repo) if packaged else None,
                     progress=progress if progress is not None else UC.resolve_progress(home, repo),
                 )
@@ -1904,6 +1905,16 @@ def make_handler(app: App):
                     if value is None:
                         value = body.get("enabled")
                     prefs = UC.save_prefs(home, check_daily=bool(value))
+                    if prefs["check_daily"]:
+                        # Back on: the saved answer shows if it is fresh,
+                        # otherwise check now (not up to an hour later).
+                        try:
+                            result = UC.check(
+                                home, repo, force=False, opener=opener, nodes=nodes,
+                                ssh_runner=ssh_runner,
+                            )
+                        except Exception:
+                            result = None
                 elif action == "check":
                     result = UC.check(
                         home, repo, force=True, opener=opener, nodes=nodes,
@@ -3149,11 +3160,14 @@ def main(argv=None):
                 import caravan_update_check as _UC
                 _repo = _Path(args.repo)
                 _home = _Path.home()
-                _UC.resolve_progress(_home, _repo)
-                _UC.maybe_auto_check(_home, _repo)
-                while True:
-                    _time.sleep(3600)
-                    _UC.maybe_auto_check(_home, _repo)
+                try:
+                    _UC.resolve_progress(_home, _repo)
+                except Exception as e:
+                    print(f"[caravan-web] update progress skipped: {e}", flush=True)
+                # One failed round no longer ends daily checks until restart.
+                _UC.run_daily_loop(
+                    _home, _repo, log=lambda m: print(m, flush=True),
+                )
             except Exception as e:
                 print(f"[caravan-web] update check skipped: {e}", flush=True)
         _threading.Thread(target=_run, name="caravan-update-check", daemon=True).start()

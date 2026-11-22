@@ -118,6 +118,14 @@ Mac is offline, the check stays quiet and keeps any earlier result.
 `caravan update --check` does the same check and does not install
 anything.
 
+Day 32 fix ([DAY32](DAY32.md#part-a-fix-daily-update-check-v095)): with
+the daily check off, the page shows no update status at all (no badge, no
+Mac lines, just the version next to Settings) until you use **Check now**.
+Turning it back on shows the last answer if it is less than a day old, or
+checks right away. A failed round no longer stops the daily check, and an
+offline result is saved, so the page stops saying "up to date" from an old
+answer.
+
 When a newer version is ready, an **Update available** badge appears
 in the header of the chat page, in the same style as the Tuning…
 badge, including on Campfire. Opening Settings shows an **Updates**

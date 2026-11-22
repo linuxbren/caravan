@@ -9,6 +9,7 @@ when that is cheaply available, and the same path prefixes as
 """
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import re
@@ -154,11 +155,21 @@ def save_json(path, data):
 def load_prefs(home):
     data = load_json(prefs_path(home), {}) or {}
     # Missing file or missing key: on by default.
-    return {"check_daily": data.get("check_daily", True) is not False}
+    try:
+        changed_at = float(data.get("changed_at") or 0)
+    except (TypeError, ValueError):
+        changed_at = 0.0
+    return {
+        "check_daily": data.get("check_daily", True) is not False,
+        "changed_at": changed_at,
+    }
 
 
-def save_prefs(home, *, check_daily):
-    save_json(prefs_path(home), {"check_daily": bool(check_daily)})
+def save_prefs(home, *, check_daily, now=None):
+    # changed_at: a check from before daily checks were turned off is not
+    # shown while they are off (Day 32 fix). Check now after that still is.
+    now = time.time() if now is None else now
+    save_json(prefs_path(home), {"check_daily": bool(check_daily), "changed_at": now})
     return load_prefs(home)
 
 
@@ -207,6 +218,19 @@ def due_for_check(cache, now=None, interval=INTERVAL_S, installed=None):
         checked = float(cache.get("checked_at") or 0)
     except (TypeError, ValueError):
         return True
+    if checked > now + 300:
+        # Saved "in the future" (the clock was wrong then): never trust it,
+        # or no check would run until that time comes.
+        return True
+    if cache.get("offline"):
+        # The last try failed but an older answer is kept: try again hourly.
+        try:
+            tried = float(cache.get("attempted_at") or checked)
+        except (TypeError, ValueError):
+            tried = checked
+        if tried > now + 300:
+            return True
+        return (now - tried) >= min(interval, 3600)
     return (now - checked) >= interval
 
 
@@ -228,7 +252,7 @@ def fetch_published(*, opener=None, url=None, clock=time.time):
         with _opener(target, opener=opener) as response:
             raw = response.read()
         text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
-    except (OSError, urllib.error.URLError, TimeoutError, ValueError):
+    except (OSError, urllib.error.URLError, TimeoutError, ValueError, http.client.HTTPException):
         return None
     return parse_manifest(text)
 
@@ -320,7 +344,7 @@ def fetch_compare(old, new, *, opener=None):
             raw = response.read()
         text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
         return json.loads(text)
-    except (OSError, urllib.error.URLError, TimeoutError, ValueError):
+    except (OSError, urllib.error.URLError, TimeoutError, ValueError, http.client.HTTPException):
         return None
 
 
@@ -338,7 +362,7 @@ def fetch_commit_date(ref, *, opener=None):
             date = ((info.get(who) or {}).get("date"))
             if date:
                 return date
-    except (OSError, urllib.error.URLError, TimeoutError, ValueError):
+    except (OSError, urllib.error.URLError, TimeoutError, ValueError, http.client.HTTPException):
         return None
     return None
 
@@ -504,12 +528,17 @@ def check(
                 out["check_daily"] = prefs["check_daily"]
                 out["helper"] = helper
                 out["offline"] = True
+                out["attempted_at"] = now
+                # Saved, so the page and the version label stop saying
+                # "up to date" from an old answer while offline.
+                save_cache(home, out)
                 return out
             result = _empty_result(
                 installed=installed, offline=True, error="offline",
                 now=now, check_daily=prefs["check_daily"],
             )
             result["helper"] = helper
+            result["attempted_at"] = now
             save_cache(home, result)
             return result
 
@@ -541,6 +570,8 @@ def check(
             result, home, nodes=nodes, ssh_runner=ssh_runner,
             published_ref=(published or {}).get("ref"),
         )
+        result["manual"] = bool(force)
+        result["attempted_at"] = now
         save_cache(home, result)
         return result
 
@@ -558,6 +589,36 @@ def maybe_auto_check(home, repo, *, opener=None, now=None, interval=INTERVAL_S, 
     return check(
         home, repo, force=False, opener=opener, now=now, interval=interval, nodes=nodes,
     )
+
+
+def run_daily_loop(home, repo, *, sleep=time.sleep, every=3600, rounds=None, log=None, **kw):
+    """The web server's daily check: try now, then once an hour.
+
+    Each round runs a check only when daily checks are on and the saved one
+    is a day old (see maybe_auto_check). One failed round never stops the
+    loop. rounds limits the loop for tests.
+    """
+    n = 0
+    while rounds is None or n < rounds:
+        n += 1
+        try:
+            maybe_auto_check(home, repo, **kw)
+        except Exception as e:  # keep checking tomorrow
+            if log:
+                log(f"[caravan-web] update check skipped: {e}")
+        if rounds is not None and n >= rounds:
+            break
+        sleep(every)
+
+
+def shown_while_off(result, changed_at):
+    """With daily checks off, only a Check now made after turning them off shows."""
+    if not result or not result.get("manual"):
+        return False
+    try:
+        return float(result.get("checked_at") or 0) >= float(changed_at or 0)
+    except (TypeError, ValueError):
+        return False
 
 
 def keep_model_text(reload_model):
@@ -682,11 +743,29 @@ def public_status(
     busy=None,
     progress=None,
     packaged=True,
-    check_daily=True,
+    check_daily=None,
     installed=None,
+    daily_changed_at=0,
 ):
-    """JSON-safe payload for GET /api/update. No hashes up front."""
+    """JSON-safe payload for GET /api/update. No hashes up front.
+
+    check_daily is the current setting and wins over the one saved with the
+    check. With daily checks off, the saved answer is not shown (no badge,
+    no Mac lines, no checked_at, so the label shows just the version),
+    unless it is a Check now made after they were turned off. A running
+    update is always shown.
+    """
     result = result or {}
+    if check_daily is None:
+        check_daily = result.get("check_daily") is not False
+    daily_hidden = False
+    if packaged and not check_daily and not shown_while_off(result, daily_changed_at):
+        live = (progress or {}).get("phase") == "updating" or any(
+            m.get("phase") == "updating" for m in ((progress or {}).get("macs") or [])
+        )
+        if not live:
+            daily_hidden = True
+            result = {"helper": result.get("helper"), "check_daily": False}
     newer = bool(result.get("newer"))
     installed = str(installed or "").strip().lower()
     if installed and result.get("available"):
@@ -736,7 +815,8 @@ def public_status(
     can_retry = bool(allowed and not busy and not any_updating and any(m.get("can_retry") for m in macs))
     payload = {
         "packaged": bool(packaged),
-        "check_daily": bool(check_daily if result.get("check_daily") is None else result.get("check_daily")),
+        "check_daily": bool(check_daily),
+        "daily_hidden": daily_hidden,
         "newer": newer,
         "current_label": current_label,
         "available_label": available_label,

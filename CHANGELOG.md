@@ -1,3 +1,22 @@
+## Day 32 part A fix (v0.9.5) — the daily update check switch, and a sturdier daily check
+
+Released as [v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5).
+
+See [DAY32](docs/DAY32.md#part-a-fix-daily-update-check-v095).
+
+- Fixed: with **Check for updates daily** off, Settings kept saying
+  "up to date" (and the Update available badge and Mac lines stayed) from
+  a check made while it was on. Now daily off shows just the version and
+  no update status, until you use **Check now**. The switch works at once,
+  without reloading the page; turning it back on shows a fresh answer or
+  checks right away.
+- Fixed: one unexpected error stopped the daily check until Caravan
+  restarted. A cut-off reply from GitHub is now treated as offline. An
+  offline result is saved, so the page no longer says "up to date" from an
+  old answer, and it is retried hourly. A check saved with a wrong clock no
+  longer blocks checks.
+- 2,078 tests pass.
+
 ## Day 32 part A (v0.9.4) — the installed version in Settings
 
 Released as [v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4).
