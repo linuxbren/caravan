@@ -79,7 +79,23 @@ Tests: `tests/test_day33_thunderbolt_wait.py`.
 
 ### Thunderbolt check after the fix
 
-Checked on both Macs after installing this release; the results are added here in the next commit.
+Release 2a155f9 on both Macs (Nov 21, no power pull):
+
+- **Late Thunderbolt note.** `caravan update` restarted the page, which
+  took over the split still running on Wi-Fi from the plug pull. Within a
+  minute the page showed "Thunderbolt to the 2nd Mac is working now, but
+  this model is still using Wi-Fi. To switch to Thunderbolt, Unload and
+  Load the model again when no chat is running." The model kept running.
+- **Restore picks Thunderbolt.** llama-server and the page on the 1st Mac
+  were killed with `kill -9` at 18:22:27 (no chat running). launchd started
+  the page again, boot restore reloaded the split and it was ready at
+  18:22:58 on "link to 2nd Mac: Thunderbolt, en2, 0.45 ms". The saved route
+  records the wait: Thunderbolt found on the first try (0.3 s), so nothing
+  was delayed. Memory compression 16.
+- Not repeated live: Thunderbolt coming up *during* the wait. That needs
+  the link taken down on purpose (administrator rights on a Mac) or another
+  power pull; the unit tests cover it with addresses that change between
+  tries.
 
 ## First plug pull (Nov 19): partial
 
