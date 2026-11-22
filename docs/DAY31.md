@@ -380,3 +380,7 @@ KeyError: 'model.layers.17.mlp.up_proj.weight'
   same 4-bit settings as before; with every shard present the guard changes
   nothing; the 2nd Mac's shards skip nothing; Stage restores the original.
 - Full suite: 2,038 tests, OK.
+- Release: source `4b48b85`, pin `a0e8cfe`; tag
+  [v0.9.3](https://github.com/linuxbren/caravan/releases/tag/v0.9.3) on the
+  wrap commit. Notes:
+  [release-notes/day31-v0.9.3.md](release-notes/day31-v0.9.3.md).

@@ -12,7 +12,8 @@ See [DAY31](docs/DAY31.md#follow-up-4-bit-mlx-split-load-fix-v093).
   names it. The fix was first made on the Macs during setup and is now
   part of Caravan.
 - Older MLX loaders without that check load as before. Loads on one Mac
-  and models that aren't pre-quantized are unchanged.
+  and models that aren't pre-quantized are unchanged. Source `4b48b85`,
+  pin `a0e8cfe`. 2,038 tests pass.
 
 ## Day 31 follow-up (v0.9.2) — the app says "context"
 
