@@ -1,3 +1,17 @@
+## Day 31 follow-up (v0.9.2) — the app says "context"
+
+Released as [v0.9.2](https://github.com/linuxbren/caravan/releases/tag/v0.9.2).
+
+See [DAY31](docs/DAY31.md#follow-up-the-app-says-context-v092).
+
+- Every place the app meant the model's context and said "window" now says
+  "context", so the page, the placement lines and the Settings help agree.
+  The 1-Mac-or-split line reads, for example: "Fits on 1 Mac with a 64K
+  context. Split across 2 Macs for the full 128K context."
+- The Settings row **Chat window** is now **Context**. Its saved setting is
+  still `chat_window`, so pinned values keep working.
+- Wording only: placement, fit and launch math are unchanged.
+
 ## Day 31 (v0.9.1) — placement counts the chat window; Settings and Topology list what is on disk
 
 Released as [v0.9.1](https://github.com/linuxbren/caravan/releases/tag/v0.9.1).

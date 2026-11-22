@@ -33,8 +33,8 @@ OPTIONS = [
      "help": "Let two chats use different Minis at the same time when an MLX model is split. Up to ~70% more combined output in our tests without a helper; no gain on one Mini, and slower with a helper.",
      "help_gguf": "Let two chats share the model at the same time. Auto keeps one chat.",
      "values": ["auto", "1", "2"]},
-    {"id": "chat_window", "label": "Chat window",
-     "help": "How much of the conversation the model can keep in mind at once. Auto uses the longest window that fits in memory, up to the full window the model was trained for. Native is that full window.",
+    {"id": "chat_window", "label": "Context",
+     "help": "How much of the conversation the model can keep in mind at once. Auto uses the longest context that fits in memory, up to the full context the model was trained for. Native is that full context.",
      "values": ["auto", "4096", "8192", "16384", "32768", "65536", "131072", "262144", "native"],
      "backends": ("gguf",)},
     {"id": "fuse_kernels", "label": "Fused kernels",
@@ -43,7 +43,7 @@ OPTIONS = [
      "backends": ("mlx",)},
     {"id": "kv_bits", "label": "Memory compression",
      "help": "Store MLX chat memory more compactly to save RAM; 16 leaves it uncompressed. May lower quality and slow reading; not supported by every model or Native MTP.",
-     "help_gguf": "Store the chat's working memory more compactly. Auto uses the lighter option only when the full one will not fit with the longest chat window. Pinning 16 can make Auto pick a shorter chat window.",
+     "help_gguf": "Store the chat's working memory more compactly. Auto uses the lighter option only when the full one will not fit with the longest context. Pinning 16 can make Auto pick a shorter context.",
      "values": ["auto", "16", "8", "4"],
      "values_gguf": ["auto", "16", "8"]},
     {"id": "keepalive", "label": "GPU keep-warm",
@@ -366,16 +366,16 @@ def options_for(source="mlx", model_dir=None, config=None, n_minis=1) -> list:
                 except Exception:  # noqa: BLE001
                     trained = None
                 if trained and int(ctx_auto) >= int(trained):
-                    tail = f"Auto is {ctx_auto} for this model, its full trained window."
+                    tail = f"Auto is {ctx_auto} for this model, its full trained context."
                 elif trained:
                     tail = (f"Auto is {ctx_auto} for this model: the longest that fits in memory. "
-                            f"Its full trained window is {trained}.")
+                            f"Its full trained context is {trained}.")
                 else:
                     tail = f"Auto is {ctx_auto} for this model."
                 item["help"] = (
                     "How much of the conversation the model can keep in mind at once. "
-                    "Auto uses the longest window that fits in memory, up to the full "
-                    "window the model was trained for. " + tail
+                    "Auto uses the longest context that fits in memory, up to the full "
+                    "context the model was trained for. " + tail
                 )
                 if trained:
                     item["native_value"] = int(trained)

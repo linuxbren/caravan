@@ -976,14 +976,14 @@ def fit_check(
         w_rec = windows[recommended]
         size = _fmt_window(target)
         if recommended == 1:
-            reason = (f"Fits on 1 Mac with the full {size} window." if w_rec >= target
-                      else f"Fits on 1 Mac with a {_fmt_window(w_rec)} window.")
+            reason = (f"Fits on 1 Mac with the full {size} context." if w_rec >= target
+                      else f"Fits on 1 Mac with a {_fmt_window(w_rec)} context.")
             color = "green" if w_rec >= target else "yellow"
         else:
-            tail = (f"for the full {size} window." if w_rec >= target
-                    else f"for a {_fmt_window(w_rec)} window.")
+            tail = (f"for the full {size} context." if w_rec >= target
+                    else f"for a {_fmt_window(w_rec)} context.")
             if 1 in windows:
-                reason = (f"Fits on 1 Mac with a {_fmt_window(windows[1])} window. "
+                reason = (f"Fits on 1 Mac with a {_fmt_window(windows[1])} context. "
                           f"Split across {recommended} Macs {tail}")
             else:
                 reason = f"Split across {recommended} Macs {tail}"

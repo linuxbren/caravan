@@ -103,8 +103,8 @@ def placement_options(
         macs = "1 Mac" if k == 1 else f"{k} Macs"
         size = f"{int(w) // 1024}K" if int(w) >= 1024 else str(w)
         if int(w) >= int(target):
-            return f"Fits on {macs} with the full {size} window."
-        return f"Fits on {macs} with a {size} window."
+            return f"Fits on {macs} with the full {size} context."
+        return f"Fits on {macs} with a {size} context."
     color = fit.get("color") or "gray"
     options = []
 

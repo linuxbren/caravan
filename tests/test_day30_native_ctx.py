@@ -199,7 +199,7 @@ class SettingsRows(unittest.TestCase):
     def test_disabled_sizes_have_plain_reasons(self):
         d = G.disabled_ctx_values("/m.gguf", decide=_decide(budget=9500.0), meta_fn=_meta(131072))
         self.assertIn("262144", d)
-        self.assertIn("shorter window (131072)", d["262144"])
+        self.assertIn("shorter context (131072)", d["262144"])
         self.assertIn("131072", d)
         self.assertIn("will not fit in memory", d["131072"])
         self.assertNotIn("65536", d)
@@ -217,12 +217,12 @@ class SettingsRows(unittest.TestCase):
     def test_options_for_reports_auto_and_native_in_plain_words(self):
         with mock.patch.object(G, "auto_ctx", return_value=131072), \
              mock.patch.object(G, "native_ctx", return_value=131072), \
-             mock.patch.object(G, "disabled_ctx_values", return_value={"262144": "This model was trained for a shorter window (131072)."}):
+             mock.patch.object(G, "disabled_ctx_values", return_value={"262144": "This model was trained for a shorter context (131072)."}):
             rows = WS.options_for("gguf", model_dir="/m.gguf")
         cw = next(o for o in rows if o["id"] == "chat_window")
         self.assertEqual(cw["auto_value"], 131072)
         self.assertEqual(cw["native_value"], 131072)
-        self.assertIn("full trained window", cw["help"])
+        self.assertIn("full trained context", cw["help"])
         self.assertIn("262144", cw["disabled_values"])
         with mock.patch.object(G, "auto_ctx", return_value=65536), \
              mock.patch.object(G, "native_ctx", return_value=131072), \

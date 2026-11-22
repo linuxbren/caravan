@@ -7,6 +7,7 @@ Day 31 ran Nov 21 2026 (America/Chicago) and is released as
 2. [Part B: the Settings load list shows only downloaded models](#part-b-the-settings-load-list-shows-only-downloaded-models)
 3. [Part C: Topology agrees with Settings](#part-c-topology-agrees-with-settings)
 4. [Code folder shown for each Mac](#code-folder-shown-for-each-mac)
+5. [Follow-up: the app says "context" (v0.9.2)](#follow-up-the-app-says-context-v092)
 
 ## Part A: placement counts the chat window
 
@@ -282,3 +283,34 @@ other Macs, so every install showed it.
   section, and the install command with a Copy button under the top
   buttons (it wraps on phones).
 
+## Follow-up: the app says "context" (v0.9.2)
+
+Brenden: "Let's just keep it consistent." The placement lines, Settings
+and the video said "window" for what most people call the model's
+context. Wording only; placement, fit and launch math are unchanged.
+
+| Where | Before | After |
+|---|---|---|
+| Placement (GGUF and MLX) | Fits on 1 Mac with a 64K window. Split across 2 Macs for the full 128K window. | Fits on 1 Mac with a 64K context. Split across 2 Macs for the full 128K context. |
+| Placement choice | Fits on 2 Macs with the full 128K window. | Fits on 2 Macs with the full 128K context. |
+| Placement, too big | Won't fit on this Mac, even with the shortest chat window (8K). | Won't fit on this Mac, even with the shortest context (8K). |
+| Settings row label | Chat window | Context |
+| Settings help | Auto uses the longest window that fits in memory, up to the full window the model was trained for. Native is that full window. | Auto uses the longest context that fits in memory, up to the full context the model was trained for. Native is that full context. |
+| Settings help (Auto) | its full trained window / Its full trained window is 131072. | its full trained context / Its full trained context is 131072. |
+| Memory compression help (GGUF) | …with the longest chat window. Pinning 16 can make Auto pick a shorter chat window. | …with the longest context. Pinning 16 can make Auto pick a shorter context. |
+| Greyed-out sizes | This model was trained for a shorter window (131072). / This window will not fit in memory with this model. / …how long a window it was trained for. / The full trained window (…) will not fit… | This model was trained for a shorter context (131072). / This context size will not fit in memory with this model. / …how much context it was trained for. / The full trained context (…) will not fit… |
+| Settings chip | chat window 65536 | context 65536 |
+| Load log | …with this chat window / Kept the full chat window of … | …with this context / Kept the full context of … |
+| Auto-tune skip | needs a shorter chat window | needs a shorter context |
+| `caravan bench` | this model's chat window is 8192… / they would not fit the chat window. / …the model's chat window are skipped | this model's context is 8192… / they would not fit the model's context. / …the model's context are skipped |
+
+- The saved setting is still `chat_window` (and the API fields
+  `window_note`, `window_ctx`, `full_window`), so pinned values and old
+  configs keep working.
+- Not changed: "Terminal window" in the installer, sliding-window model
+  internals, code names and comments.
+- `tests/test_day31_context_wording.py` (5 tests) pins the exact line
+  "Fits on 1 Mac with a 64K context. Split across 2 Macs for the full 128K
+  context." for GGUF and MLX, the **Context** label with the old key, and
+  the page's help copy. Old-string asserts in three test files updated.
+- Full suite: 2,033 tests, OK.

@@ -260,8 +260,8 @@ def _window_note(k: int, plan: Optional[dict]) -> str:
         return ""
     macs = "1 Mac" if k == 1 else f"{k} Macs"
     if plan.get("full"):
-        return f"Fits on {macs} with the full {fmt_window(plan['target'])} window."
-    return f"Fits on {macs} with a {fmt_window(plan['ctx'])} window."
+        return f"Fits on {macs} with the full {fmt_window(plan['target'])} context."
+    return f"Fits on {macs} with a {fmt_window(plan['ctx'])} context."
 
 
 def placement_summary(opts: list, default_id) -> str:
@@ -278,10 +278,10 @@ def placement_summary(opts: list, default_id) -> str:
         return d.get("window_note") or ""
     if d.get("full_window"):
         if one and one.get("enabled") and one.get("ctx"):
-            return (f"Fits on 1 Mac with a {fmt_window(one['ctx'])} window. "
-                    f"Split across {k} Macs for the full {full} window.")
-        return f"Split across {k} Macs for the full {full} window."
-    return f"Split across {k} Macs with a {fmt_window(d['ctx'])} window."
+            return (f"Fits on 1 Mac with a {fmt_window(one['ctx'])} context. "
+                    f"Split across {k} Macs for the full {full} context.")
+        return f"Split across {k} Macs for the full {full} context."
+    return f"Split across {k} Macs with a {fmt_window(d['ctx'])} context."
 
 
 def placement_options(weights_gb: float, nodes: list, *, model_path=None,
@@ -350,7 +350,7 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
             o["reason"] = why[0].upper() + why[1:] + "."
         elif plan:
             where = "this Mac" if k == 1 else f"these {k} Macs"
-            o["reason"] = (f"Won't fit on {where}, even with the shortest chat window "
+            o["reason"] = (f"Won't fit on {where}, even with the shortest context "
                            f"({fmt_window(min(PLACEMENT_MIN_CTX, plan['target']))}).")
         return o
 
@@ -613,23 +613,23 @@ def disabled_ctx_values(model_path, *, n_slots: int = 1,
     trained = model_context_length(model_path, meta_fn=meta_fn)
     for c in GGUF_CTX_CHOICES:
         if trained and c > trained:
-            out[str(c)] = f"This model was trained for a shorter window ({trained})."
+            out[str(c)] = f"This model was trained for a shorter context ({trained})."
             continue
         fits = ctx_fits_known(
             model_path, c, n_slots=n_slots, ubatch=ubatch,
             n_devices=n_devices, decide=decide, flash_attn="on", meta_fn=meta_fn,
         )
         if fits is False:
-            out[str(c)] = "This window will not fit in memory with this model."
+            out[str(c)] = "This context size will not fit in memory with this model."
     if not trained:
-        out[GGUF_CTX_NATIVE] = "This model file does not say how long a window it was trained for."
+        out[GGUF_CTX_NATIVE] = "This model file does not say how much context it was trained for."
     else:
         fits = ctx_fits_known(
             model_path, int(trained), n_slots=n_slots, ubatch=ubatch,
             n_devices=n_devices, decide=decide, flash_attn="on", meta_fn=meta_fn,
         )
         if fits is False:
-            out[GGUF_CTX_NATIVE] = (f"The full trained window ({trained}) will not fit "
+            out[GGUF_CTX_NATIVE] = (f"The full trained context ({trained}) will not fit "
                                     "in memory with this model.")
     return out
 
@@ -765,7 +765,7 @@ def window_blockers(model_path, *, n_slots: int = 1, n_devices: int = 1,
     return out
 
 
-WINDOW_SKIP = "needs a shorter chat window"
+WINDOW_SKIP = "needs a shorter context"
 
 
 def slot_save_dir(cache_type_k: str, cache_type_v: str, root=None,

@@ -115,6 +115,10 @@ and the daily logs, not mixed into current setup instructions.
     marks models Settings can't load, and can delete GGUF models.
   - **Code folder fallback:** a Mac without a saved code path falls back
     to the install folder, not an old developer folder.
+  - **Follow-up, "context" wording
+    ([v0.9.2](https://github.com/linuxbren/caravan/releases/tag/v0.9.2)):**
+    the app says "context" instead of "window" everywhere it means the
+    model's context; the Settings row is now **Context**.
 
 ## Next candidates
 

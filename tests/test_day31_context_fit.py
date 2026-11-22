@@ -85,15 +85,15 @@ class GgufPlacement(unittest.TestCase):
         self.assertFalse(one["full_window"])
         self.assertTrue(split["full_window"])
         self.assertEqual(p["default_id"], "split:exo1,exo2")
-        self.assertIn("128K window", p["summary"])
-        self.assertIn("Split across 2 Macs for the full 128K window.", p["summary"])
+        self.assertIn("128K context", p["summary"])
+        self.assertIn("Split across 2 Macs for the full 128K context.", p["summary"])
         # The old weights + 1.5 GB rule put this on one Mac.
         self.assertEqual(G.placement_options(16.5, TWO)["default_id"], "one:exo1")
 
     def test_full_window_on_one_mac_stays_on_one(self):
         p = place(4.92)  # Llama 3.1 8B Q4_K_M
         self.assertEqual(p["default_id"], "one:exo1")
-        self.assertEqual(p["summary"], "Fits on 1 Mac with the full 128K window.")
+        self.assertEqual(p["summary"], "Fits on 1 Mac with the full 128K context.")
         self.assertNotIn("Split", p["summary"])
         p = place(12.1, meta=gptoss_meta())  # sliding window keeps it small
         self.assertEqual(p["default_id"], "one:exo1")
@@ -105,10 +105,10 @@ class GgufPlacement(unittest.TestCase):
         self.assertEqual(one["ctx"], 65536)
         self.assertEqual(split["ctx"], 131072)
         self.assertEqual(p["default_id"], split["id"])
-        self.assertEqual(p["summary"], "Fits on 1 Mac with a 64K window. "
-                                       "Split across 2 Macs for the full 128K window.")
-        self.assertEqual(one["window_note"], "Fits on 1 Mac with a 64K window.")
-        self.assertEqual(split["window_note"], "Fits on 2 Macs with the full 128K window.")
+        self.assertEqual(p["summary"], "Fits on 1 Mac with a 64K context. "
+                                       "Split across 2 Macs for the full 128K context.")
+        self.assertEqual(one["window_note"], "Fits on 1 Mac with a 64K context.")
+        self.assertEqual(split["window_note"], "Fits on 2 Macs with the full 128K context.")
 
     def test_placement_and_chat_window_auto_agree(self):
         for w in (4.92, 9.0, 13.0, 16.5):
@@ -127,17 +127,17 @@ class GgufPlacement(unittest.TestCase):
     def test_pinned_chat_window_is_the_target(self):
         p = place(13.0, settings={"chat_window": "32768"})
         self.assertEqual(p["default_id"], "one:exo1")
-        self.assertEqual(p["summary"], "Fits on 1 Mac with the full 32K window.")
+        self.assertEqual(p["summary"], "Fits on 1 Mac with the full 32K context.")
 
     def test_model_too_big_even_short_window_behaves_as_today(self):
         p = place(40.0)
         self.assertEqual(p["default_id"], None)
         self.assertTrue(all(not o["enabled"] for o in p["options"]))
-        self.assertIn("shortest chat window", p["options"][0]["reason"])
+        self.assertIn("shortest context", p["options"][0]["reason"])
         p = place(30.0)  # only a split can run it, with a shorter window
         self.assertEqual(p["default_id"], "split:exo1,exo2")
         self.assertFalse(p["options"][0]["enabled"])
-        self.assertEqual(p["summary"], "Split across 2 Macs with a 64K window.")
+        self.assertEqual(p["summary"], "Split across 2 Macs with a 64K context.")
 
     def test_trained_window_unknown_falls_back_to_8192(self):
         meta = llama_meta()
@@ -213,19 +213,19 @@ class MlxFit(unittest.TestCase):
         self.assertEqual(f["window_ctx"], {"1": 65536, "2": 131072})
         self.assertEqual(f["recommended_nodes"], 2)
         self.assertEqual(f["nodes_needed"], 1)  # it can still run on one Mac
-        self.assertEqual(f["reason"], "Fits on 1 Mac with a 64K window. "
-                                      "Split across 2 Macs for the full 128K window.")
+        self.assertEqual(f["reason"], "Fits on 1 Mac with a 64K context. "
+                                      "Split across 2 Macs for the full 128K context.")
 
     def test_small_model_full_window_on_one_mac(self):
         f = P.fit_check(weights_gb=1.8, nodes=MTWO, cfg=LLAMA3)
         self.assertEqual(f["recommended_nodes"], 1)
         self.assertEqual(f["color"], "green")
-        self.assertEqual(f["reason"], "Fits on 1 Mac with the full 128K window.")
+        self.assertEqual(f["reason"], "Fits on 1 Mac with the full 128K context.")
 
     def test_one_mac_only_never_talks_split(self):
         f = P.fit_check(weights_gb=4.5, nodes=MTWO[:1], cfg=LLAMA8)
         self.assertEqual(f["recommended_nodes"], 1)
-        self.assertEqual(f["reason"], "Fits on 1 Mac with a 64K window.")
+        self.assertEqual(f["reason"], "Fits on 1 Mac with a 64K context.")
 
     def test_no_config_keeps_old_estimate(self):
         f = P.fit_check(weights_gb=4.5, nodes=MTWO)
@@ -251,7 +251,7 @@ class MlxFit(unittest.TestCase):
         self.assertEqual(o["default_id"], "split:2")
         self.assertEqual(o["summary"], f["reason"])
         split = next(x for x in o["options"] if x["id"] == "split:2")
-        self.assertEqual(split["window_note"], "Fits on 2 Macs with the full 128K window.")
+        self.assertEqual(split["window_note"], "Fits on 2 Macs with the full 128K context.")
         ones = [x for x in o["options"] if x["mode"] == "one"]
         self.assertTrue(all(x["enabled"] for x in ones))  # still offered
         f = P.fit_check(weights_gb=1.8, nodes=MTWO, cfg=LLAMA3)

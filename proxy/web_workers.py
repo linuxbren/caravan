@@ -624,14 +624,14 @@ class WorkerManager:
             launch = G.resolve_launch(str(path), tune=tune, n_devices=1 + len(rpc))
             if launch:
                 if launch.get("helper_fits") is False and tune.get("guess_ahead") == "on":
-                    self._note("Guess-ahead helper left off: it does not fit in memory with this chat window")
+                    self._note("Guess-ahead helper left off: it does not fit in memory with this context")
                     tune = dict(tune, guess_ahead="off", helper_failed=True)
                     tune.pop("draft_path", None)
                 lighter = launch.get("lighter") or {}
                 if lighter and attempt == 1:
                     words = {"cache_type": "8-bit chat memory", "flash_attn": "flash attention on",
                              "ubatch": f"prompt batch {lighter.get('ubatch')}"}
-                    self._note("Kept the full chat window of " + str(launch["ctx"]) + ": using "
+                    self._note("Kept the full context of " + str(launch["ctx"]) + ": using "
                                + ", ".join(words.get(k, k) for k in lighter)
                                + " instead of the learned setting, which would not fit")
                 tune = dict(tune, ctx=launch["ctx"], n_slots=launch["n_slots"],

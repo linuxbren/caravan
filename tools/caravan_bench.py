@@ -19,7 +19,7 @@ Does not invent numbers. Pass a plain name (for example
 `caravan bench "qwen2.5 coder 7b"`) or both `--gguf` and `--mlx` ids
 (`caravan models` lists them). By default it runs five short prompts
 and a long-prompt series at about 1k, 4k, and 8k tokens (two prompts
-at each size; sizes that will not fit the chat window are skipped).
+at each size; sizes that will not fit the context are skipped).
 `--short` or `--long` runs just one of those. Without `--yes` it
 shows which two models it would compare and the exact command.
 After a live comparison, the model that was loaded before is put
@@ -447,7 +447,7 @@ def summarize(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX") -> str:
         head = label.replace(" (5)", "").replace(" (2)", "").replace(" (1)", "")
         head = head[0].lower() + head[1:] if head else label
         if (g or {}).get("skipped") and (m or {}).get("skipped"):
-            reason = (g or m).get("reason") or "they would not fit the chat window."
+            reason = (g or m).get("reason") or "they would not fit the model's context."
             paragraphs.append(f"On {head}, both sides were skipped — {reason}")
             continue
         if (g or {}).get("skipped") and m and not m.get("skipped") and m.get("specs"):
@@ -549,7 +549,7 @@ def steps_text(gguf_id: str, mlx_id: str, port: int = DEFAULT_PORT,
         series.append(
             "a long-prompt series at about 1k, 4k, and 8k tokens "
             "(two prompts at each size; sizes that will not fit the "
-            "model's chat window are skipped)"
+            "model's context are skipped)"
         )
     series_txt = " and ".join(series) if series else "the prompt series"
     header = (

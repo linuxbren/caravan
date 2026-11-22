@@ -81,17 +81,17 @@ from the current model, and disk space on every participating Mac. More memory
 or more Macs lets larger models fit. Caravan calculates the plan; a colored
 fit hint is not permission to ignore a load-time safety check.
 
-Fit also counts the model's chat window (Day 31). A placement fits when the
-model's files, the memory for its chat window, working memory and a safety
-margin all fit. The window is the one the model was trained for (8K when
+Fit also counts the model's context (Day 31). A placement fits when the
+model's files, the memory for its context, working memory and a safety
+margin all fit. The context is the one the model was trained for (8K when
 the model does not say). The recommended placement is the smallest one
-that holds the full window, so a model that holds it on one Mac stays on
-one Mac ("Fits on 1 Mac with the full 128K window."). When one Mac holds
-the model but only a shorter window, the split is recommended and the one-Mac
-choice is still offered: "Fits on 1 Mac with a 64K window. Split across 2
-Macs for the full 128K window." GGUF uses the same numbers as Chat window
-Auto, so the window you get after Load matches the plan. A Mac whose memory
-cannot be read never counts as a fit.
+that holds the full context, so a model that holds it on one Mac stays on
+one Mac ("Fits on 1 Mac with the full 128K context."). When one Mac holds
+the model but only a shorter context, the split is recommended and the one-Mac
+choice is still offered: "Fits on 1 Mac with a 64K context. Split across 2
+Macs for the full 128K context." GGUF uses the same numbers as Context
+Auto in Settings, so the context you get after Load matches the plan. A Mac
+whose memory cannot be read never counts as a fit.
 
 ## Choose where files go
 

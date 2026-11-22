@@ -131,7 +131,7 @@ def skip_reason(prompt_tokens: int, window) -> str:
     except (TypeError, ValueError):
         w = window
     return (
-        f"this model's chat window is {w}, and a "
+        f"this model's context is {w}, and a "
         f"~{_size_label(prompt_tokens)}-token prompt would not fit."
     )
 

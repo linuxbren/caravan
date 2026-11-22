@@ -13,9 +13,9 @@ capacity and files for you. Start with a small model. Download, then **Load**.
 While a download runs, its progress card appears right under the model
 you clicked. No model is bundled with the installer. Publisher terms may apply.
 
-Each placement says the chat window it holds, for example "Fits on 1 Mac
-with the full 128K window." The recommended one is the smallest that holds
-the model's full trained window; see [fit](MODEL_PICKER.md#sources-and-fit).
+Each placement says the context it holds, for example "Fits on 1 Mac
+with the full 128K context." The recommended one is the smallest that holds
+the model's full trained context; see [fit](MODEL_PICKER.md#sources-and-fit).
 
 A one-Mac placement uses only the selected Mac. A split placement runs different
 parts on participating Macs. A copy on every Mac is not the same as a split.
@@ -163,18 +163,20 @@ Apply & restart) and not every model supports every feature. See
 it during an important chat. See [optimization](OPTIMIZE-NOW.md).
 
 When a GGUF model is loaded, Self-tuning, Memory compression, Shared start,
-**Two chats**, **Chat window**, **Flash attention**, and **Prompt batch**
+**Two chats**, **Context**, **Flash attention**, and **Prompt batch**
 are used, with plain-word hints. Memory compression offers Auto, 16, and
-8 only (never 4). Chat window Auto uses the longest window that fits in
+8 only (never 4). Context (called Chat window before v0.9.2; the saved
+setting is still `chat_window`) is how much of the conversation the model
+can keep in mind at once. Context Auto uses the longest context that fits in
 memory (on one Mac, or across the Macs a model is split over), up to the
-full window the model was trained for, and falls back to the same default
+full context the model was trained for, and falls back to the same default
 as before when that cannot be measured. It never picks less than it did
 before Day 30. A setting Caravan learned for speed (16-bit memory, flash
 attention off, a bigger prompt batch, the Guess-ahead helper) never makes
-Auto pick a shorter window; if it would not fit, Caravan uses the lighter
+Auto pick a shorter context; if it would not fit, Caravan uses the lighter
 choice and says so in the load log. Settings you pin yourself still count.
-Chat window also offers 131072, 262144 and Native (the model's full trained
-window); sizes past the trained window, or that will not fit in memory, are
+Context also offers 131072, 262144 and Native (the model's full trained
+context); sizes past the trained context, or that will not fit in memory, are
 greyed out with the reason. Two chats Auto keeps
 one chat; set 2 and apply to let two chats share the model at the same
 time, including on one Mac. Guess-ahead and Prompt lookup are Auto,

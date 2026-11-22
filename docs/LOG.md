@@ -1,3 +1,14 @@
+## 2026-11-22: Day 31 follow-up — the app says "context" (v0.9.2)
+
+Brenden: "Let's just keep it consistent." User-facing "window" (meaning
+the model's context) became "context" in placement and fit lines, the
+Settings row (label **Context**, saved key still `chat_window`), its help,
+the Settings chip, load-log notes, bench skip reasons and `caravan bench
+--help`. Logic unchanged. New `tests/test_day31_context_wording.py` pins
+the exact line "Fits on 1 Mac with a 64K context. Split across 2 Macs for
+the full 128K context." Suite 2,033 OK. Details:
+[DAY31](DAY31.md#follow-up-the-app-says-context-v092).
+
 ## 2026-11-21: Day 31 wrap — released as v0.9.1
 
 Day 31 (placement counts the chat window, Settings lists only downloaded

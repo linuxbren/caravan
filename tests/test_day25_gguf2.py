@@ -123,7 +123,7 @@ class LaunchFlags(unittest.TestCase):
         short = G.disabled_ctx_values("/m.gguf", decide=_decide(lambda c, s: (1, 10000)),
                                       meta_fn=_meta(8192))
         self.assertIn("16384", short)
-        self.assertIn("shorter window", short["16384"])
+        self.assertIn("shorter context", short["16384"])
 
     def test_resolve_web_kv_passes_slot_count(self):
         seen = {}
@@ -820,7 +820,7 @@ class LongSeries(unittest.TestCase):
         self.assertFalse(P.fits_window(2048, 2048))
         self.assertTrue(P.fits_window(2048, 8192))
         reason = P.skip_reason(8192, 8192)
-        self.assertIn("chat window is 8192", reason)
+        self.assertIn("context is 8192", reason)
         self.assertIn("8k", reason)
 
     def test_measure_series_skips_and_labels_counts(self):
@@ -844,7 +844,7 @@ class LongSeries(unittest.TestCase):
         self.assertTrue(labels[2].startswith("Long prompts (~4k tok) (2)"))
         self.assertTrue(labels[3].startswith("Long prompts (~8k tok) (2)"))
         self.assertTrue(rows[3].get("skipped"))
-        self.assertIn("chat window is 8192", rows[3]["reason"])
+        self.assertIn("context is 8192", rows[3]["reason"])
         self.assertFalse(rows[0].get("skipped"))
         self.assertFalse(rows[1].get("skipped"))
         # 5 short + 2 at 1k + 2 at 4k; 8k skipped. No shared prefix across first 80 chars
@@ -891,7 +891,7 @@ class LongSeries(unittest.TestCase):
 
     def test_summary_skips_unmeasured_sizes(self):
         g = [{"label": "Long prompts (~8k tok) (2)", "skipped": True,
-              "reason": "this model's chat window is 8192, and a ~8k-token prompt would not fit."}]
+              "reason": "this model's context is 8192, and a ~8k-token prompt would not fit."}]
         m = [{"label": "Long prompts (~8k tok) (2)", "specs": {
             "write_tok_s": 20, "read_tok_s": 80, "ttft_s": 1.0, "total_s": 10,
         }}]
@@ -1399,7 +1399,7 @@ class Docs(unittest.TestCase):
         for bad in ("prf-hays", "16 GB", "24 GB", "exo1", "exo2", "262144"):
             self.assertNotIn(bad, text)
         web = (ROOT / "docs/WEB.md").read_text()
-        self.assertIn("Chat window", web)
+        self.assertIn("Context", web)
         self.assertIn("Two chats", web)
         self.assertIn("caravan bench", web)
         inst = (ROOT / "INSTALL.md").read_text()
