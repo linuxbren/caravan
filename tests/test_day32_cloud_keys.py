@@ -42,11 +42,11 @@ class Storage(unittest.TestCase):
 
     def test_providers(self):
         st = CK.status(home=self.home)
-        self.assertEqual([p["id"] for p in st["providers"]], ["openai", "anthropic", "openrouter", "ollama"])
+        self.assertEqual([p["id"] for p in st["providers"]], ["ollama"])
         self.assertTrue(all(not p["set"] for p in st["providers"]))
 
     def test_save_is_0600_under_caravan_and_shows_only_last4(self):
-        st = CK.save("openai", KEY, home=self.home)
+        st = CK.save("ollama", KEY, home=self.home)
         path = self.home / ".caravan" / "cloud-keys.json"
         self.assertTrue(path.is_file())
         self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
@@ -54,34 +54,36 @@ class Storage(unittest.TestCase):
         self.assertEqual((row["set"], row["source"], row["last4"]), (True, "settings", "wxyz"))
         self.assertNotIn(KEY, json.dumps(st))
         self.assertNotIn(KEY[:-4], json.dumps(st))
-        self.assertEqual(CK.resolve("openai", home=self.home), KEY)
+        self.assertEqual(CK.resolve("ollama", home=self.home), KEY)
         # No temp files left behind.
         self.assertEqual(sorted(p.name for p in path.parent.iterdir()), ["cloud-keys.json"])
 
     def test_replace_and_remove(self):
-        CK.save("anthropic", KEY, home=self.home)
-        CK.save("anthropic", "sk-ant-NEWKEY-5678", home=self.home)
-        self.assertEqual(CK.resolve("anthropic", home=self.home), "sk-ant-NEWKEY-5678")
-        st = CK.remove("anthropic", home=self.home)
-        self.assertFalse(st["providers"][1]["set"])
-        self.assertIsNone(CK.resolve("anthropic", home=self.home))
+        CK.save("ollama", KEY, home=self.home)
+        CK.save("ollama", "olk-NEWKEY-5678", home=self.home)
+        self.assertEqual(CK.resolve("ollama", home=self.home), "olk-NEWKEY-5678")
+        st = CK.remove("ollama", home=self.home)
+        self.assertFalse(st["providers"][0]["set"])
+        self.assertIsNone(CK.resolve("ollama", home=self.home))
 
     def test_bad_key_is_refused_without_repeating_it(self):
         bad = "sk bad key with spaces"
         with self.assertRaises(CK.CloudKeyError) as cm:
-            CK.save("openai", bad, home=self.home)
+            CK.save("ollama", bad, home=self.home)
         self.assertNotIn(bad, str(cm.exception))
         with self.assertRaises(CK.CloudKeyError):
-            CK.save("openai", "short", home=self.home)
-        with self.assertRaises(CK.CloudKeyError):
-            CK.save("nope", KEY, home=self.home)
+            CK.save("ollama", "short", home=self.home)
+        # Only Ollama Cloud for now: other providers are unknown.
+        for other in ("nope", "openai", "anthropic", "openrouter"):
+            with self.assertRaises(CK.CloudKeyError):
+                CK.save(other, KEY, home=self.home)
 
     def test_environment_wins_and_is_not_editable(self):
-        CK.save("openrouter", KEY, home=self.home)
-        with mock.patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-or-FROMENV-9999"}):
-            row = CK.status(home=self.home)["providers"][2]
+        CK.save("ollama", KEY, home=self.home)
+        with mock.patch.dict(os.environ, {"OLLAMA_API_KEY": "olk-FROMENV-9999"}):
+            row = CK.status(home=self.home)["providers"][0]
             self.assertEqual((row["source"], row["last4"], row["editable"]), ("environment", "9999", False))
-            self.assertEqual(CK.resolve("openrouter", home=self.home), "sk-or-FROMENV-9999")
+            self.assertEqual(CK.resolve("ollama", home=self.home), "olk-FROMENV-9999")
 
     def test_broken_file_is_ignored(self):
         p = self.home / ".caravan" / "cloud-keys.json"
@@ -137,18 +139,18 @@ class Api(unittest.TestCase):
         self.assertNotIn(KEY[:-4], err.getvalue())
 
     def test_bad_key_is_400_without_echo(self):
-        code, raw = self.req({"action": "set", "provider": "openai", "key": "bad key here!"})
+        code, raw = self.req({"action": "set", "provider": "ollama", "key": "bad key here!"})
         self.assertEqual(code, 400)
         self.assertNotIn("bad key here", raw)
 
     def test_local_network_cannot_read_or_change_keys(self):
-        CK.save("openai", KEY, home=self.home)
+        CK.save("ollama", KEY, home=self.home)
         code, raw = self.req(headers={"Host": "192.168.1.20:8190"})
         self.assertEqual(code, 200)
         self.assertEqual(json.loads(raw), {"show": False, "providers": []})
-        code, raw = self.req({"action": "remove", "provider": "openai"}, headers={"Host": "192.168.1.20:8190"})
+        code, raw = self.req({"action": "remove", "provider": "ollama"}, headers={"Host": "192.168.1.20:8190"})
         self.assertEqual(code, 403)
-        self.assertEqual(CK.resolve("openai", home=self.home), KEY)
+        self.assertEqual(CK.resolve("ollama", home=self.home), KEY)
 
 
 class Picker(unittest.TestCase):

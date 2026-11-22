@@ -3,8 +3,12 @@
 Keys typed in Settings are kept in one file, ``~/.caravan/cloud-keys.json``,
 readable only by you (0600, written atomically). The page and the API only
 ever see whether a key is set and its last 4 characters. An environment
-variable (for example ``OPENAI_API_KEY``) still wins, as before, and is
-shown as "from the environment"; it cannot be edited from the page.
+variable (``OLLAMA_API_KEY``) still wins, as before, and is shown as
+"from the environment"; it cannot be edited from the page.
+
+Only Ollama Cloud for now: it is the only cloud source the Models picker
+can search. To add a provider later, add one entry to PROVIDERS (label and
+env names); Settings shows one row per entry, in this order.
 """
 from __future__ import annotations
 
@@ -16,12 +20,9 @@ from pathlib import Path
 from typing import Optional
 
 PROVIDERS = {
-    "openai": {"label": "OpenAI", "env": ("OPENAI_API_KEY", "CARAVAN_OPENAI_API_KEY")},
-    "anthropic": {"label": "Anthropic", "env": ("ANTHROPIC_API_KEY", "CARAVAN_ANTHROPIC_API_KEY")},
-    "openrouter": {"label": "OpenRouter", "env": ("OPENROUTER_API_KEY", "CARAVAN_OPENROUTER_API_KEY")},
     "ollama": {"label": "Ollama Cloud", "env": ("OLLAMA_API_KEY", "CARAVAN_OLLAMA_API_KEY")},
 }
-ORDER = ("openai", "anthropic", "openrouter", "ollama")
+ORDER = tuple(PROVIDERS)
 
 _KEY_OK = re.compile(r"^[A-Za-z0-9._\-:+/=]{8,512}$")
 
