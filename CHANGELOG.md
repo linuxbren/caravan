@@ -10,7 +10,8 @@ See [DAY31](docs/DAY31.md#follow-up-the-app-says-context-v092).
   context. Split across 2 Macs for the full 128K context."
 - The Settings row **Chat window** is now **Context**. Its saved setting is
   still `chat_window`, so pinned values keep working.
-- Wording only: placement, fit and launch math are unchanged.
+- Wording only: placement, fit and launch math are unchanged. Source
+  `12d82a4`, pin `640670d`. 2,033 tests pass.
 
 ## Day 31 (v0.9.1) — placement counts the chat window; Settings and Topology list what is on disk
 

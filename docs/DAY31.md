@@ -1,7 +1,9 @@
 # Day 31 — placement counts the chat window; Settings and Topology list what is on disk
 
 Day 31 ran Nov 21 2026 (America/Chicago) and is released as
-[v0.9.1](https://github.com/linuxbren/caravan/releases/tag/v0.9.1).
+[v0.9.1](https://github.com/linuxbren/caravan/releases/tag/v0.9.1); the
+"context" wording follow-up is
+[v0.9.2](https://github.com/linuxbren/caravan/releases/tag/v0.9.2).
 
 1. [Part A: placement counts the chat window](#part-a-placement-counts-the-chat-window)
 2. [Part B: the Settings load list shows only downloaded models](#part-b-the-settings-load-list-shows-only-downloaded-models)
@@ -314,3 +316,7 @@ context. Wording only; placement, fit and launch math are unchanged.
   context." for GGUF and MLX, the **Context** label with the old key, and
   the page's help copy. Old-string asserts in three test files updated.
 - Full suite: 2,033 tests, OK.
+- Release: source `12d82a4`, pin `640670d`; tag
+  [v0.9.2](https://github.com/linuxbren/caravan/releases/tag/v0.9.2) on the
+  wrap commit. Notes:
+  [release-notes/day31-v0.9.2.md](release-notes/day31-v0.9.2.md).
