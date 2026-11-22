@@ -36,10 +36,21 @@ def simple_status(name="web"):
         problem = ' '.join(str(worker['error']).split())
         print(f"Caravan is not running: {problem.rstrip('.')}. Open Caravan and load the model again; run caravan doctor if it fails.")
         return 1
-    print("Caravan is running")
+    label = _version_label()
+    print(f"Caravan {label} is running" if label else "Caravan is running")
     for line in link_lines():
         print(line)
     return 0
+
+
+def _version_label():
+    """'v0.9.4' from the installed VERSION file ('' when unknown)."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import caravan_version as CV
+        return CV.info(ROOT)["label"]
+    except Exception:  # noqa: BLE001 - status must never fail on this
+        return ""
 
 
 def link_lines(home=None):
@@ -91,6 +102,10 @@ def main(argv=None):
     if argv and argv[0] == "models":
         from caravan_models import main as models
         return models(argv[1:])
+    if argv and argv[0] in ("--version", "-V", "version"):
+        import caravan_version as CV
+        print(CV.text(ROOT))
+        return 0
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("start", "stop", "status", "doctor", "update", "uninstall", "add-mini", "open", "remote", "lan", "bench", "models", "jobs"))
     parser.add_argument("--name", default="web", help="one owned service; default web")

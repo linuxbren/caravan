@@ -789,6 +789,21 @@ def loadable_only(rows: list) -> list:
 _PAGE_TAGS = {}
 
 
+def _installed_version(root=None):
+    """Day 32 part A: the installed release for the Settings label, from the
+    VERSION file and pin that ship with this install (tools/caravan_version)."""
+    import sys as _sys
+    root = Path(root) if root else Path(__file__).resolve().parents[1]
+    tools = str(root / "tools")
+    if tools not in _sys.path:
+        _sys.path.insert(0, tools)
+    try:
+        import caravan_version as CV
+        return CV.info(root)
+    except Exception:  # noqa: BLE001 - status must never fail on this
+        return {"version": None, "label": "", "ref": None, "short": None, "packaged": False}
+
+
 def page_tag(path=None, package=None):
     """Short tag for the Caravan this server is running (not a version hash).
 
@@ -1217,6 +1232,7 @@ def make_handler(app: App):
                 "active": active,
                 "uptime_s": round(time.time() - app.started, 1),
                 "page": page_tag(),
+                "version": _installed_version(),
                 "ports": {"web": DEFAULT_PORT, "lead": app.mgr.lead_port,
                           "packer": (split or {}).get("peer") or app.mgr.packer_peer},
             })

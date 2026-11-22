@@ -1,3 +1,17 @@
+## Day 32 part A (v0.9.4) — the installed version in Settings
+
+Released as [v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4).
+
+See [DAY32](docs/DAY32.md#part-a-version-label).
+
+- Settings shows the installed version next to its title, with the daily
+  update check's status: "v0.9.4 · up to date", or "update available",
+  which takes you to Update now.
+- `caravan --version` (or `caravan version`), `caravan status` and
+  `caravan doctor` show the same version.
+- The number comes from a new `VERSION` file in each release and the build
+  from the installed pin, so it always matches what is really installed.
+
 ## Day 31 follow-up (v0.9.3) — 4-bit MLX models load when split across Macs
 
 Released as [v0.9.3](https://github.com/linuxbren/caravan/releases/tag/v0.9.3).

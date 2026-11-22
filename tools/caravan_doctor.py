@@ -14,6 +14,12 @@ def checks(home=None, port=8190):
     home = Path(home or Path.home())
     rows = []
     def add(level, message): rows.append((level, message))
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import caravan_version
+        add("INFO", "Installed: " + caravan_version.text() + ".")
+    except Exception:  # noqa: BLE001 - doctor must never fail on this
+        add("INFO", "Installed version: unknown.")
     mac = platform.system() == "Darwin"
     add("OK" if mac else "ERROR", "macOS required (Apple Silicon, macOS 14+).")
     add("OK" if platform.machine() == "arm64" else "ERROR", "Native Apple Silicon required; disable Rosetta for Terminal/Python.")

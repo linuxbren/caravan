@@ -9,7 +9,10 @@ If a correction needs a new release, append `-fix1`, `-fix2`, and explain it.
 1. Finish docs, CHANGELOG and the Obsidian day note. Keep every test result,
    including failures. Update INSTALL.md if setup changes.
 2. Run `PYTHONPATH=.:proxy:tests python3 -m unittest discover -s tests`.
-3. Commit as linuxbren on `main` (the only working branch since Day 30):
+3. Set `VERSION` to the release number (for example `0.9.4`, no `v`) in
+   the source commit; Settings, `caravan --version`, `caravan status` and
+   `caravan doctor` read it from the installed source.
+4. Commit as linuxbren on `main` (the only working branch since Day 30):
    the source commit, then the pin commit that sets `packaging-version` to
    that source commit and its codeload SHA-256. Push `main` (ff-only).
    **Transition:** installs from before Day 30 read `packaging-version` and
@@ -28,7 +31,7 @@ If a correction needs a new release, append `-fix1`, `-fix2`, and explain it.
    An install picks up `main` as its channel after its first update to a
    Day 30 or later build. Keep the fast-forwards until the owner decides
    no older installs are left.
-4. Build clean packages from the committed tree (not the working directory):
+5. Build clean packages from the committed tree (not the working directory):
 
 ```sh
 # Set DAY, TAG and COMMIT for this release first.
@@ -37,19 +40,19 @@ git archive --format=tar --prefix="caravan-day${DAY}/" "$COMMIT" | gzip -n > "ca
 gh release create "$TAG" --target "$COMMIT" --title "Day ${DAY} (DATE)" --notes-file release-notes.md "caravan-day${DAY}.zip" "caravan-day${DAY}.tar.gz"
 ```
 
-5. Draft notes in `docs/release-notes/dayN.md` (pass it as `--notes-file`). Notes must say what changed, link the install guide, report checks and limits.
+6. Draft notes in `docs/release-notes/dayN.md` (pass it as `--notes-file`). Notes must say what changed, link the install guide, report checks and limits.
    `handoff/lab/videos/` is export-ignored to keep source downloads small; media
    remains in Git. Models, dependencies and compiled runtimes are not bundled.
-6. Download the published asset to a fresh directory, extract it, check
+7. Download the published asset to a fresh directory, extract it, check
    INSTALL.md exists and rerun the full test command there. Record counts,
    duration, failures and skips in the day log. If verification fails, disclose
    it immediately; do not silently replace an existing release asset/tag.
-7. Pull with `git pull --ff-only` in the intended checkout on the 1st node
+8. Pull with `git pull --ff-only` in the intended checkout on the 1st node
    (first Mac/lead) and every helper, including the 2nd node. Use your saved
    deployment inventory for actual paths; never assume a historical lab path.
    Check tracked changes first. Never copy source over SSH or reset local work.
    Docs-only updates need no service restart. Preserve unrelated local files.
-8. Record the release URL, tag, commit, asset sizes and verification in the repo
+9. Record the release URL, tag, commit, asset sizes and verification in the repo
    day log and Obsidian diary. A later documentation-only commit may record the
    completed publication checks without moving the release tag.
 
@@ -72,7 +75,7 @@ passing the stdlib suite proves a clean Mac installation or hardware speed.
   committed tree; verify the published curl path after pushing. The bootstrap
   follows a moving channel but always verifies a specific source commit.
 - [ ] Push `main`, fast-forward `caravan-v3-mlx-split` and
-  `clean-install-fixes` to it (transition, step 3); never move existing tags or replace old
+  `clean-install-fixes` to it (transition, step 4); never move existing tags or replace old
   release assets with newer code. Prepare follow-up artifacts for the next
   authorized release, or a clearly named correction release.
 - [ ] ff-only pull each intended Mac checkout using its verified actual path,

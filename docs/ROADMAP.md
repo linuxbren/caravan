@@ -124,6 +124,21 @@ and the daily logs, not mixed into current setup instructions.
     a pre-quantized MLX model loads split across Macs even when one piece
     of the other Mac's layers straddles two shard files (Qwen3 32B 4-bit).
 
+- **Day 32 (in progress): localization.** See [DAY32](DAY32.md).
+  - **Part A, version label
+    ([v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4)):**
+    Settings shows the installed release next to its title, with the daily
+    update check's status ("up to date" or "update available", which leads
+    to Update now). `caravan --version`, `caravan status` and
+    `caravan doctor` show the same version. The number comes from a
+    `VERSION` file in each release's source and the build from the
+    installed pin, never from the page.
+  - **Localization (next):** pull every web page, CLI and installer string
+    into one English strings file keyed by name, with lookups that fall
+    back to English for a missing key or language. First languages:
+    Spanish, Simplified Chinese and Japanese, then German to test long
+    words in buttons and narrow layouts.
+
 ## Next candidates
 
 1. **A helper for MLX on one Mac.** Today an MLX model uses a helper only

@@ -255,7 +255,7 @@ class PathAndStatusTests(unittest.TestCase):
         self.assertEqual(len(out.getvalue().splitlines()),1)
         return result,out.getvalue().strip()
 
-    def test_running_status_one_line(self):self.assertEqual(self.status(dict(worker=dict(status='idle'))),(0,'Caravan is running'))
+    def test_running_status_one_line(self):self.assertEqual(self.status(dict(worker=dict(status='idle'))),(0,'Caravan v'+(ROOT/'VERSION').read_text().strip()+' is running'))
     def test_stopped_status_has_fix(self):
         result,text=self.status(network_error=True);self.assertEqual(result,1);self.assertIn('caravan start',text)
     def test_missing_setup_status_has_fix(self):

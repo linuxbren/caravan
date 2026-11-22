@@ -825,6 +825,11 @@
     padding-bottom: 8px; z-index: 1;
   }
   .drawer .drawer-head h2 { margin: 0; font-size: .85rem; color: var(--amber2); letter-spacing: .08em; text-transform: uppercase; font-family: var(--mono); }
+  /* Day 32 part A: installed version next to the Settings title. */
+  .drawer .drawer-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+  .ver-label { font-family: var(--mono); font-size: .72rem; color: var(--muted); letter-spacing: .02em; white-space: nowrap; }
+  .ver-label .ver-upd { font: inherit; color: var(--amber2); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+  .ver-label .ver-upd:hover, .ver-label .ver-upd:focus-visible { color: var(--accent); }
   .tip[title] { border-bottom: 1px dotted color-mix(in srgb, var(--accent) 45%, transparent); cursor: help; }
   .card { border-color: color-mix(in srgb, var(--accent) 22%, transparent); }
   body { font-feature-settings: "tnum"; }
@@ -1753,7 +1758,7 @@
 <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
   <aside class="drawer a-settings" id="settingsDrawer" aria-label="Settings">
     <div class="drawer-head">
-      <h2>Settings</h2>
+      <div class="drawer-title"><h2>Settings</h2><span class="ver-label" id="settingsVersion" hidden></span></div>
       <button type="button" class="ghost drawer-control" id="btnCloseSettings">Close</button>
     </div>
     <div class="toolbar">
@@ -2159,6 +2164,54 @@
       setTimeout(() => card.scrollIntoView({ block: "nearest", behavior: "smooth" }), 50);
     }
   }
+  // Day 32 part A: "v<version> · up to date" next to the Settings title. The
+  // version comes from /api/status (the installed VERSION file and pin),
+  // the status from the daily update check (/api/update).
+  let _verInfo = null;
+  let _verUpd = null;
+  function versionState(u) {
+    if (!u || u.show === false || u.packaged === false) return "";
+    if (u.newer || u.peers_behind) return "update";
+    if (u.checked_at && !u.offline) return "ok";
+    return "";
+  }
+  function paintVersionLabel() {
+    const el = $("settingsVersion");
+    if (!el) return;
+    const v = _verInfo;
+    if (!v || !v.label) { el.hidden = true; el.replaceChildren(); return; }
+    el.replaceChildren();
+    const num = document.createElement("span");
+    num.className = "ver-num";
+    num.textContent = v.label;
+    if (v.short) num.title = "Installed build " + v.short;
+    el.appendChild(num);
+    const st = versionState(_verUpd);
+    if (st) {
+      el.appendChild(document.createTextNode(" \u00b7 "));
+      if (st === "ok") {
+        const ok = document.createElement("span");
+        ok.className = "ver-ok";
+        ok.textContent = "up to date";
+        el.appendChild(ok);
+      } else {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "ver-upd";
+        b.textContent = "update available";
+        b.title = "Go to Update now";
+        b.addEventListener("click", () => {
+          const card = $("updatesCard");
+          if (card && !card.hidden) card.scrollIntoView({ block: "center", behavior: "smooth" });
+          const now = $("btnUpdateNow");
+          if (now && !now.hidden && !now.disabled) now.focus({ preventScroll: true });
+        });
+        el.appendChild(b);
+      }
+    }
+    el.dataset.state = st;
+    el.hidden = false;
+  }
   function paintUpdateBadge(j) {
     const el = $("updateHeaderBadge");
     if (!el) return;
@@ -2223,6 +2276,8 @@
     if (pageIsStale(j)) return;
     j = updateView(j);
     _updateInfo = j || {};
+    _verUpd = j || null;
+    paintVersionLabel();
     const card = $("updatesCard");
     // Local network: no update view at all (there is no login there).
     if (!j || j.show === false) {
@@ -3221,6 +3276,8 @@
     try {
       const j = await api("/api/status");
       if (checkPageTag(j && j.page)) return;
+      _verInfo = (j && j.version) || null;
+      paintVersionLabel();
       const restoreNotice = $("restoreNotice");
       if (restoreNotice) {
         const r = j.restore || {};
