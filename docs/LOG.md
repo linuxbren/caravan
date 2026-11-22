@@ -7,7 +7,8 @@ version next to its title with the daily update check's status
 ("up to date" / "update available" → Update now). New `VERSION` file and
 `tools/caravan_version.py`; `/api/status` `version`; `caravan --version`,
 `caravan status`, `caravan doctor`. `tests/test_day32_version_label.py`
-(13 tests). Details: [DAY32](DAY32.md).
+(13 tests). Suite 2,051 OK. Source `61d6c09`, pin `33caff0`, tag v0.9.4.
+Details: [DAY32](DAY32.md).
 
 ## 2026-11-22: Day 31 follow-up — 4-bit MLX split load fix (v0.9.3)
 

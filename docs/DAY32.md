@@ -54,3 +54,10 @@ Brenden: "Lets first do the version for 32 so that I can use it now."
   offline, never checked), and `caravan --version` / `doctor`.
 - `tests/test_day23_clean_install.py`: the one-line `caravan status` now
   includes the version.
+- Full suite: 2,051 tests, OK.
+
+### Release
+
+- Source `61d6c09`, pin `33caff0`; tag
+  [v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4) on the
+  wrap commit. Notes: [release-notes/day32-v0.9.4.md](release-notes/day32-v0.9.4.md).

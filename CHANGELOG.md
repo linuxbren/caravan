@@ -11,6 +11,7 @@ See [DAY32](docs/DAY32.md#part-a-version-label).
   `caravan doctor` show the same version.
 - The number comes from a new `VERSION` file in each release and the build
   from the installed pin, so it always matches what is really installed.
+  Source `61d6c09`, pin `33caff0`. 2,051 tests pass.
 
 ## Day 31 follow-up (v0.9.3) — 4-bit MLX models load when split across Macs
 
