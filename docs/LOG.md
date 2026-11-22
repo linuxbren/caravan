@@ -1,3 +1,15 @@
+## 2026-11-21: Day 33 — Crash series with medium prompts
+
+Five medium prompts (3.3K–7.5K tokens, real-ish tasks) on the Qwen3 30B
+Thunderbolt split, all Auto. Each ran once uninterrupted, then with
+`kill -9` of llama-server and the web on the 1st Mac during prompt
+reading, early, mid or late in the reply. 5/5 came back with no help and
+finished by themselves ("Finished after a restart", 1 replay each), all
+over Thunderbolt, all fetched with `/api/jobs` and `caravan jobs`.
+Averages: model ready 22.0 s after the kill, re-run 1.1 s later, crash
+total 54.5 s vs 23.4 s uninterrupted (about 32 s lost), same write speed
+(29 tok/s). No code change. See [DAY33](DAY33.md).
+
 ## 2026-11-21: Day 33 — Power-loss test passes
 
 Second plug pull (18:07 CST, back 18:08): both Macs booted by 18:08:17,

@@ -251,3 +251,41 @@ files `-rw-------`.
 Tests: `tests/test_day33_power_restore.py`, `tests/test_day33_jobs.py` and `tests/test_day33_thunderbolt_wait.py`; the full suite passes.
 Nothing in `agent/` worker code or the requirements changed (one message
 in `agent/service_endpoints.py`), so `caravan update` keeps a loaded model.
+
+## Medium prompts: crash series (Nov 21, 19:11–19:18 CST)
+
+Brenden asked for a series of medium prompts instead of one long one. Same
+setup as the plug-pull test: Qwen3 30B (GGUF) split over Thunderbolt, all
+11 settings Auto (Auto window 32768), release 2a155f9. Five real-ish tasks,
+3.3K–7.5K prompt tokens, replies capped at 700 tokens (/no_think,
+temperature 0), streamed to `/v1/chat/completions` on the 1st Mac by
+`tools/medium_series.py`. Each prompt ran once uninterrupted, then again
+with a new opening (so nothing was cached) and `kill -9` of llama-server
+and the web on the 1st Mac at a set point. After the kill nothing was
+touched: launchd restarted the web, the boot restore reloaded the split and
+the journal ran the job again from the start. Times use the Mac clock.
+
+| # | Task | Prompt tokens | Cut | Kill → ready | Ready → re-run | Re-run | Crash total | Uninterrupted | Lost* | Reply tokens (base / re-run) | Write tok/s (base / re-run) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | code review | 3,366 | early reply (token 32 of ~522) | 28.3 s | 2.0 s | 18.4 s | 55.8 s | 23.2 s | 37.4 s | 522 / 384 | 30.3 / 30.4 |
+| 2 | log triage | 5,565 | prompt reading (5 s into 10.2 s) | 21.1 s | 0.2 s | 26.8 s | 53.2 s | 26.9 s | 26.4 s | 468 / 464 | 28.0 / 28.0 |
+| 3 | meeting email | 2,501 | late reply (token 412 of ~514) | 20.3 s | 1.0 s | 19.2 s | 58.2 s | 20.8 s | 39.0 s | 514 / 467 | 31.1 / 31.2 |
+| 4 | sales CSV | 7,550 | prompt reading (3 s into 14.9 s) | 20.2 s | 1.1 s | 31.3 s | 55.7 s | 30.2 s | 24.4 s | 404 / 435 | 26.3 / 26.4 |
+| 5 | handbook Q&A | 4,472 | mid reply (token 119 of ~239) | 20.2 s | 1.2 s | 16.4 s | 49.8 s | 16.0 s | 33.4 s | 239 / 250 | 29.2 / 29.3 |
+| | **average** | 4,691 | | **22.0 s** | **1.1 s** | **22.4 s** | **54.5 s** | **23.4 s** | **32.1 s** | | **29.0 / 29.0** |
+
+\*Lost = crash total − re-run (time before the run that finished: work
+thrown away plus the restore). Crash total − uninterrupted averages 31.1 s;
+the two differ a little because the new opening changes the reply length.
+
+- 5/5 done, `recovered: true`, "Finished after a restart", 1 replay each.
+- 5/5 restores picked Thunderbolt (en2, 0.39–0.49 ms); no Wi-Fi fallback.
+- The web answered about 1.1 s after the kill (launchd); the split was
+  ready in 20–28 s (the first restore of the series was the slowest).
+- 5/5 answers fetched with `GET /api/jobs/<id>` and `caravan jobs <id>`.
+- Re-runs read the whole prompt again (3 cached tokens at most) and wrote
+  at the same speed as the uninterrupted runs (prompt reading 507–591
+  tok/s both ways).
+- Nothing failed, so no code change. Raw files:
+  `~/Projects/caravan-day33/medium/` (series.log, per-run job JSON,
+  `caravan jobs` output, summary.md).
