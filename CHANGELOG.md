@@ -15,7 +15,7 @@ See [DAY32](docs/DAY32.md#part-a-fix-daily-update-check-v095).
   offline result is saved, so the page no longer says "up to date" from an
   old answer, and it is retried hourly. A check saved with a wrong clock no
   longer blocks checks.
-- 2,078 tests pass.
+- Source `7251223`, pin `f5b6842`. 2,078 tests pass.
 
 ## Day 32 part A (v0.9.4) — the installed version in Settings
 

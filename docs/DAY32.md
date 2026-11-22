@@ -130,3 +130,7 @@ HTTP reply, the pin comparison, the loop surviving a failed round and
 honoring the switch, and `versionState` in Node.
 
 Full suite: 2,078 tests, OK.
+
+Release: source `7251223`, pin `f5b6842`; tag
+[v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5) on the
+wrap commit. Notes: [release-notes/day32-v0.9.5.md](release-notes/day32-v0.9.5.md).

@@ -10,7 +10,7 @@ the daily check also fixed: the hourly loop dying on one error
 (`run_daily_loop`), `http.client.HTTPException` not treated as offline,
 offline results not saved (stale "up to date"), and a future `checked_at`
 blocking checks. `tests/test_day32_daily_check.py` (27 tests). Suite
-2,078 OK. Details: [DAY32](DAY32.md#part-a-fix-daily-update-check-v095).
+2,078 OK. Source `7251223`, pin `f5b6842`, tag v0.9.5. Details: [DAY32](DAY32.md#part-a-fix-daily-update-check-v095).
 
 ## 2026-11-22: Day 32 part A — version label (v0.9.4)
 
