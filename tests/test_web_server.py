@@ -402,7 +402,10 @@ class IndexHtmlContractTest(unittest.TestCase):
         self.assertIn("thinking…", html)
         self.assertIn("FIRST_MS", html)
         self.assertIn("chatAbort", html)
-        self.assertIn('st !== "ready" || state.streaming', html)
+        # Day 32: Send stays usable while a reply streams (it reads Queue
+        # and queues the message); sendChat itself still guards streaming.
+        self.assertIn('st !== "ready" || !!window.caravanBalanceReloading', html)
+        self.assertIn("if (state.streaming || window.caravanBalanceReloading || $(\"input\").disabled) return;", html)
 
 if __name__ == "__main__":
     unittest.main()

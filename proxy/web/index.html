@@ -387,10 +387,11 @@
     max-width: 920px;
     grid-template-areas:
       "top"
+      "status"
       "chat"
       "string";
   }
-  .a-chat { grid-area: chat; } .a-last { grid-area: last; } .a-settings { grid-area: settings; }
+  .a-chat { grid-area: chat; } .a-status { grid-area: status; } .a-last { grid-area: last; } .a-settings { grid-area: settings; }
   .a-clock { grid-area: clock; } .a-miles { grid-area: miles; } .a-journey { grid-area: journey; }
   .a-progress { grid-area: progress; } .a-string { grid-area: string; }
   .a-last .stat-grid { grid-template-columns: repeat(4, 1fr); }
@@ -413,7 +414,7 @@
     .wrap {
       grid-template-columns: 1fr;
       padding: 12px 10px 32px;
-      grid-template-areas: "top" "chat" "string";
+      grid-template-areas: "top" "status" "chat" "string";
     }
     .a-last .stat-grid { grid-template-columns: 1fr 1fr; }
     #optRows { grid-template-columns: 1fr; }
@@ -438,6 +439,25 @@
     background: var(--bg2); border: 1px solid var(--line);
     font-size: .72rem; color: var(--muted); font-family: var(--mono);
     letter-spacing: .04em; text-transform: uppercase;
+  }
+  /* Day 32: theme picker + Update available on one row that never wraps. */
+  .top-right { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; min-width: 0; max-width: 100%; }
+  .top-right .theme-switch { flex: 0 1 auto; min-width: 0; }
+  .top-right #tuneHeaderBadge, .top-right #updateHeaderBadge { margin-left: 0; flex: 0 0 auto; }
+  /* Day 32: the model pill sits just outside the chat card's top-left
+     corner (the grid gap is pulled in so it nearly touches the border).
+     One line; a long model name ends in "…" (full text on hover). */
+  .chat-status {
+    justify-self: start; align-self: end; max-width: 100%; min-width: 0;
+    margin-bottom: -12px; white-space: nowrap; box-sizing: border-box;
+  }
+  .chat-status .dot { flex: 0 0 auto; }
+  .chat-status #statusText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 480px) {
+    .top-right { gap: 6px; }
+    .top-right .theme-switch { gap: 2px; }
+    .top-right .theme-switch button { padding: 6px 6px; letter-spacing: .02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .top-right #tuneHeaderBadge, .top-right #updateHeaderBadge { padding: 0 7px; font-size: .64rem; }
   }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
   .dot.ok { background: var(--ok); box-shadow: 0 0 10px rgba(93,222,138,.6); }
@@ -538,7 +558,32 @@
     line-height: 1.4;
     color: var(--muted);
   }
-  .composer { display: flex; gap: 10px; margin-top: auto; }
+  .composer { display: flex; gap: 10px; margin-top: auto; position: relative; }
+  /* Day 32: queued messages, one chip each, floating over the bottom of the
+     answer just above the prompt box. One row; scrolls sideways if long. */
+  .queue-strip {
+    position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 3;
+    display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+    padding: 4px; scrollbar-width: thin;
+    background: color-mix(in srgb, var(--bg2) 82%, transparent);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  .queue-strip[hidden] { display: none; }
+  .queue-chip {
+    display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto;
+    max-width: min(220px, 70%); box-sizing: border-box; height: 1.6rem;
+    padding: 0 4px 0 9px; border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent); font-family: var(--mono); font-size: .7rem;
+  }
+  .queue-chip .q-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .queue-chip .q-x {
+    flex: 0 0 auto; border: 0; background: transparent; color: inherit; cursor: pointer;
+    font-size: .9rem; line-height: 1; padding: 2px 5px; border-radius: 999px; min-width: 0; min-height: 0;
+  }
+  .queue-chip .q-x:hover, .queue-chip .q-x:focus-visible { background: color-mix(in srgb, var(--accent) 25%, transparent); outline: none; }
   .composer textarea {
     flex: 1; min-height: 56px; max-height: 140px; resize: vertical;
     line-height: 1.4; caret-color: var(--accent);
@@ -1584,22 +1629,28 @@
         <p>Your Macs. One model.</p>
       </div>
     </div>
-    <div class="theme-switch" id="themeSwitch" title="Theme">
-      <button type="button" data-theme="amber" class="on">Amber</button>
-      <button type="button" data-theme="green">Green</button>
-      <button type="button" data-theme="meadow">Meadow</button>
-      <button type="button" data-theme="campfire">Campfire</button>
+    <!-- Day 32: the theme picker and the Update available pill share one
+         row that never wraps; the model pill sits above the chat card. -->
+    <div class="top-right">
+      <div class="theme-switch" id="themeSwitch" title="Theme">
+        <button type="button" data-theme="amber" class="on">Amber</button>
+        <button type="button" data-theme="green">Green</button>
+        <button type="button" data-theme="meadow">Meadow</button>
+        <button type="button" data-theme="campfire">Campfire</button>
+      </div>
+      <span id="tuneHeaderBadge" class="tune-badge" hidden></span>
+      <span id="updateHeaderBadge" class="tune-badge update-badge" hidden role="button" tabindex="0" title="Open Settings for this update"></span>
     </div>
-    <div class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">starting…</span></div>
-    <span id="tuneHeaderBadge" class="tune-badge" hidden></span>
-    <span id="updateHeaderBadge" class="tune-badge update-badge" hidden role="button" tabindex="0" title="Open Settings for this update"></span>
   </header>
+
+  <!-- Day 32: the model/status pill, just outside the chat card's top-left corner. -->
+  <div class="pill chat-status a-status" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">starting…</span></div>
 
   <!-- Amber Console: chat-first; settings in right drawer -->
 
   <main class="card chat tube a-chat">
     <div class="chathead">
-      <h2>Chat <span id="tuneBadge" class="tune-badge" hidden></span></h2>
+      <h2><span class="sr-only">Chat</span><span id="tuneBadge" class="tune-badge" hidden></span></h2>
       <div class="chathead-actions">
         <button type="button" class="btn-settings" id="btnOpenSettings">Settings</button>
         <button type="button" class="btn-picker" id="btnOpenPicker">Models</button>
@@ -1626,6 +1677,9 @@
       </div>
     </div>
     <div class="composer">
+      <!-- Day 32: messages typed while the model answers wait here and send
+           in order. Floats along the bottom of the answer, above the box. -->
+      <div class="queue-strip" id="queueStrip" role="list" aria-label="Queued messages" hidden></div>
       <textarea id="input" placeholder="Ask Caravan…" rows="2"></textarea>
       <button class="primary" id="btnSend">Send</button>
     </div>
@@ -2550,6 +2604,13 @@
     streaming: false,
     poll: null,
     chatAbort: null,
+    // Day 32: messages typed while a reply streams, sent in order after it.
+    // In memory only: a queued message reaches the server (and the request
+    // journal) only when it is actually sent.
+    queue: [],
+    queueSeq: 0,
+    queuePaused: false,
+    chatActive: null,
     history: [],           // [{role, content}] for the model — survives refresh
   };
 
@@ -2585,8 +2646,70 @@
       try { state.chatAbort.abort(); } catch (_) {}
       state.chatAbort = null;
     }
+    state.chatActive = null;
     state.streaming = false;
+    if (typeof repaintSend === "function") repaintSend();
     if (typeof repaintUpdate === "function") repaintUpdate();
+  }
+
+  // Day 32: message queue. Send reads "Queue" while a reply streams (or
+  // messages are waiting); each queued message is a chip with a × to
+  // cancel it. The next one sends when the reply ends, also after an error
+  // or a stopped reply, once the model is ready.
+  function queueLabel() {
+    return (state.streaming || state.queue.length) ? "Queue" : "Send";
+  }
+  function repaintSend() {
+    const b = $("btnSend");
+    if (!b) return;
+    b.textContent = queueLabel();
+    b.title = b.textContent === "Queue" ? "Send this after the current reply" : "";
+  }
+  function renderQueue() {
+    const strip = $("queueStrip");
+    if (!strip) return;
+    strip.replaceChildren();
+    state.queue.forEach((item) => {
+      const chip = document.createElement("span");
+      chip.className = "queue-chip";
+      chip.setAttribute("role", "listitem");
+      chip.title = item.text;
+      chip.dataset.qid = String(item.id);
+      const t = document.createElement("span");
+      t.className = "q-text";
+      t.textContent = item.text;
+      const x = document.createElement("button");
+      x.type = "button";
+      x.className = "q-x";
+      x.textContent = "\u00d7";
+      x.setAttribute("aria-label", "Cancel queued message: " + item.text.slice(0, 60));
+      x.title = "Cancel this message";
+      x.addEventListener("click", () => cancelQueued(item.id));
+      chip.appendChild(t);
+      chip.appendChild(x);
+      strip.appendChild(chip);
+    });
+    strip.hidden = !state.queue.length;
+    repaintSend();
+  }
+  function enqueueMessage(text) {
+    state.queue.push({ id: ++state.queueSeq, text });
+    renderQueue();
+  }
+  function cancelQueued(id) {
+    state.queue = state.queue.filter((q) => q.id !== id);
+    renderQueue();
+  }
+  function modelReady() {
+    return (($("statusText") || {}).textContent || "").startsWith("ready");
+  }
+  function drainQueue() {
+    if (!state.queue.length || state.streaming || state.queuePaused) return false;
+    if (window.caravanBalanceReloading || ($("input") && $("input").disabled) || !modelReady()) return false;
+    const next = state.queue.shift();
+    renderQueue();
+    sendChat(next.text);
+    return true;
   }
 
   function fmt(n, digits=2) {
@@ -3268,6 +3391,8 @@
     else if (st === "error") { dot.classList.add("err"); text.textContent = `error · ${snap.error || ""}`; }
     else if (st === "idle") { text.textContent = snap.error ? `idle · ${snap.error}` : "idle · pick a model"; }
     else { dot.classList.add("busy"); text.textContent = st.replaceAll("_", " "); }
+    // Day 32: the pill is one line; the full text (a long model name) on hover.
+    $("statusPill").title = text.textContent;
 
     const prog = (snap.progress || []).slice(-12).map(p => p.msg).join("\n") || "idle";
     $("progressLog").textContent = prog;
@@ -3285,7 +3410,10 @@
     if (_applyWaiting) { $("btnLoad").disabled = true; $("btnApply").disabled = true; }
     if (["starting_lead","starting_packer","stopping"].includes(st)) setApplyBusy("Applying…");
     else if ($("btnApply").classList.contains("is-busy") && !_tuneCancelling && !_applyWaiting) setApplyBusy("");
-    $("btnSend").disabled = st !== "ready" || state.streaming || !!window.caravanBalanceReloading;
+    $("btnSend").disabled = st !== "ready" || !!window.caravanBalanceReloading;
+    repaintSend();
+    // Day 32: a queue waiting for the model (after Unload or a switch) goes on once it is ready.
+    if (st === "ready" && !state.streaming && state.queue.length) setTimeout(drainQueue, 0);
     $("input").disabled = st !== "ready" || !!window.caravanBalanceReloading;
   }
 
@@ -3638,9 +3766,19 @@
     }
   } catch (_) {}
 
-  async function sendChat() {
+  async function sendChat(queuedText) {
+    const fromQueue = typeof queuedText === "string";
+    if (!fromQueue && (state.streaming || state.queue.length)) {
+      // Day 32: typed while a reply streams (or others wait): queue it.
+      const typed = $("input").value.trim();
+      if (!typed || window.caravanBalanceReloading || $("input").disabled) return;
+      $("input").value = "";
+      enqueueMessage(typed);
+      drainQueue();
+      return;
+    }
     if (state.streaming || window.caravanBalanceReloading || $("input").disabled) return;
-    const text = $("input").value.trim();
+    const text = fromQueue ? queuedText.trim() : $("input").value.trim();
     if (!text) return;
     // Only send when worker reports ready.
     const pill = ($("statusText").textContent || "");
@@ -3648,7 +3786,7 @@
       addMsg("assistant", "(error: model not ready — wait for ready, then send)");
       return;
     }
-    $("input").value = "";
+    if (!fromQueue) $("input").value = "";
     addMsg("user", text);
     const asst = addMsg("assistant", "");
     const bodyEl = asst.querySelector(".body");
@@ -3663,8 +3801,10 @@
     cancelChat();
     const ac = new AbortController();
     state.chatAbort = ac;
+    state.chatActive = ac;
     state.streaming = true;
-    $("btnSend").disabled = true;
+    // Day 32: the box stays typeable and the button reads Queue.
+    repaintSend();
     if (typeof repaintUpdate === "function") repaintUpdate();
 
     if (!state.session) state.session = newSessionId();
@@ -3830,10 +3970,18 @@
       clearTimeout(firstTimer);
       clearTimeout(totalTimer);
       if (state.chatAbort === ac) state.chatAbort = null;
-      state.streaming = false;
+      // Only the reply that is still current may clear streaming (a stopped
+      // one finishing late must not clear the next queued reply's).
+      if (state.chatActive === ac || state.chatActive === null) {
+        state.chatActive = null;
+        state.streaming = false;
+      }
+      repaintSend();
       if (typeof repaintUpdate === "function") repaintUpdate();
       saveChat();
-      refreshStatus();
+      // Day 32: the next queued message goes once status is fresh, whether
+      // this reply finished, failed or was stopped.
+      Promise.resolve(refreshStatus()).catch(() => {}).finally(() => { drainQueue(); });
     }
   }
 
@@ -3930,6 +4078,8 @@
       if (!ok) { refreshStatus(); return; }
       askedAlready = true;
     }
+    // Day 32: queued messages wait for the new model (sent once it is ready).
+    state.queuePaused = true;
     cancelChat(); // never leave Send stuck disabled across a switch
     $("btnLoad").disabled = true;
     $("btnApply").disabled = true;
@@ -3947,11 +4097,13 @@
       if (e && e.status === 409 && e.code === "optimize_running" && !askedAlready) {
         // The page had not seen Auto-tune start yet; same choice as above.
         _tuneRunning = true;
+        state.queuePaused = false;
         refreshStatus();
         return loadPicked(false);
       }
       alert(e.error || e.message || String(e));
     }
+    state.queuePaused = false;
     refreshStatus();
     window.dispatchEvent(new CustomEvent("caravan-models-changed"));
   }
@@ -4023,17 +4175,22 @@
   };
   refreshOptimize();
   $("btnStop").onclick = async () => {
+    // Day 32: queued messages wait (they are not sent to a model being
+    // unloaded) and go once a model is ready again, or can be cancelled.
+    state.queuePaused = true;
     cancelChat();
     const b = $("btnStop");
     b.disabled = true; b.classList.add("is-busy"); b.textContent = "Unloading…";
     try {
       await api("/api/models/stop", { method: "POST", body: "{}" });
     } catch (e) {
+      state.queuePaused = false;
       b.disabled = false; b.classList.remove("is-busy"); b.textContent = "Unload";
       alert(e.error || e.message || String(e));
       refreshStatus();
       return;
     }
+    state.queuePaused = false;
     b.disabled = false; b.classList.remove("is-busy"); b.textContent = "Unload";
     state.session = null;
     resetHistory();
