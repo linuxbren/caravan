@@ -180,8 +180,11 @@ Mac's model folders.
 
 | Mac | Before (list / on disk) | After (list / on disk) |
 |---|---|---|
-| 1st Mac | 13 / 13 (during Brenden's deletes), then 9 / 9 | AFTER1 |
-| 2nd Mac | 1 / 1 | AFTER2 |
+| 1st Mac | 13 / 13 (during Brenden's deletes), then 9 / 9 | 9 / 9 |
+| 2nd Mac | 1 / 1 | 1 / 1 |
+
+Published as source `f72bdd7`, pin `e3ad09c`, installed with `caravan
+update` on both Macs.
 
 At the time of the check every listed model was on disk: the models that
 had shown up without files were gone after the deletes, so the bug was
