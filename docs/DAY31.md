@@ -271,3 +271,14 @@ other Macs, so every install showed it.
   default node list, and no code left that falls back to `~/cv3`.
 - Full suite: 2,028 tests, OK.
 
+## Release
+
+- Tag [v0.9.1](https://github.com/linuxbren/caravan/releases/tag/v0.9.1)
+  on commit `7ff9afe` (main; source pin `fecf488`). Notes:
+  [release-notes/day31.md](release-notes/day31.md).
+- Check: the tag's source download from GitHub, extracted fresh, has
+  INSTALL.md and passes the full suite (2,028 tests, OK, about 65 s).
+- Website: the Caravan page shows v0.9.1 with a "new in v0.9.1 · Day 31"
+  section, and the install command with a Copy button under the top
+  buttons (it wraps on phones).
+

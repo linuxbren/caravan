@@ -3,7 +3,9 @@
 Day 31 (placement counts the chat window, Settings lists only downloaded
 models, Topology matches Settings, code folder fallback) is released as
 [v0.9.1](https://github.com/linuxbren/caravan/releases/tag/v0.9.1). Notes:
-[release-notes/day31.md](release-notes/day31.md). See [DAY31](DAY31.md).
+[release-notes/day31.md](release-notes/day31.md). See [DAY31](DAY31.md). The tag's source
+download passes the full suite (2,028 OK). Website updated for v0.9.1, with
+the install command and a Copy button at the top of the Caravan page.
 
 ## 2026-11-21: Day 31 — Code folder fallback is the install folder
 
