@@ -1,3 +1,11 @@
+## 2026-11-21: Day 31 — Code folder fallback is the install folder
+
+A Mac without `repo` in config.toml got `~/cv3` (an old dev checkout) as
+its code folder, shown in Topology and used as the fallback in remote
+commands. Now this Mac shows where its code runs from and other Macs fall
+back to `~/.caravan/src/caravan`. Suite 2,028 OK. See
+[DAY31](DAY31.md#code-folder-shown-for-each-mac).
+
 ## 2026-11-21: Day 31 — Topology agrees with Settings (part C)
 
 Topology's On disk list scanned `~/.caravan/gguf` and `~/.ollama/models`

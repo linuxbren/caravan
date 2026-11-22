@@ -18,7 +18,7 @@ def adopt(mgr):
         from web_nodes import nodes_from_config,is_local
         node=next(n for n in nodes_from_config() if n.get("id")==meta["node"])
         target=node.get("ssh") or node.get("host")
-        if is_local(node) or target!=meta["ssh"] or (node.get("repo") or "~/cv3").rstrip("/")!=meta["repo"].rstrip("/"):return False
+        if is_local(node) or target!=meta["ssh"] or (node.get("repo") or "~/.caravan/src/caravan").rstrip("/")!=meta["repo"].rstrip("/"):return False
         pid,tid=int(meta["pid"]),int(meta["tunnel_pid"])
         if pid<=1 or tid<=1 or not meta.get("model_id"):return False
         if not tunnel_matches(O.command_of(tid),target,mgr.lead_port):return False
@@ -30,7 +30,7 @@ def adopt(mgr):
               "cmd=command_of(pid);"
               "print(json.dumps({'owned':matches(cmd,Path(repo).expanduser()/'agent/mlx_worker.py',port=port) "
               "and option(shlex.split(cmd),'--model')==model}))")
-        data=json.dumps([node.get("repo") or "~/cv3",pid,mgr.lead_port,meta["model"]])
+        data=json.dumps([node.get("repo") or "~/.caravan/src/caravan",pid,mgr.lead_port,meta["model"]])
         r=mgr._ssh_node(node,"~/.caravan/venvs/mlx/bin/python -c "+shlex.quote(code)+" "+shlex.quote(data),timeout=15)
         if r.returncode or not json.loads(r.stdout.strip()).get("owned") or not mgr.lead_healthy():return False
         mgr._worker_node=dict(node);mgr._lead_path=meta["model"]

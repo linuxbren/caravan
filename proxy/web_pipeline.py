@@ -181,7 +181,7 @@ def load_pipeline(mgr, entry, settings):
                       "from mlx_split import check_local_shards;"
                       "check_local_shards(Path(model).expanduser(),'front',counts=counts,stage_index=i)")
             cmd = ("~/.caravan/venvs/mlx/bin/python -c " + shlex.quote(script) + " "
-                   + shlex.quote(json.dumps([node.get("repo") or "~/cv3", node["model_path"], counts, i,
+                   + shlex.quote(json.dumps([node.get("repo") or "~/.caravan/src/caravan", node["model_path"], counts, i,
                                                   int((node.get("listen") or node["peer"]).rsplit(":",1)[1]) ])))
             r = mgr._ssh_node(node, cmd, timeout=60)
             if r.returncode:
@@ -212,7 +212,7 @@ def load_pipeline(mgr, entry, settings):
                                             start_new_session=True)
                 Path(marker + ".pid").expanduser().write_text(str(proc.pid))
             else:
-                repo = node.get("repo") or "~/cv3"
+                repo = node.get("repo") or "~/.caravan/src/caravan"
                 cmd = ("mkdir -p ~/.caravan/web-ui; nohup ~/.caravan/venvs/mlx/bin/python "
                        + mgr._remote_path(repo.rstrip("/") + "/agent/mlx_worker.py") + " "
                        + " ".join(mgr._remote_path(a) if a.startswith("~/") else shlex.quote(a) for a in args)
@@ -220,7 +220,7 @@ def load_pipeline(mgr, entry, settings):
                 r = mgr._ssh_node(node, cmd, timeout=30)
                 if r.returncode:
                     raise RuntimeError(f"{node['id']} start failed: {r.stderr}")
-            records.append(dict(node, repo=node.get("repo") or "~/cv3"))
+            records.append(dict(node, repo=node.get("repo") or "~/.caravan/src/caravan"))
             ownership.write_text(json.dumps(records))
             # All peer addresses must be reachable from the lead. Middle
             # packers additionally validate their upstream ranges on startup.

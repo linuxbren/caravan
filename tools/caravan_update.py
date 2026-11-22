@@ -253,7 +253,7 @@ def _ssh_stop(target, command, *, run_ssh=None, timeout=25):
 
 
 def _remote_ownership_command(repo, marker, *, pid=None, port=None, listen=None):
-    repo = (repo or "~/cv3").rstrip("/")
+    repo = (repo or "~/.caravan/src/caravan").rstrip("/")
     cmd = (
         "python3 "
         + repo
@@ -410,7 +410,7 @@ def _stop_remote_mlx(home, *, lead_port, run_ssh, inspect=None, send=None, pause
     if not target or run_ssh is None:
         return
     command = _remote_ownership_command(
-        meta.get("repo") or "~/cv3",
+        meta.get("repo") or "~/.caravan/src/caravan",
         "~/.caravan/web-ui/remote-lead.pid",
         pid=meta.get("pid"),
         port=lead_port,
@@ -429,7 +429,7 @@ def _stop_remote_packer(home, *, run_ssh):
         except (OSError, ValueError):
             continue
         target = (meta.get("ssh") or meta.get("packer_ssh") or "").strip()
-        repo = meta.get("repo") or "~/cv3"
+        repo = meta.get("repo") or "~/.caravan/src/caravan"
         if target and run_ssh is not None:
             command = _remote_ownership_command(repo, "~/.caravan/web-ui/packer.pid")
             _ssh_stop(target, command, run_ssh=run_ssh)

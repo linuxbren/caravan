@@ -25,6 +25,9 @@ See [DAY31](docs/DAY31.md).
   folders) and listed exo's `caches` folder as a model. It now uses the same
   scans as Settings, marks a model Settings can't load ("Not in Settings:
   files incomplete"), and can delete GGUF models.
+- Fixed: Topology showed `~/cv3` as each Mac's code folder, and a Mac
+  without a saved path got that old developer folder in remote commands.
+  It now shows the real folder and falls back to `~/.caravan/src/caravan`.
 
 ## Day 30 (v0.9.0) — Power-loss resume, full GGUF chat window, one main branch
 

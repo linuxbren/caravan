@@ -616,7 +616,7 @@ class App:
                     [sys.executable, py], capture_output=True, text=True, timeout=90,
                 )
             else:
-                repo = (node.get("repo") or "~/cv3").rstrip("/")
+                repo = (node.get("repo") or "~/.caravan/src/caravan").rstrip("/")
                 r = self._ssh_fn()(node, f"python3 {repo}/proxy/picker_disk_sizes.py", timeout=90)
             if getattr(r, "returncode", 1) == 0 and (getattr(r, "stdout", "") or "").strip():
                 return json.loads(r.stdout.strip().splitlines()[-1])
@@ -641,7 +641,7 @@ class App:
                     import model_inventory as inv
                     models = (inv.inventory_payload(roots=[n['model_root']] if n.get('model_root') else None).get("models") or {})
                 else:
-                    repo = (n.get("repo") or "~/cv3").rstrip("/")
+                    repo = (n.get("repo") or "~/.caravan/src/caravan").rstrip("/")
                     import web_files
                     inventory_cmd = web_files.rp(n.get('python') or '~/.caravan/venvs/mlx/bin/python') + ' ' + web_files.rp(repo+'/proxy/picker_disk_sizes.py') + ' --inventory'
                     if n.get('model_root'): inventory_cmd += ' --model-root ' + web_files.rp(n['model_root'])
@@ -1546,7 +1546,7 @@ def make_handler(app: App):
                                 capture_output=True, text=True, timeout=300,
                             )
                         else:
-                            repo = (n.get("repo") or "~/cv3").rstrip("/")
+                            repo = (n.get("repo") or "~/.caravan/src/caravan").rstrip("/")
                             script = (
                                 "python3 %s/proxy/picker_disk_sizes.py --delete %s --current %s"
                                 % (repo, kn, cur)
@@ -1573,7 +1573,7 @@ def make_handler(app: App):
                 for n in cfg_nodes:
                     if web_nodes.is_local(n):
                         continue
-                    repo = (n.get("repo") or "~/cv3").rstrip("/")
+                    repo = (n.get("repo") or "~/.caravan/src/caravan").rstrip("/")
                     r = app._ssh_fn()(n,
                         "pkill -f 'mlx_split_fetch.py %s' 2>/dev/null; sleep 0.5; "
                         "pkill -9 -f 'mlx_split_fetch.py %s' 2>/dev/null; "
@@ -2320,7 +2320,7 @@ def make_handler(app: App):
                 def run_remote(repo_id, dest, pk, prog):
                     dest_q = dest.replace("'", "").replace(";", "")
                     pid_file = f"/tmp/caravan-fetch-{repo_id.replace('/', '--')}.pid"
-                    repo_path = (node.get("repo") or "~/cv3").rstrip("/")
+                    repo_path = (node.get("repo") or "~/.caravan/src/caravan").rstrip("/")
                     script = (
                         "mkdir -p %s; rm -f %s %s.exit; "
                         "( ~/.caravan/venvs/mlx/bin/python %s/agent/mlx_split_fetch.py "

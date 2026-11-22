@@ -169,7 +169,7 @@ def probe_edge(source_node, edge, identity, *, run=subprocess.run):
     if web_nodes.is_local(source_node): return local_probe(edge, identity, run=run)
     target = str(source_node.get('ssh') or source_node.get('host') or '')
     if not D.TARGET.fullmatch(target): raise ValueError('Invalid configured probe source')
-    repo = str(source_node.get('repo') or '~/cv3')
+    repo = str(source_node.get('repo') or '~/.caravan/src/caravan')
     code = ('import sys,json;from pathlib import Path;'
             f'sys.path.insert(0,str(Path({repo!r}).expanduser()/"proxy"));'
             'from thunderbolt_probe import local_probe;'

@@ -1260,7 +1260,7 @@ def is_tunnel_cmd(cmd: str) -> bool:
 
 
 def seed_command(model_name: str, size: int, shares: list, index: int,
-                 repo: str = "~/cv3") -> str:
+                 repo: str = "~/.caravan/src/caravan") -> str:
     """Remote shell (GGUF stage 2, Day 18): if this peer has its own copy of the
     same GGUF (same name and size) under ~/.caravan/models, fill its rpc-server
     cache for its share so the lead sends only hashes. Prints the seeder's JSON

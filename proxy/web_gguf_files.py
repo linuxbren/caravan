@@ -61,7 +61,7 @@ p=json.loads(sys.argv[2]); print(json.dumps(status(p)))
             data = json.dumps(request)
             if len(data) > 80000:
                 raise ValueError('GGUF peer manifest exceeds preview command limit; split quant/tensor layout not supported yet')
-            cmd = 'python3 -c '+shlex.quote(code)+' '+web_files.rp(n.get('repo') or '~/cv3')+' '+shlex.quote(data)
+            cmd = 'python3 -c '+shlex.quote(code)+' '+web_files.rp(n.get('repo') or '~/.caravan/src/caravan')+' '+shlex.quote(data)
             r = web_files.shell(app,n,cmd)
             if r.returncode: raise ValueError(f"Cannot inspect GGUF cache on {n['id']}: {(r.stderr or '')[-250:]}")
             files = json.loads(r.stdout.strip().splitlines()[-1])

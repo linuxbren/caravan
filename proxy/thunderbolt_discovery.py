@@ -118,7 +118,7 @@ def inspect_node(node, destinations=(), *, run=subprocess.run):
     target = str(node.get('ssh') or node.get('host') or '')
     if not TARGET.fullmatch(target):
         raise ValueError('Configured SSH target is invalid')
-    repo = str(node.get('repo') or '~/cv3')
+    repo = str(node.get('repo') or '~/.caravan/src/caravan')
     # JSON-encoded data is passed as Python literals, then shell-quoted once.
     code = ('import sys,json;from pathlib import Path;'
             f'sys.path.insert(0,str(Path({repo!r}).expanduser()/"proxy"));'

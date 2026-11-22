@@ -6,6 +6,7 @@ this page grows as the Day goes on.
 1. [Part A: placement counts the chat window](#part-a-placement-counts-the-chat-window)
 2. [Part B: the Settings load list shows only downloaded models](#part-b-the-settings-load-list-shows-only-downloaded-models)
 3. [Part C: Topology agrees with Settings](#part-c-topology-agrees-with-settings)
+4. [Code folder shown for each Mac](#code-folder-shown-for-each-mac)
 
 ## Part A: placement counts the chat window
 
@@ -250,4 +251,23 @@ Topology's On disk list was built by an older scan than Settings:
   note; GGUF delete removes every part, keeps other models in the folder,
   refuses the loaded model and symlinks; server and page wiring.
 - Full suite: 2,022 tests, OK.
+
+## Code folder shown for each Mac
+
+Topology listed this Mac's code folder as `~/cv3` on both Macs. That was
+an old fallback: a Mac without a `repo` line in `config.toml` got the path
+of a developer checkout that installs never create. A fresh install writes
+no `repo` for this Mac, and pairing writes the real path only for the
+other Macs, so every install showed it.
+
+- This Mac now shows the folder its code really runs from
+  (`~/.caravan/src/caravan` for an install).
+- Another Mac without a saved `repo` now falls back to the install folder,
+  `~/.caravan/src/caravan`, in every remote command (stats, model files,
+  workers, updates, Thunderbolt checks), instead of `~/cv3`. Saved paths
+  are kept as they are. No config file needed changing.
+- `tests/test_day31_repo_default.py` (6 tests): this Mac's folder, the
+  fallback for another Mac, saved paths kept, the stats command, the old
+  default node list, and no code left that falls back to `~/cv3`.
+- Full suite: 2,028 tests, OK.
 

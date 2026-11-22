@@ -26,7 +26,7 @@ def model_dest(node, repo):
 
 
 def command(app, node, args):
-    script = str(Path(app.mgr.repo)/'agent'/'model_files.py') if web_nodes.is_local(node) else (node.get('repo') or '~/cv3') + '/agent/model_files.py'
+    script = str(Path(app.mgr.repo)/'agent'/'model_files.py') if web_nodes.is_local(node) else (node.get('repo') or '~/.caravan/src/caravan') + '/agent/model_files.py'
     python = (getattr(app.mgr, 'python', None) if web_nodes.is_local(node) else node.get('python')) or '~/.caravan/venvs/mlx/bin/python'
     return ' '.join([rp(str(python)), rp(script)] + [shlex.quote(str(a)) for a in args])
 

@@ -724,7 +724,7 @@ class WorkerManager:
                 who = name
             try:
                 r = self._ssh_node(n, G.seed_command(path.name, path.stat().st_size, shares, i + 1,
-                                                     repo=n.get("repo") or "~/cv3"), timeout=1800)
+                                                     repo=n.get("repo") or "~/.caravan/src/caravan"), timeout=1800)
                 rep = G.parse_seed(r.stdout)
             except Exception as e:  # noqa: BLE001 - stage 2 is an optimisation only
                 rep, r = None, None
@@ -1249,7 +1249,7 @@ class WorkerManager:
             meta = json.loads(meta_path.read_text())
             target = (meta.get("ssh") or "").strip()
             if target:
-                cmd = self._remote_stop_command(meta.get("repo") or "~/cv3",
+                cmd = self._remote_stop_command(meta.get("repo") or "~/.caravan/src/caravan",
                     "~/.caravan/web-ui/remote-lead.pid", pid=meta.get("pid"), port=self.lead_port)
                 import peer_route as PR
                 r = PR.run_ssh(target, cmd, "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
@@ -1271,7 +1271,7 @@ class WorkerManager:
 
     def _assert_packer_unmanaged(self):
         script = ("import sys;from pathlib import Path;"
-                  "sys.path.insert(0,str(Path('~/cv3').expanduser()/'agent'));"
+                  "sys.path.insert(0,str(Path('~/.caravan/src/caravan').expanduser()/'agent'));"
                   "from service_config import managed_worker_port;"
                   f"reserved=managed_worker_port(Path.home(),{int(self.packer_peer.rsplit(':',1)[1])});"
                   "print('An auto-start service owns this packer; uninstall its job before using web-managed loads' if reserved else '');"
@@ -1295,7 +1295,7 @@ class WorkerManager:
         if not peers:
             return
         self._assert_packer_unmanaged()
-        cmd = self._remote_stop_command("~/cv3", "~/.caravan/web-ui/packer.pid",
+        cmd = self._remote_stop_command("~/.caravan/src/caravan", "~/.caravan/web-ui/packer.pid",
                                         listen=self.packer_peer)
         r = self._ssh(cmd, timeout=25)
         if r.returncode:
@@ -1365,7 +1365,7 @@ class WorkerManager:
                 return {
                     "id": "exo2", "label": "EXO2", "role": "packer",
                     "host": self.packer_ssh, "ssh": self.packer_ssh,
-                    "repo": "~/cv3",
+                    "repo": "~/.caravan/src/caravan",
                 }
             return None
         for n in nodes:
@@ -1469,7 +1469,7 @@ class WorkerManager:
         if not model:
             raise RuntimeError("no model path for remote single-Mini load")
         remote_model = model
-        repo = (node.get("repo") or "~/cv3").rstrip("/")
+        repo = (node.get("repo") or "~/.caravan/src/caravan").rstrip("/")
         filtered = []
         for a in getattr(self, "_extra_lead", []):
             if a in ("--split-keepalive", "--no-split-keepalive"):
@@ -1523,7 +1523,7 @@ class WorkerManager:
             "mkdir -p ~/.caravan/web-ui; "
             "LPM=$(pmset -g 2>/dev/null | awk '/lowpowermode/{print $2}'); "
             "[[ \"$LPM\" == \"0\" || -z \"$LPM\" ]] || { echo REFUSE_LPM; exit 2; }; "
-            f"nohup ~/.caravan/venvs/mlx/bin/python ~/cv3/agent/mlx_worker.py "
+            f"nohup ~/.caravan/venvs/mlx/bin/python ~/.caravan/src/caravan/agent/mlx_worker.py "
             f"--model {shlex.quote(packer_path)} "
             f"--split-role packer --split-listen {shlex.quote(self.packer_peer)} "
             f"--split-packer-layers {k} --no-split-draft --split-draft-skip-first-load "

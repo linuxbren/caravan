@@ -39,7 +39,7 @@ def invoke(app,node,action,payload):
     for i in range(0,len(blob),24000):
         r=web_files.shell(app,node,'printf %s '+shlex.quote(blob[i:i+24000])+' >> '+web_files.rp(path))
         if r.returncode:raise RuntimeError('cannot write share metadata chunk')
-    repo=str(app.mgr.repo) if web_nodes.is_local(node) else node.get('repo') or '~/cv3'
+    repo=str(app.mgr.repo) if web_nodes.is_local(node) else node.get('repo') or '~/.caravan/src/caravan'
     py=app.mgr.python if web_nodes.is_local(node) else node.get('python') or '~/.caravan/venvs/mlx/bin/python'
     code='''import json,sys,hashlib
 from pathlib import Path
@@ -228,7 +228,7 @@ def load(mgr,entry,settings):
     # Verify local pieces and runtime before disturbing the previous model.
     S.serving_command(roots[0],runtime_bin()/'llama-server',port=mgr.lead_port,rpc=[f'127.0.0.1:{G.tunnel_port(i)}' for i in range(len(nodes)-1)])
     for i,n in enumerate(nodes[1:]):
-        repo=n.get('repo') or '~/cv3';py=n.get('python') or '~/.caravan/venvs/mlx/bin/python'
+        repo=n.get('repo') or '~/.caravan/src/caravan';py=n.get('python') or '~/.caravan/venvs/mlx/bin/python'
         code='import sys;from pathlib import Path;sys.path.insert(0,str(Path('+repr(repo)+').expanduser()/"agent"));import gguf_shards as S;from gguf_runtime import current;S.serving_command('+repr(roots[i+1])+',current()/"ggml-rpc-server",peer=True,port='+str(G.RPC_PORT)+');print("verified")'
         result=mgr._ssh_node(n,web_files.rp(py)+' -c '+shlex.quote(code),timeout=180)
         if result.returncode:raise ValueError('Peer pieces/runtime failed preflight; previous model retained: '+(result.stderr or result.stdout)[-800:])
@@ -239,7 +239,7 @@ def load(mgr,entry,settings):
     meta=dict(lead_pid=None,peers=[],tunnels=[],model=entry['lead_path'],id=entry['id'],name=entry['name'],gguf=gb,entry=entry,sharded=True)
     mgr._write_gguf_meta(meta);rpc=[]
     for i,n in enumerate(nodes[1:]):
-        mgr._check_cancel();repo=n.get('repo') or '~/cv3';py=n.get('python') or '~/.caravan/venvs/mlx/bin/python'
+        mgr._check_cancel();repo=n.get('repo') or '~/.caravan/src/caravan';py=n.get('python') or '~/.caravan/venvs/mlx/bin/python'
         code='import sys;from pathlib import Path;sys.path.insert(0,str(Path('+repr(repo)+').expanduser()/"agent"));'+peer_start_code(roots[i+1],G.RPC_PORT)
         result=mgr._ssh_node(n,web_files.rp(py)+' -c '+shlex.quote(code),timeout=180)
         pid=G.parse_pid(result.stdout)

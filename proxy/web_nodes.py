@@ -78,9 +78,16 @@ def web_is_running(*, home=None, urlopen=None, timeout=3) -> bool:
         return False
 
 
+# Day 31: where an installed Caravan keeps its code on every Mac. Older
+# builds fell back to a dev checkout (cv3) that installs never create.
+DEFAULT_REPO = "~/.caravan/src/caravan"
+# This Mac's own code: the folder this file runs from.
+LOCAL_REPO = str(Path(__file__).resolve().parents[1])
+
+
 def remote_stats_command(repo=None) -> str:
     """SSH command: report offline if Caravan is off, else run node_stats.py."""
-    repo = (repo or "~/cv3").rstrip("/")
+    repo = (repo or "~/.caravan/src/caravan").rstrip("/")
     script = _REMOTE_STATS.replace("REPO", json.dumps(repo), 1)
     return "/usr/bin/python3 -c " + shlex.quote(script)
 
@@ -98,9 +105,9 @@ DEFAULT_NODES = [
         "role": "packer",
         "host": catalog.DEFAULT_PACKER_SSH,
         "ssh": catalog.DEFAULT_PACKER_SSH,
-        "repo": "~/cv3",
+        "repo": "~/.caravan/src/caravan",
         "peer": catalog.DEFAULT_PACKER_PEER,
-        "remote_repo": "~/cv3",
+        "remote_repo": "~/.caravan/src/caravan",
     },
 ]
 
@@ -168,7 +175,8 @@ def nodes_from_config(cfg: Optional[dict] = None) -> list:
             "role": role,
             "host": host,
             "ssh": str(tbl.get("ssh") or ("" if host == "local" else host)),
-            "repo": str(tbl.get("repo") or tbl.get("remote_repo") or "~/cv3"),
+            "repo": str(tbl.get("repo") or tbl.get("remote_repo")
+                        or (LOCAL_REPO if host == "local" else DEFAULT_REPO)),
             "peer": str(tbl.get("peer") or ""),
             "listen": str(tbl.get("listen") or ""),
             "model_root": str(tbl.get("model_root") or ""),
