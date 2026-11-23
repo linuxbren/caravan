@@ -57,6 +57,8 @@ SERVER_ALLOWED = {
     "Ollama Cloud": "product name in the cloud model list",
     "Ollama Cloud · coding": "product name in the cloud model list",
     "com.caravan.v3.": "launchd label prefix",
+    "Qwen": "model family name", "Llama": "model family name", "Gemma": "model family name",
+    "Mistral": "model family name", "Phi": "model family name",
     "no ssh target for worker tunnel": "TunnelError detail, written to the log only",
 }
 
@@ -277,6 +279,8 @@ class NoHardCodedText(unittest.TestCase):
         errors, progress notes and the error/message/note/... fields of
         replies come from the strings file. Logs, the request journal,
         lab tools, model prompts and config/plist text are left as code."""
+        # Two words, or one capitalised word such as "Self-tuning".
+        words = re.compile(WORDS.pattern + r"|^[A-Z][a-z]{2,}(-[a-z]+)*$")
         sink_call = re.compile(r"(^|\.)(_note|note|prog|progress|_later|sentence|record_loss|_fail|fail)$")
         sink_keys = {"error", "message", "msg", "note", "notice", "reason", "detail", "warning", "label",
                      "help", "help_gguf", "why"}
@@ -305,7 +309,7 @@ class NoHardCodedText(unittest.TestCase):
                                                           or ast.unparse(sub.func).startswith("T.")):
                             continue
                         if (isinstance(sub, ast.Constant) and isinstance(sub.value, str)
-                                and WORDS.search(sub.value) and sub.value not in SERVER_ALLOWED):
+                                and words.search(sub.value) and sub.value not in SERVER_ALLOWED):
                             bad.append(f"{path.parent.name}/{path.name}:{sub.lineno}: {sub.value[:70]!r}")
                         stack.extend(ast.iter_child_nodes(sub))
         self.assertEqual(bad, [])

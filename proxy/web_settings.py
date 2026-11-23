@@ -18,11 +18,11 @@ except ImportError:  # run without tools/ on the path
 
 # id -> label, plain help, allowed values (first is "auto")
 OPTIONS = [
-    {"id": "self_tune", "label": "Self-tuning",
+    {"id": "self_tune", "label": T("server.web_settings.self_tuning"),
      "help": T("server.web_settings.caravan_learns_from_your_chats_and"),
      "help_gguf": T("server.web_settings.caravan_learns_from_your_chats_and_2"),
      "values": ["auto", "off"]},
-    {"id": "guess_ahead", "label": "Guess-ahead",
+    {"id": "guess_ahead", "label": T("server.web_settings.guess_ahead"),
      "help": T("server.web_settings.a_smaller_model_guesses_upcoming_words"),
      "help_gguf": T("server.web_settings.a_smaller_model_of_the_same"),
      "values": ["auto", "on", "off", "mtp"],

@@ -2295,5 +2295,7 @@
  "web.thermal_nominal": "nominal",
  "web.layers_a_b_of_n": "layers {a}-{b} of {n}",
  "web.fits_on_chip": "fits-on-{n}",
- "web.thermal_unknown": "unknown"
+ "web.thermal_unknown": "unknown",
+ "server.web_settings.self_tuning": "Self-tuning",
+ "server.web_settings.guess_ahead": "Guess-ahead"
 }
