@@ -21,6 +21,13 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 HASH_THRESHOLD = 10 * 1024 * 1024
 HERE = Path(__file__).resolve().parent
@@ -106,7 +113,7 @@ def seed(path: str, shares: list | None = None, index: int | None = None,
     p = subprocess.run([str(ensure_bin()), str(Path(path).expanduser()), str(cache)],
                        input=feed, capture_output=True, text=True)
     if p.returncode:
-        raise RuntimeError(p.stderr[-400:] or "seed failed")
+        raise RuntimeError(p.stderr[-400:] or T("agent.gguf_rpc_seed.seed_failed"))
     lines = [ln.split() for ln in p.stdout.splitlines() if ln.strip()]
     return {"tensors": len(plan), "new": sum(1 for x in lines if x[1] == "new"),
             "have": sum(1 for x in lines if x[1] == "have"),

@@ -4,7 +4,7 @@ const api = require('../../proxy/web/topo_live.js');
 const now = 1_000_000;
 const live = (id) => ({ id, label: id, offline: false, cpu_pct: 1.8 });
 const off = (id) => ({ id, label: id, offline: true });
-const offCaravan = (id) => ({ id, label: id, offline: true, error: api.OFF_REASON });
+const offCaravan = (id) => ({ id, label: id, offline: true, error: api.OFF_REASON, error_code: 'caravan_off' });
 
 assert.equal(api.STALE_MS, 15000);
 assert.equal(api.isOffline(live('a'), now, now - 1000), false);

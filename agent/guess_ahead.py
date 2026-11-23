@@ -12,6 +12,13 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_TABLE = HERE / "guessers.json"
@@ -104,9 +111,8 @@ def ask_download(pairing: dict, *, auto: bool, interactive: Optional[bool] = Non
     draft = pairing["draft"]
     size = draft.get("size_mb", "?")
     name = draft.get("name")
-    label = model_label or pairing.get("id") or "this model"
-    msg = (f"A {size} MB helper can make {label} faster. "
-           f"Download {name}? [y/N] ")
+    label = model_label or pairing.get("id") or T("agent.guess_ahead.this_model")
+    msg = (T("agent.guess_ahead.a_size_mb_helper_can_make", size=size, label=label, name=name))
     if auto or env_truthy("CARAVAN_MLX_SPLIT_DRAFT_AUTO_DOWNLOAD"):
         answers[key] = True
         save_state(st, table)
@@ -181,7 +187,7 @@ def build_vocab_maps(target_dir: Path, draft_dir: Path) -> dict[str, Any]:
         return {
             "ok": exact,
             "mode": "exact" if exact else "mismatch",
-            "reason": None if exact else f"vocab_size {dv} != {tv} (no tokenizer.json vocab)",
+            "reason": None if exact else T("agent.guess_ahead.vocab_size_dv_tv_no_tokenizer", dv=dv, tv=tv),
             "remap_draft_to_target": {},
             "remap_target_to_draft": {},
             "n_remap": 0,
@@ -292,8 +298,7 @@ class ChatShutoff:
             if frac < self.break_even_frac:
                 self.disabled = True
                 self.reason = (
-                    f"accepted_frac {frac:.3f} < break_even {self.break_even_frac:.3f} "
-                    f"over {self.n_gen} tokens; guess-ahead off for this chat"
+                    T("agent.guess_ahead.accepted_frac_frac_break_even_break", frac=frac, break_even_frac=self.break_even_frac, n_gen=self.n_gen)
                 )
 
     def snapshot(self) -> dict:

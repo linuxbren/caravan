@@ -19,6 +19,13 @@ import json
 import threading
 import time
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def slow_tunnels(meta: dict) -> list:
@@ -33,10 +40,9 @@ def slow_tunnels(meta: dict) -> list:
 
 
 def note_text(name: str, route: str) -> str:
-    slower = {"wifi": "Wi-Fi", "wired": "wired Ethernet", "network": "the network",
-              "other": "a slower link"}.get(route, "a slower link")
-    return (f"Thunderbolt to {name} is working now, but this model is still using {slower}. "
-            "To switch to Thunderbolt, Unload and Load the model again when no chat is running.")
+    slower = {"wifi": "Wi-Fi", "wired": T("server.link_upgrade.wired_ethernet"), "network": T("server.link_upgrade.the_network"),
+              "other": T("server.link_upgrade.a_slower_link")}.get(route, "a slower link")
+    return (T("server.link_upgrade.thunderbolt_to_name_is_working_now", name=name, slower=slower))
 
 
 class Monitor:
@@ -45,7 +51,7 @@ class Monitor:
         self.interval = interval
         self.clock = clock
         self.probe = probe or self._probe
-        self.name_for = name_for or (lambda t: t.get("label") or "the other Mac")
+        self.name_for = name_for or (lambda t: t.get("label") or T("server.link_upgrade.the_other_mac"))
         self._noted = set()        # (load key, ssh target)
         self._stop = threading.Event()
 
@@ -85,7 +91,7 @@ class Monitor:
             try:
                 name = self._friendly(t)
             except Exception:  # noqa: BLE001
-                name = "the other Mac"
+                name = T("server.link_upgrade.the_other_mac")
             text = note_text(name, str(t.get("route") or ""))
             try:
                 self.mgr._note(text)

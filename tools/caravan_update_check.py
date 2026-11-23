@@ -719,8 +719,8 @@ def _current_rows(result, progress, *, newer, packaged=True):
             else:
                 by_id[key] = len(peers)
                 peers.append(row)
-    if mine is not None and peers and mine.get("label") == "My Mac":
-        mine = dict(mine, label="1st Mac", message=T("cli.update_check.1st_mac_status", status=mine.get('status')))
+    if mine is not None and peers and mine.get("label") in ("My Mac", T("cli.update_check.my_mac")):
+        mine = dict(mine, label=T("cli.update_check.1st_mac"), message=T("cli.update_check.1st_mac_status", status=mine.get('status')))
     return ([mine] if mine else []) + peers
 
 

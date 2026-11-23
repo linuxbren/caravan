@@ -320,7 +320,7 @@ class Paths(unittest.TestCase):
         self.assertTrue(rows[0]["usable"], rows[0].get("disabled_reason"))
 
     def test_server_paths_use_real_config_and_header(self):
-        src = (ROOT / "proxy" / "web_server.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_server.py")
         self.assertIn("cfg=self._picker_cfg(body)", src)
         self.assertIn("self._picker_cfg(dict(body, repo_id=repo))", src)
         self.assertIn("web_picker.fetch_gguf_header(repo, fname)", src)

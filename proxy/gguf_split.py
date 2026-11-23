@@ -21,6 +21,13 @@ from pathlib import Path
 from typing import Optional
 
 from llama_runtime import bin_dir as llama_bin_dir
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 LLAMA_BIN = str(llama_bin_dir())
 RPC_PORT = int(os.environ.get("CARAVAN_GGUF_RPC_PORT", "50052"))
 GGUF_CTX = int(os.environ.get("CARAVAN_GGUF_CTX", "8192"))
@@ -258,10 +265,10 @@ def window_plan(model_path, n_devices: int, budget_mib: float, *, meta_fn=None,
 def _window_note(k: int, plan: Optional[dict]) -> str:
     if not plan or not plan.get("fits") or not plan.get("ctx"):
         return ""
-    macs = "1 Mac" if k == 1 else f"{k} Macs"
+    macs = T.plural("server.gguf_split.n_macs", k)
     if plan.get("full"):
-        return f"Fits on {macs} with the full {fmt_window(plan['target'])} context."
-    return f"Fits on {macs} with a {fmt_window(plan['ctx'])} context."
+        return T("server.gguf_split.fits_on_macs_with_the_full", macs=macs, fmt_window=fmt_window(plan['target']))
+    return T("server.gguf_split.fits_on_macs_with_a_fmt", macs=macs, fmt_window=fmt_window(plan['ctx']))
 
 
 def placement_summary(opts: list, default_id) -> str:
@@ -278,10 +285,9 @@ def placement_summary(opts: list, default_id) -> str:
         return d.get("window_note") or ""
     if d.get("full_window"):
         if one and one.get("enabled") and one.get("ctx"):
-            return (f"Fits on 1 Mac with a {fmt_window(one['ctx'])} context. "
-                    f"Split across {k} Macs for the full {full} context.")
-        return f"Split across {k} Macs for the full {full} context."
-    return f"Split across {k} Macs with a {fmt_window(d['ctx'])} context."
+            return (T("server.gguf_split.fits_on_1_mac_with_a", fmt_window=fmt_window(one['ctx']), k=k, full=full))
+        return T("server.gguf_split.split_across_k_macs_for_the", k=k, full=full)
+    return T("server.gguf_split.split_across_k_macs_with_a", k=k, fmt_window=fmt_window(d['ctx']))
 
 
 def placement_options(weights_gb: float, nodes: list, *, model_path=None,
@@ -325,7 +331,7 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
         missing = [n for n, b in zip(grp, budgets) if b is None]
         if missing:
             who = missing[0].get("label") or missing[0].get("id")
-            return False, None, f"can't read how much memory {who} has yet", None
+            return False, None, T("server.gguf_split.cant_read_how_much_memory_who", who=who), None
         total = sum(budgets)
         plan = None
         if model_path is not None:
@@ -349,9 +355,8 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
         elif why:
             o["reason"] = why[0].upper() + why[1:] + "."
         elif plan:
-            where = "this Mac" if k == 1 else f"these {k} Macs"
-            o["reason"] = (f"Won't fit on {where}, even with the shortest context "
-                           f"({fmt_window(min(PLACEMENT_MIN_CTX, plan['target']))}).")
+            where = T.plural("server.gguf_split.where_macs", k)
+            o["reason"] = (T("server.gguf_split.wont_fit_on_where_even_with", where=where, fmt_window=fmt_window(min(PLACEMENT_MIN_CTX, plan['target']))))
         return o
 
     opts = []
@@ -360,9 +365,9 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
         o = {
             "id": f"one:{n['id']}", "mode": "one", "node_ids": [n["id"]],
             "node_labels": [n.get("label") or n["id"]],
-            "label": f"One Mini · {n.get('label') or n['id']}",
+            "label": T("server.gguf_split.one_mini_v", v=n.get('label') or n['id']),
             "reason": "" if ok or why or plan else
-            f"needs ~{need:.1f} GB, {n.get('label')} has ~{gb:.1f} GB for the GPU",
+            T("server.gguf_split.needs_need_gb_label_has_gb", need=need, label=n.get('label'), gb=gb),
         }
         opts.append(_fill(o, ok, plan, why, gb, 1))
     for k in range(2, len(ordered) + 1):
@@ -372,9 +377,9 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
         o = {
             "id": "split:" + ",".join(n["id"] for n in grp), "mode": "split",
             "node_ids": [n["id"] for n in grp], "node_labels": labels,
-            "label": f"Split across {k} Minis · {' + '.join(labels)}",
+            "label": T("server.gguf_split.split_across_k_minis_labels", k=k, labels=' + '.join(labels)),
             "reason": "" if ok or why or plan else
-            f"needs ~{need:.1f} GB, these Minis have ~{gb:.1f} GB together",
+            T("server.gguf_split.needs_need_gb_these_minis_have", need=need, gb=gb),
         }
         opts.append(_fill(o, ok, plan, why, gb, k))
     enabled = [o for o in opts if o["enabled"]]
@@ -613,24 +618,23 @@ def disabled_ctx_values(model_path, *, n_slots: int = 1,
     trained = model_context_length(model_path, meta_fn=meta_fn)
     for c in GGUF_CTX_CHOICES:
         if trained and c > trained:
-            out[str(c)] = f"This model was trained for a shorter context ({trained})."
+            out[str(c)] = T("server.gguf_split.this_model_was_trained_for_a", trained=trained)
             continue
         fits = ctx_fits_known(
             model_path, c, n_slots=n_slots, ubatch=ubatch,
             n_devices=n_devices, decide=decide, flash_attn="on", meta_fn=meta_fn,
         )
         if fits is False:
-            out[str(c)] = "This context size will not fit in memory with this model."
+            out[str(c)] = T("server.gguf_split.this_context_size_will_not_fit")
     if not trained:
-        out[GGUF_CTX_NATIVE] = "This model file does not say how much context it was trained for."
+        out[GGUF_CTX_NATIVE] = T("server.gguf_split.this_model_file_does_not_say")
     else:
         fits = ctx_fits_known(
             model_path, int(trained), n_slots=n_slots, ubatch=ubatch,
             n_devices=n_devices, decide=decide, flash_attn="on", meta_fn=meta_fn,
         )
         if fits is False:
-            out[GGUF_CTX_NATIVE] = (f"The full trained context ({trained}) will not fit "
-                                    "in memory with this model.")
+            out[GGUF_CTX_NATIVE] = (T("server.gguf_split.the_full_trained_context_trained_will", trained=trained))
     return out
 
 
@@ -765,7 +769,7 @@ def window_blockers(model_path, *, n_slots: int = 1, n_devices: int = 1,
     return out
 
 
-WINDOW_SKIP = "needs a shorter context"
+WINDOW_SKIP = T("server.gguf_split.needs_a_shorter_context")
 
 
 def slot_save_dir(cache_type_k: str, cache_type_v: str, root=None,
@@ -796,19 +800,19 @@ def resolve_web_kv(*, flash_attn: str = "on", cache_type=None,
     def _clean(v, fallback="auto"):
         s = (str(v).strip().lower() if v is not None else fallback) or fallback
         if s in ("q4_0", "q4_1", "iq4_nl", "q4", "4"):
-            raise ValueError("GGUF memory compression does not offer 4-bit")
+            raise ValueError(T("server.gguf_split.gguf_memory_compression_does_not_offer"))
         return s
 
     if cache_type is not None:
         ct = _clean(cache_type, "")
         if ct not in allowed:
-            raise ValueError("cache_type must be f16 or q8_0")
+            raise ValueError(T("server.gguf_split.cache_type_must_be_f16_or"))
         k = v = ct
     else:
         k = _clean(cache_type_k)
         v = _clean(cache_type_v)
         if k not in allowed | {"auto"} or v not in allowed | {"auto"}:
-            raise ValueError("cache type must be auto, f16, or q8_0")
+            raise ValueError(T("server.gguf_split.cache_type_must_be_auto_f16"))
         if k == "auto" or v == "auto":
             decided_k = decided_v = "q8_0"
             try:
@@ -868,10 +872,10 @@ def llama_args(model_path: str, *, port: int, peers: list, shares: list,
     tune = dict(tune or {})
     fa = tune.get("flash_attn", "on")
     if fa not in ("on", "off"):
-        raise ValueError("flash_attn must be on or off")
+        raise ValueError(T("server.gguf_split.flash_attn_must_be_on_or"))
     ub = int(tune["ubatch"]) if tune.get("ubatch") is not None else GGUF_DEFAULT_UBATCH
     if ub not in GGUF_UBATCH:
-        raise ValueError("ubatch must be one of %s" % (GGUF_UBATCH,))
+        raise ValueError(T("server.gguf_split.ubatch_must_be_one_of", values=GGUF_UBATCH))
     batch = max(ub, GGUF_DEFAULT_BATCH)
     n_devices = 1 + len(peers or [])
     launch = resolve_launch(
@@ -1322,7 +1326,7 @@ def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
                 and f"{name}={v}" not in blocked]
         if name == "ubatch":
             alts.sort(key=lambda v: abs(v - inc))
-        skip = None if alts else "already lost"
+        skip = None if alts else T("server.gguf_split.already_lost")
         if f"{name}={inc}" in blocked:
             skip = WINDOW_SKIP
         elif not alts and any(f"{name}={v}" in blocked for v in values if v != inc):
@@ -1336,7 +1340,7 @@ def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
     skip = None
     challenger = None
     if int(n_slots or 1) > 1:
-        skip = "two chats"
+        skip = T("server.gguf_split.two_chats")
     elif "prompt_lookup" in pinned_set:
         skip = "pinned"
     else:
@@ -1347,7 +1351,7 @@ def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
         elif inc == "on" and "off" in alts:
             challenger = "off"
         else:
-            skip = "already lost"
+            skip = T("server.gguf_split.already_lost")
     items.append({"name": "prompt_lookup", "incumbent": inc,
                   "challenger": challenger, "skip": skip, "reload": True})
     draft = _existing_draft_path(draft_path)
@@ -1358,13 +1362,13 @@ def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
         skip = None
         challenger = None
         if int(n_slots or 1) > 1:
-            skip = "two chats"
+            skip = T("server.gguf_split.two_chats")
         elif "guess_ahead" in pinned_set:
             skip = "pinned"
         else:
             other = "on" if inc == "off" else "off"
             if f"guess_ahead={other}" in (losses or []):
-                skip = "already lost"
+                skip = T("server.gguf_split.already_lost")
             else:
                 challenger = other
         items.append({"name": "guess_ahead", "incumbent": inc,

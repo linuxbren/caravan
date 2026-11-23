@@ -17,6 +17,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "agent"))
 
 import mlx_split as S  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 class Arr:
@@ -130,7 +131,7 @@ class StraddledPiece(unittest.TestCase):
 
 class StageWiring(unittest.TestCase):
     def test_stage_uses_getattr_logs_and_restores(self):
-        src = (REPO / "agent/mlx_split.py").read_text()
+        src = english_source(REPO / "agent/mlx_split.py")
         body = src[src.index("class Stage:"):src.index("def _assert_loaded")]
         self.assertIn('getattr(_mlx_utils, "infer_quant_config", None)', body)
         self.assertIn("partial_quant_guard(_orig_iqc, skipped_quant)", body)

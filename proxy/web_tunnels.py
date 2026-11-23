@@ -17,6 +17,13 @@ import socket
 import subprocess
 import time
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 log = logging.getLogger("caravan.tunnel")
 
@@ -246,20 +253,28 @@ class TunnelError(RuntimeError):
         self.plain = plain
 
 
+# Internal: the ssh wording plain_tunnel_error recognises (ssh speaks English);
+# never shown, so not in the strings file.
+_IN_USE = "already in use"
+
+
 def plain_tunnel_error(exc=None, *, mac: str = "", detail: str = "") -> str:
     """One short line. No hostname, paired id, path, or ssh trace."""
-    who = (mac or "").strip() or "the other Mac"
-    if who.lower() in ("mac", "the other mac"):
-        who = "the other Mac"
-    elif not who.lower().startswith("the "):
-        who = "the " + who
+    other = T("server.link_upgrade.the_other_mac")
+    who = (mac or "").strip() or other
+    # Day 32: "the" comes from the strings file (an empty article is fine).
+    the = T("server.web_tunnels.article_the")
+    if who.lower() in ("mac", "the other mac", T("server.pairing.mac").lower(), other.lower()):
+        who = other
+    elif not who.lower().startswith(the.lower()):
+        who = the + who
     text = " ".join(str(exc or "").split())
     low = text.lower()
     if "already in use" in low or "cannot listen" in low or "local forwarding" in low:
-        return f"Couldn't start the model on {who}. Try loading again."
+        return T("server.web_tunnels.couldnt_start_the_model_on_who", who=who)
     if "permission" in low or "denied" in low:
-        return f"Couldn't reach {who}. Try loading again."
-    return f"Couldn't start the model on {who}. Try loading again."
+        return T("server.web_tunnels.couldnt_reach_who_try_loading_again", who=who)
+    return T("server.web_tunnels.couldnt_start_the_model_on_who", who=who)
 
 
 def ensure_forward(
@@ -284,7 +299,7 @@ def ensure_forward(
     port = int(port)
     if not target:
         raise TunnelError(
-            plain_tunnel_error(mac="the other Mac"),
+            plain_tunnel_error(mac=T("server.link_upgrade.the_other_mac")),
             detail="no ssh target for worker tunnel",
         )
     pause = pause or sleep or time.sleep
@@ -305,7 +320,7 @@ def ensure_forward(
             # do not touch anyone else.
             detail = f"owned ssh tunnel pid {pid} still holds 127.0.0.1:{port}"
             log.error(detail)
-            raise TunnelError(plain_tunnel_error("already in use"), detail=detail)
+            raise TunnelError(plain_tunnel_error(_IN_USE), detail=detail)
         # Fall through and open a new one.
     else:
         foreign = foreign_on_port(port, target, inspect=inspect, lsof=lsof)
@@ -315,7 +330,7 @@ def ensure_forward(
                 f"({command_of(foreign[0], inspect=inspect)[:200]}); not ours, not killed"
             )
             log.error(detail)
-            raise TunnelError(plain_tunnel_error("already in use"), detail=detail)
+            raise TunnelError(plain_tunnel_error(_IN_USE), detail=detail)
 
     proc = _spawn(target, port, popen=popen)
     pause(spawn_wait)
@@ -332,7 +347,7 @@ def ensure_forward(
         if held and probe():
             log.info("reusing worker tunnel pid %s after bind race", held[0])
             return {"pid": held[0], "proc": None, "reused": True}
-        raise TunnelError(plain_tunnel_error(raw or "already in use"), detail=raw)
+        raise TunnelError(plain_tunnel_error(raw or _IN_USE), detail=raw)
     return {"pid": int(proc.pid), "proc": proc, "reused": False}
 
 
@@ -372,7 +387,7 @@ def plain_load_status(msg: str, *, mac: str = "") -> str:
         low = s.lower()
         who = (mac or "the other Mac").strip()
         if "single-mini" in low or "single mini" in low:
-            return f"starting single-Mini worker on {who}" if who else "starting single-Mini worker"
+            return T("server.web_tunnels.starting_single_mini_worker_on_who", who=who) if who else T("server.web_tunnels.starting_single_mini_worker")
         # Day 30: only a line that reports a failure becomes the failure
         # message. The success line "rpc-server on <Mac> up (pid ..),
         # tunnel 127.0.0.1:port" used to match "tunnel" and showed
@@ -385,5 +400,5 @@ def plain_load_status(msg: str, *, mac: str = "") -> str:
         cleaned = _HIDDEN.sub("", cleaned)
         cleaned = re.sub(r"\s{2,}", " ", cleaned)
         cleaned = re.sub(r"\(\s*\)", "", cleaned).strip(" ·-:")
-        return cleaned or (f"starting the model on {who}" if who else "starting the model")
+        return cleaned or (T("server.web_tunnels.starting_the_model_on_who", who=who) if who else T("server.web_tunnels.starting_the_model"))
     return s

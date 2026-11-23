@@ -11,6 +11,13 @@ import json
 import shutil
 import sys
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 SKIP_MODEL_DIRS = {"drafts", "caches", ".cache", "cache"}
@@ -123,7 +130,7 @@ def delete_kind(kind: str, current: str = "") -> dict:
         return web_helpers.delete_helper(kind, current)
     elif kind == "drafts":
         if current:
-            return {"ok": False, "error": "Stop the loaded model before deleting helpers."}
+            return {"ok": False, "error": T("server.picker_disk_sizes.stop_the_loaded_model_before_deleting")}
         drafts = home / ".caravan" / "mlx-models" / "drafts"
         if drafts.is_dir():
             for p in list(drafts.iterdir()):
@@ -136,7 +143,7 @@ def delete_kind(kind: str, current: str = "") -> dict:
                     except OSError:
                         pass
     else:
-        return {"ok": False, "error": f"unknown kind {kind}"}
+        return {"ok": False, "error": T("server.picker_disk_sizes.unknown_kind_kind", kind=kind)}
     return {"ok": True, "kind": kind, "removed": removed}
 
 

@@ -517,7 +517,7 @@ def summarize(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX") -> str:
             elif len(bits) == 2:
                 body = bits[0] + T("cli.bench.and") + bits[1]
             else:
-                body = ", ".join(bits[:-1]) + T("cli.bench.and") + bits[-1]
+                body = T.join(bits[:-1]) + T("cli.bench.and") + bits[-1]
             paragraphs.append(T("cli.bench.on_head_body", head=head, body=body))
     if not paragraphs:
         return ""
@@ -542,7 +542,7 @@ def steps_text(gguf_id: str, mlx_id: str, port: int = DEFAULT_PORT,
         series.append(
             T("cli.bench.a_long_prompt_series_at_about")
         )
-    series_txt = " and ".join(series) if series else T("cli.bench.the_prompt_series")
+    series_txt = T.join(series, "and") if series else T("cli.bench.the_prompt_series")
     header = (
         T("cli.bench.this_compares_a_gguf_model_to", series_txt=series_txt)
     )
@@ -1032,7 +1032,7 @@ def _main_speedups(args, gid, mid, gname, mname) -> int:
         else:
             q = f"--gguf {gid} --mlx {mid} "
         sys.stdout.write(
-            T("cli.bench.this_measures_prompt_lookup_and_guess", names=" and ".join(names), v=", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0], q=q, only=only, v_=(' ' + flags) if flags else '')
+            T("cli.bench.this_measures_prompt_lookup_and_guess", names=T.join(names, "and"), v=T.and_list(parts), q=q, only=only, v_=(' ' + flags) if flags else '')
         )
         return 0
     offer_helpers(args.port, [m for k, m in (("gguf", gid), ("mlx", mid)) if k in sides])

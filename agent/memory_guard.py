@@ -11,6 +11,13 @@ import os
 import re
 import subprocess
 from typing import Callable, Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 DEFAULT_CACHE_LIMIT_GB = 1.5
@@ -238,7 +245,7 @@ def plan(
             "need_gb": 0.0,
             "prompt_tokens": 0,
             "budget_tokens": 10**9 if headroom > 0 else 0,
-            "error": None if headroom > 0 else "Free memory is below the safety margin; wait or use a smaller model.",
+            "error": None if headroom > 0 else T("agent.memory_guard.free_memory_is_below_the_safety"),
             "ok": headroom > 0,
             **{k: hr[k] for k in ("available_gb", "safety_gb", "local_headroom_gb",
                                    "packer_available_gb", "packer_headroom_gb")},
@@ -257,9 +264,7 @@ def plan(
             "need_gb": round(estimate_kv_gb(cfg, max_tokens + 1, lead_layers, kv_bits=kv_bits), 3),
             "prompt_tokens": 0,
             "budget_tokens": budget_tokens,
-            "error": (f"Not enough memory headroom ({headroom:.2f} GB after "
-                      f"{safety_gb} GB safety) for even a short reply. "
-                      f"Free RAM on the Minis or lower max_tokens."),
+            "error": (T("agent.memory_guard.not_enough_memory_headroom_headroom_gb", headroom=headroom, safety_gb=safety_gb)),
             "ok": False,
             **{k: hr[k] for k in ("available_gb", "safety_gb", "local_headroom_gb",
                                    "packer_available_gb", "packer_headroom_gb")},
@@ -274,8 +279,7 @@ def plan(
     ok = n <= prompt_budget and need <= headroom + 1e-6
     err = None
     if not ok:
-        err = (f"Even the newest turn needs about {need:.2f} GB of KV "
-               f"(headroom {headroom:.2f} GB). Shorten the prompt or free RAM.")
+        err = (T("agent.memory_guard.even_the_newest_turn_needs_about", need=need, headroom=headroom))
     return {
         "messages": msgs,
         "trimmed_turns": trimmed,

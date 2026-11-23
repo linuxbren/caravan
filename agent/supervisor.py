@@ -18,6 +18,13 @@ import time
 
 import config
 import kv_auto
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def build_head_command(model_blob_path: str, peer_rpc_addrs: list,
@@ -140,7 +147,7 @@ def open_rpc_tunnels(rpc_addrs: list[str]) -> tuple[list, list[str]]:
         if p.poll() is not None:
             for q in procs:
                 q.terminate()
-            raise RuntimeError(f"SSH tunnel failed: {' '.join(cmd)}")
+            raise RuntimeError(T("agent.supervisor.ssh_tunnel_failed_cmd", cmd=' '.join(cmd)))
         procs.append(p)
         local.append(addr)
     return procs, local

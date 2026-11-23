@@ -44,6 +44,13 @@ import re
 import subprocess
 from pathlib import Path
 from typing import NamedTuple, Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 try:
     import gguf_meta
@@ -89,7 +96,7 @@ def _per_layer(meta, arch, key, n_layer, default=None):
     v = meta.get(f"{arch}.{key}", default)
     if isinstance(v, list):
         if len(v) != n_layer:
-            raise ValueError(f"{key}: {len(v)} entries for {n_layer} layers")
+            raise ValueError(T("agent.kv_auto.key_v_entries_for_n_layer", key_=key, v=len(v), n_layer=n_layer))
         return list(v)
     if v is None:
         return None
@@ -99,7 +106,7 @@ def _per_layer(meta, arch, key, n_layer, default=None):
 def kv_layout(meta: dict) -> KvLayout:
     arch = meta.get("general.architecture")
     if not arch:
-        raise ValueError("no general.architecture")
+        raise ValueError(T("agent.kv_auto.no_general_architecture"))
     n_layer = int(meta[f"{arch}.block_count"])
     n_head = _per_layer(meta, arch, "attention.head_count", n_layer)
     n_head_kv = _per_layer(meta, arch, "attention.head_count_kv", n_layer) or n_head
@@ -240,7 +247,7 @@ def decide(model_path, n_slots: int, ctx_per_slot: int, n_ubatch: int,
         weights = int(weights_bytes) if weights_bytes else model_weights_bytes(model_path)
         layout = kv_layout(meta_fn(model_path))
     except Exception as e:  # noqa: BLE001 -- any failure means "can't estimate"
-        return KvDecision(fallback_k, fallback_v, f"q8_0 fallback: can't estimate ({e})", {})
+        return KvDecision(fallback_k, fallback_v, T("agent.kv_auto.q8_0_fallback_cant_estimate_e", e=e), {})
 
     limit_mib, limit_src = limit_fn(_env_or(cfg, "gpu_working_set_mib", "CARAVAN_GPU_WORKING_SET_MIB"))
     reserve = _env_or(cfg, "compute_reserve_mib", "CARAVAN_COMPUTE_RESERVE_MIB")
@@ -268,12 +275,12 @@ def decide(model_path, n_slots: int, ctx_per_slot: int, n_ubatch: int,
     }
     if need_f16 <= budget_mib:
         return KvDecision(cand_k, cand_v,
-                          f"f16 fits ({need_f16:.0f} <= {budget_mib:.0f} MiB)", est)
+                          T("agent.kv_auto.f16_fits_need_f16_budget_mib", need_f16=need_f16, budget_mib=budget_mib), est)
     q8_no_margin = need_q8 - margin_mib
     note = ("" if q8_no_margin <= budget_mib else
             f"; WARNING q8_0 is also at/over the estimated limit ({q8_no_margin:.0f} MiB before margin)")
     return KvDecision(fallback_k, fallback_v,
-                      f"q8_0: f16 needs {need_f16:.0f} > {budget_mib:.0f} MiB{note}", est)
+                      T("agent.kv_auto.q8_0_f16_needs_need_f16", need_f16=need_f16, budget_mib=budget_mib, note=note), est)
 
 
 def format_decision(d: KvDecision) -> str:

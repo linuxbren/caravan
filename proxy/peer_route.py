@@ -46,12 +46,19 @@ import threading
 import time
 from pathlib import Path
 from typing import Callable, Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 log = logging.getLogger("caravan.peer_route")
 
 ORDER = ("thunderbolt", "wired", "wifi", "other")
-LABELS = {"thunderbolt": "Thunderbolt", "wired": "wired Ethernet", "wifi": "Wi-Fi",
-          "other": "other network (Tailscale/VPN)"}
+LABELS = {"thunderbolt": T("server.peer_route.thunderbolt"), "wired": T("server.link_upgrade.wired_ethernet"), "wifi": "Wi-Fi",
+          "other": T("server.peer_route.other_network_tailscale_vpn")}
 SSH_PORT = 22
 MARK = "CARAVAN_PEER_ROUTE_V1"
 CONTROL_TTL_S = 300.0     # control SSH reuses a pick this young
@@ -205,7 +212,7 @@ def inventory_command() -> str:
 
 def parse_inventory(stdout: str) -> list:
     if (stdout or "").count(MARK) != 1:
-        raise ValueError("peer did not report its network interfaces")
+        raise ValueError(T("server.peer_route.peer_did_not_report_its_network"))
     ports, cfg = stdout.split(MARK)
     return interfaces(ports, cfg)
 
@@ -282,7 +289,7 @@ def verify_identity(target: str, address: str, run=None) -> tuple:
     nonce = secrets.token_hex(8)
     opts = host_opts(target, address, run=run)
     if not opts:
-        return False, "SSH alias uses a jump host"
+        return False, T("server.peer_route.ssh_alias_uses_a_jump_host")
     argv = ["ssh", *opts, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
             "-o", "UpdateHostKeys=no", "-o", "ConnectTimeout=3", target,
             "printf %s " + shlex.quote(nonce) + "; echo; hostname"]
@@ -349,12 +356,12 @@ def warning_for(kind: str, label: str) -> Optional[str]:
     if kind == "thunderbolt":
         return None
     if kind == "wired":
-        return f"Using wired Ethernet to reach {label}; Thunderbolt not found, splits will be slower"
+        return T("server.peer_route.using_wired_ethernet_to_reach_label", label=label)
     if kind == "wifi":
-        return f"Using Wi-Fi to reach {label}; Thunderbolt not found, splits will be slower"
+        return T("server.peer_route.using_wi_fi_to_reach_label", label=label)
     if kind == "other":
-        return f"Using {LABELS['other']} to reach {label}; no Thunderbolt, Ethernet or Wi-Fi path, splits will be much slower"
-    return f"Could not check the links to {label}; using its configured name"
+        return T("server.peer_route.using_other_to_reach_label_no", other=LABELS['other'], label=label)
+    return T("server.peer_route.could_not_check_the_links_to", label=label)
 
 
 def summary(route: Optional[dict]) -> Optional[dict]:
@@ -362,7 +369,7 @@ def summary(route: Optional[dict]) -> Optional[dict]:
     if not route:
         return None
     kind = route.get("kind") or "unknown"
-    return {"kind": kind, "label": LABELS.get(kind, "configured name (not checked)"),
+    return {"kind": kind, "label": LABELS.get(kind, T("server.peer_route.configured_name_not_checked")),
             "address": route.get("address"), "interface": route.get("interface"),
             "rtt_ms": route.get("rtt_ms"), "checked_at": route.get("checked_at"),
             "warning": route.get("warning")}
@@ -371,13 +378,13 @@ def summary(route: Optional[dict]) -> Optional[dict]:
 def describe(route: Optional[dict]) -> str:
     s = summary(route)
     if not s:
-        return "not checked yet"
+        return T("server.peer_route.not_checked_yet")
     bits = [s["label"]]
     if s.get("interface"):
         bits.append(s["interface"])
     if s.get("rtt_ms") is not None:
         bits.append(f"{s['rtt_ms']:g} ms")
-    return ", ".join(bits)
+    return T.join(bits)
 
 
 # ---------------------------------------------------------------- pick
@@ -410,7 +417,7 @@ def pick(target: str, *, label: Optional[str] = None, run: Optional[Callable] = 
                         capture_output=True, text=True, timeout=15, stdin=subprocess.DEVNULL)
             remote = parse_inventory(r.stdout if r.returncode == 0 else "")
     except (OSError, ValueError, subprocess.SubprocessError) as e:
-        route["reason"] = f"could not read interfaces: {str(e)[:120]}"
+        route["reason"] = T("server.peer_route.could_not_read_interfaces_e", e=str(e)[:120])
         route["warning"] = warning_for("unknown", label)
         log.warning("%s (%s)", route["warning"], route["reason"])
         if save:
@@ -421,15 +428,15 @@ def pick(target: str, *, label: Optional[str] = None, run: Optional[Callable] = 
     for c in cands:
         row = dict(c)
         if chosen is not None:
-            row["status"] = "not needed (an earlier link works)"
+            row["status"] = T("server.peer_route.not_needed_an_earlier_link_works")
         else:
             ms = rtt(c["address"], c["interface"], c["local_ip"])
             row["rtt_ms"] = ms
             if ms is None:
-                row["status"] = "no answer"
+                row["status"] = T("server.peer_route.no_answer")
             else:
                 ok, detail = identity(target, c["address"])
-                row["status"] = "ok" if ok else "wrong Mac or no login: " + str(detail)[:100]
+                row["status"] = "ok" if ok else T("server.peer_route.wrong_mac_or_no_login_detail", detail=str(detail)[:100])
                 if ok:
                     row["peer_hostname"] = detail
                     chosen = row
@@ -438,9 +445,9 @@ def pick(target: str, *, label: Optional[str] = None, run: Optional[Callable] = 
         route.update(kind=chosen["kind"], address=chosen["address"], interface=chosen["interface"],
                      local_ip=chosen["local_ip"],
                      remote_interface=chosen["remote_interface"], rtt_ms=chosen["rtt_ms"],
-                     reason=f"first working link in order: {LABELS[chosen['kind']]}")
+                     reason=T("server.peer_route.first_working_link_in_order_labels", labels=LABELS[chosen['kind']]))
     else:
-        route["reason"] = "no candidate path answered" if cands else "no shared subnet with the other Mac"
+        route["reason"] = T("server.peer_route.no_candidate_path_answered") if cands else T("server.peer_route.no_shared_subnet_with_the_other")
     route["warning"] = warning_for(route["kind"], label)
     if route["warning"]:
         log.warning(route["warning"])
@@ -487,8 +494,7 @@ def pick_waiting(target: str, *, label: Optional[str] = None, wait_s: Optional[f
                                      "limit_s": wait_s, "found": route.get("kind") == "thunderbolt"}
         if route.get("kind") != "thunderbolt":
             slower = LABELS.get(route.get("kind"), "its configured name")
-            route["warning"] = (f"Thunderbolt to {label} did not answer within {wait_s:g}s; "
-                                f"using {slower}, splits will be slower")
+            route["warning"] = (T("server.peer_route.thunderbolt_to_label_did_not_answer", label=label, wait_s=wait_s, slower=slower))
             log.warning(route["warning"])
     if seen and route.get("kind") != "thunderbolt":
         route["thunderbolt_seen_at"] = seen

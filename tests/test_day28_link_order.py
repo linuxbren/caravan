@@ -395,7 +395,7 @@ class WiringTest(unittest.TestCase):
         self.assertIn(WIFI["warning"], m.notes)
 
     def test_load_falls_back_on_any_non_network_route(self):
-        src = (ROOT / "proxy" / "web_workers.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_workers.py")
         self.assertIn('and route != "network":', src)
         self.assertIn("PR.forget(target)", src)
 
@@ -490,7 +490,7 @@ class WiringTest(unittest.TestCase):
     def test_cli_pairing_and_proxy_use_the_picker(self):
         self.assertIn("PR.run_ssh(target, cmd", (ROOT / "agent" / "gguf_split_cli.py").read_text())
         self.assertIn("PR.route_for(target, fresh=True)", (ROOT / "agent" / "gguf_split_cli.py").read_text())
-        self.assertIn("record_route(result.get('alias')", (ROOT / "proxy" / "pairing.py").read_text())
+        self.assertIn("record_route(result.get('alias')", english_source(ROOT / "proxy" / "pairing.py"))
         import pairing
         with mock.patch.object(PR, "route_for") as rf, mock.patch("threading.Thread") as th:
             pairing.record_route("caravan-x", "2nd Mac")

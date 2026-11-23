@@ -291,6 +291,7 @@ def _candidates_message(kind: str, query: str, found: list) -> str:
 def resolve_pair(models, *, query=None, gguf_id=None, mlx_id=None) -> dict:
     """Pick one GGUF and one MLX. Ambiguous or missing sides are reported, not guessed."""
     messages = []
+    blocked = False  # Day 32: set where a side is missing/ambiguous, not read from the words
     g_found, m_found = [], []
     if gguf_id:
         gguf = find_in_catalog(gguf_id, models)
@@ -301,6 +302,7 @@ def resolve_pair(models, *, query=None, gguf_id=None, mlx_id=None) -> dict:
         else:
             gguf = None
             messages.append(_candidates_message("GGUF", query, g_found))
+            blocked = True
     else:
         gguf = None
     if mlx_id:
@@ -312,13 +314,13 @@ def resolve_pair(models, *, query=None, gguf_id=None, mlx_id=None) -> dict:
         else:
             mlx = None
             messages.append(_candidates_message("MLX", query, m_found))
+            blocked = True
     else:
         mlx = None
     if not query and not gguf_id and not mlx_id:
         messages.append(
             T("cli.models.say_which_model_to_compare_for")
         )
-    blocked = any(s.startswith("No ") or s.startswith("Several") for s in messages)
     return {
         "ok": bool(gguf and mlx) and not blocked,
         "gguf": gguf,

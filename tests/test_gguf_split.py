@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "proxy"))
 sys.path.insert(0, str(ROOT / "agent"))
 
 import gguf_split as G  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 N = lambda i, role, gb, peer="": {"id": i, "label": i.upper(), "role": role,
                                    "host": "local" if role == "lead" else "b@" + peer,
@@ -150,6 +151,6 @@ if __name__ == "__main__":
 
 class GgufFetch(unittest.TestCase):
     def test_fetch_has_gguf_flag(self):
-        src = (ROOT / "agent" / "mlx_split_fetch.py").read_text()
+        src = english_source(ROOT / "agent" / "mlx_split_fetch.py")
         self.assertIn("--gguf-file", src)
         self.assertIn("def _fetch_gguf", src)

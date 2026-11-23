@@ -12,6 +12,13 @@ from pathlib import Path, PurePosixPath
 import re
 import sys
 import tempfile
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'proxy'))
@@ -20,13 +27,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'proxy'))
 def safe_name(name):
     if (not isinstance(name, str) or not name or '\\' in name or
             PurePosixPath(name).is_absolute() or any(p in ('', '.', '..') for p in name.split('/'))):
-        raise ValueError('unsafe model filename')
+        raise ValueError(T("agent.model_files.unsafe_model_filename"))
     return name
 
 
 def repo_name(repo):
     if not isinstance(repo, str) or not re.fullmatch(r'[\w.-]+/[\w.-]+', repo) or '..' in repo:
-        raise ValueError('expected a Hugging Face owner/repository')
+        raise ValueError(T("agent.model_files.expected_a_hugging_face_owner_repository"))
     return repo
 
 
@@ -34,10 +41,10 @@ def contained(root, name):
     root = Path(root).expanduser()
     p = root / safe_name(name)
     if not p.resolve().is_relative_to(root.resolve()):
-        raise ValueError('model file points outside its own folder')
+        raise ValueError(T("agent.model_files.model_file_points_outside_its_own"))
     # Never replace a symlink, even one inside the tree.
     if p.is_symlink():
-        raise ValueError('refusing to replace a linked model file')
+        raise ValueError(T("agent.model_files.refusing_to_replace_a_linked_model"))
     return p
 
 
@@ -111,7 +118,7 @@ def fetch_mlx(request):
     info = HfApi(token=token).model_info(repo, revision=request.get('revision'), files_metadata=True)
     revision = info.sha
     if not revision:
-        raise ValueError('source revision is unknown; nothing fetched')
+        raise ValueError(T("agent.model_files.source_revision_is_unknown_nothing_fetched"))
     sizes = {safe_name(s.rfilename): int(s.size or 0) for s in info.siblings}
     with tempfile.TemporaryDirectory(prefix='caravan-plan-') as tmp:
         snapshot_download(repo, revision=revision, local_dir=tmp, token=token,
@@ -119,34 +126,34 @@ def fetch_mlx(request):
         cfg = json.loads((Path(tmp)/'config.json').read_text())
         idx = json.loads((Path(tmp)/'model.safetensors.index.json').read_text())
         if plan_digest(cfg, idx) != request['metadata_digest']:
-            raise ValueError('source metadata changed since preview; nothing in the model folder changed')
+            raise ValueError(T("agent.model_files.source_metadata_changed_since_preview_nothing"))
         stages = plan_stage_files(cfg, idx, counts)['stages']
         if type(stage) is not int or not 0 <= stage < len(stages):
-            raise ValueError('invalid stage index')
+            raise ValueError(T("agent.gguf_shards.invalid_stage_index"))
         needed = sorted(stages[stage])
         contained(dest, '.cache/huggingface/download/.caravan-path-check')
         for f in needed:
             contained(dest, f)
             contained(dest, '.cache/huggingface/download/'+f+'.incomplete')
             if not sizes.get(f):
-                raise ValueError('source size is unknown for ' + f)
+                raise ValueError(T("agent.model_files.source_size_is_unknown_for_f", f=f))
         # Validate all metadata paths before snapshot_download follows any links.
         import fnmatch
         for f in sizes:
             if any(fnmatch.fnmatch(f, pat) for pat in SMALL):
                 contained(dest, f)
         if dest.is_symlink():
-            raise ValueError('model folder must not be a symlink')
+            raise ValueError(T("agent.model_files.model_folder_must_not_be_a"))
         if (dest/'config.json').is_file() and (dest/'model.safetensors.index.json').is_file():
             old_cfg = json.loads((dest/'config.json').read_text())
             old_idx = json.loads((dest/'model.safetensors.index.json').read_text())
             if plan_digest(old_cfg, old_idx) != request['metadata_digest']:
-                raise ValueError('this Mini has different model metadata; move its old folder aside before fetching')
+                raise ValueError(T("agent.model_files.this_mini_has_different_model_metadata"))
         # Correct-size corrupt files must not be silently skipped by Range fetch.
         local = inspect(dest)
         bad = set(needed) & set(local['invalid_shards'])
         if bad:
-            raise ValueError('move these corrupt files aside before fetching: ' + ', '.join(sorted(bad)))
+            raise ValueError(T("agent.model_files.move_these_corrupt_files_aside_before", sorted=T.join(sorted(bad))))
         hashes = {}
         for sibling in info.siblings:
             lfs = getattr(sibling, 'lfs', None)
@@ -158,7 +165,7 @@ def fetch_mlx(request):
             with (dest/f).open('rb') as src:
                 for block in iter(lambda: src.read(1 << 20), b''): h.update(block)
             if h.hexdigest() != hashes[f]:
-                raise ValueError('source checksum differs: move this file aside before fetching: ' + f)
+                raise ValueError(T("agent.model_files.source_checksum_differs_move_this_file", f=f))
         for f in needed:
             if (dest/f).is_file() and (dest/f).stat().st_size == sizes[f]: verify_file(f)
         snapshot_download(repo, revision=revision, local_dir=str(dest), token=token, allow_patterns=SMALL)

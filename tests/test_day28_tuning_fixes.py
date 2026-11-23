@@ -18,6 +18,7 @@ import gguf_tune as T  # noqa: E402
 import gguf_self_tune as ST  # noqa: E402
 import web_restore  # noqa: E402
 import web_workers as W  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 def specs(write, total, long_read=None, edit=None, read=300.0):
@@ -132,7 +133,7 @@ class BestTuneRoundTripTest(unittest.TestCase):
         self.assertEqual(t, {"guess_ahead": "off"})
 
     def test_web_server_balance_restore_uses_the_filter(self):
-        src = (Path(__file__).resolve().parents[1] / "proxy" / "web_server.py").read_text()
+        src = english_source(Path(__file__).resolve().parents[1] / "proxy" / "web_server.py")
         self.assertIn('restorable_gguf_tune(body["gguf_tune"]', src)
         self.assertNotIn('in ("flash_attn","ubatch","cache_type","slot_save","ctx","n_slots")', src)
 

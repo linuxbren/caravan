@@ -9,6 +9,7 @@ sys.path[:0] = [str(ROOT / "agent"), str(ROOT / "proxy")]
 import web_restore as R  # noqa: E402
 import web_nodes  # noqa: E402
 from service_endpoints import RetryableReadinessError  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 PEER = "paired_20a07ea04739f1d5bb415fba55175503"
 NODES = [dict(id="local", role="lead", host="local", label=""),
@@ -76,7 +77,7 @@ class RestoredChipShowsChatMemory(unittest.TestCase):
         self.assertEqual(a["kv_bits"], 8)
 
     def test_worker_records_the_real_cache_type(self):
-        src = (ROOT / "proxy" / "web_workers.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_workers.py")
         self.assertIn('launch = dict(launch or {}, cache_type=args[args.index("-ctk") + 1])', src)
 
 

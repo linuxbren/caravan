@@ -8,54 +8,61 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # id -> label, plain help, allowed values (first is "auto")
 OPTIONS = [
     {"id": "self_tune", "label": "Self-tuning",
-     "help": "Caravan learns from your chats and remembers faster settings for each model. Pinned choices stay yours.",
-     "help_gguf": "Caravan learns from your chats and remembers faster settings for each model. Pinned choices stay yours. For GGUF, a change reloads the model when you are not mid-reply.",
+     "help": T("server.web_settings.caravan_learns_from_your_chats_and"),
+     "help_gguf": T("server.web_settings.caravan_learns_from_your_chats_and_2"),
      "values": ["auto", "off"]},
     {"id": "guess_ahead", "label": "Guess-ahead",
-     "help": "A smaller model guesses upcoming words for the main MLX model to check. Needs a matching helper; up to ~33% faster writing one reply on a split model in our tests, but slower with two chats.",
-     "help_gguf": "A smaller model of the same family guesses upcoming words for the main model to check. It is often faster on code edits and repeated text and helps less on short chats, and the first word on long prompts can come a little later. Gains vary by model and Mac. Auto uses it only when a test on your model finds it faster. On needs a small helper of the same family on this Mac; when Caravan knows one, it offers it under the model and will not download one for you without your OK.",
+     "help": T("server.web_settings.a_smaller_model_guesses_upcoming_words"),
+     "help_gguf": T("server.web_settings.a_smaller_model_of_the_same"),
      "values": ["auto", "on", "off", "mtp"],
      "values_gguf": ["auto", "off", "on"]},
-    {"id": "prompt_lookup", "label": "Prompt lookup (experimental)",
-     "help": "Reuse words from your prompt to help the MLX model write repeated text. Up to ~44% faster in our tests on repeated text, but slower on mixed chats; one chat at a time.",
-     "help_gguf": "Reuse words from your prompt to help with repeated text. Often much faster when the reply repeats the prompt (for example whole-file code edits), little change on short chats, and slightly slower on long prompts. Gains vary by model. Auto stays off until a test finds it is faster.",
+    {"id": "prompt_lookup", "label": T("server.web_settings.prompt_lookup_experimental"),
+     "help": T("server.web_settings.reuse_words_from_your_prompt_to"),
+     "help_gguf": T("server.web_settings.reuse_words_from_your_prompt_to_2"),
      "values": ["auto", "off", "adaptive"],
      "values_gguf": ["auto", "off", "on"]},
-    {"id": "shared_start", "label": "Shared start (trim / rebuild)",
-     "help": "Reuse the beginning of repeated system prompts so the model has less to read. MLX models only.",
-     "help_gguf": "Reuse the start of a chat so later turns begin sooner.",
+    {"id": "shared_start", "label": T("server.web_settings.shared_start_trim_rebuild"),
+     "help": T("server.web_settings.reuse_the_beginning_of_repeated_system"),
+     "help_gguf": T("server.web_settings.reuse_the_start_of_a_chat"),
      "values": ["auto", "on", "off"]},
-    {"id": "pipeline_chats", "label": "Two chats",
-     "help": "Let two chats use different Minis at the same time when an MLX model is split. Up to ~70% more combined output in our tests without a helper; no gain on one Mini, and slower with a helper.",
-     "help_gguf": "Let two chats share the model at the same time. Auto keeps one chat.",
+    {"id": "pipeline_chats", "label": T("server.web_settings.two_chats"),
+     "help": T("server.web_settings.let_two_chats_use_different_minis"),
+     "help_gguf": T("server.web_settings.let_two_chats_share_the_model"),
      "values": ["auto", "1", "2"]},
-    {"id": "chat_window", "label": "Context",
-     "help": "How much of the conversation the model can keep in mind at once. Auto uses the longest context that fits in memory, up to the full context the model was trained for. Native is that full context.",
+    {"id": "chat_window", "label": T("server.web_settings.context"),
+     "help": T("server.web_settings.how_much_of_the_conversation_the_2"),
      "values": ["auto", "4096", "8192", "16384", "32768", "65536", "131072", "262144", "native"],
      "backends": ("gguf",)},
-    {"id": "fuse_kernels", "label": "Fused kernels",
-     "help": "Combine small GPU steps when running an MLX model. Experimental — no meaningful speed gain in our tests; some models are incompatible.",
+    {"id": "fuse_kernels", "label": T("server.web_settings.fused_kernels"),
+     "help": T("server.web_settings.combine_small_gpu_steps_when_running"),
      "values": ["auto", "on"],
      "backends": ("mlx",)},
-    {"id": "kv_bits", "label": "Memory compression",
-     "help": "Store MLX chat memory more compactly to save RAM; 16 leaves it uncompressed. May lower quality and slow reading; not supported by every model or Native MTP.",
-     "help_gguf": "Store the chat's working memory more compactly. Auto uses the lighter option only when the full one will not fit with the longest context. Pinning 16 can make Auto pick a shorter context.",
+    {"id": "kv_bits", "label": T("server.gguf_self_tune.memory_compression"),
+     "help": T("server.web_settings.store_mlx_chat_memory_more_compactly"),
+     "help_gguf": T("server.web_settings.store_the_chats_working_memory_more"),
      "values": ["auto", "16", "8", "4"],
      "values_gguf": ["auto", "16", "8"]},
-    {"id": "keepalive", "label": "GPU keep-warm",
-     "help": "Keep the main GPU warm while it waits for another Mini. Split MLX models only; up to ~50% faster writing replies in our tests.",
+    {"id": "keepalive", "label": T("server.web_settings.gpu_keep_warm"),
+     "help": T("server.web_settings.keep_the_main_gpu_warm_while"),
      "values": ["auto", "off"],
      "backends": ("mlx",)},
-    {"id": "flash_attn", "label": "Flash attention",
-     "help": "A faster way to read the chat so far. Leave on unless a test says off.",
+    {"id": "flash_attn", "label": T("server.gguf_self_tune.flash_attention"),
+     "help": T("server.web_settings.a_faster_way_to_read_the"),
      "values": ["auto", "on", "off"],
      "backends": ("gguf",)},
-    {"id": "ubatch", "label": "Prompt batch",
-     "help": "How much of a long question the model reads at once. Larger can read faster and uses more working memory.",
+    {"id": "ubatch", "label": T("server.gguf_self_tune.prompt_batch"),
+     "help": T("server.web_settings.how_much_of_a_long_question"),
      "values": ["auto", "256", "512", "1024"],
      "backends": ("gguf",)},
 ]
@@ -66,15 +73,15 @@ def normalize(settings) -> dict:
     """Fill defaults, validate. Raises ValueError on unknown keys/values."""
     settings = settings or {}
     if not isinstance(settings, dict):
-        raise ValueError("settings must be an object")
+        raise ValueError(T("server.web_settings.settings_must_be_an_object"))
     out = {}
     for k, v in settings.items():
         if k not in _BY_ID:
-            raise ValueError(f"unknown setting: {k}")
+            raise ValueError(T("server.web_settings.unknown_setting_k", k=k))
         v = str(v).strip().lower()
         allowed = set(_BY_ID[k]["values"]) | set(_BY_ID[k].get("values_gguf") or [])
         if v not in allowed:
-            raise ValueError(f"{k}: want one of {sorted(allowed)}, got {v!r}")
+            raise ValueError(T("server.web_settings.k_want_one_of_sorted_got", k=k, sorted=sorted(allowed), v=v))
     for o in OPTIONS:
         out[o["id"]] = str(settings.get(o["id"], "auto")).strip().lower()
     return out
@@ -90,13 +97,13 @@ def to_args(settings) -> tuple[list, list]:
         lead.append("--pin-guess-ahead")
     if s["guess_ahead"] == "mtp":
         if s["kv_bits"] in ("8", "4"):
-            raise ValueError("native MTP needs uncompressed 16-bit fresh caches")
+            raise ValueError(T("server.web_settings.native_mtp_needs_uncompressed_16_bit"))
         if s["prompt_lookup"] == "adaptive":
-            raise ValueError("native MTP and prompt lookup are separate experimental modes")
+            raise ValueError(T("server.web_settings.native_mtp_and_prompt_lookup_are"))
         lead += ["--native-mtp", "--no-learn"]
     if s["prompt_lookup"] == "adaptive":
         if s["pipeline_chats"] == "2":
-            raise ValueError("adaptive prompt lookup currently needs one chat, not two")
+            raise ValueError(T("server.web_settings.adaptive_prompt_lookup_currently_needs_one"))
         lead += ["--split-prompt-lookup", "3", "--split-prompt-lookup-adaptive", "--no-learn"]
     if s["self_tune"] == "off":
         lead.append("--no-learn")
@@ -199,7 +206,7 @@ def _parse_toml_subset(text: str) -> dict:
         if line.startswith("["):
             m = re.match(r'^\[\s*(.+?)\s*\]\s*(#.*)?$', line)
             if not m:
-                raise ValueError(f"line {n}: bad table header")
+                raise ValueError(T("server.web_settings.line_n_bad_table_header", n=n))
             parts = re.findall(r'"([^"]*)"|([A-Za-z0-9_\-]+)', m.group(1))
             cur = out
             for q, b in parts:
@@ -207,12 +214,12 @@ def _parse_toml_subset(text: str) -> dict:
             continue
         m = re.match(r'^("?)([A-Za-z0-9_\-.]+)\1\s*=\s*(.+?)\s*$', line)
         if not m:
-            raise ValueError(f"line {n}: expected key = value")
+            raise ValueError(T("server.web_settings.line_n_expected_key_value", n=n))
         k, v = m.group(2), m.group(3)
         if v.startswith('"'):
             e = v.find('"', 1)
             if e < 0:
-                raise ValueError(f"line {n}: unterminated string")
+                raise ValueError(T("server.web_settings.line_n_unterminated_string", n=n))
             val = v[1:e]
         else:
             v = v.split("#", 1)[0].strip()
@@ -222,7 +229,7 @@ def _parse_toml_subset(text: str) -> dict:
                 try:
                     val = int(v)
                 except ValueError:
-                    raise ValueError(f"line {n}: unsupported value {v!r}")
+                    raise ValueError(T("server.web_settings.line_n_unsupported_value_v", n=n, v=v))
         cur[k] = val
     return out
 
@@ -266,14 +273,14 @@ def load_config(path=None) -> dict:
                 if sv in THINK_VALUES:
                     out[k] = sv
                 else:
-                    res["errors"].append(f"{where}.thinking: want one of {list(THINK_VALUES)}")
+                    res["errors"].append(T("server.web_settings.where_thinking_want_one_of_list", where=where, list=list(THINK_VALUES)))
             elif k in _BY_ID:
                 if sv in _BY_ID[k]["values"]:
                     out[k] = sv
                 else:
-                    res["errors"].append(f"{where}.{k}: want one of {_BY_ID[k]['values']}, got {sv!r}")
+                    res["errors"].append(T("server.web_settings.where_k_want_one_of_values", where=where, k=k, values=_BY_ID[k]['values'], sv=sv))
             else:
-                res["errors"].append(f"{where}: unknown key {k!r}")
+                res["errors"].append(T("server.web_settings.where_unknown_key_k", where=where, k=k))
         return out
 
     res["defaults"] = clean(raw.get("defaults"), "defaults")
@@ -366,16 +373,13 @@ def options_for(source="mlx", model_dir=None, config=None, n_minis=1) -> list:
                 except Exception:  # noqa: BLE001
                     trained = None
                 if trained and int(ctx_auto) >= int(trained):
-                    tail = f"Auto is {ctx_auto} for this model, its full trained context."
+                    tail = T("server.web_settings.auto_is_ctx_auto_for_this", ctx_auto=ctx_auto)
                 elif trained:
-                    tail = (f"Auto is {ctx_auto} for this model: the longest that fits in memory. "
-                            f"Its full trained context is {trained}.")
+                    tail = (T("server.web_settings.auto_is_ctx_auto_for_this_2", ctx_auto=ctx_auto, trained=trained))
                 else:
-                    tail = f"Auto is {ctx_auto} for this model."
+                    tail = T("server.web_settings.auto_is_ctx_auto_for_this_3", ctx_auto=ctx_auto)
                 item["help"] = (
-                    "How much of the conversation the model can keep in mind at once. "
-                    "Auto uses the longest context that fits in memory, up to the full "
-                    "context the model was trained for. " + tail
+                    T("server.web_settings.how_much_of_the_conversation_the", tail=tail)
                 )
                 if trained:
                     item["native_value"] = int(trained)
@@ -389,7 +393,7 @@ def options_for(source="mlx", model_dir=None, config=None, n_minis=1) -> list:
                     draft = None
             if not draft:
                 item["disabled_values"] = {
-                    "on": "Needs a smaller model of the same family already on this Mac. Caravan will not download one for you.",
+                    "on": T("server.web_settings.needs_a_smaller_model_of_the"),
                 }
             else:
                 item["draft"] = {"name": draft.get("name"), "path": draft.get("path"),
@@ -426,7 +430,7 @@ def apply_gguf_settings(tune: dict, settings, *, model_path=None) -> dict:
     elif kv == "8":
         out["cache_type"] = "q8_0"
     elif kv == "4":
-        raise ValueError("GGUF memory compression does not offer 4-bit")
+        raise ValueError(T("server.gguf_split.gguf_memory_compression_does_not_offer"))
     ss = s.get("shared_start")
     if ss == "off":
         out["slot_save"] = False

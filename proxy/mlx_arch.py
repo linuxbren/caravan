@@ -10,6 +10,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # Caravan-applied remaps (also patched into mlx_lm.utils.MODEL_REMAPPING at worker start).
 MODEL_TYPE_REMAP = {
@@ -59,14 +66,14 @@ def architecture_status(model_dir: str | Path = None, *, model_type: Optional[st
             "model_type": mt,
             "effective": eff,
             "remapped": remapped,
-            "reason": f"unsupported architecture ({mt})",
+            "reason": T("server.mlx_arch.unsupported_architecture_mt", mt=mt),
         }
     return {
         "supported": True,
         "model_type": mt,
         "effective": eff,
         "remapped": remapped,
-        "reason": (f"remapped {mt} → {eff}" if remapped else ""),
+        "reason": (T("server.mlx_arch.remapped_mt_eff", mt=mt, eff=eff) if remapped else ""),
     }
 
 
@@ -158,18 +165,16 @@ def model_warnings(config: dict, weight_map: Optional[dict] = None) -> list:
     mt = str(cfg.get("model_type") or "")
     # A top-level *_text type (VLM wrappers keep it in text_config, which is fine).
     if mt.endswith("_text") and mt not in MODEL_TYPE_REMAP:
-        out.append(f"Caravan hasn't seen this model type ({mt}) before. It may not load, or it may give garbled replies. If it does, try another version of the model.")
+        out.append(T("server.mlx_arch.caravan_hasnt_seen_this_model_type", mt=mt))
     if mt.endswith("_mtp") or mt.endswith("_nextn"):
-        out.append("This is a helper that makes another model faster, not a chat model on its own. Use it with its main model, not by itself.")
+        out.append(T("server.mlx_arch.this_is_a_helper_that_makes"))
     if weight_map:
         flags = [cfg.get("tie_word_embeddings")]
         if isinstance(cfg.get("text_config"), dict):
             flags.append(cfg["text_config"].get("tie_word_embeddings"))
         has_lm = any("lm_head" in k for k in weight_map)
         if any(f is True for f in flags) and has_lm:
-            out.append("This model's files don't quite match its settings (it ships an extra output table it won't use). "
-                       "Caravan handles this: it still runs, but when split, every Mini needs the first file of the model.")
+            out.append(T("server.mlx_arch.this_models_files_dont_quite_match"))
         elif flags[0] is False and not has_lm and not any(f is True for f in flags):
-            out.append("This model is missing the part that picks each next word, so it would reply with gibberish. "
-                       "Try another download of this model.")
+            out.append(T("server.mlx_arch.this_model_is_missing_the_part"))
     return out

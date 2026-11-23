@@ -18,9 +18,16 @@ import re
 import tempfile
 from pathlib import Path
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 PROVIDERS = {
-    "ollama": {"label": "Ollama Cloud", "env": ("OLLAMA_API_KEY", "CARAVAN_OLLAMA_API_KEY")},
+    "ollama": {"label": T("server.cloud_keys.ollama_cloud"), "env": ("OLLAMA_API_KEY", "CARAVAN_OLLAMA_API_KEY")},
 }
 ORDER = tuple(PROVIDERS)
 
@@ -107,11 +114,11 @@ class CloudKeyError(ValueError):
 
 def save(provider: str, key: str, home=None) -> dict:
     if provider not in PROVIDERS:
-        raise CloudKeyError("Unknown provider.")
+        raise CloudKeyError(T("server.cloud_keys.unknown_provider"))
     key = (key or "").strip()
     if not _KEY_OK.match(key):
         # Never repeat the key in the message.
-        raise CloudKeyError("That doesn't look like an API key. Paste the whole key, with no spaces.")
+        raise CloudKeyError(T("server.cloud_keys.that_doesnt_look_like_an_api"))
     data = _load(home)
     data[provider] = key
     _save(data, home)
@@ -120,7 +127,7 @@ def save(provider: str, key: str, home=None) -> dict:
 
 def remove(provider: str, home=None) -> dict:
     if provider not in PROVIDERS:
-        raise CloudKeyError("Unknown provider.")
+        raise CloudKeyError(T("server.cloud_keys.unknown_provider"))
     data = _load(home)
     if provider in data:
         del data[provider]

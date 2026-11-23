@@ -28,12 +28,7 @@ DEFAULT_COMMAND = "~/.caravan/bin/caravan"
 
 def ordinal_mac(index):
     """1st Mac, 2nd Mac, 3rd Mac, … — never a hostname."""
-    n = int(index) + 1
-    if 10 <= n % 100 <= 20:
-        suf = "th"
-    else:
-        suf = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    return T("cli.update_peers.n_suf_mac", n=n, suf=suf)
+    return T("cli.update_peers.nth_mac", nth=T.ordinal(int(index) + 1))
 
 
 def is_local_node(node):
@@ -59,9 +54,9 @@ def _ssh_target(node):
 def friendly_label(node, index, *, total=None):
     """Prefer an already-friendly Mac name; otherwise 2nd Mac, 3rd Mac, …"""
     raw = (node.get("label") or "").strip()
-    if raw == "My Mac":
+    if raw in ("My Mac", T("cli.update_check.my_mac")):  # saved English or this language
         return raw
-    if raw.endswith(" Mac") and raw[0].isdigit():
+    if (raw.endswith(" Mac") and raw[0].isdigit()) or raw in {ordinal_mac(i) for i in range(32)}:
         return raw
     return ordinal_mac(index)
 

@@ -7,19 +7,26 @@ left out of the wording.
 from __future__ import annotations
 
 import time
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 KNOB_LABELS = {
-    "kv_bits": "Memory compression",
-    "cache_type": "Memory compression",
-    "flash_attn": "Flash attention",
-    "ubatch": "Prompt batch",
-    "shared_start": "Shared start",
-    "shared_prefix": "Shared start",
-    "pipeline_chats": "Two chats",
-    "fuse_kernels": "Fused kernels",
-    "keepalive": "GPU keep-warm",
+    "kv_bits": T("server.gguf_self_tune.memory_compression"),
+    "cache_type": T("server.gguf_self_tune.memory_compression"),
+    "flash_attn": T("server.gguf_self_tune.flash_attention"),
+    "ubatch": T("server.gguf_self_tune.prompt_batch"),
+    "shared_start": T("server.web_tune_errors.shared_start"),
+    "shared_prefix": T("server.web_tune_errors.shared_start"),
+    "pipeline_chats": T("server.web_settings.two_chats"),
+    "fuse_kernels": T("server.web_settings.fused_kernels"),
+    "keepalive": T("server.web_settings.gpu_keep_warm"),
     "guess_ahead": "Guess-ahead",
-    "prompt_lookup": "Prompt lookup",
+    "prompt_lookup": T("server.web_tune_errors.prompt_lookup"),
 }
 
 # Memory-compression raw values → the same numbers Settings uses (16 / 8).
@@ -41,24 +48,24 @@ def friendly_value(knob, value) -> str:
     if value is None or value == "":
         return ""
     if isinstance(value, bool):
-        return "On" if value else "Off"
+        return T("server.gguf_self_tune.on") if value else T("server.gguf_self_tune.off")
     s = str(value).strip()
     low = s.lower()
     knob = str(knob or "")
     if knob in ("kv_bits", "cache_type") and low in _COMPRESSION:
         return _COMPRESSION[low]
     if low in ("on", "true"):
-        return "On"
+        return T("server.gguf_self_tune.on")
     if low in ("off", "false"):
-        return "Off"
+        return T("server.gguf_self_tune.off")
     return s
 
 
 def _prompt_bit(kind=None, index=None, total=None) -> str:
     if kind == "long":
-        return "long prompt"
+        return T("server.web_tune_step.long_prompt")
     if index and total:
-        label = "short prompt" if kind in (None, "short") else "prompt"
+        label = T("server.web_tune_step.short_prompt") if kind in (None, "short") else "prompt"
         return f"{label} {int(index)} of {int(total)}"
     if index:
         return f"prompt {int(index)}"
@@ -79,28 +86,28 @@ def format_step(*, action="starting", knob=None, value=None,
     target = " ".join(p for p in (label, val) if p)
 
     if action in ("paused", "pause"):
-        return "Paused"
+        return T("server.web_tune_step.paused")
     if action in ("waiting", "waiting for your chat"):
-        return "Waiting for your chat to finish…"
+        return T("server.web_tune_step.waiting_for_your_chat_to_finish")
     if action in ("reloading_winner", "restoring", "restoring winners"):
-        return "Reloading with the winner…"
+        return T("server.web_tune_step.reloading_with_the_winner")
     if action in ("reloading", "reload"):
         if target:
-            return f"Reloading to try {target}…"
-        return "Reloading…"
+            return T("server.web_tune_step.reloading_to_try_target", target=target)
+        return T("server.web_tune_step.reloading")
     if action == "starting":
-        return "Starting…"
+        return T("server.web_tune_step.starting")
     if action == "done":
-        return "Done"
+        return T("server.web_tune_step.done")
     if action in ("canceled", "cancelled"):
-        return "Stopped"
+        return T("server.web_tune_step.stopped")
     if action in ("error", "stopped (error)"):
-        return "Stopped"
+        return T("server.web_tune_step.stopped")
     if action in ("trying", "try", "challenger"):
-        head = f"Trying {target}" if target else "Trying a new setting"
+        head = T("server.web_tune_step.trying_target", target=target) if target else T("server.web_tune_step.trying_a_new_setting")
         return f"{head} · {extra}" if extra else head
     # measuring the current / incumbent setup
-    head = "Measuring the current setup"
+    head = T("server.web_tune_step.measuring_the_current_setup")
     return f"{head} · {extra}" if extra else head
 
 
@@ -136,4 +143,4 @@ def format_elapsed(seconds) -> str:
     if s < 90:
         return f"{s}s"
     m, r = divmod(s, 60)
-    return f"{m} min {r}s" if r else f"{m} min"
+    return T("server.web_tune_step.m_min_r_s", m=m, r=r) if r else f"{m} min"

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="amber" data-bar-colors="theme">
+<html lang="{{lang}}" data-theme="amber" data-bar-colors="theme">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -2872,7 +2872,7 @@
     renderQueue();
   }
   function modelReady() {
-    return (($("statusText") || {}).textContent || "").startsWith("ready");
+    return (($("statusText") || {}).dataset || {}).status === "ready";
   }
   function drainQueue() {
     if (!state.queue.length || state.streaming || state.queuePaused) return false;
@@ -2885,7 +2885,7 @@
 
   function fmt(n, digits=2) {
     if (n === null || n === undefined || Number.isNaN(n)) return "—";
-    return Number(n).toFixed(digits);
+    return T.num(n, digits);
   }
   // Same wording and rounding as the average line under the input
   // (proxy/web_speed.format_reply_stats). Read rate falls back to
@@ -2913,8 +2913,8 @@
   function guessKeptText(g) {
     if (!g || typeof g !== "object") return null;
     const ok = (v) => v != null && Number.isFinite(Number(v));
-    if (ok(g.kept_pct)) return T(`web.guesses_kept_kept_pct`, {kept_pct: Number(g.kept_pct).toFixed(0)});
-    if (ok(g.reply_pct)) return T(`web.reply_pct_of_words_guessed`, {reply_pct: Number(g.reply_pct).toFixed(0)});
+    if (ok(g.kept_pct)) return T(`web.guesses_kept_kept_pct`, {kept_pct: T.num(g.kept_pct, 0)});
+    if (ok(g.reply_pct)) return T(`web.reply_pct_of_words_guessed`, {reply_pct: T.num(g.reply_pct, 0)});
     return null;
   }
   function fmtTs(seconds) {
@@ -3055,9 +3055,10 @@
     // Clear a leftover "takes effect when you load" notice once a model is ready.
     const stale = $("selfTuneNote");
     if (stale && !stale.dataset.tuneError && state.loadedModel
-        && /takes effect when you load/.test(stale.textContent || "")) {
+        && stale.dataset.noticeCode === "on_load") {
       stale.hidden = true;
       stale.textContent = "";
+      stale.dataset.noticeCode = "";
     }
     for (const o of state.opts) {
       const b = document.querySelector(`.opt[data-id="${o.id}"] button[data-v="auto"]`);
@@ -3092,8 +3093,10 @@
     const few = t && t.known && (t.replies_learned || 0) < 10;
     if (few && !(opt && opt.running)) {
       $("optTip").textContent = T("web.tip_auto_tune_can_try_this");
-    } else if ($("optTip") && !($("optTip").textContent || "").startsWith("config.toml")) {
+      $("optTip").dataset.kind = "tip";
+    } else if ($("optTip") && $("optTip").dataset.kind !== "file_errors") {
       $("optTip").textContent = "";
+      $("optTip").dataset.kind = "";
     }
   }
   let _tuneWasRunning = false;
@@ -3328,7 +3331,7 @@
     state.optsRenderSignature = sig;
     const pins = pinnedUnderSelfTune();
     const note = pins.length
-      ? `<div class="pinnote" id="pinNote">${T("web.pins_count_pinned_self_tuning_cant", {pins_count: pins.length, pins: pins.map(o => o.label).join(", ")})}</div>`
+      ? `<div class="pinnote" id="pinNote">${T("web.pins_count_pinned_self_tuning_cant", {pins_count: pins.length, pins: T.join(pins.map(o => o.label))})}</div>`
       : "";
     const selRow = (state.modelRows || {})[$("modelSelect")?.value] || {};
     const gguf = selRow.source === "gguf";
@@ -3391,9 +3394,9 @@
         method: "POST",
         body: JSON.stringify({ self_tune: value }),
       });
-      if (el) { el.hidden = !j.notice; el.textContent = j.notice || ""; }
+      if (el) { el.hidden = !j.notice; el.textContent = j.notice || ""; el.dataset.noticeCode = j.notice_code || ""; }
     } catch (e) {
-      if (el) { el.hidden = false; el.textContent = e.error || e.message || String(e); }
+      if (el) { el.hidden = false; el.textContent = e.error || e.message || String(e); el.dataset.noticeCode = ""; }
     }
   }
   async function loadOpts() {
@@ -3409,7 +3412,7 @@
     renderActive(state.active);
     renderThink();
     refreshTuneResult();
-    if (state.fileErrors.length) $("optTip").textContent = T(`web.config_toml_file_errors`, {file_errors: state.fileErrors.join("; ")});
+    if (state.fileErrors.length) { $("optTip").textContent = T(`web.config_toml_file_errors`, {file_errors: T.join(state.fileErrors, "clause")}); $("optTip").dataset.kind = "file_errors"; }
   }
 
   let modelsInflight = null;
@@ -3559,7 +3562,9 @@
     if (st === "ready") { dot.classList.add("ok"); text.textContent = T(`web.ready_model_name_2`, {model_name: snap.model_name || ""}); }
     else if (st === "error") { dot.classList.add("err"); text.textContent = T(`web.error_error`, {error: snap.error || ""}); }
     else if (st === "idle") { text.textContent = snap.error ? T(`web.idle_error`, {error: snap.error}) : T("web.idle_pick_a_model"); }
-    else { dot.classList.add("busy"); text.textContent = st.replaceAll("_", " "); }
+    else { dot.classList.add("busy"); text.textContent = T.has(`web.status_${st}`) ? T(`web.status_${st}`) : st.replaceAll("_", " "); }
+    // Day 32: what the pill shows is looked up; code checks the status itself.
+    text.dataset.status = st;
     // Day 32: the pill is one line; the full text (a long model name) on hover.
     $("statusPill").title = text.textContent;
 
@@ -3569,7 +3574,9 @@
     if (ed) { ed.hidden = !snap.error_detail; if (snap.error_detail) $("errDetailText").textContent = snap.error_detail; }
     const pc = $("progressCard");
     if (pc) {
-      const bad = /error|fail|Errno|No space|OSError/i.test(prog || "");
+      // Day 32: the server marks its own error lines (p.problem); worker
+      // output, which is always English, is still recognised by its words.
+      const bad = (snap.progress || []).slice(-12).some(p => p && p.problem) || /error|fail|Errno|No space|OSError/i.test(prog || "");
       pc.classList.toggle("problem", bad);
       pc.classList.toggle("demoted", !bad);
     }
@@ -3639,10 +3646,12 @@
       window.dispatchEvent(new CustomEvent('caravan-worker-status-error'));
       if (typeof updatePending === "function" && updatePending()) {
         $("statusText").textContent = T("web.updating");
+        $("statusText").dataset.status = "updating";
         $("statusDot").className = "dot";
         if (typeof paintUpdateBadge === "function") paintUpdateBadge({ progress: { phase: "updating" } });
       } else {
         $("statusText").textContent = T("web.ui_server_unreachable");
+        $("statusText").dataset.status = "unreachable";
         $("statusDot").className = "dot err";
       }
     }
@@ -3857,20 +3866,22 @@
   const LS_SID = "caravan.session", LS_MSGS = "caravan.messages", LS_HIST = "caravan.history";
   const CTX_TOKENS = 32768;   // trim history to leave room for max_tokens
   function approxTokens(s) { return Math.ceil(String(s || "").length / 4); }
+  // Day 32: Caravan's own error bubbles carry data-bad="1" (see markBad);
+  // these English starts only catch chats saved before that.
+  const LEGACY_BAD_STARTS = ["(error:", "(no reply"];
   function isBadAssistantText(s) {
     const t = String(s || "").trim();
     if (!t) return true;
-    if (t.startsWith("(error:")) return true;
-    if (t.startsWith("(no reply")) return true;
-    return false;
+    return LEGACY_BAD_STARTS.some((p) => t.startsWith(p));
   }
+  function markBad(el) { if (el) el.dataset.bad = "1"; return el; }
   function historyFromDom() {
     const out = [];
     for (const el of $("messages").querySelectorAll(".msg")) {
       const role = el.classList.contains("user") ? "user" : "assistant";
       const body = el.querySelector(".body");
       const text = (body ? body.textContent : "") || "";
-      if (role === "assistant" && isBadAssistantText(text)) continue;
+      if (role === "assistant" && (el.dataset.bad === "1" || isBadAssistantText(text))) continue;
       if (!text.trim()) continue;
       out.push({ role, content: text });
     }
@@ -3962,9 +3973,8 @@
     const text = fromQueue ? queuedText.trim() : $("input").value.trim();
     if (!text) return;
     // Only send when worker reports ready.
-    const pill = ($("statusText").textContent || "");
-    if (!pill.startsWith("ready")) {
-      addMsg("assistant", T("web.error_model_not_ready_wait_for"));
+    if ($("statusText").dataset.status !== "ready") {
+      markBad(addMsg("assistant", T("web.error_model_not_ready_wait_for")));
       return;
     }
     if (!fromQueue) $("input").value = "";
@@ -4118,9 +4128,9 @@
           nd.className = "memory-note";
           nd.style.cssText = "margin-top:6px;font-size:.72rem;color:var(--muted);font-family:var(--mono);";
           const bits = [];
-          if ((mg.trimmed_turns|0) > 0) bits.push(T(`web.moved_trimmed_turns_oldest_turn_v`, {trimmed_turns: mg.trimmed_turns, v: mg.trimmed_turns===1?"":T("web.s")}));
-          if ((mg.recalled_snippets|0) > 0) bits.push(T(`web.recalled_recalled_snippets_snippet_v`, {recalled_snippets: mg.recalled_snippets, v: mg.recalled_snippets===1?"":T("web.s")}));
-          nd.textContent = bits.join("; ");
+          if ((mg.trimmed_turns|0) > 0) bits.push(T.plural("web.moved_oldest_turns_to_notes", mg.trimmed_turns));
+          if ((mg.recalled_snippets|0) > 0) bits.push(T.plural("web.recalled_snippets", mg.recalled_snippets));
+          nd.textContent = T.join(bits, "clause");
           asst.appendChild(nd);
         }
         if (meta.garble && meta.garble.message) {
@@ -4139,6 +4149,7 @@
         if (!full) bodyEl.textContent = T("web.reply_cut_off");
       } else if (!full) {
         bodyEl.textContent = T("web.no_reply_try_again_or_reload");
+        markBad(asst);
       }
       // Commit this turn to history only when we got a real answer (not error/empty).
       // A stopped reply keeps its words so far (the model sees what you saw).
@@ -4165,6 +4176,7 @@
         }
       } else {
         bodyEl.textContent = full ? stripMarkers(full) : T(`web.error_msg`, {msg});
+        if (!full) markBad(asst);
       }
     } finally {
       clearTimeout(firstTimer);
@@ -4320,14 +4332,14 @@
     hideTuneDone();
     try {
       const j = await api("/api/settings/reset-tuning", { method: "POST", body: "{}" });
-      if (note) { note.hidden = !j.notice; note.textContent = j.notice || ""; }
+      if (note) { note.hidden = !j.notice; note.textContent = j.notice || ""; note.dataset.noticeCode = j.notice_code || ""; }
       paintTuneResult($("tuneResult"), "");
       paintOptStartLabel(null);
       refreshTuneResult();
       showTuneDone(T("web.tuning_reset_saved_results_for_this"), 8000);
     } catch (e) {
       const msg = e.error || e.message || String(e);
-      if (note) { note.hidden = false; note.textContent = msg; }
+      if (note) { note.hidden = false; note.textContent = msg; note.dataset.noticeCode = ""; }
       showTuneDone(T(`web.reset_failed_msg`, {msg}), 8000);
     } finally {
       b.classList.remove("is-busy"); b.textContent = T("web.reset_tuning");
@@ -4452,7 +4464,7 @@
   let nodesTimer = null;
   let nodesInflight = false;
   let topoOrder = [];       // stable card order from last successful poll
-  const Topo = window.CaravanTopoLive || { STALE_MS: 15000, isOffline: (n)=>!!(n&&n.offline), liveCount: (ns)=> (ns||[]).filter(n=>n&&!n.offline).length, shouldShowSplitSections: (ns)=>((ns||[]).filter(n=>n&&!n.offline).length>=2), offlineLabel: ()=>"offline" };
+  const Topo = window.CaravanTopoLive || { STALE_MS: 15000, isOffline: (n)=>!!(n&&n.offline), liveCount: (ns)=> (ns||[]).filter(n=>n&&!n.offline).length, shouldShowSplitSections: (ns)=>((ns||[]).filter(n=>n&&!n.offline).length>=2), offlineLabel: ()=>T("web.offline") };
   function syncSplitSections(nodes) {
     const show = Topo.shouldShowSplitSections(nodes || [], Date.now(), nodeFreshAt);
     for (const id of ["balancePanel", "thunderboltPanel"]) {
@@ -4470,7 +4482,7 @@
     const led = card.querySelector("[data-led]");
     if (led) led.classList.toggle("on", !off);
     const meta = card.querySelector("[data-meta]");
-    if (meta) meta.textContent = off ? Topo.offlineLabel(n, stale && !(n && n.offline)) : "live";
+    if (meta) meta.textContent = off ? Topo.offlineLabel(n, stale && !(n && n.offline)) : T("web.live");
   }
   const esc = (t) => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   function barLevel(pct) {
@@ -4589,7 +4601,7 @@
     if (dk.total_gb != null) h += nbar(T("web.disk"), dPct, T(`web.free_gb_gb_free`, {free_gb: dk.free_gb ?? "?"}));
     if (n.temp_c != null) {
       const tempPct = Math.max(0, Math.min(100, (n.temp_c - 20) / 80 * 100));
-      h += nbar(T("web.temp"), tempPct, T(`web.temp_c_c`, {temp_c: n.temp_c.toFixed(0)}));
+      h += nbar(T("web.temp"), tempPct, T(`web.temp_c_c`, {temp_c: T.num(n.temp_c, 0)}));
       if (n.thermal_pressure) h += `<div class="kv"><span>${T("web.thermal_pressure")}</span><b>${esc(n.thermal_pressure)}</b></div>`;
     } else if (n.thermal_pressure) {
       h += `<div class="kv"><span>${T("web.temp")}</span><b>${esc(n.thermal_pressure)}</b></div>`;
@@ -4898,7 +4910,7 @@
       if (opts.signal) init.signal = opts.signal;
       const r = await fetch(path, init);
       const j = await r.json().catch(function(){ return {}; });
-      if (!r.ok) throw new Error(j.error || r.statusText);
+      if (!r.ok) { const err = new Error(j.error || r.statusText); err.status = r.status; throw err; }
       if (/^\/api\/models\/(load|stop)$/.test(path) && init.method === "POST")
         window.dispatchEvent(new CustomEvent("caravan-models-changed"));
       return j;
@@ -4991,17 +5003,16 @@
     function filteredQuants(g) {
       return (g.quants || []).filter(passMaxGb).filter(passFit);
     }
-    function macWord(n) { return n === 1 ? T("web.mac") : T("web.macs"); }
     function updatePickerStatus() {
       const groups = (state.groups || []).filter(passChips);
       const n = groups.length;
-      const parts = [n + (n === 1 ? " model" : " models")];
+      const parts = [T.plural("web.n_models", n)];
       const ks = [...state.fit].map((c) => {
         const m = /^fits-on-(\d+)$/.exec(c);
         return m ? parseInt(m[1], 10) : null;
       }).filter((k) => k != null).sort((a, b) => a - b);
-      if (ks.length === 1) parts.push(T(`web.fit_on_v_mac_word`, {v: ks[0], mac_word: macWord(ks[0])}));
-      else if (ks.length > 1) parts.push(T(`web.fit_on_ks`, {ks: ks.map((k) => k + " " + macWord(k)).join(" or ")}));
+      if (ks.length === 1) parts.push(T.plural("web.fit_on_n_macs", ks[0]));
+      else if (ks.length > 1) parts.push(T(`web.fit_on_ks`, {ks: T.join(ks.map((k) => T.plural("web.n_macs", k)), "or")}));
       const meta = state.searchMeta || {};
       if (meta.max_split_stages && meta.nodes_used != null && meta.nodes_used > meta.max_split_stages) {
         parts.push(T(`web.nodes_used_mac_split_coming_later`, {nodes_used: (meta.nodes_used)}));
@@ -5052,7 +5063,7 @@
         head.innerHTML = `<span class="p-dot ${fit.color || g.fit_color || "gray"}"></span>
           <span class="p-title">${escapeHtml(g.base)}</span>
           ${g.cloud ? `<span class="p-cloud">${T("web.cloud_2")}</span>` : ""}
-          <span class="p-meta">${T("web.size_label_quants_count_quant_v", {size_label: escapeHtml(sizeLabel(g, quants)), quants_count: quants.length, v: quants.length===1?"":T("web.s"), source: escapeHtml(g.source || "")})}</span>`;
+          <span class="p-meta">${T.plural("web.size_quants_source", quants.length, {size_label: escapeHtml(sizeLabel(g, quants)), source: escapeHtml(g.source || "")})}</span>`;
         if (g.tooltip) head.title = g.tooltip;
         const reasonEl = document.createElement("div");
         reasonEl.className = "p-meta";
@@ -5304,7 +5315,7 @@
         };
       });
     }
-    function fmtBytes(b) { return b == null ? "—" : (b >= 1e9 ? T(`web.v_gb`, {v: ((b/1e9).toFixed(2))}) : T(`web.v_mb`, {v: ((b/1e6).toFixed(0))})); }
+    function fmtBytes(b) { return b == null ? "—" : (b >= 1e9 ? T(`web.v_gb`, {v: (T.num(b/1e9, 2))}) : T(`web.v_mb`, {v: (T.num(b/1e6, 0))})); }
     function fmtEta(s) {
       if (s == null || !isFinite(s)) return "—";
       s = Math.round(s); if (s < 60) return T(`web.s_s_2`, {s: (s)});
@@ -5323,8 +5334,7 @@
       return false;
     }
     function macOrdinal(n) {
-      const suf = (n % 100 >= 10 && n % 100 <= 20) ? "th" : ({1:"st",2:"nd",3:"rd"}[n % 10] || "th");
-      return n + suf;
+      return T.ordinal(n);  // Day 32: "1st", "2nd", … from the strings file
     }
     function plainDownloadError(s) {
       const t = String(s || "");
@@ -5430,12 +5440,18 @@
         tHave += have; tTot += tot; if (st === "running") tSpeed += p.speed_bps || 0;
         const starting = st === "running" && !have;
         const pct = st === "done" ? 100 : (p.pct || 0);
-        const speed = p.speed_bps ? T(`web.v_mb_s`, {v: ((p.speed_bps / 1e6).toFixed(1))}) : "";
+        const speed = p.speed_bps ? T(`web.v_mb_s`, {v: (T.num(p.speed_bps / 1e6, 1))}) : "";
         const eta = st === "running" && p.eta_s != null ? T(`web.eta_fmt_eta`, {fmt_eta: fmtEta(p.eta_s)}) : "";
         tBase += p.resume_base || 0;
-        let note = (p.msg || "").startsWith("can't read") ? p.msg : (p.stalled ? T("web.no_new_bytes_for_30s_stalled") : (p.stage || ""));
-        if (st === "running" && p.retry && p.retry.n) note = T(`web.network_error_retry_n_of_v`, {n: p.retry.n, of: p.retry.of, v: note && note.startsWith("network") ? "" : ` · ${note}`});
-        if (j.resuming && p.resume_base) note = T(`web.kept_fmt_bytes_already_on_disk`, {fmt_bytes: fmtBytes(p.resume_base), v: note && !String(note).startsWith("starting") ? " · " + note : ""});
+        // Day 32: msg_code / stage_code instead of matching the English words.
+        const cantRead = p.msg_code === "cant_read";
+        let note = cantRead ? p.msg : (p.stalled ? T("web.no_new_bytes_for_30s_stalled") : (p.stage || ""));
+        let noteIsStage = !cantRead && !p.stalled && !!p.stage;
+        if (st === "running" && p.retry && p.retry.n) {
+          note = T(`web.network_error_retry_n_of_v`, {n: p.retry.n, of: p.retry.of, v: note && noteIsStage && p.stage_code === "network_retry" ? "" : ` · ${note}`});
+          noteIsStage = false;
+        }
+        if (j.resuming && p.resume_base) note = T(`web.kept_fmt_bytes_already_on_disk`, {fmt_bytes: fmtBytes(p.resume_base), v: note && !(noteIsStage && p.stage_code === "starting") ? " · " + note : ""});
         const mac = friendlyMacName(r, p);
         rowsHtml += `<div class="j-node ${p.stalled ? "stalled" : ""} ${starting ? "starting" : ""}">
           <div class="j-line"><b>${escapeHtml(mac)}</b><span>${starting ? T("web.starting") : pct + "%"}</span></div>
@@ -5448,7 +5464,7 @@
       let head = `<div class="j-head"><span class="j-state ${st}">${resumingNow ? T("web.resuming") : (st === "running" && j.resuming ? T("web.downloading_resumed") : stLabel)}</span><span>${escapeHtml(j.repo_id || "")}</span>`;
       if (j.note) head += `<span class="p-meta">· ${escapeHtml(j.note)}</span>`;
       head += `</div>`;
-      if (runners.length > 1 && tTot) head += `<div class="j-sub">${T("web.all_macs_fmt_bytes_fmt_bytes2", {fmt_bytes: fmtBytes(tHave), fmt_bytes2: fmtBytes(tTot), v: tSpeed ? T(`web.v_mb_s_2`, {v: (tSpeed/1e6).toFixed(1)}) : ""})}</div>`;
+      if (runners.length > 1 && tTot) head += `<div class="j-sub">${T("web.all_macs_fmt_bytes_fmt_bytes2", {fmt_bytes: fmtBytes(tHave), fmt_bytes2: fmtBytes(tTot), v: tSpeed ? T(`web.v_mb_s_2`, {v: T.num(tSpeed/1e6, 1)}) : ""})}</div>`;
       if (st === "failed" && j.error) head += `<div class="j-sub" style="color:var(--rose)">${escapeHtml(plainDownloadError(j.error))}</div>`;
       let actions = `<div class="j-actions">`;
       if (st === "running") actions += `<button type="button" class="ghost" data-act="cancel">${T("web.stop")}</button>`;
@@ -5561,7 +5577,7 @@
               return;
             }
           } catch (e) {
-            if (/unknown job|not found|404/i.test(e.message || "")) {
+            if (e && e.status === 404) {  // Day 32: HTTP status, not the error's words
               if (!anyActiveJobs(id)) $("pickerStatus").textContent = T("web.web_server_restarted_re_attaching_to");
               await new Promise((r) => setTimeout(r, 3000));
               try {
@@ -5600,9 +5616,9 @@
       let loc = "";
       if (pl.mode === "split") loc = T(`web.split_labs`, {labs: labs.join("+")});
       else if (pl.mode === "all" || (m.n_nodes > 1 && held.length >= m.n_nodes)) loc = "all";
-      else loc = labs.join(", ");
+      else loc = T.join(labs);
       const part = m.incomplete_on || [];
-      if (part.length) loc += T(`web.v_partial_on_part`, {v: (loc ? " · " : ""), part: part.join(", ")});
+      if (part.length) loc += T(`web.v_partial_on_part`, {v: (loc ? " · " : ""), part: T.join(part)});
       // Day 31: same rule as the Settings load list.
       if (m.in_settings === false) loc += (loc ? " · " : "") + (m.settings_note || T("web.not_in_settings_files_incomplete"));
       return loc;
@@ -5763,7 +5779,7 @@
 </dialog>
 <dialog id="loadNowDialog" aria-labelledby="loadNowTitle">
   <h3 id="loadNowTitle">{{web.download_finished}}</h3>
-  <p>{{web.no_model_is_loaded_load}} <b id="loadNowName"></b> {{web.now}}</p>
+  <p>{{web.no_model_is_loaded_load_name_now_html}}</p>
   <button type="button" class="primary" id="loadNowYes">{{web.load_now}}</button>
   <button type="button" id="loadNowNo">{{web.not_now}}</button>
 </dialog>

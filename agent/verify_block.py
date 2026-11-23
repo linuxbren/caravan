@@ -1,8 +1,15 @@
 """Pure cache accounting for one split speculative block (no MLX dependency)."""
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 def cache_plan(draft_count, accepted, *, stopped_in_draft=False):
     if draft_count < 0 or not 0 <= accepted <= draft_count:
-        raise ValueError("invalid speculative prefix")
+        raise ValueError(T("agent.verify_block.invalid_speculative_prefix"))
     # Target consumed [previous token, d1..dk], not the bonus output token.
     keep = accepted if stopped_in_draft else accepted + 1
     target_trim = draft_count + 1 - keep

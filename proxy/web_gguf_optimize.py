@@ -17,6 +17,13 @@ import gguf_split as G
 import gguf_tune as GT
 import web_tune_errors
 import web_tune_step
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 class GgufOptimizer:
@@ -117,15 +124,15 @@ class GgufOptimizer:
     def start(self, source="optimize_now", fresh=True):
         with self._lock:
             if self.state["running"]:
-                raise RuntimeError("optimize already running")
+                raise RuntimeError(T("server.web_gguf_optimize.optimize_already_running"))
             self.source = source or "optimize_now"
             self.fresh = bool(fresh)
             snap = self.mgr.snapshot()
             entry = copy.deepcopy(getattr(self.mgr, "_loaded_entry", None) or {})
             if snap.get("status") != "ready" or not snap.get("model_id"):
-                raise RuntimeError("load a model first")
+                raise RuntimeError(T("server.web_gguf_optimize.load_a_model_first"))
             if snap.get("backend") != "llama" or entry.get("source") != "gguf":
-                raise RuntimeError("GGUF Auto-tune needs a GGUF model loaded")
+                raise RuntimeError(T("server.web_gguf_optimize.gguf_auto_tune_needs_a_gguf"))
             self.entry, self.model_id = entry, snap["model_id"]
             self.settings = snap.get("settings") or {}
             nodes = (snap.get("gguf") or {}).get("nodes") or [None]
@@ -183,13 +190,13 @@ class GgufOptimizer:
             trial = bool(cur and not self._cancel.is_set())
             if cur and not self._cancel.is_set():
                 cur["state"] = "running"
-                label = f"reloading with {cur['name']}={tune.get(cur['name'])}"
+                label = T("server.web_gguf_optimize.reloading_with_name_name2", name=cur['name'], name2=tune.get(cur['name']))
                 step = web_tune_step.format_step(
                     action="reloading", knob=cur["name"],
                     value=tune.get(cur["name"]),
                 )
             else:
-                label = "reloading with the best settings"
+                label = T("server.web_gguf_optimize.reloading_with_the_best_settings")
                 step = web_tune_step.format_step(action="reloading_winner")
             self.state["phase"] = label
             self.state["step"] = step
@@ -202,7 +209,7 @@ class GgufOptimizer:
                         entry=dict(self.entry, tune_override=dict(tune), strict_tune=trial))
         snap = self.mgr.snapshot()
         if snap.get("status") != "ready":
-            raise RuntimeError(snap.get("error") or "reload failed")
+            raise RuntimeError(snap.get("error") or T("server.web_gguf_optimize.reload_failed"))
         dt = time.time() - t0
         with self._lock:
             self.state["reloads"] += 1
@@ -348,7 +355,7 @@ class GgufOptimizer:
             with self._lock:
                 for i in self.state["schedule"]:
                     if i["state"] in ("running", "pending"):
-                        i["state"] = "skipped"; i["skip"] = i["skip"] or "not run"
+                        i["state"] = "skipped"; i["skip"] = i["skip"] or T("server.web_gguf_optimize.not_run")
             phase = getattr(self, "_pending_phase", "done")
             if self.state.get("error") and phase == "done":
                 phase = "stopped (error)"

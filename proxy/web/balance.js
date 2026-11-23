@@ -44,11 +44,12 @@
   }
   function reloadSteps(w) {
     const st=(w?.status==='ready' && reload && !reload.external && w.lead_pid===reload.oldPid)?'queued':(w?.status || 'queued'), labels=reload?.target?.stages?.map(s=>s.label) || latest?.worker?.balance?.node_ids || [];
-    const msgs=(w?.progress || []).map(p=>p.msg || '').join('\n');
+    // Day 32: a stage counts as loaded from its coded progress line, not its words.
+    const stageReady=(label,count)=>(w?.progress || []).some(p=>p && p.code==='stage_ready' && p.label===label && String(p.count)===String(count));
     const stopping=st==='stopping'||st==='queued';
     return [stopping?T('web.stopping_old_model'):T('web.old_model_stopped'),...labels.map((label,i)=>{
       const last=i===labels.length-1;
-      const ready=st==='ready' || (!last && st==='starting_lead') || msgs.includes(label+': '+(reload?.target?.counts?.[i] || '')+' layers ready');
+      const ready=st==='ready' || (!last && st==='starting_lead') || stageReady(label, reload?.target?.counts?.[i] || '');
       return ready?T(`web.label_loaded`, {label}):stopping?T(`web.waiting_for_label`, {label}):st==='starting_packer'&&last?T(`web.waiting_for_label`, {label}):T(`web.loading_on_label`, {label});
     }),st==='ready'?T('web.ready'):T('web.waiting_for_the_model_to_answer')];
   }
@@ -110,26 +111,26 @@
   }
   function draw(next) {
     memory.replaceChildren(); controls.replaceChildren(); technical.replaceChildren();
-    $("balanceModelName").textContent = T(`web.text_content_stages_count_v_memory`, {text_content: $("balanceModel").selectedOptions[0]?.textContent || model(), stages_count: next.stages.length, v: next.stages.length === 1 ? T('web.mini') : T('web.minis')});
+    $("balanceModelName").textContent = T.plural("web.balance_model_minis_estimates", next.stages.length, {text_content: $("balanceModel").selectedOptions[0]?.textContent || model()});
     next.stages.forEach((stage, i) => {
-      const c = V.card(stage), gb = n => n == null ? 'unknown' : T(`web.v_gb`, {v: ((n/1e9).toFixed(2))});
+      const c = V.card(stage), gb = n => n == null ? 'unknown' : T(`web.v_gb`, {v: (T.num(n/1e9, 2))});
       const card = text('article', ''); card.className = 'balance-card' + (c.safe ? '' : ' unsafe');
       const head = text('div', ''); head.className='balance-card-head'; head.append(text('strong', c.label), text('span', T('web.estimated_memory')));
       const bar = text('div', ''); bar.className='balance-bar'; bar.setAttribute('role','img');
       bar.setAttribute('aria-label', c.known ? T(`web.label_estimated_estimated_use_gb_gb`, {label: c.label, estimated_use_gb: stage.estimated_use_gb, capacity: c.capacity}) : T(`web.label_memory_unknown`, {label: c.label}));
       const fill=text('i',''); fill.style.width=c.percent+'%'; bar.append(fill);
       const values=text('div',''); values.className='balance-card-values';
-      values.append(text('span',c.known ? T(`web.estimated_use_gb_gb_for_model`, {estimated_use_gb: stage.estimated_use_gb.toFixed(2)}) : T('web.model_memory_unknown')), text('span',c.known ? T(`web.headroom_gb_gb_left`, {headroom_gb: stage.headroom_gb.toFixed(2)}) : T('web.free_memory_unknown')));
-      card.append(head,bar,values,text('small',c.known ? T(`web.usable_model_budget_capacity_gb_room`, {capacity: c.capacity.toFixed(2)}) : T('web.refresh_when_this_mini_is_reachable')));
+      values.append(text('span',c.known ? T(`web.estimated_use_gb_gb_for_model`, {estimated_use_gb: T.num(stage.estimated_use_gb, 2)}) : T('web.model_memory_unknown')), text('span',c.known ? T(`web.headroom_gb_gb_left`, {headroom_gb: T.num(stage.headroom_gb, 2)}) : T('web.free_memory_unknown')));
+      card.append(head,bar,values,text('small',c.known ? T(`web.usable_model_budget_capacity_gb_room`, {capacity: T.num(c.capacity, 2)}) : T('web.refresh_when_this_mini_is_reachable')));
       if (!c.safe) card.append(text('small',T('web.not_enough_known_free_memory_apply')));
       memory.append(card);
       technical.append(text('p', T(`web.label_v_v2_minimum_margin_margin`, {label: stage.label, v: next.format === 'gguf' ? T(`web.device_share_v`, {v: next.counts[i]}) : T(`web.layers_v_v2`, {v: stage.range[0], v2: stage.range[1]-1}), v2: stage.safe ? T('web.memory_fits') : T('web.too_tight'), margin_gb: next.margin_gb})));
       technical.append(text('p', T(`web.label_disk_gb_logical_gb2_allocated`, {label: stage.label, gb: gb(stage.on_disk_bytes), gb2: gb(stage.allocated_bytes), v: stage.cache_scope ? ' · ' + stage.cache_scope + (stage.cache_path ? ' ('+stage.cache_path+')' : '') : ''})));
-      if ((stage.links || []).length) technical.append(text('small',T(`web.linked_files_left_untouched_links_use`, {links: stage.links.join(', ')})));
+      if ((stage.links || []).length) technical.append(text('small',T(`web.linked_files_left_untouched_links_use`, {links: T.join(stage.links)})));
       if (stage.not_needed_for_plan === null) technical.append(text('small',T('web.retained_files_unknown')));
-      else if ((stage.not_needed_for_plan || []).length) technical.append(text('p', T(`web.not_needed_for_this_plan_kept`, {gb: gb(stage.retained_bytes), not_needed_for_plan: stage.not_needed_for_plan.join(', ')})));
+      else if ((stage.not_needed_for_plan || []).length) technical.append(text('p', T(`web.not_needed_for_this_plan_kept`, {gb: gb(stage.retained_bytes), not_needed_for_plan: T.join(stage.not_needed_for_plan)})));
       const downloads = stage.downloads;
-      technical.append(text('small', downloads === null ? T('web.files_unknown_reload_blocked') : downloads.length ? T(`web.download_from_source_downloads_v`, {downloads: downloads.join(', '), v: stage.download_bytes == null ? '' : T(`web.v_gb_2`, {v: (stage.download_bytes/1e9).toFixed(2)})}) : T('web.required_shards_already_here')));
+      technical.append(text('small', downloads === null ? T('web.files_unknown_reload_blocked') : downloads.length ? T(`web.download_from_source_downloads_v`, {downloads: T.join(downloads), v: stage.download_bytes == null ? '' : T(`web.v_gb_2`, {v: T.num(stage.download_bytes/1e9, 2)})}) : T('web.required_shards_already_here')));
       if (!stage.metadata_ready) technical.append(text('p',T('web.config_index_or_tokenizer_is_missing')));
       if (!adjusting) return;
       const row=text('div',''); row.className='balance-boundary';
@@ -257,7 +258,7 @@
   window.addEventListener("caravan-reply-stats", event => {
     const {stats, model: mid} = event.detail;
     if (measuredModel && mid === measuredModel && stats.write_tok_s != null) {
-      $("balanceSpeed").textContent = T(`web.measured_after_reload_write_tok_s`, {write_tok_s: Number(stats.write_tok_s).toFixed(2), v: stats.ttft_s == null ? T("web.unknown") : T(`web.ttft_s_s`, {ttft_s: (Number(stats.ttft_s).toFixed(2))})});
+      $("balanceSpeed").textContent = T(`web.measured_after_reload_write_tok_s`, {write_tok_s: T.num(stats.write_tok_s, 2), v: stats.ttft_s == null ? T("web.unknown") : T(`web.ttft_s_s`, {ttft_s: (T.num(stats.ttft_s, 2))})});
     }
   });
 })();

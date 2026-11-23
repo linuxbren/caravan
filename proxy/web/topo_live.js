@@ -25,9 +25,9 @@
   }
 
   function offlineLabel(node, stale) {
-    if (stale && !(node && node.offline)) return "offline";
-    if (node && node.error === OFF_REASON) return T("web.offline_caravan_is_off");
-    return "offline";
+    if (stale && !(node && node.offline)) return T("web.offline");
+    if (node && node.error_code === "caravan_off") return T("web.offline_caravan_is_off");
+    return T("web.offline");
   }
 
   const api = { STALE_MS, OFF_REASON, isOffline, liveCount, shouldShowSplitSections, offlineLabel };

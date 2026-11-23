@@ -46,7 +46,7 @@ import web_picker as P  # noqa: E402
 from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 HTML = english_source(ROOT / "proxy/web/index.html")
-SERVER = (ROOT / "proxy/web_server.py").read_text()
+SERVER = english_source(ROOT / "proxy/web_server.py")
 PICKER_DOCS = (ROOT / "docs/MODEL_PICKER.md").read_text()
 DAY = (ROOT / "docs/DAY24.md").read_text()
 

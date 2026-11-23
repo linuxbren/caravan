@@ -5,6 +5,13 @@ import shlex
 import subprocess
 import worker_ownership as O
 import web_settings
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def tunnel_matches(command,target,port):
@@ -38,6 +45,6 @@ def adopt(mgr):
         mgr._loaded_entry=dict(id=meta["model_id"],name=meta.get("model_name") or meta["model_id"],source="mlx",lead_path=meta["model"],placement={"mode":"one","node_ids":[node["id"]]},run_mode="single",available_lead=True)
         settings=web_settings.normalize(meta.get("settings") or {})
         mgr._set(status="ready",model_id=meta["model_id"],model_name=mgr._loaded_entry["name"],lead_pid=pid,split=False,settings=settings,page_settings=settings)
-        mgr._note("adopted owned remote single-Mini worker and SSH tunnel; no reload")
+        mgr._note(T("server.web_remote_adopt.adopted_owned_remote_single_mini_worker"))
         return True
     except (OSError,ValueError,TypeError,KeyError,StopIteration,subprocess.SubprocessError):return False

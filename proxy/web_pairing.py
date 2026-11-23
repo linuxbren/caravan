@@ -10,6 +10,13 @@ import subprocess
 import sys
 import threading
 from urllib.parse import urlsplit
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 LOCK=threading.Lock()
 WEB=Path(__file__).resolve().parent/'web'
@@ -32,10 +39,10 @@ def start(app):
     if hasattr(app,'pairing'): return app.pairing
     with LOCK:
         if hasattr(app,'pairing'): return app.pairing
-        app.pairing=None;app.pairing_error='Mac pairing needs the current managed Mac installation.'
+        app.pairing=None;app.pairing_error=T("server.web_pairing.mac_pairing_needs_the_current_managed")
         if sys.platform!='darwin' and os.environ.get('CARAVAN_PAIRING_ENABLED')!='1': return None
         if os.environ.get('CARAVAN_PAIRING_ENABLED')=='0':
-            app.pairing_error='Mac pairing is turned off for this instance.';return None
+            app.pairing_error=T("server.web_pairing.mac_pairing_is_turned_off_for");return None
         try:
             import spake2
             from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -47,7 +54,7 @@ def start(app):
                                 active=lambda:active(app),baseline=app.configured_nodes).serve()
             app.pairing_error=None
         except (ImportError,OSError,ValueError):
-            app.pairing_error='Mac pairing could not start. Run caravan doctor; update Caravan or free its pairing address.'
+            app.pairing_error=T("server.web_pairing.mac_pairing_could_not_start_run")
         return app.pairing
 
 
@@ -81,7 +88,7 @@ def dispatch(handler,app):
     path=handler.path.split('?',1)[0]
     if path not in ('/pairing','/pairing.js','/pairing.css') and not path.startswith('/api/pairing/'): return False
     if not allowed(handler,post=handler.command=='POST'):
-        respond(handler,403,{'error':'For your security, open Caravan on this Mac at its localhost address to add or remove Macs.'});return True
+        respond(handler,403,{'error':T("server.web_pairing.for_your_security_open_caravan_on")});return True
     manager=start(app)
     if not manager:
         respond(handler,503,{'error':app.pairing_error});return True
@@ -92,7 +99,7 @@ def dispatch(handler,app):
     except Exception: authenticated=False
     is_session=path=='/api/pairing/session' and handler.command=='POST'
     if path.startswith('/api/pairing/') and not authenticated and not is_session:
-        respond(handler,403,{'error':'Open Topology → Add a Mac from this account: run caravan add-mini in Terminal.'});return True
+        respond(handler,403,{'error':T("server.web_pairing.open_topology_add_a_mac_from")});return True
     if handler.command=='GET':
         files={'/pairing':('pairing.html','text/html; charset=utf-8'),'/pairing.js':('pairing.js','text/javascript; charset=utf-8'),'/pairing.css':('pairing.css','text/css; charset=utf-8')}
         if path in files:
@@ -102,22 +109,22 @@ def dispatch(handler,app):
                 data=caravan_i18n.render_page(data.decode('utf-8')).encode('utf-8')
             respond(handler,200,data,ctype)
         elif path=='/api/pairing/state': respond(handler,200,{**manager.local_state(),'token':manager.local_token})
-        else: respond(handler,404,{'error':'Not found.'})
+        else: respond(handler,404,{'error':T("server.pairing.not_found")})
         return True
     if handler.command!='POST':
-        respond(handler,405,{'error':'Use the Caravan page.'});return True
+        respond(handler,405,{'error':T("server.web_pairing.use_the_caravan_page")});return True
     # This route deliberately bypasses the older permissive _body/_cors helpers.
     try:
         size=int(handler.headers.get('Content-Length','0'))
-        if not 0<size<=4096: raise ValueError('Invalid pairing request size.')
-        if handler.headers.get('Content-Type')!='application/json': raise ValueError('Use the Caravan page.')
+        if not 0<size<=4096: raise ValueError(T("server.pairing.invalid_pairing_request_size"))
+        if handler.headers.get('Content-Type')!='application/json': raise ValueError(T("server.web_pairing.use_the_caravan_page"))
         if not is_session and not secrets.compare_digest(handler.headers.get('X-Caravan-Pairing',''),manager.local_token):
-            respond(handler,403,{'error':'Refresh the Caravan page before continuing.'});return True
+            respond(handler,403,{'error':T("server.web_pairing.refresh_the_caravan_page_before_continuing")});return True
         body=json.loads(handler.rfile.read(size))
-        if not isinstance(body,dict): raise ValueError('Invalid pairing request.')
+        if not isinstance(body,dict): raise ValueError(T("server.pairing.invalid_pairing_request"))
         if is_session:
             if not secrets.compare_digest(str(body.get('capability','')),manager.capability):
-                respond(handler,403,{'error':'Open Topology → Add a Mac from the Caravan command for this account.'});return True
+                respond(handler,403,{'error':T("server.web_pairing.open_topology_add_a_mac_from_2")});return True
             respond(handler,200,{'connected':True},cookie=cookie_name+'='+manager.capability+'; HttpOnly; SameSite=Strict; Path=/')
             return True
         if path=='/api/pairing/code':
@@ -128,14 +135,14 @@ def dispatch(handler,app):
         elif path=='/api/pairing/remove': result=manager.remove(body.get('id'))
         elif path=='/api/pairing/remote-login':
             from pairing import SETTINGS_URL
-            if sys.platform!='darwin': raise ValueError('Open System Settings on the new Mac and turn on Remote Login for its current account.')
+            if sys.platform!='darwin': raise ValueError(T("server.web_pairing.open_system_settings_on_the_new"))
             subprocess.run(['/usr/bin/open',SETTINGS_URL],check=True,capture_output=True,timeout=5)
             result={'opened':True}
         else:
-            respond(handler,404,{'error':'Not found.'});return True
+            respond(handler,404,{'error':T("server.pairing.not_found")});return True
         if hasattr(app,'_nodes_cache'): app._nodes_cache=None
         respond(handler,200,result)
     except (ValueError,KeyError,TypeError,OSError,subprocess.SubprocessError):
         # Do not accidentally return PAKE payloads or credential/file contents.
-        respond(handler,400,{'error':'Could not finish. Check the code and Remote Login on the new Mac. If removing a Mac, unload the model first. Refresh this page to review any unfinished connection.'})
+        respond(handler,400,{'error':T("server.web_pairing.could_not_finish_check_the_code")})
     return True

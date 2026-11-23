@@ -5,6 +5,13 @@ import json
 import os
 from pathlib import Path
 from typing import NamedTuple, Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # Where each agent instance persists its own identity (see identity.py).
 # Deliberately outside the git repo -- this is runtime state, not source.
@@ -202,30 +209,30 @@ def resolve_llama_settings(overrides: Optional[dict] = None,
         try:
             v = int(raw[key])
         except (TypeError, ValueError):
-            raise ValueError(f"{key} must be an integer, got {raw[key]!r}")
+            raise ValueError(T("agent.config.key_must_be_an_integer_got", key_=key, raw=raw[key]))
         if v < minimum:
-            raise ValueError(f"{key} must be >= {minimum}, got {v}")
+            raise ValueError(T("agent.config.key_must_be_minimum_got_v", key_=key, minimum=minimum, v=v))
         return v
 
     fa = str(raw["flash_attn"]).strip().lower()
     if fa not in FLASH_ATTN_VALUES:
-        raise ValueError(f"flash_attn must be one of {FLASH_ATTN_VALUES}, got {raw['flash_attn']!r}")
+        raise ValueError(T("agent.config.flash_attn_must_be_one_of", flash_attn_values=FLASH_ATTN_VALUES, flash_attn=raw['flash_attn']))
     ctk = str(raw["cache_type_k"]).strip().lower()
     ctv = str(raw["cache_type_v"]).strip().lower()
     for name, v in (("cache_type_k", ctk), ("cache_type_v", ctv)):
         if v not in KV_CACHE_TYPES:
-            raise ValueError(f"{name} must be one of {KV_CACHE_TYPES}, got {v!r}")
+            raise ValueError(T("agent.config.name_must_be_one_of_kv", name=name, kv_cache_types=KV_CACHE_TYPES, v=v))
     if fa == "off" and ctv not in ("auto", "f32", "f16", "bf16"):
-        raise ValueError("a quantized V cache (cache_type_v) requires flash_attn on/auto")
+        raise ValueError(T("agent.config.a_quantized_v_cache_cache_type"))
     ngl = str(raw["n_gpu_layers"]).strip().lower()
     if ngl not in ("all", "auto"):
         try:
             int(ngl)
         except ValueError:
-            raise ValueError(f"n_gpu_layers must be an integer, 'all' or 'auto', got {ngl!r}")
+            raise ValueError(T("agent.config.n_gpu_layers_must_be_an", ngl=ngl))
     batch, ubatch = _int("batch_size", 32), _int("ubatch_size", 32)
     if ubatch > batch:
-        raise ValueError(f"ubatch_size ({ubatch}) must be <= batch_size ({batch})")
+        raise ValueError(T("agent.config.ubatch_size_ubatch_must_be_batch", ubatch=ubatch, batch=batch))
     cache_ram = _int("cache_ram_mib", -1)
     return LlamaSettings(
         n_slots=_int("n_slots", 1),

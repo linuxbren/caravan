@@ -46,6 +46,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "proxy"))
 from mlx_split import plan_split  # noqa: E402
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 SMALL = ["*.json", "*.jinja", "*.txt", "*.model", "*.tiktoken", "*.py"]
 LAYER = re.compile(r"(?:^|\.)layers\.(\d+)\.")
@@ -57,7 +64,7 @@ def n_layers_of(config):
     for c in (config, config.get("text_config") or {}):
         if c.get("num_hidden_layers"):
             return int(c["num_hidden_layers"])
-    raise ValueError("config has no num_hidden_layers")
+    raise ValueError(T("agent.mlx_split_fetch.config_has_no_num_hidden_layers"))
 
 
 def tied_of(config, weight_map):
@@ -107,7 +114,7 @@ def head_only_reason(config, weight_map):
     cfg = config or {}
     mt = str(cfg.get("model_type") or "")
     if mt.endswith("_mtp") or mt.endswith("_nextn"):
-        return f"{mt} is a guess-ahead helper head, not a chat model"
+        return T("agent.mlx_split_fetch.mt_is_a_guess_ahead_helper", mt=mt)
     if weight_map and not any("embed_tokens" in k or "wte" in k or "tok_embeddings" in k
                               for k in weight_map):
         idx = {int(m.group(1)) for k in weight_map for m in [LAYER.search(k)] if m}
@@ -116,7 +123,7 @@ def head_only_reason(config, weight_map):
         except Exception:
             n = None
         if n and len(idx) < n:
-            return f"checkpoint has {len(idx)} of {n} layers and no embeddings (helper head?)"
+            return T("agent.mlx_split_fetch.checkpoint_has_idx_of_n_layers", idx=len(idx), n=n)
     return ""
 
 
@@ -128,7 +135,7 @@ def plan_files(config, index, front_layers=None, with_vision=False):
     wm = index["weight_map"]
     why = head_only_reason(config, wm)
     if why:
-        raise ValueError(f"cannot split: {why}")
+        raise ValueError(T("agent.mlx_split_fetch.cannot_split_why", why=why))
     n = n_layers_of(config)
     fr, hr = plan_split(n, front_layers)
     tied = tied_of(config, wm)
@@ -147,7 +154,7 @@ def plan_stage_files(config, index, counts, with_vision=False):
     wm = index["weight_map"]
     why = head_only_reason(config, wm)
     if why:
-        raise ValueError(f"cannot split: {why}")
+        raise ValueError(T("agent.mlx_split_fetch.cannot_split_why", why=why))
     ranges = plan_ranges(n_layers_of(config), counts)
     tied = tied_of(config, wm)
     stages = [set() for _ in ranges]
@@ -229,7 +236,7 @@ def _emit_progress_loop(stop_evt, repo, dest, total_bytes, pid):
                 pid=pid, prev=prev,
             )
         else:
-            snap = {"have_bytes": 0, "source": "starting", "pct": 0, "msg": "starting…",
+            snap = {"have_bytes": 0, "source": "starting", "pct": 0, "msg": T("agent.mlx_split_fetch.starting"),
                     "t": time.time()}
         prev = snap
         try:
@@ -324,7 +331,7 @@ def _fetch_whole_repo(a, d, token, shown="all"):
             snapshot_download(a.repo, local_dir=str(d), token=token)
             if not _payload_files(d):
                 raise FileNotFoundError(
-                    f"no model files landed in {d} for {a.repo}"
+                    T("agent.mlx_split_fetch.no_model_files_landed_in_d", d=d, repo=a.repo)
                 )
             if sizes:
                 write_sizes(d, a.repo, {f: sizes[f] for f in names if f in sizes})
@@ -463,7 +470,7 @@ def _fetch_gguf(a, d, token):
             _range_fetch_all(a.repo, stage, names, sizes, token)
             for part in names:
                 if (stage / part).stat().st_size != sizes[part]:
-                    raise ValueError("The model download is incomplete. Press Resume to finish it.")
+                    raise ValueError(T("agent.mlx_split_fetch.the_model_download_is_incomplete_press"))
             for part in names:
                 target = d / part
                 target.parent.mkdir(parents=True, exist_ok=True)

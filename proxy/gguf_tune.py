@@ -20,6 +20,13 @@ from typing import Callable, Optional
 import gguf_split as G
 
 import caravan_prompts as P
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 MARGIN = 0.03
 STORE = Path("~/.caravan/gguf-tuned.json").expanduser()
@@ -260,18 +267,18 @@ def spec_verdict(challenger, incumbent, margin: float = MARGIN) -> dict:
             if t_c <= t_i * (1 + CHAT_TOLERANCE):
                 pass  # a long-prompt reply is not slower: judge on chats below
             else:
-                return {"won": False, "why": f"long-prompt read {lr_c:.0f} vs {lr_i:.0f} tok/s, long reply {t_c:.1f}s vs {t_i:.1f}s (guard)"}
+                return {"won": False, "why": T("server.gguf_tune.long_prompt_read_lr_c_vs_2", lr_c=lr_c, lr_i=lr_i, t_c=t_c, t_i=t_i)}
         else:
-            return {"won": False, "why": f"long-prompt read {lr_c:.0f} vs {lr_i:.0f} tok/s (guard)"}
+            return {"won": False, "why": T("server.gguf_tune.long_prompt_read_lr_c_vs", lr_c=lr_c, lr_i=lr_i)}
     cs_c, cs_i = chat_score(ch), chat_score(inc)
     if cs_i <= 0 or cs_c <= 0:
-        return {"won": False, "why": "no chat measurement"}
+        return {"won": False, "why": T("server.gguf_tune.no_chat_measurement")}
     if cs_c > cs_i * (1 + margin):
-        return {"won": True, "why": f"chats {100 * (cs_c / cs_i - 1):+.0f}%"}
+        return {"won": True, "why": T("server.gguf_tune.chats_v", v=100 * (cs_c / cs_i - 1))}
     ed_c, ed_i = ch.get("edit_write_tok_s"), inc.get("edit_write_tok_s")
     if ed_c and ed_i and ed_c >= ed_i * (1 + EDIT_GAIN) and cs_c >= cs_i * (1 - CHAT_TOLERANCE):
-        return {"won": True, "why": f"code edits {100 * (ed_c / ed_i - 1):+.0f}%, chats {100 * (cs_c / cs_i - 1):+.0f}%"}
-    return {"won": False, "why": f"chats {100 * (cs_c / cs_i - 1):+.0f}%"}
+        return {"won": True, "why": T("server.gguf_tune.code_edits_v_chats_v2", v=100 * (ed_c / ed_i - 1), v2=100 * (cs_c / cs_i - 1))}
+    return {"won": False, "why": T("server.gguf_tune.chats_v", v=100 * (cs_c / cs_i - 1))}
 
 
 # Day 28 tuning fix 2: Auto-tune ends by measuring stock and its pick in the
@@ -467,8 +474,7 @@ class GgufTuner:
         if sw is None and pw and not failed:
             keep = True  # stock could not be measured; the pick replied fine
         changed = {k: best.get(k) for k, v in stock.items() if best.get(k, v) != v}
-        why = (f"stock {sw or 0:.1f} vs pick {pw or 0:.1f} tok/s"
-               + (f" ({failed})" if failed else ""))
+        why = (T("server.gguf_tune.stock_v_vs_pick_v2_tok", v=sw or 0, v2=pw or 0, v3=f" ({failed})" if failed else ""))
         rec = {"name": "final_check", "incumbent": "stock", "challenger": dict(changed),
                "incumbent_tps": round(sw or 0, 2), "challenger_tps": round(pw or 0, 2),
                "won": keep, "why": why, "at": time.strftime("%Y-%m-%dT%H:%M:%S")}

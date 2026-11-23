@@ -28,6 +28,13 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 HOME = Path.home()
 MODEL_DIRS = [HOME / ".exo" / "models", HOME / ".caravan" / "mlx-models"]
@@ -222,10 +229,10 @@ def thermal_pressure():
         return "nominal"
     m = re.search(r"thermal warning level.*?(\d+)", out, re.I)
     if m:
-        return f"warning level {m.group(1)}"
+        return T("server.node_stats.warning_level_group", group=m.group(1))
     m = re.search(r"CPU_Speed_Limit\s*=\s*(\d+)", out)
     if m:
-        return f"CPU speed limit {m.group(1)}%"
+        return T("server.node_stats.cpu_speed_limit_group", group=m.group(1))
     return "unknown"
 
 

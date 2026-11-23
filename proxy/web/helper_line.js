@@ -13,7 +13,7 @@
     return j;
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c])); }
-  function mbText(o) { return o && o.size_mb ? ' (' + (o.size_mb >= 1000 ? T(`web.v_gb`, {v: ((o.size_mb / 1000).toFixed(1))}) : T(`web.size_mb_mb`, {size_mb: (o.size_mb)})) + ')' : ''; }
+  function mbText(o) { return o && o.size_mb ? ' (' + (o.size_mb >= 1000 ? T(`web.v_gb`, {v: (T.num(o.size_mb / 1000, 1))}) : T(`web.size_mb_mb`, {size_mb: (o.size_mb)})) + ')' : ''; }
   function paint() {
     const el = line();
     if (!el) return;
@@ -24,7 +24,7 @@
       let text;
       if (st === 'done') text = T('web.helper_ready_guess_ahead_is_on');
       else if (st === 'error' || st === 'cancelled') text = T('web.helper_download_stopped');
-      else text = T(`web.downloading_helper_pct_v`, {pct, v: p.speed_bps ? T(`web.v_mb_s_2`, {v: (p.speed_bps / 1e6).toFixed(1)}) : ''});
+      else text = T(`web.downloading_helper_pct_v`, {pct, v: p.speed_bps ? T(`web.v_mb_s_2`, {v: T.num(p.speed_bps / 1e6, 1)}) : ''});
       const running = ['queued', 'running'].includes(st);
       el.innerHTML = '<span>' + esc(text) + '</span>' +
         (running ? ` <button type="button" class="ghost" data-hl="stop">${T("web.stop")}</button>` : '') +

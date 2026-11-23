@@ -411,14 +411,14 @@ class AutoTuneTests(unittest.TestCase):
 
 class DoSwitchHookTests(unittest.TestCase):
     def test_do_switch_source_has_fallback_and_probe(self):
-        src = (ROOT / "proxy/web_workers.py").read_text()
+        src = english_source(ROOT / "proxy/web_workers.py")
         self.assertIn("apply_saved_4_fallback", src)
         self.assertIn("maybe_probe", src)
         self.assertIn("finish_probe_reload", src)
         self.assertIn("allows_memory_compression_4", src)
         # Must reload via _load_once, not switch, to avoid "already in progress".
         # The probe helper itself must not call switch.
-        helper = (ROOT / "proxy/web_kv_probe.py").read_text()
+        helper = english_source(ROOT / "proxy/web_kv_probe.py")
         self.assertNotIn("mgr.switch(", helper)
 
     def test_probe_fail_notice_matches_brief(self):

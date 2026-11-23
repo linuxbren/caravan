@@ -67,11 +67,11 @@ class CancelState(unittest.TestCase):
         self.assertIn("cancel", s["phase"])
 
     def test_mlx_snapshot_reports_cancelling(self):
-        src = (ROOT / "proxy" / "web_optimize.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_optimize.py")
         self.assertIn('out["cancelling"] = bool(out.get("running") and self._cancel.is_set())', src)
 
     def test_load_409_while_tuning_has_a_code(self):
-        src = (ROOT / "proxy" / "web_server.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_server.py")
         self.assertEqual(src.count('"code": "optimize_running"'), 2)
 
 

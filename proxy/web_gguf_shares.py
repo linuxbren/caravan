@@ -16,17 +16,24 @@ import gguf_shards as S
 
 REGISTRY=Path.home()/'.caravan/gguf-models'
 from gguf_runtime import current as runtime_bin
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def nodes_for(app,body):
     configured=app.configured_nodes();ids=body.get('node_ids')
     if ids is not None:
-        if not isinstance(ids,list) or len(ids)!=len(set(ids)) or not set(ids)<={n['id'] for n in configured}:raise ValueError('unknown/duplicate node IDs')
+        if not isinstance(ids,list) or len(ids)!=len(set(ids)) or not set(ids)<={n['id'] for n in configured}:raise ValueError(T("server.web_gguf_shares.unknown_duplicate_node_ids"))
         configured=[next(n for n in configured if n['id']==i) for i in ids]
     nodes=[n for n in configured if n.get('role')=='lead']+[n for n in configured if n.get('role')!='lead']
-    if not nodes or sum(n.get('role')=='lead' for n in nodes)!=1 or not web_nodes.is_local(nodes[0]):raise ValueError('a local 1st node is required')
+    if not nodes or sum(n.get('role')=='lead' for n in nodes)!=1 or not web_nodes.is_local(nodes[0]):raise ValueError(T("server.web_gguf_shares.a_local_1st_node_is_required"))
     physical=[n.get('physical_id') or ('local' if web_nodes.is_local(n) else n.get('ssh') or n.get('host')) for n in nodes]
-    if len(set(physical))!=len(nodes):raise ValueError('each share needs a distinct physical node')
+    if len(set(physical))!=len(nodes):raise ValueError(T("server.web_gguf_shares.each_share_needs_a_distinct_physical"))
     return nodes
 
 
@@ -35,10 +42,10 @@ def invoke(app,node,action,payload):
     token='meta-'+uuid.uuid4().hex;path='~/.caravan/transfers/'+token+'.json'
     blob=json.dumps(payload,separators=(',',':'))
     r=web_files.shell(app,node,'mkdir -p ~/.caravan/transfers; : > '+web_files.rp(path))
-    if r.returncode:raise RuntimeError('cannot write share metadata')
+    if r.returncode:raise RuntimeError(T("server.web_gguf_shares.cannot_write_share_metadata"))
     for i in range(0,len(blob),24000):
         r=web_files.shell(app,node,'printf %s '+shlex.quote(blob[i:i+24000])+' >> '+web_files.rp(path))
-        if r.returncode:raise RuntimeError('cannot write share metadata chunk')
+        if r.returncode:raise RuntimeError(T("server.web_gguf_shares.cannot_write_share_metadata_chunk"))
     repo=str(app.mgr.repo) if web_nodes.is_local(node) else node.get('repo') or '~/.caravan/src/caravan'
     py=app.mgr.python if web_nodes.is_local(node) else node.get('python') or '~/.caravan/venvs/mlx/bin/python'
     code='''import json,sys,hashlib
@@ -84,7 +91,7 @@ def entries(nodes,current=None):
         if file.is_symlink():continue
         try:
             r=json.loads(file.read_text());p=r['source'];ready=set(r['node_ids'])<=ids and (Path(r['roots'][0]).expanduser()/'manifest.json').is_file()
-            opt=dict(id='own-parts',mode='split' if len(r['node_ids'])>1 else 'one',node_ids=r['node_ids'],enabled=ready,label='Split across your Macs: each keeps only its part',reason='' if ready else 'A required node or its share is unavailable')
+            opt=dict(id='own-parts',mode='split' if len(r['node_ids'])>1 else 'one',node_ids=r['node_ids'],enabled=ready,label='Split across your Macs: each keeps only its part',reason='' if ready else T("server.web_gguf_shares.a_required_node_or_its_share"))
             out.append(dict(id=r['model_id'],name=Path(p['filename']).stem+' (GGUF)',hf=p['repo_id'],source='gguf',backend='llama',lead_path=str(Path(r['roots'][0]).expanduser()/'model.cvgg'),size_gb=p['source_bytes']/1e9,usable=ready,available_lead=True,disabled_reason=opt['reason'],placement_options=[opt],default_placement=opt['id'],placement=dict(mode=opt['mode'],node_ids=r['node_ids']),current=current==r['model_id'],sharded=True,gguf_deployment=r,gguf_shares=r['shares'],gguf_peer_files_ready=True,note=opt['label'],run_mode='split' if len(r['node_ids'])>1 else 'single'))
         except (OSError,ValueError,KeyError,TypeError):continue
     return out
@@ -103,10 +110,10 @@ def preview(app,body,entry=None,fresh=False):
         roots=dep['roots'] if same else [D.stage_root(p,i) for i in range(len(nodes))]
     else:
         counts=D.shares(body.get('counts') or [1]*len(nodes));same=False
-        if len(counts)!=len(nodes):raise ValueError('one share per node is required')
+        if len(counts)!=len(nodes):raise ValueError(T("server.web_gguf_shares.one_share_per_node_is_required"))
         p=D.prepare(body['repo_id'],body['gguf_file'],counts,ids,revision=body.get('revision'))
         roots=[D.stage_root(p,i) for i in range(len(nodes))]
-    if len(counts)!=len(nodes):raise ValueError('one share per node is required')
+    if len(counts)!=len(nodes):raise ValueError(T("server.web_gguf_shares.one_share_per_node_is_required"))
     stages=[];requests=[]
     live={n['id']:n for n in (app.nodes() or {}).get('nodes',[])}
     for i,n in enumerate(nodes):
@@ -126,7 +133,7 @@ def preview(app,body,entry=None,fresh=False):
     safe=all(s['safe'] for s in stages);ready=safe and all(not s['downloads'] for s in stages) and (same or all((s.get('assembled') is True) for s in stages))
     record=dict(model_id=model_id(p),roots=roots,node_ids=ids,shares=counts,plan_id=p['plan_id'],source={k:p[k] for k in ('repo_id','filename','revision','source_sha256','source_bytes')})
     e=dict(entry or {},id=model_id(p),name=Path(p['filename']).stem+' (GGUF)',source='gguf',sharded=True,lead_path=str(Path(roots[0]).expanduser()/'model.cvgg'),gguf_deployment=record,gguf_shares=counts,gguf_peer_files_ready=ready,placement=dict(mode='split' if len(nodes)>1 else 'one',node_ids=ids))
-    return dict(format='gguf',own_shares=True,repo_id=p['repo_id'],model_id=model_id(p),counts=counts,node_ids=ids,safe=safe,ready=ready,margin_gb=1.75,mode='manual' if body.get('counts') else 'auto',stages=stages,file_requests=requests,entry=e,note='Each Mac downloads only its part straight from the source. No full copy and no weight transfer over the cable.',manifest=p,roots=roots)
+    return dict(format='gguf',own_shares=True,repo_id=p['repo_id'],model_id=model_id(p),counts=counts,node_ids=ids,safe=safe,ready=ready,margin_gb=1.75,mode='manual' if body.get('counts') else 'auto',stages=stages,file_requests=requests,entry=e,note=T("server.web_gguf_shares.each_mac_downloads_only_its_part"),manifest=p,roots=roots)
 
 
 def finalize(app,plan):
@@ -139,15 +146,15 @@ def finalize(app,plan):
 def import_existing(app,body):
     import re
     name=body.get('tree','')
-    if not re.fullmatch('[A-Za-z0-9][A-Za-z0-9_.-]*',name):raise ValueError('select a named legacy shard tree')
+    if not re.fullmatch('[A-Za-z0-9][A-Za-z0-9_.-]*',name):raise ValueError(T("server.web_gguf_shares.select_a_named_legacy_shard_tree"))
     nodes=nodes_for(app,body);root='~/.caravan/day22-shards/'+name
     checks=[invoke(app,n,'existing',dict(root=root)) for n in nodes];m=checks[0]['manifest']
     src=D.source(body['repo_id'],body['gguf_file'],body.get('revision'))
-    if src['source_sha256']!=m['source_sha256'] or src['source_bytes']!=m['source_bytes']:raise ValueError('legacy source does not match')
+    if src['source_sha256']!=m['source_sha256'] or src['source_bytes']!=m['source_bytes']:raise ValueError(T("server.web_gguf_shares.legacy_source_does_not_match"))
     ids=[n['id'] for n in nodes]
-    if len(nodes)!=len(m['shares']):raise ValueError('legacy share count differs from nodes')
+    if len(nodes)!=len(m['shares']):raise ValueError(T("server.web_gguf_shares.legacy_share_count_differs_from_nodes"))
     for i,c in enumerate(checks):
-        if c['stage_index']!=i or c['source_sha256']!=m['source_sha256'] or c['manifest']['tensors']!=m['tensors'] or c['header_sha256']!=checks[0]['header_sha256']:raise ValueError('legacy stage binding differs')
+        if c['stage_index']!=i or c['source_sha256']!=m['source_sha256'] or c['manifest']['tensors']!=m['tensors'] or c['header_sha256']!=checks[0]['header_sha256']:raise ValueError(T("server.web_gguf_shares.legacy_stage_binding_differs"))
     p=dict(src,n_layers=m['n_layers'],data_offset=checks[0]['data_offset'],tensors=m['tensors'],shares=D.shares(m['shares']),node_ids=ids,header_sha256=checks[0]['header_sha256'])
     p['plan_id']=hashlib.sha256(json.dumps([p['source_sha256'],p['shares'],ids],sort_keys=True).encode()).hexdigest()[:24]
     for n in nodes:invoke(app,n,'save-plan',dict(root=root,plan=p))
@@ -190,7 +197,7 @@ if BINARY in cmd and '-p PORT' in cmd:
  os.kill(p,signal.SIGTERM)
 '''.replace('PID',str(int(peer['pid']))).replace('BINARY',repr(peer['binary'])).replace('PORT',str(peer['port']))
     r=mgr._ssh_node(peer['node'],'python3 -c '+shlex.quote(code),timeout=30)
-    if r.returncode:raise RuntimeError('could not stop owned share peer')
+    if r.returncode:raise RuntimeError(T("server.web_gguf_shares.could_not_stop_owned_share_peer"))
 
 
 
@@ -212,7 +219,7 @@ def tunnel_args(n,lp,pick=True):
     if endpoint.startswith('ssh+tb://'):
         from service_endpoints import parse,resolve
         spec=parse(endpoint)
-        if spec[0]!=target:raise ValueError('Thunderbolt and SSH identity differ')
+        if spec[0]!=target:raise ValueError(T("server.web_gguf_shares.thunderbolt_and_ssh_identity_differ"))
         host=resolve(endpoint).rsplit(':',1)[0];verified_tb=True
     try:link=verified_tb or ipaddress.ip_address(host).is_link_local
     except ValueError:link=False
@@ -224,17 +231,17 @@ def tunnel_args(n,lp,pick=True):
 def load(mgr,entry,settings):
     import gguf_split as G
     dep=entry['gguf_deployment'];nodes=mgr._gguf_nodes(dict(node_ids=dep['node_ids']));roots=dep['roots']
-    if [n['id'] for n in nodes]!=dep['node_ids']:raise ValueError('configured stage order differs from saved shard plan')
+    if [n['id'] for n in nodes]!=dep['node_ids']:raise ValueError(T("server.web_gguf_shares.configured_stage_order_differs_from_saved"))
     # Verify local pieces and runtime before disturbing the previous model.
     S.serving_command(roots[0],runtime_bin()/'llama-server',port=mgr.lead_port,rpc=[f'127.0.0.1:{G.tunnel_port(i)}' for i in range(len(nodes)-1)])
     for i,n in enumerate(nodes[1:]):
         repo=n.get('repo') or '~/.caravan/src/caravan';py=n.get('python') or '~/.caravan/venvs/mlx/bin/python'
         code='import sys;from pathlib import Path;sys.path.insert(0,str(Path('+repr(repo)+').expanduser()/"agent"));import gguf_shards as S;from gguf_runtime import current;S.serving_command('+repr(roots[i+1])+',current()/"ggml-rpc-server",peer=True,port='+str(G.RPC_PORT)+');print("verified")'
         result=mgr._ssh_node(n,web_files.rp(py)+' -c '+shlex.quote(code),timeout=180)
-        if result.returncode:raise ValueError('Peer pieces/runtime failed preflight; previous model retained: '+(result.stderr or result.stdout)[-800:])
+        if result.returncode:raise ValueError(T("server.web_gguf_shares.peer_pieces_runtime_failed_preflight_previous", v=(result.stderr or result.stdout)[-800:]))
     mgr._check_load_cancel()
     mgr._gguf_cancel=False;mgr._kill_gguf();mgr._kill_lead();mgr._kill_packer()
-    gb=dict(nodes=dep['node_ids'],labels=[n.get('label') for n in nodes],mode='split' if len(nodes)>1 else 'single',shares=dep['shares'],storage='own-parts',own_tensor_bytes=[sum(t['size'] for t in json.loads((Path(roots[0]).expanduser()/'manifest.json').read_text())['tensors'] if t['owner']==i) for i in range(len(nodes))],note='Split across your Macs: each keeps only its part')
+    gb=dict(nodes=dep['node_ids'],labels=[n.get('label') for n in nodes],mode='split' if len(nodes)>1 else 'single',shares=dep['shares'],storage='own-parts',own_tensor_bytes=[sum(t['size'] for t in json.loads((Path(roots[0]).expanduser()/'manifest.json').read_text())['tensors'] if t['owner']==i) for i in range(len(nodes))],note=T("server.web_gguf_shares.split_across_your_macs_each_keeps"))
     mgr._set(status='starting_packer',model_id=entry['id'],model_name=entry['name'],progress=[],error=None,error_detail=None,backend='llama',gguf=gb,balance=None,model_hf=dep['source']['repo_id'],split=len(nodes)>1)
     meta=dict(lead_pid=None,peers=[],tunnels=[],model=entry['lead_path'],id=entry['id'],name=entry['name'],gguf=gb,entry=entry,sharded=True)
     mgr._write_gguf_meta(meta);rpc=[]
@@ -243,23 +250,23 @@ def load(mgr,entry,settings):
         code='import sys;from pathlib import Path;sys.path.insert(0,str(Path('+repr(repo)+').expanduser()/"agent"));'+peer_start_code(roots[i+1],G.RPC_PORT)
         result=mgr._ssh_node(n,web_files.rp(py)+' -c '+shlex.quote(code),timeout=180)
         pid=G.parse_pid(result.stdout)
-        if result.returncode or not pid:raise RuntimeError('own-piece peer failed: '+(result.stderr or result.stdout)[-1000:])
+        if result.returncode or not pid:raise RuntimeError(T("server.web_gguf_shares.own_piece_peer_failed_v", v=(result.stderr or result.stdout)[-1000:]))
         meta['peers'].append(dict(id=n['id'],ssh=n.get('ssh') or n.get('host'),pid=pid,node=n,sharded=True,port=G.RPC_PORT,binary=next(x[4:] for x in result.stdout.splitlines() if x.startswith('BIN:'))));mgr._write_gguf_meta(meta);mgr._check_cancel()
         lp=G.tunnel_port(i);target=n.get('ssh') or n.get('host');args=G.ssh_tunnel_args(target,lp)
         args=tunnel_args(n,lp)
         import socket
         with socket.socket() as probe:
             try:probe.bind(("127.0.0.1",lp))
-            except OSError:raise ValueError("RPC tunnel port busy; no existing tunnel was touched")
+            except OSError:raise ValueError(T("server.web_gguf_shares.rpc_tunnel_port_busy_no_existing"))
         tun=subprocess.Popen(args,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,start_new_session=True)
         meta['tunnels'].append(dict(pid=tun.pid,port=lp,ssh=target,id=n['id'],args=args));mgr._write_gguf_meta(meta)
-        if not G.wait_port(lp,proc=tun,timeout=15):raise RuntimeError('own-piece SSH tunnel did not start')
+        if not G.wait_port(lp,proc=tun,timeout=15):raise RuntimeError(T("server.web_gguf_shares.own_piece_ssh_tunnel_did_not"))
         rpc.append(f'127.0.0.1:{lp}')
     args,env=S.serving_command(roots[0],runtime_bin()/'llama-server',port=mgr.lead_port,rpc=rpc)
-    mgr._note(gb['note']+'; missing pieces are errors, never cable-transfer fallbacks')
+    mgr._note(T("server.web_gguf_shares.note_missing_pieces_are_errors", note=gb['note']))
     mgr._set(status='starting_lead');lf=open(mgr._lead_log(),'ab',buffering=0);mgr._worker_node=None
     mgr._lead_proc=subprocess.Popen(args,env=dict(os.environ,**env),stdout=lf,stderr=subprocess.STDOUT,start_new_session=True);lf.close()
     meta['lead_pid']=mgr._lead_proc.pid;mgr._write_gguf_meta(meta);mgr._set(lead_pid=mgr._lead_proc.pid)
     t=time.monotonic();mgr._wait_lead_ready(timeout=300);mgr._check_cancel();mgr._loaded_entry=dict(entry)
     save_deployment(json.loads((Path(roots[0]).expanduser()/'source-plan.json').read_text()),roots)
-    mgr._set(status='ready',split=len(nodes)>1);mgr._note(f'own parts ready in {time.monotonic()-t:.3f}s');mgr._start_gguf_watch(meta)
+    mgr._set(status='ready',split=len(nodes)>1);mgr._note(T("server.web_gguf_shares.own_parts_ready_in_v_s", v=time.monotonic()-t));mgr._start_gguf_watch(meta)

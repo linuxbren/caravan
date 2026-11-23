@@ -8,6 +8,13 @@ from __future__ import annotations
 
 import re
 from typing import Iterable, Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # ChatML / Llama / Gemma turn markers that can leak into a reply.
 # Keep in sync with mlx_worker.END_MARKERS and the page strip list.
@@ -41,11 +48,10 @@ EXTRAS = (
 )
 
 SAFE_NOTICE = (
-    "This reply came out garbled. Settings are already on the usual safe "
-    "values, so nothing else was changed."
+    T("agent.garble.this_reply_came_out_garbled_settings")
 )
 KV_NOTICE = (
-    "This reply came out garbled, so Memory compression was turned back to 16."
+    T("agent.garble.this_reply_came_out_garbled_so_2")
 )
 
 # Degenerate-loop knobs. "Hello!" is far shorter than this; a 24-token
@@ -199,15 +205,11 @@ def _extras_notice(changes) -> str:
     if not labels:
         return SAFE_NOTICE
     if len(labels) == 1:
-        return f"This reply came out garbled, so {labels[0]} was turned off."
+        return T("agent.garble.this_reply_came_out_garbled_so_3", labels=labels[0])
     if len(labels) == 2:
-        return f"This reply came out garbled, so {labels[0]} and {labels[1]} were turned off."
+        return T("agent.garble.this_reply_came_out_garbled_so_4", labels=labels[0], labels2=labels[1])
     return (
-        "This reply came out garbled, so "
-        + ", ".join(labels[:-1])
-        + ", and "
-        + labels[-1]
-        + " were turned off."
+        T("agent.garble.this_reply_came_out_garbled_so", labels=T.join(labels[:-1]), labels2=labels[-1])
     )
 
 

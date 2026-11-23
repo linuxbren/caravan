@@ -57,6 +57,13 @@ import threading
 import time
 from pathlib import Path
 from typing import Callable, Iterable, List, NamedTuple, Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 MODES = ("delete", "archive", "off")
 
@@ -150,24 +157,24 @@ def resolve_settings(overrides: Optional[dict] = None,
 
     mode = str(out["mode"]).strip().lower()
     if mode not in MODES:
-        raise ValueError(f"slot cleanup mode must be one of {MODES}, got {out['mode']!r}")
+        raise ValueError(T("server.slot_cleanup.slot_cleanup_mode_must_be_one", modes=MODES, mode=out['mode']))
     floats = {}
     for key in _FLOAT_KEYS:
         try:
             floats[key] = float(out[key])
         except (TypeError, ValueError):
-            raise ValueError(f"{key} must be a number, got {out[key]!r}")
+            raise ValueError(T("server.slot_cleanup.key_must_be_a_number_got", key_=key, out=out[key]))
     if floats["max_age_days"] <= 0:
-        raise ValueError("max_age_days must be > 0")
+        raise ValueError(T("server.slot_cleanup.max_age_days_must_be_0"))
     for key in ("max_gb", "protect_minutes"):
         if floats[key] < 0:
-            raise ValueError(f"{key} must be >= 0 (0 = no limit / no grace)")
+            raise ValueError(T("server.slot_cleanup.key_must_be_0_0_no", key_=key))
     try:
         max_count = int(str(out["max_count"]).strip())
     except (TypeError, ValueError):
-        raise ValueError(f"max_count must be a whole number, got {out['max_count']!r}")
+        raise ValueError(T("server.slot_cleanup.max_count_must_be_a_whole", max_count=out['max_count']))
     if max_count < 0:
-        raise ValueError("max_count must be >= 0 (0 = no count cap)")
+        raise ValueError(T("server.slot_cleanup.max_count_must_be_0_0"))
 
     return Settings(
         mode=mode,
@@ -351,7 +358,7 @@ def cleanup(settings: Settings, dry_run: bool = False,
     if settings.mode == "off":
         return CleanupResult([], [], 0, [], [])
     if settings.mode == "archive" and settings.archive_dir.resolve() == settings.slot_dir.resolve():
-        raise ValueError("archive_dir must differ from slot_dir")
+        raise ValueError(T("server.slot_cleanup.archive_dir_must_differ_from_slot"))
 
     candidates = find_stale(settings.slot_dir, settings.max_age_days, now)
     mlx_dir = getattr(settings, "mlx_dir", None)
@@ -433,7 +440,7 @@ def cleanup(settings: Settings, dry_run: bool = False,
             try:
                 drop(mlx_fps)
             except Exception as e:  # the worker may be down; files are gone anyway
-                errors.append(f"mlx drop: {e!r}")
+                errors.append(T("server.slot_cleanup.mlx_drop_e", e=e))
         if forget is not None:
             dropped = forget(fps)
         else:
@@ -470,7 +477,7 @@ def log_result(settings: Settings, result: CleanupResult, dry_run: bool) -> None
              + (f" + {len(ev)} over the cap ({cap}, LRU first)" if ev else "")
              + f", {_fmt_bytes(total)} would be {settings.mode}d")
         return
-    verb = "deleted" if settings.mode == "delete" else f"archived to {settings.archive_dir}"
+    verb = "deleted" if settings.mode == "delete" else T("server.slot_cleanup.archived_to_archive_dir", archive_dir=settings.archive_dir)
     for f in ev:
         _log(f"evicted (over cap {cap}, least recently used "
              f"{time.strftime('%Y-%m-%d %H:%M', time.localtime(f.mtime))}): "
@@ -620,7 +627,7 @@ def main(argv: Optional[list] = None) -> int:
               + (" (still over the cap: the rest are active)" if result.over_cap_active else "")
               + ". Nothing was changed.")
     else:
-        verb = "deleted" if settings.mode == "delete" else f"archived to {settings.archive_dir}"
+        verb = "deleted" if settings.mode == "delete" else T("server.slot_cleanup.archived_to_archive_dir", archive_dir=settings.archive_dir)
         print(f"{len(result.removed)} file(s) {verb}, {_fmt_bytes(result.bytes_removed)} freed "
               f"from {settings.slot_dir}; dropped {len(result.dropped_assignments)} "
               f"session->slot assignment(s).")

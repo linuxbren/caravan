@@ -18,6 +18,13 @@ import sys
 import time
 
 from gguf_rpc_seed import device_layers
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 MAGIC = b'CVGGUF1\n'
 SCHEMA = 'caravan-gguf-shards-v1'
@@ -26,7 +33,7 @@ SCHEMA = 'caravan-gguf-shards-v1'
 def shares_arg(text):
     shares = [float(x) for x in text.split(',')]
     if not shares or any(not math.isfinite(s) or s <= 0 for s in shares):
-        raise ValueError('one positive finite share is required per Mini')
+        raise ValueError(T("agent.gguf_shards.one_positive_finite_share_is_required"))
     return shares
 
 
@@ -34,7 +41,7 @@ def owners(n_layers, shares, names):
     """Exact llama.cpp layer split; input/unknown globals on lead, output last slot."""
     shares = shares_arg(','.join(map(str, shares)))
     if type(n_layers) is not int or n_layers <= 0:
-        raise ValueError('positive block count required')
+        raise ValueError(T("agent.gguf_shards.positive_block_count_required"))
     slots = {}
     for i in range(len(shares)):
         for layer in device_layers(n_layers, shares, i, pad=0):
@@ -44,7 +51,7 @@ def owners(n_layers, shares, names):
         m = re.fullmatch(r'blk\.(\d+)\..+', name)
         if m:
             layer = int(m[1])
-            if layer >= n_layers: raise ValueError('tensor layer outside model')
+            if layer >= n_layers: raise ValueError(T("agent.gguf_shards.tensor_layer_outside_model"))
             out[name] = slots[layer]
         elif name.startswith('output'):
             out[name] = slots[n_layers]
@@ -81,30 +88,30 @@ def create(source, root, shares, index):
     root = Path(root).expanduser()
     shares = shares_arg(','.join(map(str, shares)))
     if type(index) is not int or not 0 <= index < len(shares):
-        raise ValueError('invalid Mini index')
+        raise ValueError(T("agent.gguf_shards.invalid_mini_index"))
     before = source.stat()
     reader = _reader(source)
     if 'split.count' in reader.fields:
         f = reader.fields['split.count']
         if int(f.parts[f.data[0]][0]) > 1:
-            raise ValueError('multi-file source GGUF is not supported yet')
+            raise ValueError(T("agent.gguf_shards.multi_file_source_gguf_is_not"))
     counts = [int(f.parts[f.data[0]][0]) for k,f in reader.fields.items() if k.endswith('.block_count')]
-    if len(counts) != 1: raise ValueError('unambiguous GGUF block count required')
+    if len(counts) != 1: raise ValueError(T("agent.gguf_shards.unambiguous_gguf_block_count_required"))
     n_layers = counts[0]
     names = [t.name for t in reader.tensors]
-    if len(set(names)) != len(names): raise ValueError('duplicate tensor names')
+    if len(set(names)) != len(names): raise ValueError(T("agent.gguf_shards.duplicate_tensor_names"))
     if any(not re.fullmatch(r'[A-Za-z0-9_.-]+', n) for n in names):
-        raise ValueError('unsupported tensor name')
+        raise ValueError(T("agent.gguf_shards.unsupported_tensor_name"))
     own = owners(n_layers, shares, names)
     tensors = []
     for t in reader.tensors:
         off, size = int(t.data_offset), int(t.n_bytes)
         if off < reader.data_offset or size <= 0 or off+size > before.st_size:
-            raise ValueError('tensor range outside source')
+            raise ValueError(T("agent.gguf_shards.tensor_range_outside_source"))
         tensors.append(dict(name=t.name, offset=off, size=size, owner=own[t.name]))
     intervals = sorted((t['offset'],t['offset']+t['size']) for t in tensors)
     if any(b > c for (_,b),(c,_) in zip(intervals,intervals[1:])):
-        raise ValueError('overlapping tensor ranges')
+        raise ValueError(T("agent.gguf_shards.overlapping_tensor_ranges"))
     # Do all structural validation BEFORE reserving the fresh output directory.
     root.mkdir(parents=True, exist_ok=False)
     cache = root/'rpc'; cache.mkdir()
@@ -115,11 +122,11 @@ def create(source, root, shares, index):
     finally:
         exe.unlink(); exe.parent.rmdir()  # only this invocation's disposable compiler output
     keys = p.stdout.splitlines()
-    if len(keys) != len(tensors): raise ValueError('incomplete tensor hash result')
+    if len(keys) != len(tensors): raise ValueError(T("agent.gguf_shards.incomplete_tensor_hash_result"))
     seen = {}
     with source.open('rb') as f:
         for t, key in zip(tensors, keys):
-            if not re.fullmatch('[0-9a-f]{16}', key): raise ValueError('invalid native hash')
+            if not re.fullmatch('[0-9a-f]{16}', key): raise ValueError(T("agent.gguf_shards.invalid_native_hash"))
             t['key'] = key
             f.seek(t['offset']); left = t['size']; sha = hashlib.sha256()
             # Exclusive create even inside the fresh tree; never replace a piece.
@@ -128,7 +135,7 @@ def create(source, root, shares, index):
             try:
                 while left:
                     b = f.read(min(left,4<<20))
-                    if not b: raise ValueError('source truncated while sharding')
+                    if not b: raise ValueError(T("agent.gguf_shards.source_truncated_while_sharding"))
                     sha.update(b)
                     if output: output.write(b)
                     left -= len(b)
@@ -136,7 +143,7 @@ def create(source, root, shares, index):
                 if output: output.close()
             t['sha256'] = sha.hexdigest()
             if key in seen and seen[key] != (t['size'],t['sha256']):
-                raise ValueError('FNV collision: refusing ambiguous native RPC cache keys')
+                raise ValueError(T("agent.gguf_shards.fnv_collision_refusing_ambiguous_native_rpc"))
             seen[key] = (t['size'],t['sha256'])
         f.seek(0)
         with (root/'model.cvgg').open('xb') as out:
@@ -145,7 +152,7 @@ def create(source, root, shares, index):
     source_sha = digest(source)
     after = source.stat()
     if (before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns) != (after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns):
-        raise ValueError('source changed during sharding; output is not ready')
+        raise ValueError(T("agent.gguf_shards.source_changed_during_sharding_output_is"))
     manifest = dict(schema=SCHEMA, source_name=source.name, source_bytes=before.st_size,
                     source_sha256=source_sha, catalog_sha256=digest(root/'model.cvgg'),
                     n_layers=n_layers, shares=shares, stage_index=index, tensors=tensors)
@@ -161,37 +168,37 @@ def create(source, root, shares, index):
 def verify(root):
     """Check SHA256 of every local piece, catalog, routing table; reject links/extras."""
     root = Path(root).expanduser()
-    if root.is_symlink(): raise ValueError('linked shard root refused')
+    if root.is_symlink(): raise ValueError(T("agent.gguf_shards.linked_shard_root_refused"))
     for name in ('manifest.json','weights.tsv','model.cvgg','rpc'):
-        if (root/name).is_symlink(): raise ValueError('linked shard artifact refused')
+        if (root/name).is_symlink(): raise ValueError(T("agent.gguf_shards.linked_shard_artifact_refused"))
     m = json.loads((root/'manifest.json').read_text())
-    if m.get('schema') != SCHEMA: raise ValueError('unsupported shard schema')
+    if m.get('schema') != SCHEMA: raise ValueError(T("agent.gguf_shards.unsupported_shard_schema"))
     shares = shares_arg(','.join(map(str,m['shares'])))
     idx = m['stage_index']
-    if type(idx) is not int or not 0 <= idx < len(shares): raise ValueError('invalid stage index')
+    if type(idx) is not int or not 0 <= idx < len(shares): raise ValueError(T("agent.gguf_shards.invalid_stage_index"))
     for name, key in [('model.cvgg','catalog_sha256'),('weights.tsv','weights_sha256')]:
-        if digest(root/name) != m[key]: raise ValueError(name+' checksum mismatch')
+        if digest(root/name) != m[key]: raise ValueError(name+T("agent.gguf_shards.checksum_mismatch"))
     with (root/'model.cvgg').open('rb') as f:
-        if f.read(len(MAGIC)) != MAGIC or f.read(4) != b'GGUF': raise ValueError('invalid catalog')
+        if f.read(len(MAGIC)) != MAGIC or f.read(4) != b'GGUF': raise ValueError(T("agent.gguf_shards.invalid_catalog"))
     ts = m['tensors']; names = [t['name'] for t in ts]
-    if len(set(names)) != len(names): raise ValueError('duplicate tensor names')
+    if len(set(names)) != len(names): raise ValueError(T("agent.gguf_shards.duplicate_tensor_names"))
     own = owners(m['n_layers'],shares,names)
     expected_table = ''.join(f"{t['name']}\t{t['key']}\t{t['size']}\t{t['owner']}\n" for t in ts)
-    if (root/'weights.tsv').read_text() != expected_table: raise ValueError('routing table differs from manifest')
+    if (root/'weights.tsv').read_text() != expected_table: raise ValueError(T("agent.gguf_shards.routing_table_differs_from_manifest"))
     wanted = {}; total = 0
     for t in ts:
         if (not re.fullmatch('[0-9a-f]{16}', t['key']) or not re.fullmatch('[0-9a-f]{64}', t['sha256']) or
             type(t['size']) is not int or t['size'] <= 0 or t['owner'] != own[t['name']]):
-            raise ValueError('invalid tensor manifest')
+            raise ValueError(T("agent.gguf_shards.invalid_tensor_manifest"))
         if t['owner'] != idx: continue
         key = t['key']; p = root/'rpc'/key
-        if key in wanted and wanted[key] != (t['size'],t['sha256']): raise ValueError('ambiguous tensor key')
+        if key in wanted and wanted[key] != (t['size'],t['sha256']): raise ValueError(T("agent.gguf_shards.ambiguous_tensor_key"))
         wanted[key] = (t['size'],t['sha256'])
         if p.is_symlink() or not p.is_file() or p.stat().st_size != t['size'] or digest(p) != t['sha256']:
-            raise ValueError('tensor piece missing or corrupt: '+t['name'])
+            raise ValueError(T("agent.gguf_shards.tensor_piece_missing_or_corrupt_name", name=t['name']))
         total += t['size']
     if {p.name for p in (root/'rpc').iterdir()} != set(wanted):
-        raise ValueError('unexpected tensor files in stage cache')
+        raise ValueError(T("agent.gguf_shards.unexpected_tensor_files_in_stage_cache"))
     paths = [p for p in root.rglob('*') if p.is_file()]
     return dict(ok=True, stage_index=idx, n_minis=len(shares), tensors=sum(t['owner']==idx for t in ts),
                 tensor_bytes=total, unique_piece_bytes=sum(s for s,_ in wanted.values()),
@@ -207,19 +214,19 @@ def serving_command(root, binary, *, peer=False, port=18224, rpc=None, context=2
     binary = Path(binary).expanduser().resolve(strict=True)
     marker = binary.parents[2]/'caravan-shards-version'
     if not marker.is_file() or marker.read_text().strip() != 'catalog-v1/76a67730ffc7d650dffa4db04d96be84a59e7ef3':
-        raise ValueError('binary is not the isolated pinned Caravan shard runtime')
-    if type(port) is not int or not 1024 <= port <= 65535: raise ValueError('invalid unprivileged port')
+        raise ValueError(T("agent.gguf_shards.binary_is_not_the_isolated_pinned"))
+    if type(port) is not int or not 1024 <= port <= 65535: raise ValueError(T("agent.gguf_shards.invalid_unprivileged_port"))
     env = dict(LLAMA_CACHE=str(root),CARAVAN_STRICT_SHARDS='1')
     if peer:
-        if result['stage_index'] == 0: raise ValueError('peer requires a non-lead stage')
+        if result['stage_index'] == 0: raise ValueError(T("agent.gguf_shards.peer_requires_a_non_lead_stage"))
         args = [str(binary),'-d','MTL0','-H','127.0.0.1','-p',str(port),'-c']
     else:
-        if result['stage_index'] != 0: raise ValueError('lead requires stage zero')
+        if result['stage_index'] != 0: raise ValueError(T("agent.gguf_shards.lead_requires_stage_zero"))
         rpc = rpc or []
-        if len(rpc) != result['n_minis']-1: raise ValueError('one loopback SSH tunnel is required per peer')
+        if len(rpc) != result['n_minis']-1: raise ValueError(T("agent.gguf_shards.one_loopback_ssh_tunnel_is_required"))
         if any(not re.fullmatch(r'127\.0\.0\.1:[0-9]{1,5}',p) or not 1024<=int(p.split(':')[1])<=65535 for p in rpc):
-            raise ValueError('RPC endpoints must be unprivileged loopback SSH tunnels')
-        if type(context) is not int or context < 128: raise ValueError('invalid context length')
+            raise ValueError(T("agent.gguf_shards.rpc_endpoints_must_be_unprivileged_loopback"))
+        if type(context) is not int or context < 128: raise ValueError(T("agent.gguf_shards.invalid_context_length"))
         m = json.loads((root/'manifest.json').read_text())
         args = [str(binary),'-m',str(root/'model.cvgg'),'--host','127.0.0.1','--port',str(port),
                 '-c',str(context),'-ngl','999','-fa','on','--jinja','-np','1']

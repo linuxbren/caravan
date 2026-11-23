@@ -5,6 +5,13 @@ import shutil
 from pathlib import Path
 import subprocess
 import sys
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 PIN='76a67730ffc7d650dffa4db04d96be84a59e7ef3'
 MARKER='catalog-v1/'+PIN
 
@@ -15,7 +22,7 @@ def current():
     for b in candidates:
         marker=b.parents[1]/'caravan-shards-version'
         if marker.is_file() and marker.read_text().strip()==MARKER and all((b/n).is_file() for n in ('llama-server','ggml-rpc-server')):return b
-    raise FileNotFoundError('Own-part GGUF backend is not installed; first GGUF download builds the pinned backend on each Mac')
+    raise FileNotFoundError(T("agent.gguf_runtime.own_part_gguf_backend_is_not"))
 
 
 def ensure():
@@ -24,7 +31,7 @@ def ensure():
         if os.environ.get('CARAVAN_GGUF_SHARD_BIN'):raise
     base=Path.home()/'.caravan/runtimes/gguf-shards';base.mkdir(parents=True,exist_ok=True)
     lock=base/'build.lock'
-    if lock.is_symlink():raise ValueError('linked runtime lock refused')
+    if lock.is_symlink():raise ValueError(T("agent.gguf_runtime.linked_runtime_lock_refused"))
     with lock.open('a') as f:
         fcntl.flock(f,fcntl.LOCK_EX)
         try:return current()
@@ -33,17 +40,17 @@ def ensure():
         env['PATH']=os.pathsep.join(dict.fromkeys([*env.get('PATH',os.defpath).split(os.pathsep),'/opt/homebrew/bin','/usr/local/bin']))
         for tool in ('git','cmake'):
             if not shutil.which(tool,path=env['PATH']):
-                raise FileNotFoundError(f'Own-part GGUF backend needs {tool}; install the developer prerequisites on this Mac, then Resume')
+                raise FileNotFoundError(T("agent.gguf_runtime.own_part_gguf_backend_needs_tool", tool=tool))
         print('Preparing own-part GGUF backend on this Mac (no model weights cross the cable)',flush=True)
         src=base/'source.git';dst=base/PIN
-        if any(p.is_symlink() for p in (base,src,dst)):raise ValueError('linked runtime folder refused')
+        if any(p.is_symlink() for p in (base,src,dst)):raise ValueError(T("agent.gguf_runtime.linked_runtime_folder_refused"))
         if not dst.exists():
             if not src.exists():subprocess.run(['git','init','--bare',str(src)],check=True,env=env,timeout=300)
             subprocess.run(['git','-C',str(src),'fetch','--depth=1','https://github.com/ggml-org/llama.cpp.git',PIN],check=True,env=env,timeout=300)
             script=Path(__file__).resolve().parents[1]/'runtime/gguf-shards/apply.py'
             subprocess.run([sys.executable,str(script),str(src),str(dst)],check=True,env=env,timeout=300)
         marker=dst/'caravan-shards-version'
-        if not marker.is_file() or marker.read_text().strip()!=MARKER:raise ValueError('incomplete isolated runtime; retained for inspection, not patched twice')
+        if not marker.is_file() or marker.read_text().strip()!=MARKER:raise ValueError(T("agent.gguf_runtime.incomplete_isolated_runtime_retained_for_inspect"))
         subprocess.run(['cmake','-S',str(dst),'-B',str(dst/'build'),'-DGGML_RPC=ON','-DLLAMA_CURL=OFF','-DLLAMA_BUILD_TESTS=OFF'],check=True,env=env,timeout=300)
         subprocess.run(['cmake','--build',str(dst/'build'),'-j','4','--target','llama-server','ggml-rpc-server'],check=True,env=env,timeout=1800)
         return current()

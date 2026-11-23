@@ -62,7 +62,7 @@ class VersionSource(unittest.TestCase):
 
     def test_not_hardcoded_in_the_page_or_server(self):
         html = english_source(ROOT / "proxy/web/index.html")
-        server = (ROOT / "proxy/web_server.py").read_text()
+        server = english_source(ROOT / "proxy/web_server.py")
         v = (ROOT / "VERSION").read_text().strip()
         self.assertNotIn("v" + v, html)
         self.assertNotIn('"' + v + '"', server)
@@ -76,7 +76,7 @@ class StatusApi(unittest.TestCase):
         got = WS._installed_version(d)
         self.assertEqual(got["label"], "v1.2.3")
         self.assertEqual(got["short"], PIN[:7])
-        src = (ROOT / "proxy/web_server.py").read_text()
+        src = english_source(ROOT / "proxy/web_server.py")
         body = src[src.index("def _api_status"):src.index("def _api_speed_average")]
         self.assertIn('"version": _installed_version()', body)
 

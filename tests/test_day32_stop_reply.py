@@ -103,7 +103,7 @@ class WorkerSide(unittest.TestCase):
         self.assertTrue(seen["same_event"])
 
     def test_handler_wires_the_watcher(self):
-        src = (REPO / "agent/mlx_worker.py").read_text()
+        src = english_source(REPO / "agent/mlx_worker.py")
         h = src[src.index("            client_gone = threading.Event()"):]
         h = h[:h.index("    return H")]
         self.assertIn("watch_client_gone(self.connection, client_gone, reply_done)", h)

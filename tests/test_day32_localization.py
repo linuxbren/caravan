@@ -26,7 +26,7 @@ ROOT = I.ROOT
 sys.path.insert(0, str(ROOT / "tools"))
 import caravan_i18n as C  # noqa: E402
 
-KEY = re.compile(r"^(web|cli\.[a-z_]+|install)\.[a-z0-9_]+$")
+KEY = re.compile(r"^(web|install|fmt|(cli|server|agent)\.[a-z0-9_]+)\.[a-z0-9_]+$")
 WORDS = re.compile(r"[A-Za-z]{2,}[’']?[a-z]* [A-Za-z]{2,}")
 
 # Strings that look like words but are not shown as text, with the reason.
@@ -51,6 +51,14 @@ JS_ALLOWED = {
 }
 # Markup-only templates may hold short non-word text such as units.
 MARKUP_TEXT_ALLOWED = {"s"}
+
+# proxy/agent strings in message positions that are not text for people, with the reason.
+SERVER_ALLOWED = {
+    "Ollama Cloud": "product name in the cloud model list",
+    "Ollama Cloud · coding": "product name in the cloud model list",
+    "com.caravan.v3.": "launchd label prefix",
+    "no ssh target for worker tunnel": "TunnelError detail, written to the log only",
+}
 
 
 def _markup_text(s: str) -> str:
@@ -99,8 +107,13 @@ class KeysInUse(unittest.TestCase):
                 continue
             wanted = I.placeholders(self.en[key])
             for where, has_values, names in uses:
+                if has_values is None:  # a key built at run time
+                    continue
                 if has_values:
-                    self.assertEqual(set(names), wanted, f"{key} in {where}")
+                    got = set(names)
+                    if key.endswith(("_one", "_other")):  # a plural form may leave out {count}
+                        got = (got - {"count"}) | (wanted & {"count"})
+                    self.assertEqual(got, wanted, f"{key} in {where}")
                 else:
                     self.assertEqual(wanted, set(), f"{key} in {where} needs values {wanted}")
 
@@ -256,6 +269,44 @@ class NoHardCodedText(unittest.TestCase):
                             continue
                         if isinstance(sub, ast.Constant) and isinstance(sub.value, str) and WORDS.search(sub.value):
                             bad.append(f"{path.name}:{sub.lineno}: {sub.value[:70]!r}")
+                        stack.extend(ast.iter_child_nodes(sub))
+        self.assertEqual(bad, [])
+
+    def test_server_and_worker_messages(self):
+        """proxy/ and agent/ text that reaches the page or the CLI: raised
+        errors, progress notes and the error/message/note/... fields of
+        replies come from the strings file. Logs, the request journal,
+        lab tools, model prompts and config/plist text are left as code."""
+        sink_call = re.compile(r"(^|\.)(_note|note|prog|progress|_later|sentence|record_loss|_fail|fail)$")
+        sink_keys = {"error", "message", "msg", "note", "notice", "reason", "detail", "warning", "label",
+                     "help", "help_gguf", "why"}
+        bad = []
+        for path in I.SERVER_FILES:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                args = []
+                if isinstance(node, ast.Call):
+                    f = node.func
+                    name = f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", "")
+                    full = ast.unparse(f)
+                    if name == "T" or full.startswith("T."):
+                        continue
+                    if re.search(r"(Error|Exception)$", name or "") or sink_call.search(full):
+                        args = list(node.args) + [k.value for k in node.keywords
+                                                  if k.arg in ("message", "msg", "note", "reason", "detail")]
+                elif isinstance(node, ast.Dict):
+                    args = [v for k, v in zip(node.keys, node.values)
+                            if isinstance(k, ast.Constant) and k.value in sink_keys]
+                for a in args:
+                    stack = [a]
+                    while stack:
+                        sub = stack.pop()
+                        if isinstance(sub, ast.Call) and (getattr(sub.func, "id", "") == "T"
+                                                          or ast.unparse(sub.func).startswith("T.")):
+                            continue
+                        if (isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+                                and WORDS.search(sub.value) and sub.value not in SERVER_ALLOWED):
+                            bad.append(f"{path.parent.name}/{path.name}:{sub.lineno}: {sub.value[:70]!r}")
                         stack.extend(ast.iter_child_nodes(sub))
         self.assertEqual(bad, [])
 

@@ -3,15 +3,20 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'agent'))
 import guess_ahead as G
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def pairing(key):
     return next((p for p in G.load_table()['pairings'] if p['id'] == key), None)
 
 
-BALANCE_NO_HELPER = ("A Balance split of an MLX model does not use a Guess-ahead helper: "
-                     "every guess would wait on the other Mac, and in our tests the helper "
-                     "made split replies slower. A GGUF model can use its helper on two Macs.")
+BALANCE_NO_HELPER = (T("server.web_helpers.a_balance_split_of_an_mlx"))
 
 
 def balance_split(snapshot) -> bool:
@@ -43,12 +48,12 @@ def offer(snapshot):
     declined = (st.get('web_download_answers') or {}).get(p['id']) is False
     return dict(id=p['id'], name=d['name'], repo_id=d['hf_repo'], size_mb=d.get('size_mb'),
                 model=model, declined=declined,
-                message=f"A {d['size_mb']} MB helper can make {model.split('/')[-1]} write faster. Download it?")
+                message=T("server.web_helpers.a_size_mb_mb_helper_can", size_mb=d['size_mb'], split=model.split('/')[-1]))
 
 
 def answer(key, download):
     if not pairing(key):
-        raise ValueError('Unknown helper')
+        raise ValueError(T("server.web_helpers.unknown_helper"))
     st = G.load_state()
     st.setdefault('web_download_answers', {})[key] = bool(download)
     # Do not enable worker auto-download: downloads go through normal jobs.
@@ -76,10 +81,10 @@ def delete_helper(key, current=''):
     import shutil
     item = inventory().get(key)
     if not item:
-        return {'ok': False, 'error': 'Helper not found'}
+        return {'ok': False, 'error': T("server.web_helpers.helper_not_found")}
     # Conservative: protect every helper while a model is loaded (also covers
     # active workers retaining a draft after automatic guess-ahead shutoff).
     if current:
-        return {'ok': False, 'error': 'Stop the loaded model before deleting helpers.'}
+        return {'ok': False, 'error': T("server.picker_disk_sizes.stop_the_loaded_model_before_deleting")}
     shutil.rmtree(item['path'])
     return {'ok': True, 'removed': [item['path']]}

@@ -18,6 +18,13 @@ import os
 from typing import Optional
 
 from service_endpoints import RetryableReadinessError
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 MARGIN_GB = float(os.environ.get("CARAVAN_MEMORY_SAFETY_GB", "1.75"))
 STAGE_OVERHEAD_GB = float(os.environ.get("CARAVAN_SPLIT_STAGE_OVERHEAD_GB", "1.3"))
@@ -38,7 +45,7 @@ def balanced_counts(n_layers: int, caps, per_layer: float,
     Minis → even split (32 on 2 → 16/16). Earlier stages win ties."""
     n, k = int(n_layers), len(caps)
     if k < 1 or n < k:
-        raise ValueError("need at least one layer per Mini")
+        raise ValueError(T("server.split_balance.need_at_least_one_layer_per"))
     counts = [1] * k
     for _ in range(n - k):
         free = stage_free(counts, caps, per_layer, overhead)
@@ -72,23 +79,22 @@ def message(chk: dict, labels, extra_files: Optional[dict] = None) -> str:
     """Plain-language note for the picker/load. extra_files: {label: [files]}."""
     if chk["ok"]:
         return ""
-    lows = ", ".join(f"{x['label']} would have about {max(0.0, x['free_gb']):.1f} GB free"
-                     for x in chk["low"])
+    lows = T.join(T("server.split_balance.label_would_have_about_gb_free", label=x['label'], gb=max(0.0, x['free_gb']))
+                  for x in chk["low"])
     cur = "/".join(str(c) for c in chk["counts"])
     bal = "/".join(str(c) for c in chk["balanced"])
-    msg = (f"The saved split ({cur} layers) is too tight: {lows}, under the "
-           f"{chk['margin_gb']:.2f} GB safety margin, so chats would fail.")
+    msg = (T("server.split_balance.the_saved_split_cur_layers_is", cur=cur, lows=lows, margin_gb=chk['margin_gb']))
     if chk["better"]:
-        msg += f" A balanced split ({bal}) leaves " + ", ".join(
-            f"{labels[i]} about {f:.1f} GB" for i, f in enumerate(chk["balanced_free"])) + " free."
+        msg += T("server.split_balance.a_balanced_split_bal_leaves_v", bal=bal, v=T.join(
+            T("server.split_balance.label_about_gb", label=labels[i], gb=f) for i, f in enumerate(chk["balanced_free"])))
         need = {k: v for k, v in (extra_files or {}).items() if v}
         if need:
-            msg += " It needs these extra files first (Caravan won't download them by itself): " + "; ".join(
-                f"{k}: {', '.join(v)}" for k, v in need.items()) + "."
+            msg += T("server.split_balance.it_needs_these_extra_files_first", v=T.join((
+                T("server.split_balance.label_files", label=k, files=T.join(v)) for k, v in need.items()), "clause"))
         elif extra_files is not None:
-            msg += " Every Mini already has the files for it, so Caravan will load it that way."
+            msg += T("server.split_balance.every_mini_already_has_the_files")
     else:
-        msg += " No split across these Minis fits with the margin; try a smaller version of the model."
+        msg += T("server.split_balance.no_split_across_these_minis_fits")
     return msg
 
 
@@ -129,25 +135,25 @@ def preview(n_layers, weights_gb, nodes, counts=None, *, config=None, index=None
     from mlx_split import plan_ranges
     nodes = list(nodes)
     if len(nodes) < 2 or len({n.get("id") for n in nodes}) != len(nodes) or any(not n.get("id") for n in nodes):
-        raise ValueError("need at least two uniquely identified Minis")
+        raise ValueError(T("server.split_balance.need_at_least_two_uniquely_identified"))
     if sum(n.get("role") == "lead" for n in nodes) != 1 or nodes[-1].get("role") != "lead":
-        raise ValueError("pipeline order must be packers first, lead last")
+        raise ValueError(T("server.split_balance.pipeline_order_must_be_packers_first"))
     try:
         weights = float(weights_gb)
     except (ValueError, TypeError):
-        raise ValueError("model weight size is unknown") from None
+        raise ValueError(T("server.split_balance.model_weight_size_is_unknown")) from None
     if not math.isfinite(weights) or weights <= 0:
-        raise ValueError("model weight size is unknown")
+        raise ValueError(T("server.split_balance.model_weight_size_is_unknown"))
     caps = []
     for node in nodes:
         ram = node.get("ram") or {}
         available = ram.get("available_gb", ram.get("free_gb"))
         if node.get("offline") or node.get("error") or available is None:
-            raise RetryableReadinessError(f"live free memory is unknown for {node['id']}", kind="memory")
+            raise RetryableReadinessError(T("server.split_balance.live_free_memory_is_unknown_for", id=node['id']), kind="memory")
         # Reclaim only the running worker footprint, never assume total-OS is free.
         cap = float(available) + max(0.0, float(node.get("active_gb") or node.get("weights_gb") or 0))
         if not math.isfinite(cap) or cap <= 0:
-            raise RetryableReadinessError(f"live free memory is unknown for {node['id']}", kind="memory")
+            raise RetryableReadinessError(T("server.split_balance.live_free_memory_is_unknown_for", id=node['id']), kind="memory")
         caps.append(cap)
     # A second worker on the same Mini does not create another stick of RAM.
     # Explicit physical_id handles SSH aliases; matching host/SSH also dedupes.
@@ -167,7 +173,7 @@ def preview(n_layers, weights_gb, nodes, counts=None, *, config=None, index=None
     chosen = auto if counts is None else list(counts)
     ranges = plan_ranges(n_layers, chosen)
     if len(chosen) != len(nodes):
-        raise ValueError("one layer count is required for each Mini")
+        raise ValueError(T("server.split_balance.one_layer_count_is_required_for"))
     raw_free = [cap - k * per_layer - STAGE_OVERHEAD_GB for cap, k in zip(caps, chosen)]
     free = [round(value, 2) for value in raw_free]
     files = None
@@ -200,4 +206,4 @@ def preview(n_layers, weights_gb, nodes, counts=None, *, config=None, index=None
     return {"mode": "auto" if counts is None else "manual", "counts": chosen,
             "auto_counts": auto, "margin_gb": MARGIN_GB, "safe": safe,
             "ready": ready, "stages": stages, "reload_required": True,
-            "speed": None, "note": "Memory is estimated; real speed appears after reload and a reply. No downloads have started."}
+            "speed": None, "note": T("server.split_balance.memory_is_estimated_real_speed_appears")}

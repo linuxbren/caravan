@@ -59,6 +59,13 @@ import json
 import os
 from pathlib import Path
 from typing import NamedTuple, Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 DEFAULT_MLX_CACHE_DIR = "~/.caravan/mlx/prompt-cache"
 DEFAULT_MLX_PORT = 8092
@@ -106,9 +113,9 @@ def resolve_mlx_settings(cfg: dict, overrides: Optional[dict] = None) -> MlxSett
     try:
         port = int(pick("port", "CARAVAN_MLX_PORT", DEFAULT_MLX_PORT))
     except (TypeError, ValueError):
-        raise ValueError("mlx port must be an integer")
+        raise ValueError(T("server.backends.mlx_port_must_be_an_integer"))
     if not 0 < port < 65536:
-        raise ValueError(f"mlx port out of range: {port}")
+        raise ValueError(T("server.backends.mlx_port_out_of_range_port", port=port))
     models = sec.get("models") if isinstance(sec.get("models"), dict) else {}
     return MlxSettings(
         enabled=_as_bool(pick("enabled", "CARAVAN_MLX_ENABLED", True)),

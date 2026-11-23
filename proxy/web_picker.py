@@ -23,6 +23,13 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # agent/ is on sys.path from web_server
 try:
@@ -226,7 +233,7 @@ def context_phrase(*blobs, config=None, tokens=None):
             m = int(round(m))
         else:
             m = int(round(m, 1)) if isinstance(m, float) else m
-        size = f"about {m}m"
+        size = T("server.web_picker.about_m_m", m=m)
     elif n >= 1000:
         # "128k" tags are thousands; 32768-token configs are 32 × 1024.
         k = None
@@ -236,12 +243,12 @@ def context_phrase(*blobs, config=None, tokens=None):
             k = int(round(n / 1024))
         else:
             k = int(round(n / 1000))
-        size = f"about {k}k"
+        size = T("server.web_picker.about_k_k", k=k)
     else:
-        size = f"about {n}"
+        size = T("server.web_picker.about_n", n=n)
     if n >= 32000:
-        return f"handles long chats ({size})"
-    return f"{size} of chat history"
+        return T("server.web_picker.handles_long_chats_size", size=size)
+    return T("server.web_picker.size_of_chat_history", size=size)
 
 
 def capability_phrases(tags=None, filters=None, pipeline=None, repo_id=""):
@@ -255,11 +262,11 @@ def capability_phrases(tags=None, filters=None, pipeline=None, repo_id=""):
         "tools", "tool-use", "tool_use", "function-calling",
         "function_calling", "tool-calling", "function-call",
     }:
-        out.append("can use tools")
+        out.append(T("server.web_picker.can_use_tools"))
     if "vision" in filt or blob & {
         "image-text-to-text", "image-to-text", "visual-question-answering", "vision",
     }:
-        out.append("reads images")
+        out.append(T("server.web_picker.reads_images"))
     return out
 
 
@@ -303,13 +310,16 @@ def row_tooltip(group: dict) -> str:
     line2 = ""
     if line2_parts:
         # "Handles long chats (about 32k). Can use tools, reads images."
+        # Day 32: sentence marks come from the strings file; first letters
+        # are capitalised (a no-op in scripts without case).
+        first_up = lambda x: x[:1].upper() + x[1:]
         if ctx and caps:
-            cap = ", ".join(caps)
-            cap = cap[0].upper() + cap[1:]
-            line2 = ctx[0].upper() + ctx[1:] + ". " + cap + "."
+            line2 = T("server.web_picker.two_sentences", a=first_up(ctx), b=first_up(T.join(caps)))
         else:
-            sentence = ", ".join(line2_parts)
-            line2 = sentence[0].upper() + sentence[1:] + ("." if not sentence.endswith(".") else "")
+            line2 = first_up(T.join(line2_parts))
+            end = T("server.web_picker.sentence_end")
+            if not line2.endswith(end):
+                line2 += end
     notice = group.get("download_only_note") or serve_notice(
         filts, pipes[0] if pipes else group.get("pipeline_tag"),
         tags, (quants[0].get("repo_id") if quants else "") or group.get("base") or "",
@@ -616,14 +626,14 @@ def _filters_for(pipeline_tag: str, tags, repo_id: str = "") -> list:
 # types stay in the picker so Caravan can sit between an agent app and a
 # model, but these cannot be served for chat yet.
 DOWNLOAD_ONLY_NOTES = {
-    "text-to-image": "Download only, Caravan can't run image models yet",
-    "image-to-image": "Download only, Caravan can't run image models yet",
-    "text-to-video": "Download only, Caravan can't run video models yet",
-    "text-to-speech": "Download only, Caravan can't run speech models yet",
-    "speech-to-text": "Download only, Caravan can't run speech models yet",
-    "embedding": "Download only, Caravan can't run embedding models yet",
-    "decision": "Download only, Caravan can't run Decision models yet",
-    "any-to-any": "Download only, Caravan can't run this kind of model yet",
+    "text-to-image": T("server.web_picker.download_only_caravan_cant_run_image"),
+    "image-to-image": T("server.web_picker.download_only_caravan_cant_run_image"),
+    "text-to-video": T("server.web_picker.download_only_caravan_cant_run_video"),
+    "text-to-speech": T("server.web_picker.download_only_caravan_cant_run_speech"),
+    "speech-to-text": T("server.web_picker.download_only_caravan_cant_run_speech"),
+    "embedding": T("server.web_picker.download_only_caravan_cant_run_embedding"),
+    "decision": T("server.web_picker.download_only_caravan_cant_run_decision"),
+    "any-to-any": T("server.web_picker.download_only_caravan_cant_run_this"),
 }
 SERVEABLE_FILTERS = {"chat", "coding", "thinking", "tools", "vision", "cloud"}
 
@@ -686,18 +696,34 @@ def serve_notice_for_folder(path) -> str:
     # Voice, video, and other non-chat trees often have no top-level
     # config.json at all. Refuse Load with a plain line.
     if not (d / "config.json").is_file():
-        return "Download only, Caravan can't run this kind of model yet."
+        return T("server.web_picker.download_only_caravan_cant_run_this_2")
     return ""
+
+
+# Day 32: each download-only notice has its own Load refusal line, so the
+# refusal is looked up instead of cut out of the notice's words.
+_REFUSALS = {
+    "download_only_caravan_cant_run_image": "refuse_image",
+    "download_only_caravan_cant_run_video": "refuse_video",
+    "download_only_caravan_cant_run_speech": "refuse_speech",
+    "download_only_caravan_cant_run_embedding": "refuse_embedding",
+    "download_only_caravan_cant_run_decision": "refuse_decision",
+    "download_only_caravan_cant_run_this": "refuse_this_kind",
+    "download_only_caravan_cant_run_this_2": "caravan_cant_run_this_kind_of",
+}
 
 
 def load_refusal(notice: str) -> str:
     """One-line Load error from a download-only notice."""
     s = (notice or "").strip()
-    if s.lower().startswith("download only, "):
+    for nkey, rkey in _REFUSALS.items():
+        if s == T("server.web_picker." + nkey):
+            return T("server.web_picker." + rkey)
+    if s.lower().startswith("download only, "):  # an English notice from an older catalog
         s = s[len("Download only, "):]
         if s:
             s = s[0].upper() + s[1:]
-    return s or "Caravan can't run this kind of model yet."
+    return s or T("server.web_picker.caravan_cant_run_this_kind_of")
 
 def _estimate_weights_gb(params_b: Optional[float], quant: Optional[str],
                         siblings_bytes: Optional[int] = None) -> float:
@@ -741,7 +767,7 @@ def _node_capacity_gb(n: dict) -> float:
 
 
 def _node_label(n: dict, idx: int) -> str:
-    return n.get("label") or n.get("role") or f"Mini{idx+1}"
+    return n.get("label") or n.get("role") or T("server.web_picker.mini_v", v=idx+1)
 
 
 _WINDOW_SIZES = (4096, 8192, 16384, 32768, 65536, 131072, 262144)
@@ -792,7 +818,7 @@ def fit_check(
             "color": "red", "nodes_needed": None, "fits_on": [],
             "need_gb_1": round(weights_gb + safety_gb, 2),
             "need_gb_split": None,
-            "reason": "no online nodes",
+            "reason": T("server.placement.no_online_nodes"),
             "limit": "unknown",
             "runtime_stages": max_stages,
         }
@@ -845,14 +871,12 @@ def fit_check(
             if disks[best] >= share * 0.95:
                 return True, None
             return False, (
-                f"Not enough disk on {labels[best]} "
-                f"(need ~{share:.1f} GB, {disks[best]:.1f} GB free)"
+                T("server.web_picker.not_enough_disk_on_labels_need", labels=labels[best], share=share, disks=disks[best])
             )
         for i in range(k):
             if disks[i] < share * 0.9:
                 return False, (
-                    f"Not enough disk on {labels[i]} "
-                    f"(need ~{share:.1f} GB each, {labels[i]} has {disks[i]:.1f} GB free)"
+                    T("server.web_picker.not_enough_disk_on_labels_need_2", labels=labels[i], share=share, labels2=labels[i], disks=disks[i])
                 )
         return True, None
 
@@ -890,7 +914,7 @@ def fit_check(
     def runtime_note(k: int) -> str:
         if k <= max_stages:
             return ""
-        return f" ({k}-Mini split coming later; runtime loads on {max_stages} today)"
+        return T("server.web_picker.k_mini_split_coming_later_runtime", k=k, max_stages=max_stages)
 
     limit = "ram"
     need_split_each = need_each(2) if n_count >= 2 else None
@@ -901,22 +925,18 @@ def fit_check(
             color, needed = "yellow", 1
             k2 = 2 if 2 in fits_on else (min(fits_on) if fits_on else 2)
             reason = (
-                f"Tight on 1 Mini (~{need_1:.0f} GB RAM; capacity ~{caps_sorted[0]:.0f} GB). "
-                f"Fits on {k2}, about {need_each(k2):.0f} GB each"
-                + runtime_note(k2)
+                T("server.web_picker.tight_on_1_mini_need_1", need_1=need_1, caps_sorted=caps_sorted[0], k2=k2, need_each=need_each(k2), runtime_note=runtime_note(k2))
             )
         else:
             color, needed = "green", 1
-            reason = f"Fits on 1 Mini (~{need_1:.0f} GB RAM; capacity ~{caps_sorted[0]:.0f} GB)"
+            reason = T("server.web_picker.fits_on_1_mini_need_1", need_1=need_1, caps_sorted=caps_sorted[0])
     elif fits_on:
         color, needed = "yellow", min(fits_on)
         ne = need_each(needed)
         # capacity of the poorest of the top-needed
         poor = caps_sorted[needed - 1]
         reason = (
-            f"Fits on {needed} Minis, about {ne:.0f} GB RAM each "
-            f"(capacity ~{poor:.0f} GB)"
-            + runtime_note(needed)
+            T("server.web_picker.fits_on_needed_minis_about_ne", needed=needed, ne=ne, poor=poor, runtime_note=runtime_note(needed))
         )
     elif disk_block and (
         caps_sorted[0] >= need_1
@@ -941,21 +961,19 @@ def fit_check(
             # compare against full split across all online
             k = n_count
             reason = (
-                f"Won't fit: need ~{need_1:.0f} GB RAM on 1 Mini "
-                f"(capacity ~{caps_sorted[0]:.0f} GB)"
+                T("server.web_picker.wont_fit_need_need_1_gb", need_1=need_1, caps_sorted=caps_sorted[0])
             )
             if can_split:
-                reason += f" or ~{need_each(min(2, n_count)):.0f} GB ×{min(2, n_count)}"
+                reason += T("server.web_picker.or_need_each_gb_min", need_each=need_each(min(2, n_count)), min=min(2, n_count))
                 if n_count > 2:
-                    reason += f" (or ~{need_each(n_count):.0f} GB ×{n_count})"
+                    reason += T("server.web_picker.or_need_each_gb_n_count", need_each=need_each(n_count), n_count=n_count)
         else:
-            reason = f"Won't fit on available capacity (wanted {suggest} Minis)"
+            reason = T("server.web_picker.wont_fit_on_available_capacity_wanted", suggest=suggest)
     else:
         # Single node — never mention split
         color, needed = "red", None
         reason = (
-            f"Won't fit on {labels[0]}: need ~{need_1:.0f} GB RAM "
-            f"(capacity ~{caps_sorted[0]:.0f} GB)"
+            T("server.web_picker.wont_fit_on_labels_need_need", labels=labels[0], need_1=need_1, caps_sorted=caps_sorted[0])
         )
         if disk_block:
             reason = disk_block
@@ -985,17 +1003,16 @@ def fit_check(
         w_rec = windows[recommended]
         size = _fmt_window(target)
         if recommended == 1:
-            reason = (f"Fits on 1 Mac with the full {size} context." if w_rec >= target
-                      else f"Fits on 1 Mac with a {_fmt_window(w_rec)} context.")
+            reason = (T("server.web_picker.fits_on_1_mac_with_the", size=size) if w_rec >= target
+                      else T("server.web_picker.fits_on_1_mac_with_a", fmt_window=_fmt_window(w_rec)))
             color = "green" if w_rec >= target else "yellow"
         else:
-            tail = (f"for the full {size} context." if w_rec >= target
-                    else f"for a {_fmt_window(w_rec)} context.")
+            tail = (T("server.web_picker.for_the_full_size_context", size=size) if w_rec >= target
+                    else T("server.web_picker.for_a_fmt_window_context", fmt_window=_fmt_window(w_rec)))
             if 1 in windows:
-                reason = (f"Fits on 1 Mac with a {_fmt_window(windows[1])} context. "
-                          f"Split across {recommended} Macs {tail}")
+                reason = (T("server.web_picker.fits_on_1_mac_with_a_2", fmt_window=_fmt_window(windows[1]), recommended=recommended, tail=tail))
             else:
-                reason = f"Split across {recommended} Macs {tail}"
+                reason = T("server.web_picker.split_across_recommended_macs_tail", recommended=recommended, tail=tail)
             color = "yellow"
 
     return {
@@ -1047,7 +1064,7 @@ def _hf_search(query: str, *, author: Optional[str] = None, filter_gguf: bool = 
     try:
         data = _http_json(url)
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError) as e:
-        return [{"error": f"hf search failed: {e}"}]
+        return [{"error": T("server.web_picker.hf_search_failed_e", e=e)}]
     if not isinstance(data, list):
         return []
     return data
@@ -1341,7 +1358,7 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
                 "cloud_label": "CLOUD",
                 "api_key_configured": _cloud_key_set("ollama"),
                 "provider": "ollama",
-                "note": c.get("note") or "Ollama Cloud · framework only",
+                "note": c.get("note") or T("server.web_picker.ollama_cloud_framework_only"),
             })
         # cloud-only short-circuit
         source = "cloud"
@@ -1412,7 +1429,7 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
                     "cloud_label": "CLOUD",
                     "api_key_configured": _cloud_key_set("ollama"),
                     "provider": "ollama",
-                    "note": c.get("note") or "Ollama Cloud · framework only",
+                    "note": c.get("note") or T("server.web_picker.ollama_cloud_framework_only"),
                 })
 
     # Real sizes (blobs=true, index total_size fallback). No 4 GB guess.
@@ -1526,13 +1543,13 @@ def attach_fit(groups: list, nodes: list) -> list:
             if qq.get("cloud"):
                 qq["fit"] = {
                     "color": "green", "nodes_needed": 0, "fits_on": [],
-                    "reason": "cloud — token usage, not node RAM",
+                    "reason": T("server.web_picker.cloud_token_usage_not_node_ram"),
                     "weights_gb": None,
                 }
             elif not qq.get("weights_gb"):
                 qq["fit"] = {
                     "color": "gray", "nodes_needed": None, "fits_on": [],
-                    "reason": "size unknown — not marked OK",
+                    "reason": T("server.web_picker.size_unknown_not_marked_ok"),
                     "weights_gb": None,
                 }
             else:
@@ -1629,11 +1646,11 @@ def delete_model(repo_or_path: str, *, current_model_id: Optional[str],
     """Delete from ALL Minis. Refuses if currently loaded."""
     rid = (repo_or_path or "").strip()
     if not rid:
-        return {"ok": False, "error": "missing id"}
+        return {"ok": False, "error": T("server.web_picker.missing_id")}
     cur = (current_model_id or "").lower()
     folder = rid.replace("/", "--")
     if cur and (cur == rid.lower() or cur in rid.lower() or folder.lower() in cur):
-        return {"ok": False, "error": "refuse: model is currently loaded"}
+        return {"ok": False, "error": T("server.web_picker.refuse_model_is_currently_loaded")}
     if rid.startswith("gguf/"):
         return delete_gguf(rid)
     removed = []
@@ -1654,7 +1671,7 @@ def delete_model(repo_or_path: str, *, current_model_id: Optional[str],
         except Exception as e:  # noqa: BLE001
             remote = {"error": str(e)}
     if not removed and not (isinstance(remote, dict) and remote.get("removed")):
-        return {"ok": False, "error": "not found on disk", "remote": remote}
+        return {"ok": False, "error": T("server.web_picker.not_found_on_disk"), "remote": remote}
     return {"ok": True, "removed": removed, "remote": remote}
 
 
@@ -1669,11 +1686,11 @@ def delete_gguf(rid: str) -> dict:
     from gguf_sets import members
     hit = next((g for g in gguf_split.scan_local() if g["id"] == rid), None)
     if not hit:
-        return {"ok": False, "error": "not found on disk"}
+        return {"ok": False, "error": T("server.web_picker.not_found_on_disk")}
     p = Path(hit["path"])
     roots = [r.resolve() for r in gguf_split.GGUF_ROOTS]
     if not any(p.resolve().is_relative_to(r) and p.resolve() != r for r in roots) or p.is_symlink():
-        return {"ok": False, "error": "refuse: not in Caravan's GGUF folder"}
+        return {"ok": False, "error": T("server.web_picker.refuse_not_in_caravans_gguf_folder")}
     folder = p.parent
     nearby = {f.name: f.stat().st_size for f in folder.glob("*.gguf")}
     removed = []
@@ -1729,8 +1746,8 @@ def list_cleanup_targets(*, packer: Optional[dict] = None,
         {
             "id": "cleanup:hf-cache",
             "kind": "hf-cache",
-            "name": "Download cache (Hugging Face)",
-            "note": "Hub cache plus leftover .cache folders under mlx-models (skips the loaded model)",
+            "name": T("server.web_picker.download_cache_hugging_face"),
+            "note": T("server.web_picker.hub_cache_plus_leftover_cache_folders"),
             "size_gb": {
                 "lead": lead_hub,
                 "packer": packer.get("hf-cache"),
@@ -1740,8 +1757,8 @@ def list_cleanup_targets(*, packer: Optional[dict] = None,
         {
             "id": "cleanup:drafts",
             "kind": "drafts",
-            "name": "Guess-ahead helper models",
-            "note": "Small drafts under mlx-models/drafts — guess-ahead re-downloads when needed",
+            "name": T("server.web_picker.guess_ahead_helper_models"),
+            "note": T("server.web_picker.small_drafts_under_mlx_models_drafts"),
             "size_gb": {
                 "lead": round(_path_size_gb(drafts), 2),
                 "packer": packer.get("drafts"),
@@ -1802,7 +1819,7 @@ def delete_cleanup(kind: str, *, current_model_id: Optional[str] = None,
                     except OSError:
                         pass
     else:
-        return {"ok": False, "error": f"unknown cleanup kind: {kind}"}
+        return {"ok": False, "error": T("server.web_picker.unknown_cleanup_kind_kind", kind=kind)}
 
     remote = None
     if ssh_cleanup:
@@ -1877,7 +1894,7 @@ def progress_snapshot(dest: str, total_bytes: Optional[int], prev: Optional[dict
             prev=prev,
         )
     except Exception as e:  # noqa: BLE001
-        return {"pct": 0, "msg": f"progress error: {e}", "have_bytes": 0, "t": time.time(),
+        return {"pct": 0, "msg": T("server.web_picker.progress_error_e", e=e), "have_bytes": 0, "t": time.time(),
                 "source": "starting", "stalled": False}
 
 
@@ -1913,7 +1930,7 @@ def cancel_job(jid: str, *, kill_procs: Optional[callable] = None) -> dict:
     with _jobs_lock:
         j = _jobs.get(jid)
         if not j:
-            return {"ok": False, "error": "unknown job"}
+            return {"ok": False, "error": T("server.web_picker.unknown_job")}
         j["cancel"] = True
         j["status"] = "cancelling"
         repo = j.get("repo_id")
@@ -2068,14 +2085,14 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
         dest_lead = dest_lead or str(MLX_MODEL_ROOTS[0] / folder)
         if run_lead:
             runners.append({
-                "id": "lead", "label": "1st Mac", "role": "lead",
+                "id": "lead", "label": T("server.web_nodes.1st_mac"), "role": "lead",
                 "dest": dest_lead, "run": run_lead,
                 "total_bytes": total_bytes_lead, "measure": None,
             })
         dest_packer = dest_packer or f"~/.caravan/mlx-models/{folder}"
         if run_packer:
             runners.append({
-                "id": "packer", "label": "2nd Mac", "role": "packer",
+                "id": "packer", "label": T("server.web_nodes.2nd_mac"), "role": "packer",
                 "dest": dest_packer, "run": run_packer,
                 "total_bytes": total_bytes_packer, "measure": measure_packer,
             })
@@ -2083,7 +2100,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
     progress = {}
     for r in runners:
         rid = r.get("id") or r.get("label") or "node"
-        progress[rid] = {"pct": 0, "msg": "starting…", "have_bytes": 0, "t": time.time(),
+        progress[rid] = {"pct": 0, "msg": T("server.download_progress.starting"), "have_bytes": 0, "t": time.time(),
                          "label": r.get("label") or rid, "role": r.get("role"),
                          "source": "starting", "stalled": False}
         # legacy aliases
@@ -2154,20 +2171,22 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                         mb_s = speed / 1e6
                         eta_s = ((total - have) / speed) if (speed > 0 and total > have) else None
                         if have == 0:
-                            msg = ("can't read progress: " + str(m["measure_error"])) if m.get("measure_error") else "starting…"
+                            msg = (T("server.web_picker.cant_read_progress_measure_error", measure_error=str(m["measure_error"]))) if m.get("measure_error") else T("server.download_progress.starting")
                             pct = 0
                         elif total:
-                            msg = f"{have/1e9:.2f}/{total/1e9:.2f} GB · {mb_s:.1f} MB/s · ETA {_fmt_eta(eta_s)}"
+                            msg = T("server.download_progress.v_v2_gb_mb_s_mb", v=have/1e9, v2=total/1e9, mb_s=mb_s, fmt_eta=_fmt_eta(eta_s))
                         else:
-                            msg = f"{have/1e9:.2f} GB · {mb_s:.1f} MB/s"
+                            msg = T("server.download_progress.v_gb_mb_s_mb_s", v=have/1e9, mb_s=mb_s)
                         if m.get("source") == "nettop":
-                            msg += " · via network"
+                            msg += T("server.download_progress.via_network")
                         if n_inc:
-                            msg += f" · {n_inc} active"
+                            msg += T("server.web_picker.n_inc_active", n_inc=n_inc)
                         if stalled:
-                            msg += " · stalled?"
+                            msg += T("server.download_progress.stalled")
                         snap = {
                             "pct": pct, "msg": msg, "have_bytes": have,
+                            # Day 32: stable code, so the page need not match the words.
+                            "msg_code": "cant_read" if (have == 0 and m.get("measure_error")) else None,
                             "total_bytes": total or None, "speed_bps": speed,
                             "mb_s": round(mb_s, 2),
                             "eta_s": None if eta_s is None else int(eta_s),
@@ -2182,7 +2201,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             "disk_have": disk_now,
                         }
                 except Exception as e:  # noqa: BLE001
-                    snap = {"pct": 0, "msg": f"measure error: {e}", "t": time.time(),
+                    snap = {"pct": 0, "msg": T("server.web_picker.measure_error_e", e=e), "t": time.time(),
                             "source": "starting", "stalled": False}
             else:
                 totals = (get_job(jid) or {}).get("totals") or {}
@@ -2205,8 +2224,9 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                     if prev_p.get("retry"):
                         snap["retry"] = prev_p["retry"]
                     if prev_p.get("stage") and not (
-                            snap.get("have_bytes") and str(prev_p["stage"]).startswith("starting")):
+                            snap.get("have_bytes") and prev_p.get("stage_code") == "starting"):
                         snap["stage"] = prev_p.get("stage")
+                        snap["stage_code"] = prev_p.get("stage_code")
                     _jobs[jid]["progress"][role_id] = snap
                     # mirror legacy keys
                     if snap.get("role") == "lead":
@@ -2240,7 +2260,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                 fn = r.get("run")
                 dest = r.get("dest")
                 stop_evt = stops[rid]
-                def prog(pct, msg):
+                def prog(pct, msg, code=None):
                     if get_job(jid) and get_job(jid).get("cancel"):
                         raise RuntimeError("cancelled")
                     with _jobs_lock:
@@ -2248,6 +2268,8 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                         # Runner milestones are coarse (5/15/30/100). Keep them as a
                         # stage label; byte-based pct from the watcher stays in charge.
                         cur["stage"] = msg
+                        # Day 32: "starting" etc. as a code, not by its words.
+                        cur["stage_code"] = code
                         _jobs[jid]["progress"][rid] = cur
                         if cur.get("role") == "lead":
                             _jobs[jid]["progress"]["lead"] = cur
@@ -2255,7 +2277,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             _jobs[jid]["progress"]["packer"] = cur
                 try:
                     if not fn:
-                        raise RuntimeError(f"no runner for {rid}")
+                        raise RuntimeError(T("server.web_picker.no_runner_for_rid", rid=rid))
                     attempt = 0
                     while True:
                         try:
@@ -2270,8 +2292,9 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             with _jobs_lock:
                                 cur = dict(_jobs[jid]["progress"].get(rid) or {})
                                 cur["retry"] = {"n": attempt, "of": RETRY_MAX, "wait_s": wait,
-                                                "error": "network error"}
-                                cur["stage"] = f"network error, retry {attempt}/{RETRY_MAX} in {wait}s"
+                                                "error": T("server.web_picker.network_error")}
+                                cur["stage"] = T("server.web_picker.network_error_retry_attempt_retry_max", attempt=attempt, retry_max=RETRY_MAX, wait=wait)
+                                cur["stage_code"] = "network_retry"
                                 _jobs[jid]["progress"][rid] = cur
                             if stop_evt.wait(0) or _sleep_unless_cancel(jid, wait):
                                 raise
@@ -2314,7 +2337,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                 for e in errors:
                     if e not in seen:
                         seen.append(e)
-                _job_set(jid, status="error", error="; ".join(seen))
+                _job_set(jid, status="error", error=T.join(seen, "clause"))
                 return
             with _jobs_lock:
                 for rid, p in list(_jobs[jid]["progress"].items()):
@@ -2332,7 +2355,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             pp["have_bytes"] = max(int(pp.get("have_bytes") or 0), int(pp["total_bytes"]))
                         pp["speed_bps"] = 0; pp["eta_s"] = None; pp["stalled"] = False
                         pp["state"] = "done"
-                        pp["msg"] = "done" + (f" · {pp['have_bytes']/1e9:.2f} GB" if pp.get("have_bytes") else "")
+                        pp["msg"] = "done" + (T("server.web_picker.v_gb", v=pp['have_bytes']/1e9) if pp.get("have_bytes") else "")
                         _jobs[jid]["progress"][rid] = pp
             # Persist placement next to each dest so Settings/load respect it.
             place = (get_job(jid) or {}).get("placement") or placement or {}
@@ -2355,7 +2378,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
                             else:
                                 write_placement(dest, blob)
                         except Exception as exc:
-                            raise RuntimeError(f"downloaded files but could not save placement on {r.get('id')}: {exc}") from exc
+                            raise RuntimeError(T("server.web_picker.downloaded_files_but_could_not_save", id=r.get('id'), exc=exc)) from exc
                 except Exception:
                     raise
             _job_set(jid, status="done", model_folder=folder)
@@ -2378,7 +2401,7 @@ def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],
     from huggingface_hub import snapshot_download, hf_hub_download
     dest_p = Path(dest).expanduser()
     dest_p.mkdir(parents=True, exist_ok=True)
-    progress(5, "fetching index")
+    progress(5, T("server.web_picker.fetching_index"))
     for fname in ("config.json", "model.safetensors.index.json"):
         try:
             hf_hub_download(repo_id, fname, local_dir=str(dest_p), token=_hf_token())
@@ -2388,7 +2411,7 @@ def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],
     idx_path = dest_p / "model.safetensors.index.json"
     if not cfg_path.is_file() or not idx_path.is_file():
         # Not an LLM shard layout (diffusion trees, single-file repos, …).
-        progress(20, "full snapshot")
+        progress(20, T("server.web_picker.full_snapshot"))
         snapshot_download(repo_id, local_dir=str(dest_p), token=_hf_token())
         progress(100, "done")
         return
@@ -2398,12 +2421,12 @@ def local_download_mlx(repo_id: str, dest: str, packer_layers: Optional[int],
     plan = MSF.plan_files(cfg, index, front_layers=packer_layers)
     role_key = "head" if role == "lead" else "front"
     mine = sorted(plan[role_key])
-    progress(15, f"{len(mine)} shards for {role}")
+    progress(15, T("server.web_picker.mine_shards_for_role", mine=len(mine), role=role))
     small = list(MSF.SMALL)
     patterns = small + mine
-    progress(30, "downloading shards")
+    progress(30, T("server.web_picker.downloading_shards"))
     snapshot_download(
         repo_id, local_dir=str(dest_p),
         allow_patterns=patterns, token=_hf_token(),
     )
-    progress(100, f"done ({len(mine)} shards)")
+    progress(100, T("server.web_picker.done_mine_shards", mine=len(mine)))

@@ -15,6 +15,13 @@ from __future__ import annotations
 import os
 from functools import partial
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 FUSE_ENV = "CARAVAN_FUSE_KERNELS"
@@ -43,7 +50,7 @@ def resolve_mode(cli_value: Optional[str]) -> str:
         return "all"
     if v in MODES:
         return v
-    raise ValueError(f"unknown fuse-kernels mode {cli_value!r}; want one of {MODES}")
+    raise ValueError(T("agent.fuse_kernels.unknown_fuse_kernels_mode_cli_value", cli_value=cli_value, modes=MODES))
 
 
 def _patch_force_fused() -> str:
@@ -86,7 +93,7 @@ def _patch_force_fused() -> str:
         if hasattr(mod, "scaled_dot_product_attention"):
             setattr(mod, "scaled_dot_product_attention", wrapped)
             patched.append(mod_name)
-    return "force_fused on " + ", ".join(patched)
+    return T("agent.fuse_kernels.force_fused_on_patched", patched=T.join(patched))
 
 
 def _metal_swiglu_kernel():

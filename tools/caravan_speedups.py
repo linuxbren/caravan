@@ -44,13 +44,13 @@ MODES = {
     "gguf": (
         (T("cli.speedups.off"), {"prompt_lookup": "off", "guess_ahead": "off", "self_tune": "off"}),
         (T("cli.speedups.prompt_lookup"), {"prompt_lookup": "on", "guess_ahead": "off", "self_tune": "off"}),
-        ("Guess-ahead", {"prompt_lookup": "off", "guess_ahead": "on", "self_tune": "off"}),
+        (T("cli.speedups.guess_ahead"), {"prompt_lookup": "off", "guess_ahead": "on", "self_tune": "off"}),
         (T("cli.speedups.auto"), {}),
     ),
     "mlx": (
         (T("cli.speedups.off"), {"prompt_lookup": "off", "guess_ahead": "off", "self_tune": "off"}),
         (T("cli.speedups.prompt_lookup"), {"prompt_lookup": "adaptive", "guess_ahead": "off", "self_tune": "off"}),
-        ("Guess-ahead", {"prompt_lookup": "off", "guess_ahead": "on", "self_tune": "off"}),
+        (T("cli.speedups.guess_ahead"), {"prompt_lookup": "off", "guess_ahead": "on", "self_tune": "off"}),
         (T("cli.speedups.auto"), {}),
     ),
 }
@@ -140,9 +140,10 @@ def _active_note(active):
     pl = a.get("prompt_lookup")
     pl_on = bool(pl.get("enabled")) if isinstance(pl, dict) else bool(pl)
     ga = bool(a.get("guess_ahead"))
-    bits = [T("cli.speedups.prompt_lookup_v", v='on' if pl_on else 'off'),
-            f"Guess-ahead {'on' if ga else 'off'}"]
-    return ", ".join(bits)
+    on, off = T("cli.speedups.state_on"), T("cli.speedups.state_off")
+    bits = [T("cli.speedups.prompt_lookup_v", v=on if pl_on else off),
+            T("cli.speedups.guess_ahead_v", v=on if ga else off)]
+    return T.join(bits)
 
 
 def load_with(port, model_id, settings, urlopen, status_fn, *, wait=420,
@@ -194,11 +195,11 @@ def run_side(kind, model_id, *, port, urlopen, status_fn, window_fn,
             split is False
             or (isinstance(active, dict) and active
                 and active.get("two_chats_available") is False))
-        if mode == "Guess-ahead" and single_mlx:
+        if mode == T("cli.speedups.guess_ahead") and single_mlx:
             rows.append({"mode": mode, "skipped": True, "active": note,
                          "reason": T("cli.speedups.on_one_mac_an_mlx_model")})
             continue
-        if mode == "Guess-ahead" and isinstance(active, dict) and active and not active.get("guess_ahead"):
+        if mode == T("cli.speedups.guess_ahead") and isinstance(active, dict) and active and not active.get("guess_ahead"):
             rows.append({"mode": mode, "skipped": True, "active": note,
                          "reason": T("cli.speedups.no_helper_model_on_this_mac")})
             continue
@@ -226,11 +227,11 @@ def run_side(kind, model_id, *, port, urlopen, status_fn, window_fn,
 
 def verdicts(rows):
     """{mode: {set: "faster"|"slower"|"same"}} against Off, 3% margin."""
-    base = {r["set"]: r for r in rows if r.get("mode") == "Off"
+    base = {r["set"]: r for r in rows if r.get("mode") == T("cli.speedups.off")
             and not r.get("skipped") and r.get("set")}
     out = {}
     for r in rows:
-        if r.get("mode") == "Off" or r.get("skipped") or not r.get("set"):
+        if r.get("mode") == T("cli.speedups.off") or r.get("skipped") or not r.get("set"):
             continue
         b = base.get(r["set"])
         a_w = (r.get("specs") or {}).get("write_tok_s")
@@ -263,22 +264,22 @@ def format_table(name, rows) -> list:
         s = r.get("specs") or {}
         g = r.get("guess") or {}
         ch = (v.get(mode) or {}).get(r.get("set")) or {}
-        vs = "" if mode == "Off" else (f"{ch['change_pct']:+.0f}%" if ch else "—")
+        vs = "" if mode == T("cli.speedups.off") else (f"{ch['change_pct']:+.0f}%" if ch else "—")
         kept = ""
         if g.get("kept_pct") is not None:
             kept = T("cli.speedups.kept_pct_kept_of_guessed", kept_pct=g['kept_pct'], kept=g['kept'], guessed=g['guessed'])
         elif g.get("reply_pct") is not None:
             kept = T("cli.speedups.reply_pct_of_words_guessed", reply_pct=g['reply_pct'])
-        elif mode != "Off":
+        elif mode != T("cli.speedups.off"):
             kept = T("cli.speedups.no_guesses")
         ttft = s.get("ttft_s")
         lines.append(
             f"  {mode:<14} {r.get('set', ''):<16} {_fmt(s.get('write_tok_s')):>11}  {vs:>6}   "
             f"{(_fmt(ttft, 2) + 's') if ttft is not None else '—':>11}  {kept}"
         )
-    autos = sorted({r.get("active") for r in rows if r.get("mode") == "Auto" and r.get("active")})
+    autos = sorted({r.get("active") for r in rows if r.get("mode") == T("cli.speedups.auto") and r.get("active")})
     if autos:
-        lines.append(T("cli.speedups.auto_ran_with_autos", autos='; '.join(autos)))
+        lines.append(T("cli.speedups.auto_ran_with_autos", autos=T.join(autos, "clause")))
     return lines
 
 
@@ -288,17 +289,17 @@ def summary_lines(name, rows) -> list:
         faster = [f"{k} {d['change_pct']:+.0f}%" for k, d in sets.items() if d["verdict"] == "faster"]
         slower = [f"{k} {d['change_pct']:+.0f}%" for k, d in sets.items() if d["verdict"] == "slower"]
         if faster and not slower:
-            out.append(T("cli.speedups.name_mode_faster_on_faster_no", name=name, mode=mode, faster=', '.join(faster)))
+            out.append(T("cli.speedups.name_mode_faster_on_faster_no", name=name, mode=mode, faster=T.join(faster)))
         elif faster:
-            out.append(T("cli.speedups.name_mode_faster_on_faster_slower", name=name, mode=mode, faster=', '.join(faster), slower=', '.join(slower)))
+            out.append(T("cli.speedups.name_mode_faster_on_faster_slower", name=name, mode=mode, faster=T.join(faster), slower=T.join(slower)))
         elif slower:
-            out.append(T("cli.speedups.name_mode_slower_on_slower_keep", name=name, mode=mode, slower=', '.join(slower)))
+            out.append(T("cli.speedups.name_mode_slower_on_slower_keep", name=name, mode=mode, slower=T.join(slower)))
         else:
             out.append(T("cli.speedups.name_mode_about_the_same_as", name=name, mode=mode))
         later = [f"{k} {d['ttft_change_pct']:+.0f}%" for k, d in sets.items()
                  if (d.get("ttft_change_pct") or 0) >= MARGIN * 100]
         if later:
-            out.append(T("cli.speedups.first_token_came_later_on_later", later=', '.join(later)))
+            out.append(T("cli.speedups.first_token_came_later_on_later", later=T.join(later)))
     return out
 
 

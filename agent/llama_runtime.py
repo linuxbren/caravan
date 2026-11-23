@@ -6,6 +6,13 @@ from pathlib import Path
 import tarfile
 import tempfile
 import urllib.request
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 PIN = json.loads((Path(__file__).resolve().parents[1] / "runtime/llama-release.json").read_text())
 
@@ -38,21 +45,21 @@ def ensure(home=None, retrieve=urllib.request.urlretrieve):
         return root
     root.parent.mkdir(parents=True, exist_ok=True)
     if root.exists() or root.is_symlink():
-        raise ValueError("The model engine folder is incomplete. Keep it for inspection and run caravan doctor.")
+        raise ValueError(T("agent.llama_runtime.the_model_engine_folder_is_incomplete"))
     with tempfile.TemporaryDirectory(dir=root.parent, prefix="download-") as tmp:
         archive = Path(tmp) / "release.tar.gz"
         retrieve(PIN["url"], archive)
         if hashlib.sha256(archive.read_bytes()).hexdigest() != PIN["sha256"]:
-            raise ValueError("Model engine download failed its safety check. Retry setup.")
+            raise ValueError(T("agent.llama_runtime.model_engine_download_failed_its_safety"))
         stage = Path(tmp) / "unpack"
         stage.mkdir()
         with tarfile.open(archive) as tar:
             for member in tar.getmembers():
                 dest = (stage / member.name).resolve()
                 if not dest.is_relative_to(stage.resolve()) or member.isdev() or member.isfifo() or member.islnk():
-                    raise ValueError("Unsafe model engine archive")
+                    raise ValueError(T("agent.llama_runtime.unsafe_model_engine_archive"))
                 if member.issym() and not (dest.parent / member.linkname).resolve().is_relative_to(stage.resolve()):
-                    raise ValueError("Unsafe model engine archive link")
+                    raise ValueError(T("agent.llama_runtime.unsafe_model_engine_archive_link"))
             if hasattr(tarfile, "data_filter"):
                 tar.extractall(stage, filter="data")
             else:  # Python 3.10: validated members above.
@@ -60,7 +67,7 @@ def ensure(home=None, retrieve=urllib.request.urlretrieve):
         extracted = stage / ("llama-" + PIN["version"])
         for name in ("llama-server", "ggml-rpc-server", "libggml-rpc.dylib"):
             if not (extracted / name).is_file():
-                raise ValueError("Model engine archive is missing a required file: " + name)
+                raise ValueError(T("agent.llama_runtime.model_engine_archive_is_missing_a", name=name))
         (extracted / "release.sha256").write_text(PIN["sha256"] + "\n")
         extracted.rename(root)
     return root

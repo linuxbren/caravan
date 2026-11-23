@@ -19,6 +19,13 @@ from urllib.error import HTTPError
 import uuid
 import web_settings
 from service_endpoints import RetryableReadinessError, error_payload
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def mac_name(node,nid,inventory):
@@ -27,43 +34,47 @@ def mac_name(node,nid,inventory):
     try:
         label=web_nodes.friendly_mac_label(node,node_id=nid,inventory=inventory)
     except Exception:
-        label="Mac"
-    if label in ("Mac",str(nid)) or label.startswith("paired_"):label="other Mac"
-    return ("The "+label) if (label[:1].isdigit() or label in ("My Mac","other Mac")) else label
+        label=T("server.pairing.mac")
+    # Day 32: generic names in the active language, plus the English ones
+    # older configs saved (labels are stored, so both can appear).
+    generic={"Mac",T("server.pairing.mac"),str(nid)}
+    if label in generic or label.startswith("paired_"):label=T("server.web_restore.other_mac")
+    plain={"My Mac","other Mac",T("server.pairing_store.my_mac"),T("server.web_restore.other_mac")}
+    return (T("server.web_restore.the_label", label=label)) if (label[:1].isdigit() or label in plain) else label
 
 
 def canonical(request):
     if not isinstance(request, dict) or not isinstance(request.get("model_id"), str) or not request["model_id"].strip():
-        raise ValueError("last-model record needs a model ID")
+        raise ValueError(T("server.web_restore.last_model_record_needs_a_model"))
     if len(request["model_id"]) > 1024 or request.get("engine") not in ("mlx", "gguf"):
-        raise ValueError("invalid last-model ID/engine")
+        raise ValueError(T("server.web_restore.invalid_last_model_id_engine"))
     out = {"model_id":request["model_id"], "engine":request["engine"],
            "settings":web_settings.normalize(request.get("settings") or {})}
     for key in ("placement_id", "repo_id", "gguf_file"):
         if request.get(key):
-            if not isinstance(request[key],str):raise ValueError("invalid saved "+key)
+            if not isinstance(request[key],str):raise ValueError(T("server.web_restore.invalid_saved_key", key_=key))
             out[key] = request[key]
     ids = request.get("node_ids")
     if ids is not None:
         if not isinstance(ids,list) or not ids or any(not isinstance(x,str) or not x for x in ids) or len(set(ids)) != len(ids):
-            raise ValueError("invalid saved Mini IDs")
+            raise ValueError(T("server.web_restore.invalid_saved_mini_ids"))
         out["node_ids"] = list(ids)
     if request.get("placement"):
         p=request["placement"]
         if not isinstance(p,dict) or p.get("mode") not in ("one","all","split"):
-            raise ValueError("invalid saved placement")
+            raise ValueError(T("server.web_restore.invalid_saved_placement"))
         pi=p.get("node_ids")
         if not isinstance(pi,list) or not pi or any(not isinstance(x,str) or not x for x in pi) or len(set(pi))!=len(pi):
-            raise ValueError("invalid saved placement Minis")
+            raise ValueError(T("server.web_restore.invalid_saved_placement_minis"))
         out["placement"]={"mode":p["mode"],"node_ids":list(pi)}
     if request.get("balance"):
         out["balance"] = True
     if request.get("counts") is not None:
         counts=request["counts"]
         if not isinstance(counts,list) or not counts or any(isinstance(x,bool) or not isinstance(x,(int,float)) or not math.isfinite(x) or x<=0 for x in counts):
-            raise ValueError("invalid saved split")
-        if out["engine"] == "mlx" and any(not isinstance(x,int) for x in counts):raise ValueError("MLX layer counts must be integers")
-        if ids is not None and len(ids)!=len(counts):raise ValueError("one saved share per Mini is required")
+            raise ValueError(T("server.web_restore.invalid_saved_split"))
+        if out["engine"] == "mlx" and any(not isinstance(x,int) for x in counts):raise ValueError(T("server.web_restore.mlx_layer_counts_must_be_integers"))
+        if ids is not None and len(ids)!=len(counts):raise ValueError(T("server.web_restore.one_saved_share_per_mini_is"))
         out["counts"] = list(counts)
     if isinstance(request.get("gguf_tune"),dict):
         out["gguf_tune"] = {k:v for k,v in request["gguf_tune"].items() if k in ("flash_attn","ubatch")}
@@ -74,9 +85,9 @@ class Store:
     def __init__(self, path):self.path=Path(path)
     def read(self):
         if not self.path.exists():return None
-        if self.path.stat().st_size>1024*1024:raise ValueError("last-model record is too large")
+        if self.path.stat().st_size>1024*1024:raise ValueError(T("server.web_restore.last_model_record_is_too_large"))
         blob=json.loads(self.path.read_text())
-        if not isinstance(blob,dict) or blob.get("schema")!=1 or "request" not in blob:raise ValueError("unsupported/incomplete last-model record")
+        if not isinstance(blob,dict) or blob.get("schema")!=1 or "request" not in blob:raise ValueError(T("server.web_restore.unsupported_incomplete_last_model_record"))
         return canonical(blob["request"]) if blob.get("request") is not None else None
     def write(self, request):
         request=canonical(request) if request is not None else None
@@ -163,15 +174,15 @@ def validate_placement(app, entry, body):
     body=canonical(body)
     expected=body["engine"]
     if expected not in ("mlx","gguf") or ("gguf" if entry.get("source")=="gguf" else "mlx")!=expected:
-        raise ValueError("Saved model engine no longer matches the installed model")
+        raise ValueError(T("server.web_restore.saved_model_engine_no_longer_matches"))
     if body.get("balance"):return entry
     place=body.get("placement") or {}
     ids=place.get("node_ids") or body.get("node_ids") or []
     configured={n["id"]:n for n in app.configured_nodes()}
-    if not ids or len(set(ids))!=len(ids) or not set(ids)<=set(configured):raise ValueError("Saved Minis are missing or no longer configured")
+    if not ids or len(set(ids))!=len(ids) or not set(ids)<=set(configured):raise ValueError(T("server.web_restore.saved_minis_are_missing_or_no"))
     import web_nodes
     if expected=="gguf" and (configured[ids[0]].get("role")!="lead" or not web_nodes.is_local(configured[ids[0]]) or sum(configured[i].get("role")=="lead" for i in ids)!=1):
-        raise ValueError("Saved GGUF placement needs its original local lead; no substitute Mini was selected")
+        raise ValueError(T("server.web_restore.saved_gguf_placement_needs_its_original"))
     live={n["id"]:n for n in app.nodes().get("nodes") or []}
     caps=[]
     for nid in ids:
@@ -179,37 +190,37 @@ def validate_placement(app, entry, body):
         # Plain Mac name ("the 2nd Mac"), never the internal paired_… id: the
         # page's wording filter turned that id into a bare "Mac" (Day 30).
         name=mac_name(node,nid,list(configured.values()))
-        if stats.get("offline"):raise RetryableReadinessError(f"{name} is not reachable yet", kind="mini")
+        if stats.get("offline"):raise RetryableReadinessError(T("server.web_restore.name_is_not_reachable_yet", name=name), kind="mini")
         available=(stats.get("ram") or {}).get("available_gb",(stats.get("ram") or {}).get("free_gb"))
         if isinstance(available,bool) or not isinstance(available,(int,float)) or not math.isfinite(available) or available<=0:
-            raise RetryableReadinessError(f"Free memory on {name[0].lower()+name[1:] if name.startswith('The ') else name} is unknown for now; nothing was loaded", kind="memory")
+            raise RetryableReadinessError(T("server.web_restore.free_memory_on_v_is_unknown", v=name[0].lower()+name[1:] if name.startswith(T("server.web_restore.the_label", label="")) else name), kind="memory")
         current=live.get(nid,{})
         footprint=float(current.get("active_gb") or current.get("weights_gb") or 0) if app.mgr.snapshot().get("status")=="ready" and current.get("model") else 0
         caps.append(float(available)+max(0,footprint))
     out=dict(entry)
     if expected=="mlx":
-        if len(ids)!=1 or place.get("mode") not in ("one","all"):raise ValueError("Saved MLX split must use the Balance planner")
+        if len(ids)!=1 or place.get("mode") not in ("one","all"):raise ValueError(T("server.web_restore.saved_mlx_split_must_use_the"))
         inv=next((n for n in app.gather_model_inventories() if n.get("id")==ids[0]),{})
         model=(inv.get("models") or {}).get(entry.get("hf")) or {}
         if not model.get("full_ok") or not model.get("has_tokenizer") or not model.get("path"):
-            raise ValueError(f"Required complete model files are missing on {ids[0]}; no download was started")
+            raise ValueError(T("server.web_restore.required_complete_model_files_are_missing", ids=ids[0]))
         weights=float(model.get("weights_gb") or 0)
         out.update(placement={"mode":"one","node_ids":ids},lead_path=model["path"],usable=True,available_lead=True,need_split=False,run_mode="single")
         out.pop("split_counts",None);out.pop("pipeline_nodes",None)
         shares=[1]
     else:
         path=Path(entry["lead_path"]).expanduser()
-        if not path.is_file():raise ValueError("Saved GGUF file is missing; no download was started")
+        if not path.is_file():raise ValueError(T("server.web_restore.saved_gguf_file_is_missing_no"))
         weights=(entry['gguf_deployment']['source']['source_bytes'] if entry.get('sharded') else path.stat().st_size)/1e9;shares=body.get("counts") or entry.get('gguf_shares') or [1]*len(ids)
         if entry.get('sharded'):
             import gguf_share_download as D
             dep=entry['gguf_deployment']
-            if ids!=dep['node_ids'] or D.shares(shares)!=dep['shares']:raise ValueError('Saved own-part plan differs from the installed plan; use Balance, no automatic download was started')
-        if len(shares)!=len(ids):raise ValueError("Saved GGUF shares do not match the Minis")
+            if ids!=dep['node_ids'] or D.shares(shares)!=dep['shares']:raise ValueError(T("server.web_restore.saved_own_part_plan_differs_from"))
+        if len(shares)!=len(ids):raise ValueError(T("server.web_restore.saved_gguf_shares_do_not_match"))
         out.update(placement={"mode":"split" if len(ids)>1 else "one","node_ids":ids},gguf_shares=shares)
         if body.get("gguf_tune"):out["tune_override"]=restorable_gguf_tune(body["gguf_tune"],entry.get("lead_path"))
     if not weights or any(c-weights*s/sum(shares)-1.3<1.75 for c,s in zip(caps,shares)):
-        raise ValueError("Not enough free memory to restore this placement with 1.75 GB headroom; choose a smaller model or another split")
+        raise ValueError(T("server.web_restore.not_enough_free_memory_to_restore"))
     return out
 
 
@@ -235,21 +246,21 @@ class Controller:
                 cancelled=getattr(self.mgr,"_load_cancel",None)
                 if cancelled and cancelled.is_set():return
                 self.store.write(request)
-                self.state.update(phase="saved",message="Last successful model saved for next login",last_model=request["model_id"],saved_at=time.time())
+                self.state.update(phase="saved",message=T("server.web_restore.last_successful_model_saved_for_next"),last_model=request["model_id"],saved_at=time.time())
         except Exception as e:
-            self.note("save_error","Model loaded, but last-model preference could not be saved: "+str(e))
+            self.note("save_error",T("server.web_restore.model_loaded_but_last_model_preference", e=str(e)))
             self.mgr._note(self.state["message"])
     def cancel(self):
-        with self.lock:self.token=None;self.cancelled=True;self._cancel_event.set();self.state.update(phase="cancelled",message="Automatic restore cancelled by model controls")
+        with self.lock:self.token=None;self.cancelled=True;self._cancel_event.set();self.state.update(phase="cancelled",message=T("server.web_restore.automatic_restore_cancelled_by_model_controls"))
     def clear(self):
         self.cancel()
         with self.lock:
-            self.store.write(None);self.state.update(phase="empty",last_model=None,message="Models unloaded; next login will restore nothing")
+            self.store.write(None);self.state.update(phase="empty",last_model=None,message=T("server.web_restore.models_unloaded_next_login_will_restore"))
     def authorize(self,body,*,begin=False):
         token=body.get("_restore_token")
         if token:
             with self.lock:
-                if token!=self.token or self.cancelled:raise ValueError("Automatic restore was cancelled; nothing was changed")
+                if token!=self.token or self.cancelled:raise ValueError(T("server.web_restore.automatic_restore_was_cancelled_nothing_was"))
         elif begin:self.cancel()
     def start(self,base_url,*,background=True):
         with self.lock:
@@ -291,13 +302,13 @@ class Controller:
                     snap=self.mgr.snapshot()
                 typed=RetryableReadinessError.from_state(snap)
                 if typed:raise typed
-                raise ValueError(snap.get("error") or "Model did not become ready")
+                raise ValueError(snap.get("error") or T("server.web_restore.model_did_not_become_ready"))
             threading.Event().wait(.25)
-        raise ValueError("Timed out restoring last model; use Load to try again")
+        raise ValueError(T("server.web_restore.timed_out_restoring_last_model_use"))
     def _backoff(self,token,attempt,error,retry_deadline,delay):
         remaining=retry_deadline-self._clock()
         if remaining<=0:
-            raise ValueError(error.timeout_message(self.retry_timeout) if isinstance(error,RetryableReadinessError) else f"Peer readiness timed out after {self.retry_timeout:g}s")
+            raise ValueError(error.timeout_message(self.retry_timeout) if isinstance(error,RetryableReadinessError) else T("server.web_restore.peer_readiness_timed_out_after_retry", retry_timeout=self.retry_timeout))
         pause=min(delay,remaining)
         with self.lock:
             if self.cancelled or self.token!=token:return 0
@@ -307,20 +318,20 @@ class Controller:
         self._wait(pause)
         return min(delay*2,30)
     def run(self):
-        if not self.state["enabled"]:self.note("disabled","Automatic restore disabled; last successful loads are still saved");return
+        if not self.state["enabled"]:self.note("disabled",T("server.web_restore.automatic_restore_disabled_last_successful_loads"));return
         try:
             with self.lock:
                 if self.cancelled:return
-                if self.mgr.snapshot().get("status")=="ready":self.note("adopted","Kept the existing healthy model; no reload needed");return
+                if self.mgr.snapshot().get("status")=="ready":self.note("adopted",T("server.web_restore.kept_the_existing_healthy_model_no"));return
             request=self.store.read()
             with self.lock:
                 if self.cancelled:return
-                if request is None:self.note("empty","No last model to restore");return
+                if request is None:self.note("empty",T("server.web_restore.no_last_model_to_restore"));return
                 self.token=uuid.uuid4().hex;token=self.token
-                self.state.update(phase="preparing",message="Restoring last model: "+request["model_id"],last_model=request["model_id"])
+                self.state.update(phase="preparing",message=T("server.web_restore.restoring_last_model_model_id", model_id=request["model_id"]),last_model=request["model_id"])
             self.mgr._note(self.state["message"])
             healthy=getattr(self.mgr,"lead_healthy",None)
-            if callable(healthy) and healthy():raise ValueError("An unadopted worker already owns the lead port; it was not stopped")
+            if callable(healthy) and healthy():raise ValueError(T("server.web_restore.an_unadopted_worker_already_owns_the"))
             # Retry only flagged pre-worker unreadiness. Never retry ambiguous
             # HTTP timeouts, missing files or RAM shortfalls.
             retry_deadline=self._clock()+self.retry_timeout
@@ -330,7 +341,7 @@ class Controller:
                     if self.cancelled or self.token!=token:return
                 remaining=retry_deadline-self._clock()
                 if remaining<=0:
-                    raise ValueError(last_retryable.timeout_message(self.retry_timeout) if last_retryable else f"Peer readiness timed out after {self.retry_timeout:g}s")
+                    raise ValueError(last_retryable.timeout_message(self.retry_timeout) if last_retryable else T("server.web_restore.peer_readiness_timed_out_after_retry", retry_timeout=self.retry_timeout))
                 attempt+=1
                 try:
                     self.http("/api/models/load",dict(request,_restore_token=token),timeout=min(180,max(1,remaining)))
@@ -342,12 +353,12 @@ class Controller:
                     if delay==0:return
             with self.lock:self.state.pop("retry_in_s",None)
             if self.mgr.snapshot().get("status")=="ready":
-                self.note("restored","Last model restored; UI model controls remain available");return
-            raise ValueError(self.mgr.snapshot().get("error") or "Model did not become ready")
+                self.note("restored",T("server.web_restore.last_model_restored_ui_model_controls"));return
+            raise ValueError(self.mgr.snapshot().get("error") or T("server.web_restore.model_did_not_become_ready"))
         except Exception as e:
             with self.lock:
                 if self.cancelled:return
-                message="Could not restore last model: "+str(e)+". Check Minis/files/memory, then press Load. No automatic retry or download."
+                message=T("server.web_restore.could_not_restore_last_model_e", e=str(e))
                 self.token=None  # a timed-out HTTP preparation must not start later
                 self.state.update(phase="blocked",message=message)
                 if self.mgr.snapshot().get("status")!="ready":self.mgr._set(status="idle",error=message)

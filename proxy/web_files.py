@@ -15,6 +15,13 @@ import uuid
 import web_nodes
 import web_picker
 from model_files import repo_name
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def rp(path):
@@ -43,7 +50,7 @@ def inspect_node(app, node, path):
         return inspect(path)
     r = shell(app, node, command(app, node, ['--inspect-json', json.dumps({'path': path})]))
     if r.returncode:
-        raise ValueError(f"Cannot inspect files on {node['id']}: {(r.stderr or r.stdout or '')[-300:]}")
+        raise ValueError(T("server.web_files.cannot_inspect_files_on_id_v", id=node['id'], v=(r.stderr or r.stdout or '')[-300:]))
     return json.loads(r.stdout.strip().splitlines()[-1])
 
 
@@ -72,7 +79,7 @@ if p.is_file():
 
 def active(app,node):
     r=shell(app,node,command(app,node,['--list-transfers']))
-    if r.returncode: raise ValueError('Cannot check active transfers on '+node['id']+'; update/check this Mini before fetching')
+    if r.returncode: raise ValueError(T("server.web_files.cannot_check_active_transfers_on_id", id=node['id']))
     return [t for t in json.loads(r.stdout.strip().splitlines()[-1]) if t.get('node_id') in (None,node['id'])]
 
 
@@ -84,10 +91,10 @@ def orphans(app, known):
         for t in items:
             if t['repo_id'] in known: continue
             group=found.setdefault(t['repo_id'],{'progress':{},'transfers':[]})
-            group['progress'][node['id']]={'label':node.get('label') or node['id'],'role':node.get('role'), 'pct':0,'msg':'owned transfer still running after web restart; see transfer log','source':'unknown'}
+            group['progress'][node['id']]={'label':node.get('label') or node['id'],'role':node.get('role'), 'pct':0,'msg':T("server.web_files.owned_transfer_still_running_after_web"),'source':'unknown'}
             group['transfers'].append({'id':node['id'],'token':t['token']})
     return [dict(id='files-live-'+repo.replace('/','--'),repo_id=repo,status='running',orphan=True,file_mode=True,
-                 progress=g['progress'],file_transfers=g['transfers'],note='Active file transfer rediscovered; no automatic reload') for repo,g in found.items()]
+                 progress=g['progress'],file_transfers=g['transfers'],note=T("server.web_files.active_file_transfer_rediscovered_no_automatic")) for repo,g in found.items()]
 
 
 _start_lock = threading.Lock()
@@ -103,10 +110,10 @@ def _start_locked(app, plan):
     """Explicit Fetch button. Revalidated preview supplied by the server, not client."""
     repo = repo_name(plan['repo_id'])
     if any(j.get('repo_id') == repo and j.get('status') in ('queued', 'running', 'cancelling') for j in web_picker.list_jobs()):
-        raise ValueError('a download for this repository is already running; wait or stop it first')
+        raise ValueError(T("server.web_files.a_download_for_this_repository_is"))
     discover = getattr(app,'list_orphan_fetch_jobs',None)
     if discover and any(j.get('repo_id')==repo for j in discover()):
-        raise ValueError('an untracked download for this repository is still running; stop/wait before fetching')
+        raise ValueError(T("server.web_files.an_untracked_download_for_this_repository"))
     requests = [dict(r) for r in plan['file_requests']]
     # One immutable revision for the WHOLE job, not independently resolved main
     # on each Mini (the source can publish new weights during a long download).
@@ -116,7 +123,7 @@ def _start_locked(app, plan):
             from huggingface_hub import HfApi
             from mlx_split_fetch import _resolve_token
             revision = HfApi(token=_resolve_token()).model_info(repo).sha
-            if not revision: raise ValueError('source revision is unknown')
+            if not revision: raise ValueError(T("server.web_files.source_revision_is_unknown"))
             for r in requests: r['revision'] = revision
     by_id = {n['id']: n for n in app.configured_nodes()}
     destinations = set()
@@ -126,11 +133,11 @@ def _start_locked(app, plan):
         if physical in ('local','localhost','127.0.0.1'): physical='local'
         key=(physical,r.get('dest'))
         if key in destinations:
-            raise ValueError('simulated Minis on one host need separate model_root folders; nothing started')
+            raise ValueError(T("server.web_files.simulated_minis_on_one_host_need"))
         destinations.add(key)
     for stage in plan['stages']:
         if any(t['repo_id']==repo for t in active(app,by_id[stage['id']])):
-            raise ValueError('an owned transfer is still running on '+stage['id']+'; stop/wait before starting another')
+            raise ValueError(T("server.web_files.an_owned_transfer_is_still_running", id=stage['id']))
     placement = {'mode': 'split', 'node_ids': plan['node_ids'], 'layer_plan': plan['counts'],
                  'split_counts': plan['counts'], 'n_stages': len(plan['counts']),
                  'node_labels': [s['label'] for s in plan['stages']]}
@@ -142,7 +149,7 @@ def _start_locked(app, plan):
         node = by_id[stage['id']]
         request.update(node_id=stage['id'],placement=placement)
         if stage.get('downloads') is None:
-            raise ValueError(f"Files unknown on {stage['id']}; refresh before fetching")
+            raise ValueError(T("server.web_files.files_unknown_on_id_refresh_before", id=stage['id']))
         if request.get('format') == 'gguf' and node.get('role') == 'lead':
             continue  # llama.cpp still needs the existing complete lead file
         token = uuid.uuid4().hex
@@ -151,21 +158,21 @@ def _start_locked(app, plan):
             base = '~/.caravan/transfers/' + token
             blob = json.dumps(request, separators=(',', ':'))
             r = shell(app, node, 'mkdir -p ~/.caravan/transfers; : > ' + rp(base+'.json'))
-            if r.returncode: raise RuntimeError('cannot prepare transfer plan')
+            if r.returncode: raise RuntimeError(T("server.web_files.cannot_prepare_transfer_plan"))
             # Bound each SSH command even for large MoE tensor manifests.
             for i in range(0, len(blob), 24000):
                 r = shell(app, node, 'printf %s ' + shlex.quote(blob[i:i+24000]) + ' >> ' + rp(base+'.json'))
-                if r.returncode: raise RuntimeError('cannot write transfer plan')
+                if r.returncode: raise RuntimeError(T("server.web_files.cannot_write_transfer_plan"))
             cmd = command(app, node, ['--fetch-plan', str(base+'.json'), '--job', token])
             # The subshell records the real exit code; a vanished PID is NOT success.
             inner = cmd + ' & child=$!; printf %s "$child" > ' + rp(base+'.pid') + '; wait "$child"; rc=$?; printf %s "$rc" > ' + rp(base+'.exit')
             launch = 'nohup bash -c ' + shlex.quote(inner) + ' > ' + rp(base+'.log') + ' 2>&1 < /dev/null &'
 
             r = shell(app, node, launch)
-            if r.returncode: raise RuntimeError('could not start file transfer')
+            if r.returncode: raise RuntimeError(T("server.web_files.could_not_start_file_transfer"))
             lost = 0
             while True:
-                prog(1, 'fetching this Mini’s own files from source')  # checks cancellation
+                prog(1, T("server.web_files.fetching_this_minis_own_files_from"))  # checks cancellation
                 code = """from pathlib import Path
 import json,os,sys
 b=Path.home()/'.caravan/transfers'/sys.argv[1]
@@ -178,16 +185,16 @@ if pid:
 print(json.dumps({'exit':e.read_text() if e.exists() else None,'alive':alive,'pid':pid,'log':b.with_suffix('.log').read_text()[-1200:] if b.with_suffix('.log').exists() else ''}))
 """
                 r = shell(app, node, 'python3 -c '+shlex.quote(code)+' '+token)
-                if r.returncode: raise RuntimeError('lost transfer status; inspect ~/.caravan/transfers/'+token+'.log')
+                if r.returncode: raise RuntimeError(T("server.web_files.lost_transfer_status_inspect_caravan_transfers", token=token))
                 status = json.loads(r.stdout.strip().splitlines()[-1])
                 if status['exit'] is not None:
-                    if status['exit'].strip() != '0': raise RuntimeError(status['log'] or 'stage fetch failed')
+                    if status['exit'].strip() != '0': raise RuntimeError(status['log'] or T("server.web_files.stage_fetch_failed"))
                     break
                 lost = lost+1 if not status.get('alive') else 0
                 if lost >= 5:
-                    raise RuntimeError('transfer disappeared without an exit result; inspect its log, not marked complete')
+                    raise RuntimeError(T("server.web_files.transfer_disappeared_without_an_exit_result"))
                 time.sleep(1)
-            prog(100, 'verified complete')
+            prog(100, T("server.web_files.verified_complete"))
         def save(blob, node=node, request=request):
             # GGUF caches have their own manifest and do not change MLX placement.
             if request.get('format') == 'gguf-shards':
@@ -198,7 +205,7 @@ print(json.dumps({'exit':e.read_text() if e.exists() else None,'alive':alive,'pi
             if request.get('format') == 'gguf': return
             code = "from pathlib import Path; import json,sys; p=Path(sys.argv[1]).expanduser()/'caravan-placement.json'; p.write_text(sys.argv[2])"
             r = shell(app, node, 'python3 -c '+shlex.quote(code)+' '+rp(request['dest'])+' '+shlex.quote(json.dumps(blob)))
-            if r.returncode: raise RuntimeError('could not save stage placement')
+            if r.returncode: raise RuntimeError(T("server.web_files.could_not_save_stage_placement"))
         def measure(node=node, request=request, token=token):
             # This counts bytes on this Mini, not network traffic or another node's files.
             if request.get('format') in ('gguf','gguf-shards'):
@@ -213,8 +220,8 @@ print(json.dumps({'exit':e.read_text() if e.exists() else None,'alive':alive,'pi
         runners.append({'id': stage['id'], 'label': stage['label'], 'role': node.get('role'),
                         'dest': request.get('dest') or '~/.caravan/transfers', 'run': run,
                         'measure': measure, 'total_bytes': stage.get('required_bytes'), 'save_placement': save})
-    if not runners: raise ValueError('no peer files to fetch')
-    job = web_picker.start_download(repo, runners=runners, placement=placement, note='Own files only; retained files are never deleted')
+    if not runners: raise ValueError(T("server.web_files.no_peer_files_to_fetch"))
+    job = web_picker.start_download(repo, runners=runners, placement=placement, note=T("server.web_files.own_files_only_retained_files_are"))
     web_picker._job_set(job['id'], file_mode=True, file_transfers=transfers, load_id=plan['model_id'],
                         request={'file_fetch': True, 'model_id': plan['model_id'], 'counts': plan['counts'], 'node_ids': plan['node_ids'], 'repo_id': repo, 'gguf_file': requests[0].get('filename'), 'source': 'gguf' if requests[0].get('format')=='gguf-shards' else None, 'revision':requests[0].get('revision')})
     return web_picker.get_job(job['id'])
@@ -230,19 +237,19 @@ def prepare_new_mlx(app, repo, nodes, counts=None):
     repo_name(repo)
     token = _resolve_token()
     info = HfApi(token=token).model_info(repo, files_metadata=True)
-    if not info.sha: raise ValueError('source revision is unknown')
+    if not info.sha: raise ValueError(T("server.web_files.source_revision_is_unknown"))
     sizes = {s.rfilename: int(s.size or 0) for s in info.siblings}
     with tempfile.TemporaryDirectory(prefix='caravan-preview-') as tmp:
         snapshot_download(repo, revision=info.sha, local_dir=tmp, token=token,
                           allow_patterns=['config.json', 'model.safetensors.index.json'])
         if not (Path(tmp)/'config.json').is_file() or not (Path(tmp)/'model.safetensors.index.json').is_file():
             raise ValueError(
-                "This model isn't a chat model Caravan can split. Download it to one Mac instead."
+                T("server.web_files.this_model_isnt_a_chat_model")
             )
         cfg = json.loads((Path(tmp)/'config.json').read_text())
         idx = json.loads((Path(tmp)/'model.safetensors.index.json').read_text())
     nodes = SB.pipeline_order(nodes)
-    if len(nodes) != len({n['id'] for n in nodes}): raise ValueError('duplicate Mini IDs')
+    if len(nodes) != len({n['id'] for n in nodes}): raise ValueError(T("server.web_files.duplicate_mini_ids"))
     inventories, requests = {}, []
     for n in nodes:
         dest = model_dest(n, repo)
@@ -253,7 +260,7 @@ def prepare_new_mlx(app, repo, nodes, counts=None):
         requests.append({'format': 'mlx', 'repo_id': repo, 'dest': dest, 'metadata_digest': plan_digest(cfg, idx), 'revision': info.sha})
     weights = sum(sizes[f] for f in set(idx['weight_map'].values())) / 1e9
     out = SB.preview(n_layers_of(cfg), weights, nodes, counts, config=cfg, index=idx, sizes=sizes, inventories=inventories)
-    if not out['safe']: raise ValueError('this split leaves too little memory; choose fewer layers/a smaller model')
+    if not out['safe']: raise ValueError(T("server.web_files.this_split_leaves_too_little_memory"))
     for i, r in enumerate(requests):
         r.update(counts=out['counts'], stage_index=i, required_files=out['stages'][i]['required_files'])
     out.update(repo_id=repo, model_id=repo, node_ids=[n['id'] for n in nodes], file_requests=requests)

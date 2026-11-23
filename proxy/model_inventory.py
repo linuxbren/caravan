@@ -12,6 +12,13 @@ import re
 import sys
 from pathlib import Path
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -116,7 +123,7 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
     base['downloaded'] = any('/' not in name and name.endswith('.safetensors') and size > 0
                              for name, size in (base['storage'].get('files') or {}).items())
     if not d.is_dir():
-        base["reason"] = "missing folder"
+        base["reason"] = T("server.model_inventory.missing_folder")
         return base
 
     cfg_p, idx_p = d / "config.json", d / "model.safetensors.index.json"
@@ -133,22 +140,22 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
             base["placement"] = None
 
     if not base["has_config"]:
-        base["reason"] = "missing config.json"
+        base["reason"] = T("server.model_inventory.missing_config_json")
         base["kind"] = "partial"
         return base
     if not base["has_tokenizer"]:
-        base["reason"] = "missing tokenizer"
+        base["reason"] = T("server.model_inventory.missing_tokenizer")
         base["kind"] = "partial"
         return base
     if base["incomplete"]:
-        base["reason"] = f"{len(base['incomplete'])} incomplete download file(s)"
+        base["reason"] = T("server.model_inventory.incomplete_incomplete_download_file_s", incomplete=len(base['incomplete']))
         base["kind"] = "partial"
         # still compute what we can below
 
     try:
         cfg = json.loads(cfg_p.read_text())
     except (OSError, ValueError) as e:
-        base["reason"] = f"bad config.json: {e}"
+        base["reason"] = T("server.model_inventory.bad_config_json_e", e=e)
         base["kind"] = "partial"
         return base
 
@@ -173,14 +180,14 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
             base["kind"] = "full"
             base["reason"] = ""
             return base
-        base["reason"] = base["reason"] or "missing model.safetensors.index.json"
+        base["reason"] = base["reason"] or T("server.model_inventory.missing_model_safetensors_index_json")
         base["kind"] = "partial"
         return base
 
     try:
         index = json.loads(idx_p.read_text())
     except (OSError, ValueError) as e:
-        base["reason"] = f"bad index: {e}"
+        base["reason"] = T("server.model_inventory.bad_index_e", e=e)
         base["kind"] = "partial"
         return base
 
@@ -262,22 +269,22 @@ def inspect_tree(path: str | Path, *, packer_layers: Optional[int] = None) -> di
     elif base["lead_ok"] and not base["packer_ok"]:
         base["ok"] = True  # usable as lead half
         base["kind"] = "split-lead"
-        base["reason"] = "" if not missing_pack else f"lead shards ok; packer would need {len(missing_pack)} more"
+        base["reason"] = "" if not missing_pack else T("server.model_inventory.lead_shards_ok_packer_would_need", missing_pack=len(missing_pack))
     elif base["packer_ok"] and not base["lead_ok"]:
         base["ok"] = True
         base["kind"] = "split-packer"
-        base["reason"] = "" if not missing_lead else f"packer shards ok; lead would need {len(missing_lead)} more"
+        base["reason"] = "" if not missing_lead else T("server.model_inventory.packer_shards_ok_lead_would_need", missing_lead=len(missing_lead))
     else:
         base["ok"] = False
         base["kind"] = "partial"
         if base["incomplete"]:
-            base["reason"] = f"{len(base['incomplete'])} incomplete download file(s)"
+            base["reason"] = T("server.model_inventory.incomplete_incomplete_download_file_s", incomplete=len(base['incomplete']))
         elif missing_lead and missing_pack:
-            base["reason"] = f"missing {len(missing_all)} shard(s)"
+            base["reason"] = T.plural("server.model_inventory.missing_shards", len(missing_all))
         elif missing_lead:
-            base["reason"] = f"missing {len(missing_lead)} lead shard(s)"
+            base["reason"] = T.plural("server.model_inventory.missing_lead_shards", len(missing_lead))
         elif missing_pack:
-            base["reason"] = f"missing {len(missing_pack)} packer shard(s)"
+            base["reason"] = T.plural("server.model_inventory.missing_packer_shards", len(missing_pack))
         else:
             base["reason"] = plan_err or "incomplete"
     return base

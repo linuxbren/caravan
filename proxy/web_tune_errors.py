@@ -8,24 +8,31 @@ from __future__ import annotations
 import json
 import logging
 from urllib.error import HTTPError, URLError
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # Settings-row names, same words the page already uses.
 KNOB_LABELS = {
-    "kv_bits": "Memory compression",
-    "cache_type": "Memory compression",
-    "fuse_kernels": "Fused kernels",
-    "keepalive": "GPU keep-warm",
-    "shared_prefix": "Shared start",
-    "shared_start": "Shared start",
-    "slot_save": "Shared start",
+    "kv_bits": T("server.gguf_self_tune.memory_compression"),
+    "cache_type": T("server.gguf_self_tune.memory_compression"),
+    "fuse_kernels": T("server.web_settings.fused_kernels"),
+    "keepalive": T("server.web_settings.gpu_keep_warm"),
+    "shared_prefix": T("server.web_tune_errors.shared_start"),
+    "shared_start": T("server.web_tune_errors.shared_start"),
+    "slot_save": T("server.web_tune_errors.shared_start"),
     "guess_ahead": "Guess-ahead",
     "native_mtp": "Guess-ahead",
-    "pipeline_chats": "Two chats",
-    "adaptive_lookup": "Prompt lookup",
-    "prompt_lookup": "Prompt lookup",
-    "flash_attn": "Flash attention",
-    "ubatch": "Prompt batch",
-    "packer_layers": "the layer split",
+    "pipeline_chats": T("server.web_settings.two_chats"),
+    "adaptive_lookup": T("server.web_tune_errors.prompt_lookup"),
+    "prompt_lookup": T("server.web_tune_errors.prompt_lookup"),
+    "flash_attn": T("server.gguf_self_tune.flash_attention"),
+    "ubatch": T("server.gguf_self_tune.prompt_batch"),
+    "packer_layers": T("server.web_tune_errors.the_layer_split"),
 }
 
 log = logging.getLogger("caravan-web")
@@ -97,41 +104,50 @@ def log_tune_error(detail: str, *, source: str | None = None) -> None:
     print(f"[caravan-web] optimize/{who} failed: {detail}", flush=True)
 
 
+def _own(key: str) -> str:
+    """The fixed start of one of Caravan's own messages (lowercase, before its
+    first value), so the checks below also know it in the active language."""
+    return T(key).split("{", 1)[0].rstrip(": ").lower() or "\0"
+
+
 def plain_tune_error(error, *, schedule=None, source=None, detail=None) -> str:
     """Short sentence for the page. Never interpolates raw exception text."""
     if source == "self_tune":
-        who = "Self-tuning"
+        who = T("server.web_tune_errors.self_tuning")
     elif source == "optimize_now" or source == "now":
-        who = "Auto-tune"
+        who = T("server.web_tune_errors.auto_tune")
     else:
-        who = "The trial"
+        who = T("server.web_tune_errors.the_trial")
     label = knob_label(running_knob(schedule))
-    trying = f" while trying {label}" if label else ""
+    trying = T("server.web_tune_errors.while_trying_label", label=label) if label else ""
     text = detail if detail is not None else detail_of(error)
     low = text.lower()
 
     def sentence(why: str, again: bool = False) -> str:
-        tail = " Try loading again." if again else " The model is back on the previous settings."
-        return f"{who} stopped{trying}. {why}{tail}"
+        tail = T("server.web_tune_errors.try_loading_again") if again else T("server.web_tune_errors.the_model_is_back_on_the")
+        return T("server.web_tune_errors.who_stopped_trying_why_tail", who=who, trying=trying, why=why, tail=tail)
 
     if "400" in text or "bad request" in low or "was rejected" in low:
-        return sentence("A trial setting was rejected.")
+        return sentence(T("server.web_tune_errors.a_trial_setting_was_rejected"))
     if "timed out" in low or "timeout" in low:
-        return sentence("A trial took too long.")
-    if "restore failed" in low:
-        return sentence("The model couldn't return to the previous settings.", again=True)
-    if "reload failed" in low or "load failed" in low:
-        return sentence("The model didn't finish reloading.", again=True)
+        return sentence(T("server.web_tune_errors.a_trial_took_too_long"))
+    # English words come from workers and HTTP; _own(...) is Caravan's own text.
+    if "restore failed" in low or _own("server.web_optimize.restore_failed_error") in low:
+        return sentence(T("server.web_tune_errors.the_model_couldnt_return_to_the"), again=True)
+    if ("reload failed" in low or "load failed" in low or _own("server.web_optimize.reload_failed_error") in low
+            or _own("server.web_workers.load_failed_e") in low):
+        return sentence(T("server.web_tune_errors.the_model_didnt_finish_reloading"), again=True)
     if any(s in low for s in ("connection refused", "urlerror", "couldn't reach",
-                              "network is unreachable", "connection reset")):
-        return sentence("Couldn't reach the model.", again=True)
-    if "model changed" in low:
-        return f"{who} stopped because the model changed. Load the model and try again."
+                              "network is unreachable", "connection reset",
+                              _own("server.web_tunnels.couldnt_reach_who_try_loading_again"))):
+        return sentence(T("server.web_tune_errors.couldnt_reach_the_model"), again=True)
+    if "model changed" in low or _own("server.web_optimize.model_changed_during_auto_tune") in low:
+        return T("server.web_tune_errors.who_stopped_because_the_model_changed", who=who)
     if "500" in text or "internal server" in low or "httperror" in low:
-        return sentence("A trial setting ran into a problem.")
+        return sentence(T("server.web_tune_errors.a_trial_setting_ran_into_a"))
     if "cancel" in low:
-        return f"{who} was canceled. The model is back on the previous settings."
-    return sentence("Something went wrong during a trial.")
+        return T("server.web_tune_errors.who_was_canceled_the_model_is", who=who)
+    return sentence(T("server.web_tune_errors.something_went_wrong_during_a_trial"))
 
 
 def public_error(snap: dict | None) -> str | None:

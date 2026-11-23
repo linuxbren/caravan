@@ -18,6 +18,13 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 STALL_SECS = float(os.environ.get("CARAVAN_DOWNLOAD_STALL_SECS", "30"))
 PROGRESS_DIR = Path(os.environ.get("CARAVAN_PROGRESS_DIR", "/tmp"))
@@ -277,21 +284,21 @@ def combine_progress(
     mb_s = speed / 1e6
 
     if source == "starting" or (have == 0 and source != "disk"):
-        msg = "starting…"
+        msg = T("server.download_progress.starting")
         pct = 0
     else:
         if total:
-            msg = f"{have/1e9:.2f}/{total/1e9:.2f} GB · {mb_s:.1f} MB/s · ETA {fmt_eta(eta_s)}"
+            msg = T("server.download_progress.v_v2_gb_mb_s_mb", v=have/1e9, v2=total/1e9, mb_s=mb_s, fmt_eta=fmt_eta(eta_s))
         else:
-            msg = f"{have/1e9:.2f} GB · {mb_s:.1f} MB/s"
+            msg = T("server.download_progress.v_gb_mb_s_mb_s", v=have/1e9, mb_s=mb_s)
         if source == "nettop":
-            msg += " · via network"
+            msg += T("server.download_progress.via_network")
         elif source == "hook":
-            msg += " · live"
+            msg += T("server.download_progress.live")
         if disk.get("n_incomplete"):
-            msg += f" · {disk['n_incomplete']} active"
+            msg += T("server.download_progress.n_incomplete_active", n_incomplete=disk['n_incomplete'])
         if stalled:
-            msg += " · stalled?"
+            msg += T("server.download_progress.stalled")
 
     return {
         "pct": pct,

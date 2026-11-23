@@ -21,8 +21,8 @@ from i18n_check import english_source  # Day 32: page/CLI text lives in locales/
 HTML = english_source(ROOT / "proxy/web/index.html")
 DAY = (ROOT / "docs/DAY26.md").read_text()
 WEB = (ROOT / "docs/WEB.md").read_text()
-WORKERS = (ROOT / "proxy/web_workers.py").read_text()
-SPLIT = (ROOT / "proxy/gguf_split.py").read_text()
+WORKERS = english_source(ROOT / "proxy/web_workers.py")
+SPLIT = english_source(ROOT / "proxy/gguf_split.py")
 
 
 def _touch_gguf(path: Path, size: int):

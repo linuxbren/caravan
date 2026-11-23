@@ -20,9 +20,16 @@ import re
 import time
 from pathlib import Path
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 STORE = Path("~/.caravan/helper-offers.json").expanduser()
-LINE = "Download helper for faster replies?"
+LINE = T("server.helper_offer.download_helper_for_faster_replies")
 
 # id, pattern on the main GGUF file name, helper repo/file, size, and
 # what we know. Only same-tokenizer pairs. "measured" names a real
@@ -201,12 +208,11 @@ def helper_status(snapshot: dict, entry: Optional[dict], *, find_draft=None) -> 
            "known_name": known["gguf_file"][:-len(".gguf")] if known else None,
            "known_size_mb": _mb(known["bytes"]) if known else None}
     if present:
-        out["message"] = (f"The Guess-ahead helper is already on this Mac ({out['present_name']}). "
-                          "Set Guess-ahead to On, or leave it on Auto and run Auto-tune.")
+        out["message"] = (T("server.helper_offer.the_guess_ahead_helper_is_already", present_name=out['present_name']))
     elif known:
-        out["message"] = f"A {out['known_size_mb']} MB helper ({out['known_name']}) can make this model write faster."
+        out["message"] = T("server.helper_offer.a_known_size_mb_mb_helper", known_size_mb=out['known_size_mb'], known_name=out['known_name'])
     else:
-        out["message"] = "There is no known Guess-ahead helper for this GGUF model yet."
+        out["message"] = T("server.helper_offer.there_is_no_known_guess_ahead")
     return out
 
 

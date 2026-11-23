@@ -252,7 +252,7 @@ def inspect(*, port=None, home=None, path=None):
     addrs = addresses(port) if on else []
     binds = listen_hosts(path=path)
     if on and addrs:
-        message = T("cli.lan.open_at_addrs_from_a_device", addrs=" or ".join(addrs), warning=WARNING)
+        message = T("cli.lan.open_at_addrs_from_a_device", addrs=T.join(addrs, "or"), warning=WARNING)
     elif on:
         message = (
             T("cli.lan.on_the_page_is_open_on", warning=WARNING)
@@ -297,7 +297,7 @@ def turn_off(*, port=None, home=None, path=None, missing_ok=True):
 
 def status_line(info):
     if info.get("enabled") and info.get("addresses"):
-        return ON_PREFIX + " and ".join(info["addresses"])
+        return ON_PREFIX + T.join(info["addresses"], "and")
     if info.get("enabled"):
         return T("cli.lan.open_on_the_local_network_is", v=info.get("message") or WARNING)
     return OFF_MESSAGE
@@ -309,7 +309,7 @@ def doctor_line(*, port=None, home=None, path=None):
     except LanError as e:
         return T("cli.lan.open_on_the_local_network_e", e=e)
     if info.get("enabled") and info.get("addresses"):
-        return T("cli.lan.open_on_the_local_network_is_2", addresses=" and ".join(info["addresses"]), warning=WARNING)
+        return T("cli.lan.open_on_the_local_network_is_2", addresses=T.join(info["addresses"], "and"), warning=WARNING)
     if info.get("enabled"):
         return T("cli.lan.open_on_the_local_network_is_3", warning=WARNING)
     return OFF_MESSAGE

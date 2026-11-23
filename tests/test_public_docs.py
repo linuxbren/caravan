@@ -2,6 +2,7 @@
 from pathlib import Path
 import re
 import unittest
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 ROOT = Path(__file__).resolve().parents[1]
 GUIDES = ['README.md', 'INSTALL.md'] + [f'docs/{name}.md' for name in (
@@ -38,7 +39,7 @@ class PublicDocsTest(unittest.TestCase):
         self.assertIn('Apply the public naming rule daily', (ROOT/'docs/RELEASES.md').read_text())
 
     def test_visible_startup_messages_use_roles_not_lab_names(self):
-        text = (ROOT/'proxy/web_workers.py').read_text()
+        text = english_source(ROOT/'proxy/web_workers.py')
         for old in ('starting packer on EXO2', 'starting lead on EXO1', 'model folder missing on EXO1'):
             self.assertNotIn(old, text)
         self.assertIn('starting lead on the 1st Mac', text)

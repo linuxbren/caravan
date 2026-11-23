@@ -11,15 +11,20 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # User-facing. No jargon, no hostnames, no model architecture names.
 DISABLED_4_REASON = (
-    "4 is not available on this model. This model's chat memory is too "
-    "compact for 4 to work well."
+    T("agent.kv_quality.4_is_not_available_on_this")
 )
 FALLBACK_NOTE = (
-    "Memory compression 4 is not available on this model, so it was "
-    "turned back to Auto."
+    T("agent.kv_quality.memory_compression_4_is_not_available")
 )
 PROBE_PROMPT = "Reply with just: OK"
 PROBE_EXPECT = "OK"
@@ -112,10 +117,9 @@ def disabled_values_for(config=None, *, model_dir=None, source="mlx") -> dict:
 
 
 def probe_fail_notice(kv) -> str:
-    label = str(kv if kv is not None else "").strip() or "this setting"
+    label = str(kv if kv is not None else "").strip() or T("agent.kv_quality.this_setting")
     return (
-        f"Memory compression {label} gave wrong answers on this model, "
-        "so it was turned back to 16."
+        T("agent.kv_quality.memory_compression_label_gave_wrong_answers", label=label)
     )
 
 

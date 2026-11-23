@@ -22,6 +22,13 @@ import threading
 import time
 
 from pairing_store import Store, atomic, read_json, valid_id, public_key, NETWORKS, private
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 PORT = 8197
@@ -32,13 +39,13 @@ SETTINGS_URL = 'x-apple.systempreferences:com.apple.preferences.sharing?Services
 
 
 def addresses(host):
-    if not isinstance(host,str) or not host or len(host)>253 or any(c in host for c in '/\\@\r\n\x00'): raise ValueError('Invalid Mac address.')
+    if not isinstance(host,str) or not host or len(host)>253 or any(c in host for c in '/\\@\r\n\x00'): raise ValueError(T("server.pairing.invalid_mac_address"))
     rows = socket.getaddrinfo(host,None,type=socket.SOCK_STREAM)
     ips = list(dict.fromkeys(row[4][0] for row in rows))
     # Ignore public DNS results; connect only to validated literals, never a
     # second DNS lookup. Dual-stack home Macs may also advertise global IPv6.
     ips=[ip for ip in ips if private(ip)]
-    if not ips: raise ValueError('Pairing is limited to your local network, cable or private tailnet.')
+    if not ips: raise ValueError(T("server.pairing.pairing_is_limited_to_your_local"))
     return sorted(ips,key=lambda ip:(0 if ipaddress.ip_address(ip.split("%")[0]).version==4 else 1,ip))
 
 
@@ -53,22 +60,22 @@ def request(endpoint, path, body=None, *, timeout=5):
         try:
             conn.request('GET' if body is None else 'POST',path,body=data,headers={'Content-Type':'application/json','Connection':'close'})
             result=conn.getresponse();raw=result.read(MAX_BODY+1)
-            if len(raw)>MAX_BODY:raise ValueError('Pairing reply was too large.')
+            if len(raw)>MAX_BODY:raise ValueError(T("server.pairing.pairing_reply_was_too_large"))
             value=json.loads(raw)
-            if not isinstance(value,dict):raise ValueError('Invalid pairing reply.')
-            if result.status!=200:raise ValueError(value.get('error','The other Mac could not finish pairing.'))
+            if not isinstance(value,dict):raise ValueError(T("server.pairing.invalid_pairing_reply"))
+            if result.status!=200:raise ValueError(value.get('error',T("server.pairing.other_mac_could_not_finish")))
             return value
         except (OSError,http.client.HTTPException) as error:last=error
         finally:conn.close()
-    raise OSError('That Mac is not reachable at its private addresses.') from last
+    raise OSError(T("server.pairing.that_mac_is_not_reachable_at")) from last
 
 
 def b64(value): return base64.b64encode(value).decode('ascii')
 def un64(value, maximum=8192):
-    if not isinstance(value,str) or len(value)>maximum*2: raise ValueError('Invalid pairing message.')
+    if not isinstance(value,str) or len(value)>maximum*2: raise ValueError(T("server.pairing.invalid_pairing_message"))
     try: result=base64.b64decode(value,validate=True)
-    except Exception: raise ValueError('Invalid pairing message.') from None
-    if len(result)>maximum: raise ValueError('Invalid pairing message.')
+    except Exception: raise ValueError(T("server.pairing.invalid_pairing_message")) from None
+    if len(result)>maximum: raise ValueError(T("server.pairing.invalid_pairing_message"))
     return result
 
 
@@ -82,7 +89,7 @@ def unseal(key, value, context):
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     raw=un64(value)
     try: return json.loads(AESGCM(key).decrypt(raw[:12],raw[12:],context.encode()))
-    except Exception: raise ValueError('The code did not match, or the message changed. No new Mac was trusted.') from None
+    except Exception: raise ValueError(T("server.pairing.the_code_did_not_match_or")) from None
 
 
 def prepare_offer(store, *, now=None, renew=False):
@@ -109,7 +116,7 @@ def remote_login(port=22):
 def host_key(path=None):
     path=Path(path or '/etc/ssh/ssh_host_ed25519_key.pub')
     try: return public_key(path.read_text())
-    except (OSError,ValueError): raise ValueError('Turn on Remote Login on this Mac first, then try again.') from None
+    except (OSError,ValueError): raise ValueError(T("server.pairing.turn_on_remote_login_on_this")) from None
 
 
 def stale_adverts(name, port, ps_output, uid=None):
@@ -211,19 +218,19 @@ class Pairing:
         with self.lock,self.store.locked():
             offer=read_json(self.store.root/'offer.json',{})
             if offer.get('used',True) or offer.get('expires',0)<=now or offer.get('id')!=body.get('offer_id'):
-                raise ValueError('That pairing code expired or was already used. Show a new code on the other Mac.')
-            if offer.get('attempts',0)>=MAX_ATTEMPTS: raise ValueError('Too many attempts. Show a new code on the other Mac.')
+                raise ValueError(T("server.pairing.that_pairing_code_expired_or_was"))
+            if offer.get('attempts',0)>=MAX_ATTEMPTS: raise ValueError(T("server.pairing.too_many_attempts_show_a_new"))
             # Durable global budget, shared across source IPs and service restarts.
             # Every PAKE execution costs one online guess, including abandoned ones.
             offer['attempts']=offer.get('attempts',0)+1
             atomic(self.store.root/'offer.json',json.dumps(offer),backup=False)
-            if not remote_login(self.ssh_port): raise ValueError('On the new Mac, turn on Remote Login in the window Caravan opens.')
+            if not remote_login(self.ssh_port): raise ValueError(T("server.pairing.on_the_new_mac_turn_on"))
             key=host_key(self.host_key_path)  # do not accept trust if SSH identity is unavailable
             incoming=un64(body.get('a'),64)
             q=SPAKE2_B(offer['code'].encode(),idA=b'caravan-lead-v1',idB=offer['id'].encode())
             outgoing=q.start()
             try: shared=q.finish(incoming)
-            except Exception: raise ValueError('Invalid pairing handshake.') from None
+            except Exception: raise ValueError(T("server.pairing.invalid_pairing_handshake")) from None
             sid=secrets.token_hex(16)
             self.sessions={k:v for k,v in self.sessions.items() if v['expires']>now}
             self.sessions[sid]={'key':shared,'source':source,'offer':offer['id'],'expires':min(now+45,offer['expires'])}
@@ -234,22 +241,22 @@ class Pairing:
         sid=valid_id(body.get('session'))
         with self.lock,self.store.locked():
             session=self.sessions.get(sid)
-            if not session or session['expires']<=self.clock() or source!=session['source']: raise ValueError('Pairing session expired.')
+            if not session or session['expires']<=self.clock() or source!=session['source']: raise ValueError(T("server.pairing.pairing_session_expired"))
             data=unseal(session['key'],body.get('box'),'caravan-pair-v1/'+sid+'/enroll')
             peer=valid_id(data.get('id'));key=public_key(data.get('key'))
             revoke=un64(data.get('revoke'),32)
-            if len(revoke)!=32 or peer==self.id: raise ValueError('Invalid pairing identity.')
+            if len(revoke)!=32 or peer==self.id: raise ValueError(T("server.pairing.invalid_pairing_identity"))
             offer=read_json(self.store.root/'offer.json',{})
-            if offer.get('id')!=session['offer']: raise ValueError('That code was replaced; try the new code.')
+            if offer.get('id')!=session['offer']: raise ValueError(T("server.pairing.that_code_was_replaced_try_the"))
             previous=self.store.record(peer)
             if offer.get('used'):
-                if not session.get('done') or session['done']!=peer: raise ValueError('That pairing code was already used.')
+                if not session.get('done') or session['done']!=peer: raise ValueError(T("server.pairing.that_pairing_code_was_already_used"))
             else:
-                if previous: raise ValueError('This Mac is already paired. Remove its old pairing before adding it again.')
+                if previous: raise ValueError(T("server.pairing.this_mac_is_already_paired_remove"))
                 # Consume the code before authorizing a key. A lost response can
                 # retry this same confirmed session, never enroll another identity.
                 offer['used']=True;atomic(self.store.root/'offer.json',json.dumps(offer),backup=False)
-                record={'id':peer,'direction':'incoming','name':str(data.get('name') or 'First Mac')[:80],
+                record={'id':peer,'direction':'incoming','name':str(data.get('name') or T("server.pairing.first_mac"))[:80],
                         'key':key,'revoke':b64(revoke),'state':'preparing'}
                 self.store.save(peer,record)
                 self.store.authorize(peer,key)
@@ -263,14 +270,14 @@ class Pairing:
             row=self.store.record(peer)
             receipt=read_json(self.store.root/'revoked'/(peer+'.json')) if not row else None
             saved=row or receipt
-            if not saved or saved.get('direction')!='incoming': raise ValueError('Pairing identity was not verified.')
+            if not saved or saved.get('direction')!='incoming': raise ValueError(T("server.pairing.pairing_identity_was_not_verified"))
             token=un64(saved['revoke'],32)
             context='caravan-pair-v1/revoke/'+peer+'/'+self.id
             request_data=unseal(token,body.get('box'),context)
             nonce=valid_id(request_data.get('nonce'))
-            if request_data.get('target')!=self.id or request_data.get('op')!='remove': raise ValueError('Invalid removal request.')
+            if request_data.get('target')!=self.id or request_data.get('op')!='remove': raise ValueError(T("server.pairing.invalid_removal_request"))
             if row:
-                if self.active(): raise ValueError('This Mac is running a model. Unload it before removing the connection.')
+                if self.active(): raise ValueError(T("server.pairing.this_mac_is_running_a_model"))
                 self.store.unauthorize(peer)
                 atomic(self.store.root/'revoked'/(peer+'.json'),json.dumps({'direction':'incoming','revoke':saved['revoke']}),backup=False)
                 self.store.record_path(peer).unlink()
@@ -282,7 +289,7 @@ class Pairing:
         response=request(tuple(row['endpoint']),'/v1/revoke',{'id':self.id,
                          'box':seal(token,{'op':'remove','target':peer,'nonce':nonce},context)})
         value=unseal(token,response.get('box'),context+'/reply')
-        if value.get('removed') is not True or value.get('nonce')!=nonce: raise ValueError('Removal was not confirmed by the other Mac.')
+        if value.get('removed') is not True or value.get('nonce')!=nonce: raise ValueError(T("server.pairing.removal_was_not_confirmed_by_the"))
 
     def pair(self,peer,code):
         with self.lock: return self._pair(peer,code)
@@ -290,23 +297,23 @@ class Pairing:
     def _pair(self,peer,code):
         from spake2 import SPAKE2_A
         peer=valid_id(peer)
-        if not isinstance(code,str): raise ValueError('Enter the code shown on the other Mac.')
+        if not isinstance(code,str): raise ValueError(T("server.pairing.enter_the_code_shown_on_the"))
         code=code.replace('-','').replace(' ','')
-        if len(code)!=8 or not code.isascii() or not code.isdigit(): raise ValueError('Enter the eight-digit code shown on the other Mac.')
+        if len(code)!=8 or not code.isascii() or not code.isdigit(): raise ValueError(T("server.pairing.enter_the_eight_digit_code_shown"))
         candidate=self.candidates.get(peer)
-        if not candidate or self.clock()-candidate['seen']>60: raise ValueError('Find nearby Macs again before pairing.')
-        if self.store.record(peer): raise ValueError('This Mac already has a pairing. Remove it before adding it again.')
+        if not candidate or self.clock()-candidate['seen']>60: raise ValueError(T("server.pairing.find_nearby_macs_again_before_pairing"))
+        if self.store.record(peer): raise ValueError(T("server.pairing.this_mac_already_has_a_pairing"))
         endpoint=(candidate.get('host') or candidate['address'],candidate['port'])
         offer=request(endpoint,'/v1/info')
-        if offer.get('id')!=peer or not offer.get('accepting'): raise ValueError('That Mac is no longer showing a pairing code. Refresh the list.')
+        if offer.get('id')!=peer or not offer.get('accepting'): raise ValueError(T("server.pairing.that_mac_is_no_longer_showing"))
         s=SPAKE2_A(code.encode(),idA=b'caravan-lead-v1',idB=offer['offer_id'].encode())
         outgoing=s.start();reply=request(endpoint,'/v1/start',{'offer_id':offer['offer_id'],'a':b64(outgoing)})
-        if reply.get('id')!=peer: raise ValueError('The discovered Mac identity changed; find it again.')
+        if reply.get('id')!=peer: raise ValueError(T("server.pairing.the_discovered_mac_identity_changed_find"))
         sid=valid_id(reply.get('session'))
         try: shared=s.finish(un64(reply.get('b'),64))
-        except Exception: raise ValueError('Pairing identity could not be checked.') from None
+        except Exception: raise ValueError(T("server.pairing.pairing_identity_could_not_be_checked")) from None
         confirmation=unseal(shared,reply.get('confirm'),'caravan-pair-v1/'+sid+'/confirm')
-        if confirmation!={'id':peer,'offer':offer['offer_id'],'session':sid}: raise ValueError('The pairing confirmation did not match this Mac.')
+        if confirmation!={'id':peer,'offer':offer['offer_id'],'session':sid}: raise ValueError(T("server.pairing.the_pairing_confirmation_did_not_match"))
         # No SSH key is sent before key confirmation succeeds. The encrypted
         # envelope also binds the discovered Mac ID, our ID, and this session.
         path,pub=self.store.make_key(peer)
@@ -318,13 +325,13 @@ class Pairing:
         try:
             reply=request(endpoint,'/v1/finish',{'session':sid,'box':seal(shared,payload,'caravan-pair-v1/'+sid+'/enroll')})
             meta=unseal(shared,reply.get('box'),'caravan-pair-v1/'+sid+'/reply')
-            if meta.get('id')!=peer: raise ValueError('The Mac identity did not match the confirmed code.')
+            if meta.get('id')!=peer: raise ValueError(T("server.pairing.the_mac_identity_did_not_match"))
             with self.store.locked():
                 result=self.store.enroll(peer,meta,endpoint[0],path,baseline=self.baseline())
                 row.update(result);row['state']='verifying';self.store.save(peer,row)
             if self.verify_ssh:
                 checked=subprocess.run(['ssh','-F',result['ssh_config'],result['alias'],'true'],capture_output=True,timeout=10)
-                if checked.returncode: raise ValueError('Pairing was checked, but Remote Login could not use this account. Check the allowed account in Remote Login, then try again.')
+                if checked.returncode: raise ValueError(T("server.pairing.pairing_was_checked_but_remote_login"))
             row['state']='active';self.store.save(peer,row)
             record_route(result.get('alias'),candidate.get('name'))
             return {'added':True,**result,'split':'auto'}
@@ -343,12 +350,12 @@ class Pairing:
 
     def _remove(self,peer):
         peer=valid_id(peer);row=self.store.record(peer)
-        if not row or row.get('direction')!='outgoing': raise ValueError('Remove this Mac from the first Mac that added it.')
-        if self.active(): raise ValueError('Unload the model before removing a Mac. Nothing was changed.')
+        if not row or row.get('direction')!='outgoing': raise ValueError(T("server.pairing.remove_this_mac_from_the_first"))
+        if self.active(): raise ValueError(T("server.pairing.unload_the_model_before_removing_a"))
         try: self.remote_remove(row)
         except Exception:
             row['state']='removal-pending';self.store.save(peer,row)
-            return {'removed':False,'pending':True,'message':'Waiting for the other Mac. Its keys and config will be removed when it returns.'}
+            return {'removed':False,'pending':True,'message':T("server.pairing.waiting_for_the_other_mac_its")}
         with self.store.locked(): self.store.forget_local(peer)
         return {'removed':True}
 
@@ -359,15 +366,15 @@ class Pairing:
             from discovery import mdns
             for name in mdns.browse(duration=1.5)[:128]:
                 found=mdns.resolve(name,duration=.4)
-                if found: targets.append((found[0],found[1],'LAN / cable'))
+                if found: targets.append((found[0],found[1],T("server.pairing.lan_cable")))
         except Exception: pass
         try:
             from discovery import tailscale
             for peer in tailscale.get_peers(timeout=2):
-                if peer.online: targets.append((peer.tailscale_ip,self.port,'Private tailnet'))
+                if peer.online: targets.append((peer.tailscale_ip,self.port,T("server.pairing.private_tailnet")))
         except Exception: pass
-        targets.extend((h,p,'Test / saved connection') for h,p in extra)
-        targets.extend((r['endpoint'][0],r['endpoint'][1],'Paired Mac') for r in self.store.records() if r.get('direction')=='outgoing')
+        targets.extend((h,p,T("server.pairing.test_saved_connection")) for h,p in extra)
+        targets.extend((r['endpoint'][0],r['endpoint'][1],T("server.pairing.paired_mac")) for r in self.store.records() if r.get('direction')=='outgoing')
         def probe(target):
             host,port,kind=target
             try:
@@ -376,7 +383,7 @@ class Pairing:
                         value=request((ip,port),'/v1/info',timeout=1.5)
                         peer=valid_id(value.get('id'))
                         if value.get('protocol')!='caravan-pair-v1' or peer==self.id: continue
-                        return {'id':peer,'name':str(value.get('name') or 'Mac')[:80],'address':ip,'port':int(port),
+                        return {'id':peer,'name':str(value.get('name') or T("server.pairing.mac"))[:80],'address':ip,'port':int(port),
                                 'host':host,'source':kind,'accepting':bool(value.get('accepting')),'remote_login':bool(value.get('remote_login')),'seen':self.clock()}
                     except Exception: continue
             except Exception: pass
@@ -387,7 +394,7 @@ class Pairing:
         for row in found:
             # Prefer a direct cable/LAN route over a VPN when both reach the same
             # cryptographically verified identity. Discovery labels alone are untrusted.
-            if row['id'] not in unique or unique[row['id']]['source']=='Private tailnet': unique[row['id']]=row
+            if row['id'] not in unique or unique[row['id']]['source']==T("server.pairing.private_tailnet"): unique[row['id']]=row
         self.candidates=unique
         self._discovery_cache={'at':self.clock(),'nodes':list(unique.values())}
         return list(unique.values())
@@ -403,24 +410,24 @@ class Pairing:
                 self.send_header('Connection','close');self.end_headers();self.wfile.write(raw)
             def handle_pair(self):
                 if not private(self.client_address[0]) or self.headers.get('Origin'):
-                    return self.respond(403,{'error':'Pairing accepts only the local network, cable or private tailnet.'})
+                    return self.respond(403,{'error':T("server.pairing.pairing_accepts_only_the_local_network")})
                 path=self.path
                 try:
                     if self.command=='GET' and path=='/v1/info': return self.respond(200,manager.info())
-                    if self.command!='POST': return self.respond(404,{'error':'Not found.'})
+                    if self.command!='POST': return self.respond(404,{'error':T("server.pairing.not_found")})
                     size=int(self.headers.get('Content-Length','0'))
-                    if not 0<size<=MAX_BODY: raise ValueError('Invalid pairing request size.')
+                    if not 0<size<=MAX_BODY: raise ValueError(T("server.pairing.invalid_pairing_request_size"))
                     body=json.loads(self.rfile.read(size))
-                    if not isinstance(body,dict): raise ValueError('Invalid pairing request.')
+                    if not isinstance(body,dict): raise ValueError(T("server.pairing.invalid_pairing_request"))
                     if path=='/v1/start': value=manager.start(body,self.client_address[0])
                     elif path=='/v1/finish': value=manager.finish(body,self.client_address[0],self.connection.getsockname()[0])
                     elif path=='/v1/revoke': value=manager.revoke(body,self.client_address[0])
-                    else: return self.respond(404,{'error':'Not found.'})
+                    else: return self.respond(404,{'error':T("server.pairing.not_found")})
                     return self.respond(200,value)
                 except (ValueError,KeyError,TypeError,OSError,subprocess.SubprocessError):
                     # Do not expose decrypted payloads, codes, filesystem paths or
                     # exception strings through the public pairing listener/logs.
-                    return self.respond(400,{'error':'Pairing could not finish. Check the code, Remote Login and expiry on the new Mac.'})
+                    return self.respond(400,{'error':T("server.pairing.pairing_could_not_finish_check_the")})
             do_GET=handle_pair
             do_POST=handle_pair
         class Server(ThreadingHTTPServer):

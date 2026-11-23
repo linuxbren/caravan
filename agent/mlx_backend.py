@@ -44,6 +44,13 @@ import shlex
 import sys
 from pathlib import Path
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 _PROXY_DIR = Path(__file__).resolve().parent.parent / "proxy"
 if str(_PROXY_DIR) not in sys.path:
@@ -75,7 +82,7 @@ def resolve_server(cfg: dict, overrides: Optional[dict] = None) -> str:
     server = str(overrides.get("server") or os.environ.get("CARAVAN_MLX_SERVER", "").strip()
                  or sec.get("server") or "caravan").strip().lower().replace("-", "_")
     if server not in SERVERS:
-        raise ValueError(f"mlx server must be one of {SERVERS}, got {server!r}")
+        raise ValueError(T("agent.mlx_backend.mlx_server_must_be_one_of", servers=SERVERS, server=server))
     return server
 
 
@@ -87,8 +94,7 @@ def build_mlx_command(model: str, cfg: dict, overrides: Optional[dict] = None) -
     path = backends.resolve_mlx_model_path(model, s)
     if path is None:
         raise FileNotFoundError(
-            f"no local MLX model for {model!r} (looked in {', '.join(s.model_dirs)} "
-            "and config mlx.models)")
+            T("agent.mlx_backend.no_local_mlx_model_for_model", model=model, model_dirs=T.join(s.model_dirs)))
     if resolve_server(cfg, overrides) == "mlx_lm":
         return [python, "-m", "mlx_lm", "server", "--model", path,
                 "--host", s.host, "--port", str(s.port)] + extra
@@ -114,14 +120,14 @@ def resolve_split(cfg: dict, overrides: Optional[dict] = None) -> Optional[dict]
         return None
     host, _, port = front.rpartition(":")
     if not host or not port.isdigit():
-        raise ValueError(f"mlx split packer must be HOST:PORT, got {front!r}")
+        raise ValueError(T("agent.mlx_backend.mlx_split_packer_must_be_host", front=front))
     k = (overrides.get("split_packer_layers") or overrides.get("split_front_layers")
          or os.environ.get("CARAVAN_MLX_SPLIT_PACKER_LAYERS", "").strip()
          or os.environ.get("CARAVAN_MLX_SPLIT_FRONT_LAYERS", "").strip()
          or sp.get("packer_layers") or sp.get("front_layers"))
     k = int(k) if k not in (None, "") else None
     if k is not None and k < 1:
-        raise ValueError("mlx split packer_layers must be >= 1")
+        raise ValueError(T("agent.mlx_backend.mlx_split_packer_layers_must_be"))
     return {"front": front, "front_layers": k}
 
 
@@ -145,7 +151,7 @@ def build_lead_command(model: str, cfg: dict, overrides: Optional[dict] = None) 
     cmd = build_mlx_command(model, cfg, overrides)
     split = resolve_split(cfg, overrides)
     if split and resolve_server(cfg, overrides) == "mlx_lm":
-        raise ValueError("an MLX split needs the Caravan worker (mlx.server = caravan)")
+        raise ValueError(T("agent.mlx_backend.an_mlx_split_needs_the_caravan"))
     return cmd + build_split_args(split, "lead")
 
 
@@ -160,7 +166,7 @@ def build_packer_command(model_path: str, cfg: dict, overrides: Optional[dict] =
     are paths on that Mini (it has its own copy of the model)."""
     split = resolve_split(cfg, overrides)
     if not split:
-        raise ValueError("no mlx split configured (mlx.split.packer)")
+        raise ValueError(T("agent.mlx_backend.no_mlx_split_configured_mlx_split"))
     s, py, _ = resolve(cfg, overrides)
     return ([python or py, worker or str(WORKER), "--model", model_path,
              "--cache-dir", cache_dir or str(Path(s.cache_dir).expanduser())]

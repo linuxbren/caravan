@@ -14,6 +14,13 @@ from pathlib import Path
 from typing import Optional
 
 import model_inventory as inv
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # Legacy compatibility endpoint; configure an explicit trusted helper inventory.
 DEFAULT_PACKER_PEER = os.environ.get("CARAVAN_WEB_PACKER_PEER", "169.254.103.191:5560")
@@ -311,7 +318,7 @@ def build_entries_from_inventories(
             )
             if fit.get("color") == "red":
                 usable = False
-                reasons.append(fit.get("reason") or "too big")
+                reasons.append(fit.get("reason") or T("server.web_catalog.too_big"))
             elif fit.get("nodes_needed") and fit["nodes_needed"] >= 2:
                 need_split = True
 
@@ -342,17 +349,17 @@ def build_entries_from_inventories(
             configured_by = {n.get('id'): n for n in nodes}
             pipeline_nodes = []
             if len(ids) != len(saved_counts) or len(set(ids)) != len(ids):
-                usable = False; reasons.append('invalid saved N-stage placement')
+                usable = False; reasons.append(T("server.web_catalog.invalid_saved_n_stage_placement"))
             for i, nid in enumerate(ids):
                 node = configured_by.get(nid)
                 if node is None:
-                    usable = False; reasons.append(f'Mini {nid} is not configured'); continue
+                    usable = False; reasons.append(T("server.web_catalog.mini_nid_is_not_configured", nid=nid)); continue
                 label, st = _st_for(node)
                 pipeline_nodes.append(dict(node, model_path=st.get('path')))
                 ready = (st.get('full_ok') and not st.get('invalid_shards')) or (st.get('stage_counts') == saved_counts and
                          len(st.get('stage_ok') or []) == len(ids) and st['stage_ok'][i])
                 if not ready or not st.get('has_tokenizer'):
-                    usable = False; reasons.append(f'missing stage {i+1} files on {label}')
+                    usable = False; reasons.append(T("server.web_catalog.missing_stage_v_files_on_label", v=i+1, label=label))
         elif place_mode == "one":
             # Usable as a single-Mini model on the Mini that holds the full copy.
             found = False
@@ -372,8 +379,8 @@ def build_entries_from_inventories(
                     break
             if not found:
                 usable = False
-                want = ", ".join(place_labels or place_ids) or "target Mini"
-                reasons.append(f"placement is 1 Mini ({want}) but full copy not ready")
+                want = T.join(place_labels or place_ids) or T("server.web_catalog.target_mini")
+                reasons.append(T("server.web_catalog.placement_is_1_mini_want_but", want=want))
         elif place_mode == "all":
             # Full copy on every Mini — usable on any one with full_ok.
             any_full = False
@@ -384,7 +391,7 @@ def build_entries_from_inventories(
                         lead_path = st["path"]
             if not any_full:
                 usable = False
-                reasons.append("copy-to-all placement incomplete on every Mini")
+                reasons.append(T("server.web_catalog.copy_to_all_placement_incomplete_on"))
             need_split = False
         elif place_mode == "split" or need_split or (fit and fit.get("nodes_needed", 1) and fit.get("nodes_needed") >= 2):
             need_split = True
@@ -396,11 +403,11 @@ def build_entries_from_inventories(
                 if role == "lead":
                     if not st.get("lead_ok") and not st.get("full_ok"):
                         usable = False
-                        reasons.append(f"missing shards on {label}" if st else f"not on {label}")
+                        reasons.append(T("server.web_catalog.missing_shards_on_label", label=label) if st else T("server.web_catalog.not_on_label", label=label))
                 else:
                     if not st.get("packer_ok") and not st.get("full_ok"):
                         usable = False
-                        reasons.append(f"missing shards on {label}" if st else f"not on {label}")
+                        reasons.append(T("server.web_catalog.missing_shards_on_label", label=label) if st else T("server.web_catalog.not_on_label", label=label))
         else:
             # Single-node load: lead must be complete (full or lead_ok covering all)
             lead_stg = next((s for s in stages if s.get("role") == "lead"), stages[0] if stages else None)
@@ -434,7 +441,7 @@ def build_entries_from_inventories(
                     need_split = False
                 else:
                     usable = False
-                    why = st.get("reason") or (f"missing shards on {label}" if st else f"not on {label}")
+                    why = st.get("reason") or (T("server.web_catalog.missing_shards_on_label", label=label) if st else T("server.web_catalog.not_on_label", label=label))
                     reasons.append(why)
 
         if len(reasons) > n_before_files:
@@ -452,7 +459,7 @@ def build_entries_from_inventories(
             arch = {"supported": True}
         if not arch.get("supported"):
             usable = False
-            reasons.append(arch.get("reason") or "unsupported architecture")
+            reasons.append(arch.get("reason") or T("server.web_catalog.unsupported_architecture"))
 
         split_chk = None
         if need_split and (placement or {}).get("mode") not in ("one", "all"):
@@ -473,7 +480,7 @@ def build_entries_from_inventories(
         for r in reasons:
             if r and r not in uniq:
                 uniq.append(r)
-        disabled_reason = "; ".join(uniq)
+        disabled_reason = T.join(uniq, "clause")
 
         row = {
             "id": mid,
@@ -559,7 +566,7 @@ def gguf_entry(model_id: str) -> Optional[dict]:
     for g in found:
         if str(g.get("id") or "").lower() == want:
             return {
-                "id": g["id"], "name": g["name"] + " (GGUF)", "hf": g["id"],
+                "id": g["id"], "name": g["name"] + T("server.web_catalog.gguf"), "hf": g["id"],
                 "source": "gguf", "backend": "llama", "lead_path": g["path"],
                 "size_gb": g.get("size_gb"), "usable": True, "available_lead": True,
             }
@@ -658,7 +665,7 @@ def get_model(model_id: str) -> Optional[dict]:
             resolved["available_lead"] = False
             resolved["usable"] = False
             resolved["disabled"] = True
-            resolved["disabled_reason"] = arch.get("reason") or "unsupported architecture"
+            resolved["disabled_reason"] = arch.get("reason") or T("server.web_catalog.unsupported_architecture")
     # Catalog-only metadata with nothing on disk: still return (available_lead
     # False) so switch() can raise FileNotFoundError with a clear id. Truly
     # unknown names (no meta, no disk) already returned None above.

@@ -749,7 +749,7 @@ class AutoReloadAfterUpdateTests(unittest.TestCase):
 
     def setUp(self):
         self.page = english_source(ROOT / "proxy" / "web" / "index.html")
-        self.server = (ROOT / "proxy" / "web_server.py").read_text()
+        self.server = english_source(ROOT / "proxy" / "web_server.py")
 
     def test_page_tag_follows_the_page_file_not_the_version(self):
         import web_server

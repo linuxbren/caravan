@@ -21,7 +21,7 @@ from i18n_check import english_source  # Day 32: page/CLI text lives in locales/
 HTML = english_source(ROOT / "proxy/web/index.html")
 BALANCE = english_source(ROOT / "proxy/web/balance.js")
 PAIRING = english_source(ROOT / "proxy/web/pairing.html")
-SERVER = (ROOT / "proxy/web_server.py").read_text()
+SERVER = english_source(ROOT / "proxy/web_server.py")
 
 
 class TaglineAndChrome(unittest.TestCase):
@@ -117,9 +117,9 @@ class SettingsAdvanced(unittest.TestCase):
         self.assertIn("/api/settings/self-tune", HTML)
         self.assertIn('if (row.dataset.id === "self_tune") applySelfTune(b.dataset.v)', HTML)
         self.assertIn('id="selfTuneNote"', HTML)
-        self.assertIn("def set_self_tune", Path(ROOT / "proxy/web_workers.py").read_text())
-        self.assertIn("def set_self_tune", Path(ROOT / "agent/mlx_worker.py").read_text())
-        workers = Path(ROOT / "proxy/web_workers.py").read_text()
+        self.assertIn("def set_self_tune", english_source(Path(ROOT / "proxy/web_workers.py")))
+        self.assertIn("def set_self_tune", english_source(Path(ROOT / "agent/mlx_worker.py")))
+        workers = english_source(Path(ROOT / "proxy/web_workers.py"))
         # Must not fall back to a model reload.
         start = workers.index("def set_self_tune")
         body = workers[start:workers.index("def _page_self_tune")]
@@ -166,7 +166,7 @@ class PickerFilters(unittest.TestCase):
         self.assertIn("chat", P._filters_for("text-generation", []))
 
     def test_search_accepts_legacy_reasoning_name(self):
-        src = (ROOT / "proxy/web_picker.py").read_text()
+        src = english_source(ROOT / "proxy/web_picker.py")
         self.assertIn("filt = _FILTER_ALIASES.get(filt, filt)", src)
         self.assertIn('"reasoning": "thinking"', src)
 
@@ -502,8 +502,8 @@ class MultiJobCards(unittest.TestCase):
         self.assertIn("function friendlyMacName", HTML)
         self.assertIn("function looksLikeHostname", HTML)
         self.assertIn("_friendly_job", SERVER)
-        self.assertNotIn('"label": "EXO1"', Path(ROOT / "proxy/web_picker.py").read_text())
-        self.assertNotIn('"label": "EXO2"', Path(ROOT / "proxy/web_picker.py").read_text())
+        self.assertNotIn('"label": "EXO1"', english_source(Path(ROOT / "proxy/web_picker.py")))
+        self.assertNotIn('"label": "EXO2"', english_source(Path(ROOT / "proxy/web_picker.py")))
 
 
 
@@ -627,7 +627,7 @@ class TuneBeforeAfter(unittest.TestCase):
         self.assertIn("function refreshTuneResult", HTML)
         self.assertIn("function paintTuneResult", HTML)
         self.assertIn("j.tuning", HTML)
-        self.assertIn("format_tuning_lines", Path(ROOT / "proxy/web_speed.py").read_text())
+        self.assertIn("format_tuning_lines", english_source(Path(ROOT / "proxy/web_speed.py")))
         self.assertIn(".tune-slot", HTML)
         self.assertIn("min-height: 2.25rem", HTML)
         adv_pos = HTML.find('id="optAdvanced"')

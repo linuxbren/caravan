@@ -10,6 +10,13 @@ stays fast on multi-GB files.
 """
 import struct
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 MAX_ARRAY = 4096
 
@@ -45,14 +52,14 @@ class SkippedArray(tuple):
 def _read(f, n):
     b = f.read(n)
     if len(b) != n:
-        raise GGUFError("truncated GGUF header")
+        raise GGUFError(T("agent.gguf_meta.truncated_gguf_header"))
     return b
 
 
 def _read_str(f):
     (n,) = struct.unpack("<Q", _read(f, 8))
     if n > 1 << 24:
-        raise GGUFError("implausible string length")
+        raise GGUFError(T("agent.gguf_meta.implausible_string_length"))
     return _read(f, n).decode("utf-8", errors="replace")
 
 
@@ -63,7 +70,7 @@ def _skip_value(f, vtype):
         (n,) = struct.unpack("<Q", _read(f, 8))
         f.seek(n, 1)
     else:
-        raise GGUFError(f"unknown value type {vtype}")
+        raise GGUFError(T("agent.gguf_meta.unknown_value_type_vtype", vtype=vtype))
 
 
 def _read_value(f, vtype):
@@ -83,7 +90,7 @@ def _read_value(f, vtype):
                     _skip_value(f, etype)
             return SkippedArray(n)  # too long to be an architecture parameter
         return [_read_value(f, etype) for _ in range(n)]
-    raise GGUFError(f"unknown value type {vtype}")
+    raise GGUFError(T("agent.gguf_meta.unknown_value_type_vtype", vtype=vtype))
 
 
 def read_metadata(path) -> dict:
@@ -99,10 +106,10 @@ def read_metadata_from(f, name: str = "GGUF") -> dict:
     model's header from the first bytes of the download source. A buffer
     that ends inside the header raises GGUFError("truncated GGUF header")."""
     if _read(f, 4) != b"GGUF":
-        raise GGUFError(f"{name}: not a GGUF file")
+        raise GGUFError(T("agent.gguf_meta.name_not_a_gguf_file", name=name))
     (version,) = struct.unpack("<I", _read(f, 4))
     if version < 2:
-        raise GGUFError(f"{name}: GGUF v{version} not supported")
+        raise GGUFError(T("agent.gguf_meta.name_gguf_v_version_not_supported", name=name, version=version))
     _n_tensors, n_kv = struct.unpack("<QQ", _read(f, 16))
     meta = {"GGUF.version": version}
     for _ in range(n_kv):
@@ -110,7 +117,7 @@ def read_metadata_from(f, name: str = "GGUF") -> dict:
         (vtype,) = struct.unpack("<I", _read(f, 4))
         meta[key] = _read_value(f, vtype)
         if hasattr(f, "getbuffer") and f.tell() > len(f.getbuffer()):
-            raise GGUFError("truncated GGUF header")
+            raise GGUFError(T("agent.gguf_meta.truncated_gguf_header"))
     return meta
 
 

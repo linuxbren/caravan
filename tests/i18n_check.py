@@ -17,6 +17,10 @@ WEB_FILES = [WEB / "index.html", WEB / "pairing.html"] + sorted(
     p for p in WEB.glob("*.js") if p.name != "i18n.js")
 CLI_FILES = sorted(p for p in (ROOT / "tools").glob("caravan*.py") if p.name != "caravan_i18n.py")
 SHELL_FILES = [ROOT / "install", ROOT / "scripts" / "install.sh"]
+# Server and worker modules whose messages reach the page or the CLI.
+SERVER_FILES = sorted(p for d in ("proxy", "agent") for p in (ROOT / d).glob("*.py")
+                      if "from caravan_i18n import T" in p.read_text(encoding="utf-8"))
+PY_KEY = r"(?:cli|server|agent)\.[a-z0-9_.]*[a-z0-9_]"
 
 
 def en() -> dict:
@@ -188,6 +192,34 @@ def script_parts(path: Path):
 
 # ---- key usage -------------------------------------------------------------
 
+JS_PLURAL = re.compile(r"\bT\.plural\(\s*([\"'`])((?:web)\.[a-z0-9_.]+)\1\s*,")
+DYNAMIC_PREFIXES = ("fmt.", "web.status_")
+
+
+def _js_args(text: str, open_paren: int):
+    """[(start, end)] of the top-level arguments of the call at open_paren."""
+    args, depth, i, start = [], 0, open_paren, open_paren + 1
+    while i < len(text):
+        ch = text[i]
+        if ch in "\"'`":
+            j = i + 1
+            while j < len(text) and text[j] != ch:
+                j += 2 if text[j] == "\\" else 1
+            i = j
+        elif ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+            if depth == 0:
+                args.append((start, i))
+                return args
+        elif ch == "," and depth == 1:
+            args.append((start, i))
+            start = i + 1
+        i += 1
+    return args
+
+
 JS_CALL = re.compile(r"\bT\(\s*([\"'`])((?:web)\.[a-z0-9_.]+)\1\s*(,\s*\{)?")
 HTML_KEY = re.compile(r"\{\{((?:web)\.[a-z0-9_.]+)\}\}")
 PY_CALL = re.compile(r"\bT\(\s*\"(cli\.[a-z0-9_.]+)\"")
@@ -253,12 +285,41 @@ def used_keys():
         for m in JS_CALL.finditer(text):
             names = js_object_names(text, m.end() - 1) if m.group(3) else []
             uses.setdefault(m.group(2), []).append((path.name, bool(m.group(3)), names))
-    for path in CLI_FILES:
+    for path in CLI_FILES + SERVER_FILES:
         text = path.read_text(encoding="utf-8")
-        for m in re.finditer(r"\bT\(\s*\"(cli\.[a-z0-9_.]+)\"((?:\s*,\s*[A-Za-z_]\w*=)?)", text):
+        for m in re.finditer(r"\bT\(\s*\"(" + PY_KEY + r")\"", text):
             # keyword names: scan the call's arguments
             names = _py_call_names(text, m.start())
             uses.setdefault(m.group(1), []).append((path.name, bool(names), names))
+    # Plurals: T.plural("key", count[, {vars}]) uses key_one and key_other,
+    # filled with {count} plus the vars (Python: keyword values).
+    for path in WEB_FILES:
+        text = path.read_text(encoding="utf-8")
+        for m in JS_PLURAL.finditer(text):
+            args = _js_args(text, text.index("(", m.start()))
+            names = ["count"]
+            if len(args) > 2 and text[args[2][0]:args[2][1]].lstrip().startswith("{"):
+                names += js_object_names(text, text.index("{", args[2][0]))
+            for form in ("_one", "_other"):
+                uses.setdefault(m.group(2) + form, []).append((path.name, True, names))
+    for path in CLI_FILES + SERVER_FILES:
+        text = path.read_text(encoding="utf-8")
+        for m in re.finditer(r"\bT\.plural\(\s*\"(" + PY_KEY + r")\"", text):
+            names = ["count"] + _py_call_names(text, m.start())
+            for form in ("_one", "_other"):
+                uses.setdefault(m.group(1) + form, []).append((path.name, True, names))
+    # Keys built at run time: fmt.* (the number/list helpers), the page's
+    # web.status_<status>, and web_picker's notice -> refusal table.
+    import ast
+    for key, value in en().items():
+        if key.startswith(DYNAMIC_PREFIXES):
+            uses.setdefault(key, []).append(("(dynamic)", None, []))
+    picker = (ROOT / "proxy" / "web_picker.py").read_text(encoding="utf-8")
+    table = picker[picker.index("_REFUSALS = {"):]
+    table = table[:table.index("}") + 1].split("=", 1)[1]
+    for k, v in ast.literal_eval(table.strip()).items():
+        for name in (k, v):
+            uses.setdefault("server.web_picker." + name, []).append(("web_picker.py", False, []))
     for path in SHELL_FILES:
         text = path.read_text(encoding="utf-8")
         start = text.find(">>> caravan strings")
@@ -310,11 +371,11 @@ def english_source(path) -> str:
         def fill(m):
             v = strings.get(m.group(1), m.group(0))
             return v if m.group(1).endswith("_html") else H.escape(v, quote=True).replace("&#x27;", "'")
-        text = HTML_KEY.sub(fill, text)
+        text = HTML_KEY.sub(fill, text).replace('lang="{{lang}}"', 'lang="en"')
         return _expand_js(text, strings)
     if path.suffix == ".py":
         out, pos = [], 0
-        for m in re.finditer(r"\bT\(\s*\"(cli\.[a-z0-9_.]+)\"", text):
+        for m in re.finditer(r"\bT\(\s*\"(" + PY_KEY + r")\"", text):
             if m.start() < pos:
                 continue
             value = strings.get(m.group(1))

@@ -322,7 +322,7 @@ class LongReadTimeout(unittest.TestCase):
     cut off by the 30-minute wait for the model's first bytes."""
 
     def test_chat_wait_is_long_enough_for_a_full_window(self):
-        src = (ROOT / "proxy" / "web_server.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_server.py")
         self.assertIn("urlopen(req, timeout=REPLY_TIMEOUT_S)", src)
         self.assertNotIn("urlopen(req, timeout=1800)", src)
         import re

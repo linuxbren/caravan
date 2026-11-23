@@ -15,6 +15,13 @@ import json
 import os
 import tempfile
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # Option ids that identify a setup. Order is fixed for a stable key.
 OPT_IDS = (
@@ -152,8 +159,8 @@ def format_reply_stats(
         except Exception:
             guess = ""
     parts = [
-        _seg("Read", prompt_tokens, read_tok_s, 0),
-        _seg("Write", completion_tokens, write_tok_s, 1),
+        _seg(T("server.web_speed.read"), prompt_tokens, read_tok_s, 0),
+        _seg(T("server.web_speed.write"), completion_tokens, write_tok_s, 1),
         f"first token {_fmt_fixed(ttft_s, 2)}s" if _ok_num(ttft_s) else None,
         f"total {_fmt_fixed(total_s, 2)}s" if _ok_num(total_s) else None,
         guess or None,
@@ -178,7 +185,7 @@ def format_line(
         completion_tokens=completion_tokens,
         total_s=total_s,
     )
-    return f"Average · {body}" if body else ""
+    return T("server.web_speed.average_body", body=body) if body else ""
 
 
 def _entry(data: dict, model_id: str, opts) -> dict:
@@ -343,7 +350,7 @@ def format_tuning_side(label: str, specs=None) -> str:
     return f"{label} · {body}" if body else ""
 
 
-NOTHING_FASTER = "Already at its fastest settings. Nothing faster found."
+NOTHING_FASTER = T("server.web_speed.already_at_its_fastest_settings_nothing")
 
 
 def format_kept_detail(tried, margin_pct: int = 3) -> str:
@@ -360,8 +367,7 @@ def format_kept_detail(tried, margin_pct: int = 3) -> str:
     chal = [t for t in recs
             if isinstance(t.get("challenger_tps"), (int, float)) and t["challenger_tps"] > 0]
     n = len(recs)
-    head = (f"Kept your current settings: tried {n} change{'s' if n != 1 else ''}, "
-            f"none was at least {margin_pct}% faster.")
+    head = (T.plural("server.web_speed.kept_current_settings_tried", n, margin_pct=margin_pct))
     if not inc or not chal:
         return head
     import web_tune_step as WTS
@@ -370,14 +376,13 @@ def format_kept_detail(tried, margin_pct: int = 3) -> str:
     label = WTS.knob_label(best.get("name"))
     val = WTS.friendly_value(best.get("name"), best.get("challenger"))
     what = f"{label} {val}".strip()
-    return (f"{head} Current settings {now:.1f} tok/s writing; "
-            f"closest try ({what}) {float(best['challenger_tps']):.1f} tok/s.")
+    return (T("server.web_speed.head_current_settings_now_tok_s", head=head, now=now, what=what, challenger_tps=float(best['challenger_tps'])))
 
 
 def tuning_bodies_match(before=None, after=None) -> bool:
     """True when Before and After would print as the same visible line."""
-    b = format_tuning_side("Before", before)
-    a = format_tuning_side("After", after)
+    b = format_tuning_side(T("server.web_speed.before"), before)
+    a = format_tuning_side(T("server.web_speed.after"), after)
     if not b or not a:
         return False
     return b[len("Before · "):] == a[len("After · "):]
@@ -392,8 +397,8 @@ def format_tuning_lines(before=None, after=None, *, unchanged=False) -> list:
     if unchanged or tuning_bodies_match(before, after):
         return [NOTHING_FASTER]
     out = []
-    b = format_tuning_side("Before", before)
-    a = format_tuning_side("After", after)
+    b = format_tuning_side(T("server.web_speed.before"), before)
+    a = format_tuning_side(T("server.web_speed.after"), after)
     if b:
         out.append(b)
     if a:

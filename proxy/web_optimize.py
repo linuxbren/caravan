@@ -15,6 +15,13 @@ import tuned_settings as TS
 import web_settings
 import web_tune_errors
 import web_tune_step
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 AB_ARM = 3
 
@@ -83,7 +90,7 @@ def _arm_fail_why(scores, who):
     if getattr(scores, "garbled", False):
         return f"{who} garbled"
     if getattr(scores, "quality_fail", False):
-        return f"{who} failed the quality check"
+        return T("server.web_optimize.who_failed_the_quality_check", who=who)
     return who
 
 
@@ -99,8 +106,8 @@ def decide_ab_winner(inc, ch, inc_scores, ch_scores, pick):
         a_g = bool(getattr(inc_scores, "garbled", False))
         b_g = bool(getattr(ch_scores, "garbled", False))
         if a_g or b_g:
-            return inc, ch, "both garbled"
-        return inc, ch, "both failed the quality check"
+            return inc, ch, T("server.web_optimize.both_garbled")
+        return inc, ch, T("server.web_optimize.both_failed_the_quality_check")
     if pick(inc_scores, ch_scores):
         return ch, inc, None
     return inc, ch, None
@@ -156,17 +163,17 @@ class Optimizer:
         # second press is not a silent no-op. No unload or redownload.
         with self._lock:
             if self.state["running"]:
-                raise RuntimeError("optimize already running")
+                raise RuntimeError(T("server.web_gguf_optimize.optimize_already_running"))
             snap = self.mgr.snapshot()
             if snap.get("status") != "ready" or not snap.get("model_id"):
-                raise RuntimeError("load a model first")
+                raise RuntimeError(T("server.web_gguf_optimize.load_a_model_first"))
             settings = web_settings.normalize(snap.get("settings") or {})
             active = self.mgr.lead_active_settings() or {}
             # Auto-tune is independent of Self-tuning: it runs a walk-away
             # trial now, whether learning from chats is on or off.
             if (settings.get("guess_ahead") == "mtp" or
                     settings.get("prompt_lookup") == "adaptive"):
-                raise RuntimeError("turn off native MTP / adaptive lookup before Auto-tune")
+                raise RuntimeError(T("server.web_optimize.turn_off_native_mtp_adaptive_lookup"))
             self.model_id = snap["model_id"]
             self.settings = settings
             self.fresh = bool(fresh)
@@ -210,7 +217,7 @@ class Optimizer:
             raise Canceled()
         snap = self.mgr.snapshot()
         if snap.get("model_id") != self.model_id or snap.get("status") != "ready":
-            raise RuntimeError("model changed during Auto-tune")
+            raise RuntimeError(T("server.web_optimize.model_changed_during_auto_tune"))
 
     def _hold(self, values):
         self.mgr.sweep({"pause": True, "hold": {n: v for n, v in values.items()
@@ -249,7 +256,7 @@ class Optimizer:
         n = self.state["reloads"]
         self._set(reloads=n + 1, reload_s=round(elapsed, 3))
         if self.mgr.snapshot().get("status") != "ready":
-            raise RuntimeError("reload failed: " + str(self.mgr.snapshot().get("error")))
+            raise RuntimeError(T("server.web_optimize.reload_failed_error", error=str(self.mgr.snapshot().get("error"))))
         # Mark only after a successful load, so a failed challenger forces a
         # recovery reload rather than falsely believing baseline is still up.
         self.current = dict(values)
@@ -386,7 +393,7 @@ class Optimizer:
                 if isinstance(result, dict) and result.get("garbled"):
                     scores_garbled = True
                 if not result.get("ttft") or result["ttft"] <= 0:
-                    raise ValueError("reply missing TTFT")
+                    raise ValueError(T("server.web_optimize.reply_missing_ttft"))
                 scores.append(1.0 / result["ttft"])
             if scores_garbled:
                 scores.garbled = True
@@ -415,7 +422,7 @@ class Optimizer:
                         scores_garbled = True
                 ct = sum(r.get("completion_tokens") or 0 for r in results)
                 if ct <= 0:
-                    raise ValueError("pipeline reply missing token counts")
+                    raise ValueError(T("server.web_optimize.pipeline_reply_missing_token_counts"))
                 scores.append(ct / max(elapsed, 0.001))
             if scores_garbled:
                 scores.garbled = True
@@ -450,10 +457,10 @@ class Optimizer:
             samples.append(self._specs_from_reply(result) if isinstance(result, dict) else {})
         specs = self._median_specs(samples, kinds)
         if not (specs.get("write_tok_s") or specs.get("completion_tokens")):
-            raise ValueError("reply missing token counts")
+            raise ValueError(T("server.web_optimize.reply_missing_token_counts"))
         score = GT.combined_score(specs)
         if score <= 0:
-            raise ValueError("reply missing token counts")
+            raise ValueError(T("server.web_optimize.reply_missing_token_counts"))
         scores.append(score)
         if scores_garbled:
             try:
@@ -676,7 +683,7 @@ class Optimizer:
                         self._reload(self.best, restoring=True)
                     self._hold(self.best)
                 except Exception as error:
-                    extra = "restore failed: " + str(error)
+                    extra = T("server.web_optimize.restore_failed_error", error=str(error))
                     raw = ((self.state.get("error_detail") or "") + "; " + extra).strip("; ")
                     self._set(error_detail=raw)
                     self._log(extra)
@@ -691,7 +698,7 @@ class Optimizer:
                     try:
                         self.mgr.sweep({"release": True})
                     except Exception as error:
-                        extra = "release failed: " + str(error)
+                        extra = T("server.web_optimize.release_failed_error", error=str(error))
                         raw = ((self.state.get("error_detail") or "") + "; " + extra).strip("; ")
                         self._set(error_detail=raw)
                         self._log(extra)

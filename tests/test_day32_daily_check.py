@@ -220,7 +220,7 @@ class DailyLoop(Base):
         self.assertEqual(slept, [3600, 3600])
 
     def test_web_server_uses_the_loop(self):
-        src = (ROOT / "proxy/web_server.py").read_text()
+        src = english_source(ROOT / "proxy/web_server.py")
         self.assertIn("_UC.run_daily_loop(", src)
 
 

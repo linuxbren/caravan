@@ -183,7 +183,7 @@ class Settings(unittest.TestCase):
         self.assertNotIn("prf-hays", html)
         self.assertNotIn("16 GB", html)
         self.assertIn('a.backend === "llama"', html)
-        self.assertIn("Trying a different", (ROOT / "proxy/gguf_self_tune.py").read_text())
+        self.assertIn("Trying a different", english_source(ROOT / "proxy/gguf_self_tune.py"))
 
 
 class SelfTune(unittest.TestCase):

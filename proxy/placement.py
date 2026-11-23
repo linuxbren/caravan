@@ -7,6 +7,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 PLACEMENT_FILE = "caravan-placement.json"
 
@@ -100,11 +107,11 @@ def placement_options(
         w = windows.get(str(k))
         if not w or not target or fit.get("kv_source") != "config":
             return ""
-        macs = "1 Mac" if k == 1 else f"{k} Macs"
+        macs = T.plural("server.gguf_split.n_macs", k)
         size = f"{int(w) // 1024}K" if int(w) >= 1024 else str(w)
         if int(w) >= int(target):
-            return f"Fits on {macs} with the full {size} context."
-        return f"Fits on {macs} with a {size} context."
+            return T("server.placement.fits_on_macs_with_the_full", macs=macs, size=size)
+        return T("server.placement.fits_on_macs_with_a_size", macs=macs, size=size)
     color = fit.get("color") or "gray"
     options = []
 
@@ -115,16 +122,16 @@ def placement_options(
         enabled = one_fits and r["disk"] >= (weights_gb or 0) * 0.9
         reason = ""
         if not one_fits:
-            reason = fit.get("reason") or "does not fit on 1 Mini"
+            reason = fit.get("reason") or T("server.placement.does_not_fit_on_1_mini")
         elif not enabled:
-            reason = f"not enough disk on {r['label']} (~{r['disk']:.0f} GB free)"
+            reason = T("server.placement.not_enough_disk_on_label_disk", label=r['label'], disk=r['disk'])
         options.append({
             "id": f"one:{r['id']}",
             "mode": "one",
             "k": 1,
             "node_ids": [r["id"]],
             "node_labels": [r["label"]],
-            "label": f"1 Mini · {r['label']}",
+            "label": T("server.placement.1_mini_label", label=r['label']),
             "enabled": bool(enabled),
             "reason": reason,
             "full_copy": True,
@@ -144,9 +151,9 @@ def placement_options(
         enabled = runtime_ok and fit_ok
         reason = ""
         if not runtime_ok:
-            reason = f"{k}-Mini split coming later; runtime loads on {max_split_stages} today"
+            reason = T("server.placement.k_mini_split_coming_later_runtime", k=k, max_split_stages=max_split_stages)
         elif not fit_ok:
-            reason = f"does not fit across {k} Minis"
+            reason = T("server.placement.does_not_fit_across_k_minis", k=k)
         chosen = ranked[:k]
         options.append({
             "id": f"split:{k}",
@@ -154,7 +161,7 @@ def placement_options(
             "k": k,
             "node_ids": [c["id"] for c in chosen],
             "node_labels": [c["label"] for c in chosen],
-            "label": f"Split across {k} Minis ({', '.join(c['label'] for c in chosen)})",
+            "label": T("server.placement.split_across_k_minis_v", k=k, v=T.join(c['label'] for c in chosen)),
             "enabled": bool(enabled),
             "reason": reason,
             "full_copy": False,
@@ -174,18 +181,18 @@ def placement_options(
     all_enabled = one_fits and disk_ok and len(ranked) >= 1
     all_reason = ""
     if not ranked:
-        all_reason = "no online nodes"
+        all_reason = T("server.placement.no_online_nodes")
     elif not one_fits:
-        all_reason = "model does not fit as a full copy on one Mini"
+        all_reason = T("server.placement.model_does_not_fit_as_a")
     elif not disk_ok:
-        all_reason = "not enough disk on every Mini for a full copy"
+        all_reason = T("server.placement.not_enough_disk_on_every_mini")
     options.append({
         "id": "all",
         "mode": "all",
         "k": len(ranked),
         "node_ids": all_ids,
         "node_labels": all_labels,
-        "label": f"Copy to all ({', '.join(all_labels) or 'none'})",
+        "label": T("server.placement.copy_to_all_v", v=T.join(all_labels) or 'none'),
         "enabled": bool(all_enabled),
         "reason": all_reason,
         "full_copy": True,

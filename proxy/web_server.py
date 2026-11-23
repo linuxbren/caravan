@@ -36,6 +36,13 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "agent"))
 
 import web_catalog as catalog
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 if str(HERE.parent / "tools") not in sys.path:
     sys.path.append(str(HERE.parent / "tools"))  # caravan_i18n (Day 32 strings)
 import caravan_i18n as I18N  # noqa: E402
@@ -62,10 +69,19 @@ def load_journey() -> dict:
     try:
         return json.loads(p.read_text())
     except (OSError, ValueError):
-        return {"versions": [], "series": {}, "error": "unreadable journey.json"}
+        return {"versions": [], "series": {}, "error": T("server.web_server.unreadable_journey_json")}
 
 
 _STOP_ID_OK = __import__("re").compile(r"^[A-Za-z0-9_-]{8,64}$")
+
+
+def _note_problem(mgr, msg) -> None:
+    """A progress line marked as a problem (Day 32: the page reads the flag,
+    not the words); managers without the flag just get the line."""
+    try:
+        mgr._note(msg, problem=True)
+    except TypeError:
+        mgr._note(msg)
 
 
 def _hard_close(upstream) -> None:
@@ -183,11 +199,11 @@ class App:
         """Read-only preview. Client supplies counts/IDs, never RAM or file claims."""
         import split_balance as SB
         if not isinstance(body, dict):
-            raise ValueError("Balance request must be an object")
+            raise ValueError(T("server.web_server.balance_request_must_be_an_object"))
         mid = body.get("model_id") or self.mgr.snapshot().get("model_id")
         entry = next((m for m in self.list_loadable_models() if m.get("id") == mid or m.get("hf") == mid), None)
         if not entry:
-            raise ValueError("Balance needs an installed model")
+            raise ValueError(T("server.web_server.balance_needs_an_installed_model"))
         if entry.get('sharded'):
             import web_gguf_shares
             return web_gguf_shares.preview(self,body,entry,fresh=fresh)
@@ -198,7 +214,7 @@ class App:
         ids = body.get("node_ids")
         if ids is not None:
             if not isinstance(ids, list) or len(set(ids)) != len(ids) or not set(ids) <= {n["id"] for n in configured}:
-                raise ValueError("unknown or duplicate Mini IDs")
+                raise ValueError(T("server.web_gguf_files.unknown_or_duplicate_mini_ids"))
             configured = [n for n in configured if n["id"] in ids]
         if fresh:
             live = {n["id"]: web_nodes.gather_node_stats(n, ssh_fn=self._ssh_fn()) for n in configured}
@@ -346,7 +362,7 @@ class App:
     def picker_kill_node(self, node: dict, repo_id: str, job=None) -> dict:
         """SIGTERM/KILL mlx_split_fetch for repo on one node (local or SSH)."""
         if not repo_id:
-            return {"ok": False, "error": "no repo"}
+            return {"ok": False, "error": T("server.web_server.no_repo")}
         folder = repo_id.replace("/", "--")
         pid_file = f"/tmp/caravan-fetch-{folder}.pid"
         script = (
@@ -546,7 +562,7 @@ class App:
                 pid, repo, dest = int(m.group(1)), m.group(2), m.group(3)
                 if repo in known:
                     continue
-                local = next((n for n in cfg if web_nodes.is_local(n)), cfg[0] if cfg else {"id": "local", "label": "My Mac", "role": "lead"})
+                local = next((n for n in cfg if web_nodes.is_local(n)), cfg[0] if cfg else {"id": "local", "label": T("server.pairing_store.my_mac"), "role": "lead"})
                 nid = local.get("id") or "local"
                 snap = self.picker_measure_node(local, dest, repo_id=repo)
                 snap["label"] = web_nodes.friendly_mac_label(local, node_id=nid, inventory=cfg, node_count=len(cfg) or 1)
@@ -619,13 +635,13 @@ class App:
                             mb_s = float(snap.get("mb_s") or 0)
                             have_gb = have / 1e9
                             total_gb = total_b / 1e9
-                            msg = f"{have_gb:.2f}/{total_gb:.2f} GB · {mb_s:.1f} MB/s"
+                            msg = T("server.web_server.have_gb_total_gb_gb_mb", have_gb=have_gb, total_gb=total_gb, mb_s=mb_s)
                             if snap.get("n_incomplete"):
-                                msg += f" · {snap['n_incomplete']} active"
+                                msg += T("server.download_progress.n_incomplete_active", n_incomplete=snap['n_incomplete'])
                             if snap.get("source") == "nettop":
-                                msg += " · via network"
+                                msg += T("server.download_progress.via_network")
                             if snap.get("stalled"):
-                                msg += " · stalled?"
+                                msg += T("server.download_progress.stalled")
                             snap["msg"] = msg
             jobs.append({
                 "id": "live-" + repo.replace("/", "--")[:24],
@@ -635,7 +651,7 @@ class App:
                 "runners": runners,
                 "orphan": True,
                 "totals": {nid: total_b for nid in progress} if total_b else {},
-                "note": "adopted live fetch (web restarted or started outside UI)",
+                "note": T("server.web_server.adopted_live_fetch_web_restarted_or"),
             })
         import web_files
         return jobs + web_files.orphans(self,known)
@@ -787,15 +803,15 @@ class App:
             place = gguf_split.placement_options(
                 g["size_gb"], nodes, model_path=g["path"], settings=page)
             out.append({
-                "id": g["id"], "name": g["name"] + " (GGUF)", "hf": g["id"],
+                "id": g["id"], "name": g["name"] + T("server.web_catalog.gguf"), "hf": g["id"],
                 "source": "gguf", "backend": "llama", "lead_path": g["path"],
                 "size_gb": g["size_gb"], "usable": bool(place["default_id"]),
                 "available_lead": True,
-                "disabled_reason": "" if place["default_id"] else "won't fit on the online Minis",
+                "disabled_reason": "" if place["default_id"] else T("server.web_server.wont_fit_on_the_online_minis"),
                 "placement_options": place["options"],
                 "default_placement": place["default_id"],
                 "current": g["id"] == current,
-                "note": place.get("summary") or "Downloaded and ready to load",
+                "note": place.get("summary") or T("server.web_server.downloaded_and_ready_to_load"),
                 "placement_summary": place.get("summary") or "",
             })
         import web_gguf_shares
@@ -812,7 +828,7 @@ def mark_in_settings(entry: dict, listed: set) -> dict:
     rid = entry.get("id")
     entry["in_settings"] = entry.get("source") == "gguf" or rid in listed
     if not entry["in_settings"]:
-        entry["settings_note"] = "Not in Settings: files incomplete"
+        entry["settings_note"] = T("server.web_server.not_in_settings_files_incomplete")
     return entry
 
 
@@ -1054,16 +1070,16 @@ def make_handler(app: App):
                         if oj.get("id") == jid:
                             job = oj
                             break
-                return self._json(200 if job else 404, (self._friendly_job(job) if job else {"error": "not found"}))
+                return self._json(200 if job else 404, (self._friendly_job(job) if job else {"error": T("server.web_server.not_found")}))
             if path == "/api/picker/live-fetches":
                 return self._json(200, {"jobs": [self._friendly_job(j) for j in app.list_orphan_fetch_jobs()]})
             if path.startswith("/api/"):
-                return self._json(404, {"error": "not found"})
+                return self._json(404, {"error": T("server.web_server.not_found")})
             # fall through to static
             rel = path.lstrip("/")
             data, ctype = self._read_static(rel)
             if data is None:
-                return self._json(404, {"error": "not found"})
+                return self._json(404, {"error": T("server.web_server.not_found")})
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
@@ -1111,7 +1127,7 @@ def make_handler(app: App):
             if path == "/api/models/stop":
                 if hasattr(app,"restore"):app.restore.cancel()
                 if app.optimizer.snapshot().get("running"):
-                    return self._json(409, {"error": "Cancel Auto-tune and wait before unloading", "code": "optimize_running"})
+                    return self._json(409, {"error": T("server.web_server.cancel_auto_tune_and_wait_before_2"), "code": "optimize_running"})
                 try:
                     app.mgr.stop(reason="ui")
                 except ManagedServiceError as e:
@@ -1120,7 +1136,7 @@ def make_handler(app: App):
                     msg = f"{type(e).__name__}: {e}"
                     try:
                         app.mgr._set(status="error", error=msg)
-                        app.mgr._note(f"stop failed: {e}")
+                        _note_problem(app.mgr, T("server.web_server.stop_failed_e", e=e))
                     except Exception:
                         pass
                     return self._json(502, {"error": msg, "worker": app.mgr.snapshot()})
@@ -1132,11 +1148,11 @@ def make_handler(app: App):
                 except ManagedServiceError as e:
                     return self._json(409, {"error":str(e)})
                 if len((app.mgr.snapshot().get("balance") or {}).get("counts") or []) > 2:
-                    return self._json(409, {"error": "Auto-tune is not yet safe for N-stage MLX Balance; use measured replies instead"})
+                    return self._json(409, {"error": T("server.web_server.auto_tune_is_not_yet_safe")})
                 if app.mgr._switch_thread and app.mgr._switch_thread.is_alive():
-                    return self._json(409, {"error": "a model load is in progress"})
+                    return self._json(409, {"error": T("server.web_server.a_model_load_is_in_progress")})
                 if app.optimizer.snapshot().get("running"):
-                    return self._json(409, {"error": "optimize already running"})
+                    return self._json(409, {"error": T("server.web_gguf_optimize.optimize_already_running")})
                 gguf = (path.endswith("/gguf/start")
                         or app.mgr.snapshot().get("backend") == "llama")
                 try:
@@ -1168,7 +1184,7 @@ def make_handler(app: App):
                 rid = rid if _STOP_ID_OK.match(rid) else None
                 jid = jid if jid.startswith("job_") and _STOP_ID_OK.match(jid) else None
                 if not rid and not jid:
-                    return self._json(400, {"error": "Send the reply's request or job id."})
+                    return self._json(400, {"error": T("server.web_server.send_the_replys_request_or_job")})
                 out = stop_live_chat(app, request_id=rid, job_id=jid)
                 return self._json(200 if out["stopped"] else 404, out)
             if path in ("/api/chat", "/v1/chat/completions"):
@@ -1193,7 +1209,7 @@ def make_handler(app: App):
                 import web_helpers
                 p = web_helpers.pairing(body.get("helper_id"))
                 if not p or body.get("action") not in ("download", "decline"):
-                    return self._json(400, {"error": "Unknown helper or action"})
+                    return self._json(400, {"error": T("server.web_server.unknown_helper_or_action")})
                 web_helpers.answer(p["id"], body["action"] == "download")
                 if body["action"] == "decline":
                     return self._json(200, {"ok": True})
@@ -1208,9 +1224,9 @@ def make_handler(app: App):
             if path == "/api/picker/download/resume":
                 old = web_picker.get_job((body or {}).get("job_id") or "") or {}
                 if not old:
-                    return self._json(404, {"error": "unknown job"})
+                    return self._json(404, {"error": T("server.web_picker.unknown_job")})
                 if old.get("status") not in ("cancelled", "error"):
-                    return self._json(409, {"error": "job is %s, not stopped/failed" % old.get("status")})
+                    return self._json(409, {"error": T("server.web_server.job_is_status_not_stopped", status=old.get("status"))})
                 req = dict(old.get("request") or {})
                 if not req:
                     req = {"repo_id": old.get("repo_id"), "placement": old.get("placement")}
@@ -1227,7 +1243,7 @@ def make_handler(app: App):
                 if jid.startswith('files-live-'):
                     import web_files
                     orphan = next((j for j in app.list_orphan_fetch_jobs() if j.get('id')==jid),None)
-                    if not orphan: return self._json(404,{'error':'transfer is no longer running'})
+                    if not orphan: return self._json(404,{'error':T("server.web_server.transfer_is_no_longer_running")})
                     return self._json(200,web_files.cancel(app,orphan))
                 return self._json(200, web_picker.cancel_job(jid, kill_procs=app.picker_kill_all))
             if path == "/api/picker/delete":
@@ -1246,12 +1262,12 @@ def make_handler(app: App):
                 return self._api_lan(post=True, body=body)
             if path == "/api/update":
                 return self._api_update(post=True, body=body)
-            return self._json(404, {"error": "not found"})
+            return self._json(404, {"error": T("server.web_server.not_found")})
 
         def _serve_file(self, rel):
             data, ctype = self._read_static(rel)
             if data is None:
-                return self._json(404, {"error": "not found"})
+                return self._json(404, {"error": T("server.web_server.not_found")})
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
@@ -1390,7 +1406,7 @@ def make_handler(app: App):
                 try:
                     opts = json.loads(raw) if raw else {}
                 except ValueError:
-                    return self._json(400, {"error": "opts must be a JSON object"})
+                    return self._json(400, {"error": T("server.web_server.opts_must_be_a_json_object")})
                 out = web_speed.get(mid, opts)
                 out["tuning"] = web_speed.get_tuning(mid)
                 return self._json(200, out)
@@ -1402,7 +1418,7 @@ def make_handler(app: App):
             body = body if isinstance(body, dict) else {}
             raw = body.get("self_tune", body.get("value"))
             if raw is None:
-                return self._json(400, {"error": "self_tune is required"})
+                return self._json(400, {"error": T("server.web_server.self_tune_is_required")})
             try:
                 out = app.mgr.set_self_tune(raw)
             except Exception as e:
@@ -1543,9 +1559,9 @@ def make_handler(app: App):
                     cleanup.append({
                         "id": f"cleanup:{kind}",
                         "kind": kind,
-                        "name": "HF download cache" if kind == "hf-cache" else "Guess-ahead drafts",
-                        "note": "Shared Hugging Face cache" if kind == "hf-cache"
-                                else "Helper models used for guess-ahead",
+                        "name": T("server.web_server.hf_download_cache") if kind == "hf-cache" else T("server.web_server.guess_ahead_drafts"),
+                        "note": T("server.web_server.shared_hugging_face_cache") if kind == "hf-cache"
+                                else T("server.web_server.helper_models_used_for_guess_ahead"),
                         "size_gb": sizes,
                         "size_by_label": sizes_by_label,
                     })
@@ -1555,7 +1571,7 @@ def make_handler(app: App):
                 nid = n.get("id") or n.get("label")
                 for key, h in ((blobs.get(nid) or {}).get("helpers") or {}).items():
                     e = helpers.setdefault(key, {"id": "cleanup:" + key, "kind": key,
-                        "name": h["name"], "note": ("Pairs with " + ", ".join(h["pairs"])) if h.get("pairs") else "Manually installed helper; no catalog pairing recorded",
+                        "name": h["name"], "note": (T("server.web_server.pairs_with_pairs", pairs=T.join(h["pairs"]))) if h.get("pairs") else T("server.web_server.manually_installed_helper_no_catalog_pairing"),
                         "size_gb": {}, "size_by_label": {}})
                     e["size_gb"][nid] = h["size_gb"]
                     e["size_by_label"][n.get("label") or nid] = h["size_gb"]
@@ -1611,7 +1627,7 @@ def make_handler(app: App):
             if not kind.startswith(("draft:", "mtp:")):
                 kind = kind.lower()
             if not body.get("confirm"):
-                return self._json(400, {"error": "confirm=true required"})
+                return self._json(400, {"error": T("server.web_server.confirm_true_required")})
             current = app.mgr.snapshot().get("model_id")
             cfg_nodes = app.configured_nodes()
 
@@ -1621,7 +1637,7 @@ def make_handler(app: App):
                 for n in cfg_nodes:
                     kn = "hf-cache" if k in ("hf-cache", "hf_cache", "cache") else k
                     if kn != "hf-cache" and current:
-                        return self._json(409, {"error": "Stop the loaded model before deleting helpers."})
+                        return self._json(409, {"error": T("server.picker_disk_sizes.stop_the_loaded_model_before_deleting")})
                     cur = (current or "").replace("'", "")
                     import shlex
                     kn = shlex.quote(kn)
@@ -1697,7 +1713,7 @@ def make_handler(app: App):
             home = getattr(app, "cloud_keys_home", None)
             if not allowed:
                 if post:
-                    return self._json(403, {"error": "Open Caravan on this Mac or over Tailscale to change API keys.", "show": False})
+                    return self._json(403, {"error": T("server.web_server.open_caravan_on_this_mac_or"), "show": False})
                 return self._json(200, {"show": False, "providers": []})
             try:
                 if post:
@@ -1709,13 +1725,13 @@ def make_handler(app: App):
                     elif action == "set":
                         out = CK.save(provider, str(body.get("key") or ""), home=home)
                     else:
-                        return self._json(400, {"error": "Send action set or remove."})
+                        return self._json(400, {"error": T("server.web_server.send_action_set_or_remove")})
                 else:
                     out = CK.status(home=home)
             except CK.CloudKeyError as e:
                 return self._json(400, {"error": str(e)})
             except OSError:
-                return self._json(500, {"error": "Could not save the key file in ~/.caravan."})
+                return self._json(500, {"error": T("server.web_server.could_not_save_the_key_file")})
             out = dict(out)
             out["show"] = True
             return self._json(200, out)
@@ -1725,7 +1741,7 @@ def make_handler(app: App):
                 from hf_auth import validated_token_status
                 return self._json(200, validated_token_status())
             except Exception as e:
-                return self._json(500, {"error": "Could not check token status", "configured": False})
+                return self._json(500, {"error": T("server.web_server.could_not_check_token_status"), "configured": False})
 
         def _api_hf_token_set(self, body=None):
             """Store or clear HF token on each Mini. Never echoes the secret."""
@@ -1737,7 +1753,7 @@ def make_handler(app: App):
             clear = bool(body.get("clear") or body.get("token") == "")
             tok = "" if clear else (body.get("token") or "").strip()
             if not clear and not tok:
-                return self._json(400, {"error": "token required (or clear:true)"})
+                return self._json(400, {"error": T("server.web_server.token_required_or_clear_true")})
             st = clear_caravan_token() if clear else save_caravan_token(tok)
             nodes_out = [{"node": "local", "ok": True}]
             for n in app.configured_nodes():
@@ -1789,7 +1805,7 @@ def make_handler(app: App):
                     elif enabled is False:
                         info = remote.turn_off(port=port)
                     else:
-                        return self._json(400, {"error": "Send enabled true or false."})
+                        return self._json(400, {"error": T("server.web_server.send_enabled_true_or_false")})
                 else:
                     info = remote.inspect(port=port)
             except remote.RemoteError as e:
@@ -1823,7 +1839,7 @@ def make_handler(app: App):
                     elif enabled is False:
                         info = lan.turn_off(port=port)
                     else:
-                        return self._json(400, {"error": "Send enabled true or false."})
+                        return self._json(400, {"error": T("server.web_server.send_enabled_true_or_false")})
                 else:
                     info = lan.inspect(port=port)
             except lan.LanError as e:
@@ -1909,7 +1925,7 @@ def make_handler(app: App):
             post = body is not None
             if not self._helper_gate():
                 if post:
-                    return self._json(403, {"error": "Helper downloads are only offered on this Mac."})
+                    return self._json(403, {"error": T("server.web_server.helper_downloads_are_only_offered_on")})
                 return self._json(200, {"offer": None, "show": False, "lan": True})
             snap = app.mgr.snapshot()
             if post:
@@ -1932,12 +1948,12 @@ def make_handler(app: App):
                     status = None
                 return self._json(200, {"offer": offer, "show": bool(offer), "helper": status})
             if action not in ("download", "not_now"):
-                return self._json(400, {"error": "Unknown action"})
+                return self._json(400, {"error": T("server.web_server.unknown_action")})
             if action == "not_now":
                 HO.not_now(mid)
                 return self._json(200, {"ok": True, "remembered": True})
             if not offer or offer.get("id") != (body or {}).get("helper_id"):
-                return self._json(409, {"error": "No helper to download for this model."})
+                return self._json(409, {"error": T("server.web_server.no_helper_to_download_for_this")})
             if offer.get("kind") == "mlx":
                 try:
                     import web_helpers
@@ -2009,7 +2025,7 @@ def make_handler(app: App):
                 action = str(body.get("action") or "").strip().lower()
                 if action == "set":
                     if "check_daily" not in body and "enabled" not in body:
-                        return self._json(400, {"error": "Send check_daily true or false."})
+                        return self._json(400, {"error": T("server.web_server.send_check_daily_true_or_false")})
                     value = body.get("check_daily")
                     if value is None:
                         value = body.get("enabled")
@@ -2038,13 +2054,13 @@ def make_handler(app: App):
                     mac_id = body.get("mac") or body.get("id")
                     ids = [mac_id] if mac_id else UC.failed_mac_ids(home)
                     if not ids:
-                        return self._json(400, {"error": "No Mac needs to be tried again."})
+                        return self._json(400, {"error": T("server.web_server.no_mac_needs_to_be_tried")})
                     if busy:
                         return self._json(409, {"error": busy_msg, "busy": busy})
                     retry_fn = getattr(app, "update_retry", None) or UC.retry_peer
                     if getattr(app, "update_retry", None) is None:
                         if not UC.mark_retrying(home, ids):
-                            return self._json(404, {"error": "That Mac is not in this group."})
+                            return self._json(404, {"error": T("server.web_server.that_mac_is_not_in_this")})
 
                     def _run_retries():
                         for one in ids:
@@ -2093,7 +2109,7 @@ def make_handler(app: App):
                         return self._json(500, {"error": UC.FAILED})
                     return self._json(200, payload_of(result, progress))
                 elif action:
-                    return self._json(400, {"error": "Send action check, set, apply, or retry."})
+                    return self._json(400, {"error": T("server.web_server.send_action_check_set_apply_or")})
             if result is None:
                 result = UC.load_cache(home) or {}
                 mine_now = UC.installed_ref(repo) if packaged else None
@@ -2186,14 +2202,14 @@ def make_handler(app: App):
             body = body or {}
             repo = (body.get("repo_id") or body.get("id") or "").strip()
             if not repo:
-                return self._json(400, {"error": "repo_id required"})
+                return self._json(400, {"error": T("server.web_server.repo_id_required")})
             try:
                 from model_files import repo_name
                 repo_name(repo)
             except ValueError as e:
                 return self._json(400, {'error': str(e)})
             if body.get("source") == "cloud" or repo.startswith("ollama-cloud/"):
-                return self._json(400, {"error": "cloud models are framework-only for now"})
+                return self._json(400, {"error": T("server.web_server.cloud_models_are_framework_only_for")})
             gguf_file = None
             if body.get("source") == "gguf":
                 # Peers can run without the file (RPC ships tensors), but Day 18 copies it to every Mini.
@@ -2207,10 +2223,10 @@ def make_handler(app: App):
                         gguf_file = gfs[0]["rfilename"]
                 if (not gguf_file or ".." in gguf_file or gguf_file.startswith("/")
                         or not gguf_file.endswith(".gguf")):
-                    return self._json(400, {"error": "pick one GGUF file (quant) to download"})
+                    return self._json(400, {"error": T("server.web_server.pick_one_gguf_file_quant_to")})
                 lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
                 if not lead:
-                    return self._json(400, {"error": "No lead configured"})
+                    return self._json(400, {"error": T("server.web_server.no_lead_configured")})
                 body = dict(body, placement_id=None)
                 # Sizes come from the source, never the browser's per-part estimate.
                 from gguf_sets import members
@@ -2228,7 +2244,7 @@ def make_handler(app: App):
                     dict(body, repo_id=repo, gguf_file=gguf_file), body['weights_gb'], live_nodes)
                 chosen = next((o for o in places['options'] if o['id'] == places['default_id']), None)
                 if not chosen:
-                    return self._json(400, {'error': 'This model will not fit on your available Macs. Choose a smaller model or add a Mac.'})
+                    return self._json(400, {'error': T("server.web_server.this_model_will_not_fit_on")})
                 # Day 31: a split chosen only for a longer chat window keeps the
                 # whole file on the lead (it can still run on one Mac); the
                 # per-Mac share download is for models that can't run on one.
@@ -2238,12 +2254,12 @@ def make_handler(app: App):
                         import web_gguf_shares, web_files
                         plan = web_gguf_shares.preview(app, dict(body, repo_id=repo, node_ids=chosen['node_ids']), fresh=True)
                         if not plan['safe']:
-                            return self._json(409, {'error': 'There is not enough free memory to load this model safely. Close other apps or choose a smaller model.'})
+                            return self._json(409, {'error': T("server.web_server.there_is_not_enough_free_memory")})
                         # The specialized share engine is developer-built, not the
                         # official release. Clean installs use standard RPC instead.
                         from gguf_runtime import current
                         current()
-                        return self._json(200, {'job': self._friendly_job(web_files.start(app, plan)), 'note': 'Downloading this model across your Macs…'})
+                        return self._json(200, {'job': self._friendly_job(web_files.start(app, plan)), 'note': T("server.web_server.downloading_this_model_across_your_macs")})
                     except web_gguf_shares.D.UnsupportedLayout:
                         pass
                     except FileNotFoundError:
@@ -2253,7 +2269,7 @@ def make_handler(app: App):
             import web_helpers
             helper = web_helpers.pairing(body.get("helper_id")) if body.get("helper_id") else None
             if body.get("helper_id") and (not helper or repo != helper["draft"]["hf_repo"]):
-                return self._json(400, {"error": "Invalid helper"})
+                return self._json(400, {"error": T("server.web_server.invalid_helper")})
             packer_layers = body.get("packer_layers")
             pk_explicit = packer_layers is not None
             n_layers_dl = None
@@ -2311,10 +2327,10 @@ def make_handler(app: App):
             if gguf_file:
                 place = {"enabled": True}
             if not place:
-                return self._json(400, {"error": "no placement option available", "options": opts})
+                return self._json(400, {"error": T("server.web_server.no_placement_option_available"), "options": opts})
             if not place.get("enabled"):
                 return self._json(400, {
-                    "error": place.get("reason") or "placement disabled",
+                    "error": place.get("reason") or T("server.web_server.placement_disabled"),
                     "placement": place, "options": opts,
                 })
 
@@ -2324,13 +2340,12 @@ def make_handler(app: App):
                 # explicitly from the Balance file view, never a full GGUF copy.
                 ids = [lid]
                 place = {"mode": "one", "full_copy": True, "node_ids": ids, "enabled": True,
-                         "label": f"GGUF to {len(ids)} Mini{'s' if len(ids) > 1 else ''} · "
-                                  "ready to use"}
+                         "label": T.plural("server.web_server.gguf_to_minis_ready", len(ids))}
             if helper:
                 lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
                 if not lead:
-                    return self._json(400, {"error": "No lead configured"})
-                place = {"mode": "one", "full_copy": True, "node_ids": [lead.get("id") or lead.get("label")], "label": "Guess-ahead helper · applies on next load"}
+                    return self._json(400, {"error": T("server.web_server.no_lead_configured")})
+                place = {"mode": "one", "full_copy": True, "node_ids": [lead.get("id") or lead.get("label")], "label": T("server.web_server.guess_ahead_helper_applies_on_next")}
             mode = place.get("mode") or "split"
             full_copy = bool(place.get("full_copy"))
             target_ids = list(place.get("node_ids") or [])
@@ -2340,16 +2355,16 @@ def make_handler(app: App):
                 if n:
                     target_nodes.append(n)
             if not target_nodes:
-                return self._json(400, {"error": "placement nodes not found", "placement": place})
+                return self._json(400, {"error": T("server.web_server.placement_nodes_not_found"), "placement": place})
             if mode == 'split' and (len(target_nodes) > 2 or any(n.get('model_root') for n in target_nodes)):
                 try:
                     import web_files
                     if pk_explicit and body.get('counts') is None:
-                        raise ValueError('Use one count per Mini, not packer_layers, for an N-stage split')
+                        raise ValueError(T("server.web_server.use_one_count_per_mini_not"))
                     plan = web_files.prepare_new_mlx(app, repo, target_nodes, body.get('counts'))
                     job = web_files.start(app, plan)
                     return self._json(200, {'job': self._friendly_job(job), 'stages': len(target_nodes), 'placement': job.get('placement'),
-                                            'note': 'N-stage own-file download; no files are deleted'})
+                                            'note': T("server.web_server.n_stage_own_file_download_no")})
                 except Exception as e:
                     return self._json(400, {'error': str(e)})
             # Day 18 split safety: default the split point to a balanced one from each
@@ -2365,7 +2380,7 @@ def make_handler(app: App):
                            for n in target_nodes[: web_nodes.MAX_SPLIT_STAGES]]
                     kb = split_balance.balanced_packer_layers(n_layers_dl, weights, stg)
                     if kb and kb != packer_layers:
-                        balance_note = f"split point {kb}/{n_layers_dl - kb} (balanced for each Mini's RAM; default was {packer_layers})"
+                        balance_note = T("server.web_server.split_point_kb_v_balanced_for", kb=kb, v=n_layers_dl - kb, packer_layers=packer_layers)
                         packer_layers = kb
                 except Exception:  # noqa: BLE001 - keep the old default
                     pass
@@ -2374,8 +2389,7 @@ def make_handler(app: App):
             note = place.get("label") or ""
             if mode == "split" and len(target_nodes) > web_nodes.MAX_SPLIT_STAGES:
                 note = (
-                    f"{len(target_nodes)}-Mini split coming later; "
-                    f"downloading for {web_nodes.MAX_SPLIT_STAGES}-stage runtime"
+                    T("server.web_server.target_nodes_mini_split_coming_later", target_nodes=len(target_nodes), max_split_stages=web_nodes.MAX_SPLIT_STAGES)
                 )
                 target_nodes = target_nodes[: web_nodes.MAX_SPLIT_STAGES]
                 n_stages = len(target_nodes)
@@ -2414,7 +2428,7 @@ def make_handler(app: App):
                         cmd += ["--gguf-file", gguf_file]
                     elif pk and role != "all":
                         cmd += ["--packer-layers", str(int(pk))]
-                    prog(1, f"starting fetch ({role})")
+                    prog(1, T("server.web_server.starting_fetch_role", role=role), code="starting")
                     proc = subprocess.Popen(
                         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                     )
@@ -2447,7 +2461,7 @@ def make_handler(app: App):
                         logging.getLogger("caravan.download").error(
                             "Local download failed (%s): %s", role, blob)
                         from web_nodes import plain_download_error
-                        raise RuntimeError(plain_download_error(blob or f"{role} download failed", log=False))
+                        raise RuntimeError(plain_download_error(blob or T("server.web_server.role_download_failed", role=role), log=False))
                     prog(100, "done")
                 return run_local
 
@@ -2471,10 +2485,10 @@ def make_handler(app: App):
                         "; echo $? > %s.exit ) > /tmp/caravan-fetch-%s.log 2>&1 & echo $! > %s; echo FETCH_STARTED"
                         % (pid_file, node.get("id") or "node", pid_file)
                     )
-                    prog(1, f"starting fetch ({role})")
+                    prog(1, T("server.web_server.starting_fetch_role", role=role), code="starting")
                     r = app._ssh_fn()(node, script, timeout=60)
                     if r.returncode != 0 or "FETCH_STARTED" not in (r.stdout or ""):
-                        raise RuntimeError((r.stderr or r.stdout or "remote start failed")[-400:])
+                        raise RuntimeError((r.stderr or r.stdout or T("server.web_server.remote_start_failed"))[-400:])
                     import time as _t
                     while True:
                         for j in web_picker.list_jobs():
@@ -2510,7 +2524,7 @@ def make_handler(app: App):
                                 )
                                 from web_nodes import plain_download_error
                                 raise RuntimeError(plain_download_error(
-                                    " ".join(lines[1:]) if len(lines) > 1 else "download failed",
+                                    " ".join(lines[1:]) if len(lines) > 1 else T("server.web_server.download_failed"),
                                     log=False,
                                 ))
                             break
@@ -2634,7 +2648,7 @@ def make_handler(app: App):
             preview=path=="/api/thunderbolt/plan"
             allowed={"opt_in","validation_id"} if preview else set()
             if not isinstance(body,dict) or set(body)-allowed:
-                return self._json(400,{"error":"Only server-configured graph/identities are accepted","preview_only":True,"read_only":True})
+                return self._json(400,{"error":T("server.web_server.only_server_configured_graph_identities_are"),"preview_only":True,"read_only":True})
             if not hasattr(app,"thunderbolt_discovery"):
                 app.thunderbolt_discovery=thunderbolt_discovery.Controller()
             try:
@@ -2649,7 +2663,7 @@ def make_handler(app: App):
 
         def _api_load(self, body=None):
             body = body or {}
-            if not isinstance(body,dict):return self._json(400,{"error":"Load request must be an object"})
+            if not isinstance(body,dict):return self._json(400,{"error":T("server.web_server.load_request_must_be_an_object")})
             if hasattr(app,"restore"):
                 try:app.restore.authorize(body,begin=True)
                 except ValueError as e:return self._json(409,error_payload(e))
@@ -2659,11 +2673,11 @@ def make_handler(app: App):
                 except ManagedServiceError as e:
                     return self._json(409, error_payload(e))
             if app.optimizer.snapshot().get("running"):
-                return self._json(409, {"error": "Cancel Auto-tune and wait before loading", "code": "optimize_running"})
+                return self._json(409, {"error": T("server.web_server.cancel_auto_tune_and_wait_before"), "code": "optimize_running"})
             body = body or {}
             mid = body.get("model_id") or body.get("id")
             if not mid:
-                return self._json(400, {"error": "model_id required"})
+                return self._json(400, {"error": T("server.web_server.model_id_required")})
             notice = web_picker.serve_notice(
                 body.get("filters"), body.get("pipeline_tag") or "", repo_id=mid)
             if not notice:
@@ -2689,7 +2703,7 @@ def make_handler(app: App):
                     break
             if body.get("engine"):
                 try:
-                    if not entry:raise ValueError("Last model is not installed or cannot be inspected on the configured Minis")
+                    if not entry:raise ValueError(T("server.web_server.last_model_is_not_installed_or"))
                     import web_restore
                     entry = web_restore.validate_placement(app,entry,dict(body,model_id=mid))
                 except (ValueError,OSError,TypeError,KeyError) as e:return self._json(400,error_payload(e))
@@ -2698,22 +2712,22 @@ def make_handler(app: App):
                 pid_ = body.get("placement_id") or entry.get("default_placement")
                 opt = next((o for o in entry.get("placement_options") or [] if o.get("id") == pid_), None)
                 if not opt:
-                    return self._json(400, {"error": f"unknown placement {pid_!r} for {mid}"})
+                    return self._json(400, {"error": T("server.web_server.unknown_placement_pid_for_mid", pid=pid_, mid=mid)})
                 if not opt.get("enabled"):
-                    return self._json(400, {"error": opt.get("reason") or "placement doesn't fit"})
+                    return self._json(400, {"error": opt.get("reason") or T("server.web_server.placement_doesnt_fit")})
                 entry["placement"] = {"mode": opt["mode"], "node_ids": opt["node_ids"]}
             if entry and entry.get('sharded'):
                 dep=entry['gguf_deployment']
                 body=dict(body,balance=True,node_ids=body.get('node_ids') or dep['node_ids'],counts=body.get('counts') or dep['shares'])
             if body.get("balance"):
                 if app._inflight:
-                    return self._json(409, {"error": "Wait for the current reply before reloading"})
+                    return self._json(409, {"error": T("server.web_server.wait_for_the_current_reply_before")})
                 try:
                     plan = app.balance(dict(body, model_id=mid), fresh=True)
                     if not plan["ready"]:
                         plan.pop("entry", None)
                         plan.pop("file_requests", None)
-                        return self._json(409, {"error": "Split needs files or more memory; nothing was changed", "balance": plan})
+                        return self._json(409, {"error": T("server.web_server.split_needs_files_or_more_memory"), "balance": plan})
                     entry = plan["entry"]
                     if entry.get("source")=="gguf" and isinstance(body.get("gguf_tune"),dict):
                         entry=dict(entry,tune_override=__import__("web_restore").restorable_gguf_tune(body["gguf_tune"],entry.get("lead_path")))
@@ -2726,10 +2740,9 @@ def make_handler(app: App):
                 if sc.get("better") and sc.get("balanced_ready"):
                     kb = int(sc["balanced_packer_layers"])
                     entry = dict(entry, packer_layers=kb)
-                    balanced_msg = (f"Loading at a balanced split ({kb}/{sum(sc['counts']) - kb}) instead of "
-                                    f"the saved {'/'.join(map(str, sc['counts']))}, so every Mini keeps its safety margin.")
+                    balanced_msg = (T("server.web_server.loading_at_a_balanced_split_kb", kb=kb, v=sum(sc['counts']) - kb, map='/'.join(map(str, sc['counts']))))
                 else:
-                    return self._json(409, {"error": entry.get("split_note") or sc.get("note") or "split too tight",
+                    return self._json(409, {"error": entry.get("split_note") or sc.get("note") or T("server.web_server.split_too_tight"),
                                             "split_check": sc})
             # Normal Settings/Models split loads use the same N-Mini planner,
             # not the old hard-coded two-node SSH/IP defaults. Keep the explicit
@@ -2749,7 +2762,7 @@ def make_handler(app: App):
                     plan=app.balance(dict(body,model_id=mid,balance=True,node_ids=ids,counts=counts),fresh=True)
                     if not plan["ready"]:
                         plan.pop("entry",None);plan.pop("file_requests",None)
-                        return self._json(409,{"error":"Split needs files or more memory; nothing was changed","balance":plan})
+                        return self._json(409,{"error":T("server.web_server.split_needs_files_or_more_memory"),"balance":plan})
                     entry=plan["entry"]
                 except (ValueError,OSError,KeyError,TypeError) as e:return self._json(400,error_payload(e))
             try:
@@ -2793,16 +2806,16 @@ def make_handler(app: App):
                 })
             rec = app.jobs.read(path[len("/api/jobs/"):].strip("/"))
             if rec is None:
-                return self._json(404, {"error": "unknown job"})
+                return self._json(404, {"error": T("server.web_picker.unknown_job")})
             return self._json(200, RJ.public(rec))
 
         def _api_chat(self, body=None, openai_shape=False, endpoint="/api/chat"):
             # body already drained in do_POST (keep-alive safe).
             snap = app.mgr.snapshot()
             if snap.get("status") != "ready":
-                return self._json(409, {"error": "no model loaded", "worker": snap})
+                return self._json(409, {"error": T("server.web_server.no_model_loaded"), "worker": snap})
             if not isinstance(body, dict):
-                return self._json(400, {"error": "bad json"})
+                return self._json(400, {"error": T("server.web_server.bad_json")})
             # Stamp: Caravan received this request (Mini wall clock).
             t_received = time.time()
             sent_hdr = self.headers.get("X-Caravan-Sent")
@@ -2873,20 +2886,20 @@ def make_handler(app: App):
                         print(f"[caravan-web] request journal {method} failed: {e}", flush=True)
 
             def _later(msg):
-                return (msg + f" Caravan will run it again when the model is back; fetch the reply from /api/jobs/{job_id}."
+                return (msg + T("server.web_server.caravan_will_run_it_again_when", job_id=job_id)
                         if job_id else msg)
             try:
                 upstream = urlopen(req, timeout=REPLY_TIMEOUT_S)
             except HTTPError as e:
                 err = e.read().decode(errors="replace")[:500]
-                _job("fail", f"HTTP {e.code}: {err}")
+                _job("fail", T("server.web_server.http_code_err", code=e.code, err=err))
                 return self._json(e.code, {"error": err}, headers=job_hdr)
             except URLError as e:
-                _job("fail", f"lead unreachable: {e}")
-                return self._json(502, {"error": f"lead unreachable: {e}"}, headers=job_hdr)
+                _job("fail", T("server.web_server.lead_unreachable_e", e=e))
+                return self._json(502, {"error": T("server.web_server.lead_unreachable_e", e=e)}, headers=job_hdr)
             except (OSError, http.client.HTTPException) as e:
-                _job("interrupt", f"model stopped before replying: {e}")
-                return self._json(502, {"error": _later("The model stopped before replying. Check the status line."),
+                _job("interrupt", T("server.web_server.model_stopped_before_replying_e", e=e))
+                return self._json(502, {"error": _later(T("server.web_server.the_model_stopped_before_replying_check")),
                                         "detail": str(e)[:300], "job": job_id}, headers=job_hdr)
 
             live["upstream"] = upstream
@@ -2905,8 +2918,8 @@ def make_handler(app: App):
                                          "message": {"role": "assistant", "content": ""}}],
                             "caravan_web": {"stopped": True, "session": session, "job": job_id},
                         }, headers=job_hdr)
-                    _job("interrupt", f"model stopped mid-reply: {e}")
-                    return self._json(502, {"error": _later("The model stopped mid-reply. Check the status line."),
+                    _job("interrupt", T("server.web_server.model_stopped_mid_reply_e", e=e))
+                    return self._json(502, {"error": _later(T("server.web_server.the_model_stopped_mid_reply_check")),
                                             "detail": str(e)[:300], "job": job_id}, headers=job_hdr)
                 finally:
                     upstream.close()
@@ -3092,9 +3105,9 @@ def make_handler(app: App):
 
             if job_id and not (finish_reason or saw_done):
                 # The model went away mid-reply (crash, kill): keep the job open.
-                _job("interrupt", f"model stopped mid-reply: {upstream_error or 'stream ended early'}")
+                _job("interrupt", T("server.web_server.model_stopped_mid_reply_v", v=upstream_error or 'stream ended early'))
                 try:
-                    err = {"error": {"message": _later("The model stopped mid-reply."), "type": "caravan_interrupted"},
+                    err = {"error": {"message": _later(T("server.web_server.the_model_stopped_mid_reply")), "type": "caravan_interrupted"},
                            "caravan_job": job_id}
                     send_chunk(f"data: {json.dumps(err)}\n\n".encode())
                     self.wfile.write(b"0\r\n\r\n")

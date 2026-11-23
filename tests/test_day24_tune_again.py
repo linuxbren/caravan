@@ -235,7 +235,7 @@ class LeadLearnsWhenOn(unittest.TestCase):
         self.assertFalse(web_settings.lead_omits_no_learn({"self_tune": "off"}))
 
     def test_pipeline_lead_start_drops_no_learn(self):
-        src = (REPO / "proxy/web_pipeline.py").read_text()
+        src = english_source(REPO / "proxy/web_pipeline.py")
         self.assertIn("drop_no_learn_for_lead", src)
 
 
@@ -286,7 +286,7 @@ class ResetTuning(unittest.TestCase):
         self.assertIsNone(S.get_tuning("qwen", path=speed)["line"])
 
     def test_reset_does_not_unload(self):
-        src = (REPO / "proxy/web_workers.py").read_text()
+        src = english_source(REPO / "proxy/web_workers.py")
         # Reset must not stop the worker. It may reload the same model when
         # Memory compression is tight, so that value actually goes back to Auto.
         start = src.index("def reset_tuning")
@@ -299,7 +299,7 @@ class ResetTuning(unittest.TestCase):
 
 class Notices(unittest.TestCase):
     def test_ready_notice_does_not_say_when_you_load(self):
-        src = (REPO / "proxy/web_workers.py").read_text()
+        src = english_source(REPO / "proxy/web_workers.py")
         start = src.index("def set_self_tune")
         body = src[start:src.index("def _page_self_tune")]
         self.assertIn('if status == "ready"', body)
@@ -310,7 +310,7 @@ class Notices(unittest.TestCase):
         self.assertIn("ready_on", body)
 
     def test_start_does_not_require_self_tuning(self):
-        src = (REPO / "proxy/web_optimize.py").read_text()
+        src = english_source(REPO / "proxy/web_optimize.py")
         start = src.index("def start(")
         body = src[start:src.index("def cancel(")]
         self.assertNotIn("needs an MLX model with Auto learning on", body)

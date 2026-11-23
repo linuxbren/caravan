@@ -15,6 +15,13 @@ import urllib.request
 
 from model_files import repo_name, safe_name, tree_usage
 from gguf_rpc_seed import device_layers, tensor_plan, rpc_cache_dir, ensure_bin
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def digest_range(path, offset, size):
@@ -23,7 +30,7 @@ def digest_range(path, offset, size):
         f.seek(offset)
         while size:
             b = f.read(min(size, 4 << 20))
-            if not b: raise ValueError('GGUF tensor extends beyond the local file')
+            if not b: raise ValueError(T("agent.gguf_files.gguf_tensor_extends_beyond_the_local"))
             h.update(b); size -= len(b)
     return h.hexdigest()
 
@@ -44,7 +51,7 @@ def source_manifest(path, repo, filename, *, cache_root=None):
     lfs = getattr(src, 'lfs', None)
     sha = lfs.get('sha256') if isinstance(lfs, dict) else getattr(lfs, 'sha256', None)
     if src is None or src.size != stat.st_size or not sha or not info.sha:
-        raise ValueError('GGUF source must match the local file size and publish an LFS SHA256')
+        raise ValueError(T("agent.gguf_files.gguf_source_must_match_the_local"))
     identity = [str(path.resolve()), stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, sha]
     key = hashlib.sha256(json.dumps(identity).encode()).hexdigest()
     root = Path(cache_root) if cache_root else Path.home()/'.caravan/file-plans'
@@ -54,16 +61,16 @@ def source_manifest(path, repo, filename, *, cache_root=None):
         out.update(repo_id=repo, filename=filename, revision=info.sha)
         return out
     if digest_range(path, 0, stat.st_size) != sha:
-        raise ValueError('installed GGUF differs from this source; no peer files fetched')
+        raise ValueError(T("agent.gguf_files.installed_gguf_differs_from_this_source"))
     try:
         tuples, n_layer = tensor_plan(str(path), None)
     except ImportError as exc:
-        raise ValueError('GGUF metadata reader is missing; install requirements-mac.txt in the Caravan venv') from exc
-    if not n_layer: raise ValueError('GGUF block count is unknown')
+        raise ValueError(T("agent.gguf_files.gguf_metadata_reader_is_missing_install")) from exc
+    if not n_layer: raise ValueError(T("agent.gguf_files.gguf_block_count_is_unknown"))
     tensors = [dict(name=name, offset=off, size=size, sha256=digest_range(path, off, size))
                for name, off, size in tuples]
     if path.stat().st_mtime_ns != stat.st_mtime_ns or path.stat().st_size != stat.st_size:
-        raise ValueError('GGUF changed while preparing its plan')
+        raise ValueError(T("agent.gguf_files.gguf_changed_while_preparing_its_plan"))
     out = dict(format='gguf', repo_id=repo, filename=filename, revision=info.sha,
                source_bytes=stat.st_size, source_sha256=sha, n_layers=n_layer, tensors=tensors)
     root.mkdir(parents=True, exist_ok=True)
@@ -75,7 +82,7 @@ def stage_plan(manifest, shares, index):
     import math
     if (not isinstance(shares, list) or not shares or any(isinstance(s, bool) or not isinstance(s,(int,float)) or
             not math.isfinite(s) or s <= 0 for s in shares) or type(index) is not int or not 0 <= index < len(shares)):
-        raise ValueError('GGUF needs one positive finite share per Mini and a valid device index')
+        raise ValueError(T("agent.gguf_files.gguf_needs_one_positive_finite_share"))
     layers = device_layers(manifest['n_layers'], shares, index, pad=0)
     def owns(t):
         name = t['name']
@@ -89,7 +96,7 @@ def stage_plan(manifest, shares, index):
 
 def record_path(plan, root=None):
     key = plan['source_sha256']
-    if not re.fullmatch('[0-9a-f]{64}', key): raise ValueError('invalid source checksum')
+    if not re.fullmatch('[0-9a-f]{64}', key): raise ValueError(T("agent.gguf_files.invalid_source_checksum"))
     return (Path(root) if root else Path.home()/'.caravan/gguf-plans')/(key+'.json')
 
 
@@ -119,16 +126,16 @@ def fetch_tensor(plan, tensor, part, token=None, opener=None):
     """Strict bounded Range, resumable, checked against the installed lead's SHA256."""
     from range_fetch import file_url
     repo_name(plan['repo_id']); safe_name(plan['filename'])
-    if not re.fullmatch('[0-9a-f]{40,64}', plan['revision']): raise ValueError('immutable source revision required')
+    if not re.fullmatch('[0-9a-f]{40,64}', plan['revision']): raise ValueError(T("agent.gguf_files.immutable_source_revision_required"))
     size, offset = tensor['size'], tensor['offset']
     if type(size) is not int or type(offset) is not int or size <= 0 or offset < 0 or offset+size > plan['source_bytes']:
-        raise ValueError('tensor range outside source file')
-    if not re.fullmatch('[0-9a-f]{64}', tensor['sha256']): raise ValueError('invalid tensor checksum')
+        raise ValueError(T("agent.gguf_files.tensor_range_outside_source_file"))
+    if not re.fullmatch('[0-9a-f]{64}', tensor['sha256']): raise ValueError(T("agent.gguf_files.invalid_tensor_checksum"))
     part = Path(part)
     part.parent.mkdir(parents=True, exist_ok=True)
-    if part.is_symlink(): raise ValueError('linked staging file refused')
+    if part.is_symlink(): raise ValueError(T("agent.gguf_files.linked_staging_file_refused"))
     have = part.stat().st_size if part.exists() else 0
-    if have > size: raise ValueError('oversized staging file; inspect/move it aside')
+    if have > size: raise ValueError(T("agent.gguf_files.oversized_staging_file_inspect_move_it"))
     if have < size:
         start, end = offset+have, offset+size-1
         req = urllib.request.Request(file_url(plan['repo_id'], plan['filename'], plan['revision']))
@@ -137,17 +144,17 @@ def fetch_tensor(plan, tensor, part, token=None, opener=None):
         with (opener or urllib.request.urlopen)(req, timeout=60) as r:
             expected = f'bytes {start}-{end}/{plan["source_bytes"]}'
             if r.status != 206 or r.headers.get('Content-Range') != expected:
-                raise ValueError('source ignored/changed the requested tensor range; no full-file fallback')
+                raise ValueError(T("agent.gguf_files.source_ignored_changed_the_requested_tensor"))
             remaining = size-have
             with part.open('ab') as f:
                 while remaining:
                     b = r.read(min(4 << 20, remaining))
-                    if not b: raise RuntimeError('tensor download interrupted; Resume to continue')
-                    if len(b) > remaining: raise ValueError('oversized range response')
+                    if not b: raise RuntimeError(T("agent.gguf_files.tensor_download_interrupted_resume_to_continue"))
+                    if len(b) > remaining: raise ValueError(T("agent.gguf_files.oversized_range_response"))
                     f.write(b); remaining -= len(b)
-            if r.read(1): raise ValueError('range response has extra bytes')
+            if r.read(1): raise ValueError(T("agent.gguf_files.range_response_has_extra_bytes"))
     if digest_range(part, 0, size) != tensor['sha256']:
-        raise ValueError('tensor checksum failed; inspect/move its staging file aside')
+        raise ValueError(T("agent.gguf_files.tensor_checksum_failed_inspect_move_its"))
     return part
 
 
@@ -164,22 +171,22 @@ def fetch_plan(plan, *, cache=None, records=None, staging=None, opener=None):
         if tensor['name'] not in missing:
             key = seen[tensor['sha256']]['cache_key']
             if digest_range(cache/key, 0, tensor['size']) != tensor['sha256']:
-                raise ValueError('cached tensor checksum differs; move cache file aside: '+key)
+                raise ValueError(T("agent.gguf_files.cached_tensor_checksum_differs_move_cache", key_=key))
             continue
         part = fetch_tensor(plan, tensor, stage/(tensor['sha256']+'.incomplete'), _resolve_token(), opener)
         p = subprocess.run([str(ensure_bin()), str(part), str(cache)], input=f"0 {tensor['size']}\n",
                            capture_output=True, text=True)
         fields = p.stdout.strip().split()
         if p.returncode or len(fields) != 3 or not re.fullmatch('[0-9a-f]{16}', fields[0]):
-            raise RuntimeError(p.stderr or 'tensor-cache seeding failed')
+            raise RuntimeError(p.stderr or T("agent.gguf_files.tensor_cache_seeding_failed"))
         cached = cache/fields[0]
         if cached.is_symlink() or not cached.is_file() or cached.stat().st_size != tensor['size'] or digest_range(cached, 0, tensor['size']) != tensor['sha256']:
-            raise ValueError('tensor cache differs from verified source; move cache file aside: '+fields[0])
+            raise ValueError(T("agent.gguf_files.tensor_cache_differs_from_verified_source", fields=fields[0]))
         seen[tensor['sha256']] = dict(cache_key=fields[0], size=tensor['size'], name=tensor['name'])
         tmp = record.with_suffix('.tmp')
         tmp.write_text(json.dumps(dict(source_sha256=plan['source_sha256'], seen_tensors=seen)))
         os.replace(tmp, record)
         part.unlink()  # completed transfer staging only, NEVER obsolete model/cache files
     result = status(plan, cache=cache, records=records)
-    if result['downloads']: raise RuntimeError('tensor cache verification is incomplete')
+    if result['downloads']: raise RuntimeError(T("agent.gguf_files.tensor_cache_verification_is_incomplete"))
     return dict(ok=True, **result)

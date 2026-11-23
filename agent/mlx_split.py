@@ -54,6 +54,13 @@ import struct
 import threading
 import time
 import uuid
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 PROTO = "caravan-split-1"
 
@@ -65,10 +72,10 @@ def plan_split(n_layers: int, front_layers=None):
     lm_head)."""
     n = int(n_layers)
     if n < 2:
-        raise ValueError("need at least 2 layers to split")
+        raise ValueError(T("agent.mlx_split.need_at_least_2_layers_to"))
     k = n // 2 if front_layers in (None, "", 0) else int(front_layers)
     if not 1 <= k <= n - 1:
-        raise ValueError(f"packer layers must be 1..{n - 1}, got {k}")
+        raise ValueError(T("agent.mlx_split.packer_layers_must_be_1_v", v=n - 1, k=k))
     return (0, k), (k, n)
 
 
@@ -83,7 +90,7 @@ def plan_ranges(n_layers, counts):
     counts = list(counts)
     if (not counts or any(type(k) is not int or k < 1 for k in counts)
             or sum(counts) != n):
-        raise ValueError("layer counts must be positive integers adding up to the model's layers")
+        raise ValueError(T("agent.mlx_split.layer_counts_must_be_positive_integers"))
     end, ranges = 0, []
     for k in counts:
         ranges.append((end, end + k))
@@ -97,9 +104,9 @@ def parse_counts(value):
     try:
         counts = [int(k.strip()) for k in value.split(",")]
     except (ValueError, AttributeError):
-        raise ValueError("--split-counts must be comma-separated layer counts") from None
+        raise ValueError(T("agent.mlx_split.split_counts_comma_separated")) from None
     if len(counts) < 2 or min(counts) < 1:
-        raise ValueError("--split-counts needs at least two positive layer counts")
+        raise ValueError(T("agent.mlx_split.split_counts_two_positive"))
     return counts
 
 
@@ -116,7 +123,7 @@ def read_n_layers(model_dir) -> int:
     for key in ("num_hidden_layers", "n_layer", "num_layers"):
         if key in t and t[key]:
             return int(t[key])
-    raise ValueError(f"cannot read layer count from {model_dir}/config.json")
+    raise ValueError(T("agent.mlx_split.cannot_read_layer_count_from_model", model_dir=model_dir))
 
 
 def read_model_type(model_dir) -> str:
@@ -178,7 +185,7 @@ def choose_packer_layers(n_layers: int, lead_mem_gb: float, packer_mem_gb: float
     total RAM. Returns (k, reason)."""
     n = int(n_layers)
     if n < 2:
-        raise ValueError("need at least 2 layers to split")
+        raise ValueError(T("agent.mlx_split.need_at_least_2_layers_to"))
     mt = (model_type or "").lower()
     # Idea-5 / Mini-measured balanced defaults (same RAM both sides).
     balanced = None
@@ -202,8 +209,7 @@ def choose_packer_layers(n_layers: int, lead_mem_gb: float, packer_mem_gb: float
     ratio = pack / lead
     if 0.90 <= ratio <= 1.10:
         k = int(balanced)
-        reason = (f"equal RAM ~{lead:.0f}/{pack:.0f} GB; balanced cut K={k} "
-                  f"for {n} layers" + (f" ({model_type})" if model_type else ""))
+        reason = (T("agent.mlx_split.equal_ram_lead_pack_gb_balanced", lead=lead, pack=pack, k=k, n=n, v=f" ({model_type})" if model_type else ""))
     else:
         # Skew by memory share; keep at least 1 layer on each side.
         share = pack / (lead + pack)
@@ -236,17 +242,15 @@ def choose_pipeline_chats(*, total_gb: float, weights_gb: float, available_gb: f
         # Before-load available is a soft check; still never exceed total budget.
         headroom = min(headroom, float(available_gb) - reserve)
     if headroom >= per_extra:
-        return 2, (f"headroom {headroom:.1f} GB after ~{weights:.1f} GB weights "
-                   f"on {total:.0f} GB; Mini benches peak at 2 chats")
-    return 1, (f"tight headroom {headroom:.1f} GB after ~{weights:.1f} GB weights "
-               f"on {total:.0f} GB; stay at 1 chat (avoid swap)")
+        return 2, (T("agent.mlx_split.headroom_headroom_gb_after_weights_gb", headroom=headroom, weights=weights, total=total))
+    return 1, (T("agent.mlx_split.tight_headroom_headroom_gb_after_weights", headroom=headroom, weights=weights, total=total))
 
 
 def stage_label(role, rng, n):
     """Stage id stored in the session caches' metadata ("head 12-23 of 24").
     Kept in the old wording so saved caches stay valid; use stage_title()
     for anything a person reads."""
-    return f"{role} {rng[0]}-{rng[1] - 1} of {n}"
+    return T("agent.mlx_split.role_rng_v_of_n", role=role, rng=rng[0], v=rng[1] - 1, n=n)
 
 
 ROLE_TITLE = {"head": "lead", "lead": "lead", "front": "packer 1", "packer": "packer 1"}
@@ -254,14 +258,14 @@ ROLE_TITLE = {"head": "lead", "lead": "lead", "front": "packer 1", "packer": "pa
 
 def stage_title(role, rng, n):
     """Human-readable stage name: "lead: layers 12-23 of 24", "packer 1: layers 0-11 of 24"."""
-    return f"{ROLE_TITLE.get(role, role)}: layers {rng[0]}-{rng[1] - 1} of {n}"
+    return T("agent.mlx_split.role_layers_rng_v_of_n", role=ROLE_TITLE.get(role, role), rng=rng[0], v=rng[1] - 1, n=n)
 
 
 def title_from_label(label):
     """stage_label() text -> stage_title() text ("front 0-11 of 24" -> "packer 1: layers 0-11 of 24")."""
     try:
         role, rest = str(label).split(" ", 1)
-        return f"{ROLE_TITLE.get(role, role)}: layers {rest}"
+        return T("agent.mlx_split.role_layers_rest", role=ROLE_TITLE.get(role, role), rest=rest)
     except ValueError:
         return str(label)
 
@@ -289,10 +293,10 @@ def _recv_exact(sock, n, stop=None) -> bytes:
                 if select.select([sock], [], [], 0.25)[0]:
                     break
             else:
-                raise ConnectionAbortedError("packer stopping")
+                raise ConnectionAbortedError(T("agent.mlx_split.packer_stopping"))
         r = sock.recv_into(view[got:], n - got)
         if r == 0:
-            raise ConnectionError("peer closed the connection")
+            raise ConnectionError(T("agent.mlx_split.peer_closed_the_connection"))
         got += r
     return bytes(buf)
 
@@ -397,7 +401,7 @@ class FrontClient:
         hello = self._roundtrip({"op": "hello", "proto": PROTO})[0]
         if hello.get("proto") != PROTO:
             self.close()
-            raise FrontError(f"packer 1 speaks {hello.get('proto')!r}, need {PROTO}")
+            raise FrontError(T("agent.mlx_split.packer_1_speaks_proto_need_proto2", proto=hello.get('proto'), proto2=PROTO))
         old, self.epoch, self.hello = self.epoch, hello.get("epoch"), hello
         if old is not None and old != self.epoch and self.on_new_epoch:
             self.on_new_epoch(old, self.epoch)
@@ -441,7 +445,7 @@ class FrontClient:
             if warm is not None:
                 warm.stop()
             self.close()
-            raise FrontError(f"packer 1 at {self.addr}: {e}") from e
+            raise FrontError(T("agent.mlx_split.packer_1_at_addr_e", addr=self.addr, e=e)) from e
         st = self.stats
         st["calls"] += 1
         st["bytes_out"] += len(data)
@@ -449,7 +453,7 @@ class FrontClient:
         st["wait_s"] += time.perf_counter() - t0
         st["front_s"] += float(rh.get("_s", 0.0))
         if "error" in rh:
-            raise FrontError(f"packer 1: {rh['error']}")
+            raise FrontError(T("agent.mlx_split.packer_1_error", error=rh['error']))
         return rh, rp
 
     def call(self, op, payload=b"", **kw):
@@ -461,7 +465,7 @@ class FrontClient:
         """Send one op without waiting (pipeline). Pair with finish_call()."""
         self._ensure()
         if getattr(self, "_inflight", False):
-            raise FrontError("packer 1: begin_call while a reply is still outstanding")
+            raise FrontError(T("agent.mlx_split.packer_1_begin_call_while_a"))
         kw["op"] = op
         t0 = time.perf_counter()
         data = encode_frame(kw, payload)
@@ -469,7 +473,7 @@ class FrontClient:
             self.sock.sendall(data)
         except (OSError, ConnectionError) as e:
             self.close()
-            raise FrontError(f"packer 1 at {self.addr}: {e}") from e
+            raise FrontError(T("agent.mlx_split.packer_1_at_addr_e", addr=self.addr, e=e)) from e
         self._inflight = True
         self._inflight_t0 = t0
         self._inflight_bytes_out = len(data)
@@ -484,7 +488,7 @@ class FrontClient:
     def finish_call(self):
         """Receive the reply for the outstanding begin_call()."""
         if not getattr(self, "_inflight", False):
-            raise FrontError("packer 1: finish_call with nothing in flight")
+            raise FrontError(T("agent.mlx_split.packer_1_finish_call_with_nothing"))
         warm = self._keepalive
         t0 = getattr(self, "_inflight_t0", time.perf_counter())
         try:
@@ -498,14 +502,14 @@ class FrontClient:
                 warm.stop()
             self._inflight = False
             self.close()
-            raise FrontError(f"packer 1 at {self.addr}: {e}") from e
+            raise FrontError(T("agent.mlx_split.packer_1_at_addr_e", addr=self.addr, e=e)) from e
         self._inflight = False
         st = self.stats
         st["bytes_in"] += 12 + len(rp) + len(json.dumps(rh))
         st["wait_s"] += time.perf_counter() - t0
         st["front_s"] += float(rh.get("_s", 0.0))
         if "error" in rh:
-            raise FrontError(f"packer 1: {rh['error']}")
+            raise FrontError(T("agent.mlx_split.packer_1_error", error=rh['error']))
         return rh, rp
 
 
@@ -549,11 +553,11 @@ class FrontState:
                 if key:
                     s = st.sessions.get(key)
                     if s is None:
-                        return {"error": f"fwd: unknown session {key!r}"}, b""
+                        return {"error": T("agent.mlx_split.fwd_unknown_session_key", key_=key)}, b""
                     self.cur, cache = s, s.cache
                 else:
                     if self.cur is None:
-                        return {"error": "fwd before prepare"}, b""
+                        return {"error": T("agent.mlx_split.fwd_before_prepare")}, b""
                     cache = self.cur.cache
             return self.forward(toks, cache)
         if op == "trim":
@@ -568,17 +572,17 @@ class FrontState:
                 if key:
                     s = st.sessions.get(key)
                     if s is None:
-                        return {"error": f"trim: unknown session {key!r}"}, b""
+                        return {"error": T("agent.mlx_split.trim_unknown_session_key", key_=key)}, b""
                     cache = s.cache
                 else:
                     if self.cur is None:
-                        return {"error": "trim before prepare"}, b""
+                        return {"error": T("agent.mlx_split.trim_before_prepare")}, b""
                     cache = self.cur.cache
             if cache is None:
-                return {"error": "trim: no cache"}, b""
+                return {"error": T("agent.mlx_split.trim_no_cache")}, b""
             from mlx_lm.models.cache import can_trim_prompt_cache, trim_prompt_cache
             if not can_trim_prompt_cache(cache):
-                return {"error": "trim: packer cache not trimmable"}, b""
+                return {"error": T("agent.mlx_split.trim_packer_cache_not_trimmable")}, b""
             trim_prompt_cache(cache, n)
             return {"trimmed": n}, b""
         if op == "end_scratch":
@@ -620,10 +624,10 @@ class FrontState:
             # Day 12 shared-prefix: deep-copy session src -> dst (tokens + KV).
             src_k = h.get("src"); dst_k = h.get("dst")
             if not src_k or not dst_k:
-                return {"error": "clone_to needs src and dst"}, b""
+                return {"error": T("agent.mlx_split.clone_to_needs_src_and_dst")}, b""
             src = st.sessions.get(src_k)
             if src is None:
-                return {"error": f"clone_to: unknown src {src_k!r}"}, b""
+                return {"error": T("agent.mlx_split.clone_to_unknown_src_src_k", src_k=src_k)}, b""
             ops = st.ops
             new_cache = []
             for c in src.cache:
@@ -644,10 +648,10 @@ class FrontState:
             key = h.get("key")
             n = int(h.get("n") or 0)
             if not key:
-                return {"error": "trim_to needs key"}, b""
+                return {"error": T("agent.mlx_split.trim_to_needs_key")}, b""
             s = st.sessions.get(key)
             if s is None:
-                return {"error": f"trim_to: unknown session {key!r}"}, b""
+                return {"error": T("agent.mlx_split.trim_to_unknown_session_key", key_=key)}, b""
             if n < 0 or n > len(s.tokens):
                 return {"error": f"trim_to: bad n={n} len={len(s.tokens)}"}, b""
             drop = len(s.tokens) - n
@@ -656,7 +660,7 @@ class FrontState:
             ops = st.ops
             if not all(ops.always_trimmable(c) or (
                     hasattr(c, "is_trimmable") and bool(c.is_trimmable())) for c in s.cache):
-                return {"error": "trim_to: not trimmable", "n": len(s.tokens)}, b""
+                return {"error": T("agent.mlx_split.trim_to_not_trimmable"), "n": len(s.tokens)}, b""
             for c in s.cache:
                 ops.trim(c, drop)
             s.tokens = s.tokens[:n]
@@ -664,7 +668,7 @@ class FrontState:
             return {"n": n, "trimmed": drop}, b""
         if op == "describe":
             return {"sessions": st.describe()}, b""
-        return {"error": f"unknown op {op!r}"}, b""
+        return {"error": T("agent.mlx_split.unknown_op_op", op=op)}, b""
 
 
 class ChainState:
@@ -729,7 +733,7 @@ class ChainState:
             key = h.get("dst")
             self.local.store.drop([key])
             self.upstream.call("drop", keys=[key])
-            raise FrontError("prefix clone differs between stages")
+            raise FrontError(T("agent.mlx_split.prefix_clone_differs_between_stages"))
         if op == "prepare" and lh.get("n") != rh.get("n"):
             self.local.handle({"op": "reset"}, b"")
             self.upstream.call("reset")
@@ -850,7 +854,7 @@ class SplitSessions:
             self.client.call("reset")
             fr = self.client.call("prepare", key=key, prompt=list(prompt))[0]
             if fr.get("n") != 0:
-                raise FrontError("packer 1 could not reset the session")
+                raise FrontError(T("agent.mlx_split.packer_1_could_not_reset_the"))
             return s, 0, "split-resync"
         return s, n, how
 
@@ -955,14 +959,14 @@ def check_local_shards(model_dir, role, front_layers=None, counts=None, stage_in
     idx, cfg = d / "model.safetensors.index.json", d / "config.json"
     if not idx.exists() or not cfg.exists():
         if counts is not None:
-            raise FileNotFoundError(f"N-stage split needs config.json and model.safetensors.index.json in {d}")
+            raise FileNotFoundError(T("agent.mlx_split.n_stage_split_needs_config_json", d=d))
         return []
     from mlx_split_fetch import plan_files
     if counts is None:
         need = plan_files(json.loads(cfg.read_text()), json.loads(idx.read_text()), front_layers)[role]
     else:
         if type(stage_index) is not int or not 0 <= stage_index < len(counts):
-            raise ValueError("N-stage split needs a valid zero-based stage index")
+            raise ValueError(T("agent.mlx_split.n_stage_split_needs_a_valid"))
         from mlx_split_fetch import plan_stage_files
         need = plan_stage_files(json.loads(cfg.read_text()), json.loads(idx.read_text()), counts)["stages"][stage_index]
     who = {"head": "lead", "front": "packer"}.get(role, role)
@@ -975,24 +979,21 @@ def check_local_shards(model_dir, role, front_layers=None, counts=None, stage_in
             recorded, repo = {}, None
     missing = sorted(f for f in need if not (d / f).exists())
     if missing:
-        raise FileNotFoundError(f"{who} stage needs {missing} in {d}. Fetch them from the source: "
-                                + _fetch_hint(d, who, front_layers, repo, counts, stage_index))
+        raise FileNotFoundError(T("agent.mlx_split.who_stage_needs_missing_in_d", who=who, missing=missing, d=d, fetch_hint=_fetch_hint(d, who, front_layers, repo, counts, stage_index)))
     bad = []
     for f in sorted(need):
         actual = (d / f).stat().st_size
         want = recorded.get(f)
         if want and actual != want:
-            bad.append(f"{f} is {actual:,} bytes, Hugging Face lists {want:,}")
+            bad.append(T("agent.mlx_split.f_is_actual_bytes_hugging_face", f=f, actual=actual, want=want))
             continue
         exp = safetensors_expected_size(d / f)
         if exp is None:
-            bad.append(f"{f} ({actual:,} bytes) has a cut-off or unreadable header")
+            bad.append(T("agent.mlx_split.f_actual_bytes_has_a_cut", f=f, actual=actual))
         elif actual != exp:
-            bad.append(f"{f} is {actual:,} bytes, its header says {exp:,}")
+            bad.append(T("agent.mlx_split.f_is_actual_bytes_its_header", f=f, actual=actual, exp=exp))
     if bad:
-        raise ShardSizeError(f"{who} stage: wrong size in {d}: " + "; ".join(bad)
-                             + ". Move the bad file(s) aside, then fetch them again from the source: "
-                             + _fetch_hint(d, who, front_layers, repo, counts, stage_index))
+        raise ShardSizeError(T("agent.mlx_split.who_stage_wrong_size_in_d", who=who, d=d, bad=T.join(bad, "clause"), fetch_hint=_fetch_hint(d, who, front_layers, repo, counts, stage_index)))
     return sorted(need)
 
 
@@ -1091,9 +1092,9 @@ class Stage:
         if counts is not None:
             ranges = plan_ranges(n, counts)
             if stage_index is None or not 0 <= stage_index < len(ranges):
-                raise ValueError("invalid split stage index")
+                raise ValueError(T("agent.mlx_split.invalid_split_stage_index"))
             if (role == "head") != (stage_index == len(ranges) - 1):
-                raise ValueError("only the last stage can be the lead")
+                raise ValueError(T("agent.mlx_split.only_the_last_stage_can_be"))
             self.range = ranges[stage_index]
         self.first = self.range[0] == 0
         a, b = self.range
@@ -1146,9 +1147,7 @@ class Stage:
         if missing:
             who = {"head": "lead", "front": "packer"}.get(role, role)
             raise MissingWeightsError(
-                f"{who} stage would run with {len(missing)} weight(s) missing from the local "
-                f"shards (random init), e.g. {missing[:4]}. tied_embeddings={self.tied}. "
-                "Fetch the shards that hold them before loading.")
+                T("agent.mlx_split.who_stage_would_run_with_missing", who=who, missing=len(missing), missing2=missing[:4], tied=self.tied))
 
     def _kind(self, i, layer):
         if getattr(layer, "is_linear", False):
@@ -1275,7 +1274,7 @@ class SplitModel:
     def packer_fwd(self, tokens):
         """Synchronous packer-only forward (safe before trim; no begin/finish)."""
         if getattr(self.client, "_inflight", False):
-            raise FrontError("packer_fwd while a begin_packer reply is still outstanding")
+            raise FrontError(T("agent.mlx_split.packer_fwd_while_a_begin_packer"))
         rh, rp = self.client.call("fwd", **self._fwd_kw(list(tokens)))
         return array_from(self.mx, rh, rp)
 
@@ -1306,13 +1305,13 @@ class SplitModel:
             return
         from mlx_lm.models.cache import can_trim_prompt_cache, trim_prompt_cache
         if getattr(self.client, "_inflight", False):
-            raise FrontError("trim_caches while a begin_packer reply is still outstanding")
+            raise FrontError(T("agent.mlx_split.trim_caches_while_a_begin_packer"))
         if not can_trim_prompt_cache(lead_cache):
-            raise FrontError("lead cache not trimmable (need for speculative decoding)")
+            raise FrontError(T("agent.mlx_split.lead_cache_not_trimmable_need_for"))
         trim_prompt_cache(lead_cache, n)
         kw = {"n": int(n), "ctx": self.ctx}
         if self.ctx != "scratch" and self.session_key:
             kw["key"] = self.session_key
         rh = self.client.call("trim", **kw)[0]
         if rh.get("trimmed") != int(n):
-            raise FrontError(f"packer trim mismatch: {rh!r}")
+            raise FrontError(T("agent.mlx_split.packer_trim_mismatch_rh", rh=rh))

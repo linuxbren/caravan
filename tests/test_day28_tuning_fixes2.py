@@ -15,6 +15,7 @@ for _p in ("tools", "proxy", "agent"):
 import gguf_split as G  # noqa: E402
 import gguf_tune as T  # noqa: E402
 import web_workers as W  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 def specs(write, total=10.0, edit=None, garbled=False):
@@ -213,7 +214,7 @@ class ThunderboltTunnelTest(unittest.TestCase):
         self.assertEqual(popen.call_args[0][0], G.ssh_tunnel_args("host", 50062))
 
     def test_load_path_passes_the_node(self):
-        src = (ROOT / "proxy" / "web_workers.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_workers.py")
         self.assertIn("self._open_tunnel(target, lp, node=n)", src)
 
 

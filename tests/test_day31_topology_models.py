@@ -160,7 +160,7 @@ class GgufDelete(unittest.TestCase):
 
 class Wiring(unittest.TestCase):
     def test_disk_endpoint_marks_rows_from_the_settings_list(self):
-        src = (ROOT / "proxy" / "web_server.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_server.py")
         self.assertIn("app.list_loadable_models(invs, with_gguf=False)", src)
         self.assertIn("mark_in_settings(e, listed)", src)
 

@@ -284,7 +284,7 @@ def inspect(*, port=None, home=None, path=None, binary=None, runner=None, adopt=
         set_enabled(False, path)
     addrs = addresses(ident, port) if on else []
     if on:
-        message = T("cli.remote.open_at_addrs_from_devices_on", addrs=" or ".join(addrs))
+        message = T("cli.remote.open_at_addrs_from_devices_on", addrs=T.join(addrs, "or"))
     else:
         message = T("cli.remote.off_not_shared_on_your_tailscale")
     return {
@@ -355,7 +355,7 @@ def turn_off(*, port=None, home=None, path=None, binary=None, runner=None, missi
 
 def status_line(info):
     if info.get("enabled") and info.get("addresses"):
-        return T("cli.remote.open_from_other_devices_is_on", addresses=" and ".join(info["addresses"]))
+        return T("cli.remote.open_from_other_devices_is_on", addresses=T.join(info["addresses"], "and"))
     if not info.get("available") or info.get("funnel"):
         return info.get("message") or MISSING
     return T("cli.remote.open_from_other_devices_is_off")
@@ -367,7 +367,7 @@ def doctor_line(*, port=None, home=None, path=None, binary=None, runner=None):
     except RemoteError as e:
         return T("cli.remote.open_from_other_devices_e", e=e)
     if info.get("enabled") and info.get("addresses"):
-        return T("cli.remote.open_from_other_devices_is_on_2", addresses=" and ".join(info["addresses"]))
+        return T("cli.remote.open_from_other_devices_is_on_2", addresses=T.join(info["addresses"], "and"))
     if not info.get("available") or info.get("funnel"):
         return T("cli.remote.open_from_other_devices_v", v=info.get('message') or MISSING)
     return T("cli.remote.open_from_other_devices_is_off")

@@ -17,6 +17,13 @@ with no guesses has no readout; nothing here invents a number.
 from __future__ import annotations
 
 import math
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def _num(v):
@@ -81,9 +88,9 @@ def label(r) -> str:
     if not isinstance(r, dict):
         return ""
     if r.get("kept_pct") is not None:
-        return f"guesses kept {_fmt_pct(r['kept_pct'])}"
+        return T("server.guess_stats.guesses_kept_fmt_pct", fmt_pct=_fmt_pct(r['kept_pct']))
     if r.get("reply_pct") is not None:
-        return f"{_fmt_pct(r['reply_pct'])} of words guessed"
+        return T("server.guess_stats.fmt_pct_of_words_guessed", fmt_pct=_fmt_pct(r['reply_pct']))
     return ""
 
 

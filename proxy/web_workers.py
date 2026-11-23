@@ -25,6 +25,13 @@ import web_settings
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "agent"))
 import tuned_settings as TS  # noqa: E402
 from service_endpoints import RetryableReadinessError  # noqa: E402
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 WORKER = REPO / "agent" / "mlx_worker.py"
@@ -36,6 +43,10 @@ WEB_STATE_DIR = Path(os.environ.get(
     "CARAVAN_WEB_STATE", str(Path.home() / ".caravan" / "web-ui"))).expanduser()
 
 
+
+# Words in worker output (English) that mean a progress line is a problem.
+_PROBLEM_WORDS = re.compile(r"error|fail|Errno|No space|OSError", re.I)
+
 class GgufLoadError(RuntimeError):
     """Short plain message for the page; full log tail in .detail."""
     def __init__(self, msg: str, detail: str = ""):
@@ -45,16 +56,16 @@ class GgufLoadError(RuntimeError):
 
 def gguf_friendly(err: Exception, peers: list) -> str:
     t = str(err)
-    names = " + ".join(peers) or "the other Mini"
+    names = " + ".join(peers) or T("server.web_workers.the_other_mini")
     if "Failed to connect" in t or "tunnel" in t.lower() or "RPC handshake" in t:
-        return f"Couldn't reach {names} for the split. Try again."
+        return T("server.web_workers.couldnt_reach_names_for_the_split", names=names)
     if "rpc-server" in t and "did not start" in t:
-        return f"Couldn't start the split helper on {names}. Try again."
+        return T("server.web_workers.couldnt_start_the_split_helper_on", names=names)
     if "out of memory" in t.lower() or "failed to allocate" in t.lower():
-        return "Not enough memory for this placement. Try splitting across more Minis."
+        return T("server.web_workers.not_enough_memory_for_this_placement")
     if "missing" in t.lower() or "not found" in t.lower():
         return t.split("\n")[0][:160]
-    return "The model didn't load. Details below."
+    return T("server.web_workers.the_model_didnt_load_details_below")
 
 
 class ManagedServiceError(RuntimeError):
@@ -118,19 +129,25 @@ class WorkerManager:
         except Exception:
             role = ((node or {}).get("role") or "").lower()
             if role == "packer":
-                return "2nd Mac"
+                return T("server.web_nodes.2nd_mac")
             if role == "lead":
-                return "1st Mac"
-            return "Mac"
+                return T("server.web_nodes.1st_mac")
+            return T("server.pairing.mac")
 
-    def _note(self, msg: str) -> None:
+    def _note(self, msg: str, problem: bool = False, **codes) -> None:
+        """Add a progress line. ``problem`` marks Caravan's own error lines
+        so the page does not have to recognise their words (Day 32); worker
+        output (always English) is still matched by _PROBLEM_WORDS. ``codes``
+        (e.g. code="stage_ready", label=..., count=...) let the page react to
+        a line without reading it."""
         try:
             from web_tunnels import plain_load_status
             msg = plain_load_status(msg, mac=self._mac_name())
         except Exception:
             pass
+        problem = bool(problem or _PROBLEM_WORDS.search(str(msg)))
         with self._lock:
-            self.state["progress"].append({"t": round(time.time(), 3), "msg": msg})
+            self.state["progress"].append({"t": round(time.time(), 3), "msg": msg, "problem": problem, **codes})
             # keep last 40
             self.state["progress"] = self.state["progress"][-40:]
 
@@ -149,7 +166,7 @@ class WorkerManager:
 
     def _check_load_cancel(self):
         if getattr(self, "_load_cancel", None) and self._load_cancel.is_set():
-            raise RuntimeError("Load cancelled by user")
+            raise RuntimeError(T("server.web_workers.load_cancelled_by_user"))
 
     def check_lpm(self) -> bool:
         """Refuse timing / heavy load if Low Power Mode is on (macOS)."""
@@ -172,9 +189,8 @@ class WorkerManager:
             raise ManagedServiceError(str(e)) from None
         if plan:
             raise ManagedServiceError(
-                f"Auto-start service '{plan['name']}' owns this model. "
-                "Use tools/caravan_service.py uninstall --name " + plan["name"] +
-                " on the lead (and uninstall its packer jobs before switching splits). Files are kept.")
+                T("server.web_workers.auto_start_service_owns_model", name=plan['name']) +
+                T("server.web_workers.on_the_lead_and_uninstall_its"))
 
     def refresh_managed_service(self):
         """Adopt a launchd lead even if web started before peers/model were ready."""
@@ -194,7 +210,7 @@ class WorkerManager:
                 self._set(status="idle", model_id=None, model_name=None, lead_pid=None, managed_service=None)
             return
         info = {"name":plan["name"], "label":plan["label"], "role":plan["role"],
-                "note":"Owned by launchd; use the service CLI to change or stop it."}
+                "note":T("server.web_workers.owned_by_launchd_use_the_service")}
         runtime = {}
         try:
             runtime = json.loads(SC.paths(plan)["runtime"].read_text())
@@ -215,7 +231,7 @@ class WorkerManager:
             self.on_user_stop()
         self._load_cancel.set()
         self._set(status="stopping", error=None)
-        self._note(f"stopping workers ({reason})")
+        self._note(T("server.web_workers.stopping_workers_reason", reason=reason))
         self._gguf_cancel = True  # a GGUF load in flight stops at its next step
         self._kill_gguf()
         self._kill_lead()
@@ -231,10 +247,10 @@ class WorkerManager:
         if entry is None:
             entry = catalog.get_model(model_id)
         if not entry:
-            raise ValueError(f"unknown model: {model_id}")
+            raise ValueError(T("server.web_workers.unknown_model_model_id", model_id=model_id))
         if entry.get("source") == "gguf":
             if not entry.get("lead_path"):
-                raise FileNotFoundError(f"GGUF file not on the lead Mini: {model_id}")
+                raise FileNotFoundError(T("server.web_workers.gguf_file_not_on_the_lead", model_id=model_id))
             entry = dict(entry)
             entry["usable"] = True
             entry["available_lead"] = True
@@ -244,9 +260,9 @@ class WorkerManager:
             entry.get("usable") and entry.get("lead_path")
             and (entry.get("placement") or {}).get("mode") in ("one", "all")
         ):
-            raise FileNotFoundError(f"model not on this Mini: {model_id}")
+            raise FileNotFoundError(T("server.web_workers.model_not_on_this_mini_model", model_id=model_id))
         if self._switch_thread and self._switch_thread.is_alive():
-            raise RuntimeError("a model switch is already in progress")
+            raise RuntimeError(T("server.web_workers.a_model_switch_is_already_in"))
 
         self._load_cancel = threading.Event()
         self._set(retryable=False, retry_kind=None)
@@ -254,7 +270,7 @@ class WorkerManager:
             # A same-ID Balance reload must not expose the old ready state
             # while its verified new placement is still being preflighted.
             self._set(status="starting_lead")
-            self._note("Checking each Mac's own GGUF pieces before switching")
+            self._note(T("server.web_workers.checking_each_macs_own_gguf_pieces"))
         def run():
             try:
                 self._check_load_cancel()
@@ -264,14 +280,14 @@ class WorkerManager:
                 # Cleaned up already; leave a sane idle state with a plain message.
                 self._set(status="idle", model_id=None, model_name=None, lead_pid=None,
                           error=str(e), error_detail=e.detail)
-                self._note("load failed: " + str(e))
+                self._note(T("server.web_workers.load_failed_e", e=str(e)), problem=True)
             except Exception as e:  # noqa: BLE001 — surface to UI
                 if self._load_cancel.is_set():
                     for cleanup in (self._kill_gguf,self._kill_lead,self._kill_packer):
                         try:cleanup()
-                        except Exception as ex:self._note(f"cancel cleanup: {ex}")
+                        except Exception as ex:self._note(T("server.web_workers.cancel_cleanup_ex", ex=ex))
                     self._set(status="idle",model_id=None,model_name=None,lead_pid=None,packer_pid=None,error=None,retryable=False,retry_kind=None)
-                    self._note("load cancelled; next login will not resurrect an unloaded model")
+                    self._note(T("server.web_workers.load_cancelled_next_login_will_not"))
                 elif isinstance(e, RetryableReadinessError):
                     self._set(status="error", error=str(e), retryable=True, retry_kind=e.kind)
                     self._note(f"error: {e}")
@@ -328,9 +344,9 @@ class WorkerManager:
                   config_errors=cfg.get("errors") or [],
                   quality_notice=fallback_notice)
         for err in cfg.get("errors") or []:
-            self._note("config.toml: " + err)
+            self._note(T("server.web_workers.config_toml_err", err=err))
         if from_file:
-            self._note("config.toml pins: " + ", ".join(f"{k}={v}" for k, v in from_file.items()))
+            self._note(T("server.web_workers.config_toml_pins_v", v=T.join(f"{k}={v}" for k, v in from_file.items())))
         if fallback_notice:
             self._note(fallback_notice)
         try:
@@ -342,16 +358,14 @@ class WorkerManager:
             # A self-tune reload trial broke the load: never try that value
             # again for this model, go back to the winner and load that.
             why = f"{type(e).__name__}: {str(e)[-200:]}"
-            self._note(f"self-tuning: {TS.RELOAD_LABEL.get(trial['name'], trial['name'])} "
-                       f"{TS.reload_value_label(trial['name'], trial['value'])} failed to load; "
-                       f"rejected, rolling back")
+            self._note(T("server.web_workers.self_tuning_name_reload_value_label", name=TS.RELOAD_LABEL.get(trial['name'], trial['name']), reload_value_label=TS.reload_value_label(trial['name'], trial['value'])), problem=True)
             try:
                 st, ent = self._tuned_entry(entry["lead_path"], create=True)
                 TS.block_value(ent, trial["name"], trial["value"], why)
                 ent["reload_trial"] = None
                 TS.save_store(st, self.tuned_path)
             except (OSError, ValueError) as ex:
-                self._note(f"could not record rejected trial ({ex})")
+                self._note(T("server.web_workers.could_not_record_rejected_trial_ex", ex=ex))
             self._load_once(entry, settings)
         # After a successful load at 4 or 8, a short known-answer probe
         # reverts to 16 if the model gives a wrong answer. The revert is
@@ -374,13 +388,13 @@ class WorkerManager:
                 self._set(quality_notice=fallback_notice)
         except Exception as ex:
             self._kv_probe_guard = False
-            self._note(f"memory check skipped ({ex})")
+            self._note(T("server.web_workers.memory_check_skipped_ex", ex=ex))
 
     def _load_once(self, entry: dict, settings: dict) -> None:
         self._check_load_cancel()
         self._reload_trial = None
         if not self.check_lpm():
-            raise RuntimeError("Low Power Mode is on — turn it off before loading a model")
+            raise RuntimeError(T("server.web_workers.low_power_mode_is_on_turn"))
         if entry.get("source") == "gguf":
             return self._load_gguf(entry, settings)
         if entry.get("split_counts"):
@@ -393,12 +407,12 @@ class WorkerManager:
         self._set(balance=None)
         self._set(status="stopping", error=None, model_id=entry["id"],
                   model_name=entry["name"], progress=[], split=(run_mode == "split"))
-        self._note(f"switching to {entry['name']} ({run_mode})")
+        self._note(T("server.web_workers.switching_to_name_run_mode", name=entry['name'], run_mode=run_mode))
         problems = self.preflight_load(entry)
         if problems:
-            raise FileNotFoundError("; ".join(problems))
+            raise FileNotFoundError(T.join(problems, "clause"))
         if settings.get("guess_ahead") == "mtp" and (run_mode != "single" or not entry.get("native_mtp_available")):
-            raise ValueError("native MTP needs a single-Mini matching target with an installed head")
+            raise ValueError(T("server.web_workers.native_mtp_needs_a_single_mini"))
         lead_x, packer_x = web_settings.to_args(settings)
         sweep = getattr(self, "_sweep_load", None)
         if sweep:
@@ -411,7 +425,7 @@ class WorkerManager:
             self._note("self-tuning: " + line)
         self._extra_lead, self._extra_packer = lead_x, packer_x
         self._note("settings: " + ", ".join(f"{k}={v}" for k, v in settings.items())
-                   + (f" -> {' '.join(lead_x)}" if lead_x else " (all auto)"))
+                   + (f" -> {' '.join(lead_x)}" if lead_x else T("server.web_workers.all_auto")))
         self._kill_gguf()
         self._kill_lead()
         self._kill_packer()
@@ -420,22 +434,22 @@ class WorkerManager:
         if run_mode == "split":
             packer_path = self._resolve_packer_path(entry)
             self._set(status="starting_packer", packer_pid=None)
-            self._note("starting helper on the 2nd Mac")
+            self._note(T("server.web_workers.starting_helper_on_the_2nd_mac"))
             packer_pid = self._start_packer(entry, packer_path)
             self._set(packer_pid=packer_pid)
             self._wait_packer_ready(timeout=300)
             self._set(status="starting_lead")
-            self._note("starting lead on the 1st Mac")
+            self._note(T("server.web_workers.starting_lead_on_the_1st_mac"))
             lead_pid = self._start_lead(entry, split=True)
         else:
             self._set(status="starting_lead", packer_pid=None)
             node = self._resolve_worker_node(entry, place=entry.get("placement"))
             self._worker_node = node
             if node and not self._node_is_local(node):
-                self._note(f"starting single-Mini worker on {self._mac_name(node)}")
+                self._note(T("server.web_workers.starting_single_mini_worker_on_mac", mac_name=self._mac_name(node)))
                 lead_pid = self._start_remote_single(entry, node)
             else:
-                self._note("starting model worker on this Mac")
+                self._note(T("server.web_workers.starting_model_worker_on_this_mac"))
                 lead_pid = self._start_lead(entry, split=False)
         self._set(lead_pid=lead_pid)
         self._wait_lead_ready(timeout=600)
@@ -481,7 +495,7 @@ class WorkerManager:
             except Exception as ke:  # noqa: BLE001
                 self._note(f"cleanup: {ke}")
             if getattr(self, "_gguf_cancel", False):
-                raise GgufLoadError("Load stopped.", f"{type(e).__name__}: {e}"[-4000:]) from e
+                raise GgufLoadError(T("server.web_workers.load_stopped_2"), f"{type(e).__name__}: {e}"[-4000:]) from e
             raise GgufLoadError(gguf_friendly(e, peers), f"{type(e).__name__}: {e}"[-4000:]) from e
         finally:
             self._quiet_lead_log = False
@@ -499,7 +513,7 @@ class WorkerManager:
         # be scrubbed to nothing: "split across My Mac + ").
         def _friendly(n):
             if self._node_is_local(n):
-                return n.get("label") or "this Mac"
+                return n.get("label") or T("server.gguf_split.this_mac")
             try:
                 return self._mac_name(n) or n.get("label") or n.get("id")
             except Exception:  # noqa: BLE001
@@ -509,13 +523,13 @@ class WorkerManager:
                   "mode": mode}
         self._set(status="stopping", error=None, error_detail=None, model_id=entry["id"],
                   model_name=entry["name"], progress=[], split=bool(peers), backend="llama", gguf=gblock)
-        self._note(f"switching to {entry['name']} (GGUF, llama.cpp, {'split across ' if peers else 'on '}{label})")
+        self._note(T("server.web_workers.switching_to_name_gguf_llama_cpp", name=entry['name'], v='split across ' if peers else 'on ', label=label))
         path = Path(entry["lead_path"]).expanduser()
         if not path.is_file():
-            raise FileNotFoundError(f"GGUF file missing on the lead Mini: {path}")
+            raise FileNotFoundError(T("server.web_workers.gguf_file_missing_on_the_lead", path=path))
         binp = Path(G.LLAMA_BIN).expanduser() / "llama-server"
         if not binp.is_file():
-            raise FileNotFoundError(f"llama-server not found at {binp} (set CARAVAN_LLAMA_BIN)")
+            raise FileNotFoundError(T("server.web_workers.llama_server_not_found_at_binp", binp=binp))
         self._gguf_cancel = False
         self._kill_gguf()
         self._kill_lead()
@@ -532,13 +546,12 @@ class WorkerManager:
             name = _friendly(n)
             target = (n.get("ssh") or n.get("host") or "").strip()
             if not target:
-                raise RuntimeError(f"no SSH target for {name}; set ssh in [web.nodes.{n.get('id')}]")
-            self._note(f"starting rpc-server on {name} (127.0.0.1:{G.RPC_PORT}, reached over SSH)")
+                raise RuntimeError(T("server.web_workers.no_ssh_target_for_name", name=name, id=n.get('id')))
+            self._note(T("server.web_workers.starting_rpc_server_on_name_127", name=name, rpc_port=G.RPC_PORT))
             r = self._ssh_node(n, G.rpc_start_command(), timeout=40)
             pid = G.parse_pid(r.stdout)
             if not pid:
-                raise RuntimeError(f"rpc-server on {name} did not start: "
-                                   f"{(r.stdout or '')[-300:]} {(r.stderr or '')[-200:]}")
+                raise RuntimeError(T("server.web_workers.rpc_server_on_name_did_not", name=name, v=(r.stdout or '')[-300:], v2=(r.stderr or '')[-200:]))
             meta["peers"].append({"id": n.get("id"), "label": name, "ssh": target, "pid": pid})
             self._write_gguf_meta(meta)
             lp = G.tunnel_port(i)
@@ -552,7 +565,7 @@ class WorkerManager:
                                     "route": route, "args": list(getattr(tun, "args", None) or [])})
             self._write_gguf_meta(meta)
             if not G.wait_port(lp, proc=tun, timeout=10) and route != "network":
-                self._note(f"{route} route to {name} did not open; using its configured SSH name instead")
+                self._note(T("server.web_workers.route_route_to_name_did_not", route=route, name=name))
                 import peer_route as PR
                 PR.forget(target)
                 try:
@@ -565,26 +578,24 @@ class WorkerManager:
                 self._write_gguf_meta(meta)
                 if not G.wait_port(lp, proc=tun, timeout=10):
                     err = (tun.stderr.read() if tun.poll() is not None and tun.stderr else b"") or b""
-                    raise RuntimeError(f"SSH tunnel to {name} failed: {err.decode(errors='replace')[:300]}")
+                    raise RuntimeError(T("server.web_workers.ssh_tunnel_to_name_failed_decode", name=name, decode=err.decode(errors='replace')[:300]))
             elif tun.poll() is not None or not G.wait_port(lp, proc=tun, timeout=1):
                 err = (tun.stderr.read() if tun.poll() is not None and tun.stderr else b"") or b""
-                raise RuntimeError(f"SSH tunnel to {name} failed: {err.decode(errors='replace')[:300]}")
+                raise RuntimeError(T("server.web_workers.ssh_tunnel_to_name_failed_decode", name=name, decode=err.decode(errors='replace')[:300]))
             gblock.setdefault("routes", []).append(route)
             self._set(gguf=gblock)
             rpc.append(f"127.0.0.1:{lp}")
-            self._note(f"rpc-server on {name} up (pid {pid}), tunnel 127.0.0.1:{lp}")
+            self._note(T("server.web_workers.rpc_server_on_name_up_pid", name=name, pid=pid, lp=lp))
         self._check_cancel()
         free = [self._free_gb(n) for n in nodes] if peers else [None]
         shares = entry.get('gguf_shares') or (G.shares_from_free(free) if peers else [1])
         if entry.get('gguf_shares'):
             import math
             if len(shares) != len(nodes) or any(isinstance(x,bool) or not isinstance(x,(int,float)) or not math.isfinite(x) or x<=0 for x in shares):
-                raise ValueError('invalid explicit GGUF shares')
+                raise ValueError(T("server.web_workers.invalid_explicit_gguf_shares"))
         if peers:
-            self._note("free RAM now: " + ", ".join(
-                f"{_friendly(n)} {f if f is not None else '?'} GB" for n, f in zip(nodes, free))
-                + " → split " + ":".join(str(x) for x in shares)
-                + ("" if all(f for f in free) else " (equal: free RAM unknown)"))
+            self._note(T("server.web_workers.free_ram_now_v_split_v2", v=T.join(
+                T("server.web_workers.name_free_gb", name=_friendly(n), gb=f if f is not None else '?') for n, f in zip(nodes, free)), v2=":".join(str(x) for x in shares), v3="" if all(f for f in free) else T("server.web_workers.equal_free_ram_unknown")))
         meta["shares"] = shares
         gblock["shares"] = list(shares)
         self._set(gguf=gblock)  # Report the actual applied shares for no-op/reload UI checks.
@@ -617,23 +628,21 @@ class WorkerManager:
         except Exception:  # noqa: BLE001 - tuning is optional
             tune = {}
         if tune:
-            self._note("using saved GGUF settings")
+            self._note(T("server.web_workers.using_saved_gguf_settings"))
         t0 = time.time()
         for attempt in (1, 2):
             args = G.llama_args(str(path), port=self.lead_port, peers=rpc, shares=shares, tune=tune)
             launch = G.resolve_launch(str(path), tune=tune, n_devices=1 + len(rpc))
             if launch:
                 if launch.get("helper_fits") is False and tune.get("guess_ahead") == "on":
-                    self._note("Guess-ahead helper left off: it does not fit in memory with this context")
+                    self._note(T("server.web_workers.guess_ahead_helper_left_off_it"))
                     tune = dict(tune, guess_ahead="off", helper_failed=True)
                     tune.pop("draft_path", None)
                 lighter = launch.get("lighter") or {}
                 if lighter and attempt == 1:
-                    words = {"cache_type": "8-bit chat memory", "flash_attn": "flash attention on",
-                             "ubatch": f"prompt batch {lighter.get('ubatch')}"}
-                    self._note("Kept the full context of " + str(launch["ctx"]) + ": using "
-                               + ", ".join(words.get(k, k) for k in lighter)
-                               + " instead of the learned setting, which would not fit")
+                    words = {"cache_type": T("server.web_workers.8_bit_chat_memory"), "flash_attn": T("server.web_workers.flash_attention_on"),
+                             "ubatch": T("server.web_workers.prompt_batch_ubatch", ubatch=lighter.get('ubatch'))}
+                    self._note(T("server.web_workers.kept_the_full_context_of_ctx", ctx=str(launch["ctx"]), v=T.join(words.get(k, k) for k in lighter)))
                 tune = dict(tune, ctx=launch["ctx"], n_slots=launch["n_slots"],
                             ctx_auto=bool(launch.get("ctx_auto")), **lighter)
             # Day 30: report the chat memory llama-server really got. A boot
@@ -652,13 +661,13 @@ class WorkerManager:
             self._set(status="starting_lead", packer_pid=None)
             seeded = bool(meta.get("seed"))
             if not rpc:
-                self._note("starting llama-server on the lead Mac (one Mini)")
+                self._note(T("server.web_workers.starting_llama_server_on_the_lead"))
             elif meta.get("file_mode") == "balance-verified-peer-cache":
-                self._note("starting llama-server using verified peer-only tensor caches; small tensors and cache misses still cross RPC")
+                self._note(T("server.web_workers.starting_llama_server_using_verified_peer"))
             elif seeded:
-                self._note("starting llama-server on the lead Mac; peers with their own copy load from disk, others get their share over the link")
+                self._note(T("server.web_workers.starting_llama_server_on_the_lead_2"))
             else:
-                self._note("starting llama-server on the lead Mac, peers get their share over the link (first load copies it, later loads use the peer cache)")
+                self._note(T("server.web_workers.starting_llama_server_on_the_lead_3"))
             log_path = self._lead_log()
             log_path.write_text("")
             lf = open(log_path, "ab", buffering=0)
@@ -679,8 +688,7 @@ class WorkerManager:
             spec_on = tune.get("guess_ahead") == "on" or tune.get("prompt_lookup") == "on"
             self._stop_gguf_lead()
             if attempt == 1 and spec_on and not entry.get("strict_tune"):
-                self._note("The first test reply failed with Guess-ahead / Prompt lookup on "
-                           f"({err[:160]}); starting again without them")
+                self._note(T("server.web_workers.first_test_reply_failed_with_speedups", err=err[:160]), problem=True)
                 if tune.get("guess_ahead") == "on":
                     try:
                         import gguf_tune as GT
@@ -690,8 +698,8 @@ class WorkerManager:
                 tune = dict(tune, guess_ahead="off", prompt_lookup="off", helper_failed=True)
                 tune.pop("draft_path", None)
                 continue
-            raise RuntimeError(f"the model loaded but its first test reply failed: {err[:500]}")
-        self._note(f"loaded in {time.time() - t0:.1f}s")
+            raise RuntimeError(T("server.web_workers.the_model_loaded_but_its_first", err=err[:500]))
+        self._note(T("server.web_workers.loaded_in_v_s", v=time.time() - t0))
         # GGUF Optimize now reads this (it refused "needs a GGUF model loaded" before).
         self._loaded_entry = dict({k: v for k, v in entry.items() if k not in ("tune_override", "strict_tune")},
                                   gguf_shares=shares, _loaded_tune=tune,
@@ -712,7 +720,7 @@ class WorkerManager:
         # Do not scan a legacy full peer GGUF or seed its padded extra layers.
         if entry.get("gguf_peer_files_ready") is True:
             meta["file_mode"] = "balance-verified-peer-cache"
-            self._note("using each Mini's verified assigned tensor cache; no complete peer GGUF needed")
+            self._note(T("server.web_workers.using_each_minis_verified_assigned_tensor"))
             return
         for i, n in enumerate(peers):
             # GGUF stage 2: a peer with its own copy fills its rpc cache from disk.
@@ -728,20 +736,17 @@ class WorkerManager:
                 rep = G.parse_seed(r.stdout)
             except Exception as e:  # noqa: BLE001 - stage 2 is an optimisation only
                 rep, r = None, None
-                self._note(f"{who}: local seed skipped ({e})")
+                self._note(T("server.web_workers.who_local_seed_skipped_e", who=who, e=e))
             if rep:
                 meta.setdefault("seed", {})[n.get("id") or name] = rep
-                self._note(f"{who} loads its share from its own disk: {rep['tensors']} tensors, "
-                           f"{rep['bytes'] / 1e9:.1f} GB ({rep['new']} new, {rep['have']} cached) "
-                           f"in {rep['s']}s")
+                self._note(T("server.web_workers.who_loads_its_share_from_its", who=who, tensors=rep['tensors'], v=rep['bytes'] / 1e9, new=rep['new'], have=rep['have'], s=rep['s']))
             elif r is not None:
-                self._note(f"{who}: no complete local {path.name}; existing RPC tensor cache is still used, "
-                           "and cache misses / small tensors may cross the link")
+                self._note(T("server.web_workers.who_no_complete_local_name_existing", who=who, name=path.name))
 
     def _check_cancel(self):
         self._check_load_cancel()
         if getattr(self, "_gguf_cancel", False):
-            raise RuntimeError("load stopped")
+            raise RuntimeError(T("server.web_workers.load_stopped"))
 
     def _write_gguf_meta(self, meta: dict) -> None:
         self._gguf_meta_path().write_text(json.dumps(meta))
@@ -769,8 +774,7 @@ class WorkerManager:
                 self._check_cancel()
                 if waited - noted["at"] >= 15:
                     noted["at"] = waited
-                    self._note(f"Waiting for the Thunderbolt link to {_name} "
-                               f"({int(waited)}s of {int(limit)}s)…")
+                    self._note(T("server.web_workers.waiting_for_the_thunderbolt_link_to", name=_name, waited=int(waited), limit=int(limit)))
             picked = PR.route_for(target, fresh=True, label=name, wait_thunderbolt=True, on_wait=_tb_wait)
             if picked is not None:
                 if picked.get("warning"):
@@ -780,14 +784,14 @@ class WorkerManager:
                     args = G.ssh_tunnel_args(target, port)
                     args[1:1] = opts + ["-o", "StrictHostKeyChecking=yes"]
                     route = picked["kind"]
-                    self._note(f"link to {name}: {PR.describe(picked)}")
+                    self._note(T("server.web_workers.link_to_name_describe", name=name, describe=PR.describe(picked)))
         if args is None and node and str(node.get("peer") or "").startswith("ssh+tb://"):
             try:
                 import web_gguf_shares
                 args = web_gguf_shares.tunnel_args(dict(node, ssh=target), port, pick=False)
                 route = "thunderbolt" if any(str(a).startswith("HostName=") for a in args) else "network"
             except Exception as ex:  # noqa: BLE001 - fall back to the plain route
-                self._note(f"Thunderbolt route not available ({str(ex)[:120]}); using the network")
+                self._note(T("server.web_workers.thunderbolt_route_not_available", ex=str(ex)[:120]))
                 args = None
         if args is None:
             args, route = G.ssh_tunnel_args(target, port), "network"
@@ -834,10 +838,10 @@ class WorkerManager:
                     pass
                 peers = [p.get("label") or p.get("id") for p in meta.get("peers") or []]
                 if "RPC" in tail or "rpc" in tail or "Failed to connect" in tail or "Broken pipe" in tail:
-                    msg = (f"Lost {' + '.join(peers) or 'a Mini'} during the split. Load it again."
-                           if peers else "llama-server stopped. Load the model again.")
+                    msg = (T("server.web_workers.lost_v_during_the_split_load", v=' + '.join(peers) or 'a Mini')
+                           if peers else T("server.web_workers.llama_server_stopped_load_the_model"))
                 else:
-                    msg = "llama-server stopped. Load the model again."
+                    msg = T("server.web_workers.llama_server_stopped_load_the_model")
                 self._gguf_watch_token = None
                 try:
                     self._kill_gguf()
@@ -845,7 +849,7 @@ class WorkerManager:
                     self._note(f"cleanup: {e}")
                 self._set(status="idle", model_id=None, model_name=None, lead_pid=None,
                           split=False, error=msg, error_detail=tail[-2500:])
-                self._note("load failed: " + msg)
+                self._note(T("server.web_workers.load_failed_msg", msg=msg), problem=True)
                 return
         threading.Thread(target=run, daemon=True).start()
 
@@ -869,7 +873,7 @@ class WorkerManager:
             tun = (subprocess.Popen(t['args'],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,start_new_session=True) if t.get('args') else self._open_tunnel(t["ssh"], t["port"])[0])  # only the recorded route
             t["pid"] = tun.pid
             G.wait_port(t["port"], proc=tun, timeout=10)
-            self._note(f"reopened tunnel 127.0.0.1:{t['port']} to {t.get('id')}")
+            self._note(T("server.web_workers.reopened_tunnel_127_0_0_1", port=t['port'], id=t.get('id')))
         self._write_gguf_meta(meta)
         gb = meta.get("gguf") or {}
         # Day 28: gguf.json never held an "entry", so after Update now (a web
@@ -880,8 +884,7 @@ class WorkerManager:
         self._set(status="ready", model_id=meta.get("id"), model_name=meta.get("name"),
                   lead_pid=pid, split=gb.get("mode") == "split", backend="llama", gguf=gb,
                   error=None, error_detail=None)
-        self._note(f"adopted running llama-server (pid {pid}) and "
-                   f"{len(meta.get('tunnels') or [])} tunnel(s) after web restart")
+        self._note(T.plural("server.web_workers.adopted_llama_server_tunnels", len(meta.get('tunnels') or []), pid=pid))
         self._start_gguf_watch(meta)
         return True
 
@@ -925,7 +928,7 @@ class WorkerManager:
         if isinstance(d, dict) and d.get("error"):
             return json.dumps(d["error"])[:300]
         if not isinstance(d, dict) or not d.get("choices"):
-            return "no reply"
+            return T("server.web_workers.no_reply")
         return None
 
     def _stop_gguf_lead(self) -> None:
@@ -993,9 +996,9 @@ class WorkerManager:
                 r = PR.run_ssh(target, G.rpc_stop_command(), "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
                                timeout=30, run=subprocess.run)
                 if r.returncode:
-                    self._note(f"could not stop rpc-server on {p.get('id')}: {(r.stderr or '')[:200]}")
+                    self._note(T("server.web_workers.could_not_stop_rpc_server_on", id=p.get('id'), v=(r.stderr or '')[:200]))
             except subprocess.SubprocessError as e:
-                self._note(f"could not stop rpc-server on {p.get('id')}: {e}")
+                self._note(T("server.web_workers.could_not_stop_rpc_server_on_2", id=p.get('id'), e=e))
         mp.unlink()
         self._set(gguf=None, backend=None)
 
@@ -1029,9 +1032,9 @@ class WorkerManager:
             remote_node = self._resolve_worker_node(entry, place=place)
         if remote_node and not self._node_is_local(remote_node):
             # Model lives on another Mini — check there via SSH.
-            label = remote_node.get("label") or remote_node.get("id") or "remote Mini"
+            label = remote_node.get("label") or remote_node.get("id") or T("server.web_workers.remote_mini")
             if not lead:
-                problems.append(f"model folder not found on {label}")
+                problems.append(T("server.web_workers.model_folder_not_found_on_label", label=label))
             else:
                 # Expanduser locally for the usual ~/.caravan path; same on sibling Minis.
                 d = str(Path(lead).expanduser())
@@ -1046,23 +1049,23 @@ class WorkerManager:
                     r = self._ssh_node(remote_node, check, timeout=25)
                     out = (r.stdout or "").strip().splitlines()
                     if not out or out[-1] != "OK":
-                        problems.append(f"model missing on {label}: {lead}")
+                        problems.append(T("server.web_workers.model_missing_on_label_lead", label=label, lead=lead))
                 except Exception as e:
-                    problems.append(f"can't reach {label} to check model: {e}")
+                    problems.append(T("server.web_workers.cant_reach_label_to_check_model", label=label, e=e))
         elif not lead:
-            problems.append("model folder not found on this Mac (lead)")
+            problems.append(T("server.web_workers.model_folder_not_found_on_this"))
         else:
             lp = Path(lead).expanduser()
             if not lp.is_dir():
-                problems.append(f"model folder missing on the lead Mac: {lead}")
+                problems.append(T("server.web_workers.model_folder_missing_on_the_lead", lead=lead))
             elif not (lp / "config.json").is_file():
-                problems.append(f"config.json missing in {lead}")
+                problems.append(T("server.web_workers.config_json_missing_in_lead", lead=lead))
             else:
                 try:
                     from mlx_arch import architecture_status
                     arch = architecture_status(lp)
                     if not arch.get("supported"):
-                        problems.append(arch.get("reason") or "unsupported architecture")
+                        problems.append(arch.get("reason") or T("server.web_catalog.unsupported_architecture"))
                     elif arch.get("remapped"):
                         self._note("architecture: " + (arch.get("reason") or "remapped"))
                 except Exception:
@@ -1070,7 +1073,7 @@ class WorkerManager:
                 # Need at least one weight file for single / lead
                 has_w = any(lp.glob("*.safetensors")) or (lp / "model.safetensors.index.json").is_file()
                 if not has_w:
-                    problems.append(f"no weight files in {lead}")
+                    problems.append(T("server.web_workers.no_weight_files_in_lead", lead=lead))
         if run_mode == "split":
             # Packer must have a tree — cheap existence check (same as resolve).
             try:
@@ -1078,10 +1081,7 @@ class WorkerManager:
                 self._assert_packer_unmanaged()
             except FileNotFoundError as e:
                 problems.append(
-                    "model is not on the helper Mac. "
-                    "For a one-Mac download, place it on the lead Mac before loading — "
-                    "or re-download as a split / copy-to-all. "
-                    f"({e})"
+                    T("server.web_workers.model_is_not_on_the_helper", e=e)
                 )
         return problems
 
@@ -1135,7 +1135,7 @@ class WorkerManager:
             self._reload_trial = plan.get("trial")
             TS.save_store(st, self.tuned_path)
         except (OSError, ValueError) as ex:
-            return [f"reload plan skipped ({ex})"]
+            return [T("server.web_workers.reload_plan_skipped_ex", ex=ex)]
         v = plan["values"]
         both = []
         if "kv_bits" in v and int(v["kv_bits"]) != 16:
@@ -1209,8 +1209,8 @@ class WorkerManager:
                 active = self.lead_active_settings() or {}
                 if active.get("sweep_paused"):
                     self.sweep({"release": True})
-                    self._note("released abandoned Optimize now live holds after web restart")
-                self._note(f"adopted running lead (pid {pid}) after web restart")
+                    self._note(T("server.web_workers.released_abandoned_optimize_now_live_holds"))
+                self._note(T("server.web_workers.adopted_running_lead_pid_pid_after", pid=pid))
                 self._sync_learn_flag()
                 return True
         return False
@@ -1255,7 +1255,7 @@ class WorkerManager:
                 r = PR.run_ssh(target, cmd, "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
                                timeout=25, run=subprocess.run)
                 if r.returncode:
-                    raise RuntimeError("could not stop tracked remote worker: " + (r.stderr or ""))
+                    raise RuntimeError(T("server.web_workers.could_not_stop_tracked_remote_worker", v=r.stderr or ""))
             meta_path.unlink()
         if self._lead_proc is not None:
             stop(self.worker, pid=self._lead_proc.pid, port=self.lead_port)
@@ -1278,9 +1278,9 @@ class WorkerManager:
                   "sys.exit(42 if reserved else 0)")
         r = self._ssh("python3 -c " + shlex.quote(script),timeout=25)
         if r.returncode == 42:
-            raise ManagedServiceError((r.stdout or "An auto-start service owns this packer")[-800:])
+            raise ManagedServiceError((r.stdout or T("server.web_workers.auto_start_service_owns_packer"))[-800:])
         if r.returncode:
-            raise RuntimeError("could not stop tracked packer: ownership check failed: " + (r.stderr or r.stdout or "unknown error")[-800:])
+            raise RuntimeError(T("server.web_workers.could_not_stop_tracked_packer_ownership", v=(r.stderr or r.stdout or "unknown error")[-800:]))
 
     def _kill_packer(self) -> None:
         from web_pipeline import stop_pipeline
@@ -1299,14 +1299,14 @@ class WorkerManager:
                                         listen=self.packer_peer)
         r = self._ssh(cmd, timeout=25)
         if r.returncode:
-            raise RuntimeError("could not stop tracked packer: " + (r.stderr or ""))
+            raise RuntimeError(T("server.web_workers.could_not_stop_tracked_packer_v", v=r.stderr or ""))
 
     def _resolve_packer_path(self, entry: dict) -> str:
         # Ask the configured helper which candidate exists.
         cands = entry.get("packer_path_candidates") or [entry.get("packer_path")]
         cands = [c for c in cands if c]
         if not cands:
-            raise FileNotFoundError("no packer path candidates")
+            raise FileNotFoundError(T("server.web_workers.no_packer_path_candidates"))
         script = " ; ".join(
             f'[ -d {shlex.quote(c)} ] && echo FOUND:{c} && exit 0'
             for c in cands
@@ -1316,8 +1316,7 @@ class WorkerManager:
             if line.startswith("FOUND:"):
                 return line[len("FOUND:"):]
         raise FileNotFoundError(
-            f"model not on packer Mini; tried {cands}; ssh_rc={r.returncode} "
-            f"err={(r.stderr or '')[:200]}")
+            T("server.web_workers.model_not_on_packer_mini", cands=cands, rc=r.returncode, err=(r.stderr or '')[:200]))
 
 
     def _node_is_local(self, node: Optional[dict]) -> bool:
@@ -1385,7 +1384,7 @@ class WorkerManager:
     def _ssh_node(self, node: dict, cmd: str, timeout: float = 60):
         target = (node.get("ssh") or node.get("host") or self.packer_ssh or "").strip()
         if not target:
-            raise RuntimeError("no ssh target for remote worker")
+            raise RuntimeError(T("server.web_workers.no_ssh_target_for_remote_worker"))
         import peer_route as PR
         return PR.run_ssh(target, cmd, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
                           timeout=timeout, run=subprocess.run,
@@ -1393,7 +1392,7 @@ class WorkerManager:
 
     def _stop_tunnel(self, node=None) -> None:
         """Stop only Caravan's own ssh forward to this worker. Never a foreign pid."""
-        import web_tunnels as T
+        import web_tunnels as WT
         pids = []
         proc = getattr(self, "_tunnel_proc", None)
         if proc is not None:
@@ -1421,17 +1420,17 @@ class WorkerManager:
             except (OSError, ValueError, TypeError):
                 pass
         if target:
-            T.stop_forward(target, port, pids=pids)
+            WT.stop_forward(target, port, pids=pids)
         else:
             for pid in pids:
-                cmd = T.command_of(pid)
+                cmd = WT.command_of(pid)
                 try:
                     args = __import__("shlex").split(cmd or "")
                     maybe = args[-1] if args else ""
                 except (ValueError, IndexError):
                     maybe = ""
                 if maybe:
-                    T.stop_owned(pid, maybe, port)
+                    WT.stop_owned(pid, maybe, port)
 
     def _ensure_tunnel(self, node: dict) -> None:
         """Forward local lead_port → remote 127.0.0.1:lead_port so chat/health stay local.
@@ -1440,19 +1439,19 @@ class WorkerManager:
         works, or replaced (only that process) when it does not. A process
         that is not ours is never killed.
         """
-        import web_tunnels as T
+        import web_tunnels as WT
         target = (node.get("ssh") or node.get("host") or self.packer_ssh or "").strip()
         port = int(self.lead_port)
         adopted = getattr(self, "_adopted_tunnel", None)
         if adopted and adopted[1] and adopted[1] != target:
             self._stop_tunnel()
         try:
-            got = T.ensure_forward(target, port)
-        except T.TunnelError:
+            got = WT.ensure_forward(target, port)
+        except WT.TunnelError:
             raise
         except Exception as e:
-            raise T.TunnelError(
-                T.plain_tunnel_error(e, mac=self._mac_name(node)),
+            raise WT.TunnelError(
+                WT.plain_tunnel_error(e, mac=self._mac_name(node)),
                 detail=str(e),
             ) from e
         if got.get("reused"):
@@ -1467,7 +1466,7 @@ class WorkerManager:
         """Run mlx_worker as a non-split HTTP server on a non-lead Mini; tunnel to it."""
         model = entry.get("lead_path") or entry.get("packer_path")
         if not model:
-            raise RuntimeError("no model path for remote single-Mini load")
+            raise RuntimeError(T("server.web_workers.no_model_path_for_remote_single"))
         remote_model = model
         repo = (node.get("repo") or "~/.caravan/src/caravan").rstrip("/")
         filtered = []
@@ -1490,14 +1489,14 @@ class WorkerManager:
         )
         r = self._ssh_node(node, remote, timeout=45)
         if r.returncode != 0:
-            raise RuntimeError(f"remote worker start failed: {(r.stderr or r.stdout or '')[:400]}")
+            raise RuntimeError(T("server.web_workers.remote_worker_start_failed_v", v=(r.stderr or r.stdout or '')[:400]))
         pid = None
         for line in (r.stdout or "").splitlines():
             line = line.strip()
             if line.isdigit():
                 pid = int(line)
         if not pid:
-            raise RuntimeError(f"remote worker did not print a pid: {(r.stdout or '')[:200]}")
+            raise RuntimeError(T("server.web_workers.remote_worker_did_not_print_a", v=(r.stdout or '')[:200]))
         self._ensure_tunnel(node)
         self._lead_proc = None
         (self.state_dir / "lead.pid").write_text(str(pid))
@@ -1533,7 +1532,7 @@ class WorkerManager:
         )
         r = self._ssh(remote, timeout=30)
         if r.returncode != 0:
-            raise RuntimeError(f"packer start failed: {(r.stderr or r.stdout or '')[:300]}")
+            raise RuntimeError(T("server.web_workers.packer_start_failed_v", v=(r.stderr or r.stdout or '')[:300]))
         pid = None
         for line in (r.stdout or "").splitlines():
             line = line.strip()
@@ -1556,14 +1555,14 @@ class WorkerManager:
                 if re.search(r"loaded .+ in [\d.]+s", line) or "serve_front" in line or "stage" in line and "loaded" in line:
                     # Also accept "packer stage … loaded"
                     if "loaded" in line:
-                        self._note("packer ready")
+                        self._note(T("server.web_workers.packer_ready"))
                         return
             if "Error" in text or "Traceback" in text:
                 # Keep waiting a bit — load errors are fatal though.
                 if "Traceback" in text:
-                    raise RuntimeError("packer traceback:\n" + "\n".join(text.splitlines()[-20:]))
+                    raise RuntimeError(T("server.web_workers.packer_traceback_splitlines", splitlines="\n".join(text.splitlines()[-20:])))
             time.sleep(1.5)
-        raise TimeoutError("packer did not become ready in time")
+        raise TimeoutError(T("server.web_workers.packer_did_not_become_ready_in"))
 
     def _start_lead(self, entry: dict, *, split: bool = True) -> int:
         k = int(entry.get("packer_layers") or 24)
@@ -1623,7 +1622,7 @@ class WorkerManager:
             self._check_load_cancel()
             if self._lead_proc and self._lead_proc.poll() is not None:
                 tail = log_path.read_text(errors="replace")[-2000:] if log_path.exists() else ""
-                raise RuntimeError(f"lead exited early (rc={self._lead_proc.returncode}): {tail}")
+                raise RuntimeError(T("server.web_workers.lead_exited_early", rc=self._lead_proc.returncode, tail=tail))
             if (not remote) and log_path.exists() and not getattr(self, "_quiet_lead_log", False):
                 text = log_path.read_text(errors="replace")
                 if len(text) > last_size:
@@ -1637,12 +1636,12 @@ class WorkerManager:
             try:
                 with urllib.request.urlopen(url, timeout=2) as r:
                     if r.status == 200:
-                        self._note("lead health ok")
+                        self._note(T("server.web_workers.lead_health_ok"))
                         return
             except Exception:
                 pass
             time.sleep(1.0)
-        raise TimeoutError("lead did not become ready in time")
+        raise TimeoutError(T("server.web_workers.lead_did_not_become_ready_in"))
 
     def set_self_tune(self, value) -> dict:
         """Save Self-tuning and apply it on a running MLX worker with no reload.
@@ -1663,10 +1662,10 @@ class WorkerManager:
         backend = snap.get("backend")
         # "when you load a model" only if nothing is loaded; a leftover of that
         # next to a ready model is confusing.
-        ready_on = "Self-tuning is on. Caravan will learn from your next chats."
-        ready_off = "Self-tuning is off. Caravan will keep the current settings."
-        load_on = "Self-tuning is on. It takes effect when you load a model."
-        load_off = "Self-tuning is off. It takes effect when you load a model."
+        ready_on = T("server.web_workers.self_tuning_is_on_caravan_will")
+        ready_off = T("server.web_workers.self_tuning_is_off_caravan_will")
+        load_on = T("server.web_workers.self_tuning_is_on_it_takes")
+        load_off = T("server.web_workers.self_tuning_is_off_it_takes")
         notice = (ready_off if raw == "off" else ready_on) if status == "ready" else (
             load_off if raw == "off" else load_on)
         if status == "ready" and backend == "llama":
@@ -1675,9 +1674,9 @@ class WorkerManager:
                 if tun is not None and hasattr(tun, "cancel"):
                     tun.cancel()
             notice = (
-                "Self-tuning is off. Caravan will keep the current settings."
+                T("server.web_workers.self_tuning_is_off_caravan_will")
                 if raw == "off" else
-                "Self-tuning is on. For this model, a change reloads when you are not mid-reply."
+                T("server.web_workers.self_tuning_is_on_for_this")
             )
         elif status == "ready":
             try:
@@ -1691,19 +1690,23 @@ class WorkerManager:
                     json.loads(response.read())
                 applied = True
                 notice = (
-                    "Self-tuning is off. Caravan will keep the current settings and stop learning."
+                    T("server.web_workers.self_tuning_is_off_caravan_will_2")
                     if raw == "off" else
-                    "Self-tuning is on. Caravan will learn from your next chats."
+                    T("server.web_workers.self_tuning_is_on_caravan_will")
                 )
             except Exception as e:
                 notice = (
-                    "Could not update Self-tuning on the running model "
-                    f"({type(e).__name__}). Try again, or unload and load."
+                    T("server.web_workers.could_not_update_self_tuning_on", name=type(e).__name__)
                 )
                 return {"self_tune": raw, "applied": False, "reloaded": False,
                         "notice": notice, "error": str(e)}
-        return {"self_tune": raw, "applied": applied, "reloaded": False,
-                "notice": notice}
+        # notice_code lets the page clear the "when you load a model" note
+        # once a model is ready without matching its words (Day 32).
+        out = {"self_tune": raw, "applied": applied, "reloaded": False,
+               "notice": notice}
+        if notice in (load_on, load_off):
+            out["notice_code"] = "on_load"
+        return out
 
     def _page_self_tune(self) -> str:
         """The user's Self-tuning preference (auto/off).
@@ -1737,7 +1740,7 @@ class WorkerManager:
         try:
             self.set_self_tune("auto")
         except Exception as e:
-            self._note(f"could not turn Self-tuning on for the adopted model: {e}")
+            self._note(T("server.web_workers.could_not_turn_self_tuning_on", e=e))
 
     def guess_ahead_auto(self) -> str:
         """Day 27: after the user says yes to a helper download, put
@@ -1836,8 +1839,7 @@ class WorkerManager:
         except Exception:
             pass
         notice = (
-            "Saved tuning for this model is cleared. Memory compression is back to Auto. "
-            "Press Start to run a new trial."
+            T("server.web_workers.saved_tuning_for_this_model_is")
         )
         live = dict(snap.get("settings") or {})
         live_kv = str(live.get("kv_bits") or "auto").lower()
@@ -1847,13 +1849,11 @@ class WorkerManager:
             try:
                 self.switch(mid, wait=True, settings=page)
                 notice = (
-                    "Saved tuning for this model is cleared. Memory compression is back to Auto. "
-                    "Press Start to run a new trial."
+                    T("server.web_workers.saved_tuning_for_this_model_is")
                 )
             except Exception as e:
                 notice = (
-                    "Saved tuning is cleared and Memory compression is set back to Auto, "
-                    "but the model could not be reloaded: " + str(e)[:160]
+                    T("server.web_workers.saved_tuning_is_cleared_and_memory", e=str(e)[:160])
                 )
         return {
             "ok": True,

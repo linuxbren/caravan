@@ -5,6 +5,13 @@ import os
 import plistlib
 import re
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 OWNER = "caravan-service-v1"
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,7 +24,7 @@ def absolute(path):
 def port(value):
     n = int(value)
     if not 1 <= n <= 65535:
-        raise ValueError("ports must be between 1 and 65535")
+        raise ValueError(T("agent.service_config.ports_must_be_between_1_and"))
     return n
 
 
@@ -28,7 +35,7 @@ def endpoint(value):
     from mlx_split import _hostport
     host, number = _hostport(value)
     if not host:
-        raise ValueError("use a private HOST:PORT, not just a port")
+        raise ValueError(T("agent.service_config.use_a_private_host_port_not"))
     port(number)
     return str(value)
 
@@ -40,11 +47,11 @@ def make_plan(*, kind, name=None, repo=ROOT, python=None, home=None, host="127.0
     repo = Path(repo).expanduser().resolve()
     name = name or kind
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", name):
-        raise ValueError("service name must use 1-64 letters, numbers, _ or -")
+        raise ValueError(T("agent.service_config.service_name_must_use_1_64"))
     if kind not in ("web", "worker", "proxy"):
-        raise ValueError("choose web, worker or proxy")
+        raise ValueError(T("agent.service_config.choose_web_worker_or_proxy"))
     if kind == "proxy" and host != "127.0.0.1":
-        raise ValueError("proxy is loopback-only; use an SSH tunnel for remote clients")
+        raise ValueError(T("agent.service_config.proxy_is_loopback_only_use_an"))
     # A venv's Python is commonly a symlink to Homebrew/system Python. Resolving
     # that symlink changes sys.prefix and silently loses all venv dependencies.
     py = os.path.abspath(os.path.expanduser(str(python or home/".caravan/venvs/mlx/bin/python")))
@@ -53,11 +60,11 @@ def make_plan(*, kind, name=None, repo=ROOT, python=None, home=None, host="127.0
             "home": str(home), "host": str(host), "port": port(web_port if kind in ("web", "proxy") else lead_port)}
     if kind in ("web", "proxy"):
         if model or counts or stage_index is not None or listen or upstream or peer:
-            raise ValueError("web service does not load a model; install a separate worker plan")
+            raise ValueError(T("agent.service_config.web_service_does_not_load_a"))
         plan["lead_port"] = port(lead_port)
     else:
         if not model:
-            raise ValueError("worker auto-start needs an installed local --model folder")
+            raise ValueError(T("agent.service_config.worker_auto_start_needs_an_installed"))
         plan["model"] = absolute(model)
         plan["cache_dir"] = str(home/".caravan/mlx"/f"service-{name}"/"sessions")
         if counts:
@@ -65,22 +72,22 @@ def make_plan(*, kind, name=None, repo=ROOT, python=None, home=None, host="127.0
             counts = parse_counts(counts) if isinstance(counts,str) else list(counts)
             plan_ranges(sum(counts), counts)
             if len(counts) < 2 or type(stage_index) is not int or not 0 <= stage_index < len(counts):
-                raise ValueError("split counts need a valid zero-based stage index")
+                raise ValueError(T("agent.service_config.split_counts_need_a_valid_zero"))
             plan.update(counts=counts, stage_index=stage_index,
                         role="lead" if stage_index == len(counts)-1 else "packer")
             if plan["role"] == "lead":
                 if not peer or listen or upstream:
-                    raise ValueError("split lead needs --peer, not --listen/--upstream")
+                    raise ValueError(T("agent.service_config.split_lead_needs_peer_not_listen"))
                 plan["peer"] = endpoint(peer)
             else:
                 if not listen or peer or bool(stage_index) != bool(upstream):
-                    raise ValueError("packer needs --listen; only middle packers also need --upstream")
+                    raise ValueError(T("agent.service_config.packer_needs_listen_only_middle_packers"))
                 plan["listen"] = endpoint(listen)
                 if upstream:
                     plan["upstream"] = endpoint(upstream)
         else:
             if stage_index is not None or listen or upstream or peer:
-                raise ValueError("split stage options require --counts")
+                raise ValueError(T("agent.service_config.split_stage_options_require_counts"))
             plan["role"] = "single"
     return plan
 
@@ -144,14 +151,14 @@ def render(plan, *, staged=None):
 def load(path):
     plan = json.loads(Path(path).expanduser().read_text())
     if plan.get("managed_by") != OWNER or plan.get("schema") != 1:
-        raise ValueError("not a Caravan-managed service plan")
+        raise ValueError(T("agent.service_config.not_a_caravan_managed_service_plan"))
     # Rebuild rather than trust serialized command lines or labels.
     rebuilt = make_plan(kind=plan["kind"],name=plan["name"],repo=plan["repo"],python=plan["python"],home=plan["home"],
                         host=plan["host"],web_port=plan["port"],lead_port=plan.get("lead_port",plan["port"]),
                         model=plan.get("model"),counts=plan.get("counts"),stage_index=plan.get("stage_index"),
                         listen=plan.get("listen"),upstream=plan.get("upstream"),peer=plan.get("peer"))
     if plan != rebuilt:
-        raise ValueError("service plan has unsupported fields or was edited inconsistently; regenerate it")
+        raise ValueError(T("agent.service_config.service_plan_has_unsupported_fields_or"))
     return rebuilt
 
 
@@ -172,12 +179,12 @@ def login_job_loaded(plan):
         r = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{plan['label']}"],
                            capture_output=True, text=True, timeout=3)
     except (OSError, subprocess.TimeoutExpired) as e:
-        raise ValueError(f"Cannot check staged auto-start ownership: {e}") from None
+        raise ValueError(T("agent.service_config.cannot_check_staged_auto_start_ownership_2", e=e)) from None
     if r.returncode == 0:
         return True
     if r.returncode in (3,113) or "Could not find service" in r.stderr or "No such process" in r.stderr:
         return False
-    raise ValueError(f"Cannot check staged auto-start ownership: {r.stderr.strip()}")
+    raise ValueError(T("agent.service_config.cannot_check_staged_auto_start_ownership", stderr=r.stderr.strip()))
 
 
 def managed_plans(home):
@@ -188,7 +195,7 @@ def managed_plans(home):
             if path.parent == root/"login" and not login_job_loaded(plan):
                 continue
         except (ValueError, OSError, KeyError, TypeError) as e:
-            raise ValueError(f"Unreadable auto-start plan {path}; repair it before changing workers: {e}") from None
+            raise ValueError(T("agent.service_config.unreadable_auto_start_plan_path_repair", path=path, e=e)) from None
         yield plan
 
 

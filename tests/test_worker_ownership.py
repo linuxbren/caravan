@@ -5,6 +5,7 @@ from unittest import TestCase
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"proxy"))
 import worker_ownership as O
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 WORKER="/repo/agent/mlx_worker.py"
 def cmd(port=8194,script=WORKER):return f"/usr/bin/python3 {script} --model /m --port {port} --split-role none"
@@ -38,7 +39,7 @@ class OwnershipTest(TestCase):
         self.assertEqual(sends,[(20,signal.SIGTERM)])
     def test_no_untracked_sweep(self):
         self.assertFalse(O.stop(WORKER,port=8194)["stopped"])
-        s=(Path(__file__).resolve().parents[1]/"proxy/web_workers.py").read_text()
+        s=english_source(Path(__file__).resolve().parents[1]/"proxy/web_workers.py")
         self.assertNotIn("pkill",s)
         self.assertNotIn("old=$(cat",s)
 

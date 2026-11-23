@@ -23,8 +23,15 @@ from pathlib import Path
 from typing import Callable, Optional
 
 import gguf_split as G
-import gguf_tune as T
+import gguf_tune as GT
 import web_speed as S
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 STORE = Path("~/.caravan/gguf-self-tune.json").expanduser()
 MIN_SAMPLES = 3
@@ -37,15 +44,15 @@ LEARN_ORDER = ("ubatch", "cache_type", "flash_attn")
 SPEC_FIRST = ("guess_ahead",)
 LABELS = {
     "guess_ahead": "Guess-ahead",
-    "ubatch": "Prompt batch",
-    "cache_type": "Memory compression",
-    "flash_attn": "Flash attention",
+    "ubatch": T("server.gguf_self_tune.prompt_batch"),
+    "cache_type": T("server.gguf_self_tune.memory_compression"),
+    "flash_attn": T("server.gguf_self_tune.flash_attention"),
 }
 VALUE_LABELS = {
     ("cache_type", "f16"): "16",
     ("cache_type", "q8_0"): "8",
-    ("flash_attn", "on"): "On",
-    ("flash_attn", "off"): "Off",
+    ("flash_attn", "on"): T("server.gguf_self_tune.on"),
+    ("flash_attn", "off"): T("server.gguf_self_tune.off"),
 }
 
 
@@ -71,7 +78,7 @@ def save_store(store: dict, path=None) -> None:
 
 
 def entry_key(model_path, n_minis: int) -> str:
-    return T.entry_key(model_path, n_minis)
+    return GT.entry_key(model_path, n_minis)
 
 
 def entry(store: dict, key: str) -> dict:
@@ -180,7 +187,7 @@ def used_from_tune(tune: dict) -> dict:
 def _decided_by_autotune(model_path, n_minis: int, autotune_path=None) -> set:
     """Options Auto-tune already measured for this model (it has the last word)."""
     try:
-        best = (T.load_store(autotune_path).get(T.entry_key(model_path, n_minis)) or {}).get("best") or {}
+        best = (GT.load_store(autotune_path).get(GT.entry_key(model_path, n_minis)) or {}).get("best") or {}
         return {k for k in ("guess_ahead", "prompt_lookup") if k in best}
     except Exception:  # noqa: BLE001
         return set()
@@ -235,7 +242,7 @@ def observe(model_path, n_minis: int, specs, *, used=None, settings=None,
         draft = None
         if "guess_ahead" not in pinned:
             try:
-                draft = (find_draft or (lambda mp: T.helper_on_disk(None, mp)))(model_path)
+                draft = (find_draft or (lambda mp: GT.helper_on_disk(None, mp)))(model_path)
             except Exception:  # noqa: BLE001
                 draft = None
         # Day 30: never trial a heavier setting that would need a shorter
@@ -298,7 +305,7 @@ def observe(model_path, n_minis: int, specs, *, used=None, settings=None,
         e["status"] = "collecting"
         e["used"] = current
         save_store(store, path)
-        plan["reason"] = "helper failed"
+        plan["reason"] = T("server.gguf_self_tune.helper_failed")
         return plan
     if tname and str(current.get(tname)) != str(tch):
         trial.pop("settled", None)
@@ -340,7 +347,7 @@ def observe(model_path, n_minis: int, specs, *, used=None, settings=None,
     base = _specs_of(e.get("baseline"))
     chal = _specs_of(trial["samples"])
     name, ch = trial["name"], trial["challenger"]
-    won = T.trial_won(name, chal, base) if S._has_specs(chal) and S._has_specs(base) else False
+    won = GT.trial_won(name, chal, base) if S._has_specs(chal) and S._has_specs(base) else False
     if won:
         e["winners"][name] = ch
         e["used"] = dict(e.get("used") or {}, **(trial.get("extra") or {}), **{name: ch})
@@ -455,11 +462,11 @@ class Controller:
         with self._lock:
             return dict(self._pending) if self._pending else None
 
-    def _note(self, msg: str) -> None:
+    def _note(self, msg: str, problem: bool = False) -> None:
         try:
             note = getattr(self.mgr, "_note", None)
             if callable(note):
-                note(msg)
+                note(msg, problem=True) if problem else note(msg)
         except Exception:
             pass
 
@@ -488,12 +495,11 @@ class Controller:
                 label = job["label"]
                 if reason == "revert":
                     self._note(
-                        "The trial was not faster. The model is reloading "
-                        "with the previous settings."
+                        T("server.gguf_self_tune.the_trial_was_not_faster_the")
                     )
                 else:
                     self._note(
-                        f"Trying a different {label}. The model is reloading."
+                        T("server.gguf_self_tune.trying_a_different_label_the_model", label=label)
                     )
                 entry = dict(job.get("entry") or {})
                 entry["tune_override"] = dict(job["tune"])
@@ -519,8 +525,7 @@ class Controller:
                     except Exception:  # noqa: BLE001
                         pass
                     self._note(
-                        "That trial setting could not load. The model is "
-                        "back on the previous settings."
+                        T("server.gguf_self_tune.that_trial_setting_could_not_load")
                     )
                 with self._lock:
                     # Clear only if nothing newer was queued.

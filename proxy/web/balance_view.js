@@ -31,7 +31,7 @@
     if (!valid(plan)) return T('web.preview_unavailable_refresh_before_applying');
     const safe = plan.stages.every(s => card(s).safe);
     if (!safe) return T('web.preview_not_enough_known_free_memory');
-    const free = Math.min(...plan.stages.map(s => s.headroom_gb)).toFixed(1);
+    const free = T.num(Math.min(...plan.stages.map(s => s.headroom_gb)), 1);
     if (adjusting) {
       const split = plan.counts.length <= 2 ? `${plan.counts.join(' / ')} ${plan.format === 'gguf' ? 'shares' : 'layers'}` : T(`web.counts_count_minis`, {counts_count: plan.counts.length});
       return T(`web.preview_split_free_gb_free_per`, {split, free});

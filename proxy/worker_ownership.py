@@ -8,6 +8,13 @@ import signal
 import subprocess
 import time
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def option(argv, name):
@@ -40,13 +47,13 @@ def stop(worker, *, pid=None, pid_file=None, port=None, listen=None,
          inspect=command_of, send=os.kill, pause=time.sleep, timeout=8):
     if pid is None and pid_file:
         try: pid=int(Path(pid_file).expanduser().read_text().strip())
-        except (OSError,ValueError): return {"stopped":False,"reason":"no tracked pid"}
-    if not pid or int(pid)<=1: return {"stopped":False,"reason":"invalid tracked pid"}
+        except (OSError,ValueError): return {"stopped":False,"reason":T("server.worker_ownership.no_tracked_pid")}
+    if not pid or int(pid)<=1: return {"stopped":False,"reason":T("server.worker_ownership.invalid_tracked_pid")}
     pid=int(pid)
     def owned():return matches(inspect(pid),worker,port=port,listen=listen)
-    if not owned(): return {"stopped":False,"reason":"pid absent or identity mismatch","pid":pid}
+    if not owned(): return {"stopped":False,"reason":T("server.worker_ownership.pid_absent_or_identity_mismatch"),"pid":pid}
     try:send(pid,signal.SIGTERM)
-    except ProcessLookupError:return {"stopped":False,"reason":"already exited","pid":pid}
+    except ProcessLookupError:return {"stopped":False,"reason":T("server.worker_ownership.already_exited"),"pid":pid}
     deadline=time.monotonic()+timeout
     while time.monotonic()<deadline and owned():pause(0.05)
     if owned():

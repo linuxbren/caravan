@@ -67,6 +67,13 @@ import guess_ahead
 import adaptive_pl
 import shared_prefix
 from typing import Optional
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 FORMAT = "caravan-mlx-cache-1"
 KEY_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -183,23 +190,23 @@ class SessionStore:
     def check_metadata(self, md: dict, cache) -> "str | None":
         """None if a loaded file fits this worker, else why not."""
         if not isinstance(md, dict) or md.get("format") != FORMAT:
-            return "not a caravan cache file"
+            return T("agent.mlx_worker.not_a_caravan_cache_file")
         for k, v in self.ident.items():
             if md.get(k) != str(v):
                 return f"{k} differs"
         if md.get("classes") != ",".join(self.ops.classes(self.ops.new_cache())):
-            return "cache layout differs"
+            return T("agent.mlx_worker.cache_layout_differs")
         if ",".join(self.ops.classes(cache)) != md.get("classes"):
-            return "cache layout differs"
+            return T("agent.mlx_worker.cache_layout_differs")
         try:
             toks = json.loads(md.get("tokens", ""))
         except ValueError:
-            return "bad token list"
+            return T("agent.mlx_worker.bad_token_list")
         if not isinstance(toks, list) or not all(isinstance(t, int) for t in toks) or not toks:
-            return "bad token list"
+            return T("agent.mlx_worker.bad_token_list")
         for layer in cache:
             if self.ops.always_trimmable(layer) and self.ops.offset(layer) != len(toks):
-                return "token count doesn't match the cache"
+                return T("agent.mlx_worker.token_count_doesnt_match_the_cache")
         return None
 
     # --- memory -----------------------------------------------------------
@@ -754,10 +761,7 @@ class Engine:
                 k, reason = S.choose_packer_layers(n_layers, lead_total, pack_total, mt)
                 pack_k = int((hello0.get("range") or [0, 0])[1] or 0)
                 if pack_k and pack_k != k:
-                    raise RuntimeError(
-                        f"auto split wants packer_layers={k} ({reason}), but packer loaded K={pack_k}. "
-                        f"Restart the packer without --split-packer-layers (or pass "
-                        f"--split-packer-layers {k} on both).")
+                    raise RuntimeError(T("agent.mlx_worker.auto_split_packer_mismatch", k=k, reason=reason, pack_k=pack_k))
                 args.split_front_layers = k
                 log(f"auto split: packer_layers={k} ({reason})")
             # ROADMAP #13b: overlay saved/pending packer_layers BEFORE weights load.
@@ -806,8 +810,7 @@ class Engine:
             if ((expected is not None and actual != expected)
                     or hello.get("range") != [0, self.stage.range[0]]
                     or hello.get("n_layers") != self.stage.n_layers):
-                raise RuntimeError(f"Packer 1 ({S.title_from_label(hello.get('stage'))}) doesn't match the lead "
-                                   f"({S.stage_title('head', self.stage.range, self.stage.n_layers)})")
+                raise RuntimeError(T("agent.mlx_worker.packer_1_title_from_label_doesnt", title_from_label=S.title_from_label(hello.get('stage')), stage_title=S.stage_title('head', self.stage.range, self.stage.n_layers)))
             log(f"split lead: {S.stage_title('head', self.stage.range, self.stage.n_layers)} here, "
                 f"{S.title_from_label(hello.get('stage'))} at {args.split_peer}")
             # ROADMAP #13a: auto pipeline chat count when flag/env omitted.
@@ -828,7 +831,7 @@ class Engine:
             if draft:
                 dpath = Path(draft).expanduser().resolve()
                 if not dpath.is_dir():
-                    raise FileNotFoundError(f"split draft model not found: {dpath}")
+                    raise FileNotFoundError(T("agent.mlx_worker.split_draft_model_not_found_dpath", dpath=dpath))
                 pairing = guess_ahead.find_pairing(self.model_dir)
                 if pairing and pairing.get("skip"):
                     pairing = None
@@ -884,9 +887,9 @@ class Engine:
             add_turn_end_stops(self.tokenizer, log=log)
         if getattr(args, "native_mtp", False):
             if getattr(args, "kv_bits", None):
-                raise ValueError("native MTP experiment uses uncompressed caches only")
+                raise ValueError(T("agent.mlx_worker.native_mtp_experiment_uses_uncompressed_caches"))
             if self.client is not None:
-                raise ValueError("native MTP experiment is single-Mini only")
+                raise ValueError(T("agent.mlx_worker.native_mtp_experiment_is_single_mini"))
             from native_mtp import load_head
             self.native_mtp = load_head(self.model_dir, self.model)
             log("native MTP: matching Qwen3.5 head loaded (experimental, greedy only)")
@@ -1053,7 +1056,7 @@ class Engine:
                 self._learn_guess_override = True
         # Shared-prefix: apply learned winner (or stay off) unless flag pinned it.
         if "shared_prefix" not in explicit and r.get("shared_prefix") is not None:
-            self._set_shared_prefix(bool(r["shared_prefix"]), reason="startup winner")
+            self._set_shared_prefix(bool(r["shared_prefix"]), reason=T("agent.mlx_worker.startup_winner"))
         for line in r["reasons"]:
             if line.startswith("learned") or line.startswith("try split") or line.startswith("flag"):
                 log(line)
@@ -1094,7 +1097,7 @@ class Engine:
             "guess_ahead_mode": "native_mtp" if self.native_mtp is not None else "helper",
             "prompt_lookup": {"enabled": bool(self.prompt_lookup_n),
                               "adaptive": bool(self.prompt_lookup_adaptive), "overlap_on": 0.50},
-            "multi_token_verify": "experimental · split draft blocks; Qwen N2 tested, helper slower",
+            "multi_token_verify": T("agent.mlx_worker.experimental_split_draft_blocks_qwen_n2"),
             "two_chats_available": self.client is not None,
             "self_tune": bool(self._learn_enabled),
             "shared_start": bool(self._shared_prefix_on()),
@@ -1305,7 +1308,7 @@ class Engine:
                             f"guess_ahead={self._learn_guess_override}")
                     elif trial.get("name") == "shared_prefix" and "shared_prefix" in w:
                         self._set_shared_prefix(bool(w["shared_prefix"]),
-                                               reason="end trial; back to winner")
+                                               reason=T("agent.mlx_worker.end_trial_back_to_winner"))
                     self._learn_trial = None
 
             explore = out.get("explore")
@@ -1402,7 +1405,7 @@ class Engine:
     def _clone_lead_session(self, src_key: str, dst_key: str):
         src = self.store.sessions.get(src_key)
         if src is None:
-            raise RuntimeError(f"shared-prefix: missing lead src {src_key}")
+            raise RuntimeError(T("agent.mlx_worker.shared_prefix_missing_lead_src_src", src_key=src_key))
         ops = self.store.ops
         new_cache = [ops.from_snapshot(ops.snapshot(c)) for c in src.cache]
         dst = self.store.sessions.get(dst_key)
@@ -1486,7 +1489,7 @@ class Engine:
             if self.client is not None:
                 fr = self.client.call("clone_to", src=reserved, dst=key)[0]
                 if fr.get("error") or fr.get("n") != n:
-                    raise RuntimeError(f"prefix clone refused: {fr}")
+                    raise RuntimeError(T("agent.mlx_worker.prefix_clone_refused_fr", fr=fr))
             self._clone_lead_session(reserved, key)
             s, reused, how = self.s_prepare(key, prompt)
             log(f"agent-prefix hit {n} tokens -> {key}")
@@ -1507,7 +1510,7 @@ class Engine:
             if self.client is not None:
                 fr = self.client.call("clone_to", src=key, dst=reserved)[0]
                 if fr.get("error") or fr.get("n") != n:
-                    raise RuntimeError(f"prefix checkpoint refused: {fr}")
+                    raise RuntimeError(T("agent.mlx_worker.prefix_checkpoint_refused_fr", fr=fr))
             self._clone_lead_session(key, reserved)
             result = (self.split or self.store).save(reserved)
             log(f"agent-prefix stored {n} tokens ({result})")
@@ -2012,7 +2015,7 @@ class Engine:
             if ok:
                 q_ok += 1
         if q_ok < len(guess_ahead.QUALITY_PROBES):
-            result = {"keep": False, "quality": quality, "reason": f"quality {q_ok}/{len(guess_ahead.QUALITY_PROBES)}"}
+            result = {"keep": False, "quality": quality, "reason": T("agent.mlx_worker.quality_q_ok_quality_probes", q_ok=q_ok, quality_probes=len(guess_ahead.QUALITY_PROBES))}
             guess_ahead.set_first_load(self.model_dir, dpath, result)
             log(f"split speculate: first-load quality fail {q_ok}/3; disabling draft")
             self.draft_model = None
@@ -2024,7 +2027,7 @@ class Engine:
             off = self._gate_timed(prompt, max_tokens=40, use_draft=False)
             on = self._gate_timed(prompt, max_tokens=40, use_draft=True)
         except Exception as e:
-            result = {"keep": False, "quality": quality, "reason": f"speed err: {e}"}
+            result = {"keep": False, "quality": quality, "reason": T("agent.mlx_worker.speed_err_e", e=e)}
             guess_ahead.set_first_load(self.model_dir, dpath, result)
             log(f"split speculate: first-load speed err ({e}); disabling draft")
             self.draft_model = None
@@ -2173,7 +2176,7 @@ class Engine:
         if gate is not None:
             gate.begin_request(prompt)
         if not use_draft and not use_pl:
-            raise RuntimeError("speculate called with neither draft nor prompt-lookup")
+            raise RuntimeError(T("agent.mlx_worker.speculate_called_with_neither_draft_nor"))
         num_draft_tokens = int(self.speculate_k)
         def trim_target(n):
             if not n:
@@ -2181,7 +2184,7 @@ class Engine:
             if hasattr(model, "trim_caches"):
                 model.trim_caches(n, cache)
             elif trim_prompt_cache(cache, n) != n:
-                raise RuntimeError("prompt lookup needs rewindable target caches")
+                raise RuntimeError(T("agent.mlx_worker.prompt_lookup_needs_rewindable_target_caches"))
         # RotatingKVCache may already be full after a long prompt; we still
         # run but only single-token steps until/unless trim room appears (it
         # will not for a full sliding window). Hard-fail only when no cache
@@ -2433,10 +2436,10 @@ class Engine:
     def _run_native_mtp(self, key, prompt, body, cancel):
         from native_mtp import generate
         if float(body.get("temperature", 0) or 0) != 0 or body.get("repetition_penalty"):
-            raise ValueError("native MTP experiment requires temperature 0 and no repetition penalty")
+            raise ValueError(T("agent.mlx_worker.native_mtp_experiment_requires_temperature_0"))
         enabled = body.get("native_mtp", True)
         if not isinstance(enabled, bool):
-            raise ValueError("native_mtp must be a boolean")
+            raise ValueError(T("agent.mlx_worker.native_mtp_must_be_a_boolean"))
         t0 = time.time()
         stats, n, ttft = {}, 0, None
         detok = self.tokenizer.detokenizer
@@ -2487,9 +2490,9 @@ class Engine:
             yield from self._run_impl(key, prompt, body, cancel)
             return
         if mode not in ("off", "adaptive"):
-            raise ValueError("prompt_lookup must be off or adaptive")
+            raise ValueError(T("agent.mlx_worker.prompt_lookup_must_be_off_or"))
         if self.client is not None and int(self.pipeline_chats or 1) > 1:
-            raise ValueError("request-local prompt lookup requires serial worker")
+            raise ValueError(T("agent.mlx_worker.request_local_prompt_lookup_requires_serial"))
         saved = (self.prompt_lookup_n, self.prompt_lookup_adaptive, self._adaptive_pl_gate)
         self.prompt_lookup_n = 3 if mode == "adaptive" else 0
         self.prompt_lookup_adaptive = mode == "adaptive"
@@ -2887,7 +2890,7 @@ class Engine:
         mx = self.mx
         model = self.model
         if getattr(self.client, "_inflight", False):
-            raise RuntimeError("pipeline: packer call still in flight at round start")
+            raise RuntimeError(T("agent.mlx_worker.pipeline_packer_call_still_in_flight"))
 
         for slot in decoding:
             if slot.cancel.is_set() and not slot.finished:
@@ -3130,7 +3133,7 @@ class Engine:
         from verify_block import cache_plan
         n_draft = len(drafts)
         if n_pred != n_draft + 1:
-            raise RuntimeError("split verify returned wrong token count")
+            raise RuntimeError(T("agent.mlx_worker.split_verify_returned_wrong_token_count"))
         accepted, finish = 0, None
         while accepted < n_draft and sampled[accepted] == drafts[accepted]:
             finish = self._pipe_emit_token(slot, sampled[accepted], from_draft=True)
@@ -3149,7 +3152,7 @@ class Engine:
             if plan["draft_trim"]:
                 trimmed = trim_prompt_cache(slot.draft_cache, plan["draft_trim"])
                 if trimmed != plan["draft_trim"]:
-                    raise RuntimeError("draft cache cannot rewind speculative block")
+                    raise RuntimeError(T("agent.mlx_worker.draft_cache_cannot_rewind_speculative_block"))
             remap = getattr(self, "draft_remap_t2d", None) or {}
             last = slot.all_tokens[-1]
             ids = [remap.get(last, last)]
@@ -3428,7 +3431,7 @@ def make_handler(engine: "Engine"):
             if self.path.startswith("/caravan/settings"):
                 fn = getattr(engine, "active_settings", None)
                 if fn is None:
-                    return self._json(404, {"error": "no settings on this worker"})
+                    return self._json(404, {"error": T("agent.mlx_worker.no_settings_on_this_worker")})
                 try:
                     return self._json(200, {"active": fn()})
                 except Exception as e:
@@ -3445,12 +3448,12 @@ def make_handler(engine: "Engine"):
                 return self._json(200, engine.call(lambda: {
                     "sessions": engine.store.describe(), "persist": engine.store.persist,
                     "cache_dir": str(engine.store.cache_dir)}))
-            self._json(404, {"error": "not found"})
+            self._json(404, {"error": T("agent.mlx_worker.not_found")})
 
         def do_POST(self):
             body = self._body()
             if not isinstance(body, dict):
-                return self._json(400, {"error": "bad json"})
+                return self._json(400, {"error": T("agent.mlx_worker.bad_json")})
             if self.path.split("?")[0] == "/caravan/sweep":
                 from sweep_control import apply
                 try:
@@ -3466,7 +3469,7 @@ def make_handler(engine: "Engine"):
                 elif raw in (True, 1, "1", "on", "auto", "true", "True"):
                     want = True
                 else:
-                    return self._json(400, {"error": "self_tune must be on or off"})
+                    return self._json(400, {"error": T("agent.mlx_worker.self_tune_must_be_on_or")})
                 try:
                     return self._json(200, engine.call(lambda: engine.set_self_tune(want)))
                 except Exception as e:
@@ -3478,17 +3481,17 @@ def make_handler(engine: "Engine"):
                     return self._json(200, {"dropped": engine.call(lambda: engine.s_drop(keys))})
                 key = body.get("key")
                 if not valid_key(key):
-                    return self._json(400, {"error": "bad key"})
+                    return self._json(400, {"error": T("agent.mlx_worker.bad_key")})
                 if op == "save":
                     return self._json(200, {"result": engine.call(lambda: engine.s_save(key))})
                 if op == "restore":
                     return self._json(200, {"result": engine.call(lambda: engine.s_restore(key))})
-                return self._json(404, {"error": "unknown op"})
+                return self._json(404, {"error": T("agent.mlx_worker.unknown_op")})
             if self.path.startswith("/v1/chat/completions"):
                 return self._complete(body, chat=True)
             if self.path.startswith("/v1/completions"):
                 return self._complete(body, chat=False)
-            self._json(404, {"error": "not found"})
+            self._json(404, {"error": T("agent.mlx_worker.not_found")})
 
         def _complete(self, body, chat):
             key = self.headers.get("X-Caravan-Session")
@@ -3498,7 +3501,7 @@ def make_handler(engine: "Engine"):
                     body, guard_meta = engine.apply_memory_guard(body, session_key=key)
                 except Exception as e:
                     log(f"memory_guard failed open: {e!r}")
-                    guard_meta = {"ok": True, "trimmed_turns": 0, "error": None, "note": f"guard skipped: {e}"}
+                    guard_meta = {"ok": True, "trimmed_turns": 0, "error": None, "note": T("agent.mlx_worker.guard_skipped_e", e=e)}
                 if guard_meta and guard_meta.get("error") and not guard_meta.get("ok", True):
                     return self._json(507, {"error": guard_meta["error"], "memory_guard": guard_meta})
             try:
@@ -3506,7 +3509,7 @@ def make_handler(engine: "Engine"):
             except Exception as e:
                 return self._json(400, {"error": f"prompt: {e}"})
             if len(prompt) < 1:
-                return self._json(400, {"error": "empty prompt"})
+                return self._json(400, {"error": T("agent.mlx_worker.empty_prompt")})
             stream = bool(body.get("stream"))
             rid = f"chatcmpl-{uuid.uuid4().hex[:12]}"
             created = int(time.time())
@@ -3818,9 +3821,9 @@ def front_main(args):
     if counts:
         ranges = S.plan_ranges(S.read_n_layers(model_dir), counts)
         if stage_index is None or not 0 <= stage_index < len(counts) - 1:
-            raise ValueError("packer requires --split-stage-index before the lead")
+            raise ValueError(T("agent.mlx_worker.packer_requires_split_stage_index_before"))
         if bool(stage_index) != bool(getattr(args, "split_upstream", None)):
-            raise ValueError("only middle packers require --split-upstream")
+            raise ValueError(T("agent.mlx_worker.only_middle_packers_require_split_upstream"))
         args.split_front_layers = ranges[stage_index][1]
     elif args.split_front_layers is None:
         n_layers = S.read_n_layers(model_dir)
@@ -3882,7 +3885,7 @@ def front_main(args):
         hello = upstream.call("hello", proto=S.PROTO)[0]
         actual = [tuple(x["range"]) for x in hello.get("stages", [hello])]
         if actual != ranges[:stage_index] or hello.get("n_layers") != stage.n_layers:
-            raise ValueError("upstream pipeline ranges do not match this stage")
+            raise ValueError(T("agent.mlx_worker.upstream_pipeline_ranges_do_not_match"))
         def hidden_forward(header, payload, cache):
             with mx.stream(stream):
                 return stage.middle_forward(header, payload, cache)

@@ -41,7 +41,7 @@ class NeutralGuessAheadText(unittest.TestCase):
         return out
 
     def test_settings_help_names_no_model(self):
-        src = (ROOT / "proxy" / "web_settings.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_settings.py")
         for line in src.splitlines():
             if '"help' in line:
                 self.assertNotRegex(line.lower(), r"qwen|llama|gemma|deepseek|mistral", line)
@@ -54,7 +54,7 @@ class NeutralGuessAheadText(unittest.TestCase):
         self.assertNotIn("Qwen N2", HTML)
 
     def test_generic_wording_and_same_text_on_page(self):
-        src = (ROOT / "proxy" / "web_settings.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_settings.py")
         for needle in ("often faster on code edits", "Gains vary by model and Mac",
                        "first word on long prompts can come a little later"):
             self.assertIn(needle, src)
@@ -149,7 +149,7 @@ class AdoptedGgufCanTuneAndReset(unittest.TestCase):
         self.assertEqual(Path(clear.call_args[0][0]), self.model)
 
     def test_load_saves_entry_for_next_adoption(self):
-        src = (ROOT / "proxy" / "web_workers.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_workers.py")
         self.assertIn('meta["entry"] = json.loads(json.dumps(self._loaded_entry, default=str))', src)
 
 

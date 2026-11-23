@@ -257,7 +257,7 @@ class ApplyTests(unittest.TestCase):
         self.assertIn("Caravan is running", text)
         self.assertEqual(self.workers, [])
         self.assertEqual(self.launchd.actions, [("stop", "web"), ("start", "web")])
-        self.assertEqual((self.repo / "proxy" / "web_server.py").read_text(), "web-v2")
+        self.assertEqual(english_source(self.repo / "proxy" / "web_server.py"), "web-v2")
         self.assertTrue((self.src / "caravan-backup-12345").exists())
         self.assertEqual(text.splitlines()[0], U.OPENING)
         self.assertEqual(text.strip().splitlines()[-1], "Caravan is running")
@@ -272,7 +272,7 @@ class ApplyTests(unittest.TestCase):
         self.assertEqual(
             (self.home / ".caravan" / "web-ui" / "last-model.json").read_bytes(), saved
         )
-        self.assertEqual((self.repo / "agent" / "mlx_worker.py").read_text(), "worker-v2")
+        self.assertEqual(english_source(self.repo / "agent" / "mlx_worker.py"), "worker-v2")
 
     def test_install_failure_restores_old_source_and_restarts(self):
         self.seed(WEB_ONLY_OLD, WEB_ONLY_NEW)
@@ -280,7 +280,7 @@ class ApplyTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn(U.FAILED, text)
         self.assertNotIn("Caravan is running", text)
-        self.assertEqual((self.repo / "proxy" / "web_server.py").read_text(), "web-v1")
+        self.assertEqual(english_source(self.repo / "proxy" / "web_server.py"), "web-v1")
         self.assertFalse((self.src / "caravan-backup-12345").exists())
         self.assertIn(("stop", "web"), self.launchd.actions)
         self.assertIn(("start", "web"), self.launchd.actions)
@@ -295,7 +295,7 @@ class ApplyTests(unittest.TestCase):
         result, text = self.apply(fail_start=True)
         self.assertEqual(result, 1)
         self.assertIn(U.FAILED, text)
-        self.assertEqual((self.repo / "proxy" / "web_server.py").read_text(), "web-v1")
+        self.assertEqual(english_source(self.repo / "proxy" / "web_server.py"), "web-v1")
         self.assertIn("web", self.launchd.loaded)
 
     def test_no_start_still_restarts_a_running_page(self):

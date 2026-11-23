@@ -15,6 +15,13 @@ import time
 from pathlib import Path
 import service_config as SC
 import service_endpoints as SE
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def upstream_ready(plan, client_factory=None):
@@ -27,7 +34,7 @@ def upstream_ready(plan, client_factory=None):
         expected = plan_ranges(sum(plan["counts"]),plan["counts"])[:plan["stage_index"]]
         actual = [tuple(s["range"]) for s in hello.get("stages",[hello])]
         if actual != expected or hello.get("n_layers") != sum(plan["counts"]):
-            raise ValueError("Upstream layers do not match this Mini's saved split. Check all stage plans.")
+            raise ValueError(T("agent.service_runner.upstream_layers_do_not_match_this"))
     finally:
         client.close()
 
@@ -65,7 +72,7 @@ def endpoints_changed(saved, effective):
 def run(path, *, apply=False, stop=None, popen=subprocess.Popen, retry_seconds=15):
     plan = SC.load(path)
     if plan["kind"] != "worker":
-        raise ValueError("agent service config must describe a local worker")
+        raise ValueError(T("agent.service_runner.agent_service_config_must_describe_a"))
     cmd = SC.worker_command(plan)
     print("[Caravan] Local worker plan: "+__import__("shlex").join(cmd),flush=True)
     if not apply:
@@ -96,7 +103,7 @@ def run(path, *, apply=False, stop=None, popen=subprocess.Popen, retry_seconds=1
                 while child.poll() is None and not stop.wait(0.5):
                     if time.monotonic() >= refresh_at:
                         if endpoints_changed(plan,effective):
-                            raise RuntimeError("Thunderbolt address changed; restarting only this agent's own worker")
+                            raise RuntimeError(T("agent.service_runner.thunderbolt_address_changed_restarting_only_this"))
                         refresh_at = time.monotonic() + 10
                 if stop.is_set() and child.poll() is None:
                     child.terminate()

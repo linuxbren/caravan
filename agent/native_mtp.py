@@ -11,6 +11,13 @@ import copy
 import json
 import time
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def head_path(model_dir):
@@ -22,14 +29,14 @@ def validate_pair(target_config, head_config):
     text = target_config.get("text_config", target_config)
     wanted = head_config.get("text_config", {})
     if target_config.get("model_type") != "qwen3_5" or text.get("num_experts", 0):
-        raise ValueError("native MTP currently supports dense Qwen3.5 only")
+        raise ValueError(T("agent.native_mtp.native_mtp_currently_supports_dense_qwen3"))
     if text.get("mtp_num_hidden_layers", 1) != 1 or not text.get("tie_word_embeddings", True):
-        raise ValueError("native MTP needs one head layer and tied embeddings")
+        raise ValueError(T("agent.native_mtp.native_mtp_needs_one_head_layer"))
     for key in ("hidden_size", "vocab_size", "num_hidden_layers", "intermediate_size"):
         if text.get(key) != wanted.get(key):
-            raise ValueError(f"MTP target mismatch: {key}")
+            raise ValueError(T("agent.native_mtp.mtp_target_mismatch_key", key_=key))
     if head_config.get("target_repo") != "Orvena/Orvena-4B-MLX-4bit":
-        raise ValueError("MTP head must name the exact supported target checkpoint")
+        raise ValueError(T("agent.native_mtp.mtp_head_must_name_the_exact"))
     return text
 
 
@@ -40,7 +47,7 @@ def load_head(model_dir, target):
     from mlx_lm.models.qwen3_5 import TextModelArgs, DecoderLayer
     p = head_path(model_dir)
     if p is None:
-        raise ValueError("native MTP weights missing: install matching caravan-mtp head first")
+        raise ValueError(T("agent.native_mtp.native_mtp_weights_missing_install_matching"))
     cfg = json.loads((Path(model_dir) / "config.json").read_text())
     hc = json.loads((p / "config.json").read_text())
     text = validate_pair(cfg, hc)
@@ -50,7 +57,7 @@ def load_head(model_dir, target):
         import hashlib
         actual = hashlib.sha256((Path(model_dir) / "config.json").read_bytes()).hexdigest()
         if actual != marker["target_config_sha256"]:
-            raise ValueError("MTP target config changed since extraction")
+            raise ValueError(T("agent.native_mtp.mtp_target_config_changed_since_extraction"))
     args = replace(TextModelArgs.from_dict(text), num_hidden_layers=1, full_attention_interval=1)
 
     class Head(nn.Module):

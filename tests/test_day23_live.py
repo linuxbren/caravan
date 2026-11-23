@@ -89,7 +89,7 @@ class FreshTuningTests(unittest.TestCase):
     def worker_enabled(self, lead_args, env=None):
         # Execute the production parser's no-learn declarations and the actual
         # worker enable expression without importing MLX on a Linux host.
-        tree=ast.parse((ROOT/'agent/mlx_worker.py').read_text())
+        tree=ast.parse(english_source(ROOT/'agent/mlx_worker.py'))
         ap=argparse.ArgumentParser()
         scope={'os':os,'ap':ap}
         with patch.dict(os.environ, env or {}, clear=True):

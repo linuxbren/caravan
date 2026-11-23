@@ -105,7 +105,7 @@ class ConfigAndDefaultTests(unittest.TestCase):
 
     def test_agent_service_config_is_untouched(self):
         # The listen change lives in the web process so an update keeps a loaded model.
-        source = (ROOT / "agent" / "service_config.py").read_text()
+        source = english_source(ROOT / "agent" / "service_config.py")
         self.assertNotIn("[lan]", source)
         self.assertNotIn("caravan_lan", source)
 
@@ -432,7 +432,7 @@ class ApiLanTests(unittest.TestCase):
             self.assertIn("enabled", body["error"])
 
     def test_api_source_does_not_stop_workers(self):
-        source = (ROOT / "proxy" / "web_server.py").read_text()
+        source = english_source(ROOT / "proxy" / "web_server.py")
         # The LAN handler must not stop a loaded model.
         start = source.index("def _api_lan")
         end = source.index("def _api_picker_placement")

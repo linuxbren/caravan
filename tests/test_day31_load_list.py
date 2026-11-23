@@ -130,7 +130,7 @@ class Refresh(unittest.TestCase):
         self.assertIn("window.refreshCaravanModels()", html[i:i + 400])
 
     def test_server_filters_the_load_list(self):
-        src = (ROOT / "proxy" / "web_server.py").read_text()
+        src = english_source(ROOT / "proxy" / "web_server.py")
         self.assertIn("return loadable_only(rows + self.gguf_entries(", src)
 
 

@@ -13,6 +13,13 @@ import subprocess
 import tempfile
 import threading
 import time
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 LOCK = threading.RLock()
 ID = re.compile(r'^[a-f0-9]{32}$')
@@ -53,24 +60,24 @@ def private(value):
 
 
 def valid_id(value):
-    if not isinstance(value, str) or not ID.fullmatch(value): raise ValueError('Invalid Mac identity.')
+    if not isinstance(value, str) or not ID.fullmatch(value): raise ValueError(T("server.pairing_store.invalid_mac_identity"))
     return value
 
 
 def public_key(value):
     """Accept only a real Ed25519 OpenSSH public-key encoding, never key options."""
-    if not isinstance(value, str) or len(value) > 256: raise ValueError('Invalid public key.')
+    if not isinstance(value, str) or len(value) > 256: raise ValueError(T("server.pairing_store.invalid_public_key"))
     fields = value.strip().split()
-    if len(fields) < 2 or fields[0] != 'ssh-ed25519': raise ValueError('Only Ed25519 public keys are accepted.')
+    if len(fields) < 2 or fields[0] != 'ssh-ed25519': raise ValueError(T("server.pairing_store.only_ed25519_public_keys_are_accepted"))
     try: raw = base64.b64decode(fields[1], validate=True)
-    except Exception: raise ValueError('Invalid public key.') from None
-    if len(raw) != 51 or raw[:19] != b'\x00\x00\x00\x0bssh-ed25519\x00\x00\x00\x20': raise ValueError('Invalid public key.')
+    except Exception: raise ValueError(T("server.pairing_store.invalid_public_key")) from None
+    if len(raw) != 51 or raw[:19] != b'\x00\x00\x00\x0bssh-ed25519\x00\x00\x00\x20': raise ValueError(T("server.pairing_store.invalid_public_key"))
     return 'ssh-ed25519 ' + fields[1]
 
 
 def atomic(path, data, *, backup=True, mode=0o600):
     path = Path(path)
-    if path.is_symlink(): raise ValueError(f'Refusing to replace a linked file: {path.name}. Existing files kept.')
+    if path.is_symlink(): raise ValueError(T("server.pairing_store.refusing_to_replace_a_linked_file", name=path.name))
     path.parent.mkdir(parents=True, exist_ok=True)
     old = path.read_bytes() if path.exists() else None
     data = data.encode() if isinstance(data, str) else data
@@ -91,7 +98,7 @@ def atomic(path, data, *, backup=True, mode=0o600):
 
 
 def read_json(path, default=None):
-    if Path(path).is_symlink(): raise ValueError("Linked pairing state was kept unchanged; review it before continuing.")
+    if Path(path).is_symlink(): raise ValueError(T("server.pairing_store.linked_pairing_state_was_kept_unchanged"))
     try: return json.loads(Path(path).read_text())
     except FileNotFoundError: return default
 
@@ -110,7 +117,7 @@ class Store:
     def private_dir(self,path):
         path=Path(path)
         if path.is_symlink() or any(p.is_symlink() for p in path.parents if p==self.home or p.is_relative_to(self.home)):
-            raise ValueError('A linked Caravan or SSH folder needs review. Existing files kept.')
+            raise ValueError(T("server.pairing_store.a_linked_caravan_or_ssh_folder"))
         path.mkdir(parents=True,exist_ok=True);path.chmod(0o700)
 
     @contextlib.contextmanager
@@ -118,7 +125,7 @@ class Store:
         import fcntl
         with LOCK:
             self.private_dir(self.root)
-            if (self.root/'lock').is_symlink(): raise ValueError('Linked pairing lock was kept unchanged.')
+            if (self.root/'lock').is_symlink(): raise ValueError(T("server.pairing_store.linked_pairing_lock_was_kept_unchanged"))
             with (self.root/'lock').open('a') as file:
                 os.chmod(file.name, 0o600); fcntl.flock(file, fcntl.LOCK_EX)
                 try:
@@ -143,7 +150,7 @@ class Store:
     def make_key(self, peer):
         path = self.root/'keys'/valid_id(peer)
         self.private_dir(path.parent)
-        if path.is_symlink() or path.with_suffix('.pub').is_symlink(): raise ValueError('Linked pairing key was kept for review.')
+        if path.is_symlink() or path.with_suffix('.pub').is_symlink(): raise ValueError(T("server.pairing_store.linked_pairing_key_was_kept_for"))
         if not path.exists():
             subprocess.run(['ssh-keygen','-q','-t','ed25519','-N','','-C','caravan-pair-'+peer,'-f',str(path)], check=True, capture_output=True)
             path.chmod(0o600)
@@ -158,7 +165,7 @@ class Store:
     def authorize(self, peer, key):
         key = public_key(key); marker = self.marker(peer)
         path = self.home/'.ssh/authorized_keys'
-        if path.is_symlink(): raise ValueError('Linked authorized_keys needs a separate migration; nothing changed.')
+        if path.is_symlink(): raise ValueError(T("server.pairing_store.linked_authorized_keys_needs_a_separate"))
         old = path.read_text() if path.exists() else ''
         lines = [line for line in old.splitlines(keepends=True) if not line.rstrip().endswith(marker)]
         text = ''.join(lines)
@@ -189,7 +196,7 @@ class Store:
     def unauthorize(self, peer):
         path = self.home/'.ssh/authorized_keys'; marker = self.marker(peer)
         if not path.exists(): return
-        if path.is_symlink(): raise ValueError('Linked authorized_keys was kept unchanged.')
+        if path.is_symlink(): raise ValueError(T("server.pairing_store.linked_authorized_keys_was_kept_unchanged"))
         old = path.read_text()
         atomic(path, ''.join(line for line in old.splitlines(keepends=True) if not line.rstrip().endswith(marker)))
 
@@ -198,11 +205,11 @@ class Store:
 
     def replace_block(self, path, peer, content=None):
         path = Path(path)
-        if path.is_symlink(): raise ValueError(f'Linked {path.name} was kept unchanged.')
+        if path.is_symlink(): raise ValueError(T("server.pairing_store.linked_name_was_kept_unchanged", name=path.name))
         old = path.read_text() if path.exists() else ''
         pattern = re.compile(r'^# BEGIN caravan-pair:'+valid_id(peer)+r'\n.*?^# END caravan-pair:'+peer+r'\n?', re.M|re.S)
         matches = list(pattern.finditer(old))
-        if len(matches) > 1: raise ValueError('Duplicate pairing blocks; files kept for review.')
+        if len(matches) > 1: raise ValueError(T("server.pairing_store.duplicate_pairing_blocks_files_kept_for"))
         new = pattern.sub('', old)
         if content is not None:
             if new and not new.endswith('\n'): new += '\n'
@@ -214,9 +221,9 @@ class Store:
         rows=[]
         for path,data in changes:
             path=Path(path)
-            if not path.is_relative_to(self.home): raise ValueError('Pairing needs its config inside this account’s home folder. Use the developer guide for external configs.')
+            if not path.is_relative_to(self.home): raise ValueError(T("server.pairing_store.pairing_needs_its_config_inside_this"))
             if path.is_symlink() or any(p.is_symlink() for p in path.parents if p==self.home or p.is_relative_to(self.home)):
-                raise ValueError('A linked pairing/config path needs review. Existing files kept.')
+                raise ValueError(T("server.pairing_store.a_linked_pairing_config_path_needs"))
             old=path.read_bytes() if path.exists() else None
             encoded=data.encode() if isinstance(data,str) else data
             rows.append({'path':str(path),'old':None if old is None else base64.b64encode(old).decode(),
@@ -235,11 +242,11 @@ class Store:
         if rows is None: return
         for row in rows:
             path=Path(row['path'])
-            if not path.is_relative_to(self.home) or path.is_symlink(): raise ValueError('Pairing recovery needs review; files kept.')
+            if not path.is_relative_to(self.home) or path.is_symlink(): raise ValueError(T("server.pairing_store.pairing_recovery_needs_review_files_kept"))
             current=path.read_bytes() if path.exists() else None
             old=None if row['old'] is None else base64.b64decode(row['old'])
             if current!=old and (current is None or hashlib.sha256(current).hexdigest()!=row['new_hash']):
-                raise ValueError('A pairing file changed outside Caravan. Review its backup before trying again.')
+                raise ValueError(T("server.pairing_store.a_pairing_file_changed_outside_caravan"))
         for row in reversed(rows):
             path=Path(row['path'])
             if row['old'] is None:
@@ -249,10 +256,10 @@ class Store:
 
     def block_text(self,path,peer,content=None,*,prepend=False):
         path=Path(path)
-        if path.is_symlink(): raise ValueError(f'Linked {path.name} was kept unchanged.')
+        if path.is_symlink(): raise ValueError(T("server.pairing_store.linked_name_was_kept_unchanged", name=path.name))
         old=path.read_text() if path.exists() else ''
         pattern=re.compile(r'^# BEGIN caravan-pair:'+valid_id(peer)+r'\n.*?^# END caravan-pair:'+peer+r'\n?',re.M|re.S)
-        if len(list(pattern.finditer(old)))>1: raise ValueError('Duplicate pairing blocks; files kept for review.')
+        if len(list(pattern.finditer(old)))>1: raise ValueError(T("server.pairing_store.duplicate_pairing_blocks_files_kept_for"))
         text=pattern.sub('',old)
         if content is not None:
             if prepend: text=self.block(peer,content)+text
@@ -263,29 +270,29 @@ class Store:
         try: import tomllib
         except ImportError: import tomli as tomllib
         valid_id(peer); alias='caravan-'+peer
-        if not re.fullmatch(r'[A-Za-z0-9_.:%-]+',endpoint): raise ValueError('Invalid private endpoint.')
-        if not private(endpoint) and not endpoint.endswith('.local'): raise ValueError('Use a private address or the Mac’s local Bonjour name.')
+        if not re.fullmatch(r'[A-Za-z0-9_.:%-]+',endpoint): raise ValueError(T("server.pairing_store.invalid_private_endpoint"))
+        if not private(endpoint) and not endpoint.endswith('.local'): raise ValueError(T("server.pairing_store.use_a_private_address_or_the"))
         user=metadata['user'];repo=metadata['repo']
-        if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',user): raise ValueError('Unsupported Mac account name.')
-        if not isinstance(repo,str) or not repo.startswith('/') or any(x in repo for x in '\r\n\x00'): raise ValueError('Invalid source path.')
+        if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',user): raise ValueError(T("server.pairing_store.unsupported_mac_account_name"))
+        if not isinstance(repo,str) or not repo.startswith('/') or any(x in repo for x in '\r\n\x00'): raise ValueError(T("server.pairing_store.invalid_source_path"))
         key=public_key(metadata['host_key']);ssh_port=int(metadata.get('ssh_port',22))
-        if not 1<=ssh_port<=65535: raise ValueError('Invalid SSH port.')
+        if not 1<=ssh_port<=65535: raise ValueError(T("server.pairing_store.invalid_ssh_port"))
         raw=self.config.read_text() if self.config.exists() else ''
         cfg=tomllib.loads(raw) if raw else {};nodes=cfg.get('web',{}).get('nodes',{})
         if not nodes:
-            initial=list(baseline) or [{'id':'local','label':'My Mac','host':'local','role':'lead','order':0}]
+            initial=list(baseline) or [{'id':'local','label':T("server.pairing_store.my_mac"),'host':'local','role':'lead','order':0}]
             for i,node in enumerate(initial):
                 ident=node.get('id','existing'+str(i))
-                if not re.fullmatch(r'[A-Za-z0-9_-]+',ident): raise ValueError('Existing inventory needs review; nothing guessed.')
+                if not re.fullmatch(r'[A-Za-z0-9_-]+',ident): raise ValueError(T("server.pairing_store.existing_inventory_needs_review_nothing_guessed"))
                 raw+='\n[web.nodes.'+ident+']\n'
                 for name in ('label','host','role','ssh','repo','peer','listen','upstream','order'):
                     if node.get(name) is not None: raw+=name+' = '+json.dumps(node[name])+'\n'
             nodes=tomllib.loads(raw)['web']['nodes']
         ident='paired_'+peer
         order=max([int(n.get('order',0)) for n in nodes.values()]+[0])+1
-        label=str(metadata.get('name') or 'Mac '+str(order+1))[:80]
+        label=str(metadata.get('name') or T("server.pairing_store.mac_v", v=str(order+1)))[:80]
         iface=metadata.get('tb_interface');data_host=metadata.get('data_host') or endpoint
-        if not isinstance(data_host,str) or not private(data_host): raise ValueError('The model connection must stay on your private network or cable.')
+        if not isinstance(data_host,str) or not private(data_host): raise ValueError(T("server.pairing_store.the_model_connection_must_stay_on"))
         if iface and isinstance(iface,str) and re.fullmatch(r'en\d+',iface):
             data='ssh+tb://'+alias+'/'+iface+':5560';listen='tb://'+iface+':5560'
         else:
@@ -297,7 +304,7 @@ class Store:
         known=self.root/'known_hosts'/peer
         def quote(path):
             text=str(path)
-            if any(c in text for c in '\r\n\x00'): raise ValueError('Invalid SSH path.')
+            if any(c in text for c in '\r\n\x00'): raise ValueError(T("server.pairing_store.invalid_ssh_path"))
             return '"'+text.replace('\\','\\\\').replace('"','\\"')+'"'
         ssh='\n'.join([f'Host {alias}',f'    HostName {endpoint}','    AddressFamily inet',f'    Port {ssh_port}',f'    User {user}',
                        f'    IdentityFile {quote(key_path)}','    IdentitiesOnly yes','    IdentityAgent none',
@@ -325,7 +332,7 @@ class Store:
         for path,text in changes:
             if path==self.config: tomllib.loads(text)
         paths=(self.root/'known_hosts'/peer,self.root/'ssh'/peer,self.root/'keys'/peer,(self.root/'keys'/peer).with_suffix('.pub'))
-        if any(path.is_symlink() for path in paths): raise ValueError('Linked pairing key was kept for review.')
+        if any(path.is_symlink() for path in paths): raise ValueError(T("server.pairing_store.linked_pairing_key_was_kept_for"))
         self._transaction(changes)
         for path in paths:
             if path.exists(): path.unlink()

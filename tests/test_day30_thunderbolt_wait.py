@@ -20,6 +20,7 @@ sys.path.insert(0, str(REPO / "proxy"))
 
 import peer_route as PR  # noqa: E402
 import link_upgrade as LU  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 WIFI_L = {"dev": "en1", "kind": "wifi", "ip": "192.168.1.79", "prefix": 24}
 WIFI_R = {"dev": "en1", "kind": "wifi", "ip": "192.168.1.38", "prefix": 24}
@@ -146,7 +147,7 @@ class WaitForThunderbolt(unittest.TestCase):
         self.assertTrue(PR.thunderbolt_seen_at("peer"))
 
     def test_worker_uses_the_wait(self):
-        src = (REPO / "proxy" / "web_workers.py").read_text()
+        src = english_source(REPO / "proxy" / "web_workers.py")
         self.assertIn("wait_thunderbolt=True, on_wait=_tb_wait", src)
         self.assertIn("Waiting for the Thunderbolt link to", src)
 
@@ -221,7 +222,7 @@ class LateThunderboltNote(unittest.TestCase):
         self.assertIsNone(self.mgr.state["link_note"])
 
     def test_server_starts_the_monitor(self):
-        self.assertIn("_LU.Monitor(app.mgr)", (REPO / "proxy" / "web_server.py").read_text())
+        self.assertIn("_LU.Monitor(app.mgr)", english_source(REPO / "proxy" / "web_server.py"))
 
 
 if __name__ == "__main__":

@@ -6,6 +6,13 @@ import json
 import math
 import time
 import tuned_settings as TS
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # UI key, worker key, requires a reload. There is no Cartesian-product search.
 KNOBS = (("guess_ahead", "guess_ahead", False),
@@ -27,32 +34,32 @@ def validate(name, value):
     """Reject malformed controls before mutating the worker or its store."""
     if name in ("guess_ahead", "shared_prefix", "keepalive", "native_mtp", "adaptive_lookup"):
         if not isinstance(value, bool):
-            raise ValueError(name + " needs a boolean")
+            raise ValueError(name + T("agent.optimize_schedule.needs_a_boolean"))
     elif name in ("kv_bits", "pipeline_chats", "packer_layers"):
         if isinstance(value, bool) or not isinstance(value, int):
-            raise ValueError(name + " needs an integer")
+            raise ValueError(name + T("agent.optimize_schedule.needs_an_integer"))
         if (name == "kv_bits" and value not in (16, 8, 4) or
                 name == "pipeline_chats" and value not in (1, 2) or
                 name == "packer_layers" and value < 1):
             raise ValueError("invalid " + name)
     elif name == "fuse_kernels":
         if value not in ("off", "on"):
-            raise ValueError("invalid fuse_kernels")
+            raise ValueError(T("agent.optimize_schedule.invalid_fuse_kernels"))
     else:
-        raise ValueError("unknown option " + str(name))
+        raise ValueError(T("agent.optimize_schedule.unknown_option_name", name=str(name)))
     return value
 
 
 def fingerprint(nodes, *, split):
     """Stable identity for every participating Mini; never use free RAM/load."""
     if not nodes or any(n.get("offline") or n.get("error") for n in nodes):
-        raise ValueError("hardware information unavailable; cannot reuse loss records")
+        raise ValueError(T("agent.optimize_schedule.hardware_information_unavailable_cannot_reuse_lo"))
     parts = []
     for n in nodes:
         part = {k: n.get(k) for k in ("id", "host", "role", "peer", "chip", "cpus", "machine")}
         part["ram_gb"] = (n.get("ram") or {}).get("total_gb")
         if not part["chip"] or not part["ram_gb"]:
-            raise ValueError("hardware chip/RAM information unavailable")
+            raise ValueError(T("agent.optimize_schedule.hardware_chip_ram_information_unavailable"))
         parts.append(part)
     payload = {"split": bool(split), "nodes": sorted(parts, key=lambda n: str(n["id"]))}
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
@@ -110,7 +117,7 @@ def schedule(entry, settings, active, fp, *, n_layers=None):
               or name in exp_pin and settings.get(exp_pin[name], "auto") != "auto"):
             item["skip"] = "pinned"
         elif base.get(name) is None:
-            item["skip"] = "no baseline"
+            item["skip"] = T("agent.optimize_schedule.no_baseline")
         else:
             inc = base[name]
             if name == "kv_bits":
@@ -134,7 +141,7 @@ def schedule(entry, settings, active, fp, *, n_layers=None):
             if alternatives:
                 item["challenger"] = alternatives[0]
             else:
-                item["skip"] = "already lost or blocked"
+                item["skip"] = T("agent.optimize_schedule.already_lost_or_blocked")
         if item["skip"]:
             item["state"] = "skipped"
         items.append(item)
@@ -145,7 +152,7 @@ def pick(inc_scores, challenger_scores):
     """Incomplete/invalid arms can never publish a winner or a loss."""
     if (not inc_scores or len(inc_scores) != len(challenger_scores) or
             any(not math.isfinite(x) or x <= 0 for x in inc_scores + challenger_scores)):
-        raise ValueError("incomplete or invalid A/B measurements")
+        raise ValueError(T("agent.optimize_schedule.incomplete_or_invalid_a_b_measurements"))
     return sum(challenger_scores) >= sum(inc_scores) * TS.SWITCH_MARGIN
 
 
@@ -154,7 +161,7 @@ def commit(entry, fp, name, winner, lost=None, measurements=None):
     if lost is not None:
         validate(name, lost)
     if not isinstance(fp, str) or not fp or len(fp) > 128:
-        raise ValueError("hardware fingerprint required")
+        raise ValueError(T("agent.optimize_schedule.hardware_fingerprint_required"))
     entry.setdefault("winner", {})[name] = winner
     box = entry.setdefault("optimize_hardware", {}).setdefault(fp, {"losses": [], "results": []})
     if lost is not None:

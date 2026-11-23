@@ -18,6 +18,13 @@ import socket
 import subprocess
 import threading
 import time
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 TARGET = re.compile(r"(?:[A-Za-z_][A-Za-z0-9_.-]*@)?[A-Za-z0-9][A-Za-z0-9_.-]*\Z")
 DEVICE = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,15}\Z")
@@ -70,7 +77,7 @@ def collect_local(destinations=(), *, run=subprocess.run):
     def read(argv):
         r = run(argv, capture_output=True, text=True, timeout=5)
         if r.returncode:
-            raise RuntimeError('System interface/route inspection failed')
+            raise RuntimeError(T("server.thunderbolt_discovery.system_interface_route_inspection_failed"))
         return r.stdout
     ports = read(['/usr/sbin/networksetup', '-listallhardwareports'])
     config = read(['/sbin/ifconfig', '-a'])
@@ -88,13 +95,13 @@ def collect_local(destinations=(), *, run=subprocess.run):
 
 def normalized_inventory(data):
     if not isinstance(data, dict) or not isinstance(data.get('interfaces'), list) or not isinstance(data.get('routes'), list):
-        raise ValueError('Invalid trusted-node inventory')
+        raise ValueError(T("server.thunderbolt_discovery.invalid_trusted_node_inventory"))
     interfaces = []
     for entry in data['interfaces']:
         if (not isinstance(entry, dict) or not DEVICE.fullmatch(str(entry.get('interface') or ''))
                 or entry.get('kind') not in ('thunderbolt', 'tb-only-bridge')
                 or not isinstance(entry.get('addresses'), list)):
-            raise ValueError('Invalid interface inventory')
+            raise ValueError(T("server.thunderbolt_discovery.invalid_interface_inventory"))
         addresses = sorted(set(filter(None, (private_ipv4(v) for v in entry['addresses']))))
         if addresses:
             interfaces.append(dict(interface=entry['interface'], kind=entry['kind'],
@@ -102,7 +109,7 @@ def normalized_inventory(data):
     routes = []
     for route in data['routes']:
         if not isinstance(route, dict):
-            raise ValueError('Invalid route inventory')
+            raise ValueError(T("server.thunderbolt_discovery.invalid_route_inventory"))
         address = private_ipv4(route.get('address'))
         interface = route.get('interface')
         if address:
@@ -117,7 +124,7 @@ def inspect_node(node, destinations=(), *, run=subprocess.run):
         return collect_local(destinations, run=run)
     target = str(node.get('ssh') or node.get('host') or '')
     if not TARGET.fullmatch(target):
-        raise ValueError('Configured SSH target is invalid')
+        raise ValueError(T("server.thunderbolt_discovery.configured_ssh_target_is_invalid"))
     repo = str(node.get('repo') or '~/.caravan/src/caravan')
     # JSON-encoded data is passed as Python literals, then shell-quoted once.
     code = ('import sys,json;from pathlib import Path;'
@@ -129,7 +136,7 @@ def inspect_node(node, destinations=(), *, run=subprocess.run):
                   '-o', 'ConnectTimeout=5', target, command],
                  capture_output=True, text=True, timeout=max(15, 12 + len(destinations)*5))
     if result.returncode:
-        raise RuntimeError('Trusted SSH inspection failed; no trust/address fallback')
+        raise RuntimeError(T("server.thunderbolt_discovery.trusted_ssh_inspection_failed_no_trust"))
     return normalized_inventory(json.loads(result.stdout))
 
 
@@ -158,18 +165,18 @@ def candidate_graph(nodes):
                         edges.append({'source': source['id'], 'target': target['id'], 'address': address,
                                       'source_address':candidates[0],
                                       'source_interface': routes[address], 'target_interface': interface['interface'],
-                                      'evidence': 'trusted inventory + source route', 'status': 'unverified',
-                                      'reason':'Not actively validated', 'usable_for_routing': False})
+                                      'evidence': T("server.thunderbolt_discovery.trusted_inventory_source_route"), 'status': 'unverified',
+                                      'reason':T("server.thunderbolt_discovery.not_actively_validated"), 'usable_for_routing': False})
     return {'node_ids': [n['id'] for n in nodes], 'edges': edges,
             'directed': True, 'automatic_routing': False, 'ambiguous_addresses': ambiguous,
-            'warning': 'Unverified candidates until explicit validation. No route changes; model protocol/throughput and cable adjacency are not tested.'}
+            'warning': T("server.thunderbolt_discovery.unverified_candidates_until_explicit_validation")}
 
 
 def discover(configured, *, inspect=inspect_node):
     """Two bounded-concurrency read-only passes: inventory, then source routes."""
     ids = [str(n.get('id') or '') for n in configured]
     if len(set(ids)) != len(ids) or any(not re.fullmatch(r'[A-Za-z0-9_-]+', nid) for nid in ids):
-        raise ValueError('Configured Mini IDs must be unique and valid')
+        raise ValueError(T("server.thunderbolt_discovery.configured_mini_ids_must_be_unique"))
     def parallel(fn):
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, max(1, len(configured)))) as pool:
             return list(pool.map(fn, configured))
@@ -198,7 +205,7 @@ def discover(configured, *, inspect=inspect_node):
         return out
     snapshots = parallel(routes)
     return {'observed_at': time.time(), 'read_only': True, 'nodes': snapshots, 'graph': candidate_graph(snapshots),
-            'scope': 'Configured trusted Minis only; no scanning, probes, route changes or automatic loads.'}
+            'scope': T("server.thunderbolt_discovery.configured_trusted_minis_only_no_scanning")}
 
 
 class Controller:
@@ -236,7 +243,7 @@ class Controller:
             if (opt_in is not True or self.cached is None or self.key!=json.dumps(configured,sort_keys=True)
                     or time.monotonic()>=self.until or not validation_id
                     or validation_id!=self.cached.get('validation_id')):
-                raise ValueError('Opt in and validate the current trusted graph first; stale/missing graph is rejected')
+                raise ValueError(T("server.thunderbolt_discovery.opt_in_and_validate_the_current"))
             return suggested_plan(configured,self.cached)
 
 
@@ -250,7 +257,7 @@ def fresh_snapshot(snapshot, *, now=None):
     for edge in edges:
         checked=edge.get('checked_at')
         if edge.get('status')=='verified' and (not isinstance(checked,(int,float)) or not 0<=now-checked<=VERIFIED_TTL):
-            edge.update(status='unverified',reason='Validation expired or clock mismatch; validate again before preview',identity_verified=False)
+            edge.update(status='unverified',reason=T("server.thunderbolt_discovery.validation_expired_or_clock_mismatch_validate"),identity_verified=False)
     if 'graph' in out:
         out['graph']['validation_counts']={state:sum(e.get('status')==state for e in edges) for state in ('verified','unverified','failed')}
     return out
@@ -264,11 +271,11 @@ def validate_graph(snapshot, configured, *, probe=None):
         number,edge=pair
         result=dict(edge,status='unverified',usable_for_routing=False)
         if number>=MAX_PROBES:
-            return dict(result,reason='Per-inspection probe budget exhausted; not guessed')
+            return dict(result,reason=T("server.thunderbolt_discovery.per_inspection_probe_budget_exhausted_not"))
         try:
             identity=P.identity_for(config[edge['target']],nodes[edge['target']])
             observed=probe(config[edge['source']],edge,identity)
-            if observed.get('status') not in ('verified','unverified','failed'):raise ValueError('Invalid validation status')
+            if observed.get('status') not in ('verified','unverified','failed'):raise ValueError(T("server.thunderbolt_discovery.invalid_validation_status"))
             if observed['status']=='verified':
                 latency=observed.get('latency_ms')
                 if (observed.get('identity_verified') is not True or observed.get('reachable') is not True
@@ -276,13 +283,13 @@ def validate_graph(snapshot, configured, *, probe=None):
                         or isinstance(observed.get('bound_ifindex'),bool) or observed['bound_ifindex']<=0
                         or observed.get('source_address')!=edge['source_address'] or not isinstance(latency,(int,float))
                         or isinstance(latency,bool) or not math.isfinite(latency) or latency<0):
-                    raise ValueError('Incomplete authenticated link evidence')
+                    raise ValueError(T("server.thunderbolt_discovery.incomplete_authenticated_link_evidence"))
             # Probe output may add evidence, never redefine graph endpoints.
             allowed=('status','reason','identity_verified','reachable','latency_ms','tcp_connect_ms','checked_at',
                      'method','latency_kind','identity_alias','port','peer_hostname','elapsed_ms','transport_bound','bound_ifindex')
             result.update({k:observed[k] for k in allowed if k in observed})
         except (OSError,ValueError,TypeError,KeyError,RuntimeError,subprocess.SubprocessError):
-            result.update(status='unverified',reason='Trusted bound validation unavailable; no fallback')
+            result.update(status='unverified',reason=T("server.thunderbolt_discovery.trusted_bound_validation_unavailable_no_fallback"))
         return result
     # Spend the bounded budget on existing-order pipeline requirements first,
     # not an arbitrary all-to-all prefix that could omit a successor edge.
@@ -296,16 +303,16 @@ def validate_graph(snapshot, configured, *, probe=None):
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
         out['graph']['edges']=list(pool.map(validate,enumerate(candidates)))
     out.update(validated_at=time.time(),validation_id=uuid.uuid4().hex,validation_ttl_s=VERIFIED_TTL)
-    out['graph']['warning']='Verified means existing SSH host key, nonce, hostname and TCP22 over a kernel-bound private TB interface; not MLX health/throughput or direct cable adjacency. No routing changes.'
-    out['scope']='Explicit bounded trusted-link validation only. No scans, enrollment, model/socket interruption or automatic routes.'
+    out['graph']['warning']=T("server.thunderbolt_discovery.verified_means_existing_ssh_host_key")
+    out['scope']=T("server.thunderbolt_discovery.explicit_bounded_trusted_link_validation_only")
     return out
 
 
 def endpoint(value):
-    if not isinstance(value,str) or value.count(':')!=1:raise ValueError('Existing private IPv4 peer:port required; no guessed port')
+    if not isinstance(value,str) or value.count(':')!=1:raise ValueError(T("server.thunderbolt_discovery.existing_private_ipv4_peer_port_required"))
     address,port=value.split(':')
     if not private_ipv4(address) or not port.isdigit() or not 1<=int(port)<=65535:
-        raise ValueError('Existing private IPv4 peer:port required; no guessed port')
+        raise ValueError(T("server.thunderbolt_discovery.existing_private_ipv4_peer_port_required"))
     return address,int(port)
 
 
@@ -320,12 +327,12 @@ def configured_endpoint(value, node, inventory):
     if spec is None:return endpoint(value)
     target,interface,port=spec
     if target and target!=(node.get('ssh') or node.get('host')):
-        raise ValueError('Endpoint SSH identity differs from configured Mini; no fallback')
+        raise ValueError(T("server.thunderbolt_discovery.endpoint_ssh_identity_differs_from_configured"))
     matches=[i for i in inventory['interfaces'] if i['interface']==interface]
     if len(matches)!=1 or len(matches[0]['addresses'])!=1:
-        raise ValueError('Configured TB interface needs one current private address')
+        raise ValueError(T("server.thunderbolt_discovery.configured_tb_interface_needs_one_current"))
     address=private_ipv4(matches[0]['addresses'][0])
-    if not address:raise ValueError('Configured TB interface address is not private')
+    if not address:raise ValueError(T("server.thunderbolt_discovery.configured_tb_interface_address_is_not"))
     return address,port
 
 
@@ -340,14 +347,14 @@ def suggested_plan(configured, snapshot, *, now=None):
     now=time.time() if now is None else now
     if (not snapshot.get('validation_id') or not isinstance(snapshot.get('validated_at'),(int,float))
             or not 0<=now-snapshot['validated_at']<=VERIFIED_TTL):
-        raise ValueError('Validated graph expired or missing; no fallback')
+        raise ValueError(T("server.thunderbolt_discovery.validated_graph_expired_or_missing_no"))
     ids=[n['id'] for n in configured]
     if len(ids)<2 or len(set(ids))!=len(ids) or set(ids)!=set(snapshot['graph']['node_ids']):
-        raise ValueError('Graph must cover the exact configured Minis')
+        raise ValueError(T("server.thunderbolt_discovery.graph_must_cover_the_exact_configured"))
     if len([n for n in configured if n.get('role')=='lead'])!=1 or any(n.get('role') not in ('lead','packer') for n in configured):
-        raise ValueError('Exactly one configured lead and explicit packer roles required')
+        raise ValueError(T("server.thunderbolt_discovery.exactly_one_configured_lead_and_explicit"))
     if any(n.get('offline') or n.get('error') for n in snapshot['nodes']):
-        raise ValueError('Every configured Mini needs current trusted inventory')
+        raise ValueError(T("server.thunderbolt_discovery.every_configured_mini_needs_current_trusted"))
     inventory={n['id']:n for n in snapshot['nodes']}
     ordered=pipeline_order(configured);lead=ordered[-1];rows=[];used=[];same=True;previous=None
     edges=[e for e in snapshot['graph']['edges'] if e.get('status')=='verified'
@@ -361,24 +368,24 @@ def suggested_plan(configured, snapshot, *, now=None):
         for source in required:
             options={e['address'] for e in edges if e['source']==source and e['target']==node['id']}
             addresses=options if addresses is None else addresses & options
-        if not addresses:raise ValueError('No fresh verified common TB peer address for '+node['id']+' from lead and successor; no fallback')
+        if not addresses:raise ValueError(T("server.thunderbolt_discovery.no_fresh_verified_common_tb_peer", id=node['id']))
         if old_ip in addresses:chosen=old_ip
         elif len(addresses)==1:chosen=next(iter(addresses))
-        else:raise ValueError('Ambiguous verified TB addresses for '+node['id']+'; no automatic selection')
+        else:raise ValueError(T("server.thunderbolt_discovery.ambiguous_verified_tb_addresses_for_id", id=node['id']))
         selected=[]
         for source in sorted(required):
             matches=[e for e in edges if e['source']==source and e['target']==node['id'] and e['address']==chosen]
-            if len(matches)!=1:raise ValueError('Ambiguous directed link evidence; no automatic selection')
+            if len(matches)!=1:raise ValueError(T("server.thunderbolt_discovery.ambiguous_directed_link_evidence_no_automatic"))
             selected.append(matches[0]);used.append(copy.deepcopy(matches[0]))
         interfaces={e['target_interface'] for e in selected}
-        if len(interfaces)!=1:raise ValueError('Peer interface is ambiguous')
+        if len(interfaces)!=1:raise ValueError(T("server.thunderbolt_discovery.peer_interface_is_ambiguous"))
         peer=chosen+':'+str(port)
         row={'id':node['id'],'role':'packer','peer':peer,'listen':peer,'upstream_peer':previous,
              'interface':next(iter(interfaces))}
         old_listen=configured_endpoint(node.get('listen') or node.get('peer'),node,inventory[node['id']])
         same=same and (old_ip,port)==(chosen,port) and old_listen==(chosen,port)
         if node.get('upstream_peer'):
-            if i==0:raise ValueError('First packer must not have an upstream peer')
+            if i==0:raise ValueError(T("server.thunderbolt_discovery.first_packer_must_not_have_an"))
             prior=ordered[i-1]
             upstream=configured_endpoint(node['upstream_peer'],prior,inventory[prior['id']])
             same=same and upstream==endpoint(previous)
@@ -389,4 +396,4 @@ def suggested_plan(configured, snapshot, *, now=None):
             'validation_id':snapshot['validation_id'],'expires_at':min(e['checked_at']+VERIFIED_TTL for e in used),
             'order':[n['id'] for n in ordered],'nodes':rows,'required_edges':used,
             'matches_current_config':bool(same),'matches_live':None,
-            'warning':'Preview only. No apply endpoint. Preserve ports/order; no Wi-Fi/Tailscale fallback. SSH validation does not prove MLX ports or guarantee runtime interface pinning. Future apply needs explicit consent, fresh identity checks and strictly bound worker transports.'}
+            'warning':T("server.thunderbolt_discovery.preview_only_no_apply_endpoint_preserve")}

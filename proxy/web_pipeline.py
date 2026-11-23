@@ -10,12 +10,19 @@ import shlex
 import subprocess
 import time
 from pathlib import Path
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 
 def _marker(node):
     nid = str(node.get("id") or "")
     if not re.fullmatch(r"[A-Za-z0-9_-]+", nid):
-        raise ValueError("Mini IDs must contain only letters, numbers, _ and -")
+        raise ValueError(T("server.web_pipeline.mini_ids_must_contain_only_letters"))
     return f"~/.caravan/web-ui/pipeline-{nid}"
 
 
@@ -24,17 +31,17 @@ def stage_args(node, counts, index, previous=None):
     from mlx_split import plan_ranges
     plan_ranges(sum(counts), counts)
     if not node.get("model_path"):
-        raise ValueError(f"model folder unknown on {node.get('label') or node['id']}")
+        raise ValueError(T("server.web_pipeline.model_folder_unknown_on_v", v=node.get('label') or node['id']))
     args = ["--model", node["model_path"], "--split-counts", ",".join(map(str, counts)),
             "--no-split-draft", "--no-learn", "--split-pipeline-chats", "1"]
     if index == len(counts) - 1:
         if not previous:
-            raise ValueError("lead needs a previous packer")
+            raise ValueError(T("server.web_pipeline.lead_needs_a_previous_packer"))
         args += ["--split-role", "lead", "--split-peer", previous]
     else:
         peer = node.get("peer")
         if not peer or ":" not in peer:
-            raise ValueError(f"set a reachable HOST:PORT peer for {node['id']}")
+            raise ValueError(T("server.web_pipeline.set_a_reachable_host_port_peer", id=node['id']))
         args += ["--split-role", "packer", "--split-stage-index", str(index),
                  "--split-listen", node.get("listen") or peer]
         if index:
@@ -59,7 +66,7 @@ def stop_pipeline(mgr):
             cmd = mgr._remote_stop_command(node["repo"], marker, listen=listen)
             r = mgr._ssh_node(node, cmd, timeout=30)
             if r.returncode:
-                raise RuntimeError(f"could not stop pipeline stage on {node['id']}: {r.stderr}")
+                raise RuntimeError(T("server.web_pipeline.could_not_stop_pipeline_stage_on", id=node['id'], stderr=r.stderr))
     path.unlink()
     (mgr.state_dir / "pipeline-balance.json").unlink(missing_ok=True)
     return True
@@ -135,7 +142,7 @@ def resolve_nodes(mgr, nodes):
             spec=SE.parse(value)
             if spec and spec[0] is None and not mgr._node_is_local(n):
                 target=n.get("ssh") or n.get("host")
-                if not target:raise ValueError("Remote Thunderbolt interface needs a trusted SSH control host")
+                if not target:raise ValueError(T("server.web_pipeline.remote_thunderbolt_interface_needs_a_trusted"))
                 value=f"ssh+tb://{target}/{spec[1]}:{spec[2]}"
             n[key]=SE.resolve(value)
         out.append(n)
@@ -151,7 +158,7 @@ def load_pipeline(mgr, entry, settings):
     check_cancel()
     plan_ranges(sum(counts), counts)
     if len(nodes) != len(counts) or nodes[-1].get("role") != "lead" or not mgr._node_is_local(nodes[-1]):
-        raise ValueError("pipeline needs one local lead last and one layer count per Mini")
+        raise ValueError(T("server.web_pipeline.pipeline_needs_one_local_lead_last"))
     commands = []
     previous = None
     for i, node in enumerate(nodes):
@@ -167,7 +174,7 @@ def load_pipeline(mgr, entry, settings):
             number = int((node.get("listen") or node.get("peer")).rsplit(":",1)[1]) if i < len(nodes)-1 else mgr.lead_port
             reserved = SC.managed_worker_port(Path.home(), number)
             if reserved:
-                raise ValueError(f"Auto-start service {reserved['name']} owns this worker; uninstall that job before using web-managed loads")
+                raise ValueError(T("server.web_pipeline.auto_start_service_name_owns_this", name=reserved['name']))
             check_local_shards(Path(node["model_path"]).expanduser(),
                                "head" if i == len(nodes)-1 else "front", counts=counts, stage_index=i)
         else:
@@ -185,7 +192,7 @@ def load_pipeline(mgr, entry, settings):
                                                   int((node.get("listen") or node["peer"]).rsplit(":",1)[1]) ])))
             r = mgr._ssh_node(node, cmd, timeout=60)
             if r.returncode:
-                raise ValueError(f"{node['id']} files not ready: {(r.stderr or r.stdout)[-800:]}")
+                raise ValueError(T("server.web_pipeline.id_files_not_ready_v", id=node['id'], v=(r.stderr or r.stdout)[-800:]))
     mgr._set(status="stopping", error=None, model_id=entry["id"], model_name=entry["name"], progress=[], split=True)
     mgr._kill_gguf()
     mgr._kill_lead()
@@ -219,7 +226,7 @@ def load_pipeline(mgr, entry, settings):
                        + " > " + mgr._remote_path(log) + " 2>&1 & echo $! > " + mgr._remote_path(marker + ".pid"))
                 r = mgr._ssh_node(node, cmd, timeout=30)
                 if r.returncode:
-                    raise RuntimeError(f"{node['id']} start failed: {r.stderr}")
+                    raise RuntimeError(T("server.web_pipeline.id_start_failed_stderr", id=node['id'], stderr=r.stderr))
             records.append(dict(node, repo=node.get("repo") or "~/.caravan/src/caravan"))
             ownership.write_text(json.dumps(records))
             # All peer addresses must be reachable from the lead. Middle
@@ -234,7 +241,7 @@ def load_pipeline(mgr, entry, settings):
                     expected = plan_ranges(sum(counts), counts)[:i+1]
                     actual = [tuple(x["range"]) for x in hello.get("stages", [hello])]
                     if actual != expected:
-                        raise ValueError("loaded pipeline ranges do not match Balance")
+                        raise ValueError(T("server.web_pipeline.loaded_pipeline_ranges_do_not_match"))
                     error = None
                     break
                 except (OSError, RuntimeError, ConnectionError) as e:
@@ -243,8 +250,13 @@ def load_pipeline(mgr, entry, settings):
                 finally:
                     client.close()
             if error:
-                raise RuntimeError(f"{node['id']} did not become ready: {error}; see {log}")
-            mgr._note(f"{node.get('label') or node['id']}: {counts[i]} layers ready")
+                raise RuntimeError(T("server.web_pipeline.id_did_not_become_ready", id=node['id'], error=error, log=log))
+            label = node.get('label') or node['id']
+            msg = T("server.web_pipeline.label_count_layers_ready", label=label, count=counts[i])
+            try:  # Day 32: the Balance view checks the code, not the words
+                mgr._note(msg, code="stage_ready", label=label, count=counts[i])
+            except TypeError:  # a manager without coded notes
+                mgr._note(msg)
         mgr._set(status="starting_lead")
         lead = nodes[-1]
         args = commands[-1] + ["--host", "127.0.0.1", "--port", str(mgr.lead_port)]
@@ -266,7 +278,7 @@ def load_pipeline(mgr, entry, settings):
                    "model_id": entry["id"], "model_name": entry["name"], "model_path": mgr._lead_path}
         (mgr.state_dir / "pipeline-balance.json").write_text(json.dumps(balance))
         mgr._set(status="ready", split=True, balance=balance)
-        mgr._note("Balance loaded; send a reply to measure real speed")
+        mgr._note(T("server.web_pipeline.balance_loaded_send_a_reply_to"))
     except Exception:
         mgr._kill_lead()
         stop_pipeline(mgr)

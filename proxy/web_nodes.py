@@ -19,6 +19,13 @@ from typing import Optional
 
 import web_catalog as catalog
 import web_settings
+try:
+    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+except ImportError:  # run without tools/ on the path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.append(str(_Path(__file__).resolve().parents[1] / "tools"))
+    from caravan_i18n import T  # noqa: E402
 
 # N-stage runtime: no default topology cap; an explicit operator cap still works.
 MAX_SPLIT_STAGES = int(os.environ.get("CARAVAN_MAX_SPLIT_STAGES", str(__import__("sys").maxsize)))
@@ -31,7 +38,7 @@ def stage_limit(nodes):
 # if the machine itself still answers SSH. Stats older than this many
 # seconds are also shown offline in the page (see proxy/web/topo_live.js).
 STALE_AFTER_S = 15
-OFF_REASON = "Caravan is off"
+OFF_REASON = T("server.web_nodes.caravan_is_off")
 
 # Self-contained remote check. The other Mac may still be on an older
 # checkout, so this cannot import this module over SSH.
@@ -50,7 +57,7 @@ for rel in (".caravan/services/web.json", ".caravan/services/login/web.json"):
 try:
     urllib.request.urlopen("http://127.0.0.1:%d/api/status" % port, timeout=3)
 except Exception:
-    json.dump({"offline": True, "error": "Caravan is off"}, sys.stdout)
+    json.dump({"offline": True, "error": "Caravan is off", "code": "caravan_off"}, sys.stdout)
     print()
     sys.exit(0)
 repo = os.path.expanduser(REPO)
@@ -251,17 +258,21 @@ def gather_node_stats(node: dict, *, ssh_fn=None, local_gather=None) -> dict:
             stats = local_gather() or {}
         else:
             if ssh_fn is None:
-                raise RuntimeError("no ssh")
+                raise RuntimeError(T("server.web_nodes.no_ssh"))
             cmd = remote_stats_command(node.get("repo"))
             r = ssh_fn(node, cmd, timeout=25)
             if getattr(r, "returncode", 1) != 0:
-                raise RuntimeError((getattr(r, "stderr", None) or getattr(r, "stdout", None) or "ssh failed")[-200:])
+                raise RuntimeError((getattr(r, "stderr", None) or getattr(r, "stdout", None) or T("server.web_nodes.ssh_failed"))[-200:])
             line = (r.stdout or "").strip().splitlines()[-1]
             stats = json.loads(line)
         if not isinstance(stats, dict):
-            raise RuntimeError("bad stats")
+            raise RuntimeError(T("server.web_nodes.bad_stats"))
         if stats.get("offline") or stats.get("caravan_running") is False:
-            return {**base, "offline": True, "error": stats.get("error") or OFF_REASON}
+            # Day 32: error_code says "Caravan is off" without the page
+            # matching the words (the other Mac's script answers in English).
+            off = stats.get("code") == "caravan_off" or not stats.get("error")
+            return {**base, "offline": True, "error": OFF_REASON if off else stats.get("error"),
+                    "error_code": "caravan_off" if off else None}
         out = dict(stats)
         out.update(base)
         out["offline"] = False
@@ -336,7 +347,7 @@ def make_ssh_fn(mgr):
     def ssh_fn(node, cmd, timeout=60):
         target = (node.get("ssh") or node.get("host") or "").strip()
         if not target or is_local(node):
-            raise RuntimeError("local node has no ssh")
+            raise RuntimeError(T("server.web_nodes.local_node_has_no_ssh"))
         # Prefer mgr._ssh when target matches default packer; else raw ssh.
         default = (getattr(mgr, "packer_ssh", None) or "").strip()
         if target == default and hasattr(mgr, "_ssh"):
@@ -368,15 +379,11 @@ def looks_like_hostname(name: str) -> bool:
 
 
 def _ordinal(n: int) -> str:
-    if 10 <= n % 100 <= 20:
-        suf = "th"
-    else:
-        suf = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    return f"{n}{suf}"
+    return T.ordinal(n)  # "1st", "2nd", … (Day 32: from the strings file)
 
 
 
-_PLAIN_DOWNLOAD_FAIL = "Download stopped. Press Resume to try again."
+_PLAIN_DOWNLOAD_FAIL = T("server.web_nodes.download_stopped_press_resume_to_try")
 _INTERNAL_ERROR = re.compile(
     r"Traceback|FileNotFoundError|EntryNotFoundError|Errno\s|OSError|\\^\^+|"
     r"File \"[/\\]|paired_[0-9a-f]{8}|line \d+, in ",
@@ -408,9 +415,9 @@ def plain_download_error(exc, *, log=True) -> str:
     text = str(exc)
     low = text.lower()
     if "cancelled" in low and "resume" not in low:
-        return "stopped by user"
+        return T("server.web_nodes.stopped_by_user")
     if "no space" in low or "enospc" in low or "out of disk" in low or "no space left" in low:
-        return "Download stopped. This Mac is out of disk space."
+        return T("server.web_nodes.download_stopped_this_mac_is_out")
     if looks_like_internal_error(text) or not text.strip():
         return _PLAIN_DOWNLOAD_FAIL
     # Already a short plain sentence without internals: keep it if it's brief.
@@ -457,18 +464,18 @@ def friendly_mac_label(node=None, *, label=None, role=None, node_id=None,
         return raw
     # Role first: a job may have only the packer as its single runner (index 0).
     if role == "lead":
-        return "My Mac" if node_count == 1 else "1st Mac"
+        return T("server.pairing_store.my_mac") if node_count == 1 else T("server.web_nodes.1st_mac")
     if role == "packer":
-        return "2nd Mac"
+        return T("server.web_nodes.2nd_mac")
     if index == 0:
-        return "My Mac" if node_count == 1 else "1st Mac"
+        return T("server.pairing_store.my_mac") if node_count == 1 else T("server.web_nodes.1st_mac")
     if index == 1:
-        return "2nd Mac"
+        return T("server.web_nodes.2nd_mac")
     if isinstance(index, int) and index >= 0:
-        return _ordinal(index + 1) + " Mac"
+        return _ordinal(index + 1) + T("server.web_nodes.mac")
     if nid and not looks_like_hostname(str(nid)):
         return str(nid)
-    return "Mac"
+    return T("server.pairing.mac")
 
 
 def friendly_job(job, inventory=None, node_count=None):
