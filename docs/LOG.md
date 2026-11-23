@@ -1,3 +1,21 @@
+## 2026-11-23: Day 32 — Russian localization (in progress, pending review)
+
+Local work on `day32-russian` (from `main` at v0.9.9, `bd46a24`), not
+committed until Claude approves, not tagged, not pushed. Russian is the
+next language after Spanish: `locales/ru.json` for every current key
+(natural Russian, informal *ты*), one/few/many/other plural keys
+everywhere counts appear, **Русский (beta)** in the Settings picker and
+the installer shell block, Russian number and date formatting (space as
+the thousands separator, decimal comma, "и" lists, genitive months), and
+layout screenshots at 1280 and 375 px. Russian is marked beta in the
+picker until a native speaker reviews it. Glossary:
+[docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md). Tests:
+`tests/test_day32_russian.py`. Full suite: 2,187 passed, 97 subtests,
+82.08 s, with the review command. Screenshots:
+`~/Projects/caravan-day32-results/russian/{before,after}/`. CHANGELOG and
+VERSION stay at v0.9.9 until a wrap commit. The Macs were not updated
+(Brenden updates them himself). Day 32 stays open.
+
 ## 2026-11-23: Day 32 — Spanish localization (v0.9.9)
 
 Mid-day release; Day 32 stays open for other languages. Built on the

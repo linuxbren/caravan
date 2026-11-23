@@ -327,6 +327,45 @@ Notes: [release-notes/day32-v0.9.9.md](release-notes/day32-v0.9.9.md).
 The Macs were not updated as part of the release; Brenden updates them
 himself with `caravan update`. Day 32 stays open for other languages.
 
+## Russian (in progress, pending review)
+
+Brenden (2026-11-23): start Russian, same process as Spanish. Work is on
+the local branch `day32-russian` (from `main` at v0.9.9, `bd46a24`).
+**Uncommitted until Claude approves.** No push, no tag, no Mac updates.
+CHANGELOG and VERSION stay at v0.9.9 (no Unreleased section).
+
+What this adds:
+
+- `locales/ru.json` for every current English key (natural Russian,
+  informal *ты*). Model names, **Caravan**, **Mini**, **GGUF**, **MLX**,
+  and commands stay in English. One / few / many / other plural keys
+  everywhere counts appear. Glossary: [docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md)
+  (Russian column).
+- A Settings language picker and installer shell block that include
+  **Русский (beta)**. Default order is unchanged (`CARAVAN_LANG`, then
+  the saved Settings choice, then the Mac's language, then English).
+  Russian is marked **beta** until a native speaker reviews it. All
+  picker strings go through `T()`.
+- Locale formatting for Russian: a space as the thousands separator, a
+  decimal comma (1 234,5), "и" / "или" lists, and dates like "13 ноября"
+  (genitive month) and "ноябрь 2026".
+- Layout: Russian (Cyrillic) runs long, so each main screen is
+  screenshotted in English and Russian with the mock server (1280 and
+  375 px) and overflows are fixed. Shots live in
+  `~/Projects/caravan-day32-results/russian/` (not in the repo). An
+  overflow check on those screens found none; longer Russian labels wrap
+  in the chat header buttons, chips, and Mac mini cards, using the same
+  rules as Spanish.
+- Tests: `tests/test_day32_russian.py` (parity, placeholders, `_html`
+  tags, plural forms in real strings). Full suite: 2,187 passed, 97
+  subtests, 82.08 s, with
+  `XDG_CONFIG_HOME="" PYTHONPATH=.:proxy:tests uv run --with pytest
+  --with spake2==0.9 --with cryptography==46.0.3 python -m pytest tests -q`.
+
+The review request is in the Obsidian Claude Review note (uncommitted
+diff against `bd46a24`). CHANGELOG and VERSION stay at v0.9.9. Day 32
+stays open for Japanese and Simplified Chinese after this.
+
 ## Part A: version label
 
 Brenden: "Lets first do the version for 32 so that I can use it now."

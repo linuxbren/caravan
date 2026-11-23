@@ -1429,17 +1429,22 @@
     #settingsDrawer .toolbar { grid-template-columns: 1fr; }
   }
   html[lang="es"] #settingsDrawer .drawer-control,
-  html[lang="es"] button.primary, html[lang="es"] button.ghost {
+  html[lang="ru"] #settingsDrawer .drawer-control,
+  html[lang="es"] button.primary, html[lang="es"] button.ghost,
+  html[lang="ru"] button.primary, html[lang="ru"] button.ghost {
     line-height: 1.25;
   }
-  /* Longer Spanish labels in the chat header button stack. */
-  html[lang="es"] .chathead-actions { width: 168px; }
-  html[lang="es"] .chathead-actions button {
+  /* Longer Spanish and Russian labels in the chat header button stack. */
+  html[lang="es"] .chathead-actions,
+  html[lang="ru"] .chathead-actions { width: 168px; }
+  html[lang="es"] .chathead-actions button,
+  html[lang="ru"] .chathead-actions button {
     white-space: normal; line-height: 1.2; overflow-wrap: anywhere; letter-spacing: .04em;
   }
   @media (max-width: 420px) {
     .chathead-actions { width: min(168px, 46vw); }
-    html[lang="es"] .chathead-actions { width: min(184px, 54vw); }
+    html[lang="es"] .chathead-actions,
+    html[lang="ru"] .chathead-actions { width: min(184px, 54vw); }
     .chathead-actions button {
       white-space: normal; line-height: 1.2; padding: 7px 8px; letter-spacing: .03em;
     }
@@ -1986,6 +1991,7 @@
       <select class="drawer-control" id="languageSelect" aria-label="{{web.language}}">
         <option value="en">{{web.language_name_en}}</option>
         <option value="es">{{web.language_name_es}}</option>
+        <option value="ru">{{web.language_name_ru}}</option>
       </select>
       <span class="hidden" hidden>{{web.language_beta}}</span>
       <small class="lang-help">{{web.language_help}}</small>

@@ -252,7 +252,7 @@ def load_pipeline(mgr, entry, settings):
             if error:
                 raise RuntimeError(T("server.web_pipeline.id_did_not_become_ready", id=node['id'], error=error, log=log))
             label = node.get('label') or node['id']
-            msg = T("server.web_pipeline.label_count_layers_ready", label=label, count=counts[i])
+            msg = T.plural("server.web_pipeline.label_count_layers_ready", counts[i], label=label)
             try:  # Day 32: the Balance view checks the code, not the words
                 mgr._note(msg, code="stage_ready", label=label, count=counts[i])
             except TypeError:  # a manager without coded notes

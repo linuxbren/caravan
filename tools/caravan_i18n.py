@@ -449,19 +449,32 @@ def and_list(items, lang=None):
     return t_in(lang, "fmt.and_list", rest=join_words(items[:-1], lang=lang), last=items[-1])
 
 
-def month_name(month, *, abbr=False, lang=None):
-    """Full or abbreviated month name from the strings file (1 = January)."""
+def month_name(month, *, abbr=False, lang=None, case=None):
+    """Full or abbreviated month name from the strings file (1 = January).
+
+    ``case="genitive"`` uses ``fmt.month_gen_N`` when that key exists
+    (Russian dates like "13 ноября"); otherwise the nominative name.
+    """
     month = int(month)
-    key = "fmt.month_abbr_%s" % month if abbr else "fmt.month_%s" % month
+    if abbr:
+        key = "fmt.month_abbr_%s" % month
+    elif case == "genitive":
+        gen = "fmt.month_gen_%s" % month
+        key = gen if gen in strings(lang) else "fmt.month_%s" % month
+    else:
+        key = "fmt.month_%s" % month
     return t_in(lang, key)
 
 
 def fmt_date(dt, style="month_day", lang=None):
     """A friendly date in the language's style.
 
-    ``month_day``: English "November 13", Spanish "13 de noviembre".
-    ``month_year``: English "November 2026", Spanish "noviembre de 2026".
-    ``short``: English "Nov 13 07:43:00", Spanish "13 nov 07:43:00".
+    ``month_day``: English "November 13", Spanish "13 de noviembre",
+    Russian "13 ноября" (genitive month when ``fmt.month_gen_N`` exists).
+    ``month_year``: English "November 2026", Spanish "noviembre de 2026",
+    Russian "ноябрь 2026" (nominative).
+    ``short``: English "Nov 13 07:43:00", Spanish "13 nov 07:43:00",
+    Russian "13 нояб 07:43:00".
     ``dt`` may be a datetime, a time.struct_time, or a timestamp.
     """
     import datetime as _dt
@@ -475,7 +488,8 @@ def fmt_date(dt, style="month_day", lang=None):
         time_s = dt.strftime("%H:%M:%S")
     code = lang or language()
     values = {
-        "month": month_name(month, lang=code),
+        "month": month_name(month, lang=code,
+                             case="genitive" if style == "month_day" else None),
         "month_abbr": month_name(month, abbr=True, lang=code),
         "day": str(int(day)),
         "year": str(int(year)),
