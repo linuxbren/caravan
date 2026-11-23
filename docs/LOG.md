@@ -1,3 +1,17 @@
+## 2026-11-23: Day 32 — drop unreleased CHANGELOG section until release
+
+Claude review (CHANGES NEEDED, 05:50 CST): `127d957` had prepended an
+"unreleased" top section to CHANGELOG.md, which failed
+`test_repo_version_file_matches_the_newest_release_docs` (the first
+heading must contain `(v{VERSION})`). That was the first time an
+unreleased section had been prepended; prior convention is that
+CHANGELOG's top entry matches the installed VERSION, with in-progress
+work in DAY32 and ROADMAP only. The earlier 2,161-OK run was before
+that docs commit (suite log 05:20 CST; the section was committed at
+05:23). The premature section is dropped; the notes stay in DAY32 and
+ROADMAP and will land in CHANGELOG at the wrap commit. Re-ran the
+review command: 2,161 passed, 97 subtests, 80.42 s.
+
 ## 2026-11-23: Day 32 — GGUF placement (ROADMAP #9, unreleased)
 
 Local commits on `day32-localization`, pending review, not tagged, not

@@ -235,8 +235,20 @@ turned into a split. New strings go through `locales/en.json` and `T()`.
 
 Tests: `tests/test_day32_gguf_placement.py` (green/yellow/red all open
 the chooser and send the placement, default is the smallest that fits,
-the choice is honored at download and at load). Full suite: 2,161 OK.
+the choice is honored at download and at load). Full suite after the
+CHANGELOG fix below: 2,161 passed, 97 subtests, 80.42 s, with
+`XDG_CONFIG_HOME="" PYTHONPATH=.:proxy:tests uv run --with pytest
+--with spake2==0.9 --with cryptography==46.0.3 python -m pytest tests -q`.
 The Macs were not updated (Brenden updates them himself).
+
+CHANGELOG.md is left pointing at v0.9.7 until the release wrap. The
+version-label test requires the first heading to contain `(v{VERSION})`,
+and the project convention (through v0.9.6 and v0.9.7) is that
+in-progress work is documented here and in ROADMAP, then landed in
+CHANGELOG at the wrap commit. A premature "unreleased" top section was
+added in `127d957` and dropped after review. The earlier 2,161-OK run
+was taken before that docs commit (suite log 05:20 CST; the section was
+committed at 05:23), which is why it missed the failure.
 
 
 ## Part A: version label
