@@ -20,6 +20,7 @@ import html
 import json
 import os
 import re
+import string
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,12 +73,16 @@ def _saved_language() -> str | None:
 
 
 def strings(lang: str | None = None) -> dict[str, str]:
-    """English, with the chosen language's strings on top."""
+    """English, with the chosen language's strings on top (cached; restart
+    after editing a strings file). Treat the result as read-only."""
     code = lang or language()
-    merged = dict(_load(DEFAULT_LANGUAGE))
-    if code != DEFAULT_LANGUAGE:
-        merged.update(_load(code))
-    return merged
+    slot = "+" + code  # kept in _CACHE too, so clearing it clears both
+    if slot not in _CACHE:
+        merged = dict(_load(DEFAULT_LANGUAGE))
+        if code != DEFAULT_LANGUAGE:
+            merged.update(_load(code))
+        _CACHE[slot] = merged
+    return _CACHE[slot]
 
 
 def t(key: str, /, **values) -> str:
@@ -88,10 +93,124 @@ def t(key: str, /, **values) -> str:
 
 def t_in(lang: str | None, key: str, /, **values) -> str:
     """Like :func:`t`, for a given language code."""
-    text = strings(lang).get(key)
+    table = strings(lang)
+    text = table.get(key)
     if text is None:
         text = _load(DEFAULT_LANGUAGE).get(key, key)
-    return text.format(**values) if values else text
+    if not values:
+        return text
+    dec = table.get("fmt.decimal", ".")
+    return text.format(**values) if dec == "." else _NumberFormatter(dec).format(text, **values)
+
+
+class _NumberFormatter(string.Formatter):
+    """str.format, with the language's decimal mark in ``{x:.1f}``-style
+    numbers. English (".") never comes here, so its text is unchanged."""
+
+    def __init__(self, decimal: str):
+        super().__init__()
+        self.decimal = decimal
+
+    def format_field(self, value, format_spec):
+        out = super().format_field(value, format_spec)
+        if isinstance(value, float) or (isinstance(value, int) and not isinstance(value, bool)
+                                        and format_spec[-1:] in ("f", "g", "e", "%")):
+            out = out.replace(".", self.decimal)
+        return out
+
+
+# --- plurals and numbers (Day 32, t1109u) ---------------------------------
+# A count-dependent text has two keys, ``<key>_one`` and ``<key>_other``
+# (more forms, e.g. ``_few``, can be added per language later); the count
+# is passed as ``{count}``. Numbers with units go through fmt_* so the
+# decimal mark and the unit wording come from the strings file.
+
+def plural_form(count, lang: str | None = None) -> str:
+    """CLDR-style plural category. English: 'one' for exactly 1, else 'other'.
+    Other languages can be added here as they arrive."""
+    try:
+        return "one" if float(count) == 1 else "other"
+    except (TypeError, ValueError):
+        return "other"
+
+
+def t_plural(key: str, count, /, **values) -> str:
+    """``<key>_one`` / ``<key>_other`` for ``count``, filled with ``{count}``
+    and any other values."""
+    form = plural_form(count)
+    table = strings()
+    full = f"{key}_{form}"
+    if full not in table and full not in _load(DEFAULT_LANGUAGE):
+        full = f"{key}_other"
+    values.setdefault("count", count)
+    return t(full, **values)
+
+
+def fmt_num(value, digits: int = 0) -> str:
+    """A number with ``digits`` decimals, in the language's style
+    (English: like ``f"{value:.{digits}f}"``)."""
+    out = f"{float(value):.{int(digits)}f}"
+    dec = strings().get("fmt.decimal", ".")
+    return out if dec == "." else out.replace(".", dec)
+
+
+def fmt_unit(unit: str, value, digits: int = 0) -> str:
+    """``value`` with a unit key from the strings file: fmt.gb, fmt.mb,
+    fmt.mb_s, fmt.tok_s, fmt.pct, fmt.seconds. English: "12.3 GB" etc."""
+    return t(f"fmt.{unit}", n=fmt_num(value, digits))
+
+
+def fmt_gb(value, digits: int = 1) -> str:
+    return fmt_unit("gb", value, digits)
+
+
+def fmt_pct(value, digits: int = 0) -> str:
+    return fmt_unit("pct", value, digits)
+
+
+def fmt_tok_s(value, digits: int = 1) -> str:
+    return fmt_unit("tok_s", value, digits)
+
+
+def ordinal_form(n) -> str:
+    """CLDR ordinal category; English: 1st/21st one, 2nd two, 3rd few, else other."""
+    n = abs(int(n))
+    if n % 10 == 1 and n % 100 != 11:
+        return "one"
+    if n % 10 == 2 and n % 100 != 12:
+        return "two"
+    if n % 10 == 3 and n % 100 != 13:
+        return "few"
+    return "other"
+
+
+def ordinal(n) -> str:
+    """"1st", "2nd", … from fmt.ordinal_<form>."""
+    return t(f"fmt.ordinal_{ordinal_form(n)}", n=int(n))
+
+
+def join_words(items, kind: str = "list") -> str:
+    """Join user-facing words with the language's separator: kind "list"
+    (", "), "clause" ("; "), "and" (" and "), "or" (" or ")."""
+    return t(f"fmt.{kind}_sep").join(str(x) for x in items)
+
+
+def and_list(items) -> str:
+    """"a, b and c" in the language's style (English: no comma before "and")."""
+    items = [str(x) for x in items]
+    if len(items) < 2:
+        return "".join(items)
+    return t("fmt.and_list", rest=join_words(items[:-1]), last=items[-1])
+
+
+TP = t_plural
+# The same helpers on T, like the page's T.plural / T.num / T.join (i18n.js).
+t.plural = t_plural
+t.num = fmt_num
+t.unit = fmt_unit
+t.join = join_words
+t.and_list = and_list
+t.ordinal = ordinal
 
 
 _PLACEHOLDER = re.compile(r"\{\{([a-z0-9_.]+)\}\}")
@@ -114,12 +233,13 @@ def render_page(source: str, lang: str | None = None, prefix: str = "web.") -> s
             return m.group(0)
         return text if key.endswith("_html") else html.escape(text, quote=True).replace("&#x27;", "'")
 
-    out = _PLACEHOLDER.sub(fill, source)
+    code = lang or language()
+    # <html lang="{{lang}}">: the active language (Day 32 step 1: "en").
+    out = _PLACEHOLDER.sub(fill, source.replace('lang="{{lang}}"', f'lang="{html.escape(code)}"'))
     if "<!--caravan-strings-->" in out:
-        page = {k: v for k, v in table.items() if k.startswith(prefix)}
+        page = {k: v for k, v in table.items() if k.startswith(prefix) or k.startswith("fmt.")}
         blob = json.dumps(page, ensure_ascii=False, separators=(",", ":"))
         blob = blob.replace("</", "<\\/").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
-        code = lang or language()
         out = out.replace("<!--caravan-strings-->",
                           f"<script>window.CARAVAN_LANG={json.dumps(code)};window.CARAVAN_STRINGS={blob};</script>")
     return out
