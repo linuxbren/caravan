@@ -1,6 +1,7 @@
 import json, tempfile, unittest
 from pathlib import Path
 import web_alert
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 ROWS = [{"hf": "org/A", "warnings": ["w1", "w2"]}, {"hf": "org/B", "warnings": []}]
 ENV = {"CARAVAN_ALERT_WEBHOOK_URL": "https://example.invalid/hook", "CARAVAN_ALERT_WEBHOOK_KEY": "k"}
@@ -46,7 +47,7 @@ class AlertTests(unittest.TestCase):
 
 class ReportLinkTests(unittest.TestCase):
     def test_html_has_report_link(self):
-        html = (Path(__file__).resolve().parent.parent / "proxy/web/index.html").read_text()
+        html = english_source(Path(__file__).resolve().parent.parent / "proxy/web/index.html")
         self.assertIn("https://github.com/linuxbren/caravan/issues/new?", html)
         self.assertIn("labels: \"model-report\"", html)
         self.assertIn("Report this model", html)

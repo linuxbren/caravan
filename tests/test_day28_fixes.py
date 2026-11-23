@@ -22,8 +22,9 @@ import web_settings  # noqa: E402
 import web_speed as S  # noqa: E402
 import web_workers  # noqa: E402
 from web_workers import WorkerManager  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (ROOT / "proxy" / "web" / "index.html").read_text()
+HTML = english_source(ROOT / "proxy" / "web" / "index.html")
 
 
 def _css_block(selector: str) -> str:

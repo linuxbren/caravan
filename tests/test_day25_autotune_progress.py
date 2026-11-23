@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import json
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 import shutil
 import subprocess
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HTML = (ROOT / "proxy/web/index.html").read_text()
+HTML = english_source(ROOT / "proxy/web/index.html")
 WEB = (ROOT / "docs/WEB.md").read_text()
 DAY = (ROOT / "docs/DAY25.md").read_text()
 

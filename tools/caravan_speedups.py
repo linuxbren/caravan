@@ -32,7 +32,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import caravan_prompts as P  # noqa: E402
 import guess_stats as GS  # noqa: E402
-import gguf_tune as T  # noqa: E402
+import gguf_tune as GT  # noqa: E402
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 MARGIN = 0.03
 STORE = Path("~/.caravan/bench_speedups.json").expanduser()
@@ -41,16 +42,16 @@ STORE = Path("~/.caravan/bench_speedups.json").expanduser()
 # change cannot reload the model in the middle of a measurement.
 MODES = {
     "gguf": (
-        ("Off", {"prompt_lookup": "off", "guess_ahead": "off", "self_tune": "off"}),
-        ("Prompt lookup", {"prompt_lookup": "on", "guess_ahead": "off", "self_tune": "off"}),
+        (T("cli.speedups.off"), {"prompt_lookup": "off", "guess_ahead": "off", "self_tune": "off"}),
+        (T("cli.speedups.prompt_lookup"), {"prompt_lookup": "on", "guess_ahead": "off", "self_tune": "off"}),
         ("Guess-ahead", {"prompt_lookup": "off", "guess_ahead": "on", "self_tune": "off"}),
-        ("Auto", {}),
+        (T("cli.speedups.auto"), {}),
     ),
     "mlx": (
-        ("Off", {"prompt_lookup": "off", "guess_ahead": "off", "self_tune": "off"}),
-        ("Prompt lookup", {"prompt_lookup": "adaptive", "guess_ahead": "off", "self_tune": "off"}),
+        (T("cli.speedups.off"), {"prompt_lookup": "off", "guess_ahead": "off", "self_tune": "off"}),
+        (T("cli.speedups.prompt_lookup"), {"prompt_lookup": "adaptive", "guess_ahead": "off", "self_tune": "off"}),
         ("Guess-ahead", {"prompt_lookup": "off", "guess_ahead": "on", "self_tune": "off"}),
-        ("Auto", {}),
+        (T("cli.speedups.auto"), {}),
     ),
 }
 
@@ -59,12 +60,12 @@ def prompt_sets(run_short=True, run_edits=True, run_long=True, window=None):
     """[(label, prompts or None, skip_reason)] in run order."""
     out = []
     if run_short:
-        out.append(("Short (5)", P.short_prompts(tag_prefix="Speedups short"), None))
+        out.append((T("cli.speedups.short_5"), P.short_prompts(tag_prefix="Speedups short"), None))
     if run_edits:
-        out.append(("Code edits (5)", P.edit_prompts(tag_prefix="Speedups edit"), None))
+        out.append((T("cli.speedups.code_edits_5"), P.edit_prompts(tag_prefix="Speedups edit"), None))
     if run_long:
         for size in P.BENCH_LONG_SIZES:
-            label = f"Long ~{P.size_label(size)} (2)"
+            label = T("cli.speedups.long_size_label_2", size_label=P.size_label(size))
             if not P.fits_window(size, window):
                 out.append((label, None, P.skip_reason(size, window)))
             else:
@@ -89,7 +90,7 @@ def reply_readout(data):
 
 def reply_specs(data):
     data = data if isinstance(data, dict) else {}
-    specs = T.specs_from_response(data)
+    specs = GT.specs_from_response(data)
     stats = ((data.get("caravan_web") or {}).get("stats") or {})
     for k in ("write_tok_s", "read_tok_s", "ttft_s", "prompt_tokens",
               "completion_tokens", "total_s"):
@@ -107,7 +108,7 @@ def median_specs(samples):
                 "completion_tokens", "total_s"):
         vals = [float(s[key]) for s in samples if isinstance(s, dict)
                 and isinstance(s.get(key), (int, float))]
-        med = T._median(vals) if vals else None
+        med = GT._median(vals) if vals else None
         if med is not None:
             out[key] = med
     return out
@@ -139,7 +140,7 @@ def _active_note(active):
     pl = a.get("prompt_lookup")
     pl_on = bool(pl.get("enabled")) if isinstance(pl, dict) else bool(pl)
     ga = bool(a.get("guess_ahead"))
-    bits = [f"Prompt lookup {'on' if pl_on else 'off'}",
+    bits = [T("cli.speedups.prompt_lookup_v", v='on' if pl_on else 'off'),
             f"Guess-ahead {'on' if ga else 'off'}"]
     return ", ".join(bits)
 
@@ -161,13 +162,13 @@ def load_with(port, model_id, settings, urlopen, status_fn, *, wait=420,
         last = status_fn(port, urlopen=urlopen) or {}
         w = last.get("worker") or {}
         if w.get("status") in ("error", "stopped") and w.get("error"):
-            raise RuntimeError(w.get("error") or "load failed")
+            raise RuntimeError(w.get("error") or T("cli.bench.load_failed"))
         fresh = (not same) or (w.get("lead_pid") and w.get("lead_pid") != old_pid)
         if (w.get("status") == "ready" and w.get("model_id") == model_id
                 and fresh and last.get("lead_healthy", True)):
             return last
         sleep(1)
-    raise TimeoutError("The model did not become ready in time.")
+    raise TimeoutError(T("cli.bench.the_model_did_not_become_ready"))
 
 
 def run_side(kind, model_id, *, port, urlopen, status_fn, window_fn,
@@ -176,14 +177,14 @@ def run_side(kind, model_id, *, port, urlopen, status_fn, window_fn,
     rows, notes = [], []
     for mode, settings in MODES[kind]:
         if progress:
-            progress.set(f"{name or kind.upper()} · {mode} · loading")
+            progress.set(T("cli.speedups.v_mode_loading", v=name or kind.upper(), mode=mode))
         try:
             st = load_with(port, model_id, settings, urlopen, status_fn)
         except KeyboardInterrupt:
             raise
         except Exception as e:
             rows.append({"mode": mode, "skipped": True,
-                         "reason": f"could not load ({e})"})
+                         "reason": T("cli.speedups.could_not_load_e", e=e)})
             continue
         active = st.get("active") or {}
         note = _active_note(active)
@@ -195,12 +196,11 @@ def run_side(kind, model_id, *, port, urlopen, status_fn, window_fn,
                 and active.get("two_chats_available") is False))
         if mode == "Guess-ahead" and single_mlx:
             rows.append({"mode": mode, "skipped": True, "active": note,
-                         "reason": "on one Mac, an MLX model does not use a helper "
-                                   "yet (split models only)"})
+                         "reason": T("cli.speedups.on_one_mac_an_mlx_model")})
             continue
         if mode == "Guess-ahead" and isinstance(active, dict) and active and not active.get("guess_ahead"):
             rows.append({"mode": mode, "skipped": True, "active": note,
-                         "reason": "no helper model on this Mac for this model"})
+                         "reason": T("cli.speedups.no_helper_model_on_this_mac")})
             continue
         window = window_fn(port, urlopen, st)
         for label, prompts, skip in prompt_sets(window=window, **sets_args):
@@ -218,7 +218,7 @@ def run_side(kind, model_id, *, port, urlopen, status_fn, window_fn,
                 raise
             except Exception as e:
                 rows.append({"mode": mode, "set": label, "skipped": True,
-                             "reason": f"the measurement failed ({e})"})
+                             "reason": T("cli.speedups.the_measurement_failed_e", e=e)})
                 continue
             rows.append(dict(res, mode=mode, set=label, active=note))
     return {"rows": rows, "notes": notes}
@@ -254,11 +254,11 @@ def _fmt(x, d=1):
 
 def format_table(name, rows) -> list:
     v = verdicts(rows)
-    lines = [f"{name}", "  Mode           Prompts          Write tok/s  vs Off   First token  Guesses kept"]
+    lines = [f"{name}", T("cli.speedups.mode_prompts_write_tok_s_vs")]
     for r in rows:
         mode = r.get("mode", "")
         if r.get("skipped"):
-            lines.append(f"  {mode:<14} {r.get('set', ''):<16} skipped — {r.get('reason')}")
+            lines.append(T("cli.speedups.mode_set_skipped_reason", mode=mode, set=r.get('set', ''), reason=r.get('reason')))
             continue
         s = r.get("specs") or {}
         g = r.get("guess") or {}
@@ -266,11 +266,11 @@ def format_table(name, rows) -> list:
         vs = "" if mode == "Off" else (f"{ch['change_pct']:+.0f}%" if ch else "—")
         kept = ""
         if g.get("kept_pct") is not None:
-            kept = f"{g['kept_pct']:.0f}% ({g['kept']} of {g['guessed']})"
+            kept = T("cli.speedups.kept_pct_kept_of_guessed", kept_pct=g['kept_pct'], kept=g['kept'], guessed=g['guessed'])
         elif g.get("reply_pct") is not None:
-            kept = f"{g['reply_pct']:.0f}% of words guessed"
+            kept = T("cli.speedups.reply_pct_of_words_guessed", reply_pct=g['reply_pct'])
         elif mode != "Off":
-            kept = "no guesses"
+            kept = T("cli.speedups.no_guesses")
         ttft = s.get("ttft_s")
         lines.append(
             f"  {mode:<14} {r.get('set', ''):<16} {_fmt(s.get('write_tok_s')):>11}  {vs:>6}   "
@@ -278,7 +278,7 @@ def format_table(name, rows) -> list:
         )
     autos = sorted({r.get("active") for r in rows if r.get("mode") == "Auto" and r.get("active")})
     if autos:
-        lines.append(f"  Auto ran with: {'; '.join(autos)}.")
+        lines.append(T("cli.speedups.auto_ran_with_autos", autos='; '.join(autos)))
     return lines
 
 
@@ -288,17 +288,17 @@ def summary_lines(name, rows) -> list:
         faster = [f"{k} {d['change_pct']:+.0f}%" for k, d in sets.items() if d["verdict"] == "faster"]
         slower = [f"{k} {d['change_pct']:+.0f}%" for k, d in sets.items() if d["verdict"] == "slower"]
         if faster and not slower:
-            out.append(f"{name} · {mode}: faster on {', '.join(faster)}; no slower rows.")
+            out.append(T("cli.speedups.name_mode_faster_on_faster_no", name=name, mode=mode, faster=', '.join(faster)))
         elif faster:
-            out.append(f"{name} · {mode}: faster on {', '.join(faster)}; slower on {', '.join(slower)}.")
+            out.append(T("cli.speedups.name_mode_faster_on_faster_slower", name=name, mode=mode, faster=', '.join(faster), slower=', '.join(slower)))
         elif slower:
-            out.append(f"{name} · {mode}: slower on {', '.join(slower)}; keep it off.")
+            out.append(T("cli.speedups.name_mode_slower_on_slower_keep", name=name, mode=mode, slower=', '.join(slower)))
         else:
-            out.append(f"{name} · {mode}: about the same as Off (within 3%).")
+            out.append(T("cli.speedups.name_mode_about_the_same_as", name=name, mode=mode))
         later = [f"{k} {d['ttft_change_pct']:+.0f}%" for k, d in sets.items()
                  if (d.get("ttft_change_pct") or 0) >= MARGIN * 100]
         if later:
-            out.append(f"  First token came later on {', '.join(later)}.")
+            out.append(T("cli.speedups.first_token_came_later_on_later", later=', '.join(later)))
     return out
 
 
@@ -350,18 +350,18 @@ def run_speedups(gguf_id, mlx_id, *, port, urlopen, status_fn, window_fn,
                 name=nm), name=nm)
     except KeyboardInterrupt:
         err = "stopped"
-        result["notes"].append("Stopped.")
+        result["notes"].append(T("cli.bench.stopped"))
     except Exception as e:
         err = str(e)
     finally:
         if progress:
-            progress.set("Putting the original model back")
+            progress.set(T("cli.speedups.putting_the_original_model_back"))
         if original:
-            result["notes"].append(f"Putting the original model back: {original['name']}.")
+            result["notes"].append(T("cli.speedups.putting_the_original_model_back_name", name=original['name']))
             try:
                 load_with(port, original["id"], original["settings"], urlopen, status_fn)
             except Exception as e:
-                result["notes"].append(f"Could not put the original model back: {e}")
+                result["notes"].append(T("cli.bench.could_not_put_the_original_model", e=e))
     result["error"] = err
     return result
 
@@ -380,6 +380,5 @@ def render(result) -> list:
             lines += summary_lines(side.get("name") or kind.upper(), side.get("rows"))
     if lines and lines[-1] != "":
         lines.append("")
-    lines.append("Each row is the median of its prompts. Faster or slower means writing "
-                 "speed moved at least 3% against Off. " + P.CACHE_NOTE)
+    lines.append(T("cli.speedups.each_row_is_the_median_of", cache_note=P.CACHE_NOTE))
     return lines

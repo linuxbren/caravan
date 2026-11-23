@@ -20,6 +20,7 @@ import web_settings as WS
 import web_optimize as WO
 import optimize_schedule as AB
 import tuned_settings as TS
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 def _write_cfg(folder: Path, heads: int, hidden: int = 3584) -> Path:
@@ -86,7 +87,7 @@ class HideFourTests(unittest.TestCase):
                 self.assertNotIn(word, low, text)
 
     def test_page_shows_disabled_reason_and_quality_note(self):
-        html = (ROOT / "proxy/web/index.html").read_text()
+        html = english_source(ROOT / "proxy/web/index.html")
         self.assertIn("disabled_values", html)
         self.assertIn("val-disabled", html)
         self.assertIn("qualityNotice", html)

@@ -1,5 +1,6 @@
 /* Pure presentation helpers; no network or model mutations. Shared with tests. */
 (function (root) {
+  const T = (root && root.T) || require("./i18n.js").T;
   const finite = n => typeof n === 'number' && Number.isFinite(n);
   function valid(plan) {
     return !!(plan && typeof plan.model_id === 'string' && plan.model_id && Array.isArray(plan.counts) && plan.counts.length &&
@@ -15,11 +16,11 @@
     const known = finite(capacity) && capacity > 0 &&
       finite(stage.estimated_use_gb) && stage.estimated_use_gb >= 0 && finite(stage.headroom_gb);
     return {known, capacity, percent: known ? Math.max(0, Math.min(100, 100 * stage.estimated_use_gb / capacity)) : 0,
-      safe: known && stage.safe === true, label: stage.label || stage.id || 'Mini'};
+      safe: known && stage.safe === true, label: stage.label || stage.id || T('web.mini')};
   }
   function moveBoundary(counts, index, value) {
     if (!Array.isArray(counts) || !counts.every(n => Number.isInteger(n) && n > 0) ||
-        !Number.isInteger(index) || index < 0 || index >= counts.length - 1 || !finite(Number(value))) throw Error('Invalid layer boundary');
+        !Number.isInteger(index) || index < 0 || index >= counts.length - 1 || !finite(Number(value))) throw Error(T('web.invalid_layer_boundary'));
     const out = [...counts], start = counts.slice(0, index).reduce((a,b) => a+b, 0);
     const end = start + counts[index] + counts[index+1];
     const boundary = Math.max(start+1, Math.min(end-1, Math.round(Number(value))));
@@ -27,15 +28,15 @@
     return out;
   }
   function summary(plan, adjusting) {
-    if (!valid(plan)) return 'Preview unavailable; refresh before applying.';
+    if (!valid(plan)) return T('web.preview_unavailable_refresh_before_applying');
     const safe = plan.stages.every(s => card(s).safe);
-    if (!safe) return 'Preview: not enough known free memory on every Mini. Apply is blocked.';
+    if (!safe) return T('web.preview_not_enough_known_free_memory');
     const free = Math.min(...plan.stages.map(s => s.headroom_gb)).toFixed(1);
     if (adjusting) {
-      const split = plan.counts.length <= 2 ? `${plan.counts.join(' / ')} ${plan.format === 'gguf' ? 'shares' : 'layers'}` : `${plan.counts.length} Minis`;
-      return `Preview: ${split} · ≥${free} GB free per Mini.`;
+      const split = plan.counts.length <= 2 ? `${plan.counts.join(' / ')} ${plan.format === 'gguf' ? 'shares' : 'layers'}` : T(`web.counts_count_minis`, {counts_count: plan.counts.length});
+      return T(`web.preview_split_free_gb_free_per`, {split, free});
     }
-    return `Preview: Auto · ≥${free} GB free per Mini.`;
+    return T(`web.preview_auto_free_gb_free_per`, {free});
   }
   function matches(plan, worker) {
     const b=plan?.format==='gguf' ? (worker?.gguf ? {counts:worker.gguf.shares,node_ids:worker.gguf.nodes}:null) : worker?.balance;

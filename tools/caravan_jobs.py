@@ -16,12 +16,13 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 DEFAULT_PORT = int(os.environ.get("CARAVAN_WEB_PORT", "8190"))
 STATUS_WORDS = {
-    "running": "running", "interrupted": "waiting to run again", "done": "done",
-    "failed": "failed", "cancelled": "cancelled", "expired": "too old to run again",
-    "gave_up": "stopped too often", "skipped": "skipped", "stopped": "stopped by you",
+    "running": "running", "interrupted": T("cli.jobs.waiting_to_run_again"), "done": "done",
+    "failed": "failed", "cancelled": "cancelled", "expired": T("cli.jobs.too_old_to_run_again"),
+    "gave_up": T("cli.jobs.stopped_too_often"), "skipped": "skipped", "stopped": T("cli.jobs.stopped_by_you"),
 }
 
 
@@ -48,14 +49,14 @@ def format_list(data) -> str:
     jobs = data.get("jobs") or []
     lines = []
     if not data.get("enabled", True):
-        lines.append("Resume after a restart is off ([jobs] resume = false); new chats are not saved.")
+        lines.append(T("cli.jobs.resume_after_a_restart_is_off"))
     if not jobs:
-        lines.append("No saved chats.")
+        lines.append(T("cli.jobs.no_saved_chats"))
         return "\n".join(lines)
     for j in jobs:
         status = STATUS_WORDS.get(j.get("status"), j.get("status") or "?")
         if j.get("recovered") and j.get("status") == "done":
-            status = "finished after a restart"
+            status = T("cli.jobs.finished_after_a_restart")
         prompt = (j.get("prompt_preview") or "").replace("\n", " ")[:60]
         lines.append(f"{j.get('id')}  {_when(j.get('created'))}  {status:<26} {prompt}")
     return "\n".join(lines)
@@ -63,16 +64,15 @@ def format_list(data) -> str:
 
 def format_job(job) -> str:
     status = STATUS_WORDS.get(job.get("status"), job.get("status") or "?")
-    out = [f"Job {job.get('id')}: {status}"]
+    out = [T("cli.jobs.job_id_status", id=job.get('id'), status=status)]
     if job.get("recovered"):
-        out.append("Finished after a restart: Caravan ran the request again from the start "
-                   f"(try {job.get('replays')}).")
+        out.append(T("cli.jobs.finished_after_a_restart_caravan_ran", replays=job.get('replays')))
     if job.get("error") and job.get("status") != "done":
-        out.append("Note: " + str(job["error"]))
-    out.append(f"Asked {_when(job.get('created'))}; finished {_when(job.get('finished'))}")
+        out.append(T("cli.jobs.note_error", error=str(job["error"])))
+    out.append(T("cli.jobs.asked_when_finished_when2", when=_when(job.get('created')), when2=_when(job.get('finished'))))
     if job.get("status") == "done":
         out.append("")
-        out.append(job.get("reply") or "(empty reply)")
+        out.append(job.get("reply") or T("cli.jobs.empty_reply"))
     return "\n".join(out)
 
 
@@ -93,12 +93,12 @@ def main(argv=None) -> int:
             print(json.dumps(data, indent=2, ensure_ascii=False) if as_json else format_list(data))
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            print(f"[Caravan] No saved chat {argv[0] if argv else ''}.", file=sys.stderr)
+            print(T("cli.jobs.caravan_no_saved_chat_v", v=argv[0] if argv else ''), file=sys.stderr)
             return 1
-        print(f"[Caravan] The page answered HTTP {e.code}.", file=sys.stderr)
+        print(T("cli.jobs.caravan_the_page_answered_http_code", code=e.code), file=sys.stderr)
         return 2
     except (urllib.error.URLError, OSError) as e:
-        print(f"[Caravan] Caravan is not running on this Mac ({e}). Run caravan start.", file=sys.stderr)
+        print(T("cli.jobs.caravan_caravan_is_not_running_on", e=e), file=sys.stderr)
         return 2
     return 0
 

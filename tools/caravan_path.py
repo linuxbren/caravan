@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import re
 import sys
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 START = "# >>> caravan >>>"
 END = "# <<< caravan <<<"
@@ -18,10 +19,10 @@ def configure(action="install", home=None, shell=None):
     for name in names:
         p = home / name
         if p.is_symlink():
-            raise ValueError("Shell profile is a link; add Caravan to PATH manually: " + str(p))
+            raise ValueError(T("cli.path.shell_profile_is_a_link_add", p=str(p)))
         text = p.read_text() if p.exists() else ""
         if text.count(START) != text.count(END):
-            raise ValueError("Incomplete Caravan PATH block; inspect " + str(p))
+            raise ValueError(T("cli.path.incomplete_caravan_path_block_inspect_p", p=str(p)))
         clean = re.sub(r"(?m)^" + re.escape(START) + r"\n.*?^" + re.escape(END) + r"\n?", "", text, flags=re.S)
         new = clean
         if action == "install":

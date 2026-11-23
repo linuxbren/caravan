@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 # Short connect; the update itself may take several minutes (download + swap).
 CONNECT_TIMEOUT = 10
@@ -32,7 +33,7 @@ def ordinal_mac(index):
         suf = "th"
     else:
         suf = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    return f"{n}{suf} Mac"
+    return T("cli.update_peers.n_suf_mac", n=n, suf=suf)
 
 
 def is_local_node(node):
@@ -217,33 +218,33 @@ def peer_update_command():
 
 def failure_help(kind, label):
     """Plain step-by-step help under a Mac's status. No hostnames, no jargon."""
-    label = label or "Mac"
+    label = label or T("cli.update_peers.mac")
     if kind == "offline":
         return [
-            f"Check that the {label} is on and awake.",
-            "Check that it's on the same network as this Mac, or on Tailscale if you use that to reach it.",
-            f"Then click Try again, or on the {label} open Terminal and run: caravan update",
-            "After that Mac is updated, load your model again if it isn't already.",
+            T("cli.update_peers.check_that_the_label_is_on", label=label),
+            T("cli.update_peers.check_that_its_on_the_same"),
+            T("cli.update_peers.then_click_try_again_or_on", label=label),
+            T("cli.update_peers.after_that_mac_is_updated_load"),
         ]
     if kind == "failed":
         return [
-            f"The update on the {label} didn't finish. That Mac should still be on the previous version.",
-            f"Check that the {label} is on and awake, and that it's on the same network or on Tailscale.",
-            f"Click Try again, or on the {label} open Terminal and run: caravan update",
-            "After that Mac is updated, load your model again if it isn't already.",
+            T("cli.update_peers.the_update_on_the_label_didnt", label=label),
+            T("cli.update_peers.check_that_the_label_is_on_2", label=label),
+            T("cli.update_peers.click_try_again_or_on_the", label=label),
+            T("cli.update_peers.after_that_mac_is_updated_load"),
         ]
     if kind == "still_old":
         return [
-            f"The {label} is still on the previous version.",
-            f"Check that the {label} is on and awake, and that it's on the same network or on Tailscale.",
-            f"Click Try again, or on the {label} open Terminal and run: caravan update",
-            "After that Mac is updated, load your model again if it isn't already.",
+            T("cli.update_peers.the_label_is_still_on_the", label=label),
+            T("cli.update_peers.check_that_the_label_is_on_2", label=label),
+            T("cli.update_peers.click_try_again_or_on_the", label=label),
+            T("cli.update_peers.after_that_mac_is_updated_load"),
         ]
     if kind == "no_model":
         return [
-            f"The {label} updated, but the model didn't come back.",
-            "On this Mac, open Models and load your model again.",
-            f"If that doesn't work, on the {label} open Terminal and run: caravan update, then load the model again here.",
+            T("cli.update_peers.the_label_updated_but_the_model", label=label),
+            T("cli.update_peers.on_this_mac_open_models_and"),
+            T("cli.update_peers.if_that_doesnt_work_on_the", label=label),
         ]
     return []
 
@@ -251,9 +252,9 @@ def failure_help(kind, label):
 STATUS_WORDS = {
     "done": "current",
     "current": "current",
-    "updating": "updating…",
-    "waiting": "update needed",
-    "behind": "update needed",
+    "updating": T("cli.update_peers.updating"),
+    "waiting": T("cli.update_check.update_needed"),
+    "behind": T("cli.update_check.update_needed"),
     "offline": "failed",
     "failed": "failed",
     "still_old": "failed",
@@ -264,9 +265,9 @@ STATUS_WORDS = {
 def short_help(kind, label):
     """At most one short line under a Mac that failed."""
     if kind == "no_model":
-        return [f"Load your model again in Models."]
+        return [T("cli.update_peers.load_your_model_again_in_models")]
     if kind in ("offline", "failed", "still_old"):
-        return [f"On the {label}, run caravan update in Terminal."]
+        return [T("cli.update_peers.on_the_label_run_caravan_update", label=label)]
     return []
 
 
@@ -279,7 +280,7 @@ def _detail_text(result, node):
     )
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     tail = " ".join(lines[-3:])[-300:]
-    label = node.get("label") or "Mac"
+    label = node.get("label") or T("cli.update_peers.mac")
     for secret in {_ssh_target(node), (node.get("host") or "").strip()}:
         if secret:
             tail = tail.replace(secret, label)
@@ -290,7 +291,7 @@ def _detail_text(result, node):
 
 
 def _row(node, *, phase, kind=None, status=None, message=None, can_retry=None, detail=None):
-    label = node.get("label") or "Mac"
+    label = node.get("label") or T("cli.update_peers.mac")
     help_steps = short_help(kind, label) if kind and phase != "behind" else []
     if can_retry is None:
         can_retry = bool(kind)
@@ -298,15 +299,15 @@ def _row(node, *, phase, kind=None, status=None, message=None, can_retry=None, d
         status = STATUS_WORDS.get(phase, phase)
     if message is None:
         message = {
-            "offline": f"Couldn't reach the {label}.",
-            "failed": f"The update on the {label} failed.",
-            "still_old": f"The {label} is still on the previous version.",
-            "no_model": f"The {label} updated, but the model didn't come back.",
-            "done": f"The {label}: done.",
-            "updating": f"The {label}: updating…",
-            "waiting": f"The {label}: waiting.",
-            "behind": f"The {label} is on an older version.",
-            "current": f"The {label} is up to date.",
+            "offline": T("cli.update_peers.couldnt_reach_the_label", label=label),
+            "failed": T("cli.update_peers.the_update_on_the_label_failed", label=label),
+            "still_old": T("cli.update_peers.the_label_is_still_on_the", label=label),
+            "no_model": T("cli.update_peers.the_label_updated_but_the_model", label=label),
+            "done": T("cli.update_peers.the_label_done", label=label),
+            "updating": T("cli.update_peers.the_label_updating", label=label),
+            "waiting": T("cli.update_peers.the_label_waiting", label=label),
+            "behind": T("cli.update_peers.the_label_is_on_an_older", label=label),
+            "current": T("cli.update_peers.the_label_is_up_to_date", label=label),
         }.get(phase, f"The {label}: {status}.")
     return {
         "id": node.get("id"),
@@ -322,7 +323,7 @@ def _row(node, *, phase, kind=None, status=None, message=None, can_retry=None, d
     }
 
 
-def local_row(*, phase="waiting", label="1st Mac", message=None, kind=None):
+def local_row(*, phase="waiting", label=T("cli.update_check.1st_mac"), message=None, kind=None):
     node = {"id": "local", "label": label}
     row = _row(node, phase=phase, kind=kind, message=message, can_retry=False)
     row["mine"] = True
@@ -338,8 +339,8 @@ def check_peers(peers, published_ref, *, runner=None):
         ref = read_peer_ref(node, runner=runner)
         if ref is None:
             row = _row(node, phase="offline", kind="offline",
-                       message=f"Couldn't check the {node.get('label') or 'Mac'} right now.",
-                       detail="Couldn't reach it to read its version.")
+                       message=T("cli.update_peers.couldnt_check_the_v_right_now", v=node.get('label') or 'Mac'),
+                       detail=T("cli.update_peers.couldnt_reach_it_to_read_its"))
             # Checking is not a failed update; still offer Try again to re-check / update.
             row["behind"] = False
             out.append(row)
@@ -363,22 +364,22 @@ def any_behind(peer_rows):
 
 def update_peer(node, *, expected=None, runner=None, timeout=UPDATE_TIMEOUT):
     """Run caravan update on one already-paired Mac. Never raises."""
-    label = node.get("label") or "Mac"
+    label = node.get("label") or T("cli.update_peers.mac")
     probe = ssh_run(node, "true", runner=runner, timeout=CONNECT_TIMEOUT + 5)
     if probe is None or getattr(probe, "returncode", 1) != 0:
         return _row(node, phase="offline", kind="offline",
-                    detail=_detail_text(probe, node) or "Couldn't reach it.")
+                    detail=_detail_text(probe, node) or T("cli.update_peers.couldnt_reach_it"))
     result = ssh_run(
         node, peer_update_command(), runner=runner, timeout=timeout,
     )
     if result is None:
         return _row(node, phase="failed", kind="failed",
-                    message=f"The update on the {label} didn't finish.",
-                    detail="No answer before the time limit.")
+                    message=T("cli.update_peers.the_update_on_the_label_didnt_2", label=label),
+                    detail=T("cli.update_peers.no_answer_before_the_time_limit"))
     if result.returncode == 127:
         return _row(
             node, phase="failed", kind="failed",
-            message=f"Caravan on the {label} could not be found.",
+            message=T("cli.update_peers.caravan_on_the_label_could_not", label=label),
             detail=_detail_text(result, node),
         )
     if result.returncode != 0:
@@ -387,12 +388,12 @@ def update_peer(node, *, expected=None, runner=None, timeout=UPDATE_TIMEOUT):
         ref = read_peer_ref(node, runner=runner)
         if ref and ref != str(expected).strip().lower():
             return _row(node, phase="still_old", kind="still_old",
-                        detail="It finished, but is still on the previous version.")
+                        detail=T("cli.update_peers.it_finished_but_is_still_on"))
     return _row(node, phase="done", can_retry=False)
 
 
 def coordinator_label(peer_count):
-    return "1st Mac" if peer_count else "My Mac"
+    return T("cli.update_check.1st_mac") if peer_count else T("cli.update_check.my_mac")
 
 
 def initial_progress(peers, *, local_phase="waiting", local_label=None):
@@ -436,9 +437,9 @@ def update_other_macs(
         peers = load_nodes(home)
     rows = []
     for node in peers or []:
-        label = node.get("label") or "Mac"
+        label = node.get("label") or T("cli.update_peers.mac")
         if out is not None:
-            print(f"Updating the {label}…", file=out, flush=True)
+            print(T("cli.update_peers.updating_the_label", label=label), file=out, flush=True)
         if on_progress:
             on_progress(_row(node, phase="updating", can_retry=False))
         row = update_peer(node, expected=expected, runner=runner, timeout=timeout)
@@ -509,7 +510,7 @@ def model_did_not_return(home, *, status_fn=None, last_model_fn=None):
     return status not in ("ready",)
 
 
-def no_model_help(label="Macs"):
+def no_model_help(label=T("cli.update_peers.macs")):
     return short_help("no_model", label)
 
 

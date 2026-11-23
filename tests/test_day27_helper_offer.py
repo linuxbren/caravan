@@ -23,6 +23,7 @@ import caravan_bench as B  # noqa: E402
 import web_server  # noqa: E402
 import web_catalog  # noqa: E402
 from web_workers import WorkerManager  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 QWEN = "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf"
 
@@ -260,14 +261,14 @@ class GuessAheadAutoTests(unittest.TestCase):
 
 class PageTests(unittest.TestCase):
     def test_page_has_one_line_and_no_popup(self):
-        html = (ROOT / "proxy/web/index.html").read_text()
+        html = english_source(ROOT / "proxy/web/index.html")
         self.assertIn('id="helperLine"', html)
         self.assertLess(html.index("/helper_line.js"), html.index("/helpers.js"))
-        js = (ROOT / "proxy/web/helper_line.js").read_text()
+        js = english_source(ROOT / "proxy/web/helper_line.js")
         self.assertIn("window.caravanHelperLine = true", js)
         self.assertIn("Not now", js)
         self.assertIn("data.lan", js)
-        self.assertIn("!window.caravanHelperLine", (ROOT / "proxy/web/helpers.js").read_text())
+        self.assertIn("!window.caravanHelperLine", english_source(ROOT / "proxy/web/helpers.js"))
 
 
 if __name__ == "__main__":

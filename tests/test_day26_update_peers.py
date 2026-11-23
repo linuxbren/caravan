@@ -23,6 +23,7 @@ import caravan as cli  # noqa: E402
 from test_day26_update_check import (  # noqa: E402
     NEW, OLD, opener_for, write_package,
 )
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 def Result(code=0, stdout="", stderr=""):
@@ -441,7 +442,7 @@ class CheckPeersAndFanOutTests(unittest.TestCase):
 
 class PageFollowUpTests(unittest.TestCase):
     def test_page_is_minimal(self):
-        page = (ROOT / "proxy" / "web" / "index.html").read_text()
+        page = english_source(ROOT / "proxy" / "web" / "index.html")
         card = page.split('id="updatesCard"', 1)[1].split('id="topoBarsCard"', 1)[0]
         self.assertIn("hidden>", card.split("\n", 1)[0])  # hidden until the server says to show it
         self.assertIn('id="btnUpdateCheck"', card)
@@ -629,7 +630,7 @@ class CurrentRealityTests(unittest.TestCase):
         self.assertFalse(out["can_apply"])
 
     def test_page_has_no_summary_sentences(self):
-        page = (ROOT / "proxy" / "web" / "index.html").read_text()
+        page = english_source(ROOT / "proxy" / "web" / "index.html")
         self.assertNotIn("j.progress && j.progress.message", page)
         self.assertNotIn("Other Macs need attention", page)
         self.assertNotIn("Some other Macs need attention", page)
@@ -747,7 +748,7 @@ class AutoReloadAfterUpdateTests(unittest.TestCase):
     """Open pages reload themselves once Caravan is updated underneath them."""
 
     def setUp(self):
-        self.page = (ROOT / "proxy" / "web" / "index.html").read_text()
+        self.page = english_source(ROOT / "proxy" / "web" / "index.html")
         self.server = (ROOT / "proxy" / "web_server.py").read_text()
 
     def test_page_tag_follows_the_page_file_not_the_version(self):
@@ -814,7 +815,7 @@ class AutoReloadAfterUpdateTests(unittest.TestCase):
     def test_a_stuck_request_turns_into_restarting(self):
         refresh = self.page.split("async function refreshUpdate(opts)", 1)[1].split("\n  }\n", 1)[0]
         self.assertIn("setTimeout(() => ctl.abort(), 5000)", refresh)
-        self.assertIn('"… restarting"', refresh)
+        self.assertIn('… restarting`', refresh)  # Day 32: the + chain is one string with values now
         self.assertIn("_updatePollBusy", self.page)
 
 
@@ -880,10 +881,10 @@ class UpdateAnimationTests(unittest.TestCase):
             self.assertEqual([m["status"] for m in out["macs"]], ["current", "current"])
 
     def test_page_has_campfire_step_and_survives_restart(self):
-        page = (ROOT / "proxy" / "web" / "index.html").read_text()
+        page = english_source(ROOT / "proxy" / "web" / "index.html")
         self.assertIn("function startUpdateStep", page)
         self.assertIn("fmtElapsed", page)
-        self.assertIn('"… restarting"', page)
+        self.assertIn('… restarting`', page)  # Day 32: the + chain is one string with values now
         self.assertIn('flashUpdateDone("Done.")', page)
         self.assertIn('btnNow.classList.toggle("is-tuning", updating)', page)
         self.assertIn('textContent = updating ? "Updating…" : "Update now"', page)

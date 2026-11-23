@@ -17,14 +17,14 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 
-OPENING = "Updating Caravan, the page will be back in a few seconds."
-UP_TO_DATE = "Caravan is already up to date."
-RELOADING = "The model is reloading."
+OPENING = T("cli.update_check.updating_caravan_the_page_will_be")
+UP_TO_DATE = T("cli.update_check.caravan_is_already_up_to_date")
+RELOADING = T("cli.update.the_model_is_reloading")
 FAILED = (
-    "The update failed. Caravan is back on the previous version. "
-    "Check your internet connection and try again."
+    T("cli.update_check.the_update_failed_caravan_is_back")
 )
 
 # Hash changes under these paths mean the running model must be stopped and
@@ -73,7 +73,7 @@ def load_hashes(path):
             continue
         parts = line.split(None, 1)
         if len(parts) != 2 or len(parts[0]) != 64:
-            raise ValueError("Package integrity list is unreadable")
+            raise ValueError(T("cli.update.package_integrity_list_is_unreadable"))
         result[normalize(parts[1])] = parts[0].lower()
     return result
 
@@ -187,7 +187,7 @@ def stop_service(name, *, run=default_launchctl):
         return False
     result = run(["bootout", target])
     if result.returncode:
-        raise ValueError(result.stderr or result.stdout or f"could not stop {name}")
+        raise ValueError(result.stderr or result.stdout or T("cli.update.could_not_stop_name", name=name))
     return True
 
 
@@ -197,10 +197,10 @@ def start_service(home, name, *, run=default_launchctl):
         return False
     plist = service_plist(home, name)
     if not plist.is_file():
-        raise ValueError(f"Startup file for {name} is missing")
+        raise ValueError(T("cli.update.startup_file_for_name_is_missing", name=name))
     result = run(["bootstrap", domain(), str(plist)])
     if result.returncode:
-        raise ValueError(result.stderr or result.stdout or f"could not start {name}")
+        raise ValueError(result.stderr or result.stdout or T("cli.update.could_not_start_name", name=name))
     return True
 
 
@@ -471,7 +471,7 @@ def stop_model_workers(
     )
     _stop_remote_packer(home, run_ssh=run_ssh)
     if path.is_file() and before is not None and path.read_bytes() != before:
-        raise ValueError("Update must not clear the saved model")
+        raise ValueError(T("cli.update.update_must_not_clear_the_saved"))
     return has_saved_model(home) or (before is not None)
 
 
@@ -483,7 +483,7 @@ def swap_source(repo, new_source, backup_dir=None, *, clock=time.time):
     backup_dir = Path(backup_dir)
     if repo.exists():
         if backup_dir.exists():
-            raise ValueError(f"Backup folder already exists: {backup_dir}")
+            raise ValueError(T("cli.update.backup_folder_already_exists_backup_dir", backup_dir=backup_dir))
         shutil.move(str(repo), str(backup_dir))
         try:
             shutil.move(str(new_source), str(repo))
@@ -536,7 +536,7 @@ def run_installer(repo, *, home, python, role, name, port, log=None, runner=None
         )
     if result.returncode:
         raise ValueError(
-            (result.stderr or result.stdout or "Installer failed").strip()[:500]
+            (result.stderr or result.stdout or T("cli.update.installer_failed")).strip()[:500]
         )
     return result
 
@@ -555,7 +555,7 @@ def wait_for_web(port, *, timeout=30, opener=None, pause=time.sleep):
         except (OSError, urllib.error.URLError, ValueError) as error:
             last = error
         pause(0.25)
-    raise ValueError(f"The page did not come back in time{': ' + str(last) if last else ''}")
+    raise ValueError(T("cli.update.the_page_did_not_come_back", v=': ' + str(last) if last else ''))
 
 
 def print_status(home, name="web", *, opener=None, file=None):
@@ -575,21 +575,19 @@ def print_status(home, name="web", *, opener=None, file=None):
         with opener(f"http://127.0.0.1:{int(port)}/api/status", timeout=3) as response:
             data = json.load(response)
         if not isinstance(data, dict) or not isinstance(data.get("worker"), dict):
-            raise ValueError("Unexpected status response")
+            raise ValueError(T("cli.caravan.unexpected_status_response"))
         if data["worker"].get("error"):
             problem = " ".join(str(data["worker"]["error"]).split())
             print(
-                f"Caravan is not running: {problem.rstrip('.')}. "
-                "Open Caravan and load the model again; run caravan doctor if it fails.",
+                T("cli.caravan.caravan_is_not_running_problem_open", problem=problem.rstrip('.')),
                 file=file,
             )
             return 1
-        print("Caravan is running", file=file)
+        print(T("cli.caravan.caravan_is_running"), file=file)
         return 0
     except (OSError, ValueError, urllib.error.URLError):
         print(
-            "Caravan is not running: its browser service is stopped or not responding. "
-            "Run caravan start; if that fails, run caravan doctor.",
+            T("cli.caravan.caravan_is_not_running_its_browser"),
             file=file,
         )
         return 1

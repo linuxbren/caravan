@@ -1,5 +1,6 @@
 // Minimal DOM contract runner: exercises production handlers, never a real API.
 const assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
+const I18N_T = require('../../proxy/web/i18n.js').T; // Day 32: page text lives in locales/en.json
 const V = require('../../proxy/web/balance_view.js');
 class El {
   constructor(tag='div') { this.tagName=tag;this.children=[];this.attrs={};this.style={};this.dataset={};this.listeners={};this.value='';this._text='';this.disabled=false;this.hidden=false;this.classList={contains:()=>true}; }
@@ -19,7 +20,7 @@ function setup(){
  const events={},window={CaravanBalanceView:V,caravanWorkerSnapshot:initial,addEventListener:(name,f)=>events[name]=f};
  const fetch=async(url,opts={})=>{requests.push({url,body:opts.body?JSON.parse(opts.body):null});if(url==='/api/models')return {ok:true,json:async()=>({models:[{id:'tiny',name:'Tiny model'}]})};if(url==='/api/balance'){let value=fixture();if(pending.length)value=await pending.shift();return {ok:true,json:async()=>value};}return {ok:true,json:async()=>({})};};
  document.getElementById('modelSelect').value='tiny';document.getElementById('balanceModel').value='tiny';document.getElementById('balanceApply').disabled=true;
- vm.runInNewContext(fs.readFileSync(require.resolve('../../proxy/web/balance.js'),'utf8'),{document,window,fetch,clearTimeout(){timer=null;},setTimeout:f=>{timer=f;return 1;},console});
+ vm.runInNewContext(fs.readFileSync(require.resolve('../../proxy/web/balance.js'),'utf8'),{T:I18N_T,document,window,fetch,clearTimeout(){timer=null;},setTimeout:f=>{timer=f;return 1;},console});
  return {elements,requests,pending,window,emit:snapshot=>events['caravan-worker-status']({detail:snapshot}),fail:()=>events['caravan-worker-status-error'](),async tick(){for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));},async open(){elements.btnOpenTopo.listeners.click();await this.tick();},async timer(){if(timer){const f=timer;timer=null;await f();await this.tick();}}};
 }
 (async()=>{

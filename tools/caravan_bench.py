@@ -45,7 +45,7 @@ sys.path.insert(0, str(ROOT / "agent"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import web_speed as S  # noqa: E402
-import gguf_tune as T  # noqa: E402
+import gguf_tune as GT  # noqa: E402
 import caravan_prompts as P  # noqa: E402
 from caravan_progress import (  # noqa: E402
     Progress,
@@ -64,6 +64,7 @@ from caravan_models import (  # noqa: E402
     resolve_pair,
 )
 from caravan_chart import decide_style, render_chart  # noqa: E402
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 
 SPEED_STORE = Path("~/.caravan/speed_averages.json").expanduser()
@@ -136,7 +137,7 @@ def _plain_day(ts) -> str:
 
 
 def no_numbers_line(kind: str) -> str:
-    return f"No saved numbers for the {kind} model yet - chat with it a bit, or run the bench."
+    return T("cli.bench.no_saved_numbers_for_the_kind", kind=kind)
 
 
 def format_side(name: str, specs) -> str:
@@ -152,7 +153,7 @@ def format_side(name: str, specs) -> str:
     )
     if line:
         return f"{name}: {line}"
-    return f"{name}: no speed numbers recorded yet."
+    return T("cli.bench.name_no_speed_numbers_recorded_yet", name=name)
 
 
 def _median_specs(samples: list) -> dict:
@@ -162,7 +163,7 @@ def _median_specs(samples: list) -> dict:
         vals = [float(s[key]) for s in samples if isinstance(s, dict) and key in s
                 and isinstance(s[key], (int, float))]
         if vals:
-            med = T._median(vals)
+            med = GT._median(vals)
             if med is not None:
                 out[key] = med
     return out
@@ -233,14 +234,14 @@ def load_model(port: int, model_id: str, urlopen=_urlopen, wait=300,
         if _fresh_ready(worker, model_id, since):
             return last
         if worker.get("status") in ("error", "stopped") and worker.get("error"):
-            raise RuntimeError(worker.get("error") or "load failed")
+            raise RuntimeError(worker.get("error") or T("cli.bench.load_failed"))
         sleep(1)
-    raise TimeoutError("The model did not become ready in time.")
+    raise TimeoutError(T("cli.bench.the_model_did_not_become_ready"))
 
 
 def measure_chat(port: int, prompts=None, max_tokens=192, urlopen=_urlopen,
                  timeout=300, on_prompt=None) -> dict:
-    prompts = prompts or T.BENCH_PROMPTS
+    prompts = prompts or GT.BENCH_PROMPTS
     samples = []
     n = len(prompts)
     for i, p in enumerate(prompts, 1):
@@ -258,7 +259,7 @@ def measure_chat(port: int, prompts=None, max_tokens=192, urlopen=_urlopen,
         )
         web = (data or {}).get("caravan_web") or {}
         stats = web.get("stats") or {}
-        specs = T.specs_from_response(data) if isinstance(data, dict) else {}
+        specs = GT.specs_from_response(data) if isinstance(data, dict) else {}
         # Prefer the same caravan_web stats the page uses under each reply.
         for k, src in (("write_tok_s", "write_tok_s"), ("read_tok_s", "read_tok_s"),
                        ("ttft_s", "ttft_s"), ("prompt_tokens", "prompt_tokens"),
@@ -340,7 +341,7 @@ def measure_series(port, urlopen, *, run_short=True, run_long=True,
             port, prompts=prompts, urlopen=urlopen, on_prompt=hook_short,
         )
         rows.append({
-            "label": f"Short prompts ({len(prompts)})",
+            "label": T("cli.bench.short_prompts_prompts", prompts=len(prompts)),
             "specs": specs, "n": len(prompts),
         })
         return rows
@@ -350,13 +351,13 @@ def measure_series(port, urlopen, *, run_short=True, run_long=True,
             port, prompts=shorts, urlopen=urlopen, on_prompt=hook_short,
         )
         rows.append({
-            "label": f"Short prompts ({len(shorts)})",
+            "label": T("cli.bench.short_prompts_shorts", shorts=len(shorts)),
             "specs": specs, "n": len(shorts),
         })
     if run_long:
         window = window if window is not None else _running_window(port, urlopen)
         for size in P.BENCH_LONG_SIZES:
-            label = f"Long prompts (~{P.size_label(size)} tok) (2)"
+            label = T("cli.bench.long_prompts_size_label_tok_2", size_label=P.size_label(size))
             if not P.fits_window(size, window):
                 rows.append({
                     "label": label, "skipped": True,
@@ -374,7 +375,7 @@ def measure_series(port, urlopen, *, run_short=True, run_long=True,
             except Exception as e:
                 rows.append({
                     "label": label, "skipped": True,
-                    "reason": f"the prompt did not fit or the measurement failed ({e})",
+                    "reason": T("cli.bench.the_prompt_did_not_fit_or", e=e),
                     "size": size,
                 })
                 continue
@@ -388,7 +389,7 @@ def format_series(name, rows) -> list:
     lines = [f"{name}:"]
     for r in rows or []:
         if r.get("skipped"):
-            lines.append(f"  {r['label']}: skipped — {r['reason']}")
+            lines.append(T("cli.bench.label_skipped_reason", label=r['label'], reason=r['reason']))
             continue
         specs = r.get("specs") or {}
         line = S.format_reply_stats(
@@ -402,7 +403,7 @@ def format_series(name, rows) -> list:
         if line:
             lines.append(f"  {r['label']}: {line}")
         else:
-            lines.append(f"  {r['label']}: no speed numbers recorded yet.")
+            lines.append(T("cli.bench.label_no_speed_numbers_recorded_yet", label=r['label']))
     return lines
 
 
@@ -447,19 +448,17 @@ def summarize(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX") -> str:
         head = label.replace(" (5)", "").replace(" (2)", "").replace(" (1)", "")
         head = head[0].lower() + head[1:] if head else label
         if (g or {}).get("skipped") and (m or {}).get("skipped"):
-            reason = (g or m).get("reason") or "they would not fit the model's context."
-            paragraphs.append(f"On {head}, both sides were skipped — {reason}")
+            reason = (g or m).get("reason") or T("cli.bench.they_would_not_fit_the_models")
+            paragraphs.append(T("cli.bench.on_head_both_sides_were_skipped", head=head, reason=reason))
             continue
         if (g or {}).get("skipped") and m and not m.get("skipped") and m.get("specs"):
             paragraphs.append(
-                f"On {head}, {gguf_name} was skipped — {g.get('reason')}. "
-                f"No comparison at this size."
+                T("cli.bench.on_head_gguf_name_was_skipped", head=head, gguf_name=gguf_name, reason=g.get('reason'))
             )
             continue
         if (m or {}).get("skipped") and g and not g.get("skipped") and g.get("specs"):
             paragraphs.append(
-                f"On {head}, {mlx_name} was skipped — {m.get('reason')}. "
-                f"No comparison at this size."
+                T("cli.bench.on_head_mlx_name_was_skipped", head=head, mlx_name=mlx_name, reason=m.get('reason'))
             )
             continue
         gs, ms = (g or {}).get("specs") or {}, (m or {}).get("specs") or {}
@@ -476,8 +475,7 @@ def summarize(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX") -> str:
             rel = abs(a - b) / max(a, b)
             if rel < 0.02:
                 bits.append(
-                    f"about the same at {word} "
-                    f"({_fmt_speed(a)} vs {_fmt_speed(b)} tok/s)"
+                    T("cli.bench.about_the_same_at_word_fmt", word=word, fmt_speed=_fmt_speed(a), fmt_speed2=_fmt_speed(b))
                 )
                 return
             if b > a:
@@ -485,9 +483,7 @@ def summarize(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX") -> str:
             else:
                 winner, fast, slow = gguf_name, a, b
             bits.append(
-                f"{winner} was faster at {word} "
-                f"({_fmt_pct(_pct(fast, slow))} faster, "
-                f"{_fmt_speed(fast)} vs {_fmt_speed(slow)} tok/s)"
+                T("cli.bench.winner_was_faster_at_word_fmt", winner=winner, word=word, fmt_pct=_fmt_pct(_pct(fast, slow)), fmt_speed=_fmt_speed(fast), fmt_speed2=_fmt_speed(slow))
             )
 
         def time_bit(key, word, unit_fmt=_fmt_time):
@@ -499,8 +495,7 @@ def summarize(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX") -> str:
             rel = abs(a - b) / max(a, b)
             if rel < 0.02:
                 bits.append(
-                    f"{word} was about the same "
-                    f"({unit_fmt(a)} vs {unit_fmt(b)})"
+                    T("cli.bench.word_was_about_the_same_unit", word=word, unit_fmt=unit_fmt(a), unit_fmt2=unit_fmt(b))
                 )
                 return
             if a < b:
@@ -508,24 +503,22 @@ def summarize(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX") -> str:
             else:
                 winner, fast, slow = mlx_name, b, a
             bits.append(
-                f"{winner}'s {word} was sooner "
-                f"({_fmt_pct((slow - fast) / slow * 100)} sooner, "
-                f"{unit_fmt(fast)} vs {unit_fmt(slow)})"
+                T("cli.bench.winner_s_word_was_sooner_fmt", winner=winner, word=word, fmt_pct=_fmt_pct((slow - fast) / slow * 100), unit_fmt=unit_fmt(fast), unit_fmt2=unit_fmt(slow))
             )
 
         speed_bit("read_tok_s", "reading")
         speed_bit("write_tok_s", "writing")
-        time_bit("ttft_s", "first token")
-        time_bit("total_s", "total time")
+        time_bit("ttft_s", T("cli.bench.first_token"))
+        time_bit("total_s", T("cli.bench.total_time"))
         if bits:
             # "On short prompts, X was ... and Y. Z."
             if len(bits) == 1:
                 body = bits[0]
             elif len(bits) == 2:
-                body = bits[0] + ", and " + bits[1]
+                body = bits[0] + T("cli.bench.and") + bits[1]
             else:
-                body = ", ".join(bits[:-1]) + ", and " + bits[-1]
-            paragraphs.append(f"On {head}, {body}.")
+                body = ", ".join(bits[:-1]) + T("cli.bench.and") + bits[-1]
+            paragraphs.append(T("cli.bench.on_head_body", head=head, body=body))
     if not paragraphs:
         return ""
     return "\n".join(paragraphs) + "\n"
@@ -544,48 +537,28 @@ def steps_text(gguf_id: str, mlx_id: str, port: int = DEFAULT_PORT,
         flags = " --long"
     series = []
     if run_short:
-        series.append("five short prompts")
+        series.append(T("cli.bench.five_short_prompts"))
     if run_long:
         series.append(
-            "a long-prompt series at about 1k, 4k, and 8k tokens "
-            "(two prompts at each size; sizes that will not fit the "
-            "model's context are skipped)"
+            T("cli.bench.a_long_prompt_series_at_about")
         )
-    series_txt = " and ".join(series) if series else "the prompt series"
+    series_txt = " and ".join(series) if series else T("cli.bench.the_prompt_series")
     header = (
-        "This compares a GGUF model to its MLX counterpart and prints\n"
-        "a compact chart of reading, writing, and first-token speed.\n"
-        f"It runs {series_txt}. Sizes that were not run are left out.\n"
-        "Pass --details (or --text) to also print the reply-stats\n"
-        "lines. Pass --ascii for plain '#' bars.\n"
+        T("cli.bench.this_compares_a_gguf_model_to", series_txt=series_txt)
     )
     if gguf and mlx:
         header += (
-            "\nThis would compare:\n"
-            f"  {format_line(gguf)}\n"
-            f"  {format_line(mlx)}\n"
+            T("cli.bench.this_would_compare_format_line_format", format_line=format_line(gguf), format_line2=format_line(mlx))
         )
     header += (
-        "\nWhen the comparison finishes (or if it stops early), Caravan puts\n"
-        "the original model back, if one was loaded.\n"
-        "\n"
-        "On the 1st Mac, with Caravan running and both models already\n"
-        "downloaded:\n"
-        "\n"
-        f"  caravan bench --gguf {gid} --mlx {mid}{flags} --yes\n"
+        T("cli.bench.when_the_comparison_finishes_or_if", gid=gid, mid=mid, flags=flags)
     )
     if query:
         header += (
-            "\nOr, using the name:\n"
-            "\n"
-            f'  caravan bench "{query}"{flags} --yes\n'
+            T("cli.bench.or_using_the_name_caravan_bench", query=query, flags=flags)
         )
     header += (
-        "\nTo only print already-saved chat averages, without loading anything:\n"
-        "\n"
-        f"  caravan bench --gguf {gid} --mlx {mid} --from-averages\n"
-        "\n"
-        f"Caravan's page is http://127.0.0.1:{int(port)}/\n"
+        T("cli.bench.to_only_print_already_saved_chat", gid=gid, mid=mid, port=int(port))
     )
     return header
 
@@ -602,19 +575,19 @@ def run_from_averages(gguf_id: str, mlx_id: str, *, gguf_name=None, mlx_name=Non
     last = load_last_bench(gguf_id, mlx_id, path=last_store)
     g = averages_for(gguf_id, store=store)
     m = averages_for(mlx_id, store=store)
-    gname = gguf_name or f"{gguf_id} (GGUF)"
-    mname = mlx_name or f"{mlx_id} (MLX)"
+    gname = gguf_name or T("cli.bench.gguf_id_gguf", gguf_id=gguf_id)
+    mname = mlx_name or T("cli.bench.mlx_id_mlx", mlx_id=mlx_id)
     sources = []
 
     def pick(kind, saved):
         rows = _clean_rows(last.get(f"{kind.lower()}_rows"))
         if rows:
             day = _plain_day(last.get(f"{kind.lower()}_at"))
-            sources.append(f"{kind}: Last bench" + (f" ({day})" if day else ""))
+            sources.append(T("cli.bench.kind_last_bench_v", kind=kind, v=f" ({day})" if day else ""))
             return rows
         if saved:
-            sources.append(f"{kind}: Saved chat average")
-            return [{"label": "Saved", "specs": saved}]
+            sources.append(T("cli.bench.kind_saved_chat_average", kind=kind))
+            return [{"label": T("cli.bench.saved"), "specs": saved}]
         return []
 
     g_rows = pick("GGUF", g)
@@ -652,16 +625,16 @@ def _restore_original(port, original_id, original_name, urlopen, notes,
     if not original_id:
         return
     label = original_name or original_id
-    notes.append(f"Putting the original model back: {label}.")
+    notes.append(T("cli.bench.putting_the_original_model_back_label", label=label))
     try:
         st = status(port, urlopen=urlopen)
         worker = (st or {}).get("worker") or st or {}
         if worker.get("status") == "ready" and worker.get("model_id") == original_id:
-            notes.append("It is already loaded.")
+            notes.append(T("cli.bench.it_is_already_loaded"))
             return
         load_model(port, original_id, urlopen=urlopen)
     except Exception as e:
-        notes.append(f"Could not put the original model back: {e}")
+        notes.append(T("cli.bench.could_not_put_the_original_model", e=e))
 
 
 def _emit(progress, lines, chunk, *, printed):
@@ -682,12 +655,12 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
         raise
     except Exception:
         raise RuntimeError(
-            "Caravan is not running. Start it with caravan start, then run this again."
+            T("cli.bench.caravan_is_not_running_start_it")
         )
     worker = (st or {}).get("worker") or st or {}
     if not worker and not isinstance(st, dict):
         raise RuntimeError(
-            "Caravan is not running. Start it with caravan start, then run this again."
+            T("cli.bench.caravan_is_not_running_start_it")
         )
     original_id = None
     original_name = None
@@ -699,8 +672,8 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
     err = None
     g_rows, m_rows = [], []
     printed = [False]
-    gname = gguf_name or f"{gguf_id} (GGUF)"
-    mname = mlx_name or f"{mlx_id} (MLX)"
+    gname = gguf_name or T("cli.bench.gguf_id_gguf", gguf_id=gguf_id)
+    mname = mlx_name or T("cli.bench.mlx_id_mlx", mlx_id=mlx_id)
     try:
         if progress:
             progress.set(loading_step(gname))
@@ -736,7 +709,7 @@ def run_live(gguf_id: str, mlx_id: str, *, port=DEFAULT_PORT, urlopen=_urlopen,
         lines.append(P.CACHE_NOTE)
     except KeyboardInterrupt:
         err = KeyboardInterrupt()
-        notes.append("Stopped.")
+        notes.append(T("cli.bench.stopped"))
     except Exception as e:
         err = e
     finally:
@@ -818,62 +791,55 @@ def main(argv=None, *, models=None):
     )
     p.add_argument(
         "name", nargs="?", default=None,
-        help="plain model name, for example 'qwen2.5 coder 7b'; "
-             "Caravan finds the matching GGUF and MLX among downloaded models",
+        help=T("cli.bench.plain_model_name_for_example_qwen2"),
     )
     p.add_argument(
         "--gguf", default=None,
-        help="GGUF model id (for example gguf/qwen2.5-coder-7b-instruct-q4_k_m); "
-             "see caravan models",
+        help=T("cli.bench.gguf_model_id_for_example_gguf"),
     )
     p.add_argument(
         "--mlx", default=None,
-        help="MLX model id for the same model (for example "
-             "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit); see caravan models",
+        help=T("cli.bench.mlx_model_id_for_the_same"),
     )
     p.add_argument(
         "--yes", action="store_true",
-        help="load each model and measure; the model that was loaded before "
-             "is put back when the comparison finishes",
+        help=T("cli.bench.load_each_model_and_measure_the"),
     )
     p.add_argument(
         "--short", action="store_true",
-        help="run only the five short prompts",
+        help=T("cli.bench.run_only_the_five_short_prompts"),
     )
     p.add_argument(
         "--long", action="store_true",
-        help="run only the long-prompt series (about 1k, 4k, and 8k tokens)",
+        help=T("cli.bench.run_only_the_long_prompt_series"),
     )
     p.add_argument(
         "--from-averages", action="store_true",
-        help="draw a chart from already-saved chat averages only; "
-             "do not load or unload a model",
+        help=T("cli.bench.draw_a_chart_from_already_saved"),
     )
     p.add_argument(
         "--details", "--text", dest="details", action="store_true",
-        help="also print the reply-stats lines and the unique-opening note",
+        help=T("cli.bench.also_print_the_reply_stats_lines"),
     )
     p.add_argument(
         "--ascii", action="store_true",
-        help="use plain '#' bars instead of block characters",
+        help=T("cli.bench.use_plain_bars_instead_of_block"),
     )
     p.add_argument(
         "--quiet", action="store_true",
-        help="no progress animation or step lines; still print the results",
+        help=T("cli.bench.no_progress_animation_or_step_lines"),
     )
     p.add_argument(
         "--speedups", action="store_true",
-        help="measure Prompt lookup and Guess-ahead: Off, Prompt lookup, "
-             "Guess-ahead (when a helper is on this Mac) and Auto, on short, "
-             "code-edit and long prompts, with how many guesses were kept",
+        help=T("cli.bench.measure_prompt_lookup_and_guess_ahead"),
     )
     p.add_argument(
         "--edits", action="store_true",
-        help="with --speedups, run only the five code-edit prompts",
+        help=T("cli.bench.with_speedups_run_only_the_five"),
     )
     p.add_argument(
         "--only", choices=("gguf", "mlx"), default=None,
-        help="with --speedups, measure only one side",
+        help=T("cli.bench.with_speedups_measure_only_one_side"),
     )
     p.add_argument("--port", type=int, default=DEFAULT_PORT, help=argparse.SUPPRESS)
     p.add_argument("--gguf-name", default=None, help=argparse.SUPPRESS)
@@ -885,7 +851,7 @@ def main(argv=None, *, models=None):
         side = _resolve_one_side(args, args.only, models=models)
         if not side.get("ok"):
             sys.stdout.write("\n\n".join(side.get("messages") or [
-                f"No {args.only.upper()} model found. Run caravan models to see ids."]) + "\n")
+                T("cli.bench.no_upper_model_found_run_caravan", upper=args.only.upper())]) + "\n")
             return 2
         m = side["model"]
         gid = model_id(m) if args.only == "gguf" else None
@@ -898,9 +864,7 @@ def main(argv=None, *, models=None):
         text = "\n\n".join(pair.get("messages") or [])
         if not text:
             text = (
-                "Need both a GGUF and an MLX model. "
-                "Pass a plain name, or both --gguf and --mlx. "
-                "Run caravan models to see ids."
+                T("cli.bench.need_both_a_gguf_and_an")
             )
         sys.stdout.write(text + "\n")
         return 2
@@ -935,11 +899,11 @@ def main(argv=None, *, models=None):
         )
     except KeyboardInterrupt:
         progress.stop()
-        sys.stderr.write("Stopped.\n")
+        sys.stderr.write(T("cli.bench.stopped_2"))
         return 130
     except Exception as e:
         progress.stop()
-        sys.stderr.write(f"Could not finish the comparison: {e}\n")
+        sys.stderr.write(T("cli.bench.could_not_finish_the_comparison_e", e=e))
         return 1
     progress.stop()
     g_rows = result.get("gguf_rows") or []
@@ -961,7 +925,7 @@ def main(argv=None, *, models=None):
     if isinstance(err, KeyboardInterrupt) or err == "stopped":
         return 130
     if err:
-        sys.stderr.write(f"Could not finish the comparison: {err}\n")
+        sys.stderr.write(T("cli.bench.could_not_finish_the_comparison_err", err=err))
         return 1
     return 0
 
@@ -989,16 +953,15 @@ def offer_helpers(port, model_ids, *, urlopen=_urlopen, ask=None, isatty=None,
         if not offer:
             continue
         size = offer.get("size_mb")
-        size_txt = (f" ({size / 1000:.1f} GB)" if size and size >= 1000
-                    else (f" ({size} MB)" if size else ""))
+        size_txt = (T("cli.bench.v_gb", v=size / 1000) if size and size >= 1000
+                    else (T("cli.bench.size_mb", size=size) if size else ""))
         name = str(mid).split("/")[-1]
         if not tty:
-            out.write(f"A helper{size_txt} can make {name} reply faster. "
-                      "Run caravan bench in a terminal to be asked, or use the web page.\n")
+            out.write(T("cli.bench.a_helper_size_txt_can_make", size_txt=size_txt, name=name))
             done.append((mid, "no-terminal"))
             continue
         try:
-            reply = str(ask(f"{name}: Download helper for faster replies?{size_txt} [y/N] ") or "")
+            reply = str(ask(T("cli.bench.name_download_helper_for_faster_replies", name=name, size_txt=size_txt)) or "")
         except (EOFError, KeyboardInterrupt):
             reply = ""
             out.write("\n")
@@ -1009,14 +972,14 @@ def offer_helpers(port, model_ids, *, urlopen=_urlopen, ask=None, isatty=None,
                         data=json.dumps(dict(body, action="not_now")).encode(), timeout=10)
             except Exception:
                 pass
-            out.write("Okay. Caravan will not ask again for this model.\n")
+            out.write(T("cli.bench.okay_caravan_will_not_ask_again"))
             done.append((mid, "not_now"))
             continue
         try:
             r = urlopen(f"{base}/api/helper-offer/answer",
                         data=json.dumps(dict(body, action="download")).encode(), timeout=60) or {}
         except Exception as e:
-            out.write(f"Could not start the helper download: {e}\n")
+            out.write(T("cli.bench.could_not_start_the_helper_download", e=e))
             done.append((mid, "error"))
             continue
         job = r.get("job") or {}
@@ -1030,12 +993,12 @@ def offer_helpers(port, model_ids, *, urlopen=_urlopen, ask=None, isatty=None,
                 pass
             status_txt = job.get("status") or status_txt
             p = next(iter((job.get("progress") or {}).values()), {}) or {}
-            out.write(f"\rDownloading helper… {p.get('pct') or 0}%   ")
+            out.write(T("cli.bench.downloading_helper_v", v=p.get('pct') or 0))
             out.flush()
         if status_txt == "done":
-            out.write("\rHelper ready. Guess-ahead is on Auto; Auto-tune keeps it only if it is faster.\n")
+            out.write(T("cli.bench.helper_ready_guess_ahead_is_on"))
         else:
-            out.write(f"\rHelper download did not finish ({status_txt}).\n")
+            out.write(T("cli.bench.helper_download_did_not_finish_status", status_txt=status_txt))
         done.append((mid, status_txt))
     return done
 
@@ -1053,11 +1016,11 @@ def _main_speedups(args, gid, mid, gname, mname) -> int:
     if not args.yes:
         parts = []
         if sets_args["run_short"]:
-            parts.append("the five short prompts")
+            parts.append(T("cli.bench.the_five_short_prompts"))
         if sets_args["run_edits"]:
-            parts.append("five code-edit prompts")
+            parts.append(T("cli.bench.five_code_edit_prompts"))
         if sets_args["run_long"]:
-            parts.append("the long-prompt series")
+            parts.append(T("cli.bench.the_long_prompt_series"))
         names = [n for k, n in (("gguf", gname), ("mlx", mname)) if k in sides]
         flags = " ".join(f for f, on in (("--short", args.short), ("--edits", args.edits),
                                          ("--long", args.long)) if on)
@@ -1069,13 +1032,7 @@ def _main_speedups(args, gid, mid, gname, mname) -> int:
         else:
             q = f"--gguf {gid} --mlx {mid} "
         sys.stdout.write(
-            "This measures Prompt lookup and Guess-ahead on "
-            + " and ".join(names) + ".\n"
-            "Each model is loaded once per mode (Off, Prompt lookup, Guess-ahead "
-            "when a helper is on this Mac, Auto) and runs "
-            + (", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0]) + ".\n"
-            "The model that is loaded now is put back at the end, with its settings.\n\n"
-            f"Run: caravan bench {q}--speedups{only}{(' ' + flags) if flags else ''} --yes\n"
+            T("cli.bench.this_measures_prompt_lookup_and_guess", names=" and ".join(names), v=", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0], q=q, only=only, v_=(' ' + flags) if flags else '')
         )
         return 0
     offer_helpers(args.port, [m for k, m in (("gguf", gid), ("mlx", mid)) if k in sides])
@@ -1089,11 +1046,11 @@ def _main_speedups(args, gid, mid, gname, mname) -> int:
         )
     except KeyboardInterrupt:
         progress.stop()
-        sys.stderr.write("Stopped.\n")
+        sys.stderr.write(T("cli.bench.stopped_2"))
         return 130
     except Exception as e:
         progress.stop()
-        sys.stderr.write(f"Could not finish the measurement: {e}\n")
+        sys.stderr.write(T("cli.bench.could_not_finish_the_measurement_e", e=e))
         return 1
     progress.stop()
     if result.get("sides"):
@@ -1105,7 +1062,7 @@ def _main_speedups(args, gid, mid, gname, mname) -> int:
     if result.get("error") == "stopped":
         return 130
     if result.get("error"):
-        sys.stderr.write(f"Could not finish the measurement: {result['error']}\n")
+        sys.stderr.write(T("cli.bench.could_not_finish_the_measurement_error", error=result['error']))
         return 1
     return 0
 

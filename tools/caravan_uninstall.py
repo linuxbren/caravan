@@ -10,6 +10,7 @@ import signal
 import subprocess
 import time
 import sys
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "proxy"))
 
 SCRIPTS = ('proxy/web_server.py', 'proxy/slot_pin_proxy.py', 'agent/caravan_agent.py',
@@ -117,19 +118,19 @@ def marked_ssh_edits(home):
     changes = []
     folder = home / '.ssh'
     if folder.is_symlink():
-        raise ValueError('SSH folder is a link; review its marked Caravan entries manually before uninstalling.')
+        raise ValueError(T("cli.uninstall.ssh_folder_is_a_link_review"))
     block = re.compile(r'^# BEGIN caravan-pair:([a-f0-9]{32})\n.*?^# END caravan-pair:\1\n?', re.M | re.S)
     line = re.compile(r'^.* # caravan-pair:[a-f0-9]{32}\n?$', re.M)
     for name in ('config', 'known_hosts', 'authorized_keys'):
         path = folder / name
         if path.is_symlink():
-            raise ValueError('SSH file is a link; review it manually before uninstalling: ' + name)
+            raise ValueError(T("cli.uninstall.ssh_file_is_a_link_review", name=name))
         if not path.exists():
             continue
         old = path.read_text()
         new = line.sub('', block.sub('', old))
         if '# BEGIN caravan-pair:' in new or '# END caravan-pair:' in new:
-            raise ValueError('Incomplete Caravan SSH marker; inspect ' + name + ' before uninstalling.')
+            raise ValueError(T("cli.uninstall.incomplete_caravan_ssh_marker_inspect_name", name=name))
         if old != new:
             changes.append((path, new))
     return changes
@@ -150,7 +151,7 @@ def uninstall(home=None, *, yes=False, confirm=input, run=None, inspect=command_
     home = Path(home or Path.home())
     root = home / '.caravan'
     if root.is_symlink():
-        raise ValueError('Caravan folder is a link; inspect it manually. Nothing removed.')
+        raise ValueError(T("cli.uninstall.caravan_folder_is_a_link_inspect"))
     run = run or service.run_launchctl
     service.check_platform()
     jobs = []
@@ -168,15 +169,14 @@ def uninstall(home=None, *, yes=False, confirm=input, run=None, inspect=command_
     for name in ('.zprofile', '.bash_profile'):
         profile = home / name
         if profile.is_symlink():
-            raise ValueError('Shell profile is a link; remove its Caravan block manually first.')
+            raise ValueError(T("cli.uninstall.shell_profile_is_a_link_remove"))
         text = profile.read_text() if profile.exists() else ''
         if text.count('# >>> caravan >>>') != text.count('# <<< caravan <<<'):
-            raise ValueError('Incomplete Caravan PATH block; inspect ' + name + ' first.')
+            raise ValueError(T("cli.uninstall.incomplete_caravan_path_block_inspect_name", name=name))
     size = total_bytes(root) + sum(p.stat().st_size for p, _ in jobs)
-    prompt = (f'Remove paired Macs first. Delete all Caravan services, models, settings, runtimes, '
-              f'pairing keys and ~/.caravan ({size / 1e9:.2f} GB total), plus marked SSH/PATH entries? [y/N] ')
+    prompt = (T("cli.uninstall.remove_paired_macs_first_delete_all", v=size / 1e9))
     if not yes and confirm(prompt).strip().lower() not in ('y', 'yes'):
-        return 'Cancelled. Caravan files were kept.'
+        return T("cli.uninstall.cancelled_caravan_files_were_kept")
     # Drop Tailscale share and local-network listen before files disappear.
     try:
         if remote_off is None:
@@ -201,7 +201,7 @@ def uninstall(home=None, *, yes=False, confirm=input, run=None, inspect=command_
         if run(['print', target]).returncode == 0:
             result = run(['bootout', target])
             if result.returncode:
-                raise ValueError('Could not stop ' + plan['Label'] + '; files kept. Run caravan doctor.')
+                raise ValueError(T("cli.uninstall.could_not_stop_label_files_kept", label=plan['Label']))
         path.unlink()
     for pid, command in tracked.items():
         stop_exact(pid, command, inspect=inspect, send=send)
@@ -210,5 +210,5 @@ def uninstall(home=None, *, yes=False, confirm=input, run=None, inspect=command_
     configure('remove', home)
     if root.exists():
         shutil.rmtree(root)
-    suffix = ' Unverified startup files left untouched.' if unverified else ''
-    return 'Caravan uninstalled; all Caravan data removed.' + suffix
+    suffix = T("cli.uninstall.unverified_startup_files_left_untouched") if unverified else ''
+    return T("cli.uninstall.caravan_uninstalled_all_caravan_data_removed", suffix=suffix)

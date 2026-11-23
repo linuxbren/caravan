@@ -16,10 +16,11 @@ sys.path.insert(0, str(ROOT / "proxy"))
 import web_picker as P
 import web_speed as S
 import web_nodes as N
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (ROOT / "proxy/web/index.html").read_text()
-BALANCE = (ROOT / "proxy/web/balance.js").read_text()
-PAIRING = (ROOT / "proxy/web/pairing.html").read_text()
+HTML = english_source(ROOT / "proxy/web/index.html")
+BALANCE = english_source(ROOT / "proxy/web/balance.js")
+PAIRING = english_source(ROOT / "proxy/web/pairing.html")
 SERVER = (ROOT / "proxy/web_server.py").read_text()
 
 
@@ -345,7 +346,7 @@ class FitSummary(unittest.TestCase):
     def test_status_uses_selected_fit_and_says_macs(self):
         self.assertIn('function macWord(n)', HTML)
         self.assertIn('n === 1 ? "Mac" : "Macs"', HTML)
-        self.assertIn('parts.push("fit on " + ks[0] + " " + macWord(ks[0]))', HTML)
+        self.assertIn('parts.push(`fit on ${ks[0]} ${macWord(ks[0])}`)', HTML)  # Day 32: the + chain is one string with values now
         self.assertIn("function passFit(q)", HTML)
         self.assertIn("filteredQuants(g)", HTML)
         self.assertIn(".filter(passFit)", HTML)
@@ -681,7 +682,7 @@ class HelperFlicker(unittest.TestCase):
         self.assertIn('Helper download…', HTML)
         self.assertIn(".helper-slot", HTML)
         self.assertIn("min-height: 2.25rem", HTML)
-        helpers = (ROOT / "proxy/web/helpers.js").read_text()
+        helpers = english_source(ROOT / "proxy/web/helpers.js")
         self.assertIn("function applyHelperPoll(", helpers)
         self.assertIn("function paintHelperButton()", helpers)
         # The old append-if-missing path is gone; identical polls must not write.

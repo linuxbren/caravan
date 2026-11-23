@@ -11,6 +11,7 @@ from service_endpoints import RetryableReadinessError
 import web_server as W
 import web_pipeline as P
 from web_workers import WorkerManager
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 NODES=[dict(id="n1",role="lead",host="local"),dict(id="n2",role="packer",host="peer",ssh="peer")]
 def request(mid="q"):
@@ -42,7 +43,7 @@ class ControllerTest(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.mgr=WorkerManager(state_dir=Path(self.tmp.name));self.app=NS(mgr=self.mgr,configured_nodes=lambda:NODES);self.c=R.Controller(self.app)
     def test_ui_shows_restore_warnings_as_text_without_locking_controls(self):
-        html=(Path(__file__).resolve().parents[1]/"proxy/web/index.html").read_text()
+        html=english_source(Path(__file__).resolve().parents[1]/"proxy/web/index.html")
         self.assertIn('id="restoreNotice" role="status"',html)
         self.assertIn('restoreNotice.textContent = r.message',html)
         self.assertIn('["preparing", "blocked", "save_error"]',html)

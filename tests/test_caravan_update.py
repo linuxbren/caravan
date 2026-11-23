@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import caravan_update as U
 import caravan as cli
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 def hashes(mapping):
@@ -359,7 +360,7 @@ class CommandTests(unittest.TestCase):
             network.assert_not_called()
 
     def test_update_does_not_ask_the_user_to_start_afterwards(self):
-        text = (ROOT / "tools" / "caravan.py").read_text()
+        text = english_source(ROOT / "tools" / "caravan.py")
         self.assertIn('"--update", "--role", role', text)
         self.assertNotIn("run caravan start when ready", text)
         self.assertNotIn("--no-start", text.split("if args.action == \"update\":")[1].split("if args.action ==")[0])
@@ -391,7 +392,7 @@ class BootstrapContractTests(unittest.TestCase):
         )
 
     def test_services_loaded_path_no_longer_refuses(self):
-        text = (ROOT / "install").read_text()
+        text = english_source(ROOT / "install")
         self.assertNotIn("Stop the web first", text)
         self.assertNotIn("then run caravan update", text)
         self.assertIn("caravan_update.py", text)

@@ -25,6 +25,7 @@ import caravan as CLI
 import caravan_path as PathSetup
 import caravan_service as Service
 import service_config as SC
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 class RuntimeTests(unittest.TestCase):
@@ -82,10 +83,10 @@ class RuntimeTests(unittest.TestCase):
         self.assertIn('macos-arm64.tar.gz',L.PIN['url'])
 
     def test_every_role_installs_engine_and_update_reuses_installer(self):
-        script=(ROOT/'scripts/install.sh').read_text()
+        script=english_source(ROOT/'scripts/install.sh')
         self.assertIn('run "$VENV/bin/python" "$REPO/agent/llama_runtime.py"',script)
         self.assertLess(script.index('llama_runtime.py'),script.index('if [ "$ROLE" = lead ]; then\n  KIND=web'))
-        self.assertIn('"--update", "--role", role', (ROOT/'tools/caravan.py').read_text())
+        self.assertIn('"--update", "--role", role', english_source(ROOT/'tools/caravan.py'))
         self.assertIn('runtime/llama/',G.rpc_start_command())
         self.assertIn('CARAVAN_RPC_BIN',G.rpc_start_command())
 
@@ -296,31 +297,31 @@ class StartupAndDiscoveryTests(unittest.TestCase):
 
 class UiContractTests(unittest.TestCase):
     def test_no_hidden_download_option_and_quant_is_download(self):
-        text=(ROOT/'proxy/web/index.html').read_text()
+        text=english_source(ROOT/'proxy/web/index.html')
         self.assertNotIn('ggufFullFallback',text);self.assertIn('btn.innerHTML = `${q.cloud ? "Load" : "Download"} ',text)  # Day 32: cloud rows say Load
         self.assertIn('Could not load:',text);self.assertIn('e.error || e.message',text)
         self.assertIn('not downloaded',text)
 
     def test_topology_add_card_banner_and_pairing_columns(self):
-        text=(ROOT/'proxy/web/index.html').read_text()
+        text=english_source(ROOT/'proxy/web/index.html')
         self.assertIn('class="ghost add-mac-card"',text);self.assertIn('+ Add a Mac',text)
         self.assertIn('Have another Mac? Add it to run bigger models.',text)
         self.assertIn('caravan-add-mac-dismissed',text);self.assertIn('count !== 1 || dismissed',text)
         self.assertNotIn('href="/pairing">Add Macs',text)
         self.assertIn('id="pairingPanel"',text)
         for file in ('index.html','pairing.html'):
-            html=(ROOT/'proxy/web'/file).read_text();self.assertIn('pairing-columns',html)
+            html=english_source(ROOT/'proxy/web'/file);self.assertIn('pairing-columns',html)
             self.assertIn('On the new Mac',html);self.assertIn('On your first Mac',html)
         css=(ROOT/'proxy/web/pairing.css').read_text()
         self.assertIn('grid-template-columns:1fr 1fr',css);self.assertIn('@media(max-width:640px)',css)
         self.assertIn('--bg: #050504',css);self.assertNotIn('@import',css)
-        js=(ROOT/'proxy/web/pairing.js').read_text()
+        js=english_source(ROOT/'proxy/web/pairing.js')
         self.assertIn('nodeCard-',js);self.assertIn('Remove this Mac',js);self.assertIn('X-Caravan-Pairing',js)
 
     def test_inline_and_pairing_javascript_parse(self):
         import re
         if not shutil.which('node'):self.skipTest('node not installed')
-        text=(ROOT/'proxy/web/index.html').read_text()
+        text=english_source(ROOT/'proxy/web/index.html')
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/'inline.js';p.write_text('\n'.join(re.findall(r'<script>(.*?)</script>',text,re.S)))
             for script in (p,ROOT/'proxy/web/pairing.js'):
@@ -392,7 +393,7 @@ class FullUninstallTests(unittest.TestCase):
             self.assertEqual(set(found),{101,104})
 
     def test_no_remote_commands_in_uninstaller(self):
-        text=(ROOT/'tools/caravan_uninstall.py').read_text()
+        text=english_source(ROOT/'tools/caravan_uninstall.py')
         self.assertNotIn('subprocess.run(["ssh"',text)
         self.assertNotIn('pkill',text)
 

@@ -2,6 +2,7 @@
 // server says the run ended, then a plain cancelled line in the Auto-tune
 // section and where the Tuning badge was; buttons come back.
 const assert = require('node:assert/strict');
+const I18N_T = require('../../proxy/web/i18n.js').T; // Day 32: page text lives in locales/en.json
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -32,7 +33,7 @@ const timers = [];
 const calls = [];
 let server = { running: true, phase: 'A/B', step: 'Testing Prompt batch 256', schedule: [] };
 const ctx = {
-  $, console, JSON, Object, String, Number, Math, Date, Promise, Error, isFinite,
+  $, console, JSON, Object, String, Number, Math, Date, Promise, Error, isFinite, T: I18N_T,
   setTimeout: (f, ms) => { timers.push({ f, ms }); return timers.length; }, clearTimeout: () => {},
   refreshTuneResult: () => {}, repaintUpdate: () => {},
   api: async (url, opts) => { calls.push(url); if (url === '/api/optimize/cancel') return Object.assign({}, server, { cancelling: true }); return JSON.parse(JSON.stringify(server)); },

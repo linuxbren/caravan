@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 import hf_auth
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 class TokenValidationTests(unittest.TestCase):
@@ -54,7 +55,7 @@ class TokenSettingsUiTests(unittest.TestCase):
         import subprocess
         if not shutil.which("node"):
             self.skipTest("node is required for UI state assertions")
-        html = (pathlib.Path(__file__).parents[1] / "proxy/web/index.html").read_text()
+        html = english_source(pathlib.Path(__file__).parents[1] / "proxy/web/index.html")
         function = html.split("  function renderHfTokenStatus", 1)[1].split('  $("btnHfTokenEdit").addEventListener', 1)[0]
         script = """
 const assert = require('assert');

@@ -22,6 +22,7 @@ import caravan_update_check as UC  # noqa: E402
 import caravan as cli  # noqa: E402
 import web_server  # noqa: E402
 from web_workers import WorkerManager  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 OLD = "a" * 40
@@ -702,7 +703,7 @@ class UpdateApiTests(unittest.TestCase):
 
 class PageAndDocsTests(unittest.TestCase):
     def setUp(self):
-        self.page = (ROOT / "proxy" / "web" / "index.html").read_text()
+        self.page = english_source(ROOT / "proxy" / "web" / "index.html")
         self.day26 = (ROOT / "docs" / "DAY26.md").read_text()
         self.web = (ROOT / "docs" / "WEB.md").read_text()
         self.install = (ROOT / "INSTALL.md").read_text()

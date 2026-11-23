@@ -22,6 +22,7 @@ import caravan_lan as L
 import caravan_uninstall as U
 import service_config as SC
 import web_server
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 def tmp_home():
@@ -304,7 +305,7 @@ class InstallerPromptTests(unittest.TestCase):
             self.assertEqual(out.getvalue(), "")
 
     def test_install_sh_asks_only_on_fresh_non_update(self):
-        text = (ROOT / "scripts/install.sh").read_text()
+        text = english_source(ROOT / "scripts/install.sh")
         self.assertIn('caravan_lan.py" maybe-prompt --port', text)
         self.assertIn('FRESH_CONFIG" = 1 ] && [ "$UPDATE" = 0 ]', text)
         self.assertIn("Would ask whether to open Caravan on your local network.", text)
@@ -439,12 +440,12 @@ class ApiLanTests(unittest.TestCase):
         self.assertNotIn("mgr.stop", block)
         self.assertIn("CARAVAN_WEB_KEEP_WORKERS", block)
         self.assertIn("The page will be back in a few seconds. The model stays loaded.",
-                      (ROOT / "tools" / "caravan_lan.py").read_text())
+                      english_source(ROOT / "tools" / "caravan_lan.py"))
 
 
 class UiTests(unittest.TestCase):
     def test_settings_switch_and_warning(self):
-        html = (ROOT / "proxy/web/index.html").read_text()
+        html = english_source(ROOT / "proxy/web/index.html")
         self.assertIn("Open on my local network", html)
         self.assertIn('id="lanAccessCard"', html)
         self.assertIn('id="lanAccessSwitch"', html)
@@ -472,7 +473,7 @@ class UiTests(unittest.TestCase):
         import re, shutil, subprocess
         if not shutil.which("node"):
             self.skipTest("node not installed")
-        text = (ROOT / "proxy/web/index.html").read_text()
+        text = english_source(ROOT / "proxy/web/index.html")
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "inline.js"
             p.write_text("\n".join(re.findall(r"<script>(.*?)</script>", text, re.S)))

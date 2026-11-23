@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 import subprocess
 from pathlib import Path
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 ROOT = Path(__file__).resolve().parents[1]
 _VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
@@ -65,7 +66,7 @@ def info(root=None):
 def text(root=None):
     """One line for the CLI: 'Caravan v0.9.4 (4b48b85)'."""
     i = info(root)
-    head = f"Caravan {i['label']}" if i["label"] else "Caravan (version unknown)"
+    head = T("cli.version.caravan_label", label=i['label']) if i["label"] else T("cli.version.caravan_version_unknown")
     return head + (f" ({i['short']})" if i["short"] else "")
 
 

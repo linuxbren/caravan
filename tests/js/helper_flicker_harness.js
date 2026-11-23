@@ -1,6 +1,7 @@
 // Settings Helper-download button: repeated identical polls must not
 // remove, recreate, or toggle the button (that jump was the Day 24 flicker).
 const assert = require('node:assert/strict');
+const I18N_T = require('../../proxy/web/i18n.js').T; // Day 32: page text lives in locales/en.json
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -153,6 +154,7 @@ function setup() {
     alert() {},
     Error,
     Object, String, JSON, Promise,
+    T: I18N_T,
   };
   let currentOffer = { id: 'helper-qwen', message: 'A helper is available.', declined: false };
   const src = fs.readFileSync(path.join(__dirname, '../../proxy/web/helpers.js'), 'utf8');

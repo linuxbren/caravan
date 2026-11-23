@@ -36,6 +36,9 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "agent"))
 
 import web_catalog as catalog
+if str(HERE.parent / "tools") not in sys.path:
+    sys.path.append(str(HERE.parent / "tools"))  # caravan_i18n (Day 32 strings)
+import caravan_i18n as I18N  # noqa: E402
 import web_settings  # noqa: E402
 import web_speed  # noqa: E402
 import web_timing as timing  # noqa: E402
@@ -938,6 +941,9 @@ def make_handler(app: App):
             if not path.is_file():
                 return None, None
             data = path.read_bytes()
+            if path.suffix.lower() == ".html":
+                # Day 32: page text comes from locales/<lang>.json, filled in here.
+                data = I18N.render_page(data.decode("utf-8")).encode("utf-8")
             ctype = {
                 ".html": "text/html; charset=utf-8",
                 ".js": "application/javascript; charset=utf-8",

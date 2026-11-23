@@ -18,8 +18,9 @@ import web_timing as WT  # noqa: E402
 import web_speed as S  # noqa: E402
 import caravan_prompts as P  # noqa: E402
 import caravan_speedups as SU  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (ROOT / "proxy/web/index.html").read_text()
+HTML = english_source(ROOT / "proxy/web/index.html")
 
 
 class Readout(unittest.TestCase):

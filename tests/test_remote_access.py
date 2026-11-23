@@ -20,6 +20,7 @@ import caravan_remote as R
 import caravan_uninstall as U
 import service_config as SC
 import web_server
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 class FakeTailscale:
@@ -395,7 +396,7 @@ class InstallerPromptTests(unittest.TestCase):
         self.assertEqual(R.QUESTION, "Open Caravan from your other devices over Tailscale? (y/N) ")
 
     def test_install_sh_asks_only_on_fresh_non_update(self):
-        text = (ROOT / "scripts/install.sh").read_text()
+        text = english_source(ROOT / "scripts/install.sh")
         self.assertIn('caravan_remote.py" maybe-prompt --port', text)
         self.assertIn('caravan_lan.py" maybe-prompt --port', text)
         self.assertIn('FRESH_CONFIG" = 1 ] && [ "$UPDATE" = 0 ]', text)
@@ -526,7 +527,7 @@ class ApiRemoteTests(unittest.TestCase):
 
 class UiAndBindTests(unittest.TestCase):
     def test_settings_switch_and_copy(self):
-        html = (ROOT / "proxy/web/index.html").read_text()
+        html = english_source(ROOT / "proxy/web/index.html")
         self.assertIn("Open from my other devices", html)
         self.assertIn('id="remoteAccessCard"', html)
         self.assertIn('id="remoteAccessSwitch"', html)
@@ -546,7 +547,7 @@ class UiAndBindTests(unittest.TestCase):
         cmd = SC.render(plan)["ProgramArguments"]
         self.assertIn("--host", cmd)
         self.assertEqual(cmd[cmd.index("--host") + 1], "127.0.0.1")
-        source = (ROOT / "tools/caravan_remote.py").read_text()
+        source = english_source(ROOT / "tools/caravan_remote.py")
         self.assertNotIn('"0.0.0.0"', source)
         self.assertNotIn("'0.0.0.0'", source)
         self.assertNotIn("--funnel", source)
@@ -557,7 +558,7 @@ class UiAndBindTests(unittest.TestCase):
         import re, shutil, subprocess
         if not shutil.which("node"):
             self.skipTest("node not installed")
-        text = (ROOT / "proxy/web/index.html").read_text()
+        text = english_source(ROOT / "proxy/web/index.html")
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "inline.js"
             p.write_text("\n".join(re.findall(r"<script>(.*?)</script>", text, re.S)))

@@ -18,6 +18,7 @@ import gguf_self_tune as GST  # noqa: E402
 import kv_auto  # noqa: E402
 import web_restore as WR  # noqa: E402
 import web_settings as WS  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 MIB = 1024 * 1024
 
@@ -281,7 +282,7 @@ class TuningKeepsTheWindow(unittest.TestCase):
 
 class UiTrim(unittest.TestCase):
     def test_web_chat_trims_to_the_real_gguf_window(self):
-        html = (ROOT / "proxy" / "web" / "index.html").read_text()
+        html = english_source(ROOT / "proxy" / "web" / "index.html")
         self.assertIn("function chatWindowTokens()", html)
         self.assertIn("chatWindowTokens() - (maxTokens || 768) - 256", html)
         self.assertIn('native: "Native"', html)

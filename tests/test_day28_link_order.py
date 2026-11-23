@@ -19,6 +19,7 @@ for _p in ("tools", "proxy", "agent"):
     if str(ROOT / _p) not in sys.path:
         sys.path.insert(0, str(ROOT / _p))
 import peer_route as PR  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 PORTS = """
 Hardware Port: Ethernet
@@ -460,7 +461,7 @@ class WiringTest(unittest.TestCase):
             st = web_nodes.gather_node_stats({"id": "p", "host": "caravan-x", "ssh": "caravan-x"},
                                              ssh_fn=lambda n, c, timeout=0: SimpleNamespace(returncode=0, stdout='{"cpu_pct": 1}', stderr=""))
         self.assertEqual(st["link"]["kind"], "thunderbolt")
-        html = (ROOT / "proxy" / "web" / "index.html").read_text()
+        html = english_source(ROOT / "proxy" / "web" / "index.html")
         self.assertIn("function linkRow(L)", html)
         self.assertIn("if (n.link && n.role !== \"lead\") h += linkRow(n.link);", html)
 

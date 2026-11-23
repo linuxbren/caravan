@@ -16,8 +16,9 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
-QUESTION = "Open Caravan from your other devices over Tailscale? (y/N) "
+QUESTION = T("cli.remote.open_caravan_from_your_other_devices")
 LOOPBACKS = ("127.0.0.1", "localhost", "::1", "[::1]")
 BINARIES = (
     "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
@@ -25,10 +26,10 @@ BINARIES = (
     "/opt/homebrew/bin/tailscale",
     "/usr/local/bin/tailscale",
 )
-MISSING = "Tailscale is not installed on this Mac. Install the Tailscale app, sign in, then try again."
-LOGGED_OUT = "Tailscale is installed but not signed in. Open Tailscale, sign in, then try again."
-NOT_RUNNING = "Tailscale is installed but not running. Open Tailscale, sign in, then try again."
-UNAVAILABLE = "Tailscale could not be reached. Open Tailscale, sign in, then try again."
+MISSING = T("cli.remote.tailscale_is_not_installed_on_this")
+LOGGED_OUT = T("cli.remote.tailscale_is_installed_but_not_signed")
+NOT_RUNNING = T("cli.remote.tailscale_is_installed_but_not_running")
+UNAVAILABLE = T("cli.remote.tailscale_could_not_be_reached_open")
 
 
 class RemoteError(Exception):
@@ -213,7 +214,7 @@ def set_enabled(enabled, path=None):
     path = Path(path) if path else config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_symlink():
-        raise RemoteError("Settings file is a link; inspect it manually.")
+        raise RemoteError(T("cli.lan.settings_file_is_a_link_inspect"))
     text = path.read_text() if path.is_file() else ""
     value = "true" if enabled else "false"
     pattern = re.compile(r'(?ms)^(\[remote\][^\n]*\n)(.*?)(?=^\[|\Z)')
@@ -269,7 +270,7 @@ def inspect(*, port=None, home=None, path=None, binary=None, runner=None, adopt=
             "addresses": addresses(ident, port), "message": str(e), "port": port,
         }
     if served["funnel"] and served["ours"]:
-        message = "This port is shared more widely than Caravan expects. Turn that off in Tailscale first."
+        message = T("cli.remote.this_port_is_shared_more_widely")
         return {
             "enabled": False, "available": True, "installed": True, "logged_in": True,
             "addresses": addresses(ident, port), "message": message, "port": port,
@@ -283,9 +284,9 @@ def inspect(*, port=None, home=None, path=None, binary=None, runner=None, adopt=
         set_enabled(False, path)
     addrs = addresses(ident, port) if on else []
     if on:
-        message = "Open at " + " or ".join(addrs) + " from devices on your Tailscale network."
+        message = T("cli.remote.open_at_addrs_from_devices_on", addrs=" or ".join(addrs))
     else:
-        message = "Off. Not shared on your Tailscale network."
+        message = T("cli.remote.off_not_shared_on_your_tailscale")
     return {
         "enabled": on, "available": True, "installed": True, "logged_in": True,
         "addresses": addrs, "message": message, "port": port,
@@ -348,28 +349,28 @@ def turn_off(*, port=None, home=None, path=None, binary=None, runner=None, missi
     info = inspect(port=port, home=home, path=path, binary=found, runner=runner, adopt=False)
     info["enabled"] = False
     info["addresses"] = []
-    info["message"] = "Open from other devices is off."
+    info["message"] = T("cli.remote.open_from_other_devices_is_off")
     return info
 
 
 def status_line(info):
     if info.get("enabled") and info.get("addresses"):
-        return "Open from other devices is on: " + " and ".join(info["addresses"])
+        return T("cli.remote.open_from_other_devices_is_on", addresses=" and ".join(info["addresses"]))
     if not info.get("available") or info.get("funnel"):
         return info.get("message") or MISSING
-    return "Open from other devices is off."
+    return T("cli.remote.open_from_other_devices_is_off")
 
 
 def doctor_line(*, port=None, home=None, path=None, binary=None, runner=None):
     try:
         info = inspect(port=port, home=home, path=path, binary=binary, runner=runner, adopt=False)
     except RemoteError as e:
-        return f"Open from other devices: {e}"
+        return T("cli.remote.open_from_other_devices_e", e=e)
     if info.get("enabled") and info.get("addresses"):
-        return "Open from other devices is on at " + " and ".join(info["addresses"]) + "."
+        return T("cli.remote.open_from_other_devices_is_on_2", addresses=" and ".join(info["addresses"]))
     if not info.get("available") or info.get("funnel"):
-        return f"Open from other devices: {info.get('message') or MISSING}"
-    return "Open from other devices is off."
+        return T("cli.remote.open_from_other_devices_v", v=info.get('message') or MISSING)
+    return T("cli.remote.open_from_other_devices_is_off")
 
 
 def can_ask(tty_path="/dev/tty"):
@@ -421,7 +422,7 @@ def maybe_prompt(*, port=8190, home=None, path=None, tty_path="/dev/tty",
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Share this Mac's Caravan page with your other Tailscale devices.")
+        description=T("cli.remote.share_this_macs_caravan_page_with"))
     parser.add_argument("action", nargs="?", default="status",
                         choices=("on", "off", "status", "maybe-prompt"))
     parser.add_argument("--port", type=int, default=None)
@@ -429,7 +430,7 @@ def main(argv=None):
     parser.add_argument("--home", default=None)
     args = parser.parse_args(argv)
     if args.port is not None and not 1 <= args.port <= 65535:
-        parser.error("port must be 1–65535")
+        parser.error(T("cli.doctor.port_must_be_1_65535"))
     port = args.port or web_port(args.home, name=args.name)
     try:
         if args.action == "maybe-prompt":

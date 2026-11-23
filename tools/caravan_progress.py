@@ -10,6 +10,7 @@ import os
 import sys
 import threading
 import time
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 # A tiny campfire flicker. One cell each, widely available.
 FRAMES = ("·", "✦", "✶", "✸", "✶", "✦")
@@ -35,20 +36,20 @@ def decide_mode(stream=None, *, quiet=False) -> str:
 
 
 def loading_step(name: str) -> str:
-    return f"Loading {name}…"
+    return T("cli.progress.loading_name", name=name)
 
 
 def short_step(kind: str, i: int, n: int = 5) -> str:
-    return f"{kind} · short prompt {int(i)} of {int(n)}"
+    return T("cli.progress.kind_short_prompt_i_of_n", kind=kind, i=int(i), n=int(n))
 
 
 def long_step(kind: str, size, i: int, n: int = 2) -> str:
     label = size if isinstance(size, str) else _size_label(size)
-    return f"{kind} · long prompt ~{label}, {int(i)} of {int(n)}"
+    return T("cli.progress.kind_long_prompt_label_i_of", kind=kind, label=label, i=int(i), n=int(n))
 
 
 def restore_step() -> str:
-    return "Putting the original model back…"
+    return T("cli.progress.putting_the_original_model_back")
 
 
 def _size_label(n) -> str:

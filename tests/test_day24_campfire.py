@@ -5,10 +5,11 @@ import shutil
 import subprocess
 import unittest
 from pathlib import Path
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 ROOT = Path(__file__).resolve().parent.parent
-HTML = (ROOT / "proxy/web/index.html").read_text()
-PAIR_JS = (ROOT / "proxy/web/pairing.js").read_text()
+HTML = english_source(ROOT / "proxy/web/index.html")
+PAIR_JS = english_source(ROOT / "proxy/web/pairing.js")
 PAIR_CSS = (ROOT / "proxy/web/pairing.css").read_text()
 ASSETS = ROOT / "proxy/web/assets"
 

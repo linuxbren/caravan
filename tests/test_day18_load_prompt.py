@@ -3,8 +3,9 @@ from __future__ import annotations
 import re
 import unittest
 from pathlib import Path
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (Path(__file__).resolve().parents[1] / "proxy" / "web" / "index.html").read_text()
+HTML = english_source(Path(__file__).resolve().parents[1] / "proxy" / "web" / "index.html")
 
 
 class LoadNowPrompt(unittest.TestCase):

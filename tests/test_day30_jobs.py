@@ -26,6 +26,7 @@ sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "tests"))
 
 import request_journal as RJ  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 BODY = {"model": "x", "messages": [{"role": "user", "content": "Say OK"}], "max_tokens": 8}
 
@@ -415,7 +416,7 @@ class CliAndDocs(unittest.TestCase):
         self.assertTrue(job.endswith("OK"))
 
     def test_cli_wired(self):
-        src = (REPO / "tools" / "caravan.py").read_text()
+        src = english_source(REPO / "tools" / "caravan.py")
         self.assertIn('argv[0] == "jobs"', src)
 
     def test_docs_say_from_the_start(self):
@@ -423,7 +424,7 @@ class CliAndDocs(unittest.TestCase):
             self.assertIn("from the start", (REPO / doc).read_text(), doc)
 
     def test_page_shows_recovered_note(self):
-        html = (REPO / "proxy" / "web" / "index.html").read_text()
+        html = english_source(REPO / "proxy" / "web" / "index.html")
         self.assertIn("Finished after a restart", html)
         self.assertIn('/api/jobs?unseen=1', html)
 

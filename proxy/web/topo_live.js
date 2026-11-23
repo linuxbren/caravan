@@ -1,7 +1,8 @@
 /** Topology helpers: one-Mac section visibility and stale/offline presence. */
 (function (root) {
+  const T = (root && root.T) || require("./i18n.js").T;
   const STALE_MS = 15000;
-  const OFF_REASON = "Caravan is off";
+  const OFF_REASON = T("web.caravan_is_off");
 
   function isOffline(node, now, freshAt) {
     if (node && node.offline) return true;
@@ -25,7 +26,7 @@
 
   function offlineLabel(node, stale) {
     if (stale && !(node && node.offline)) return "offline";
-    if (node && node.error === OFF_REASON) return "offline · Caravan is off";
+    if (node && node.error === OFF_REASON) return T("web.offline_caravan_is_off");
     return "offline";
   }
 

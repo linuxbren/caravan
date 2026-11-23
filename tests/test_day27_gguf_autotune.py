@@ -12,8 +12,9 @@ sys.path.insert(0, str(ROOT / "agent"))
 
 import gguf_split as G  # noqa: E402
 import gguf_tune as GT  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (ROOT / "proxy/web/index.html").read_text()
+HTML = english_source(ROOT / "proxy/web/index.html")
 
 
 def _touch(path: Path, size: int) -> Path:

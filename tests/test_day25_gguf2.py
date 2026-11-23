@@ -30,6 +30,7 @@ B.LAST_BENCH_STORE = Path(_BENCH_TMP) / "bench_last.json"
 import caravan_models as M  # noqa: E402
 import caravan_progress as PR  # noqa: E402
 import caravan_chart as CH  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 def _decide_f16(*a, **k):
@@ -174,7 +175,7 @@ class Settings(unittest.TestCase):
         self.assertTrue(a["shared_start"])
 
     def test_page_help_is_plain(self):
-        html = (ROOT / "proxy/web/index.html").read_text()
+        html = english_source(ROOT / "proxy/web/index.html")
         self.assertIn("Let two chats share the model at the same time", html)
         self.assertIn("Auto keeps one chat", html)
         self.assertIn("How much of the conversation the model can keep in mind at once", html)
@@ -478,14 +479,14 @@ class Bench(unittest.TestCase):
         with mock.patch("caravan_bench.main", return_value=0) as m:
             # caravan.py early-dispatches; import path is tools/
             pass
-        src = (ROOT / "tools/caravan.py").read_text()
+        src = english_source(ROOT / "tools/caravan.py")
         self.assertIn('argv[0] == "bench"', src)
         self.assertIn('"bench"', src)
 
 
 
     def test_caravan_dispatches_models(self):
-        src = (ROOT / "tools/caravan.py").read_text()
+        src = english_source(ROOT / "tools/caravan.py")
         self.assertIn('argv[0] == "models"', src)
         self.assertIn('"models"', src)
 

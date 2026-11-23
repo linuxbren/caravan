@@ -17,8 +17,9 @@ sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "proxy"))
 sys.path.insert(0, str(ROOT / "agent"))
 import web_gguf_optimize as WGO  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (ROOT / "proxy" / "web" / "index.html").read_text()
+HTML = english_source(ROOT / "proxy" / "web" / "index.html")
 NODE = shutil.which("node")
 
 
@@ -105,9 +106,9 @@ class CancelPage(unittest.TestCase):
                        'del.textContent = "Deleting…"', 'l.textContent = "Loading…"',
                        '"Turning on…" : "Turning off…"', '"Resuming…" : "Pausing…"'):
             self.assertIn(needle, HTML)
-        self.assertIn("Stopping download…", (ROOT / "proxy/web/helpers.js").read_text())
-        self.assertIn("'Stopping…'", (ROOT / "proxy/web/helper_line.js").read_text())
-        self.assertIn("Stopping this fetch…", (ROOT / "proxy/web/balance.js").read_text())
+        self.assertIn("Stopping download…", english_source(ROOT / "proxy/web/helpers.js"))
+        self.assertIn("'Stopping…'", english_source(ROOT / "proxy/web/helper_line.js"))
+        self.assertIn("Stopping this fetch…", english_source(ROOT / "proxy/web/balance.js"))
 
 
 if __name__ == "__main__":

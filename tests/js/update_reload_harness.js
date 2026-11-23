@@ -3,6 +3,7 @@
 // old "done" progress + click + slow server reply => no reload until the
 // new run finishes, then exactly one reload.
 const assert = require('node:assert/strict');
+const I18N_T = require('../../proxy/web/i18n.js').T; // Day 32: page text lives in locales/en.json
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -41,7 +42,7 @@ const timers = [];
 const pendingCalls = [];
 let handler = null;
 const ctx = {
-  $, console, JSON, Object, String, Number, Math, Date, Promise, Error,
+  $, console, JSON, Object, String, Number, Math, Date, Promise, Error, T: I18N_T,
   localStorage: store(), sessionStorage: store(),
   location: { reload: () => { reloads++; }, search: '' },
   document: { querySelectorAll: () => [], addEventListener: () => {}, createElement: (t) => new El(t),

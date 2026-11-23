@@ -20,6 +20,7 @@ import gguf_split as G  # noqa: E402
 import web_picker as P  # noqa: E402
 import web_settings as WS  # noqa: E402
 from test_day31_context_fit import LLAMA8, MTWO, place  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 SCENE3 = "Fits on 1 Mac with a 64K context. Split across 2 Macs for the full 128K context."
 
@@ -40,7 +41,7 @@ class SettingsRow(unittest.TestCase):
         self.assertEqual(WS.normalize({"chat_window": "65536"})["chat_window"], "65536")
 
     def test_page_help_copy_says_context(self):
-        html = (ROOT / "proxy/web/index.html").read_text()
+        html = english_source(ROOT / "proxy/web/index.html")
         for line in re.findall(r'"chat_window": "([^"]*)"', html):
             self.assertNotIn("window", line.lower())
             self.assertIn("context", line)

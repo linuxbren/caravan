@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "agent"))
 import gguf_split as G  # noqa: E402
 import web_catalog as catalog  # noqa: E402
 import web_server as WS  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 NODES = [
     {"id": "exo1", "label": "EXO1", "role": "lead",
@@ -124,7 +125,7 @@ class GgufRows(unittest.TestCase):
 
 class Refresh(unittest.TestCase):
     def test_delete_refreshes_the_settings_list(self):
-        html = (ROOT / "proxy" / "web" / "index.html").read_text()
+        html = english_source(ROOT / "proxy" / "web" / "index.html")
         i = html.index('JSON.stringify({ id: m.id, confirm: true })')
         self.assertIn("window.refreshCaravanModels()", html[i:i + 400])
 

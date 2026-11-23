@@ -21,8 +21,9 @@ import web_nodes
 import web_settings as settings
 import tuned_settings as tuned
 from test_model_inventory import _write_fake_mlx
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (ROOT/'proxy/web/index.html').read_text()
+HTML = english_source(ROOT/'proxy/web/index.html')
 
 
 class FreshInventoryTests(unittest.TestCase):
@@ -110,7 +111,7 @@ class FreshTuningTests(unittest.TestCase):
             self.assertTrue(self.worker_enabled(lead))
             r=tuned.resolve_startup(model_dir=td,spanned=False,path=Path(td)/'unlearned.json',day9_packer_layers=None,day9_pipeline_chats=1,day9_guess_ahead=None,explicit={})
             self.assertIsNotNone(r['entry'])
-        self.assertIn("'self_tune = \"auto\"'",(ROOT/'scripts/install.sh').read_text())
+        self.assertIn("'self_tune = \"auto\"'",english_source(ROOT/'scripts/install.sh'))
 
     def test_existing_off_and_worker_environment_opt_out_are_preserved(self):
         lead,_=settings.to_args({'self_tune':'off'})
@@ -215,7 +216,7 @@ buttons.btnPlaceAddMac.onclick();assert.deepEqual(await result,{addMac:true,keep
         job=HTML[HTML.index('    async function pollJob('):HTML.index('    function diskLocation(')]
         self.assertIn('caravan-models-changed',job)
         self.assertIn('window.refreshCaravanModels = refreshModels',HTML)
-        pairing=(ROOT/'proxy/web/pairing.js').read_text()
+        pairing=english_source(ROOT/'proxy/web/pairing.js')
         self.assertIn("CustomEvent('caravan-pairing-complete')",pairing)
 
 

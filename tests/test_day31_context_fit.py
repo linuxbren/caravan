@@ -28,6 +28,7 @@ import memory_guard as MG  # noqa: E402
 import placement as PL  # noqa: E402
 import web_catalog as catalog  # noqa: E402
 import web_picker as P  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 LIMIT = 18186.25  # MiB per Mac, the limit Chat window Auto plans with
 RAM = 25.77       # GB the Macs report (any matching pair works)
@@ -329,7 +330,7 @@ class Paths(unittest.TestCase):
         self.assertIn("and not one_ok", src)
 
     def test_page_shows_window_and_sends_gguf_file(self):
-        html = (ROOT / "proxy" / "web" / "index.html").read_text()
+        html = english_source(ROOT / "proxy" / "web" / "index.html")
         self.assertIn("o.window_note", html)
         self.assertIn("place.summary", html)
         self.assertIn("gguf_file: q.gguf_file})", html)

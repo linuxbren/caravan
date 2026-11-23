@@ -11,6 +11,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "proxy"))
@@ -47,7 +48,7 @@ def kind_of(model) -> str:
 def friendly_name(model) -> str:
     name = str((model or {}).get("name") or (model or {}).get("id") or "").strip()
     if name.endswith(" (GGUF)"):
-        name = name[: -len(" (GGUF)")].strip()
+        name = name[: -len(T("cli.models.gguf"))].strip()
     return name or str((model or {}).get("id") or "")
 
 
@@ -66,8 +67,8 @@ def format_line(model, current=None) -> str:
     name = friendly_name(model)
     kind = kind_of(model)
     mid = model_id(model)
-    mark = "  (currently loaded)" if is_current(model, current) else ""
-    ready = "" if (model or {}).get("usable", True) else "  — not ready to load"
+    mark = T("cli.models.currently_loaded") if is_current(model, current) else ""
+    ready = "" if (model or {}).get("usable", True) else T("cli.models.not_ready_to_load")
     return f"{name}  ({kind})  {mid}{mark}{ready}"
 
 
@@ -75,13 +76,12 @@ def format_list(models, current=None, *, running=True) -> str:
     lines = []
     if not running:
         lines.append(
-            "Caravan is not running. These are the models on this Mac. "
-            "Run caravan start to see which one is loaded, and to compare them."
+            T("cli.models.caravan_is_not_running_these_are")
         )
         lines.append("")
     rows = [m for m in (models or []) if isinstance(m, dict) and model_id(m)]
     if not rows:
-        lines.append("No models are downloaded on this Mac yet.")
+        lines.append(T("cli.models.no_models_are_downloaded_on_this"))
         return "\n".join(lines) + "\n"
     for m in rows:
         lines.append(format_line(m, current if running else None))
@@ -278,13 +278,10 @@ def find_in_catalog(mid: str, models) -> dict | None:
 def _candidates_message(kind: str, query: str, found: list) -> str:
     if not found:
         return (
-            f"No {kind} model matches {query!r}. "
-            "Run caravan models to see what is downloaded, and pick one with "
-            f"--{kind.lower()} <id>."
+            T("cli.models.no_kind_model_matches_query_run", kind=kind, query=query, lower=kind.lower())
         )
     lines = [
-        f"Several {kind} models match {query!r}. Pick one with "
-        f"--{kind.lower()} and its id:"
+        T("cli.models.several_kind_models_match_query_pick", kind=kind, query=query, lower=kind.lower())
     ]
     for m in found:
         lines.append("  " + format_line(m))
@@ -319,9 +316,7 @@ def resolve_pair(models, *, query=None, gguf_id=None, mlx_id=None) -> dict:
         mlx = None
     if not query and not gguf_id and not mlx_id:
         messages.append(
-            "Say which model to compare, for example:  caravan bench \"qwen2.5 coder 7b\"\n"
-            "Or pass both ids:  caravan bench --gguf <id> --mlx <id>\n"
-            "See downloaded models and their ids:  caravan models"
+            T("cli.models.say_which_model_to_compare_for")
         )
     blocked = any(s.startswith("No ") or s.startswith("Several") for s in messages)
     return {
@@ -338,7 +333,7 @@ def main(argv=None):
     import argparse
     p = argparse.ArgumentParser(
         prog="caravan models",
-        description="List downloaded models and the id to copy for each one.",
+        description=T("cli.models.list_downloaded_models_and_the_id"),
     )
     p.add_argument("--port", type=int, default=None, help=argparse.SUPPRESS)
     args = p.parse_args(argv)

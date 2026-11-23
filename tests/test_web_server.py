@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 import sys
 import threading
 import tempfile
@@ -396,7 +397,7 @@ class KeepAliveDrainTest(unittest.TestCase):
 
 class IndexHtmlContractTest(unittest.TestCase):
     def test_ui_has_send_guards_and_timeouts(self):
-        html = (REPO / "proxy" / "web" / "index.html").read_text()
+        html = english_source(REPO / "proxy" / "web" / "index.html")
         self.assertIn("cancelChat", html)
         self.assertIn("stripMarkers", html)
         self.assertIn("thinking…", html)
@@ -416,7 +417,7 @@ class PageInsecureContextTest(unittest.TestCase):
     context), where crypto.randomUUID is undefined. Sending must not depend on it."""
 
     def test_no_bare_random_uuid(self):
-        html = (REPO / "proxy" / "web" / "index.html").read_text()
+        html = english_source(REPO / "proxy" / "web" / "index.html")
         self.assertIn("function newSessionId()", html)
         self.assertIn("getRandomValues", html)
         bare = [ln for ln in html.splitlines()
@@ -513,7 +514,7 @@ class PageOrderTest(unittest.TestCase):
     """Day 15: Brenden's order, most important first."""
 
     def test_section_order(self):
-        html = (REPO / "proxy" / "web" / "index.html").read_text()
+        html = english_source(REPO / "proxy" / "web" / "index.html")
         body = html[html.index("<body>"):]
         # ba60fa9 (Day 16) moved load progress into the chat column and the
         # string card into Topology. Day 24 removed the Specifications box
@@ -535,13 +536,13 @@ class SelfTuneFirstTest(unittest.TestCase):
         self.assertEqual([o["id"] for o in web_settings.OPTIONS[1:]],
                          ["guess_ahead", "prompt_lookup", "shared_start", "pipeline_chats",
                           "chat_window", "fuse_kernels", "kv_bits", "keepalive", "flash_attn", "ubatch"])
-        html = (REPO / "proxy" / "web" / "index.html").read_text()
+        html = english_source(REPO / "proxy" / "web" / "index.html")
         self.assertIn('(b.id === "self_tune") - (a.id === "self_tune")', html)
 
 
 class SelfTuneAutoResetTest(unittest.TestCase):
     def setUp(self):
-        self.html = (REPO / "proxy" / "web" / "index.html").read_text()
+        self.html = english_source(REPO / "proxy" / "web" / "index.html")
 
     def test_self_tune_auto_resets_all(self):
         self.assertIn('row.dataset.id === "self_tune" && b.dataset.v === "auto"', self.html)

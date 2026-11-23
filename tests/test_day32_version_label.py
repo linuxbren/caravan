@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "proxy"))
 
 import caravan_version as CV  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 PIN = "4b48b85e83860cf2e8c35f7fb719e647dc20ea5d"
 
@@ -60,7 +61,7 @@ class VersionSource(unittest.TestCase):
         self.assertEqual(CV.release(ROOT), v)
 
     def test_not_hardcoded_in_the_page_or_server(self):
-        html = (ROOT / "proxy/web/index.html").read_text()
+        html = english_source(ROOT / "proxy/web/index.html")
         server = (ROOT / "proxy/web_server.py").read_text()
         v = (ROOT / "VERSION").read_text().strip()
         self.assertNotIn("v" + v, html)
@@ -82,7 +83,7 @@ class StatusApi(unittest.TestCase):
 
 class PageLabel(unittest.TestCase):
     def setUp(self):
-        self.html = (ROOT / "proxy/web/index.html").read_text()
+        self.html = english_source(ROOT / "proxy/web/index.html")
 
     def test_label_sits_next_to_settings_title(self):
         head = self.html[self.html.index('id="settingsDrawer"'):]
@@ -139,8 +140,8 @@ class Cli(unittest.TestCase):
     def test_doctor_lists_version(self):
         import caravan_doctor as D
         with mock.patch.object(D, "checks", wraps=D.checks):
-            src = (ROOT / "tools/caravan_doctor.py").read_text()
-        self.assertIn('"Installed: " + caravan_version.text()', src)
+            src = english_source(ROOT / "tools/caravan_doctor.py")
+        self.assertIn("Installed: {caravan_version.text()}", src)  # Day 32: the + chain is one string with values now
 
 
 if __name__ == "__main__":

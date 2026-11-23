@@ -28,6 +28,7 @@ import web_catalog  # noqa: E402
 import web_server  # noqa: E402
 import web_settings  # noqa: E402
 from web_workers import WorkerManager  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 MAIN = "Qwen2.5-Coder-7B-Instruct-Q4_K_M"
 HELP = "Qwen2.5-Coder-0.5B-Instruct-Q8_0"
@@ -49,7 +50,7 @@ class UpdateReloadTests(unittest.TestCase):
         self.assertIn("ok", r.stdout)
 
     def test_page_code_guards(self):
-        html = (ROOT / "proxy/web/index.html").read_text()
+        html = english_source(ROOT / "proxy/web/index.html")
         self.assertIn("function isNewRun(progress, pending)", html)
         self.assertIn("j = updateView(j);", html)
         self.assertIn("setUpdatePending(true, prevRun", html)
@@ -156,7 +157,7 @@ class RealGgufLookupTests(unittest.TestCase):
 @unittest.skipUnless(NODE, "node not installed")
 class HelperButtonTextTests(unittest.TestCase):
     def say(self, st):
-        js = (ROOT / "proxy/web/helpers.js").read_text()
+        js = english_source(ROOT / "proxy/web/helpers.js")
         a = js.index("  function helperButtonText(")
         b = js.index("  async function helperButtonClick(")
         prog = js[a:b] + "\nconsole.log(JSON.stringify(helperButtonText(" + json.dumps(st) + ")));"

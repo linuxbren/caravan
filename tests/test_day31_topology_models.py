@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "agent"))
 import gguf_split as G  # noqa: E402
 import web_picker as P  # noqa: E402
 import web_server as WS  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 def gguf(folder: Path, name: str, size=60_000_000):
@@ -164,7 +165,7 @@ class Wiring(unittest.TestCase):
         self.assertIn("mark_in_settings(e, listed)", src)
 
     def test_page_shows_the_settings_note(self):
-        html = (ROOT / "proxy" / "web" / "index.html").read_text()
+        html = english_source(ROOT / "proxy" / "web" / "index.html")
         i = html.index("function diskLocation(m)")
         self.assertIn("m.in_settings === false", html[i:i + 900])
         self.assertNotIn("including incomplete downloads", html)

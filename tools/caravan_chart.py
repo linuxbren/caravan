@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import sys
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 FULL_U, HALF_U = "█", "▌"
 FULL_A = "#"
@@ -23,12 +24,12 @@ GREEN = "\033[32m"
 RESET = "\033[0m"
 
 SECTIONS = (
-    ("Reading (tok/s, higher is better)", "read_tok_s", "speed", True),
-    ("Writing (tok/s, higher is better)", "write_tok_s", "speed", True),
-    ("First token (s, lower is better)", "ttft_s", "time", False),
+    (T("cli.chart.reading_tok_s_higher_is_better"), "read_tok_s", "speed", True),
+    (T("cli.chart.writing_tok_s_higher_is_better"), "write_tok_s", "speed", True),
+    (T("cli.chart.first_token_s_lower_is_better"), "ttft_s", "time", False),
 )
 
-SIZE_ORDER = ("Short", "~1k", "~4k", "~8k", "Saved")
+SIZE_ORDER = (T("cli.chart.short"), "~1k", "~4k", "~8k", T("cli.bench.saved"))
 _SIZE_FROM_N = {1024: "~1k", 2048: "~2k", 4096: "~4k", 8192: "~8k"}
 
 
@@ -90,9 +91,9 @@ def size_label_of(row) -> str:
     lab = str(row.get("label") or "")
     low = lab.lower()
     if "saved" in low:
-        return "Saved"
+        return T("cli.bench.saved")
     if "short" in low:
-        return "Short"
+        return T("cli.chart.short")
     for tag in ("8k", "4k", "2k", "1k"):
         if tag in low:
             return f"~{tag}"
@@ -197,7 +198,7 @@ def render_chart(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX",
         if lab not in sizes:
             sizes.append(lab)
     if not sizes:
-        return "No speed numbers to chart yet.\n"
+        return T("cli.chart.no_speed_numbers_to_chart_yet")
 
     lines = []
     g_title = gguf_name or "GGUF"
@@ -274,40 +275,40 @@ def render_chart(gguf_rows, mlx_rows, *, gguf_name="GGUF", mlx_name="MLX",
 # Fixture from Brenden's first full-series run on the 1st Mac,
 # Qwen2.5 Coder 7B (five short prompts plus the long-prompt series).
 # Used in tests and in the docs sample. Do not invent other figures.
-FIXTURE_GGUF_NAME = "Qwen2.5 Coder 7B (GGUF Q4_K_M)"
-FIXTURE_MLX_NAME = "Qwen2.5 Coder 7B (MLX 4bit)"
+FIXTURE_GGUF_NAME = T("cli.chart.qwen2_5_coder_7b_gguf_q4")
+FIXTURE_MLX_NAME = T("cli.chart.qwen2_5_coder_7b_mlx_4bit")
 FIXTURE_GGUF = [
-    {"label": "Short prompts (5)", "specs": {
+    {"label": T("cli.chart.short_prompts_5"), "specs": {
         "read_tok_s": 182, "write_tok_s": 22.2, "ttft_s": 0.28,
         "prompt_tokens": 77, "completion_tokens": 145, "total_s": 6.76,
     }},
-    {"label": "Long prompts (~1k tok) (2)", "size": 1024, "specs": {
+    {"label": T("cli.chart.long_prompts_1k_tok_2"), "size": 1024, "specs": {
         "read_tok_s": 239, "write_tok_s": 21.5, "ttft_s": 5.30,
         "prompt_tokens": 1265, "completion_tokens": 149, "total_s": 12.20,
     }},
-    {"label": "Long prompts (~4k tok) (2)", "size": 4096, "specs": {
+    {"label": T("cli.chart.long_prompts_4k_tok_2"), "size": 4096, "specs": {
         "read_tok_s": 215, "write_tok_s": 19.1, "ttft_s": 23.40,
         "prompt_tokens": 5035, "completion_tokens": 161, "total_s": 31.83,
     }},
-    {"label": "Long prompts (~8k tok) (2)", "size": 8192, "specs": {
+    {"label": T("cli.chart.long_prompts_8k_tok_2"), "size": 8192, "specs": {
         "read_tok_s": 195, "write_tok_s": 16.7, "ttft_s": 52.15,
         "prompt_tokens": 10102, "completion_tokens": 146, "total_s": 61.04,
     }},
 ]
 FIXTURE_MLX = [
-    {"label": "Short prompts (5)", "specs": {
+    {"label": T("cli.chart.short_prompts_5"), "specs": {
         "read_tok_s": 204, "write_tok_s": 23.4, "ttft_s": 0.46,
         "prompt_tokens": 77, "completion_tokens": 141, "total_s": 6.45,
     }},
-    {"label": "Long prompts (~1k tok) (2)", "size": 1024, "specs": {
+    {"label": T("cli.chart.long_prompts_1k_tok_2"), "size": 1024, "specs": {
         "read_tok_s": 257, "write_tok_s": 22.9, "ttft_s": 5.01,
         "prompt_tokens": 1265, "completion_tokens": 148, "total_s": 11.44,
     }},
-    {"label": "Long prompts (~4k tok) (2)", "size": 4096, "specs": {
+    {"label": T("cli.chart.long_prompts_4k_tok_2"), "size": 4096, "specs": {
         "read_tok_s": 242, "write_tok_s": 21.8, "ttft_s": 20.96,
         "prompt_tokens": 5035, "completion_tokens": 167, "total_s": 28.57,
     }},
-    {"label": "Long prompts (~8k tok) (2)", "size": 8192, "specs": {
+    {"label": T("cli.chart.long_prompts_8k_tok_2"), "size": 8192, "specs": {
         "read_tok_s": 218, "write_tok_s": 20.4, "ttft_s": 46.74,
         "prompt_tokens": 10102, "completion_tokens": 89, "total_s": 51.08,
     }},

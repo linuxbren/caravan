@@ -12,10 +12,14 @@ import time
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+import caravan_i18n as I18N  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "proxy" / "web"
-HTML = (WEB / "index.html").read_text()
+HTML = english_source(WEB / "index.html")
 
 
 def _between(a, b):
@@ -181,7 +185,8 @@ class _Mock(BaseHTTPRequestHandler):
             return self._json(200, {})
         f = WEB / p.lstrip("/")
         if f.is_file():
-            body = f.read_bytes()
+            # Day 32: pages carry {{web.*}} text keys; the real server fills them.
+            body = I18N.render_page(f.read_text(encoding="utf-8")).encode("utf-8") if f.suffix == ".html" else f.read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/html" if f.suffix == ".html" else "text/javascript")
             self.send_header("Content-Length", str(len(body)))

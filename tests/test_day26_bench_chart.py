@@ -8,9 +8,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import caravan_chart as CH  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 DAY = (ROOT / "docs/DAY26.md").read_text()
-BENCH = (ROOT / "tools/caravan_bench.py").read_text()
+BENCH = english_source(ROOT / "tools/caravan_bench.py")
 
 
 def _hashes(line: str) -> int:

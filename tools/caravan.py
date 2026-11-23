@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "agent"))
 import caravan_service as service
 import service_config as SC
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 
 def simple_status(name="web"):
@@ -21,23 +22,23 @@ def simple_status(name="web"):
         plan = service.stored(name, Path.home())
         service.assert_owned(plan, require=True)
     except (OSError, ValueError, KeyError):
-        print("Caravan is not running: setup is missing or needs repair. Run the install command again.")
+        print(T("cli.caravan.caravan_is_not_running_setup_is"))
         return 1
     try:
         with urllib.request.urlopen(f"http://127.0.0.1:{plan['port']}/api/status", timeout=3) as response:
             data = json.load(response)
         if not isinstance(data, dict) or not isinstance(data.get('worker'), dict):
-            raise ValueError("Unexpected status response")
+            raise ValueError(T("cli.caravan.unexpected_status_response"))
     except (OSError, ValueError):
-        print("Caravan is not running: its browser service is stopped or not responding. Run caravan start; if that fails, run caravan doctor.")
+        print(T("cli.caravan.caravan_is_not_running_its_browser"))
         return 1
     worker = data['worker']
     if worker.get('error'):
         problem = ' '.join(str(worker['error']).split())
-        print(f"Caravan is not running: {problem.rstrip('.')}. Open Caravan and load the model again; run caravan doctor if it fails.")
+        print(T("cli.caravan.caravan_is_not_running_problem_open", problem=problem.rstrip('.')))
         return 1
     label = _version_label()
-    print(f"Caravan {label} is running" if label else "Caravan is running")
+    print(T("cli.caravan.caravan_label_is_running", label=label) if label else T("cli.caravan.caravan_is_running"))
     for line in link_lines():
         print(line)
     return 0
@@ -66,7 +67,7 @@ def link_lines(home=None):
         if not isinstance(route, dict):
             continue
         name = route.get("label") or target
-        out.append(f"Link to {name}: {PR.describe(route)}")
+        out.append(T("cli.caravan.link_to_name_describe", name=name, describe=PR.describe(route)))
         if route.get("warning"):
             out.append(f"  warning: {route['warning']}")
     return out
@@ -80,7 +81,7 @@ def _update_other_macs(home=None, out=None):
     from caravan_update_peers import update_other_macs, load_nodes
     peers = load_nodes(home)
     if peers:
-        print("Updating the other Macs first, then this Mac.", file=out, flush=True)
+        print(T("cli.caravan.updating_the_other_macs_first_then"), file=out, flush=True)
         update_other_macs(home, peers, out=out)
     return peers
 
@@ -108,12 +109,12 @@ def main(argv=None):
         return 0
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("start", "stop", "status", "doctor", "update", "uninstall", "add-mini", "open", "remote", "lan", "bench", "models", "jobs"))
-    parser.add_argument("--name", default="web", help="one owned service; default web")
+    parser.add_argument("--name", default="web", help=T("cli.caravan.one_owned_service_default_web"))
     parser.add_argument("--full", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--everything", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--yes", action="store_true", help="with uninstall: confirm removal of all Caravan data")
-    parser.add_argument("--check", action="store_true", help="with update: only check for a newer version, do not install it")
-    parser.add_argument("--local-only", action="store_true", help="with update: only this Mac, do not ask the other Macs")
+    parser.add_argument("--yes", action="store_true", help=T("cli.caravan.with_uninstall_confirm_removal_of_all"))
+    parser.add_argument("--check", action="store_true", help=T("cli.caravan.with_update_only_check_for_a"))
+    parser.add_argument("--local-only", action="store_true", help=T("cli.caravan.with_update_only_this_mac_do"))
     args = parser.parse_args(argv)
     try:
         if args.action == "remote":
@@ -133,17 +134,17 @@ def main(argv=None):
             plan = service.stored(args.name, Path.home())
             service.assert_owned(plan, require=True)
             from caravan_pairing import launch_file
-            print("On the new Mac, run the same install command. In Topology → Add a Mac on the new Mac, turn on Remote Login and show a code. Here, choose Add this Mac and enter that code. No manual SSH or settings-file edits.")
+            print(T("cli.caravan.on_the_new_mac_run_the"))
             return subprocess.run(["open", str(launch_file(plan["port"]))]).returncode
         if args.action == "update":
             if args.check:
                 from caravan_update_check import cli_check
                 return cli_check(ROOT, name=args.name)
             if not (ROOT / ".caravan-package").exists():
-                raise ValueError("This is a source checkout. Update it with git pull --ff-only, then rerun scripts/install.sh with the same options. No checkout changed.")
+                raise ValueError(T("cli.caravan.this_is_a_source_checkout_update"))
             role_file = ROOT / ".caravan-role"
             role = role_file.read_text().strip() if role_file.exists() else "lead"
-            if role not in ("lead", "worker"): raise ValueError("Unknown saved installation role; no update attempted")
+            if role not in ("lead", "worker"): raise ValueError(T("cli.caravan.unknown_saved_installation_role_no_update"))
             local_only = bool(args.local_only) or os.environ.get("CARAVAN_UPDATE_LOCAL", "").strip() in ("1", "true", "yes")
             if not local_only:
                 # Other Macs first, over the existing SSH link. A failure there
@@ -151,7 +152,7 @@ def main(argv=None):
                 try:
                     _update_other_macs(Path.home(), out=sys.stdout)
                 except Exception as peer_error:
-                    print(f"Couldn't update the other Macs ({peer_error}). This Mac will still update.", flush=True)
+                    print(T("cli.caravan.couldnt_update_the_other_macs_peer", peer_error=peer_error), flush=True)
             # Fetch to a file: a failed HTTP request can never run a partial shell script.
             from caravan_update_check import INSTALL_URL
             with urllib.request.urlopen(INSTALL_URL + "?channel=" + str(time.time_ns()), timeout=30) as response:
@@ -173,7 +174,7 @@ def main(argv=None):
         plan = service.stored(args.name, Path.home())
         service.assert_owned(plan, require=True)
         if args.action == "open":
-            if plan["kind"] != "web": raise ValueError("Choose the web service to open the browser")
+            if plan["kind"] != "web": raise ValueError(T("cli.caravan.choose_the_web_service_to_open"))
             from caravan_pairing import launch_file
             return subprocess.run(["open", str(launch_file(plan["port"], next_home=True))]).returncode
         service.check_platform(); service.gui_ready()
@@ -182,18 +183,18 @@ def main(argv=None):
         if args.action == "stop":
             if loaded:
                 result = service.run_launchctl(["bootout", target])
-                if result.returncode: raise ValueError(result.stderr or "launchd could not stop the service")
-            print("Web service stopped until next login or caravan start. Model workers stay running; use Unload in the UI first to free their memory.")
+                if result.returncode: raise ValueError(result.stderr or T("cli.caravan.launchd_could_not_stop_the_service"))
+            print(T("cli.caravan.web_service_stopped_until_next_login"))
             return 0
         if not loaded:
             service.ensure_port_free(plan)
             result = service.run_launchctl(["bootstrap", service.domain(), str(SC.paths(plan)["plist"])])
-            if result.returncode: raise ValueError(result.stderr or "launchd could not start the service")
-            print("Caravan started. Run caravan open to open it in your browser.")
+            if result.returncode: raise ValueError(result.stderr or T("cli.caravan.launchd_could_not_start_the_service"))
+            print(T("cli.caravan.caravan_started_run_caravan_open_to"))
         else:
-            print("Caravan is running. Run caravan open to open it in your browser.")
+            print(T("cli.caravan.caravan_is_running_run_caravan_open"))
     except (OSError, ValueError, KeyError) as error:
-        print(f"[Caravan] {error}", file=sys.stderr)
+        print(T("cli.caravan.caravan_error", error=error), file=sys.stderr)
         return 2
     return 0
 

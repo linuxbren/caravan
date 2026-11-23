@@ -23,10 +23,11 @@ import cloud_keys as CK  # noqa: E402
 import web_server  # noqa: E402
 import web_picker  # noqa: E402
 from web_workers import WorkerManager  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 KEY = "sk-test-ABCDEFGHIJKLMNOP1234wxyz"
 ENV_NAMES = [n for p in CK.PROVIDERS.values() for n in p["env"]]
-HTML = (ROOT / "proxy/web/index.html").read_text()
+HTML = english_source(ROOT / "proxy/web/index.html")
 
 
 def clean_env():
@@ -174,7 +175,7 @@ class Page(unittest.TestCase):
         self.assertIn('id="cloudKeysCard"', HTML)
         self.assertIn(">Cloud API keys</span>", HTML)
         self.assertIn('input.type = "password";', HTML)
-        self.assertIn('"Set · ends in " + (p.last4', HTML)
+        self.assertIn('`Set · ends in ${p.last4', HTML)  # Day 32: the + chain is one string with values now
         self.assertIn('rm.textContent = "Remove";', HTML)
         self.assertIn("refreshCloudKeys();", HTML[HTML.index("const openDrawer = () => {"):][:200])
 

@@ -18,6 +18,7 @@ import gguf_tune as T  # noqa: E402
 import web_settings as WS  # noqa: E402
 import web_speed as S  # noqa: E402
 import web_gguf_optimize as WGO  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 def _decide_f16(*a, **k):
@@ -154,7 +155,7 @@ class SettingsRows(unittest.TestCase):
         self.assertIn("4", kv["values"])
 
     def test_page_drops_mlx_only_banner_and_uses_friendly_help(self):
-        html = (ROOT / "proxy/web/index.html").read_text()
+        html = english_source(ROOT / "proxy/web/index.html")
         self.assertNotIn("MLX only — this GGUF runs on llama.cpp", html)
         self.assertNotIn("these options are not used", html)
         self.assertIn("SETTINGS_HELP_GGUF", html)

@@ -18,8 +18,9 @@ import web_optimize as WO
 import web_settings
 import web_tune_errors as TE
 import web_gguf_optimize as WGO
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (REPO / "proxy" / "web" / "index.html").read_text()
+HTML = english_source(REPO / "proxy" / "web" / "index.html")
 
 
 FORBIDDEN = (

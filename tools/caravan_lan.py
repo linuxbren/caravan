@@ -17,11 +17,12 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
-WARNING = "Anyone on the same network can use Caravan, and there is no login."
-QUESTION = "Open Caravan on your local network? (y/N) "
-OFF_MESSAGE = "Open on the local network is off."
-ON_PREFIX = "Open on the local network at "
+WARNING = T("cli.lan.anyone_on_the_same_network_can")
+QUESTION = T("cli.lan.open_caravan_on_your_local_network")
+OFF_MESSAGE = T("cli.lan.open_on_the_local_network_is_4")
+ON_PREFIX = T("cli.lan.open_on_the_local_network_at")
 
 
 class LanError(Exception):
@@ -65,7 +66,7 @@ def set_enabled(enabled, path=None):
     path = Path(path) if path else config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_symlink():
-        raise LanError("Settings file is a link; inspect it manually.")
+        raise LanError(T("cli.lan.settings_file_is_a_link_inspect"))
     text = path.read_text() if path.is_file() else ""
     value = "true" if enabled else "false"
     pattern = re.compile(r'(?ms)^(\[lan\][^\n]*\n)(.*?)(?=^\[|\Z)')
@@ -251,14 +252,13 @@ def inspect(*, port=None, home=None, path=None):
     addrs = addresses(port) if on else []
     binds = listen_hosts(path=path)
     if on and addrs:
-        message = "Open at " + " or ".join(addrs) + " from a device on the same network. " + WARNING
+        message = T("cli.lan.open_at_addrs_from_a_device", addrs=" or ".join(addrs), warning=WARNING)
     elif on:
         message = (
-            "On. The page is open on the local network, but this Mac's "
-            "network address could not be found right now. " + WARNING
+            T("cli.lan.on_the_page_is_open_on", warning=WARNING)
         )
     else:
-        message = "Off. The page is not open on the local network."
+        message = T("cli.lan.off_the_page_is_not_open")
     return {
         "enabled": on,
         "addresses": addrs,
@@ -291,7 +291,7 @@ def turn_off(*, port=None, home=None, path=None, missing_ok=True):
     info["bind"] = "127.0.0.1"
     info["binds"] = ["127.0.0.1"]
     info["message"] = OFF_MESSAGE.replace(" is off.", " is off.")  # stable
-    info["message"] = "Off. The page is not open on the local network."
+    info["message"] = T("cli.lan.off_the_page_is_not_open")
     return info
 
 
@@ -299,7 +299,7 @@ def status_line(info):
     if info.get("enabled") and info.get("addresses"):
         return ON_PREFIX + " and ".join(info["addresses"])
     if info.get("enabled"):
-        return "Open on the local network is on. " + (info.get("message") or WARNING)
+        return T("cli.lan.open_on_the_local_network_is", v=info.get("message") or WARNING)
     return OFF_MESSAGE
 
 
@@ -307,11 +307,11 @@ def doctor_line(*, port=None, home=None, path=None):
     try:
         info = inspect(port=port, home=home, path=path)
     except LanError as e:
-        return f"Open on the local network: {e}"
+        return T("cli.lan.open_on_the_local_network_e", e=e)
     if info.get("enabled") and info.get("addresses"):
-        return "Open on the local network is on at " + " and ".join(info["addresses"]) + ". " + WARNING
+        return T("cli.lan.open_on_the_local_network_is_2", addresses=" and ".join(info["addresses"]), warning=WARNING)
     if info.get("enabled"):
-        return "Open on the local network is on. " + WARNING
+        return T("cli.lan.open_on_the_local_network_is_3", warning=WARNING)
     return OFF_MESSAGE
 
 
@@ -359,7 +359,7 @@ def maybe_prompt(*, port=8190, home=None, path=None, tty_path="/dev/tty",
     return "on"
 
 
-RESTART_MESSAGE = "The page will be back in a few seconds. The model stays loaded."
+RESTART_MESSAGE = T("cli.lan.the_page_will_be_back_in")
 
 
 def notify_running_web(*, port, enabled, timeout=3):
@@ -380,8 +380,7 @@ def notify_running_web(*, port, enabled, timeout=3):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Open this Mac's Caravan page on your local network. "
-                    + WARNING)
+        description=T("cli.lan.open_this_macs_caravan_page_on", warning=WARNING))
     parser.add_argument("action", nargs="?", default="status",
                         choices=("on", "off", "status", "maybe-prompt"))
     parser.add_argument("--port", type=int, default=None)
@@ -389,7 +388,7 @@ def main(argv=None):
     parser.add_argument("--home", default=None)
     args = parser.parse_args(argv)
     if args.port is not None and not 1 <= args.port <= 65535:
-        parser.error("port must be 1–65535")
+        parser.error(T("cli.doctor.port_must_be_1_65535"))
     port = args.port or web_port(args.home, name=args.name)
     try:
         if args.action == "maybe-prompt":

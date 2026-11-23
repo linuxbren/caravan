@@ -3,19 +3,19 @@
   let offer = null, shown = '', job = null;
   const dialog = document.createElement('dialog');
   dialog.className = 'panel'; dialog.style.maxWidth = '520px';
-  const title = document.createElement('h3'); title.textContent = 'Guess-ahead helper';
+  const title = document.createElement('h3'); title.textContent = T('web.guess_ahead_helper');
   const text = document.createElement('p'), status = document.createElement('p');
   const yes = document.createElement('button'), no = document.createElement('button');
-  yes.textContent = 'Download'; no.textContent = 'Not now';
-  const stop = document.createElement('button'); stop.textContent='Stop download'; stop.hidden=true;
-  const close = document.createElement('button'); close.textContent='Close'; close.onclick=()=>dialog.close();
+  yes.textContent = T('web.download'); no.textContent = T('web.not_now');
+  const stop = document.createElement('button'); stop.textContent=T('web.stop_download'); stop.hidden=true;
+  const close = document.createElement('button'); close.textContent=T('web.close'); close.onclick=()=>dialog.close();
   dialog.append(title, text, status, yes, no, stop, close); document.body.append(dialog);
-  stop.onclick = async () => { stop.disabled = true; status.textContent = 'Stopping download…'; try { await api('/api/picker/download/cancel', {job_id:job.id}); } catch(e) {status.textContent=e.message; stop.disabled = false;} };
+  stop.onclick = async () => { stop.disabled = true; status.textContent = T('web.stopping_download'); try { await api('/api/picker/download/cancel', {job_id:job.id}); } catch(e) {status.textContent=e.message; stop.disabled = false;} };
   async function api(path, body) {
     const r = await fetch(path, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {});
-    const j = await r.json(); if (!r.ok) throw Error(j.error || 'Request failed'); return j;
+    const j = await r.json(); if (!r.ok) throw Error(j.error || T('web.request_failed')); return j;
   }
-  function show() { text.textContent = offer.message + ' Runs on the lead Mini; used on the next load. Size is the pairing-table estimate.'; status.textContent = ''; yes.hidden = no.hidden = false; if (!dialog.open) dialog.showModal(); }
+  function show() { text.textContent = T(`web.message_runs_on_the_lead_mini`, {message: (offer.message)}); status.textContent = ''; yes.hidden = no.hidden = false; if (!dialog.open) dialog.showModal(); }
   no.onclick = async () => { try { await api('/api/helpers/answer', {helper_id:offer.id, action:'decline'}); dialog.close(); } catch(e) {status.textContent=e.message;} };
   // Escape is Not now for this visit, not persistent consent.
   dialog.addEventListener('cancel', () => { shown = offer?.id || ''; });
@@ -23,7 +23,7 @@
     yes.disabled = true;
     try {
       const j = await api('/api/helpers/answer', {helper_id:offer.id, action:'download'});
-      job = j.job; yes.hidden = no.hidden = true; stop.hidden=false; status.textContent = 'Starting download…';
+      job = j.job; yes.hidden = no.hidden = true; stop.hidden=false; status.textContent = T('web.starting_download');
     } catch(e) { status.textContent = e.message; }
     finally {yes.disabled = false;}
   };
@@ -49,7 +49,7 @@
       b = document.createElement('button');
       b.type = 'button';
       b.dataset.helper = '1';
-      b.textContent = 'Helper download…';
+      b.textContent = T('web.helper_download');
       slot.append(b);
     }
     b.onclick = () => helperButtonClick();
@@ -61,12 +61,12 @@
   // or why a one-Mac MLX model does not use a helper.
   function helperButtonText(st) {
     if (st && st.kind === 'gguf') {
-      if (st.present) return {say: 'The Guess-ahead helper is already on this Mac (' + (st.present_name || 'a smaller model of the same family') + '). Set Guess-ahead to On, or leave it on Auto and run Auto-tune.'};
-      if (st.known_id) return {ask: 'Download the ' + st.known_name + ' helper' + (st.known_size_mb ? ' (' + st.known_size_mb + ' MB)' : '') + ' for faster replies? It runs on this Mac and is used on the next load.'};
-      return {say: 'There is no known Guess-ahead helper for this GGUF model yet.'};
+      if (st.present) return {say: T(`web.the_guess_ahead_helper_is_already`, {present_name: st.present_name || T('web.a_smaller_model_of_the_same_2')})};
+      if (st.known_id) return {ask: T(`web.download_the_known_name_helper_v`, {known_name: st.known_name, v: st.known_size_mb ? T(`web.known_size_mb_mb`, {known_size_mb: st.known_size_mb}) : ''})};
+      return {say: T('web.there_is_no_known_guess_ahead')};
     }
-    if (st && st.kind === 'mlx' && !st.split) return {say: 'On one Mac, MLX models do not use a Guess-ahead helper yet.'};
-    return {say: 'No missing compatible helper for the loaded split MLX model.'};
+    if (st && st.kind === 'mlx' && !st.split) return {say: T('web.on_one_mac_mlx_models_do')};
+    return {say: T('web.no_missing_compatible_helper_for_the')};
   }
   async function helperButtonClick() {
     let data = null;
@@ -110,9 +110,9 @@
         job = await api('/api/picker/jobs/' + job.id).then(j => j.job || j);
         const p = Object.values(job.progress || {})[0] || {};
         stop.hidden = !['queued','running'].includes(job.status);
-        status.textContent = job.status === 'done' ? 'Downloaded. It will be used on the next model load.' : job.status + ' · ' + (p.msg || 'starting…');
+        status.textContent = job.status === 'done' ? T('web.downloaded_it_will_be_used_on') : job.status + ' · ' + (p.msg || T('web.starting'));
         if (['error','cancelled'].includes(job.status)) {
-          yes.hidden = false; yes.textContent = 'Resume';
+          yes.hidden = false; yes.textContent = T('web.resume');
           yes.onclick = async () => { try { const r = await api('/api/picker/download/resume', {job_id:job.id}); job = r.job; yes.hidden = true; } catch(e) {status.textContent=e.message;} };
         }
         return;

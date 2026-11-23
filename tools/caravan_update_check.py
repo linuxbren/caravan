@@ -20,6 +20,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 
 try:
     from zoneinfo import ZoneInfo
@@ -55,34 +56,29 @@ WORKER_CODE_PATHS = (
     "requirements-mac.txt",
 )
 
-UP_TO_DATE = "Caravan is already up to date."
-NEWER_PREFIX = "A {label} update is ready."
-KEEP_MODEL = "Your model stays loaded."
-RELOAD_MODEL = "Caravan will reload the model."
+UP_TO_DATE = T("cli.update_check.caravan_is_already_up_to_date")
+NEWER_PREFIX = T("cli.update_check.a_label_update_is_ready")
+KEEP_MODEL = T("cli.update_check.your_model_stays_loaded")
+RELOAD_MODEL = T("cli.update_check.caravan_will_reload_the_model")
 HELPER = (
-    "Caravan will also update the other Macs it knows about. "
-    "If one is off, this Mac still updates, and that Mac is listed in Settings."
+    T("cli.update_check.caravan_will_also_update_the_other")
 )
 NOT_LOCAL = (
-    "To update, open Caravan on this Mac or from a device on your Tailscale "
-    "network, and click Update now. On the local network, run caravan update "
-    "in Terminal on this Mac."
+    T("cli.update_check.to_update_open_caravan_on_this")
 )
 NOT_LAN = NOT_LOCAL
 SOURCE_CHECKOUT = (
-    "This is a source checkout. Update it with git pull --ff-only, "
-    "then rerun scripts/install.sh with the same options. No checkout changed."
+    T("cli.caravan.this_is_a_source_checkout_update")
 )
-OFFLINE = "Could not check for updates right now."
-OPENING = "Updating Caravan, the page will be back in a few seconds."
+OFFLINE = T("cli.update_check.could_not_check_for_updates_right")
+OPENING = T("cli.update_check.updating_caravan_the_page_will_be")
 FAILED = (
-    "The update failed. Caravan is back on the previous version. "
-    "Check your internet connection and try again."
+    T("cli.update_check.the_update_failed_caravan_is_back")
 )
-DONE = "Done."
-BUSY_REPLY = "Wait for the current reply, then try Update again."
-BUSY_TUNE = "Wait for Auto-tune to finish, then try Update again."
-BUSY_LOAD = "Wait for the model to finish loading, then try Update again."
+DONE = T("cli.update_check.done")
+BUSY_REPLY = T("cli.update_check.wait_for_the_current_reply_then")
+BUSY_TUNE = T("cli.update_check.wait_for_auto_tune_to_finish")
+BUSY_LOAD = T("cli.update_check.wait_for_the_model_to_finish")
 
 PIN_SUBJECT = re.compile(r"^Publish .+ source pin\s*$")
 
@@ -390,7 +386,7 @@ def _labels(current_date, available_date, newer):
     available = plain_date(available_date)
     if current and available and current == available and newer:
         return (
-            "an earlier " + current + " version",
+            T("cli.update_check.an_earlier_current_version", current=current),
             available,
             True,
         )
@@ -631,9 +627,9 @@ def keep_model_text(reload_model):
 
 def local_status_row(result, *, newer, peers=0):
     """This Mac's line, in the same format as the other Macs."""
-    label = "1st Mac" if peers else "My Mac"
+    label = T("cli.update_check.1st_mac") if peers else T("cli.update_check.my_mac")
     if newer:
-        status = "update needed"
+        status = T("cli.update_check.update_needed")
     elif result.get("available") or (result.get("checked_at") and not result.get("error")):
         status = "current"
     else:
@@ -676,19 +672,19 @@ def _current_rows(result, progress, *, newer, packaged=True):
                 m["status"] = "current"
                 m["behind"] = False
             elif m.get("phase") in ("waiting", "behind"):
-                m["status"] = "update needed"
+                m["status"] = T("cli.update_check.update_needed")
             rows.append(m)
         return rows
     peers = [dict(m) for m in (result.get("macs") or []) if not m.get("mine")]
     for m in peers:
         if m.get("phase") == "offline":
             # Couldn't read its version: that is not a failed update.
-            m["status"] = "couldn't check"
+            m["status"] = T("cli.update_check.couldnt_check")
             m["can_retry"] = False
             m["help"] = []
             m["behind"] = False
         elif m.get("phase") == "behind" or m.get("behind"):
-            m["status"] = "update needed"
+            m["status"] = T("cli.update_check.update_needed")
             m["behind"] = True
             m["can_retry"] = False
         elif m.get("phase") in ("done", "current"):
@@ -725,7 +721,7 @@ def _current_rows(result, progress, *, newer, packaged=True):
                 by_id[key] = len(peers)
                 peers.append(row)
     if mine is not None and peers and mine.get("label") == "My Mac":
-        mine = dict(mine, label="1st Mac", message=f"1st Mac: {mine.get('status')}.")
+        mine = dict(mine, label="1st Mac", message=T("cli.update_check.1st_mac_status", status=mine.get('status')))
     return ([mine] if mine else []) + peers
 
 
@@ -785,7 +781,7 @@ def public_status(
         if available_label:
             message = NEWER_PREFIX.format(label=available_label)
         else:
-            message = "A newer version is ready."
+            message = T("cli.update_check.a_newer_version_is_ready")
     # No summary sentences ("This Mac is updated…"): each Mac has its own line.
     macs = _current_rows(result, progress, newer=newer, packaged=packaged)
     peer_rows = [m for m in macs if not m.get("mine")]
@@ -808,7 +804,7 @@ def public_status(
         except (TypeError, ValueError):
             since = started
         step = {
-            "text": raw.get("text") or "Updating…",
+            "text": raw.get("text") or T("cli.update_check.updating"),
             "elapsed_s": max(0, int(now - since)),
             "total_s": max(0, int(now - started)),
         }
@@ -1161,7 +1157,7 @@ def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None
     macs = P.initial_progress(peers, local_phase="waiting", local_label=local_label)
     progress["phase"] = "updating"
     progress["message"] = (
-        "Updating the other Macs first, then this Mac." if peers else OPENING
+        T("cli.caravan.updating_the_other_macs_first_then") if peers else OPENING
     )
     progress["macs"] = macs
     save_progress(home, progress)
@@ -1180,14 +1176,14 @@ def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None
         if message:
             progress["message"] = message
         if phase == "updating":
-            set_step(f"Updating the {local_label}…")
+            set_step(T("cli.update_check.updating_the_local_label", local_label=local_label))
         persist()
 
     def on_progress(row):
         nonlocal macs
         macs = P.replace_mac(macs, row.get("id"), row)
         if row.get("phase") == "updating":
-            set_step(f"Updating the {row.get('label') or 'Mac'}…")
+            set_step(T("cli.update_check.updating_the_v", v=row.get('label') or 'Mac'))
         persist()
 
     if peers:
@@ -1225,7 +1221,7 @@ def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None
                     ("offline", "failed", "still_old") for m in macs
                 )
                 if not peer_trouble:
-                    final_msg = "The Macs updated, but the model didn't come back."
+                    final_msg = T("cli.update_check.the_macs_updated_but_the_model")
                     set_local("no_model", final_msg, kind="no_model")
                     local_phase = "no_model"
         except Exception:
@@ -1273,11 +1269,11 @@ def retry_peer(home, mac_id, *, expected=None, peers=None, runner=None, timeout=
     if timeout is not None:
         kw["timeout"] = timeout
     expected = expected or (progress.get("expected") or None)
-    progress["step"] = {"text": f"Updating the {node.get('label') or 'Mac'}…", "since": time.time()}
+    progress["step"] = {"text": T("cli.update_check.updating_the_v", v=node.get('label') or 'Mac'), "since": time.time()}
     save_progress(home, progress)
     row = P.update_peer(node, expected=expected, runner=runner, **kw)
     P.record_peer_result(home, row)
-    print(f"Try again on the {row.get('label')}: {row.get('status')}. {row.get('detail') or ''}".strip(), flush=True)
+    print(T("cli.update_check.try_again_on_the_label", label=row.get('label'), status=row.get('status'), detail=row.get('detail') or '').strip(), flush=True)
     progress = load_progress(home) or progress
     macs = P.replace_mac(list(progress.get("macs") or []), node.get("id"), row)
     progress["macs"] = macs
@@ -1312,7 +1308,7 @@ def mark_retrying(home, mac_ids, *, peers=None):
             macs = P.replace_mac(macs, node.get("id"), P._row(node, phase="updating", can_retry=False))
             found.append(node.get("id"))
             if len(found) == 1:
-                progress["step"] = {"text": f"Updating the {node.get('label') or 'Mac'}…", "since": time.time()}
+                progress["step"] = {"text": T("cli.update_check.updating_the_v", v=node.get('label') or 'Mac'), "since": time.time()}
     progress["macs"] = macs
     save_progress(home, progress)
     return found
@@ -1339,7 +1335,7 @@ def cli_check(repo, *, home=None, name="web", opener=None, file=None, nodes=None
             print(keep, file=file)
         changes = result.get("changes") or []
         if changes:
-            print("What's new:", file=file)
+            print(T("cli.update_check.whats_new"), file=file)
             for line in changes:
                 print("  " + line, file=file)
         if result.get("helper") or behind:
@@ -1347,14 +1343,14 @@ def cli_check(repo, *, home=None, name="web", opener=None, file=None, nodes=None
         for m in (result.get("macs") or []):
             if m.get("behind") or m.get("phase") == "offline":
                 print(m["message"], file=file)
-        print("Run caravan update to install it. Other Macs are updated first.", file=file)
+        print(T("cli.update_check.run_caravan_update_to_install_it"), file=file)
         return 1
     if behind:
         for m in (result.get("macs") or []):
             print(m["message"], file=file)
             for step in m.get("help") or []:
                 print("  " + step, file=file)
-        print("Run caravan update to update the other Macs.", file=file)
+        print(T("cli.update_check.run_caravan_update_to_update_the"), file=file)
         return 1
     print(UP_TO_DATE, file=file)
     return 0

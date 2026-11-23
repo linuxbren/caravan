@@ -23,6 +23,7 @@ import garble
 import web_garble
 import mlx_worker
 import web_timing
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 HELLO = "Hello!"
@@ -332,7 +333,7 @@ class MarkerTests(unittest.TestCase):
     def test_proxy_and_page_strip_im_start(self):
         self.assertIn("<|im_start|>", web_timing._REPLY_MARKERS)
         self.assertEqual(web_timing.strip_reply_markers(IM_START_LOOP).strip(), "")
-        html = (ROOT / "proxy/web/index.html").read_text()
+        html = english_source(ROOT / "proxy/web/index.html")
         self.assertIn('"<|im_start|>"', html)
         self.assertIn("garble-note", html)
         self.assertIn("meta.garble", html)
@@ -342,7 +343,7 @@ class MarkerTests(unittest.TestCase):
 
 class PackagingVersionTests(unittest.TestCase):
     def test_install_stamps_channel_version_before_hash(self):
-        text = (ROOT / "install").read_text()
+        text = english_source(ROOT / "install")
         stamp = 'printf \'%s %s\\n\' "$REF" "$SHA" > "$TMP/source/packaging-version"'
         self.assertIn(stamp, text)
         # Must run after extract, before the integrity list is built, so the
@@ -430,7 +431,7 @@ class UiGarbleTests(unittest.TestCase):
         import re, shutil, subprocess
         if not shutil.which("node"):
             self.skipTest("node not installed")
-        text = (ROOT / "proxy/web/index.html").read_text()
+        text = english_source(ROOT / "proxy/web/index.html")
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "inline.js"
             p.write_text("\n".join(re.findall(r"<script>(.*?)</script>", text, re.S)))

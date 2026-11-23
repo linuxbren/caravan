@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 import caravan_update_check as UC  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 OLD = ("caravan-v3-mlx-split", "clean-install-fixes")
 RAW = "https://raw.githubusercontent.com/linuxbren/caravan/"
@@ -26,19 +27,19 @@ class UpdateAndInstallPointAtMain(unittest.TestCase):
         self.assertEqual(UC.INSTALL_URL, RAW + "main/install")
 
     def test_caravan_update_fetches_the_install_script_from_main(self):
-        src = (ROOT / "tools" / "caravan.py").read_text()
+        src = english_source(ROOT / "tools" / "caravan.py")
         self.assertIn("INSTALL_URL", src)
         for old in OLD:
             self.assertNotIn(old, src)
 
     def test_curl_installer_reads_the_pin_from_main(self):
-        src = (ROOT / "install").read_text()
+        src = english_source(ROOT / "install")
         urls = re.findall(r"https://raw\.githubusercontent\.com/linuxbren/caravan/([^/]+)/", src)
         self.assertTrue(urls)
         self.assertEqual(set(urls), {"main"})
 
     def test_source_installer_defaults_to_main(self):
-        src = (ROOT / "scripts" / "install.sh").read_text()
+        src = english_source(ROOT / "scripts" / "install.sh")
         self.assertRegex(src, r"(?m)^REF=main$")
 
     def test_install_lines_in_readme_and_install_guide_use_main(self):

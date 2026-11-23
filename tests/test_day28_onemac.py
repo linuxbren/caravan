@@ -18,8 +18,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "proxy"))
 import web_nodes as N  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (ROOT / "proxy" / "web" / "index.html").read_text()
+HTML = english_source(ROOT / "proxy" / "web" / "index.html")
 NODE = shutil.which("node")
 
 

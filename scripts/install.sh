@@ -1,15 +1,65 @@
 #!/bin/bash
 # One-command, per-user Apple Silicon installer. Compatible with macOS Bash 3.2.
 set -euo pipefail
+# >>> caravan strings (generated from locales/en.json; edit there, then run: python3 tools/caravan_i18n.py --sync-shell) >>>
+S_unknown_option_arg_use_help() { printf '%s' "Unknown option: ${1}. Use --help."; }
+S_setup_stopped_models_and_existing_settings() { printf '%s' "Setup stopped. Models and existing settings were not removed. Fix the error above, then rerun the same command."; }
+S_arg_needs_a_value_2() { printf '%s' "${1} needs a value."; }
+S_choose_a_port_number_from_1() { printf '%s' "Choose a port number from 1 to 65535."; }
+S_choose_role_lead_or_role_worker() { printf '%s' "Choose --role lead or --role worker."; }
+S_install_the_web_ui_as_lead() { printf '%s' "Install the web UI as lead first; use caravan_service.py for an optional model auto-start plan."; }
+S_worker_stage_options_need_an_installed() { printf '%s' "Worker stage options need an installed --model folder. No worker was configured."; }
+S_repo_must_be_an_absolute_path() { printf '%s' "--repo must be an absolute path (use \"\$HOME/...\", not a literal ~)."; }
+S_ref_must_name_a_git_branch() { printf '%s' "--ref must name a Git branch or tag."; }
+S_choose_a_dedicated_caravan_folder_not() { printf '%s' "Choose a dedicated Caravan folder, not / or your home folder."; }
+S_preview_only_no_directories_downloads_packag() { printf '%s' "PREVIEW ONLY: no directories, downloads, packages, config or launchd jobs will change."; }
+S_this_installer_needs_macos_nothing_was() { printf '%s' "This installer needs macOS. Nothing was installed."; }
+S_use_an_apple_silicon_mac_and() { printf '%s' "Use an Apple Silicon Mac and a native Terminal (not Rosetta). Nothing was installed."; }
+S_macos_14_or_newer_is_required() { printf '%s' "macOS 14 or newer is required (found ${1})."; }
+S_run_as_your_normal_macos_user() { printf '%s' "Run as your normal macOS user, not sudo/root."; }
+S_use_the_no_prerequisites_mac_bootstrap() { printf '%s' "Use the no-prerequisites Mac bootstrap in INSTALL.md, or pass --python /absolute/path/python3 (3.10+)."; }
+S_python_3_10_or_newer_is() { printf '%s' "Python 3.10 or newer is required."; }
+S_this_python_is_running_under_rosetta() { printf '%s' "This Python is running under Rosetta. Choose a native arm64 Python."; }
+S_free_at_least_8_gb_before() { printf '%s' "Free at least 8 GB before installing; models need more."; }
+S_python_python() { printf '%s' "Python: ${1}"; }
+S_source_folder_repo_ref() { printf '%s' "Source folder: ${1} (${2})"; }
+S_that_checkout_has_a_different_origin() { printf '%s' "That checkout has a different origin. Reuse it manually or choose a new folder."; }
+S_your_checkout_has_local_changes_keep() { printf '%s' "Your checkout has local changes. Keep them; commit or choose a different folder before installing."; }
+S_this_checkout_follows_the_old_branch() { printf '%s' "This checkout follows the old branch name ${1}; it gets the same releases as main."; }
+S_checkout_is_current_not_ref_no() { printf '%s' "Checkout is ${1}, not ${2}. No branch was changed."; }
+S_a_release_tag_is_immutable_choose() { printf '%s' "A release tag is immutable; choose a new install folder to change releases."; }
+S_matching_clean_checkout_found_leaving_its() { printf '%s' "Matching clean checkout found; leaving its code unchanged. Use --update for a clean fast-forward pull."; }
+S_using_existing_extracted_source_no_git() { printf '%s' "Using existing extracted source; no Git operations."; }
+S_that_folder_already_exists_and_is() { printf '%s' "That folder already exists and is not a recognized checkout. Use --use-existing for an extracted release, or choose an empty path."; }
+S_use_existing_needs_an_existing_caravan() { printf '%s' "--use-existing needs an existing Caravan source folder."; }
+S_git_is_missing_install_apple_command() { printf '%s' "Git is missing. Install Apple Command Line Tools first (xcode-select --install), then retry."; }
+S_finish_installing_apple_command_line_tools() { printf '%s' "Finish installing Apple Command Line Tools, then retry."; }
+S_reusing_the_mlx_virtual_environment() { printf '%s' "Reusing the MLX virtual environment."; }
+S_existing_venv_is_incompatible_choose_a() { printf '%s' "Existing venv is incompatible; choose a compatible environment manually. It was not removed."; }
+S_installing_tested_dependencies_this_may_use() { printf '%s' "Installing tested dependencies; this may use the internet."; }
+S_package_dependency_lock_is_missing_download() { printf '%s' "Package dependency lock is missing. Download a current package."; }
+S_the_easy_package_needs_its_managed() { printf '%s' "The easy package needs its managed Python 3.12. Rerun the Mac bootstrap."; }
+S_would_create_a_single_local_mac() { printf '%s' "Would create a single-local-Mac config (no lab SSH defaults)."; }
+S_created_the_local_mac_config_existing() { printf '%s' "Created the local Mac config. Existing configs are never replaced."; }
+S_an_unrelated_caravan_bin_caravan_exists() { printf '%s' "An unrelated ~/.caravan/bin/caravan exists. Keep it; choose a different command path manually."; }
+S_preparing_this_macs_browser_page_so() { printf '%s' "Preparing this Mac’s browser page so it can join your other Macs."; }
+S_open_a_new_terminal_window_to_2() { printf '%s' "Open a new Terminal window to use caravan (for example: caravan status)."; }
+S_done_caravan_starts_at_user_login() { printf '%s' "Done. Caravan starts at user login, not before login. Choose a model in the browser."; }
+S_would_ask_whether_to_open_caravan() { printf '%s' "Would ask whether to open Caravan from your other devices over Tailscale."; }
+S_would_ask_whether_to_open_caravan_2() { printf '%s' "Would ask whether to open Caravan on your local network."; }
+S_open_http_127_0_0_1() { printf '%s' "Open http://127.0.0.1:${1}/ (local browser). To add a Mac, choose Add Macs. Logs: ~/.caravan/logs/"; }
+S_usage_text() { printf '%s' "Usage: bash scripts/install.sh [--role lead|worker] [--repo PATH] [--ref REF]
+       [--python PATH] [--check] [--dry-run] [--no-start] [--update] [--use-existing]
+Worker plan: --model PATH [--counts K,K,... --stage-index I --listen HOST:PORT]
+             [--upstream HOST:PORT | --peer HOST:PORT] [--name ID] [--port PORT]
+Each Mac gets its browser page; a fixed-model worker is a developer option."; }
+S_would_run() { printf '%s' "Would run: "; }
+# <<< caravan strings <<<
 say() { printf '[Caravan] %s\n' "$*"; }
-trap 'code=$?; say "Setup stopped. Models and existing settings were not removed. Fix the error above, then rerun the same command." >&2; exit "$code"' ERR
+trap 'code=$?; say "$(S_setup_stopped_models_and_existing_settings)" >&2; exit "$code"' ERR
 fail() { say "$*" >&2; exit 1; }
 usage() {
-  printf '%s\n' 'Usage: bash scripts/install.sh [--role lead|worker] [--repo PATH] [--ref REF]' \
-    '       [--python PATH] [--check] [--dry-run] [--no-start] [--update] [--use-existing]' \
-    'Worker plan: --model PATH [--counts K,K,... --stage-index I --listen HOST:PORT]' \
-    '             [--upstream HOST:PORT | --peer HOST:PORT] [--name ID] [--port PORT]' \
-    'Each Mac gets its browser page; a fixed-model worker is a developer option.'
+  printf '%s\n' "$(S_usage_text)"
 }
 ROLE=lead
 WEB_PORT=8190
@@ -35,38 +85,38 @@ while [ "$#" -gt 0 ]; do
     --use-existing) EXISTING=1; shift ;;
     --replace-old-services) SERVICE_ARGS+=(--replace-old-services); shift ;;
     --role|--repo|--ref|--python)
-      [ "$#" -ge 2 ] || fail "$1 needs a value."
+      [ "$#" -ge 2 ] || fail "$(S_arg_needs_a_value_2 "$1")"
       case "$1" in
         --role) ROLE=$2 ;; --repo) REPO=$2 ;; --ref) REF=$2; REF_GIVEN=1 ;; --python) PYTHON=$2 ;;
       esac
       shift 2 ;;
     --model|--counts|--stage-index|--listen|--upstream|--peer|--name|--port|--host|--lead-port)
-      [ "$#" -ge 2 ] || fail "$1 needs a value."
+      [ "$#" -ge 2 ] || fail "$(S_arg_needs_a_value_2 "$1")"
       [ "$1" != --model ] || MODEL=1
       case "$1" in --counts|--stage-index|--listen|--upstream|--peer) STAGE=1 ;; esac
       [ "$1" != --port ] || WEB_PORT=$2
       SERVICE_ARGS+=("$1" "$2"); shift 2 ;;
-    *) fail "Unknown option: $1. Use --help." ;;
+    *) fail "$(S_unknown_option_arg_use_help "$1")" ;;
   esac
 done
-case "$WEB_PORT" in ''|*[!0-9]*|??????*) fail 'Choose a port number from 1 to 65535.' ;; esac
-[ "$WEB_PORT" -ge 1 ] && [ "$WEB_PORT" -le 65535 ] || fail 'Choose a port number from 1 to 65535.'
-[ "$ROLE" = lead ] || [ "$ROLE" = worker ] || fail 'Choose --role lead or --role worker.'
-[ "$ROLE" != lead ] || [ "$MODEL" = 0 ] || fail 'Install the web UI as lead first; use caravan_service.py for an optional model auto-start plan.'
+case "$WEB_PORT" in ''|*[!0-9]*|??????*) fail "$(S_choose_a_port_number_from_1)" ;; esac
+[ "$WEB_PORT" -ge 1 ] && [ "$WEB_PORT" -le 65535 ] || fail "$(S_choose_a_port_number_from_1)"
+[ "$ROLE" = lead ] || [ "$ROLE" = worker ] || fail "$(S_choose_role_lead_or_role_worker)"
+[ "$ROLE" != lead ] || [ "$MODEL" = 0 ] || fail "$(S_install_the_web_ui_as_lead)"
 if [ "$ROLE" = worker ] && [ "$MODEL" = 0 ] && [ "$STAGE" = 1 ]; then
-  fail 'Worker stage options need an installed --model folder. No worker was configured.'
+  fail "$(S_worker_stage_options_need_an_installed)"
 fi
-case "$REPO" in /*) ;; *) fail '--repo must be an absolute path (use "$HOME/...", not a literal ~).' ;; esac
-case "$REF" in ''|-*) fail '--ref must name a Git branch or tag.' ;; esac
-[ "$REPO" != / ] && [ "$REPO" != "$HOME" ] || fail 'Choose a dedicated Caravan folder, not / or your home folder.'
+case "$REPO" in /*) ;; *) fail "$(S_repo_must_be_an_absolute_path)" ;; esac
+case "$REF" in ''|-*) fail "$(S_ref_must_name_a_git_branch)" ;; esac
+[ "$REPO" != / ] && [ "$REPO" != "$HOME" ] || fail "$(S_choose_a_dedicated_caravan_folder_not)"
 if [ "$DRY" = 1 ]; then
-  say 'PREVIEW ONLY: no directories, downloads, packages, config or launchd jobs will change.'
+  say "$(S_preview_only_no_directories_downloads_packag)"
 else
-  [ "$(uname -s)" = Darwin ] || fail 'This installer needs macOS. Nothing was installed.'
-  [ "$(uname -m)" = arm64 ] || fail 'Use an Apple Silicon Mac and a native Terminal (not Rosetta). Nothing was installed.'
+  [ "$(uname -s)" = Darwin ] || fail "$(S_this_installer_needs_macos_nothing_was)"
+  [ "$(uname -m)" = arm64 ] || fail "$(S_use_an_apple_silicon_mac_and)"
   MACOS=$(sw_vers -productVersion)
-  [ "${MACOS%%.*}" -ge 14 ] || fail "macOS 14 or newer is required (found $MACOS)."
-  [ "$(id -u)" != 0 ] || fail 'Run as your normal macOS user, not sudo/root.'
+  [ "${MACOS%%.*}" -ge 14 ] || fail "$(S_macos_14_or_newer_is_required "$MACOS")"
+  [ "$(id -u)" != 0 ] || fail "$(S_run_as_your_normal_macos_user)"
 fi
 if [ -z "$PYTHON" ]; then
   for candidate in /opt/homebrew/bin/python3 /Library/Frameworks/Python.framework/Versions/Current/bin/python3 "$(command -v python3 || true)"; do
@@ -75,58 +125,58 @@ if [ -z "$PYTHON" ]; then
     fi
   done
 fi
-[ -n "$PYTHON" ] && [ -x "$PYTHON" ] || fail 'Use the no-prerequisites Mac bootstrap in INSTALL.md, or pass --python /absolute/path/python3 (3.10+).'
-"$PYTHON" -c 'import sys;sys.exit(sys.version_info < (3,10))' || fail 'Python 3.10 or newer is required.'
+[ -n "$PYTHON" ] && [ -x "$PYTHON" ] || fail "$(S_use_the_no_prerequisites_mac_bootstrap)"
+"$PYTHON" -c 'import sys;sys.exit(sys.version_info < (3,10))' || fail "$(S_python_3_10_or_newer_is)"
 if [ "$DRY" = 0 ]; then
-  "$PYTHON" -c 'import platform,sys;sys.exit(platform.machine() != "arm64")' || fail 'This Python is running under Rosetta. Choose a native arm64 Python.'
+  "$PYTHON" -c 'import platform,sys;sys.exit(platform.machine() != "arm64")' || fail "$(S_this_python_is_running_under_rosetta)"
 fi
 if [ "$CHECK" = 1 ]; then
   exec "$PYTHON" "$(cd "$(dirname "$0")/.." && pwd)/tools/caravan_doctor.py" --port "$WEB_PORT"
 fi
 if [ "$DRY" = 0 ]; then
   FREE=$(df -Pk "$HOME" | awk 'END {print $4}')
-  [ "$FREE" -ge 8388608 ] || fail 'Free at least 8 GB before installing; models need more.'
+  [ "$FREE" -ge 8388608 ] || fail "$(S_free_at_least_8_gb_before)"
 fi
-say "Python: $PYTHON"
-say "Source folder: $REPO ($REF)"
+say "$(S_python_python "$PYTHON")"
+say "$(S_source_folder_repo_ref "$REPO" "$REF")"
 run() {
-  if [ "$DRY" = 1 ]; then printf '[Caravan] Would run: '; printf '%q ' "$@"; printf '\n'; else "$@"; fi
+  if [ "$DRY" = 1 ]; then printf '[Caravan] %s' "$(S_would_run)"; printf '%q ' "$@"; printf '\n'; else "$@"; fi
 }
 # Reuse matching checkouts. Never reset, force, change branches or overwrite work.
 if [ -d "$REPO/.git" ]; then
   REMOTE=$(git -C "$REPO" remote get-url origin)
   case "$REMOTE" in https://github.com/linuxbren/caravan.git|git@github.com:linuxbren/caravan.git|https://github.com/linuxbren/caravan) ;;
-    *) fail "That checkout has a different origin. Reuse it manually or choose a new folder." ;;
+    *) fail "$(S_that_checkout_has_a_different_origin)" ;;
   esac
-  [ -z "$(git -C "$REPO" status --porcelain)" ] || fail 'Your checkout has local changes. Keep them; commit or choose a different folder before installing.'
+  [ -z "$(git -C "$REPO" status --porcelain)" ] || fail "$(S_your_checkout_has_local_changes_keep)"
   CURRENT=$(git -C "$REPO" symbolic-ref --short -q HEAD || git -C "$REPO" describe --tags --exact-match HEAD || true)
   # Checkouts made before Day 30 follow an old branch name. Those branches are
   # fast-forwarded to main with every release, so keep pulling the branch the
   # checkout is on instead of refusing it (no branch is switched).
   if [ "$REF_GIVEN" = 0 ] && [ "$CURRENT" != "$REF" ]; then
     case "$CURRENT" in caravan-v3-mlx-split|clean-install-fixes)
-      say "This checkout follows the old branch name $CURRENT; it gets the same releases as main."
+      say "$(S_this_checkout_follows_the_old_branch "$CURRENT")"
       REF=$CURRENT ;;
     esac
   fi
-  [ "$CURRENT" = "$REF" ] || fail "Checkout is $CURRENT, not $REF. No branch was changed."
+  [ "$CURRENT" = "$REF" ] || fail "$(S_checkout_is_current_not_ref_no "$CURRENT" "$REF")"
   if [ "$UPDATE" = 1 ]; then
-    git -C "$REPO" symbolic-ref -q HEAD >/dev/null || fail 'A release tag is immutable; choose a new install folder to change releases.'
+    git -C "$REPO" symbolic-ref -q HEAD >/dev/null || fail "$(S_a_release_tag_is_immutable_choose)"
     run git -C "$REPO" pull --ff-only origin "$REF"
   else
-    say 'Matching clean checkout found; leaving its code unchanged. Use --update for a clean fast-forward pull.'
+    say "$(S_matching_clean_checkout_found_leaving_its)"
   fi
 elif [ -e "$REPO" ]; then
   if [ "$EXISTING" = 1 ] && [ -f "$REPO/proxy/web_server.py" ] && [ -f "$REPO/tools/caravan_service.py" ]; then
-    say 'Using existing extracted source; no Git operations.'
+    say "$(S_using_existing_extracted_source_no_git)"
   else
-    fail 'That folder already exists and is not a recognized checkout. Use --use-existing for an extracted release, or choose an empty path.'
+    fail "$(S_that_folder_already_exists_and_is)"
   fi
 else
-  [ "$EXISTING" = 0 ] || fail '--use-existing needs an existing Caravan source folder.'
+  [ "$EXISTING" = 0 ] || fail "$(S_use_existing_needs_an_existing_caravan)"
   if [ "$DRY" = 0 ]; then
-    command -v git >/dev/null || fail 'Git is missing. Install Apple Command Line Tools first (xcode-select --install), then retry.'
-    git --version >/dev/null || fail 'Finish installing Apple Command Line Tools, then retry.'
+    command -v git >/dev/null || fail "$(S_git_is_missing_install_apple_command)"
+    git --version >/dev/null || fail "$(S_finish_installing_apple_command_line_tools)"
   fi
   run mkdir -p "$(dirname "$REPO")"
   run git clone --branch "$REF" --single-branch https://github.com/linuxbren/caravan.git "$REPO"
@@ -135,15 +185,15 @@ VENV="$HOME/.caravan/venvs/mlx"
 if [ ! -x "$VENV/bin/python" ]; then
   run "$PYTHON" -m venv "$VENV"
 else
-  say 'Reusing the MLX virtual environment.'
+  say "$(S_reusing_the_mlx_virtual_environment)"
   if [ "$DRY" = 0 ]; then
-    "$VENV/bin/python" -c 'import sys,platform;sys.exit(sys.version_info < (3,10) or platform.machine() != "arm64")' || fail 'Existing venv is incompatible; choose a compatible environment manually. It was not removed.'
+    "$VENV/bin/python" -c 'import sys,platform;sys.exit(sys.version_info < (3,10) or platform.machine() != "arm64")' || fail "$(S_existing_venv_is_incompatible_choose_a)"
   fi
 fi
-say 'Installing tested dependencies; this may use the internet.'
+say "$(S_installing_tested_dependencies_this_may_use)"
 if [ -f "$REPO/.caravan-package" ]; then
-  [ -f "$REPO/requirements-mac.lock" ] || fail 'Package dependency lock is missing. Download a current package.'
-  "$PYTHON" -c 'import sys;sys.exit(sys.version_info[:2] != (3,12))' || fail 'The easy package needs its managed Python 3.12. Rerun the Mac bootstrap.'
+  [ -f "$REPO/requirements-mac.lock" ] || fail "$(S_package_dependency_lock_is_missing_download)"
+  "$PYTHON" -c 'import sys;sys.exit(sys.version_info[:2] != (3,12))' || fail "$(S_the_easy_package_needs_its_managed)"
   run "$VENV/bin/python" -m pip install --only-binary=:all: -r "$REPO/requirements-mac.lock"
 else
   # Developer source installs retain the documented Python 3.10+ path.
@@ -159,11 +209,11 @@ FRESH_CONFIG=0
 if { [ "$ROLE" = lead ] || [ "$MODEL" = 0 ]; } && [ ! -e "$CONFIG" ]; then
   FRESH_CONFIG=1
   if [ "$DRY" = 1 ]; then
-    say 'Would create a single-local-Mac config (no lab SSH defaults).'
+    say "$(S_would_create_a_single_local_mac)"
   else
     mkdir -p "$HOME/.caravan"
     (set -o noclobber; printf '%s\n' '[defaults]' 'self_tune = "auto"' '' '[web.nodes.local]' 'label = "My Mac"' 'role = "lead"' 'host = "local"' > "$CONFIG")
-    say 'Created the local Mac config. Existing configs are never replaced.'
+    say "$(S_created_the_local_mac_config_existing)"
   fi
 fi
 # Stable command location; only publish after successful install/preparation.
@@ -172,7 +222,7 @@ if [ "$DRY" = 0 ]; then
   mkdir -p "$HOME/.caravan/bin"
   WRAPPER="$HOME/.caravan/bin/caravan"
   if [ -e "$WRAPPER" ] && ! /usr/bin/grep -q '^# Caravan managed command$' "$WRAPPER"; then
-    fail 'An unrelated ~/.caravan/bin/caravan exists. Keep it; choose a different command path manually.'
+    fail "$(S_an_unrelated_caravan_bin_caravan_exists)"
   fi
   { printf '%s\n' '#!/bin/bash' '# Caravan managed command'; printf 'exec %q %q "$@"\n' "$VENV/bin/python" "$REPO/tools/caravan.py"; } > "$WRAPPER"
   chmod 755 "$WRAPPER"
@@ -185,7 +235,7 @@ elif [ "$MODEL" = 1 ]; then
   KIND=worker
 else
   KIND=web
-  say "Preparing this Mac’s browser page so it can join your other Macs."
+  say "$(S_preparing_this_macs_browser_page_so)"
 fi
 SERVICE=("$VENV/bin/python" "$REPO/tools/caravan_service.py" install --kind "$KIND" --repo "$REPO" --python "$VENV/bin/python")
 if [ "$START" = 0 ]; then SERVICE+=(--no-start); fi
@@ -196,8 +246,8 @@ else
   "${SERVICE[@]}" ${SERVICE_ARGS[@]+"${SERVICE_ARGS[@]}"}
 fi
 register_command
-say 'Open a new Terminal window to use caravan (for example: caravan status).'
-say 'Done. Caravan starts at user login, not before login. Choose a model in the browser.'
+say "$(S_open_a_new_terminal_window_to_2)"
+say "$(S_done_caravan_starts_at_user_login)"
 if [ "$KIND" = web ]; then
   if [ "$FRESH_CONFIG" = 1 ]; then run "$VENV/bin/python" "$REPO/tools/caravan_pairing.py" prepare; fi
   # Optional questions, only on a fresh install. Tailscale is asked only if
@@ -206,12 +256,12 @@ if [ "$KIND" = web ]; then
   # terminal can be read; default is No. Updates never ask. Otherwise silent.
   if [ "$FRESH_CONFIG" = 1 ] && [ "$UPDATE" = 0 ]; then
     if [ "$DRY" = 1 ]; then
-      say 'Would ask whether to open Caravan from your other devices over Tailscale.'
-      say 'Would ask whether to open Caravan on your local network.'
+      say "$(S_would_ask_whether_to_open_caravan)"
+      say "$(S_would_ask_whether_to_open_caravan_2)"
     else
       "$VENV/bin/python" "$REPO/tools/caravan_remote.py" maybe-prompt --port "$WEB_PORT"
       "$VENV/bin/python" "$REPO/tools/caravan_lan.py" maybe-prompt --port "$WEB_PORT"
     fi
   fi
-  say "Open http://127.0.0.1:$WEB_PORT/ (local browser). To add a Mac, choose Add Macs. Logs: ~/.caravan/logs/"
+  say "$(S_open_http_127_0_0_1 "$WEB_PORT")"
 fi

@@ -96,7 +96,11 @@ def dispatch(handler,app):
     if handler.command=='GET':
         files={'/pairing':('pairing.html','text/html; charset=utf-8'),'/pairing.js':('pairing.js','text/javascript; charset=utf-8'),'/pairing.css':('pairing.css','text/css; charset=utf-8')}
         if path in files:
-            name,ctype=files[path];respond(handler,200,(WEB/name).read_bytes(),ctype)
+            name,ctype=files[path];data=(WEB/name).read_bytes()
+            if name.endswith('.html'):
+                import caravan_i18n
+                data=caravan_i18n.render_page(data.decode('utf-8')).encode('utf-8')
+            respond(handler,200,data,ctype)
         elif path=='/api/pairing/state': respond(handler,200,{**manager.local_state(),'token':manager.local_token})
         else: respond(handler,404,{'error':'Not found.'})
         return True

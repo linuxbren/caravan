@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import caravan_doctor as doctor
 import caravan as cli
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 
 class BootstrapTests(unittest.TestCase):
@@ -43,7 +44,7 @@ class BootstrapTests(unittest.TestCase):
             self.assertEqual(list(Path(home).iterdir()), [])
 
     def test_security_contract(self):
-        text = (ROOT/"install").read_text()
+        text = english_source(ROOT/"install")
         self.assertIn('"$ACTUAL" = "$SHA"', text)
         self.assertIn('--proto', text)
         self.assertIn('3f61099e261e449527141dbf125629fab33ad696468c8c90cebbac40185a306c', text)

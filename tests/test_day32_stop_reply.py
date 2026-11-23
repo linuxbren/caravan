@@ -9,6 +9,7 @@ the journal job is closed as "stopped" so it is never run again.
 from __future__ import annotations
 
 import json
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 import queue
 import re
 import socket
@@ -30,7 +31,7 @@ sys.path.insert(0, str(REPO / "agent"))
 import request_journal as RJ  # noqa: E402
 import mlx_worker as W  # noqa: E402
 
-HTML = (REPO / "proxy/web/index.html").read_text()
+HTML = english_source(REPO / "proxy/web/index.html")
 
 
 class Journal(unittest.TestCase):

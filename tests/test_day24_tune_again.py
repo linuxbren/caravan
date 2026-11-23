@@ -23,8 +23,9 @@ import web_optimize as WO
 import web_settings
 import web_speed as S
 from web_workers import WorkerManager
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (REPO / "proxy/web/index.html").read_text()
+HTML = english_source(REPO / "proxy/web/index.html")
 ACTIVE = dict(
     self_tune=True, guess_ahead=False, guess_ahead_loaded=False,
     shared_start=True, pipeline_chats=1, keepalive=None,

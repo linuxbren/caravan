@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 ROOT = Path(__file__).resolve().parents[1]
-HTML = (ROOT / "proxy/web/index.html").read_text()
+HTML = english_source(ROOT / "proxy/web/index.html")
 PICKER = (ROOT / "docs/MODEL_PICKER.md").read_text()
 DAY = (ROOT / "docs/DAY26.md").read_text()
 WEB = (ROOT / "docs/WEB.md").read_text()

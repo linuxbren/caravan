@@ -24,6 +24,7 @@ from web_workers import WorkerManager  # noqa: E402
 from test_day26_update_check import (  # noqa: E402
     NEW, OLD, SHA, FakeOpener, _offline_app, opener_for, write_package,
 )
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
 DAY = 86400
 
@@ -301,7 +302,7 @@ class ToggleApi(unittest.TestCase):
 
 
 class Page(unittest.TestCase):
-    html = (ROOT / "proxy/web/index.html").read_text()
+    html = english_source(ROOT / "proxy/web/index.html")
 
     def test_version_state_honors_daily_hidden_in_node(self):
         node = shutil.which("node")

@@ -1,6 +1,7 @@
 import pathlib, unittest
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (pathlib.Path(__file__).resolve().parents[1] / "proxy/web/index.html").read_text()
+HTML = english_source(pathlib.Path(__file__).resolve().parents[1] / "proxy/web/index.html")
 
 
 class StatsLine(unittest.TestCase):

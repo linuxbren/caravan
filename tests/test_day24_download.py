@@ -43,8 +43,9 @@ def _restore_hub(hub, parts):
 import placement as PL  # noqa: E402
 import web_nodes as N  # noqa: E402
 import web_picker as P  # noqa: E402
+from i18n_check import english_source  # Day 32: page/CLI text lives in locales/en.json
 
-HTML = (ROOT / "proxy/web/index.html").read_text()
+HTML = english_source(ROOT / "proxy/web/index.html")
 SERVER = (ROOT / "proxy/web_server.py").read_text()
 PICKER_DOCS = (ROOT / "docs/MODEL_PICKER.md").read_text()
 DAY = (ROOT / "docs/DAY24.md").read_text()
