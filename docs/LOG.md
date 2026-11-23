@@ -12,7 +12,7 @@ language picker that switches the page live and persists (`CARAVAN_LANG`
 formatting, and layout screenshots at 1280 and 375 px. Spanish is marked
 beta in the picker until a native speaker reviews it. Glossary:
 [docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md). Tests:
-`tests/test_day32_spanish.py`. Suite 2,176 OK. The Macs were not updated
+`tests/test_day32_spanish.py`. Suite 2,176 OK. Source `8b449aa`, pin `9f23e16`, tag v0.9.9. The Macs were not updated
 (Brenden updates them himself).
 
 ## 2026-11-23: Day 32 — Spanish localization (in progress, pending review)

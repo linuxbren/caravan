@@ -23,7 +23,7 @@ See [DAY32](docs/DAY32.md#spanish-v099).
   numbers stay ungrouped.
 - Changed: longer Spanish labels wrap in the chat header buttons, chips
   and Mac mini cards, including at 375 px.
-- Tests: `tests/test_day32_spanish.py`. 2,176 tests pass.
+- Source `8b449aa`, pin `9f23e16`. 2,176 tests pass.
 
 ## Day 32 — GGUF placement (v0.9.8)
 

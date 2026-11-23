@@ -319,9 +319,9 @@ Built on the local branch `day32-spanish` (on `2e49275`), reviewed
 by Claude (approved 2026-11-23 09:05 CST: full suite 2,175 of 2,175 with
 the review command; two nits fixed afterward) and merged to `main`
 fast-forward only.
-Released as a mid-day release, tag
+Released as a mid-day release: source `8b449aa`, pin `9f23e16`; tag
 [v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9) on the
-wrap commit (source and pin commits are recorded after publishing).
+wrap commit.
 Notes: [release-notes/day32-v0.9.9.md](release-notes/day32-v0.9.9.md).
 
 The Macs were not updated as part of the release; Brenden updates them
