@@ -21,6 +21,7 @@ choosing and adding languages, the rest of its main theme, comes next.
 9. [Part B: Stop a reply (v0.9.6)](#part-b-stop-a-reply-v096)
 10. [Part B: tests and release (v0.9.6)](#part-b-tests-and-release-v096)
 11. [Superseded: first proposal for cloud API keys](#superseded-first-proposal-for-cloud-api-keys)
+12. [GGUF placement (ROADMAP #9)](#gguf-placement-roadmap-9)
 
 ## Status of every Day 32 request
 
@@ -35,7 +36,7 @@ choosing and adding languages, the rest of its main theme, comes next.
 | Stop a reply while it is written: a **Stop** button under Send/Queue that really stops the model (the request to the model is closed, the split workers stop and are free for the next message), keeps the words so far marked "(stopped)", closes the journal job as stopped (never run again) and still sends queued messages next ([details](#part-b-stop-a-reply-v096)) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
 | Localization step 1: move all user-facing text into one English strings file keyed by name, English fallback, no other languages yet (Brenden: "start with compartmentalization first with English. Then we'll decide on additional languages.") | Done (fully compartmentalized: page, CLI, installers, server and worker messages), reviewed (Claude: approved), released in [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7) (mid-day); Brenden updates the Macs himself ([details](#localization-step-1-english-strings-file)) |
 | Localization next: other languages and a language setting | Brenden decides which languages. Day 32 stays open for it |
-| A confirmation step before every download (raised in the step 1 review): `pickQuant()` in `proxy/web/index.html` asks to confirm the placement/split only when the fit is red (`q.fit.color === "red"`); green and yellow fits start downloading at once. Brenden wants a confirmation before every download, whatever the fit color | Open, not started; not part of v0.9.7. On the [ROADMAP](ROADMAP.md) |
+| A confirmation step before every download (ROADMAP Next candidates #9; raised in the step 1 review): GGUF should use the same Step 2 placement chooser as MLX, for every fit color | Done on the branch (pending review, not tagged). See [GGUF placement](#gguf-placement-roadmap-9) |
 
 ## Plan: localization
 
@@ -209,8 +210,34 @@ updates them himself with `caravan update`.
 
 Still open in Day 32:
 - Choosing and adding languages, then a language setting.
-- A confirmation step before every download (see the status table;
-  found in the step 1 review, not part of this release).
+- GGUF placement (ROADMAP #9) is implemented on this branch, pending
+  review, and is not part of v0.9.7. See [GGUF placement](#gguf-placement-roadmap-9).
+
+
+## GGUF placement (ROADMAP #9)
+
+Brenden (2026-11-23): GGUF downloads should act exactly like MLX.
+
+**Before:** GGUF downloads in Models skipped Step 2 unless the fit was
+red, and even then only showed the automatic recommendation. The
+download API ignored a chosen placement and always sent the file to the
+lead Mini. At load, a one-Mini placement could be turned into a split.
+
+**After (this branch, pending review, not tagged):** every GGUF
+download, any fit color, opens the same Step 2 chooser as MLX: 1 Mini /
+split across K Minis / copy to all, for any number of Macs from the
+config. Unfit options stay visible and disabled with the reason. The
+default is the smallest placement that fits (for GGUF, the smallest that
+holds the full chat window, as in Day 31). The choice is saved as
+`caravan-placement.json` and honored at download and at load: only the
+needed files go to the chosen Mini(s), and a one-Mini choice is not
+turned into a split. New strings go through `locales/en.json` and `T()`.
+
+Tests: `tests/test_day32_gguf_placement.py` (green/yellow/red all open
+the chooser and send the placement, default is the smallest that fits,
+the choice is honored at download and at load). Full suite: 2,161 OK.
+The Macs were not updated (Brenden updates them himself).
+
 
 ## Part A: version label
 
