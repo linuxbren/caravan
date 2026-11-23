@@ -168,10 +168,12 @@ and the daily logs, not mixed into current setup instructions.
   - **Localization (main theme; Day 32 stays open for it).**
     - **Step 1, English strings file (done on the `day32-localization`
       branch, not pushed or released yet; waiting for review):** the web
-      page, the `caravan` command and the installers read their text from
-      one English file, `locales/en.json` (1,127 strings keyed by name),
-      with English as the fallback. The English text is unchanged. No
-      other language yet. See [DAY32](DAY32.md#localization-step-1-english-strings-file).
+      page, the `caravan` command, the installers and the server and
+      worker messages read their text from one English file,
+      `locales/en.json` (2,299 strings keyed by name), with English as the
+      fallback. Code checks message codes instead of English words;
+      plurals, numbers, units and lists go through locale helpers. The
+      English text is unchanged. No other language yet. See [DAY32](DAY32.md#localization-step-1-english-strings-file).
     - **Next (the owner decides):** which languages to add, then a language
       setting (the Mac's language by default, a Settings override). The
       planned first languages were Spanish, Simplified Chinese and
