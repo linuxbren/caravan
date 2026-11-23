@@ -1,3 +1,19 @@
+## 2026-11-23: Day 32 — Russian localization (v0.9.10)
+
+Mid-day release; Day 32 stays open for other languages. Built on the
+local branch `day32-russian` (on `bd46a24`), reviewed (Claude: approved
+11:05 CST, suite 2,187/2,187 with the review command) and merged
+fast-forward. Russian is the next language after Spanish:
+`locales/ru.json` for every current key (natural Russian, informal *ты*),
+one/few/many/other plural keys everywhere counts appear, **Русский
+(beta)** in the Settings picker and the installer shell block, Russian
+number and date formatting (space as the thousands separator, decimal
+comma, "и" lists, genitive months), and layout screenshots at 1280 and
+375 px. Russian is marked beta in the picker until a native speaker
+reviews it. Glossary: [docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md). Tests:
+`tests/test_day32_russian.py`. Suite 2,187 OK. The Macs were not updated
+(Brenden updates them himself).
+
 ## 2026-11-23: Day 32 — Russian localization (in progress, pending review)
 
 Local work on `day32-russian` (from `main` at v0.9.9, `bd46a24`), not

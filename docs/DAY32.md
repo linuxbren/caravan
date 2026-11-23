@@ -327,12 +327,15 @@ Notes: [release-notes/day32-v0.9.9.md](release-notes/day32-v0.9.9.md).
 The Macs were not updated as part of the release; Brenden updates them
 himself with `caravan update`. Day 32 stays open for other languages.
 
-## Russian (in progress, pending review)
+## Russian (v0.9.10)
 
-Brenden (2026-11-23): start Russian, same process as Spanish. Work is on
-the local branch `day32-russian` (from `main` at v0.9.9, `bd46a24`).
-**Uncommitted until Claude approves.** No push, no tag, no Mac updates.
-CHANGELOG and VERSION stay at v0.9.9 (no Unreleased section).
+Brenden (2026-11-23): start Russian, same process as Spanish.
+
+**After ([v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10)):** Russian is
+the next language after Spanish. Work was on the local branch
+`day32-russian` (from `main` at v0.9.9, `bd46a24`). Claude approved the
+uncommitted tree (11:05 CST). The Macs were not updated (Brenden updates
+them himself).
 
 What this adds:
 
@@ -362,9 +365,18 @@ What this adds:
   `XDG_CONFIG_HOME="" PYTHONPATH=.:proxy:tests uv run --with pytest
   --with spake2==0.9 --with cryptography==46.0.3 python -m pytest tests -q`.
 
-The review request is in the Obsidian Claude Review note (uncommitted
-diff against `bd46a24`). CHANGELOG and VERSION stay at v0.9.9. Day 32
-stays open for Japanese and Simplified Chinese after this.
+### Russian: release (v0.9.10)
+
+Built on the local branch `day32-russian` (on `bd46a24`), reviewed
+by Claude (approved 2026-11-23 11:05 CST: full suite 2,187 of 2,187 with
+the review command) and merged to `main` fast-forward only.
+Released as a mid-day release, tag
+[v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10) on the
+wrap commit (source and pin commits are recorded after publishing).
+Notes: [release-notes/day32-v0.9.10.md](release-notes/day32-v0.9.10.md).
+
+The Macs were not updated as part of the release; Brenden updates them
+himself with `caravan update`. Day 32 stays open for other languages.
 
 ## Part A: version label
 

@@ -1,3 +1,30 @@
+## Day 32 — Russian localization (v0.9.10)
+
+Released as [v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10), a mid-day
+release. Day 32 continues with other languages (Japanese and Simplified
+Chinese can drop in later).
+
+See [DAY32](docs/DAY32.md#russian-v0910).
+
+- Added: Russian as the next language after Spanish. `locales/ru.json`
+  has every current English key (2,333; natural Russian, informal *ты*),
+  plus one/few/many/other forms everywhere counts appear. Model names,
+  Caravan, Mini, GGUF, MLX and commands stay in English. Glossary:
+  [docs/i18n/GLOSSARY.md](docs/i18n/GLOSSARY.md).
+- Added: **Русский (beta)** in the Settings language picker and the
+  installer shell block. Default order is unchanged: `CARAVAN_LANG`,
+  then the saved Settings choice, then the Mac's language, then English.
+  Russian is marked beta until a native speaker reviews it.
+- Added: Russian number and date formatting (decimal comma, a space as
+  the thousands separator (1 234,5), "и" / "или" lists, dates like
+  "13 ноября" and "ноябрь 2026").
+- Changed: longer Russian (Cyrillic) labels wrap in the chat header
+  buttons, chips and Mac mini cards, including at 375 px, using the same
+  rules as Spanish.
+- Changed: the split-status line `{label}: {count} layers ready` now
+  goes through `T.plural`, so English says "1 layer ready".
+- Tests: `tests/test_day32_russian.py`. 2,187 tests pass.
+
 ## Day 32 — Spanish localization (v0.9.9)
 
 Released as [v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9), a mid-day

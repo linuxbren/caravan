@@ -181,14 +181,14 @@ and the daily logs, not mixed into current setup instructions.
       Spanish number/date formatting, and layout checks at 1280 and 375 px.
       Spanish is marked beta in the picker until a native speaker reviews
       it. See [DAY32](DAY32.md#spanish-v099).
-    - **Russian (in progress, pending review):** next language after
+    - **Russian ([v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10), done):** next language after
       Spanish. `locales/ru.json` for every current key (natural Russian,
       informal *ты*), one/few/many/other plural keys everywhere counts
       appear, **Русский (beta)** in the Settings picker and the installer
       shell block, Russian number/date formatting (space as the thousands
       separator, decimal comma, "и" lists, genitive months), and Cyrillic
       layout checks at 1280 and 375 px. Russian is marked beta until a
-      native speaker reviews it. See [DAY32](DAY32.md#russian-in-progress-pending-review).
+      native speaker reviews it. See [DAY32](DAY32.md#russian-v0910).
   - **GGUF placement ([v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8), done):**
     every GGUF download uses the same Step 2 placement chooser as MLX,
     for every fit color: 1 Mini / split across K Minis / copy to all.
