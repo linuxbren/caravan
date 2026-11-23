@@ -1,3 +1,35 @@
+## Day 32 — Simplified Chinese localization (v0.9.12)
+
+Released as [v0.9.12](https://github.com/linuxbren/caravan/releases/tag/v0.9.12), a mid-day
+release. This is the last planned Day 32 language (Spanish, Russian,
+Japanese and Simplified Chinese are now in Settings; each is marked beta
+until a native speaker reviews it).
+
+See [DAY32](docs/DAY32.md#simplified-chinese-v0912).
+
+- Added: Simplified Chinese as the last planned language after Japanese.
+  `locales/zh-Hans.json` has every current English key except non-`other`
+  plural forms (2,335 English keys; natural, idiomatic Simplified Chinese,
+  你 rather than formal 您). Plural keys use `_other` only. Model names,
+  Caravan, Mini, GGUF, MLX and commands stay in English. Download is 下载;
+  Unload is 卸载. Glossary:
+  [docs/i18n/GLOSSARY.md](docs/i18n/GLOSSARY.md).
+- Added: **简体中文 (beta)** in the Settings language picker and the
+  installer shell block. Default order is unchanged: `CARAVAN_LANG`,
+  then the saved Settings choice, then the Mac's language, then English.
+  `zh-Hans`, `zh-CN`, `zh-SG` and `zh` map to Simplified Chinese;
+  `zh-Hant`, `zh-TW` and `zh-HK` do not. Simplified Chinese is marked
+  beta until a native speaker reviews it.
+- Added: Simplified Chinese number and date formatting (dates like
+  2026年11月13日 and 2026年11月, lists with 、 and 和, numbers like
+  1,234.5, ordinals like 第1 / 第2).
+- Changed: CJK line breaking (`line-break: strict`, `word-break: normal`,
+  `overflow-wrap: anywhere`) and fonts that cover Simplified Chinese
+  (`PingFang SC`, `Hiragino Sans GB`, `Noto Sans CJK SC`,
+  `Microsoft YaHei`). Longer Chinese labels wrap with the same rules as
+  Spanish, Russian and Japanese.
+- Tests: `tests/test_day32_chinese.py`. 2,213 tests pass.
+
 ## Day 32 — Japanese localization (v0.9.11)
 
 Released as [v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11), a mid-day

@@ -88,7 +88,7 @@ link it picked.
 
 ## For developers / details
 
-[What's new (Day 32, v0.9.11)](docs/DAY32.md) · [Developer setup](docs/DEVELOPMENT.md) · [Clean-install fixes and verification](docs/DAY23.md) · [Package status](docs/PACKAGING.md) · [Documentation index](docs/README.md) · [Changelog](CHANGELOG.md).
+[What's new (Day 32, v0.9.12)](docs/DAY32.md) · [Developer setup](docs/DEVELOPMENT.md) · [Clean-install fixes and verification](docs/DAY23.md) · [Package status](docs/PACKAGING.md) · [Documentation index](docs/README.md) · [Changelog](CHANGELOG.md).
 
 The browser page is for your own Mac. Do not expose it to the public internet.
 

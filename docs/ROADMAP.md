@@ -124,7 +124,7 @@ and the daily logs, not mixed into current setup instructions.
     a pre-quantized MLX model loads split across Macs even when one piece
     of the other Mac's layers straddles two shard files (Qwen3 32B 4-bit).
 
-- **Day 32 (in progress): localization.** See [DAY32](DAY32.md).
+- **Day 32: localization.** The planned languages are released (Spanish, Russian, Japanese, Simplified Chinese; each still beta until a native review). See [DAY32](DAY32.md).
   - **Part A, version label
     ([v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4)):**
     Settings shows the installed release next to its title, with the daily
@@ -165,7 +165,7 @@ and the daily logs, not mixed into current setup instructions.
     the words so far marked "(stopped)", closes the journal job as
     "stopped" so it never runs again, and still sends queued messages.
     See [DAY32](DAY32.md#part-b-stop-a-reply-v096).
-  - **Localization (main theme; Day 32 stays open for it).**
+  - **Localization (main theme; planned languages done).**
     - **Step 1, English strings file ([v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7), done):** the web
       page, the `caravan` command, the installers and the server and
       worker messages read their text from one English file,
@@ -197,7 +197,7 @@ and the daily logs, not mixed into current setup instructions.
       (2026年11月13日, 、 lists), CJK line breaking, and layout checks at
       1280 and 375 px. Japanese is marked beta until a native speaker
       reviews it. See [DAY32](DAY32.md#japanese-v0911).
-    - **Simplified Chinese (in progress, pending review):** last planned
+    - **Simplified Chinese ([v0.9.12](https://github.com/linuxbren/caravan/releases/tag/v0.9.12), done):** last planned
       Day 32 language, after Japanese. `locales/zh-Hans.json` for every
       current key (natural, idiomatic Simplified Chinese, 你 rather than
       formal 您), `_other` only for plural keys, **简体中文 (beta)** in
@@ -205,10 +205,8 @@ and the daily logs, not mixed into current setup instructions.
       Chinese number/date formatting (2026年11月13日, 、 and 和 lists),
       CJK line breaking, and layout checks at 1280 and 375 px. Canonical
       locale is `zh-Hans` (`zh-CN` / `zh-SG` / `zh` map to it; `zh-Hant`
-      / `zh-TW` / `zh-HK` do not). Work is uncommitted on `day32-chinese`
-      off v0.9.11 (`9ad1fbe`); CHANGELOG and VERSION stay at 0.9.11 until
-      the wrap. Simplified Chinese is marked beta until a native speaker
-      reviews it. See [DAY32](DAY32.md#simplified-chinese-in-progress-pending-review).
+      / `zh-TW` / `zh-HK` do not). Simplified Chinese is marked beta until
+      a native speaker reviews it. See [DAY32](DAY32.md#simplified-chinese-v0912).
   - **GGUF placement ([v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8), done):**
     every GGUF download uses the same Step 2 placement chooser as MLX,
     for every fit color: 1 Mini / split across K Minis / copy to all.

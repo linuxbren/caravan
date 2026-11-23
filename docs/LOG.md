@@ -1,3 +1,22 @@
+## 2026-11-23: Day 32 — Simplified Chinese localization (v0.9.12)
+
+Mid-day release; this is the last planned Day 32 language. Built on the
+local branch `day32-chinese` (on `9ad1fbe`), reviewed (Claude: approved
+17:02 CST, suite 2,213/2,213 with the review command) and merged
+fast-forward. Simplified Chinese is the last planned language after
+Japanese: `locales/zh-Hans.json` for every current key (natural,
+idiomatic Simplified Chinese, 你 rather than formal 您), `_other` only
+for plural keys, **简体中文 (beta)** in the Settings picker and the
+installer shell block, Simplified Chinese number and date formatting
+(2026年11月13日, 、 and 和 lists, 1,234.5, 第n ordinals), CJK line
+breaking and fonts, and layout screenshots at 1280 and 375 px.
+`zh-Hans` / `zh-CN` / `zh-SG` / `zh` map to Simplified Chinese;
+`zh-Hant` / `zh-TW` / `zh-HK` do not. Simplified Chinese is marked beta
+in the picker until a native speaker reviews it. Glossary:
+[docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md). Tests:
+`tests/test_day32_chinese.py`. Suite 2,213 OK. The Macs were not updated
+(Brenden updates them himself).
+
 ## 2026-11-23: Day 32 — Simplified Chinese localization (in progress, pending review)
 
 Uncommitted work on `day32-chinese` off v0.9.11 (`9ad1fbe`). Not
