@@ -10,6 +10,7 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 4. [Part A fix: daily update check (v0.9.5)](#part-a-fix-daily-update-check-v095)
 5. [Proposal: API keys for cloud models](#proposal-api-keys-for-cloud-models)
 6. [Cloud API keys: built, waiting on review](#cloud-api-keys-built-waiting-on-review)
+7. [Stop a reply: built, waiting on review](#stop-a-reply-built-waiting-on-review)
 
 ## Status of every Day 32 request
 
@@ -21,6 +22,7 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 | Chat message queue: Send reads **Queue** while the model answers; queued messages send in order when the answer finishes (also after an error or Stop); a floating strip just above the prompt box, one chip per message (full text on hover) with a × to cancel; a queued message is journaled only when it sends; Stop still works | Built and tested on a local branch (not pushed); waiting on Brenden's review before release |
 | API keys for cloud models: a **Cloud API keys** section in Settings (Ollama Cloud only, the one cloud source Models can search; masked, editable, removable); an inline key prompt when a cloud model's provider has no key; cloud models say **Load**, not Download ([what was built](#cloud-api-keys-built-waiting-on-review)) | Approved; built and tested on a local branch (not pushed); waiting on Brenden's review before release |
 | Chatting with Ollama Cloud models (routing `/api/chat` to Ollama Cloud) | Not for Day 32 (Brenden); the key is saved now, cloud chat comes later. On the [ROADMAP](ROADMAP.md) as a future item |
+| Stop a reply while it is written: a **Stop** button under Send/Queue that really stops the model (the request to the model is closed, the split workers stop and are free for the next message), keeps the words so far marked "(stopped)", closes the journal job as stopped (never run again) and still sends queued messages next ([details](#stop-a-reply-built-waiting-on-review)) | Built and tested on a local branch (not pushed); checked live against the Macs' running model from the dev node; waiting on Brenden's review before release |
 | Localization (main theme): one English strings file keyed by name, English fallback, then Spanish, Simplified Chinese, Japanese, then German | Not started |
 
 ## Plan: localization
@@ -282,3 +284,80 @@ tests.
 Screenshots, for review only, are not in the repo: Settings section,
 inline prompt, the Load button and the message after saving, at 375 and
 1280 px.
+
+## Stop a reply: built, waiting on review
+
+Brenden asked for a Stop button for chat output. Before this, nothing
+stopped a reply while it was being written. The only stop controls were
+**Unload** (unload the model) and stopping a download. A reply left
+behind (for example after a model switch) only ended in the browser; the
+model kept writing until it noticed the page had gone. Built on the local
+branch `day32-header-layout`. Nothing is pushed or released and the
+Macs' install is unchanged until Brenden reviews it.
+
+What it does:
+
+- While a reply is written, a **Stop** button sits under **Send/Queue**,
+  next to the prompt box. It says "Stopping…" until the reply ends and
+  hides when nothing is being written.
+- Stop asks the web server to end that reply (`POST /api/chat/stop` with
+  the reply's request id, sent as `X-Caravan-Request`, or its journal job
+  id). The server shuts down its connection to the model, so:
+  - the MLX lead sees its client gone and stops generating. The split
+    helper only works when the lead asks it to, so it stops too, and both
+    are free for the next message. The lead now watches its client socket,
+    so this also works while it is still reading a long prompt, when
+    nothing has been written yet (before, it noticed only at its next
+    word);
+  - llama-server (GGUF) cancels the task when its client goes away.
+- The words written so far stay in the chat, marked **(stopped)**, and in
+  the chat history the model sees next time.
+- The request journal closes the job as **stopped** (a new final state,
+  "stopped by you" in `caravan jobs`), so it is never run again after a
+  restart or power loss.
+- Queued messages still send next, in order.
+- If the server can't answer within 5 seconds, the page ends the request
+  itself (the old behavior). Unload and switching models also ask the
+  server to stop the reply that is being written.
+
+Code: `proxy/web_server.py` (`/api/chat/stop`, live replies by request
+and job id, the stopped ending), `agent/mlx_worker.py` (the client-gone
+watcher), `proxy/request_journal.py` (`stop`, "stopped" status),
+`tools/caravan_jobs.py`, `proxy/web/index.html`.
+
+Releasing this changes the worker code (`agent/mlx_worker.py`), so the
+update reloads the model once.
+
+Tests: `tests/test_day32_stop_reply.py` has 16 tests:
+- the journal keeps the partial reply and never runs a stopped job again;
+- the watcher fires when the client closes and stays quiet after a
+  normal reply;
+- the worker ends a cancelled reply without an error;
+- a real web server with a slow fake model is stopped mid-reply, and
+  again while the model is still reading the prompt (using the real
+  watcher);
+- bad and unknown ids are refused;
+- a reply that finishes normally is still "done";
+- the page contract;
+- a headless-browser run: Stop shows while streaming and hides after,
+  "(stopped)" is shown, the queued message sends next, and the server is
+  asked with the request id.
+
+The full suite on the branch passes: 2,120 tests.
+
+Checked live on the Macs without changing their install (Nov 22, 18:10
+CST). The branch's web server ran on the dev node and talked to the 1st
+Mac's running lead through an SSH tunnel, with the split model already
+loaded.
+- A long reply was stopped after about 40 pieces. The stream ended right
+  away and the job was saved as "stopped" with the partial words.
+- The lead logged `generation stopped (KeyboardInterrupt('cancelled'));
+  rewound` in the same second.
+- The next message got its first word in 0.37 s.
+- Not checked live: stopping while the lead is still reading the
+  prompt. That needs the branch's worker running on the Macs; it is
+  covered by the tests and is left for after Brenden's review.
+
+Screenshots, for review only, are not in the repo: Stop while a reply
+streams with a queued message, and after Stop (partial reply marked
+"(stopped)", the queued message sending), at 375 and 1280 px.

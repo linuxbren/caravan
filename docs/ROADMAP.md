@@ -160,6 +160,13 @@ and the daily logs, not mixed into current setup instructions.
     only the last 4 characters. The key is saved now; chatting with Ollama
     Cloud models comes later (see Next candidates). See
     [DAY32](DAY32.md#cloud-api-keys-built-waiting-on-review).
+  - **Stop a reply (built on a local branch, waiting on Brenden's review
+    before release):** a **Stop** button under Send/Queue while a reply is
+    written. It ends the reply on the server and the model (the MLX lead
+    and split helper stop, even mid-prompt; llama-server cancels), keeps
+    the words so far marked "(stopped)", closes the journal job as
+    "stopped" so it never runs again, and still sends queued messages.
+    See [DAY32](DAY32.md#stop-a-reply-built-waiting-on-review).
   - **Localization (main theme, not started):** pull every web page, CLI and installer string
     into one English strings file keyed by name, with lookups that fall
     back to English for a missing key or language. First languages:
