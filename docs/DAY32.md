@@ -166,10 +166,12 @@ worker messages (`test_server_and_worker_messages`: raised errors,
 progress notes and the `error`/`message`/`note`/`label`/… fields of
 replies in `proxy/` and `agent/`). A short allowlist gives the reason for
 each exception. Older tests that look for a phrase in the source read the
-English back through `tests/i18n_check.py`. Full suite: 2,144 tests, 2,143
-pass; `test_day32_stop_reply.StopInBrowser.test_stop_flow` fails on and
-off. It is a timing flake that fails as often on `f809d4f` (two of three
-runs each), not from this work.
+English back through `tests/i18n_check.py`. Full suite: 2,144 tests, OK.
+The browser tests (`test_day32_header_queue`, `test_day32_stop_reply`)
+now start a plain headless Chromium: the distro launcher had been adding
+the user's own Chromium flags (extensions, renderer accessibility), which
+slowed the page enough that `test_stop_flow` failed on and off, also on
+`f809d4f`.
 
 **Left as code, and why:**
 
