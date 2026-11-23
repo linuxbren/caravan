@@ -36,7 +36,7 @@ choosing and adding languages, the rest of its main theme, comes next.
 | Stop a reply while it is written: a **Stop** button under Send/Queue that really stops the model (the request to the model is closed, the split workers stop and are free for the next message), keeps the words so far marked "(stopped)", closes the journal job as stopped (never run again) and still sends queued messages next ([details](#part-b-stop-a-reply-v096)) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
 | Localization step 1: move all user-facing text into one English strings file keyed by name, English fallback, no other languages yet (Brenden: "start with compartmentalization first with English. Then we'll decide on additional languages.") | Done (fully compartmentalized: page, CLI, installers, server and worker messages), reviewed (Claude: approved), released in [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7) (mid-day); Brenden updates the Macs himself ([details](#localization-step-1-english-strings-file)) |
 | Localization next: other languages and a language setting | Brenden decides which languages. Day 32 stays open for it |
-| A confirmation step before every download (ROADMAP Next candidates #9; raised in the step 1 review): GGUF should use the same Step 2 placement chooser as MLX, for every fit color | Done on the branch (pending review, not tagged). See [GGUF placement](#gguf-placement-roadmap-9) |
+| A confirmation step before every download (ROADMAP Next candidates #9; raised in the step 1 review): GGUF should use the same Step 2 placement chooser as MLX, for every fit color | Done, reviewed (Claude: approved), released in [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8) (mid-day); Brenden updates the Macs himself ([details](#gguf-placement-roadmap-9)) |
 
 ## Plan: localization
 
@@ -210,8 +210,6 @@ updates them himself with `caravan update`.
 
 Still open in Day 32:
 - Choosing and adding languages, then a language setting.
-- GGUF placement (ROADMAP #9) is implemented on this branch, pending
-  review, and is not part of v0.9.7. See [GGUF placement](#gguf-placement-roadmap-9).
 
 
 ## GGUF placement (ROADMAP #9)
@@ -223,7 +221,7 @@ red, and even then only showed the automatic recommendation. The
 download API ignored a chosen placement and always sent the file to the
 lead Mini. At load, a one-Mini placement could be turned into a split.
 
-**After (this branch, pending review, not tagged):** every GGUF
+**After ([v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8)):** every GGUF
 download, any fit color, opens the same Step 2 chooser as MLX: 1 Mini /
 split across K Minis / copy to all, for any number of Macs from the
 config. Unfit options stay visible and disabled with the reason. The
@@ -235,20 +233,31 @@ turned into a split. New strings go through `locales/en.json` and `T()`.
 
 Tests: `tests/test_day32_gguf_placement.py` (green/yellow/red all open
 the chooser and send the placement, default is the smallest that fits,
-the choice is honored at download and at load). Full suite after the
-CHANGELOG fix below: 2,161 passed, 97 subtests, 80.42 s, with
+the choice is honored at download and at load). Full suite: 2,161 passed,
+97 subtests, with
 `XDG_CONFIG_HOME="" PYTHONPATH=.:proxy:tests uv run --with pytest
 --with spake2==0.9 --with cryptography==46.0.3 python -m pytest tests -q`.
 The Macs were not updated (Brenden updates them himself).
 
-CHANGELOG.md is left pointing at v0.9.7 until the release wrap. The
-version-label test requires the first heading to contain `(v{VERSION})`,
-and the project convention (through v0.9.6 and v0.9.7) is that
-in-progress work is documented here and in ROADMAP, then landed in
-CHANGELOG at the wrap commit. A premature "unreleased" top section was
-added in `127d957` and dropped after review. The earlier 2,161-OK run
-was taken before that docs commit (suite log 05:20 CST; the section was
-committed at 05:23), which is why it missed the failure.
+The version-label test requires the first CHANGELOG heading to contain
+`(v{VERSION})`. In-progress work stayed in this page and in ROADMAP
+until this release (a premature "unreleased" top section in `127d957`
+was dropped in `d9f6408` after review). The v0.9.8 CHANGELOG entry lands
+in this release's source commit.
+
+### GGUF placement: release (v0.9.8)
+
+Built on the local branch `day32-localization` (on `7905018`), reviewed
+by Claude (approved 2026-11-23 06:36 CST: full suite 2,161 of 2,161 with
+the review command) and merged to `main` fast-forward only.
+Released as a mid-day release, tag
+[v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8) on the
+wrap commit (source and pin commits are recorded after publishing).
+Notes: [release-notes/day32-v0.9.8.md](release-notes/day32-v0.9.8.md).
+
+The Macs were not updated as part of the release; Brenden updates them
+himself with `caravan update`. Day 32 stays open for choosing and adding
+languages.
 
 
 ## Part A: version label

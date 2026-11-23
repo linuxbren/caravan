@@ -1,3 +1,20 @@
+## Day 32 — GGUF placement (v0.9.8)
+
+Released as [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8), a mid-day
+release. Day 32 continues with choosing and adding languages.
+
+See [DAY32](docs/DAY32.md#gguf-placement-roadmap-9).
+
+- Changed: GGUF downloads in Models use the same Step 2 placement chooser
+  as MLX, for every fit color: 1 Mini / split across K Minis / copy to
+  all, for any number of Macs from the config. Unfit options stay visible
+  and disabled with the reason. The default is the smallest placement
+  that fits (for GGUF, the smallest that holds the full chat window, as
+  in Day 31). The choice is saved as `caravan-placement.json` and honored
+  at download and at load: only the needed files go to the chosen Mini(s),
+  and a one-Mini choice is not turned into a split.
+- Tests: `tests/test_day32_gguf_placement.py`. 2,161 tests pass.
+
 ## Day 32 localization step 1 (v0.9.7) — all text in one English strings file
 
 Released as [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7), a mid-day

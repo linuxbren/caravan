@@ -178,6 +178,12 @@ and the daily logs, not mixed into current setup instructions.
       planned first languages were Spanish, Simplified Chinese and
       Japanese, then German to test long words in buttons and narrow
       layouts.
+  - **GGUF placement ([v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8), done):**
+    every GGUF download uses the same Step 2 placement chooser as MLX,
+    for every fit color: 1 Mini / split across K Minis / copy to all.
+    Unfit options stay visible and disabled with the reason; the default
+    is the smallest placement that fits; the choice is saved and honored
+    at download and at load. See [DAY32](DAY32.md#gguf-placement-roadmap-9).
 
 ## Next candidates
 
@@ -203,13 +209,10 @@ and the daily logs, not mixed into current setup instructions.
    a CLOUD model is picked, with a first-chat notice that the message
    leaves your Macs, and keep the key out of logs, the journal and saved
    chats. Other providers come only if Models can search them.
-9. **Confirm before every download.** Implemented on the Day 32 branch
-   (pending review, not in a tagged release). GGUF downloads now use the
-   same Step 2 placement chooser as MLX, for every fit color: 1 Mini /
-   split across K Minis / copy to all. Unfit options are disabled with
-   the reason; the default is the smallest placement that fits; the
-   choice is saved and honored at download and at load. Raised in the
-   Day 32 localization review; see [DAY32](DAY32.md#gguf-placement-roadmap-9).
+9. **Confirm before every download.** Done in
+   [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8).
+   GGUF downloads use the same Step 2 placement chooser as MLX, for every
+   fit color. See [DAY32](DAY32.md#gguf-placement-roadmap-9).
 
 Earlier development-order items (Days 22–25) are kept in
 [roadmap history](history/ROADMAP-LAB.md) and the daily logs.

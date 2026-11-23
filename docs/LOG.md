@@ -1,3 +1,16 @@
+## 2026-11-23: Day 32 — GGUF placement (v0.9.8)
+
+Mid-day release; Day 32 stays open for choosing and adding languages.
+Built on the local branch `day32-localization` (on `7905018`), reviewed
+(Claude: approved 06:36 CST, suite 2,161/2,161 with the review command)
+and merged fast-forward. Every GGUF download in Models now uses the same
+Step 2 placement chooser as MLX, for every fit color: 1 Mini / split
+across K Minis / copy to all, for any number of Macs from the config.
+Unfit options stay visible and disabled with the reason; the default is
+the smallest placement that fits; the choice is saved and honored at
+download and at load. Tests: `tests/test_day32_gguf_placement.py`. Suite
+2,161 OK. The Macs were not updated (Brenden updates them himself).
+
 ## 2026-11-23: Day 32 — drop unreleased CHANGELOG section until release
 
 Claude review (CHANGES NEEDED, 05:50 CST): `127d957` had prepended an
