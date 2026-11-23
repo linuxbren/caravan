@@ -7,6 +7,12 @@ operating system for the dev machine, or personal SSH alias is required.
 
 ## Choose a model
 
+Cloud models (labeled CLOUD; today the Ollama Cloud list under Models →
+Cloud) run at the provider, so they say **Load**, not Download. The first
+time, Caravan asks for your Ollama Cloud API key right in that row and
+saves it. Keys live in Settings → **Cloud API keys**. Chatting with cloud
+models comes in a later update; for now the key is saved and ready.
+
 Open **Models**, search for a model, and check its fit and download location.
 More memory or adding Macs lets larger models fit; Caravan checks each Mac's
 capacity and files for you. Start with a small model. Download, then **Load**.
@@ -39,8 +45,27 @@ each set of optimizations, so a change of settings starts a new average. The
 line is hidden until there is something to show. Thinking may be shown
 separately when the model supports it. **New session** starts a fresh chat
 without unloading the model. The chips under the input sit in a **Current optimizations** box, in the same order as Settings (Self-tuning first), with a
-short hover hint on each chip. They are labels, not switches. Stop cancels the
-current reply; **Unload** releases the loaded model and disables next-login restore.
+short hover hint on each chip. They are labels, not switches. **Unload** releases the loaded model and disables next-login restore.
+
+While a reply is being written you can keep typing: **Send** reads
+**Queue**, and each message you send waits as a chip in a small strip
+just above the box (full text on hover, **×** to cancel it). Queued
+messages send in order as soon as the reply ends, also after an error or
+Stop. A queued message is not sent anywhere, or saved, until its turn.
+Unload, switching models and New session keep the queue; it sends once
+the model is ready again.
+
+**Stop** (under Send/Queue while a reply is written) ends the reply for
+real: the page asks the server to close its request to the model, so the
+Macs stop writing (also while they are still reading a long prompt) and
+are free for the next message. The words written so far stay, marked
+**(stopped)**, and the saved job is closed as "stopped", so it is never
+run again after a restart. For scripts: send a request id in the
+`X-Caravan-Request` header and stop it with
+`POST /api/chat/stop {"request": "<id>"}` (or `{"job": "<job id>"}`); the
+stream then ends with a `caravan.meta` event that has `"stopped": true`.
+If the server doesn't answer within 5 seconds, the page ends the request
+itself.
 
 Closing the browser does not unload the model. To stop the web service, use
 `~/.caravan/bin/caravan stop`; its model workers remain running. Unload first
@@ -81,6 +106,11 @@ read-only. Requested checks show verified/unverified/failed and expire after
 does not apply routes, pair Macs, install keys or authenticate model transport.
 
 ## Look
+
+The model and its status (for example `● READY · QWEN3 32B 4BIT`) sit
+just above the chat card's top-left corner. A long model name ends in
+"…"; hover it for the full name. Nothing in the header wraps, even on a
+phone.
 
 The theme switch at the top of the page offers **Amber**, **Green**,
 **Meadow**, and **Campfire**. Campfire is a cool night sky with a soft
@@ -247,7 +277,7 @@ take about 5 minutes to show up after it is published, because GitHub
 keeps a short copy of the published version file.
 
 When a newer version is ready, an **Update available** badge appears
-in the chat page header. The Updates section stays short: **Check
+in the chat page header, right of the theme switch. The Updates section stays short: **Check
 now** next to the title, the daily switch, What's new (only when an
 update is ready), and one line per Mac — "1st Mac: current",
 "2nd Mac: update needed", or "2nd Mac: failed". Each line says where
@@ -345,8 +375,8 @@ recent jobs without their prompts.
 Limits: a chat older than 1 hour when the model comes back is not run
 again (`expired`). Each chat is run again at most 2 times (`gave_up`).
 Requests over 4 MB are not saved. A finished chat is never run again, and a
-chat you stopped (Stop, or the client closed the connection) is not run
-again. Finished jobs are deleted after 3 days (at most 500 are kept).
+chat you stopped (Stop, which saves it as `stopped` with the words so
+far, or the client closed the connection) is not run again. Finished jobs are deleted after 3 days (at most 500 are kept).
 Requests sent to the 1st Mac while it is still loading are answered "no
 model loaded" and are not saved; send them again once it is ready.
 

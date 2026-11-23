@@ -1,3 +1,32 @@
+## Day 32 part B (v0.9.6) — Stop a reply, a message queue, a tidier header and the Ollama Cloud key
+
+Released as [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6), a mid-day
+release. Day 32 continues with localization.
+
+See [DAY32](docs/DAY32.md#part-b-header-layout-v096).
+
+- New: **Stop** under Send while a reply is written. It really stops the
+  model: the request to the model is closed, the Macs (including the
+  split helper) stop writing, even while still reading a long prompt, and
+  are free for the next message. The words so far stay, marked
+  "(stopped)". The saved job is closed as "stopped" and never run again
+  after a restart. `POST /api/chat/stop` for scripts.
+- New: keep typing while the model answers. **Send** reads **Queue**;
+  queued messages show as chips above the box (× to cancel) and send in
+  order when the reply ends, also after an error or Stop. Nothing is sent
+  or saved until its turn.
+- Changed: the model and its status sit just above the chat card's
+  top-left corner; **Update available** sits right of the theme switch;
+  nothing in the header wraps (long model names end in "…", full name on
+  hover).
+- New: Settings → **Cloud API keys** for the Ollama Cloud key (masked,
+  only the last 4 characters shown, editable, removable; saved in
+  `~/.caravan/cloud-keys.json`, 0600). Picking a cloud model with no key
+  asks for it right there. Cloud models say **Load**, not Download.
+  Chatting with cloud models comes later.
+- Updating reloads the model once (the MLX worker changed for Stop).
+- 2,120 tests pass.
+
 ## Day 32 part A fix (v0.9.5) — the daily update check switch, and a sturdier daily check
 
 Released as [v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5).

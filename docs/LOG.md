@@ -1,3 +1,23 @@
+## 2026-11-22: Day 32 part B — Stop, queue, header, Ollama Cloud key (v0.9.6)
+
+Mid-day release; Day 32 stays open for localization. Built on the local
+branch `day32-header-layout`, reviewed (Claude), approved by Brenden,
+rebased onto main's docs and merged fast-forward. Header: `#statusPill`
+is its own grid row above the chat card; `.top-right` holds the theme
+switch and badges, nowrap, ellipsis + tooltip. Queue: `state.queue`,
+`drainQueue` after every reply end; nothing posted or journaled until
+sent. Cloud key: `proxy/cloud_keys.py` (Ollama Cloud only after Brenden's
+trim), `/api/cloud-keys` (owner-only), inline prompt in Models, Load not
+Download; cloud chat routing not built (ROADMAP Next candidates).
+Stop: `POST /api/chat/stop` by `X-Caravan-Request` or job id; the web
+server shuts down its socket to the lead; `agent/mlx_worker.py`
+`watch_client_gone` cancels even mid-prefill; journal status `stopped`
+(final, never replayed). Checked live before release from the dev node
+through a tunnel (lead logged the cancel; next first token 0.37 s).
+Tests: `test_day32_header_queue` (13), `test_day32_cloud_keys` (13),
+`test_day32_stop_reply` (16). Suite 2,120 OK. Updating reloads the model once;
+the Macs were not updated (Brenden updates them).
+
 ## 2026-11-22: Day 32 part A fix — daily update check (v0.9.5)
 
 Review finding confirmed: `versionState()` (and the badge and Mac lines)

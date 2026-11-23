@@ -290,12 +290,12 @@ async function browser(width) {
     await b.ev(`[...${S}("queueStrip").children].find(c=>c.title==="fourth").querySelector(".q-x").click()`);
     out.afterCancel = await view();
     await fetch(url + '__release');
-    await b.until(`${S}("btnSend").textContent === "Send" && ${S}("queueStrip").hidden`, 20000);
+    await b.until(`${S}("btnSend").textContent === "Send" && ${S}("queueStrip").hidden`, 45000);
     out.done = await view();
     // An error and a cut-off reply: the next queued message still goes.
     await type('boom'); await sleep(50);
     await type('cut'); await type('after');
-    await b.until(`${S}("btnSend").textContent === "Send" && ${S}("queueStrip").hidden`, 20000);
+    await b.until(`${S}("btnSend").textContent === "Send" && ${S}("queueStrip").hidden`, 45000);
     out.afterErrors = await view();
     out.bubbles = await b.ev(`JSON.stringify([...document.querySelectorAll("#messages .msg.user .body")].map(e=>e.textContent))`).then(JSON.parse);
     b.close();

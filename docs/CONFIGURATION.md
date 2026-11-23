@@ -494,6 +494,22 @@ The Settings field **never echoes** the secret back to the page — only
 `configured` / `source`. `GET/POST /api/hf-token` and the `hf_token` key on
 `GET /api/settings` expose status only.
 
+## Cloud API keys
+
+Settings → **Cloud API keys** holds the key for cloud models (today only
+Ollama Cloud, the one cloud source Models can search). Caravan resolves it
+in this order:
+
+1. `OLLAMA_API_KEY` or `CARAVAN_OLLAMA_API_KEY` environment variable (shown
+   as "From OLLAMA_API_KEY"; not editable from the page)
+2. `~/.caravan/cloud-keys.json` on the 1st Mac (Settings; 0600, written
+   atomically; `CARAVAN_CLOUD_KEYS_PATH` moves it)
+
+The page and `GET/POST /api/cloud-keys` only ever show whether a key is
+set and its last 4 characters; keys are never logged or echoed in errors.
+Reading or changing keys works from this Mac or over Tailscale, not from
+the local network. Chatting with cloud models is not built yet.
+
 
 ## Paired Macs
 

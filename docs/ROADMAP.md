@@ -139,35 +139,34 @@ and the daily logs, not mixed into current setup instructions.
     lines show no update status (live, no reload); an audit of the daily
     check also fixed a loop that stopped after one error, offline answers
     that kept saying "up to date", broken replies and a wrong-clock case.
-  - **Header layout (built on a local branch, waiting on Brenden's review
-    before release):**
+  - **Part B, header layout ([v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6)), done:**
     the model/status pill moves above and outside the chat card's top-left
     corner, just outside its border (where the CHAT label was); **Update
     available** moves right of the theme picker; nothing wraps at narrow
-    widths (long model names end in "…" with the full name on hover).
-  - **Chat message queue (built on a local branch, waiting on Brenden's
-    review before release):** while the model answers, the prompt box stays typeable and
+    widths (long model names end in "…" with the full name on hover). See
+    [DAY32](DAY32.md#part-b-header-layout-v096).
+  - **Part B, chat message queue ([v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6)), done:** while the model answers, the prompt box stays typeable and
     Send reads **Queue**. Queued messages send in order when the answer
     finishes (also after an error or Stop), shown as a floating strip just
     above the prompt box, one chip per message with a × to cancel. A
-    queued message is journaled only when it sends.
-  - **Cloud API keys (approved; built on a local branch, waiting on
-    Brenden's review before release):** Settings gets a **Cloud API keys**
+    queued message is journaled only when it sends. See
+    [DAY32](DAY32.md#part-b-chat-message-queue-v096).
+  - **Part B, Ollama Cloud API key ([v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6)), done:** Settings gets a **Cloud API keys**
     section for the Ollama Cloud key (the only cloud source Models can
     search; masked, editable, removable). Picking a cloud model with no key asks for it inline, then
     carries on. Cloud models say **Load**, not Download. Keys are kept in
     `~/.caravan/cloud-keys.json` (0600), never logged, and the page sees
     only the last 4 characters. The key is saved now; chatting with Ollama
     Cloud models comes later (see Next candidates). See
-    [DAY32](DAY32.md#cloud-api-keys-built-waiting-on-review).
-  - **Stop a reply (built on a local branch, waiting on Brenden's review
-    before release):** a **Stop** button under Send/Queue while a reply is
+    [DAY32](DAY32.md#part-b-ollama-cloud-api-key-v096).
+  - **Part B, Stop a reply ([v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6)), done:** a **Stop** button under Send/Queue while a reply is
     written. It ends the reply on the server and the model (the MLX lead
     and split helper stop, even mid-prompt; llama-server cancels), keeps
     the words so far marked "(stopped)", closes the journal job as
     "stopped" so it never runs again, and still sends queued messages.
-    See [DAY32](DAY32.md#stop-a-reply-built-waiting-on-review).
-  - **Localization (main theme, not started):** pull every web page, CLI and installer string
+    See [DAY32](DAY32.md#part-b-stop-a-reply-v096).
+  - **Localization (main theme, next; not started; Day 32 stays open
+    for it):** pull every web page, CLI and installer string
     into one English strings file keyed by name, with lookups that fall
     back to English for a missing key or language. First languages:
     Spanish, Simplified Chinese and Japanese, then German to test long

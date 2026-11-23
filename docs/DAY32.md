@@ -1,16 +1,22 @@
-# Day 32 — localization; part A: version label
+# Day 32 — localization; part A: version label; part B: chat and header
 
 Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 [v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4), its fix as
-[v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5).
+[v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5). Part B (header layout, chat
+queue, Ollama Cloud key, Stop a reply) is a mid-day release,
+[v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6). Day 32 stays open:
+localization, its main theme, is next and not started.
 
 1. [Status of every Day 32 request](#status-of-every-day-32-request)
 2. [Plan: localization](#plan-localization)
 3. [Part A: version label](#part-a-version-label)
 4. [Part A fix: daily update check (v0.9.5)](#part-a-fix-daily-update-check-v095)
-5. [Proposal: API keys for cloud models](#proposal-api-keys-for-cloud-models)
-6. [Cloud API keys: built, waiting on review](#cloud-api-keys-built-waiting-on-review)
-7. [Stop a reply: built, waiting on review](#stop-a-reply-built-waiting-on-review)
+5. [Part B: header layout (v0.9.6)](#part-b-header-layout-v096)
+6. [Part B: chat message queue (v0.9.6)](#part-b-chat-message-queue-v096)
+7. [Part B: Ollama Cloud API key (v0.9.6)](#part-b-ollama-cloud-api-key-v096)
+8. [Part B: Stop a reply (v0.9.6)](#part-b-stop-a-reply-v096)
+9. [Part B: tests and release (v0.9.6)](#part-b-tests-and-release-v096)
+10. [Superseded: first proposal for cloud API keys](#superseded-first-proposal-for-cloud-api-keys)
 
 ## Status of every Day 32 request
 
@@ -18,12 +24,12 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 |---|---|
 | Part A: version label next to Settings ([v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4)) | Done, released, on both Macs |
 | Daily-check-off fix and daily check audit ([v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5)) | Done, released, on both Macs, checked live with the switch on and off |
-| Header layout: model/status pill above and outside the chat card's top-left corner (just outside its border, where the CHAT label was); **Update available** right of the theme picker; nothing wraps at narrow widths (long model names end in "…", full name on hover) | Built and tested on a local branch (not pushed); waiting on Brenden's review before release |
-| Chat message queue: Send reads **Queue** while the model answers; queued messages send in order when the answer finishes (also after an error or Stop); a floating strip just above the prompt box, one chip per message (full text on hover) with a × to cancel; a queued message is journaled only when it sends; Stop still works | Built and tested on a local branch (not pushed); waiting on Brenden's review before release |
-| API keys for cloud models: a **Cloud API keys** section in Settings (Ollama Cloud only, the one cloud source Models can search; masked, editable, removable); an inline key prompt when a cloud model's provider has no key; cloud models say **Load**, not Download ([what was built](#cloud-api-keys-built-waiting-on-review)) | Approved; built and tested on a local branch (not pushed); waiting on Brenden's review before release |
+| Header layout: model/status pill above and outside the chat card's top-left corner (just outside its border, where the CHAT label was); **Update available** right of the theme picker; nothing wraps at narrow widths (long model names end in "…", full name on hover) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
+| Chat message queue: Send reads **Queue** while the model answers; queued messages send in order when the answer finishes (also after an error or Stop); a floating strip just above the prompt box, one chip per message (full text on hover) with a × to cancel; a queued message is journaled only when it sends; Stop still works | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
+| API keys for cloud models: a **Cloud API keys** section in Settings (Ollama Cloud only, the one cloud source Models can search; masked, editable, removable); an inline key prompt when a cloud model's provider has no key; cloud models say **Load**, not Download ([details](#part-b-ollama-cloud-api-key-v096)) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
 | Chatting with Ollama Cloud models (routing `/api/chat` to Ollama Cloud) | Not for Day 32 (Brenden); the key is saved now, cloud chat comes later. On the [ROADMAP](ROADMAP.md) as a future item |
-| Stop a reply while it is written: a **Stop** button under Send/Queue that really stops the model (the request to the model is closed, the split workers stop and are free for the next message), keeps the words so far marked "(stopped)", closes the journal job as stopped (never run again) and still sends queued messages next ([details](#stop-a-reply-built-waiting-on-review)) | Built and tested on a local branch (not pushed); checked live against the Macs' running model from the dev node; waiting on Brenden's review before release |
-| Localization (main theme): one English strings file keyed by name, English fallback, then Spanish, Simplified Chinese, Japanese, then German | Not started |
+| Stop a reply while it is written: a **Stop** button under Send/Queue that really stops the model (the request to the model is closed, the split workers stop and are free for the next message), keeps the words so far marked "(stopped)", closes the journal job as stopped (never run again) and still sends queued messages next ([details](#part-b-stop-a-reply-v096)) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
+| Localization (main theme): one English strings file keyed by name, English fallback, then Spanish, Simplified Chinese, Japanese, then German | Next; not started. Day 32 stays open for it |
 
 ## Plan: localization
 
@@ -167,59 +173,51 @@ wrap commit. Notes: [release-notes/day32-v0.9.5.md](release-notes/day32-v0.9.5.m
   again brought them back within a few seconds. The switch was left as it
   was found (off).
 
-## Proposal: API keys for cloud models
+## Part B: header layout (v0.9.6)
 
-Brenden: Settings needs a place to enter API keys for cloud models, if one
-doesn't exist yet. Status: **approved and built on a local branch,
-waiting on review** (see [below](#cloud-api-keys-built-waiting-on-review)).
-The proposal below is kept as written; what was built differs in a few
-places, listed in the next section.
+Brenden asked for a tidier header that never wraps.
 
-What Caravan has today (checked in the code, nothing changed):
+- The model/status pill (for example `● READY · QWEN3 32B 4BIT`) moved out
+  of the header. It now sits above and outside the chat card's top-left
+  corner, just outside its border, where the CHAT label was. The CHAT
+  heading is still there for screen readers.
+- **Update available** moved to the right of the theme picker, on the
+  same row.
+- Nothing wraps at any width (checked at 375, 768, 1024 and 1280 px). A
+  long model name ends in "…", and hovering the pill shows the full name.
+  On phones (480 px and narrower) the theme buttons and the update badge
+  get a little smaller so they fit on one row.
 
-- **No working cloud provider.** Chats only go to the model on your Macs
-  (`/api/chat` → the local worker). There is no OpenAI, Anthropic or
-  OpenRouter client.
-- **Ollama Cloud is listed but "framework-only".** The Models picker has a
-  **Cloud** source with a fixed list of Ollama Cloud models labeled CLOUD
-  (`proxy/web_picker.py`). Choosing one shows "Ollama Cloud is
-  framework-only for now. Set OLLAMA_API_KEY in config/env", and the server
-  refuses to "download" it. The key is read only from the
-  `OLLAMA_API_KEY` (or `CARAVAN_OLLAMA_API_KEY`) environment variable at
-  start, and is used only to report "key configured".
-- **The only key Settings stores is the Hugging Face token.** It is saved
-  to `~/.caravan/hf_token` with 0600 permissions, copied to the other Macs
-  over SSH, never sent back to the page (only "set / not set"), and
-  removable from Settings. A webhook key for alerts
-  (`CARAVAN_ALERT_WEBHOOK_KEY`) is environment-only.
+Code: `proxy/web/index.html` (the `.top-right` group, `#statusPill` as its
+own grid row, `setStatus` sets the pill's tooltip).
 
-Proposal (to approve before any work):
+## Part B: chat message queue (v0.9.6)
 
-- **Providers, first:** OpenAI, Anthropic and OpenRouter (OpenRouter covers
-  many models with one key), plus the existing Ollama Cloud entry. Later,
-  any OpenAI-compatible endpoint (base URL + key).
-- **Settings → "Cloud models" card:** one row per provider with a masked
-  key field (shows only "set · ends in …abcd"), **Save**, **Test** (one
-  tiny request, plain result) and **Remove**. Only from this Mac or
-  Tailscale, like Update now; not from the local network.
-- **Storage:** one file per provider under `~/.caravan/keys/`
-  (directory 0700, files 0600), written atomically, on the 1st Mac only
-  (cloud calls don't need the other Macs). Environment variables still win,
-  as today.
-- **Never shown or logged:** the API never returns a key, logs and errors
-  redact it, it is not in the request journal, saved chats, crash reports
-  or `caravan doctor` output (only "set / not set").
-- **Plain consent:** cloud models stay labeled CLOUD, and the first chat
-  with one says the message goes to that provider (docs/SECURITY.md
-  already says optional cloud features send data to the provider you
-  choose).
+Brenden asked to keep typing while the model answers.
 
-## Cloud API keys: built, waiting on review
+- While a reply is written, the prompt box stays typeable and **Send**
+  reads **Queue**.
+- Each queued message shows as a chip in a small strip floating just
+  above the prompt box: the start of the text, the full text on hover,
+  and a **×** to cancel it. The strip disappears when the queue is empty,
+  and the button reads **Send** again.
+- Queued messages send in order when the current reply ends, also after
+  an error, a cut-off reply or Stop.
+- A queued message is not sent to the server, or written to the request
+  journal, until its turn comes. Cancelling one with × means it never
+  leaves the page.
+- Unload, switching models and New session don't throw the queue away.
+  It waits while the model changes, sends when the model is ready again,
+  and items can still be cancelled with ×.
 
-Brenden approved the cloud keys request with three parts. All three are
-built on the local branch `day32-header-layout` (with the header layout
-and the chat queue). Nothing is pushed or released and the Macs are not
-changed until Brenden reviews it.
+Code: `proxy/web/index.html` (`queue`, `enqueueMessage`, `cancelQueued`,
+`drainQueue`, `renderQueue`; `sendChat` queues while a reply streams and
+drains the queue when it ends).
+
+## Part B: Ollama Cloud API key (v0.9.6)
+
+Brenden approved the cloud keys request with three parts, then trimmed it
+to Ollama Cloud only. All three parts shipped in v0.9.6.
 
 1. **Settings → Cloud API keys.** One row: **Ollama Cloud**. Ollama Cloud
    is the only cloud source the Models picker can search, so it is the
@@ -278,22 +276,15 @@ storage, last 4 only, replace and remove, refusing a bad key without
 echoing it, the environment winning, a broken file, the API never
 returning or logging a key, the local network getting no access, other
 providers (OpenAI, Anthropic, OpenRouter) being refused as unknown, picker
-rows, and the page contract. The full suite on the branch passes: 2,104
-tests.
+rows, and the page contract.
 
-Screenshots, for review only, are not in the repo: Settings section,
-inline prompt, the Load button and the message after saving, at 375 and
-1280 px.
-
-## Stop a reply: built, waiting on review
+## Part B: Stop a reply (v0.9.6)
 
 Brenden asked for a Stop button for chat output. Before this, nothing
 stopped a reply while it was being written. The only stop controls were
 **Unload** (unload the model) and stopping a download. A reply left
 behind (for example after a model switch) only ended in the browser; the
-model kept writing until it noticed the page had gone. Built on the local
-branch `day32-header-layout`. Nothing is pushed or released and the
-Macs' install is unchanged until Brenden reviews it.
+model kept writing until it noticed the page had gone. Shipped in v0.9.6.
 
 What it does:
 
@@ -325,8 +316,8 @@ and job id, the stopped ending), `agent/mlx_worker.py` (the client-gone
 watcher), `proxy/request_journal.py` (`stop`, "stopped" status),
 `tools/caravan_jobs.py`, `proxy/web/index.html`.
 
-Releasing this changes the worker code (`agent/mlx_worker.py`), so the
-update reloads the model once.
+This changes the worker code (`agent/mlx_worker.py`), so updating to
+v0.9.6 reloads the model once.
 
 Tests: `tests/test_day32_stop_reply.py` has 16 tests:
 - the journal keeps the partial reply and never runs a stopped job again;
@@ -343,10 +334,8 @@ Tests: `tests/test_day32_stop_reply.py` has 16 tests:
   "(stopped)" is shown, the queued message sends next, and the server is
   asked with the request id.
 
-The full suite on the branch passes: 2,120 tests.
-
-Checked live on the Macs without changing their install (Nov 22, 18:10
-CST). The branch's web server ran on the dev node and talked to the 1st
+Checked live on the Macs before release, without changing their install
+(Nov 22, 18:10 CST). The branch's web server ran on the dev node and talked to the 1st
 Mac's running lead through an SSH tunnel, with the split model already
 loaded.
 - A long reply was stopped after about 40 pieces. The stream ended right
@@ -355,9 +344,82 @@ loaded.
   rewound` in the same second.
 - The next message got its first word in 0.37 s.
 - Not checked live: stopping while the lead is still reading the
-  prompt. That needs the branch's worker running on the Macs; it is
-  covered by the tests and is left for after Brenden's review.
+  prompt. That needs the new worker running on the Macs; it is covered
+  by the tests and can be checked once Brenden has updated the Macs.
 
-Screenshots, for review only, are not in the repo: Stop while a reply
-streams with a queued message, and after Stop (partial reply marked
-"(stopped)", the queued message sending), at 375 and 1280 px.
+## Part B: tests and release (v0.9.6)
+
+Built on a local branch, reviewed (Claude) and approved by Brenden, then
+merged to `main` (fast-forward only).
+
+Tests:
+- `tests/test_day32_header_queue.py` (13): the header layout at four
+  widths in a headless browser, and the queue (fake page and browser).
+- `tests/test_day32_cloud_keys.py` (13).
+- `tests/test_day32_stop_reply.py` (16).
+- Two older tests were updated on purpose: the Send guard in
+  `tests/test_web_server.py` (Send now queues while a reply streams) and
+  the Download button text in `tests/test_day23_clean_install.py`
+  (cloud rows say Load).
+
+Full suite: 2,120 tests, OK. `test_queue_flow` failed once in about six runs (Send still read "Queue" when its 20 s wait ran out under load); its wait is now 45 s.
+
+Screenshots for the review (header at 375/768/1024/1280 px, the queue,
+Settings → Cloud API keys, the inline key prompt, the Load button, Stop)
+are not in the repo.
+
+Release: tag v0.9.6 (source and pin commits are recorded after publishing).
+
+Updating reloads the model once (the MLX worker changed for Stop). The
+Macs were not updated as part of the release; Brenden updates them
+himself with `caravan update`.
+
+Still open in Day 32: localization (not started).
+
+## Superseded: first proposal for cloud API keys
+
+Brenden: Settings needs a place to enter API keys for cloud models, if one
+doesn't exist yet. **Superseded:** this was the first proposal, written
+before any work, with four providers. Brenden trimmed it to Ollama Cloud
+only (the one cloud source Models can search), and what shipped in v0.9.6
+is described in [Part B: Ollama Cloud API key](#part-b-ollama-cloud-api-key-v096).
+It is kept here as written, for the record.
+
+What Caravan has today (checked in the code, nothing changed):
+
+- **No working cloud provider.** Chats only go to the model on your Macs
+  (`/api/chat` → the local worker). There is no OpenAI, Anthropic or
+  OpenRouter client.
+- **Ollama Cloud is listed but "framework-only".** The Models picker has a
+  **Cloud** source with a fixed list of Ollama Cloud models labeled CLOUD
+  (`proxy/web_picker.py`). Choosing one shows "Ollama Cloud is
+  framework-only for now. Set OLLAMA_API_KEY in config/env", and the server
+  refuses to "download" it. The key is read only from the
+  `OLLAMA_API_KEY` (or `CARAVAN_OLLAMA_API_KEY`) environment variable at
+  start, and is used only to report "key configured".
+- **The only key Settings stores is the Hugging Face token.** It is saved
+  to `~/.caravan/hf_token` with 0600 permissions, copied to the other Macs
+  over SSH, never sent back to the page (only "set / not set"), and
+  removable from Settings. A webhook key for alerts
+  (`CARAVAN_ALERT_WEBHOOK_KEY`) is environment-only.
+
+Proposal (to approve before any work):
+
+- **Providers, first:** OpenAI, Anthropic and OpenRouter (OpenRouter covers
+  many models with one key), plus the existing Ollama Cloud entry. Later,
+  any OpenAI-compatible endpoint (base URL + key).
+- **Settings → "Cloud models" card:** one row per provider with a masked
+  key field (shows only "set · ends in …abcd"), **Save**, **Test** (one
+  tiny request, plain result) and **Remove**. Only from this Mac or
+  Tailscale, like Update now; not from the local network.
+- **Storage:** one file per provider under `~/.caravan/keys/`
+  (directory 0700, files 0600), written atomically, on the 1st Mac only
+  (cloud calls don't need the other Macs). Environment variables still win,
+  as today.
+- **Never shown or logged:** the API never returns a key, logs and errors
+  redact it, it is not in the request journal, saved chats, crash reports
+  or `caravan doctor` output (only "set / not set").
+- **Plain consent:** cloud models stay labeled CLOUD, and the first chat
+  with one says the message goes to that provider (docs/SECURITY.md
+  already says optional cloud features send data to the provider you
+  choose).
