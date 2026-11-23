@@ -688,7 +688,7 @@ class WorkerManager:
             spec_on = tune.get("guess_ahead") == "on" or tune.get("prompt_lookup") == "on"
             self._stop_gguf_lead()
             if attempt == 1 and spec_on and not entry.get("strict_tune"):
-                self._note(T("server.web_workers.first_test_reply_failed_with_speedups", err=err[:160]), problem=True)
+                self._note(T("server.web_workers.first_test_reply_failed_with_speedups", err=err[:160]))
                 if tune.get("guess_ahead") == "on":
                     try:
                         import gguf_tune as GT
