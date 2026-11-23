@@ -204,6 +204,22 @@ class Page(unittest.TestCase):
         blob = out[len("<script>"):-len("</script>")]
         self.assertNotIn("</", blob)
 
+    def test_languages_blob_cannot_close_the_script(self):
+        # Parity with test_strings_blob_cannot_close_the_script for the
+        # window.CARAVAN_LANGUAGES injection (Day 32 Spanish).
+        poison = "</script><script>alert(1)"
+        with mock.patch.object(C, "picker_languages", return_value=[{
+            "code": "xx", "name": poison, "label": poison, "beta": True,
+        }]):
+            out = C.render_page("<!--caravan-strings-->")
+        self.assertIn("window.CARAVAN_LANGUAGES=", out)
+        start = out.index("window.CARAVAN_LANGUAGES=") + len("window.CARAVAN_LANGUAGES=")
+        end = out.index("</script>", start)
+        blob = out[start:end]
+        self.assertNotIn("</", blob)
+        inner = out[len("<script>"):-len("</script>")]
+        self.assertNotIn("</", inner)
+
     def test_js_in_the_page_parses_with_english_put_back(self):
         if not shutil.which("node"):
             self.skipTest("node not installed")

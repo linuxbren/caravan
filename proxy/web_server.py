@@ -1926,8 +1926,6 @@ def make_handler(app: App):
                 return self._json(400, {**payload, "error": info.get("message")})
             return self._json(200, payload)
 
-
-
         def _api_language(self, post=False, body=None):
             """GET the current language; POST {language} saves it (Settings)."""
             if post:
