@@ -57,7 +57,6 @@ WORKER_CODE_PATHS = (
 )
 
 UP_TO_DATE = T("cli.update_check.caravan_is_already_up_to_date")
-NEWER_PREFIX = T("cli.update_check.a_label_update_is_ready")
 KEEP_MODEL = T("cli.update_check.your_model_stays_loaded")
 RELOAD_MODEL = T("cli.update_check.caravan_will_reload_the_model")
 HELPER = (
@@ -779,7 +778,7 @@ def public_status(
         message = OPENING
     elif newer:
         if available_label:
-            message = NEWER_PREFIX.format(label=available_label)
+            message = T("cli.update_check.a_label_update_is_ready", label=available_label)
         else:
             message = T("cli.update_check.a_newer_version_is_ready")
     # No summary sentences ("This Mac is updated…"): each Mac has its own line.
@@ -1329,7 +1328,7 @@ def cli_check(repo, *, home=None, name="web", opener=None, file=None, nodes=None
     behind = [m for m in (result.get("macs") or []) if m.get("behind")]
     if result.get("newer"):
         label = result.get("available_label") or "newer"
-        print(NEWER_PREFIX.format(label=label), file=file)
+        print(T("cli.update_check.a_label_update_is_ready", label=label), file=file)
         keep = keep_model_text(result.get("reload_model"))
         if keep:
             print(keep, file=file)

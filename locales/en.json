@@ -691,6 +691,7 @@
  "web.download_gb_to_names": "Download {gb} to {names}",
  "web.ok": "OK",
  "web.recommended_tag": "recommended",
+ "web.waiting_meta": "waiting",
  "cli.bench.this_measures_prompt_lookup_and_guess": "This measures Prompt lookup and Guess-ahead on {names}.\nEach model is loaded once per mode (Off, Prompt lookup, Guess-ahead when a helper is on this Mac, Auto) and runs {v}.\nThe model that is loaded now is put back at the end, with its settings.\n\nRun: caravan bench {q}--speedups{only}{v_} --yes\n",
  "cli.bench.kind_last_bench_v": "{kind}: Last bench{v}",
  "cli.bench.no_saved_numbers_for_the_kind": "No saved numbers for the {kind} model yet - chat with it a bit, or run the bench.",
