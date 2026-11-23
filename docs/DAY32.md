@@ -7,8 +7,9 @@ queue, Ollama Cloud key, Stop a reply) is a mid-day release,
 [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6). Localization step 1 (all
 user-facing text in one English strings file) is another mid-day release,
 [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7). GGUF placement is another mid-day release,
-[v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8). Day 32 stays open: Spanish is in progress
-(pending review); Japanese, Simplified Chinese and Russian can drop in later.
+[v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8). Spanish is another mid-day release,
+[v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9). Day 32 stays open: Japanese,
+Simplified Chinese and Russian can drop in later.
 
 1. [Status of every Day 32 request](#status-of-every-day-32-request)
 2. [Plan: localization](#plan-localization)
@@ -24,7 +25,7 @@ user-facing text in one English strings file) is another mid-day release,
 11. [Superseded: first proposal for cloud API keys](#superseded-first-proposal-for-cloud-api-keys)
 12. [GGUF placement (ROADMAP #9)](#gguf-placement-roadmap-9)
     (release: [v0.9.8](#gguf-placement-release-v098))
-13. [Spanish (in progress)](#spanish-in-progress)
+13. [Spanish (v0.9.9)](#spanish-v099)
 
 ## Status of every Day 32 request
 
@@ -38,7 +39,7 @@ user-facing text in one English strings file) is another mid-day release,
 | Chatting with Ollama Cloud models (routing `/api/chat` to Ollama Cloud) | Not for Day 32 (Brenden); the key is saved now, cloud chat comes later. On the [ROADMAP](ROADMAP.md) as a future item |
 | Stop a reply while it is written: a **Stop** button under Send/Queue that really stops the model (the request to the model is closed, the split workers stop and are free for the next message), keeps the words so far marked "(stopped)", closes the journal job as stopped (never run again) and still sends queued messages next ([details](#part-b-stop-a-reply-v096)) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
 | Localization step 1: move all user-facing text into one English strings file keyed by name, English fallback, no other languages yet (Brenden: "start with compartmentalization first with English. Then we'll decide on additional languages.") | Done (fully compartmentalized: page, CLI, installers, server and worker messages), reviewed (Claude: approved), released in [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7) (mid-day); Brenden updates the Macs himself ([details](#localization-step-1-english-strings-file)) |
-| Spanish: CLDR plurals, `locales/es.json`, Settings language picker, locale formatting, layout screenshots, beta until native-reviewed | In progress on local branch `day32-spanish` (uncommitted, pending review). Day 32 stays open; Japanese, Simplified Chinese and Russian can drop in later ([details](#spanish-in-progress)) |
+| Spanish: CLDR plurals, `locales/es.json`, Settings language picker, locale formatting, layout screenshots, beta until native-reviewed | Done, reviewed (Claude: approved 09:05 CST), released in [v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9) (mid-day); Brenden updates the Macs himself ([details](#spanish-v099)) |
 | A confirmation step before every download (ROADMAP Next candidates #9; raised in the step 1 review): GGUF should use the same Step 2 placement chooser as MLX, for every fit color | Done, reviewed (Claude: approved), released in [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8) (mid-day); Brenden updates the Macs himself ([details](#gguf-placement-roadmap-9)) |
 
 ## Plan: localization
@@ -262,14 +263,16 @@ The Macs were not updated as part of the release; Brenden updates them
 himself with `caravan update`. Day 32 stays open for choosing and adding
 languages.
 
-## Spanish (in progress)
+## Spanish (v0.9.9)
 
 Brenden (2026-11-23): start Spanish, built so later languages can drop in.
-Work is on the local branch `day32-spanish` (from `main` at v0.9.8,
-`2e49275`), uncommitted until Claude approves. Not tagged, not pushed.
-The Macs are not updated (Brenden updates them himself). CHANGELOG stays
-at v0.9.8 until a wrap commit; the version-label test requires the first
-heading to contain `(v{VERSION})`.
+
+**After ([v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9)):** Spanish is
+the first language after English. Work was on the local branch
+`day32-spanish` (from `main` at v0.9.8, `2e49275`). Claude approved the
+uncommitted tree (09:05 CST); two non-blocking nits were fixed in a
+follow-up commit. The Macs were not updated (Brenden updates them
+himself).
 
 What this adds:
 
@@ -299,15 +302,30 @@ What this adds:
 - Tests: `tests/test_day32_spanish.py`, plus updates to the localization
   tests now that a second language exists.
 
-Ready for review, still uncommitted. Full suite: 2,175 passed, 97 subtests,
-81.52 s, with
+Full suite after the review nits: 2,176 passed, 97 subtests, 82.05 s, with
 `XDG_CONFIG_HOME="" PYTHONPATH=.:proxy:tests uv run --with pytest
 --with spake2==0.9 --with cryptography==46.0.3 python -m pytest tests -q`.
-Screenshots (English before / Spanish after, 1280 and 375 px; chat, Models,
-placement, Settings with the language picker, Topology): 
-`~/Projects/caravan-day32-results/spanish/{before,after}/` (not in the repo).
-An overflow check on those screens found none; longer Spanish labels wrap in
-the chat header buttons, chips, and Mac mini cards. CHANGELOG stays at v0.9.8.
+(The review run was 2,175; the extra test is the `CARAVAN_LANGUAGES`
+script-close check.) Screenshots (English before / Spanish after, 1280
+and 375 px; chat, Models, placement, Settings with the language picker,
+Topology): `~/Projects/caravan-day32-results/spanish/{before,after}/`
+(not in the repo). An overflow check on those screens found none; longer
+Spanish labels wrap in the chat header buttons, chips, and Mac mini
+cards.
+
+### Spanish: release (v0.9.9)
+
+Built on the local branch `day32-spanish` (on `2e49275`), reviewed
+by Claude (approved 2026-11-23 09:05 CST: full suite 2,175 of 2,175 with
+the review command; two nits fixed afterward) and merged to `main`
+fast-forward only.
+Released as a mid-day release, tag
+[v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9) on the
+wrap commit (source and pin commits are recorded after publishing).
+Notes: [release-notes/day32-v0.9.9.md](release-notes/day32-v0.9.9.md).
+
+The Macs were not updated as part of the release; Brenden updates them
+himself with `caravan update`. Day 32 stays open for other languages.
 
 ## Part A: version label
 

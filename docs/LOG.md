@@ -1,3 +1,20 @@
+## 2026-11-23: Day 32 — Spanish localization (v0.9.9)
+
+Mid-day release; Day 32 stays open for other languages. Built on the
+local branch `day32-spanish` (on `2e49275`), reviewed (Claude: approved
+09:05 CST, suite 2,175/2,175 with the review command; two nits fixed
+afterward) and merged fast-forward. Spanish is the first language after
+English, built so Japanese, Simplified Chinese and Russian can drop in
+later: a CLDR plural engine, `locales/es.json` for every current key
+(neutral Latin American / universal Spanish, casual tú), a Settings
+language picker that switches the page live and persists (`CARAVAN_LANG`
+> Settings > the Mac's language > English), Spanish number and date
+formatting, and layout screenshots at 1280 and 375 px. Spanish is marked
+beta in the picker until a native speaker reviews it. Glossary:
+[docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md). Tests:
+`tests/test_day32_spanish.py`. Suite 2,176 OK. The Macs were not updated
+(Brenden updates them himself).
+
 ## 2026-11-23: Day 32 — Spanish localization (in progress, pending review)
 
 Local work on `day32-spanish` (from `main` at v0.9.8, `2e49275`), not

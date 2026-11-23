@@ -1,3 +1,30 @@
+## Day 32 — Spanish localization (v0.9.9)
+
+Released as [v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9), a mid-day
+release. Day 32 continues with other languages (Japanese, Simplified
+Chinese and Russian can drop in later).
+
+See [DAY32](docs/DAY32.md#spanish-v099).
+
+- Added: Spanish as the first language after English, built so later
+  languages can drop in. A CLDR plural engine (`one`/`other` for Spanish
+  and English; `one`/`few`/`many`/`other` for Russian; `other` only for
+  Japanese and Chinese). `locales/es.json` has every current English key
+  (2,331; neutral Latin American / universal Spanish, casual *tú*). Model
+  names, Caravan, Mini, GGUF, MLX and commands stay in English. Glossary:
+  [docs/i18n/GLOSSARY.md](docs/i18n/GLOSSARY.md).
+- Added: a Settings language picker (English, Español (beta)) that
+  switches the page live and persists. Default order: `CARAVAN_LANG`,
+  then the saved Settings choice, then the Mac's language, then English.
+  The `caravan` command and the installers follow the same setting.
+  Spanish is marked beta until a native speaker reviews it.
+- Added: Spanish number and date formatting (decimal comma, thousands
+  separator, "y" / "o" lists, dates like "13 de noviembre"). English
+  numbers stay ungrouped.
+- Changed: longer Spanish labels wrap in the chat header buttons, chips
+  and Mac mini cards, including at 375 px.
+- Tests: `tests/test_day32_spanish.py`. 2,176 tests pass.
+
 ## Day 32 — GGUF placement (v0.9.8)
 
 Released as [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8), a mid-day
