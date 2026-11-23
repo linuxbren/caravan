@@ -62,10 +62,59 @@ def load_journey() -> dict:
         return {"versions": [], "series": {}, "error": "unreadable journey.json"}
 
 
+_STOP_ID_OK = __import__("re").compile(r"^[A-Za-z0-9_-]{8,64}$")
+
+
+def _hard_close(upstream) -> None:
+    """Day 32: end a reply from another thread. Shutting the socket down
+    wakes the blocked read at once and tells the model's server the client
+    is gone, so it stops generating (MLX lead and the split helper stop
+    between steps; llama-server cancels the task)."""
+    import socket as _socket
+    sock = None
+    try:
+        sock = upstream.fp.raw._sock  # http.client.HTTPResponse -> SocketIO -> socket
+    except AttributeError:
+        sock = None
+    if sock is not None:
+        try:
+            sock.shutdown(_socket.SHUT_RDWR)
+            return
+        except OSError:
+            pass
+    # No socket to shut down: closing is the fallback (the reading thread
+    # then sees a closed response and ends).
+    try:
+        upstream.close()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def stop_live_chat(app, *, request_id=None, job_id=None) -> dict:
+    """Stop one streaming reply. Returns {"stopped": bool, "job": id|None}."""
+    with app.live_chats_lock:
+        entry = None
+        for key in (request_id, job_id):
+            if key and key in app.live_chats:
+                entry = app.live_chats[key]
+                break
+        if entry is None:
+            return {"stopped": False, "job": None}
+        entry["stop"].set()
+        upstream = entry.get("upstream")
+    if upstream is not None:
+        _hard_close(upstream)
+    return {"stopped": True, "job": entry.get("job")}
+
+
 class App:
     def __init__(self, mgr: WorkerManager):
         self.mgr = mgr
         self.started = time.time()
+        # Day 32: replies that are streaming now, so Stop can end one on the
+        # server (and the model) by its request id or journal job id.
+        self.live_chats = {}
+        self.live_chats_lock = threading.Lock()
         self._shutdown = threading.Event()
         self.httpd = None
         import thunderbolt_discovery
@@ -1103,6 +1152,19 @@ def make_handler(app: App):
             if path.startswith("/api/jobs/") and path.endswith("/seen"):
                 rec = app.jobs.mark_seen(path[len("/api/jobs/"):-len("/seen")])
                 return self._json(200 if rec else 404, {"ok": bool(rec)})
+            if path == "/api/chat/stop":
+                # Day 32: the Stop button. Ends the reply on the server and the
+                # model, keeps the words so far, closes the journal job as
+                # "stopped" (never run again).
+                b = body if isinstance(body, dict) else {}
+                rid = str(b.get("request") or "")
+                jid = str(b.get("job") or "")
+                rid = rid if _STOP_ID_OK.match(rid) else None
+                jid = jid if jid.startswith("job_") and _STOP_ID_OK.match(jid) else None
+                if not rid and not jid:
+                    return self._json(400, {"error": "Send the reply's request or job id."})
+                out = stop_live_chat(app, request_id=rid, job_id=jid)
+                return self._json(200 if out["stopped"] else 404, out)
             if path in ("/api/chat", "/v1/chat/completions"):
                 # /v1 path too so tools can hit the UI port.
                 app.chat_begin()
@@ -2774,6 +2836,29 @@ def make_handler(app: App):
                     print(f"[caravan-web] request journal skipped: {e}", flush=True)
             job_hdr = {"X-Caravan-Job": job_id} if job_id else None
 
+            # Day 32: register this reply so POST /api/chat/stop can end it.
+            live = {"stop": threading.Event(), "upstream": None, "job": job_id}
+            live_keys = []
+            rid_hdr = str(self.headers.get("X-Caravan-Request") or "")
+            if getattr(app, "live_chats", None) is not None:
+                with app.live_chats_lock:
+                    for k in ((rid_hdr if _STOP_ID_OK.match(rid_hdr) else None), job_id):
+                        if k:
+                            app.live_chats[k] = live
+                            live_keys.append(k)
+            try:
+                return self._api_chat_run(body, snap, req, session, stream, job_id, job_hdr,
+                                          jobs, live, t_received, sent_browser)
+            finally:
+                if live_keys:
+                    with app.live_chats_lock:
+                        for k in live_keys:
+                            if app.live_chats.get(k) is live:
+                                del app.live_chats[k]
+
+        def _api_chat_run(self, body, snap, req, session, stream, job_id, job_hdr,
+                          jobs, live, t_received, sent_browser):
+
             def _job(method, *a, **kw):
                 if job_id:
                     try:
@@ -2798,10 +2883,22 @@ def make_handler(app: App):
                 return self._json(502, {"error": _later("The model stopped before replying. Check the status line."),
                                         "detail": str(e)[:300], "job": job_id}, headers=job_hdr)
 
+            live["upstream"] = upstream
+            if live["stop"].is_set():
+                _hard_close(upstream)  # Stop came while the model was being reached
+
             if not stream:
                 try:
                     data = json.loads(upstream.read().decode())
                 except (OSError, ValueError, http.client.HTTPException) as e:
+                    if live["stop"].is_set():
+                        _job("stop")
+                        return self._json(200, {
+                            "object": "chat.completion", "model": body.get("model"),
+                            "choices": [{"index": 0, "finish_reason": "stopped",
+                                         "message": {"role": "assistant", "content": ""}}],
+                            "caravan_web": {"stopped": True, "session": session, "job": job_id},
+                        }, headers=job_hdr)
                     _job("interrupt", f"model stopped mid-reply: {e}")
                     return self._json(502, {"error": _later("The model stopped mid-reply. Check the status line."),
                                             "detail": str(e)[:300], "job": job_id}, headers=job_hdr)
@@ -2908,6 +3005,11 @@ def make_handler(app: App):
                     except (OSError, http.client.HTTPException) as e:
                         upstream_error = e
                         break
+                    except (ValueError, AttributeError) as e:
+                        if not live["stop"].is_set():
+                            raise
+                        upstream_error = e  # closed by Stop from another thread
+                        break
                     if not chunk:
                         break
                     buf += chunk
@@ -2949,13 +3051,38 @@ def make_handler(app: App):
                         send_chunk(_scrub_frame(frame) + b"\n\n")
             except (BrokenPipeError, ConnectionResetError):
                 cancelled = True
-                _job("cancel")
+                if live["stop"].is_set():
+                    _job("stop", reply="".join(raw_parts), reasoning="".join(reasoning_parts), usage=usage)
+                else:
+                    _job("cancel")
                 return
             finally:
                 try:
                     upstream.close()
                 except Exception:
                     pass
+
+            if live["stop"].is_set() and not saw_done:
+                # Day 32: stopped by the user. Keep the words so far, close the
+                # job as "stopped" (never run again) and end the stream cleanly.
+                reply_text = "".join(raw_parts)
+                _job("stop", reply=reply_text, reasoning="".join(reasoning_parts), usage=usage)
+                t_done = time.time()
+                meta = {
+                    "id": "caravan-meta", "object": "caravan.meta", "stopped": True,
+                    "finish_reason": "stopped",
+                    "timestamps": {"sent_browser": sent_browser, "received_mini": round(t_received, 6),
+                                   "done_mini": round(t_done, 6)},
+                    "stats": {}, "session": session, "job": job_id,
+                }
+                try:
+                    send_chunk(f"data: {json.dumps(meta)}\n\n".encode())
+                    send_chunk(b"data: [DONE]\n\n")
+                    self.wfile.write(b"0\r\n\r\n")
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, OSError):
+                    pass
+                return
 
             if job_id and not (finish_reason or saw_done):
                 # The model went away mid-reply (crash, kill): keep the job open.

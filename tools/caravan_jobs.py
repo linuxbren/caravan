@@ -21,7 +21,7 @@ DEFAULT_PORT = int(os.environ.get("CARAVAN_WEB_PORT", "8190"))
 STATUS_WORDS = {
     "running": "running", "interrupted": "waiting to run again", "done": "done",
     "failed": "failed", "cancelled": "cancelled", "expired": "too old to run again",
-    "gave_up": "stopped too often", "skipped": "skipped",
+    "gave_up": "stopped too often", "skipped": "skipped", "stopped": "stopped by you",
 }
 
 

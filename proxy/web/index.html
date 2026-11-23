@@ -570,6 +570,13 @@
     border: 1px solid var(--line); border-radius: var(--radius);
   }
   .queue-strip[hidden] { display: none; }
+  /* Day 32: Send/Queue with Stop under it while a reply is written. */
+  .composer-actions { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+  .composer-actions #btnSend { flex: 1 1 auto; }
+  .composer-actions .stop-reply { flex: 0 0 auto; min-height: 0; padding: 4px 12px; font-size: .78rem; }
+  .composer-actions .stop-reply::before { content: "\25A0"; margin-right: 6px; font-size: .7em; vertical-align: 1px; }
+  .stop-reply[hidden] { display: none; }
+  .stopped-note { margin-top: 6px; font-size: .78rem; color: var(--muted); font-family: var(--mono); }
   .queue-chip {
     display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto;
     max-width: min(220px, 70%); box-sizing: border-box; height: 1.6rem;
@@ -1697,7 +1704,11 @@
            in order. Floats along the bottom of the answer, above the box. -->
       <div class="queue-strip" id="queueStrip" role="list" aria-label="Queued messages" hidden></div>
       <textarea id="input" placeholder="Ask Caravan…" rows="2"></textarea>
-      <button class="primary" id="btnSend">Send</button>
+      <div class="composer-actions">
+        <button class="primary" id="btnSend">Send</button>
+        <!-- Day 32: stop the reply that is being written (server and model too). -->
+        <button type="button" class="ghost stop-reply" id="btnStopReply" title="Stop this reply. The words so far are kept." hidden>Stop</button>
+      </div>
     </div>
     <div class="composer-meta">
       <p class="avg-speed" id="avgSpeed" hidden></p>
@@ -2732,6 +2743,11 @@
     queueSeq: 0,
     queuePaused: false,
     chatActive: null,
+    // Day 32: the reply being written: its request id (and journal job) for
+    // Stop, and which reply a Stop is pending for.
+    chatReq: null,
+    chatJob: null,
+    stopping: null,
     history: [],           // [{role, content}] for the model — survives refresh
   };
 
@@ -2762,7 +2778,33 @@
     while (s.length < 16) s += Math.floor(Math.random() * 16).toString(16);
     return s;
   }
+  // Day 32: Stop. Ask the server to end the reply (it closes the model's
+  // request, so the Macs stop writing and are free for the next message,
+  // and the journal marks the job "stopped" so it never runs again). If the
+  // server can't answer within 5 s, the page ends the request itself.
+  function postStop(req, job) {
+    if (!req && !job) return Promise.resolve(null);
+    const body = {};
+    if (req) body.request = req;
+    if (job) body.job = job;
+    return fetch("/api/chat/stop", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body), keepalive: true }).catch(() => null);
+  }
+  function stopReply() {
+    const ac = state.chatActive;
+    if (!state.streaming || !ac || state.stopping === ac) return;
+    state.stopping = ac;
+    repaintSend();
+    postStop(state.chatReq, state.chatJob);
+    setTimeout(() => {
+      if (state.chatActive === ac) { try { ac.abort(new DOMException("stopped", "AbortError")); } catch (_) {} }
+    }, 5000);
+  }
   function cancelChat() {
+    // Leaving a reply (unload, model switch): end it on the server too.
+    if (state.streaming && (state.chatReq || state.chatJob)) postStop(state.chatReq, state.chatJob);
+    state.chatReq = null;
+    state.chatJob = null;
     if (state.chatAbort) {
       try { state.chatAbort.abort(); } catch (_) {}
       state.chatAbort = null;
@@ -2785,6 +2827,13 @@
     if (!b) return;
     b.textContent = queueLabel();
     b.title = b.textContent === "Queue" ? "Send this after the current reply" : "";
+    const st = $("btnStopReply");
+    if (st) {
+      st.hidden = !state.streaming;
+      const pending = !!state.chatActive && state.stopping === state.chatActive;
+      st.disabled = pending;
+      st.textContent = pending ? "Stopping…" : "Stop";
+    }
   }
   function renderQueue() {
     const strip = $("queueStrip");
@@ -3887,6 +3936,19 @@
     }
   } catch (_) {}
 
+  // Day 32: a reply you stopped keeps its words, marked "(stopped)".
+  function markStopped(asst, bodyEl, full) {
+    bodyEl.textContent = full ? stripMarkers(full) : "";
+    asst.dataset.stopped = "1";
+    if (!asst.querySelector(".stopped-note")) {
+      const n = document.createElement("div");
+      n.className = "stopped-note";
+      n.setAttribute("role", "status");
+      n.textContent = "(stopped)";
+      asst.appendChild(n);
+    }
+  }
+
   async function sendChat(queuedText) {
     const fromQueue = typeof queuedText === "string";
     if (!fromQueue && (state.streaming || state.queue.length)) {
@@ -3921,8 +3983,11 @@
 
     cancelChat();
     const ac = new AbortController();
+    const reqId = newSessionId();
     state.chatAbort = ac;
     state.chatActive = ac;
+    state.chatReq = reqId;
+    state.chatJob = null;
     state.streaming = true;
     // Day 32: the box stays typeable and the button reads Queue.
     repaintSend();
@@ -3966,6 +4031,7 @@
           "Content-Type": "application/json",
           "X-Caravan-Session": state.session,
           "X-Caravan-Sent": String(sent),
+          "X-Caravan-Request": reqId,
         },
         body: JSON.stringify(payload),
         signal: ac.signal,
@@ -3977,6 +4043,7 @@
       // Day 30: the request journal's id for this reply (GET /api/jobs/<id>).
       const jobId = r.headers.get("X-Caravan-Job");
       if (jobId) asst.dataset.job = jobId;
+      if (jobId && state.chatActive === ac) state.chatJob = jobId;
       let streamErr = "";
       const reader = r.body.getReader();
       const dec = new TextDecoder();
@@ -4037,7 +4104,10 @@
       bodyEl.textContent = full;
       const thEl = asst.querySelector(".think");
       if (thEl && thEl.dataset.placeholder === "1") thEl.remove();
-      if (meta) {
+      const stopped = (meta && meta.stopped) || state.stopping === ac;
+      if (stopped) {
+        markStopped(asst, bodyEl, full);
+      } else if (meta) {
         showStats(meta.stats || {}, meta.timestamps || {});
         const tdiv = document.createElement("div");
         tdiv.className = "timing";
@@ -4073,6 +4143,7 @@
         bodyEl.textContent = "(no reply — try again, or reload the model)";
       }
       // Commit this turn to history only when we got a real answer (not error/empty).
+      // A stopped reply keeps its words so far (the model sees what you saw).
       if (full && !isBadAssistantText(full)) {
         state.history = (state.history || []).concat([
           { role: "user", content: text },
@@ -4084,17 +4155,30 @@
       const msg = aborted
         ? (e.message || "request aborted")
         : (e.message || String(e));
-      bodyEl.textContent = full ? stripMarkers(full) : `(error: ${msg})`;
       const thEl = asst.querySelector(".think");
       if (thEl && thEl.dataset.placeholder === "1") thEl.remove();
+      if (state.stopping === ac) {
+        markStopped(asst, bodyEl, full);
+        if (full && !isBadAssistantText(full)) {
+          state.history = (state.history || []).concat([
+            { role: "user", content: text },
+            { role: "assistant", content: stripMarkers(full) },
+          ]);
+        }
+      } else {
+        bodyEl.textContent = full ? stripMarkers(full) : `(error: ${msg})`;
+      }
     } finally {
       clearTimeout(firstTimer);
       clearTimeout(totalTimer);
       if (state.chatAbort === ac) state.chatAbort = null;
+      if (state.stopping === ac) state.stopping = null;
       // Only the reply that is still current may clear streaming (a stopped
       // one finishing late must not clear the next queued reply's).
       if (state.chatActive === ac || state.chatActive === null) {
         state.chatActive = null;
+        state.chatReq = null;
+        state.chatJob = null;
         state.streaming = false;
       }
       repaintSend();
@@ -4138,6 +4222,7 @@
   }
 
   $("btnSend").onclick = sendChat;
+  $("btnStopReply").onclick = stopReply;
   $("input").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); }
   });

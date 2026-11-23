@@ -27,7 +27,9 @@ each request is run again at most MAX_REPLAYS times ("gave_up"),
 request bodies over MAX_BODY_BYTES are not journaled, and finished jobs
 are deleted after KEEP_S (at most MAX_JOBS are kept). A request whose
 reply finished is never run again. A request the client cancelled (it
-closed the connection) is not run again.
+closed the connection) is not run again. A reply you stopped (Day 32: the Stop
+button, POST /api/chat/stop) is closed as "stopped" with the words
+written so far, and is never run again.
 
 Privacy: the journal holds prompts and replies. It stays on this Mac in
 ~/.caravan/web-ui/jobs (owner-only permissions) and `caravan uninstall`
@@ -52,7 +54,8 @@ KEEP_S = 3 * 24 * 3600
 MAX_JOBS = 500
 
 OPEN = ("running", "interrupted")
-FINAL = ("done", "failed", "cancelled", "expired", "gave_up", "skipped")
+FINAL = ("done", "failed", "cancelled", "stopped", "expired", "gave_up", "skipped")
+STOPPED_NOTE = "Stopped by you"
 RECOVERED_NOTE = "Finished after a restart"
 
 
@@ -201,6 +204,12 @@ class Journal:
 
     def cancel(self, job_id: str):
         return self._update(job_id, status="cancelled", finished=self.clock())
+
+    def stop(self, job_id: str, *, reply="", reasoning="", usage=None):
+        """Day 32: the user pressed Stop. Keep the partial reply; never run it again."""
+        return self._update(job_id, status="stopped", finished=self.clock(), reply=reply or "",
+                            reasoning=reasoning or "", usage=usage, finish_reason="stopped",
+                            note=STOPPED_NOTE)
 
     def mark_seen(self, job_id: str):
         return self._update(job_id, seen=True)

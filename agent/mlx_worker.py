@@ -76,6 +76,35 @@ ALWAYS_TRIMMABLE = ("KVCache", "QuantizedKVCache", "ConcatenateKVCache")
 DEFAULT_CACHE_DIR = "~/.caravan/mlx/prompt-cache"
 
 
+def watch_client_gone(sock, cancel, done, interval=0.2):
+    """Day 32: set `cancel` as soon as the client closes its connection.
+
+    Writes only notice a closed client at the next token, and nothing is
+    written while the prompt is read. Caravan's Stop closes the connection,
+    so watching the socket lets the lead (and with it the split helper,
+    which the lead drives step by step) stop at once and take the next
+    request. Only an end-of-file counts; any other byte stops the watch.
+    """
+    import select
+    import socket as _socket
+
+    def _loop():
+        while not done.is_set() and not cancel.is_set():
+            try:
+                r, _, _ = select.select([sock], [], [], interval)
+                if not r:
+                    continue
+                if sock.recv(1, _socket.MSG_PEEK) == b"":
+                    cancel.set()
+                return
+            except (OSError, ValueError):
+                cancel.set()
+                return
+    t = threading.Thread(target=_loop, name="client-gone-watch", daemon=True)
+    t.start()
+    return t
+
+
 def log(msg: str) -> None:
     sys.stderr.write(f"{time.strftime('%H:%M:%S')} [mlx-worker] {msg}\n")
     sys.stderr.flush()
@@ -1694,11 +1723,13 @@ class Engine:
             raise v
         return v
 
-    def run(self, key, prompt, body):
+    def run(self, key, prompt, body, cancel=None):
         """Generator for a handler thread: ("piece", text, last) ... ("done", info).
-        Closing it early (client gone) cancels the generation."""
+        Closing it early (client gone) cancels the generation. Day 32: so
+        does setting `cancel` (the client-gone watcher), even mid-prefill;
+        the generator then just ends."""
         out = self._queue_mod.Queue()
-        cancel = threading.Event()
+        cancel = cancel if cancel is not None else threading.Event()
         self.jobs.put(("gen", (key, prompt, body, cancel), out))
         try:
             while True:
@@ -1706,6 +1737,8 @@ class Engine:
                 if ev is None:
                     return
                 if ev[0] == "error":
+                    if cancel.is_set():
+                        return  # stopped on purpose, not a failure
                     raise ev[1]
                 yield ev
         finally:
@@ -3528,7 +3561,13 @@ def make_handler(engine: "Engine"):
                         lead[0] = False
                 return c
 
-            gen = engine.run(key, prompt, body)
+            client_gone = threading.Event()
+            reply_done = threading.Event()
+            try:
+                watch_client_gone(self.connection, client_gone, reply_done)
+            except Exception:  # noqa: BLE001 - never block a reply on the watcher
+                pass
+            gen = engine.run(key, prompt, body, cancel=client_gone)
             try:
                 for ev in gen:
                     if ev[0] == "done":
@@ -3564,7 +3603,11 @@ def make_handler(engine: "Engine"):
                     return
                 return self._json(500, {"error": str(e)})
             finally:
+                reply_done.set()
                 gen.close()   # client gone -> cancels the generation on the mlx thread
+            if info is None and client_gone.is_set():
+                log(f"session {key}: client closed the connection (stopped); generation cancelled")
+                return
             if chat and info is not None:
                 try:
                     log(f"session {key}: thinking {_think_label(body)}, reasoning "
