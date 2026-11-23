@@ -342,11 +342,16 @@ class DocsMentionDay24(unittest.TestCase):
 
 
 
+import json as _json
+T_EN = _json.loads((ROOT / "locales/en.json").read_text(encoding="utf-8"))
+
+
 class FitSummary(unittest.TestCase):
     def test_status_uses_selected_fit_and_says_macs(self):
-        self.assertIn('function macWord(n)', HTML)
-        self.assertIn('n === 1 ? "Mac" : "Macs"', HTML)
-        self.assertIn('parts.push(`fit on ${ks[0]} ${macWord(ks[0])}`)', HTML)  # Day 32: the + chain is one string with values now
+        # Day 32: Mac/Macs comes from the plural keys web.fit_on_n_macs_one/_other.
+        self.assertIn('parts.push(T.plural("web.fit_on_n_macs", ks[0]))', HTML)
+        self.assertEqual(T_EN["web.fit_on_n_macs_one"], "fit on {count} Mac")
+        self.assertEqual(T_EN["web.fit_on_n_macs_other"], "fit on {count} Macs")
         self.assertIn("function passFit(q)", HTML)
         self.assertIn("filteredQuants(g)", HTML)
         self.assertIn(".filter(passFit)", HTML)

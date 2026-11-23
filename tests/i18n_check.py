@@ -193,7 +193,7 @@ def script_parts(path: Path):
 # ---- key usage -------------------------------------------------------------
 
 JS_PLURAL = re.compile(r"\bT\.plural\(\s*([\"'`])((?:web)\.[a-z0-9_.]+)\1\s*,")
-DYNAMIC_PREFIXES = ("fmt.", "web.status_")
+DYNAMIC_PREFIXES = ("fmt.", "web.status_", "web.thermal_")
 
 
 def _js_args(text: str, open_paren: int):

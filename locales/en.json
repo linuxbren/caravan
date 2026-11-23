@@ -2291,5 +2291,9 @@
  "server.web_workers.auto_start_service_owns_packer": "An auto-start service owns this packer",
  "server.web_workers.model_not_on_packer_mini": "model not on packer Mini; tried {cands}; ssh_rc={rc} err={err}",
  "server.web_workers.no_ssh_target_for_remote_worker": "no ssh target for remote worker",
- "server.web_workers.lead_exited_early": "lead exited early (rc={rc}): {tail}"
+ "server.web_workers.lead_exited_early": "lead exited early (rc={rc}): {tail}",
+ "web.thermal_nominal": "nominal",
+ "web.layers_a_b_of_n": "layers {a}-{b} of {n}",
+ "web.fits_on_chip": "fits-on-{n}",
+ "web.thermal_unknown": "unknown"
 }

@@ -4572,6 +4572,14 @@
   }
   // Link-order fix: which link this Mac uses to reach that Mac
   // (Thunderbolt > wired Ethernet > Wi-Fi > other), from the last check.
+  // Day 32: macOS thermal pressure level ("nominal"/"unknown" from node_stats) and the
+  // worker's "packer 1: layers 24-63 of 64" are codes; the words are looked up.
+  function thermalWord(v) { return T.has(`web.thermal_${v}`) ? T(`web.thermal_${v}`) : v; }
+  function layersText(v) {
+    const s = String(v).replace(/^[^:]*:\s*/, "");
+    const m = /^layers (\d+)-(\d+) of (\d+)$/.exec(s);
+    return m ? T("web.layers_a_b_of_n", {a: m[1], b: m[2], n: m[3]}) : s;
+  }
   function linkRow(L) {
     const slow = L.kind !== "thunderbolt";
     const bits = [L.label || L.kind];
@@ -4602,14 +4610,14 @@
     if (n.temp_c != null) {
       const tempPct = Math.max(0, Math.min(100, (n.temp_c - 20) / 80 * 100));
       h += nbar(T("web.temp"), tempPct, T(`web.temp_c_c`, {temp_c: T.num(n.temp_c, 0)}));
-      if (n.thermal_pressure) h += `<div class="kv"><span>${T("web.thermal_pressure")}</span><b>${esc(n.thermal_pressure)}</b></div>`;
+      if (n.thermal_pressure) h += `<div class="kv"><span>${T("web.thermal_pressure")}</span><b>${esc(thermalWord(n.thermal_pressure))}</b></div>`;
     } else if (n.thermal_pressure) {
-      h += `<div class="kv"><span>${T("web.temp")}</span><b>${esc(n.thermal_pressure)}</b></div>`;
+      h += `<div class="kv"><span>${T("web.temp")}</span><b>${esc(thermalWord(n.thermal_pressure))}</b></div>`;
     }
     if (n.model) h += `<div class="kv"><span>${T("web.model")}</span><b>${esc(n.model)}</b></div>`;
     else if (n.model === "") h += `<div class="kv"><span>${T("web.model")}</span><b>${T("web.idle_no_model")}</b></div>`;
     if (n.link && n.role !== "lead") h += linkRow(n.link);
-    if (n.layers) h += `<div class="kv"><span>${T("web.holds")}</span><b>${esc(String(n.layers).replace(/^[^:]*:\s*/, ""))}${n.weights_gb ? T(`web.weights_gb_gb`, {weights_gb: n.weights_gb}) : ""}</b></div>`;
+    if (n.layers) h += `<div class="kv"><span>${T("web.holds")}</span><b>${esc(layersText(n.layers))}${n.weights_gb ? T(`web.weights_gb_gb`, {weights_gb: n.weights_gb}) : ""}</b></div>`;
     if (!h) {
       if (n.error) return `<span class="err">${T("web.cant_reach_error", {error: esc(n.error)})}</span>`;
       return `<span class="err">${T("web.waiting_for_first_sample")}</span>`;
@@ -4770,7 +4778,7 @@
     };
     const $ = (id) => document.getElementById(id);
     const chipsEl = $("pickerChips");
-    function fitChipName(k) { return "fits-on-" + k; }
+    function fitChipName(k) { return "fits-on-" + k; }  // a code; its label is web.fits_on_chip
     function allChipButtons() {
       const adv = $("pickerAdvancedChips");
       return [...chipsEl.querySelectorAll("button"), ...(adv ? [...adv.querySelectorAll("button")] : [])];
@@ -4794,7 +4802,9 @@
       function placeChip(host, f) {
         if ([...host.querySelectorAll("button")].some((b) => b.dataset.chip === f)) return;
         const b = document.createElement("button");
-        b.type = "button"; b.textContent = CHIP_LABELS[f] || f; b.dataset.chip = f;
+        b.type = "button"; b.dataset.chip = f;
+        const fitN = /^fits-on-(\d+)$/.exec(f);
+        b.textContent = CHIP_LABELS[f] || (fitN ? T("web.fits_on_chip", {n: fitN[1]}) : f);
         if (state.category === f) b.classList.add("on");
         if (state.fit.has(f)) b.classList.add("on");
         if (f === "new" && state.newer) b.classList.add("on");

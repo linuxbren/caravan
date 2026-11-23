@@ -172,7 +172,7 @@ and the daily logs, not mixed into current setup instructions.
       one English file, `locales/en.json` (1,127 strings keyed by name),
       with English as the fallback. The English text is unchanged. No
       other language yet. See [DAY32](DAY32.md#localization-step-1-english-strings-file).
-    - **Next (Brenden decides):** which languages to add, then a language
+    - **Next (the owner decides):** which languages to add, then a language
       setting (the Mac's language by default, a Settings override). The
       planned first languages were Spanish, Simplified Chinese and
       Japanese, then German to test long words in buttons and narrow

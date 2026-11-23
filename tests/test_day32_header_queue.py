@@ -79,7 +79,7 @@ class El { constructor(tag){ this.tagName=tag; this.children=[]; this.dataset={}
   setAttribute(k,v){ this.attrs[k]=v; } addEventListener(t,f){ this.listeners[t]=f; } click(){ this.listeners.click && this.listeners.click(); } }
 const document = { createElement: (t) => new El(t) };
 const els = { btnSend: new El("button"), queueStrip: new El("div"), statusText: new El("span"), input: new El("textarea") };
-els.btnSend.textContent = "Send"; els.statusText.textContent = "ready · Qwen3"; els.queueStrip.hidden = true;
+els.btnSend.textContent = "Send"; els.statusText.textContent = "ready · Qwen3"; els.statusText.dataset.status = "ready"; els.queueStrip.hidden = true;
 const $ = (id) => els[id];
 const window = {};
 const state = { streaming: false, queue: [], queueSeq: 0, queuePaused: false };
@@ -118,8 +118,8 @@ eq(els.btnSend.textContent, "Send", "back to Send");
         self.run_node(r"""
 const eq = (a, b, m) => { if (JSON.stringify(a) !== JSON.stringify(b)) { console.log("FAIL", m, JSON.stringify(a)); process.exit(1); } };
 enqueueMessage("one");
-els.statusText.textContent = "starting lead"; eq(drainQueue(), false, "not ready");
-els.statusText.textContent = "ready · X"; state.queuePaused = true; eq(drainQueue(), false, "paused (Unload/switch)");
+els.statusText.textContent = "starting lead"; els.statusText.dataset.status = "starting_lead"; eq(drainQueue(), false, "not ready");
+els.statusText.textContent = "ready · X"; els.statusText.dataset.status = "ready"; state.queuePaused = true; eq(drainQueue(), false, "paused (Unload/switch)");
 state.queuePaused = false; window.caravanBalanceReloading = true; eq(drainQueue(), false, "balance reload");
 window.caravanBalanceReloading = false; els.input.disabled = true; eq(drainQueue(), false, "input disabled");
 els.input.disabled = false; eq(drainQueue(), true, "goes once ready");

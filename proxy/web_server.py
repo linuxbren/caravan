@@ -64,6 +64,13 @@ DEFAULT_PORT = int(os.environ.get("CARAVAN_WEB_PORT", "8190"))
 
 def load_journey() -> dict:
     p = WEB_DIR / "journey.json"
+    try:  # Day 32: a translated copy (journey.<lang>.json) wins when there is one
+        import caravan_i18n
+        lp = WEB_DIR / f"journey.{caravan_i18n.language()}.json"
+        if lp.exists():
+            p = lp
+    except Exception:
+        pass
     if not p.exists():
         return {"versions": [], "series": {}}
     try:
