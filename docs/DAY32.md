@@ -1,19 +1,22 @@
 # Day 32 — localization; part A: version label; part B: chat and header
 
-Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
-[v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4), its fix as
+Day 32 ran Nov 22–23 2026 (America/Chicago) and is complete, released as
+[v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4) through
+[v0.9.12](https://github.com/linuxbren/caravan/releases/tag/v0.9.12). Part A is
+[v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4), its fix
 [v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5). Part B (header layout, chat
-queue, Ollama Cloud key, Stop a reply) is a mid-day release,
+queue, Ollama Cloud key, Stop a reply) is
 [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6). Localization step 1 (all
-user-facing text in one English strings file) is another mid-day release,
-[v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7). GGUF placement is another mid-day release,
-[v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8). Spanish is another mid-day release,
-[v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9). Russian is another mid-day release,
-[v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10). Japanese is another mid-day release,
-[v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11). Simplified Chinese is another mid-day release,
+user-facing text in one English strings file) is
+[v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7). GGUF placement is
+[v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8). Spanish is
+[v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9). Russian is
+[v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10). Japanese is
+[v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11). Simplified Chinese, the last planned language, is
 [v0.9.12](https://github.com/linuxbren/caravan/releases/tag/v0.9.12). The planned Day 32 languages
-are now released (Spanish, Russian, Japanese and Simplified Chinese),
-each marked beta until a native speaker reviews it.
+are released (Spanish, Russian, Japanese and Simplified Chinese),
+each marked beta until a native speaker reviews it. German was not
+added in Day 32.
 
 1. [Status of every Day 32 request](#status-of-every-day-32-request)
 2. [Plan: localization](#plan-localization)
@@ -60,6 +63,9 @@ each marked beta until a native speaker reviews it.
   language, so a half-translated language never shows a blank.
 - First languages: Spanish, Simplified Chinese and Japanese. Then German,
   to test long words in buttons and narrow layouts.
+- Planned languages released in v0.9.9–v0.9.12: Spanish, Russian, Japanese
+  and Simplified Chinese, each still beta until a native review. German was
+  not added in Day 32.
 
 ## Localization step 1: English strings file
 
@@ -490,14 +496,14 @@ What this adds:
 Built on the local branch `day32-chinese` (on `9ad1fbe`), reviewed
 by Claude (approved 2026-11-23 17:02 CST: full suite 2,213 of 2,213 with
 the review command) and merged to `main` fast-forward only.
-Released as a mid-day release: source `969581b`, pin `2c070ad`; tag
+Released as the final Day 32 release: source `969581b`, pin `2c070ad`; tag
 [v0.9.12](https://github.com/linuxbren/caravan/releases/tag/v0.9.12) on the
 wrap commit.
 Notes: [release-notes/day32-v0.9.12.md](release-notes/day32-v0.9.12.md).
 
 The Macs were not updated as part of the release; Brenden updates them
 himself with `caravan update`. The planned Day 32 languages are now in
-Settings.
+Settings. Day 32 is complete. German was not added in Day 32.
 
 ## Part A: version label
 

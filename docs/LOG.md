@@ -1,3 +1,11 @@
+## 2026-11-23: Day 32 closed (complete through v0.9.12)
+
+Day 32 ran Nov 22–23 2026 and is complete, released v0.9.4 through
+[v0.9.12](https://github.com/linuxbren/caravan/releases/tag/v0.9.12).
+The planned languages (Spanish, Russian, Japanese, Simplified Chinese)
+are in Settings, each still beta until a native review. German was not
+added in Day 32. The Macs were not updated (Brenden updates them himself).
+
 ## 2026-11-23: Day 32 — Simplified Chinese localization (v0.9.12)
 
 Mid-day release; this is the last planned Day 32 language. Built on the

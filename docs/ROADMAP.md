@@ -124,7 +124,11 @@ and the daily logs, not mixed into current setup instructions.
     a pre-quantized MLX model loads split across Macs even when one piece
     of the other Mac's layers straddles two shard files (Qwen3 32B 4-bit).
 
-- **Day 32: localization.** The planned languages are released (Spanish, Russian, Japanese, Simplified Chinese; each still beta until a native review). See [DAY32](DAY32.md).
+- **Day 32 (done, released through
+  [v0.9.12](https://github.com/linuxbren/caravan/releases/tag/v0.9.12)):**
+  localization. The planned languages are released (Spanish, Russian,
+  Japanese, Simplified Chinese; each still beta until a native review).
+  German was not added in Day 32. See [DAY32](DAY32.md).
   - **Part A, version label
     ([v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4)):**
     Settings shows the installed release next to its title, with the daily
