@@ -21,7 +21,7 @@ See [DAY32](docs/DAY32.md#localization-step-1-english-strings-file).
 - Tests: a lint now also covers server and worker messages; the browser
   tests start a plain headless Chromium (a flaky Stop test is fixed,
   `176bfe6`).
-- 2,144 tests pass.
+- Source `fcfdc35`, pin `deb0e52`. 2,144 tests pass.
 
 ## Day 32 part B (v0.9.6) — Stop a reply, a message queue, a tidier header and the Ollama Cloud key
 

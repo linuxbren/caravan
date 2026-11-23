@@ -197,9 +197,9 @@ slowed the page enough that `test_stop_flow` failed on and off, also on
 Built on the local branch `day32-localization` (on `f809d4f`), reviewed
 by Claude (approved: full suite 2,144 of 2,144 twice, string counts
 checked against this page) and merged to `main` fast-forward only.
-Released as a mid-day release, tag
+Released as a mid-day release: source `fcfdc35`, pin `deb0e52`; tag
 [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7) on the
-wrap commit (source and pin commits are recorded after publishing).
+wrap commit.
 Notes: [release-notes/day32-v0.9.7.md](release-notes/day32-v0.9.7.md).
 
 Nothing looks or reads differently in English; the update only moves where

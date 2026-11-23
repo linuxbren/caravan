@@ -15,7 +15,7 @@ pseudo-language pass. Lint `test_server_and_worker_messages` covers
 `proxy/` and `agent/`. Flaky `test_stop_flow` fixed (`176bfe6`): the
 distro Chromium launcher added personal flags and extensions, so the
 test browser now gets an empty `XDG_CONFIG_HOME` and
-`--disable-extensions`. Suite 2,144 OK. Logs, journal, lab tools and
+`--disable-extensions`. Suite 2,144 OK. Source `fcfdc35`, pin `deb0e52`, tag v0.9.7. Logs, journal, lab tools and
 prompts stay as code. Later (ROADMAP): confirm before every download.
 The Macs were not updated (Brenden updates them).
 
