@@ -25,7 +25,7 @@ See [DAY32](docs/DAY32.md#part-b-header-layout-v096).
   asks for it right there. Cloud models say **Load**, not Download.
   Chatting with cloud models comes later.
 - Updating reloads the model once (the MLX worker changed for Stop).
-- 2,120 tests pass.
+- Source `44a67e8`, pin `6f874c5`. 2,120 tests pass.
 
 ## Day 32 part A fix (v0.9.5) — the daily update check switch, and a sturdier daily check
 

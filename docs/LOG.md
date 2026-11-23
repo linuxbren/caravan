@@ -15,7 +15,7 @@ server shuts down its socket to the lead; `agent/mlx_worker.py`
 (final, never replayed). Checked live before release from the dev node
 through a tunnel (lead logged the cancel; next first token 0.37 s).
 Tests: `test_day32_header_queue` (13), `test_day32_cloud_keys` (13),
-`test_day32_stop_reply` (16). Suite 2,120 OK. Updating reloads the model once;
+`test_day32_stop_reply` (16). Suite 2,120 OK. Source `44a67e8`, pin `6f874c5`, tag v0.9.6. Updating reloads the model once;
 the Macs were not updated (Brenden updates them).
 
 ## 2026-11-22: Day 32 part A fix — daily update check (v0.9.5)

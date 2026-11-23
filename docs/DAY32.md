@@ -368,7 +368,10 @@ Screenshots for the review (header at 375/768/1024/1280 px, the queue,
 Settings → Cloud API keys, the inline key prompt, the Load button, Stop)
 are not in the repo.
 
-Release: tag v0.9.6 (source and pin commits are recorded after publishing).
+Release: source `44a67e8`, pin `6f874c5`; tag
+[v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) on the
+wrap commit. Notes: [release-notes/day32-v0.9.6.md](release-notes/day32-v0.9.6.md).
+A mid-day release; Day 32 stays open for localization.
 
 Updating reloads the model once (the MLX worker changed for Stop). The
 Macs were not updated as part of the release; Brenden updates them
