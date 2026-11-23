@@ -6,8 +6,9 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 queue, Ollama Cloud key, Stop a reply) is a mid-day release,
 [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6). Localization step 1 (all
 user-facing text in one English strings file) is another mid-day release,
-[v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7). Day 32 stays open:
-choosing and adding languages, the rest of its main theme, comes next.
+[v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7). GGUF placement is another mid-day release,
+[v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8). Day 32 stays open: Spanish is in progress
+(pending review); Japanese, Simplified Chinese and Russian can drop in later.
 
 1. [Status of every Day 32 request](#status-of-every-day-32-request)
 2. [Plan: localization](#plan-localization)
@@ -22,6 +23,8 @@ choosing and adding languages, the rest of its main theme, comes next.
 10. [Part B: tests and release (v0.9.6)](#part-b-tests-and-release-v096)
 11. [Superseded: first proposal for cloud API keys](#superseded-first-proposal-for-cloud-api-keys)
 12. [GGUF placement (ROADMAP #9)](#gguf-placement-roadmap-9)
+    (release: [v0.9.8](#gguf-placement-release-v098))
+13. [Spanish (in progress)](#spanish-in-progress)
 
 ## Status of every Day 32 request
 
@@ -35,7 +38,7 @@ choosing and adding languages, the rest of its main theme, comes next.
 | Chatting with Ollama Cloud models (routing `/api/chat` to Ollama Cloud) | Not for Day 32 (Brenden); the key is saved now, cloud chat comes later. On the [ROADMAP](ROADMAP.md) as a future item |
 | Stop a reply while it is written: a **Stop** button under Send/Queue that really stops the model (the request to the model is closed, the split workers stop and are free for the next message), keeps the words so far marked "(stopped)", closes the journal job as stopped (never run again) and still sends queued messages next ([details](#part-b-stop-a-reply-v096)) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
 | Localization step 1: move all user-facing text into one English strings file keyed by name, English fallback, no other languages yet (Brenden: "start with compartmentalization first with English. Then we'll decide on additional languages.") | Done (fully compartmentalized: page, CLI, installers, server and worker messages), reviewed (Claude: approved), released in [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7) (mid-day); Brenden updates the Macs himself ([details](#localization-step-1-english-strings-file)) |
-| Localization next: other languages and a language setting | Brenden decides which languages. Day 32 stays open for it |
+| Spanish: CLDR plurals, `locales/es.json`, Settings language picker, locale formatting, layout screenshots, beta until native-reviewed | In progress on local branch `day32-spanish` (uncommitted, pending review). Day 32 stays open; Japanese, Simplified Chinese and Russian can drop in later ([details](#spanish-in-progress)) |
 | A confirmation step before every download (ROADMAP Next candidates #9; raised in the step 1 review): GGUF should use the same Step 2 placement chooser as MLX, for every fit color | Done, reviewed (Claude: approved), released in [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8) (mid-day); Brenden updates the Macs himself ([details](#gguf-placement-roadmap-9)) |
 
 ## Plan: localization
@@ -259,6 +262,52 @@ The Macs were not updated as part of the release; Brenden updates them
 himself with `caravan update`. Day 32 stays open for choosing and adding
 languages.
 
+## Spanish (in progress)
+
+Brenden (2026-11-23): start Spanish, built so later languages can drop in.
+Work is on the local branch `day32-spanish` (from `main` at v0.9.8,
+`2e49275`), uncommitted until Claude approves. Not tagged, not pushed.
+The Macs are not updated (Brenden updates them himself). CHANGELOG stays
+at v0.9.8 until a wrap commit; the version-label test requires the first
+heading to contain `(v{VERSION})`.
+
+What this adds:
+
+- A CLDR plural engine (`one`/`other` for Spanish and English;
+  `one`/`few`/`many`/`other` for Russian; `other` only for Japanese and
+  Chinese). Keys use `_one` / `_few` / `_many` / `_other`, and fall back
+  to `_other` then English.
+- `locales/es.json` for every current English key (neutral Latin American
+  / universal Spanish, casual *tú*). Model names, **Caravan**, **Mini**,
+  **GGUF**, **MLX**, and commands stay in English. Glossary:
+  [docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md).
+- A checker: every key present, `{name}` placeholders identical, `_html`
+  tags identical, no empty strings. The installer shell block is
+  regenerated from the language files.
+- A Settings language picker (English, Español; others later) that
+  switches the page live and persists. Default order: `CARAVAN_LANG`,
+  then the saved Settings choice, then the Mac's language, then English.
+  The `caravan` command and the installers follow the same setting.
+  Spanish is marked **beta** in the picker until a native speaker reviews
+  it. All picker strings go through `T()`.
+- Locale formatting for Spanish: decimal comma, thousands separator,
+  units, "y" / "o" lists, and dates like "13 de noviembre".
+- Layout: Spanish is longer, so each main screen is screenshotted in
+  English and Spanish with the mock server (1280 and 375 px) and overflows
+  are fixed. Shots live in `~/Projects/caravan-day32-results/spanish/`
+  (not in the repo).
+- Tests: `tests/test_day32_spanish.py`, plus updates to the localization
+  tests now that a second language exists.
+
+Ready for review, still uncommitted. Full suite: 2,175 passed, 97 subtests,
+81.52 s, with
+`XDG_CONFIG_HOME="" PYTHONPATH=.:proxy:tests uv run --with pytest
+--with spake2==0.9 --with cryptography==46.0.3 python -m pytest tests -q`.
+Screenshots (English before / Spanish after, 1280 and 375 px; chat, Models,
+placement, Settings with the language picker, Topology): 
+`~/Projects/caravan-day32-results/spanish/{before,after}/` (not in the repo).
+An overflow check on those screens found none; longer Spanish labels wrap in
+the chat header buttons, chips, and Mac mini cards. CHANGELOG stays at v0.9.8.
 
 ## Part A: version label
 

@@ -1,59 +1,111 @@
 #!/bin/bash
 # One-command, per-user Apple Silicon installer. Compatible with macOS Bash 3.2.
 set -euo pipefail
-# >>> caravan strings (generated from locales/en.json; edit there, then run: python3 tools/caravan_i18n.py --sync-shell) >>>
-S_unknown_option_arg_use_help() { printf '%s' "Unknown option: ${1}. Use --help."; }
-S_setup_stopped_models_and_existing_settings() { printf '%s' "Setup stopped. Models and existing settings were not removed. Fix the error above, then rerun the same command."; }
-S_arg_needs_a_value_2() { printf '%s' "${1} needs a value."; }
-S_choose_a_port_number_from_1() { printf '%s' "Choose a port number from 1 to 65535."; }
-S_choose_role_lead_or_role_worker() { printf '%s' "Choose --role lead or --role worker."; }
-S_install_the_web_ui_as_lead() { printf '%s' "Install the web UI as lead first; use caravan_service.py for an optional model auto-start plan."; }
-S_worker_stage_options_need_an_installed() { printf '%s' "Worker stage options need an installed --model folder. No worker was configured."; }
-S_repo_must_be_an_absolute_path() { printf '%s' "--repo must be an absolute path (use \"\$HOME/...\", not a literal ~)."; }
-S_ref_must_name_a_git_branch() { printf '%s' "--ref must name a Git branch or tag."; }
-S_choose_a_dedicated_caravan_folder_not() { printf '%s' "Choose a dedicated Caravan folder, not / or your home folder."; }
-S_preview_only_no_directories_downloads_packag() { printf '%s' "PREVIEW ONLY: no directories, downloads, packages, config or launchd jobs will change."; }
-S_this_installer_needs_macos_nothing_was() { printf '%s' "This installer needs macOS. Nothing was installed."; }
-S_use_an_apple_silicon_mac_and() { printf '%s' "Use an Apple Silicon Mac and a native Terminal (not Rosetta). Nothing was installed."; }
-S_macos_14_or_newer_is_required() { printf '%s' "macOS 14 or newer is required (found ${1})."; }
-S_run_as_your_normal_macos_user() { printf '%s' "Run as your normal macOS user, not sudo/root."; }
-S_use_the_no_prerequisites_mac_bootstrap() { printf '%s' "Use the no-prerequisites Mac bootstrap in INSTALL.md, or pass --python /absolute/path/python3 (3.10+)."; }
-S_python_3_10_or_newer_is() { printf '%s' "Python 3.10 or newer is required."; }
-S_this_python_is_running_under_rosetta() { printf '%s' "This Python is running under Rosetta. Choose a native arm64 Python."; }
-S_free_at_least_8_gb_before() { printf '%s' "Free at least 8 GB before installing; models need more."; }
-S_python_python() { printf '%s' "Python: ${1}"; }
-S_source_folder_repo_ref() { printf '%s' "Source folder: ${1} (${2})"; }
-S_that_checkout_has_a_different_origin() { printf '%s' "That checkout has a different origin. Reuse it manually or choose a new folder."; }
-S_your_checkout_has_local_changes_keep() { printf '%s' "Your checkout has local changes. Keep them; commit or choose a different folder before installing."; }
-S_this_checkout_follows_the_old_branch() { printf '%s' "This checkout follows the old branch name ${1}; it gets the same releases as main."; }
-S_checkout_is_current_not_ref_no() { printf '%s' "Checkout is ${1}, not ${2}. No branch was changed."; }
-S_a_release_tag_is_immutable_choose() { printf '%s' "A release tag is immutable; choose a new install folder to change releases."; }
-S_matching_clean_checkout_found_leaving_its() { printf '%s' "Matching clean checkout found; leaving its code unchanged. Use --update for a clean fast-forward pull."; }
-S_using_existing_extracted_source_no_git() { printf '%s' "Using existing extracted source; no Git operations."; }
-S_that_folder_already_exists_and_is() { printf '%s' "That folder already exists and is not a recognized checkout. Use --use-existing for an extracted release, or choose an empty path."; }
-S_use_existing_needs_an_existing_caravan() { printf '%s' "--use-existing needs an existing Caravan source folder."; }
-S_git_is_missing_install_apple_command() { printf '%s' "Git is missing. Install Apple Command Line Tools first (xcode-select --install), then retry."; }
-S_finish_installing_apple_command_line_tools() { printf '%s' "Finish installing Apple Command Line Tools, then retry."; }
-S_reusing_the_mlx_virtual_environment() { printf '%s' "Reusing the MLX virtual environment."; }
-S_existing_venv_is_incompatible_choose_a() { printf '%s' "Existing venv is incompatible; choose a compatible environment manually. It was not removed."; }
-S_installing_tested_dependencies_this_may_use() { printf '%s' "Installing tested dependencies; this may use the internet."; }
-S_package_dependency_lock_is_missing_download() { printf '%s' "Package dependency lock is missing. Download a current package."; }
-S_the_easy_package_needs_its_managed() { printf '%s' "The easy package needs its managed Python 3.12. Rerun the Mac bootstrap."; }
-S_would_create_a_single_local_mac() { printf '%s' "Would create a single-local-Mac config (no lab SSH defaults)."; }
-S_created_the_local_mac_config_existing() { printf '%s' "Created the local Mac config. Existing configs are never replaced."; }
-S_an_unrelated_caravan_bin_caravan_exists() { printf '%s' "An unrelated ~/.caravan/bin/caravan exists. Keep it; choose a different command path manually."; }
-S_preparing_this_macs_browser_page_so() { printf '%s' "Preparing this Mac’s browser page so it can join your other Macs."; }
-S_open_a_new_terminal_window_to_2() { printf '%s' "Open a new Terminal window to use caravan (for example: caravan status)."; }
-S_done_caravan_starts_at_user_login() { printf '%s' "Done. Caravan starts at user login, not before login. Choose a model in the browser."; }
-S_would_ask_whether_to_open_caravan() { printf '%s' "Would ask whether to open Caravan from your other devices over Tailscale."; }
-S_would_ask_whether_to_open_caravan_2() { printf '%s' "Would ask whether to open Caravan on your local network."; }
-S_open_http_127_0_0_1() { printf '%s' "Open http://127.0.0.1:${1}/ (local browser). To add a Mac, choose Add Macs. Logs: ~/.caravan/logs/"; }
-S_usage_text() { printf '%s' "Usage: bash scripts/install.sh [--role lead|worker] [--repo PATH] [--ref REF]
+# >>> caravan strings (generated from locales/*.json; edit those, then run: python3 tools/caravan_i18n.py --sync-shell) >>>
+_caravan_ui_lang() {
+  _caravan_norm_lang() {
+    c=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | cut -d. -f1)
+    case "$c" in
+      es|es-*) printf '%s' es ;;
+      en|en-*) printf '%s' en ;;
+      ja|ja-*) printf '%s' ja ;;
+      ru|ru-*) printf '%s' ru ;;
+      zh-hant|zh-tw|zh-hk|zh-mo) printf '%s' zh-Hant ;;
+      zh-hans|zh-cn|zh-sg|zh) printf '%s' zh-Hans ;;
+      *) printf '%s' "$c" ;;
+    esac
+  }
+  _caravan_have_lang() {
+    case "$1" in
+      en|es) return 0 ;;
+      *) return 1 ;;
+    esac
+  }
+  if [ -n "${CARAVAN_LANG:-}" ]; then
+    n=$(_caravan_norm_lang "$CARAVAN_LANG")
+    if _caravan_have_lang "$n"; then printf '%s' "$n"; return; fi
+  fi
+  if [ -f "${HOME}/.caravan/prefs" ]; then
+    p=$(sed -n 's/.*"language"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${HOME}/.caravan/prefs" | head -n 1)
+    if [ -n "$p" ]; then
+      n=$(_caravan_norm_lang "$p")
+      if _caravan_have_lang "$n"; then printf '%s' "$n"; return; fi
+    fi
+  fi
+  if command -v defaults >/dev/null 2>&1; then
+    for tag in $(defaults read -g AppleLanguages 2>/dev/null | tr -d '"(),' ); do
+      [ -n "$tag" ] || continue
+      n=$(_caravan_norm_lang "$tag")
+      if _caravan_have_lang "$n"; then printf '%s' "$n"; return; fi
+    done
+  fi
+  if [ -n "${LC_ALL:-}" ] && [ "${LC_ALL}" != "C" ] && [ "${LC_ALL}" != "POSIX" ]; then
+    n=$(_caravan_norm_lang "$LC_ALL")
+    if _caravan_have_lang "$n"; then printf '%s' "$n"; return; fi
+  fi
+  if [ -n "${LANG:-}" ] && [ "${LANG}" != "C" ] && [ "${LANG}" != "POSIX" ]; then
+    n=$(_caravan_norm_lang "$LANG")
+    if _caravan_have_lang "$n"; then printf '%s' "$n"; return; fi
+  fi
+  printf '%s' en
+}
+CARAVAN_UI_LANG=$(_caravan_ui_lang)
+S_unknown_option_arg_use_help() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Opción desconocida: ${1}. Usa --help." ;; *) printf '%s' "Unknown option: ${1}. Use --help." ;; esac; }
+S_setup_stopped_models_and_existing_settings() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se detuvo la instalación. No se eliminaron los modelos ni los ajustes existentes. Corrige el error de arriba y vuelve a ejecutar el mismo comando." ;; *) printf '%s' "Setup stopped. Models and existing settings were not removed. Fix the error above, then rerun the same command." ;; esac; }
+S_arg_needs_a_value_2() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "${1} necesita un valor." ;; *) printf '%s' "${1} needs a value." ;; esac; }
+S_choose_a_port_number_from_1() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Elige un número de puerto del 1 al 65535." ;; *) printf '%s' "Choose a port number from 1 to 65535." ;; esac; }
+S_choose_role_lead_or_role_worker() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Elige --role lead o --role worker." ;; *) printf '%s' "Choose --role lead or --role worker." ;; esac; }
+S_install_the_web_ui_as_lead() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Instala primero la página web como lead; usa caravan_service.py para un plan opcional de arranque automático del modelo." ;; *) printf '%s' "Install the web UI as lead first; use caravan_service.py for an optional model auto-start plan." ;; esac; }
+S_worker_stage_options_need_an_installed() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Las opciones de etapa de worker necesitan una carpeta --model instalada. No se configuró ningún worker." ;; *) printf '%s' "Worker stage options need an installed --model folder. No worker was configured." ;; esac; }
+S_repo_must_be_an_absolute_path() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "--repo debe ser una ruta absoluta (usa \"\$HOME/...\", no un ~ literal)." ;; *) printf '%s' "--repo must be an absolute path (use \"\$HOME/...\", not a literal ~)." ;; esac; }
+S_ref_must_name_a_git_branch() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "--ref debe ser una rama o etiqueta de Git." ;; *) printf '%s' "--ref must name a Git branch or tag." ;; esac; }
+S_choose_a_dedicated_caravan_folder_not() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Elige una carpeta dedicada de Caravan, no / ni tu carpeta de inicio." ;; *) printf '%s' "Choose a dedicated Caravan folder, not / or your home folder." ;; esac; }
+S_preview_only_no_directories_downloads_packag() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "SOLO VISTA PREVIA: no se cambiarán carpetas, descargas, paquetes, configuración ni tareas de launchd." ;; *) printf '%s' "PREVIEW ONLY: no directories, downloads, packages, config or launchd jobs will change." ;; esac; }
+S_this_installer_needs_macos_nothing_was() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Este instalador necesita macOS. No se instaló nada." ;; *) printf '%s' "This installer needs macOS. Nothing was installed." ;; esac; }
+S_use_an_apple_silicon_mac_and() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Usa un Mac con Apple Silicon y una Terminal nativa (no Rosetta). No se instaló nada." ;; *) printf '%s' "Use an Apple Silicon Mac and a native Terminal (not Rosetta). Nothing was installed." ;; esac; }
+S_macos_14_or_newer_is_required() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se necesita macOS 14 o posterior (se encontró ${1})." ;; *) printf '%s' "macOS 14 or newer is required (found ${1})." ;; esac; }
+S_run_as_your_normal_macos_user() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Ejecútalo como tu usuario normal de macOS, no con sudo/root." ;; *) printf '%s' "Run as your normal macOS user, not sudo/root." ;; esac; }
+S_use_the_no_prerequisites_mac_bootstrap() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Usa el instalador de Mac sin requisitos previos en INSTALL.md, o pasa --python /ruta/absoluta/python3 (3.10+)." ;; *) printf '%s' "Use the no-prerequisites Mac bootstrap in INSTALL.md, or pass --python /absolute/path/python3 (3.10+)." ;; esac; }
+S_python_3_10_or_newer_is() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se necesita Python 3.10 o posterior." ;; *) printf '%s' "Python 3.10 or newer is required." ;; esac; }
+S_this_python_is_running_under_rosetta() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Este Python está corriendo bajo Rosetta. Elige un Python nativo arm64." ;; *) printf '%s' "This Python is running under Rosetta. Choose a native arm64 Python." ;; esac; }
+S_free_at_least_8_gb_before() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Libera al menos 8 GB antes de instalar; los modelos necesitan más." ;; *) printf '%s' "Free at least 8 GB before installing; models need more." ;; esac; }
+S_python_python() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Python: ${1}" ;; *) printf '%s' "Python: ${1}" ;; esac; }
+S_source_folder_repo_ref() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Carpeta del código: ${1} (${2})" ;; *) printf '%s' "Source folder: ${1} (${2})" ;; esac; }
+S_that_checkout_has_a_different_origin() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Esa copia tiene un origen distinto. Reutilízala a mano o elige una carpeta nueva." ;; *) printf '%s' "That checkout has a different origin. Reuse it manually or choose a new folder." ;; esac; }
+S_your_checkout_has_local_changes_keep() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Tu copia tiene cambios locales. Consérvalos; haz un commit o elige otra carpeta antes de instalar." ;; *) printf '%s' "Your checkout has local changes. Keep them; commit or choose a different folder before installing." ;; esac; }
+S_this_checkout_follows_the_old_branch() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Esta copia sigue el nombre de rama anterior ${1}; recibe las mismas versiones que main." ;; *) printf '%s' "This checkout follows the old branch name ${1}; it gets the same releases as main." ;; esac; }
+S_checkout_is_current_not_ref_no() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "La copia está en ${1}, no en ${2}. No se cambió ninguna rama." ;; *) printf '%s' "Checkout is ${1}, not ${2}. No branch was changed." ;; esac; }
+S_a_release_tag_is_immutable_choose() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Una etiqueta de versión no se modifica; elige una carpeta de instalación nueva para cambiar de versión." ;; *) printf '%s' "A release tag is immutable; choose a new install folder to change releases." ;; esac; }
+S_matching_clean_checkout_found_leaving_its() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se encontró una copia limpia coincidente; su código se deja igual. Usa --update para un fast-forward limpio." ;; *) printf '%s' "Matching clean checkout found; leaving its code unchanged. Use --update for a clean fast-forward pull." ;; esac; }
+S_using_existing_extracted_source_no_git() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se usa el código extraído existente; no hay operaciones de Git." ;; *) printf '%s' "Using existing extracted source; no Git operations." ;; esac; }
+S_that_folder_already_exists_and_is() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Esa carpeta ya existe y no es una copia reconocida. Usa --use-existing para una versión extraída, o elige una ruta vacía." ;; *) printf '%s' "That folder already exists and is not a recognized checkout. Use --use-existing for an extracted release, or choose an empty path." ;; esac; }
+S_use_existing_needs_an_existing_caravan() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "--use-existing necesita una carpeta de código de Caravan que ya exista." ;; *) printf '%s' "--use-existing needs an existing Caravan source folder." ;; esac; }
+S_git_is_missing_install_apple_command() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Falta Git. Instala primero las herramientas de línea de comandos de Apple (xcode-select --install) y vuelve a intentarlo." ;; *) printf '%s' "Git is missing. Install Apple Command Line Tools first (xcode-select --install), then retry." ;; esac; }
+S_finish_installing_apple_command_line_tools() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Termina de instalar las herramientas de línea de comandos de Apple y vuelve a intentarlo." ;; *) printf '%s' "Finish installing Apple Command Line Tools, then retry." ;; esac; }
+S_reusing_the_mlx_virtual_environment() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se reutiliza el entorno virtual de MLX." ;; *) printf '%s' "Reusing the MLX virtual environment." ;; esac; }
+S_existing_venv_is_incompatible_choose_a() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "El entorno virtual existente no es compatible; elige un entorno compatible a mano. No se eliminó." ;; *) printf '%s' "Existing venv is incompatible; choose a compatible environment manually. It was not removed." ;; esac; }
+S_installing_tested_dependencies_this_may_use() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Instalando las dependencias comprobadas; esto puede usar internet." ;; *) printf '%s' "Installing tested dependencies; this may use the internet." ;; esac; }
+S_package_dependency_lock_is_missing_download() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Falta el bloqueo de dependencias del paquete. Descarga un paquete actual." ;; *) printf '%s' "Package dependency lock is missing. Download a current package." ;; esac; }
+S_the_easy_package_needs_its_managed() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "El paquete sencillo necesita su Python 3.12 administrado. Vuelve a ejecutar el instalador de Mac." ;; *) printf '%s' "The easy package needs its managed Python 3.12. Rerun the Mac bootstrap." ;; esac; }
+S_would_create_a_single_local_mac() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Crearía una configuración de un solo Mac local (sin valores predeterminados de SSH de laboratorio)." ;; *) printf '%s' "Would create a single-local-Mac config (no lab SSH defaults)." ;; esac; }
+S_created_the_local_mac_config_existing() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se creó la configuración del Mac local. Las configuraciones existentes nunca se reemplazan." ;; *) printf '%s' "Created the local Mac config. Existing configs are never replaced." ;; esac; }
+S_an_unrelated_caravan_bin_caravan_exists() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Ya existe un ~/.caravan/bin/caravan que no es de esta instalación. Se conserva; elige otra ruta de comando a mano." ;; *) printf '%s' "An unrelated ~/.caravan/bin/caravan exists. Keep it; choose a different command path manually." ;; esac; }
+S_preparing_this_macs_browser_page_so() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Preparando la página del navegador de este Mac para que pueda unirse a tus otros Macs." ;; *) printf '%s' "Preparing this Mac’s browser page so it can join your other Macs." ;; esac; }
+S_open_a_new_terminal_window_to_2() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Abre una ventana nueva de Terminal para usar caravan (por ejemplo: caravan status)." ;; *) printf '%s' "Open a new Terminal window to use caravan (for example: caravan status)." ;; esac; }
+S_done_caravan_starts_at_user_login() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Listo. Caravan se inicia al iniciar sesión, no antes. Elige un modelo en el navegador." ;; *) printf '%s' "Done. Caravan starts at user login, not before login. Choose a model in the browser." ;; esac; }
+S_would_ask_whether_to_open_caravan() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Preguntaría si quieres abrir Caravan desde tus otros dispositivos por Tailscale." ;; *) printf '%s' "Would ask whether to open Caravan from your other devices over Tailscale." ;; esac; }
+S_would_ask_whether_to_open_caravan_2() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Preguntaría si quieres abrir Caravan en tu red local." ;; *) printf '%s' "Would ask whether to open Caravan on your local network." ;; esac; }
+S_open_http_127_0_0_1() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Abre http://127.0.0.1:${1}/ (navegador local). Para añadir un Mac, elige Añadir Macs. Registros: ~/.caravan/logs/" ;; *) printf '%s' "Open http://127.0.0.1:${1}/ (local browser). To add a Mac, choose Add Macs. Logs: ~/.caravan/logs/" ;; esac; }
+S_usage_text() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Uso: bash scripts/install.sh [--role lead|worker] [--repo PATH] [--ref REF]
+       [--python PATH] [--check] [--dry-run] [--no-start] [--update] [--use-existing]
+Plan de worker: --model PATH [--counts K,K,... --stage-index I --listen HOST:PORT]
+             [--upstream HOST:PORT | --peer HOST:PORT] [--name ID] [--port PORT]
+Cada Mac tiene su página en el navegador; un worker de modelo fijo es una opción para desarrolladores." ;; *) printf '%s' "Usage: bash scripts/install.sh [--role lead|worker] [--repo PATH] [--ref REF]
        [--python PATH] [--check] [--dry-run] [--no-start] [--update] [--use-existing]
 Worker plan: --model PATH [--counts K,K,... --stage-index I --listen HOST:PORT]
              [--upstream HOST:PORT | --peer HOST:PORT] [--name ID] [--port PORT]
-Each Mac gets its browser page; a fixed-model worker is a developer option."; }
-S_would_run() { printf '%s' "Would run: "; }
+Each Mac gets its browser page; a fixed-model worker is a developer option." ;; esac; }
+S_would_run() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se ejecutaría: " ;; *) printf '%s' "Would run: " ;; esac; }
 # <<< caravan strings <<<
 say() { printf '[Caravan] %s\n' "$*"; }
 trap 'code=$?; say "$(S_setup_stopped_models_and_existing_settings)" >&2; exit "$code"' ERR

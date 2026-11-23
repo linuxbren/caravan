@@ -64,7 +64,7 @@ from caravan_models import (  # noqa: E402
     resolve_pair,
 )
 from caravan_chart import decide_style, render_chart  # noqa: E402
-from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
+from caravan_i18n import T, fmt_date  # noqa: E402  (Day 32: user-facing text)
 
 
 SPEED_STORE = Path("~/.caravan/speed_averages.json").expanduser()
@@ -133,7 +133,7 @@ def _plain_day(ts) -> str:
         t = time.localtime(float(ts))
     except (TypeError, ValueError):
         return ""
-    return time.strftime("%B ", t) + str(t.tm_mday)
+    return fmt_date(t, "month_day")
 
 
 def no_numbers_line(kind: str) -> str:

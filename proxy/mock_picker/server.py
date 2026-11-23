@@ -180,6 +180,10 @@ document.addEventListener('DOMContentLoaded', function(){
         if u.path == "/api/picker/disk":
             return self._json(200, {"models": [], "cleanup": [], "current": None,
                                     "max_split_stages": 2})
+        if u.path == "/api/language":
+            import caravan_i18n
+            return self._json(200, {"language": caravan_i18n.language(),
+                                    "languages": caravan_i18n.picker_languages()})
         if u.path.startswith("/api/"):
             return self._json(200, {"ok": True, "mock": True})
         self.send_error(404)
@@ -205,6 +209,20 @@ document.addEventListener('DOMContentLoaded', function(){
         if u.path == "/api/picker/download":
             return self._json(200, {"job": {"id": "mock-job", "status": "queued", "repo_id": body.get("repo_id"),
                                             "placement_id": body.get("placement_id")}})
+        if u.path == "/api/language":
+            import caravan_i18n
+            code = (body or {}).get("language")
+            if isinstance(code, str) and caravan_i18n.normalize_language(code):
+                # Only persist when CARAVAN_HOME is set, so the mock never
+                # writes the developer's real ~/.caravan/prefs.
+                import os
+                if os.environ.get("CARAVAN_HOME"):
+                    caravan_i18n.save_language(code)
+                else:
+                    os.environ["CARAVAN_LANG"] = caravan_i18n.normalize_language(code)
+                caravan_i18n.clear_language_cache()
+            return self._json(200, {"language": caravan_i18n.language(),
+                                    "languages": caravan_i18n.picker_languages()})
         if u.path.startswith("/api/"):
             return self._json(200, {"ok": True, "mock": True})
         self.send_error(404)

@@ -1412,6 +1412,42 @@
   .drawer, .drawer-left, #settingsDrawer, #topoDrawer { width:100vw; min-width:0; }
   .pairing-columns { grid-template-columns:1fr; }
 }
+
+  /* Day 32 Spanish: language picker, and room for longer labels on a phone. */
+  #languageCard .drawer-control { width: 100%; max-width: 100%; }
+  #languageCard .lang-help { display: block; margin-top: 8px; }
+  #languageSelect option { white-space: normal; }
+  @media (max-width: 420px) {
+    #settingsDrawer .drawer-control,
+    #settingsDrawer button.drawer-control,
+    .picker-chips button,
+    .chip, .p-chip, .src-chip {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      line-height: 1.25;
+    }
+    #settingsDrawer .toolbar { grid-template-columns: 1fr; }
+  }
+  html[lang="es"] #settingsDrawer .drawer-control,
+  html[lang="es"] button.primary, html[lang="es"] button.ghost {
+    line-height: 1.25;
+  }
+  /* Longer Spanish labels in the chat header button stack. */
+  html[lang="es"] .chathead-actions { width: 168px; }
+  html[lang="es"] .chathead-actions button {
+    white-space: normal; line-height: 1.2; overflow-wrap: anywhere; letter-spacing: .04em;
+  }
+  @media (max-width: 420px) {
+    .chathead-actions { width: min(168px, 46vw); }
+    html[lang="es"] .chathead-actions { width: min(184px, 54vw); }
+    .chathead-actions button {
+      white-space: normal; line-height: 1.2; padding: 7px 8px; letter-spacing: .03em;
+    }
+    /* Mac mini cards in Topology: let longer Spanish lines wrap. */
+    .node .name, .node .meta, .topo-card, .mini-card, #topoBody .mac {
+      overflow-wrap: anywhere; min-width: 0;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1943,6 +1979,16 @@
         <button class="ghost drawer-control" id="btnUpdateRetry" type="button" hidden>{{web.try_again}}</button>
       </div>
       <p class="tune-step" id="updateStep" role="status" aria-live="polite" hidden></p>
+    </div>
+
+    <div class="optcard drawer-section" id="languageCard">
+      <h2 class="drawer-section-title">{{web.language}}</h2>
+      <select class="drawer-control" id="languageSelect" aria-label="{{web.language}}">
+        <option value="en">{{web.language_name_en}}</option>
+        <option value="es">{{web.language_name_es}}</option>
+      </select>
+      <span class="hidden" hidden>{{web.language_beta}}</span>
+      <small class="lang-help">{{web.language_help}}</small>
     </div>
     <div class="optcard drawer-section" id="topoBarsCard">
       <h2 class="drawer-section-title"><span class="tip" title="{{web.how_topology_fills_the_cpu_gpu}}">{{web.topology_bars}}</span></h2>
@@ -2725,6 +2771,42 @@
     if (document.visibilityState === "visible") refreshUpdate().catch(() => {});
   });
   if (/[?&]settings=1\b/.test(location.search)) setTimeout(openDrawer, 300);
+  
+  // Day 32: language picker. Options come from window.CARAVAN_LANGUAGES
+  // (names and the "beta" label via T()). Changing it saves and reloads.
+  (function () {
+    const sel = $("languageSelect");
+    if (!sel) return;
+    const langs = window.CARAVAN_LANGUAGES || [];
+    const current = window.CARAVAN_LANG || "en";
+    if (langs.length) {
+      sel.innerHTML = langs.map((L) => {
+        const label = L.beta
+          ? T("web.language_option_beta", {name: L.name, beta: T("web.language_beta")})
+          : (L.label || L.name);
+        const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+        return `<option value="${esc(L.code)}"${L.code === current ? " selected" : ""}>${esc(label)}</option>`;
+      }).join("");
+    } else {
+      sel.value = current;
+    }
+    sel.addEventListener("change", async () => {
+      const language = sel.value;
+      try {
+        const r = await fetch("/api/language", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({language}),
+        });
+        if (!r.ok) throw new Error(String(r.status));
+      } catch (e) {
+        sel.value = current;
+        return;
+      }
+      location.reload();
+    });
+  })();
+
   $("btnCloseSettings").addEventListener("click", closeDrawer);
   $("drawerBackdrop").addEventListener("click", closeDrawer);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });

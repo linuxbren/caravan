@@ -1,3 +1,21 @@
+## 2026-11-23: Day 32 — Spanish localization (in progress, pending review)
+
+Local work on `day32-spanish` (from `main` at v0.9.8, `2e49275`), not
+committed until Claude approves, not tagged, not pushed. Spanish is the
+first language after English, built so Japanese, Simplified Chinese and
+Russian can drop in later: a CLDR plural engine, `locales/es.json` for
+every current key (neutral Latin American / universal Spanish, casual
+tú), a Settings language picker that switches the page live and persists
+(`CARAVAN_LANG` > Settings > the Mac's language > English), Spanish
+number and date formatting, and layout screenshots at 1280 and 375 px.
+Spanish is marked beta in the picker until a native speaker reviews it.
+Glossary: [docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md). Tests:
+`tests/test_day32_spanish.py`. Full suite: 2,175 passed, 97 subtests,
+81.52 s, with the review command. Screenshots:
+`~/Projects/caravan-day32-results/spanish/{before,after}/`. CHANGELOG
+stays at v0.9.8 until a wrap commit. The Macs were not updated (Brenden
+updates them himself). Day 32 stays open.
+
 ## 2026-11-23: Day 32 — GGUF placement (v0.9.8)
 
 Mid-day release; Day 32 stays open for choosing and adding languages.

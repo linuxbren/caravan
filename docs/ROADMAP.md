@@ -173,11 +173,15 @@ and the daily logs, not mixed into current setup instructions.
       fallback. Code checks message codes instead of English words;
       plurals, numbers, units and lists go through locale helpers. The
       English text is unchanged. No other language yet. See [DAY32](DAY32.md#localization-step-1-english-strings-file).
-    - **Next (the owner decides):** which languages to add, then a language
-      setting (the Mac's language by default, a Settings override). The
-      planned first languages were Spanish, Simplified Chinese and
-      Japanese, then German to test long words in buttons and narrow
-      layouts.
+    - **Spanish (in progress, pending review):** first language after
+      English. A CLDR plural engine (built so Japanese, Simplified Chinese
+      and Russian can drop in later), `locales/es.json` for every current
+      key, a Settings language picker that switches the page live and
+      persists (`CARAVAN_LANG` > Settings > the Mac's language > English),
+      Spanish number/date formatting, and layout checks at 1280 and 375 px.
+      Spanish is marked beta in the picker until a native speaker reviews
+      it. Work is uncommitted on `day32-spanish`. See
+      [DAY32](DAY32.md#spanish-in-progress).
   - **GGUF placement ([v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8), done):**
     every GGUF download uses the same Step 2 placement chooser as MLX,
     for every fit color: 1 Mini / split across K Minis / copy to all.

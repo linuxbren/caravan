@@ -3,47 +3,95 @@
 set -euo pipefail
 # Parse the entire bootstrap before executing, so an interrupted download cannot
 # run a truncated top-level install.
-# >>> caravan strings (generated from locales/en.json; edit there, then run: python3 tools/caravan_i18n.py --sync-shell) >>>
-S_usage_install_role_lead_worker_check() { printf '%s' "Usage: install [--role lead|worker] [--check] [--update] [--no-start] [--port PORT] [--name NAME]"; }
-S_arg_needs_a_value() { printf '%s' "${1} needs a value"; }
-S_unknown_option_arg_use_help() { printf '%s' "Unknown option: ${1}. Use --help."; }
-S_service_name_must_use_letters_numbers() { printf '%s' "Service name must use letters, numbers, _ or -."; }
-S_service_name_is_too_long() { printf '%s' "Service name is too long."; }
-S_choose_lead_or_worker() { printf '%s' "Choose lead or worker."; }
-S_port_must_be_1_65535() { printf '%s' "Port must be 1–65535."; }
-S_caravan_needs_a_mac_with_apple() { printf '%s' "Caravan needs a Mac with Apple Silicon. Nothing was installed."; }
-S_use_apple_silicon_and_a_terminal() { printf '%s' "Use Apple Silicon and a Terminal not running with Rosetta. Intel Macs are not supported."; }
-S_run_as_your_normal_mac_user() { printf '%s' "Run as your normal Mac user, without sudo."; }
-S_update_macos_to_14_or_newer() { printf '%s' "Update macOS to 14 or newer (found ${1})."; }
-S_your_home_folder_is_not_writable() { printf '%s' "Your home folder is not writable. Check its permissions."; }
-S_free_at_least_8_gb_on() { printf '%s' "Free at least 8 GB on this Mac, then retry. Models need additional space."; }
-S_this_mac_has_too_little_memory() { printf '%s' "This Mac has too little memory for setup. More memory or additional Macs lets you run bigger models."; }
-S_caravan_checks_which_models_fit_more() { printf '%s' "Caravan checks which models fit. More memory, or adding Macs, lets you run bigger models."; }
-S_mac_checks_passed_macos_os_apple() { printf '%s' "Mac checks passed: macOS ${1}, Apple Silicon. No administrator password needed."; }
-S_filevault_unlock_and_log_into_this() { printf '%s' "FileVault: unlock and log into this Mac after reboot; services run at login, not at the unlock screen."; }
-S_check_only_nothing_changed_setup_downloads() { printf '%s' "Check only: nothing changed. Setup downloads its own Python; Git, Homebrew and Xcode are not required."; }
-S_port_port_is_busy_if_not() { printf '%s' "Port ${1} is busy. If not Caravan, close that app or choose --port NUMBER."; }
-S_an_existing_custom_web_service_is() { printf '%s' "An existing custom web service is installed. Keep it; follow the source-install update instructions in INSTALL.md. Nothing was changed."; }
-S_setup_stopped_existing_models_settings_were() { printf '%s' "Setup stopped. Existing models/settings were kept. Check your internet connection and the error above, then retry."; }
-S_another_setup_is_running_if_none() { printf '%s' "Another setup is running. If none is running, remove ${1}/install.lock and retry."; }
-S_setup_stopped_models_settings_kept_inspect() { printf '%s' "Setup stopped. Models/settings kept; inspect the error above and retry."; }
-S_could_not_download_arg_check_wi() { printf '%s' "Could not download ${1}. Check Wi-Fi, proxy/firewall and free space, then retry."; }
-S_invalid_package_manifest_nothing_activated() { printf '%s' "Invalid package manifest; nothing activated."; }
-S_invalid_package_checksum_nothing_activated() { printf '%s' "Invalid package checksum; nothing activated."; }
-S_caravan_is_already_up_to_date() { printf '%s' "Caravan is already up to date."; }
-S_an_existing_source_install_lives_here() { printf '%s' "An existing source install lives here. Keep it; see INSTALL.md for migration. Nothing was replaced."; }
-S_caravan_is_already_installed_run_caravan() { printf '%s' "Caravan is already installed. Run ~/.caravan/bin/caravan update to change versions."; }
-S_package_integrity_list_missing_existing_code() { printf '%s' "Package integrity list missing; existing code kept."; }
-S_installed_source_has_edits_keep_them() { printf '%s' "Installed source has edits. Keep them; use a separate source checkout. No files replaced."; }
-S_source_checksum_mismatch_nothing_activated_r() { printf '%s' "Source checksum mismatch. Nothing activated; retry later."; }
-S_package_is_missing_its_installer() { printf '%s' "Package is missing its installer."; }
-S_package_is_missing_its_updater_existing() { printf '%s' "Package is missing its updater. Existing code kept."; }
-S_caravan_python_is_missing_existing_source() { printf '%s' "Caravan Python is missing; existing source kept. Run the install command again or caravan doctor."; }
-S_previous_source_saved_at_backup_models() { printf '%s' "Previous source saved at ${1} (models/settings unchanged)."; }
-S_python_installer_checksum_mismatch_nothing_e() { printf '%s' "Python installer checksum mismatch. Nothing executed."; }
-S_preparing_private_python_3_12_nothing() { printf '%s' "Preparing private Python 3.12. Nothing changes the Mac system Python."; }
-S_open_a_new_terminal_window_to() { printf '%s' "Open a new Terminal window to use caravan. Next time: caravan status (or doctor, start, stop, update, uninstall, add-mini)."; }
-S_the_web_page_is_not_ready() { printf '%s' "The web page is not ready yet. Run ~/.caravan/bin/caravan doctor and check ~/.caravan/logs/web.log."; }
+# >>> caravan strings (generated from locales/*.json; edit those, then run: python3 tools/caravan_i18n.py --sync-shell) >>>
+_caravan_ui_lang() {
+  _caravan_norm_lang() {
+    c=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | cut -d. -f1)
+    case "$c" in
+      es|es-*) printf '%s' es ;;
+      en|en-*) printf '%s' en ;;
+      ja|ja-*) printf '%s' ja ;;
+      ru|ru-*) printf '%s' ru ;;
+      zh-hant|zh-tw|zh-hk|zh-mo) printf '%s' zh-Hant ;;
+      zh-hans|zh-cn|zh-sg|zh) printf '%s' zh-Hans ;;
+      *) printf '%s' "$c" ;;
+    esac
+  }
+  _caravan_have_lang() {
+    case "$1" in
+      en|es) return 0 ;;
+      *) return 1 ;;
+    esac
+  }
+  if [ -n "${CARAVAN_LANG:-}" ]; then
+    n=$(_caravan_norm_lang "$CARAVAN_LANG")
+    if _caravan_have_lang "$n"; then printf '%s' "$n"; return; fi
+  fi
+  if [ -f "${HOME}/.caravan/prefs" ]; then
+    p=$(sed -n 's/.*"language"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${HOME}/.caravan/prefs" | head -n 1)
+    if [ -n "$p" ]; then
+      n=$(_caravan_norm_lang "$p")
+      if _caravan_have_lang "$n"; then printf '%s' "$n"; return; fi
+    fi
+  fi
+  if command -v defaults >/dev/null 2>&1; then
+    for tag in $(defaults read -g AppleLanguages 2>/dev/null | tr -d '"(),' ); do
+      [ -n "$tag" ] || continue
+      n=$(_caravan_norm_lang "$tag")
+      if _caravan_have_lang "$n"; then printf '%s' "$n"; return; fi
+    done
+  fi
+  if [ -n "${LC_ALL:-}" ] && [ "${LC_ALL}" != "C" ] && [ "${LC_ALL}" != "POSIX" ]; then
+    n=$(_caravan_norm_lang "$LC_ALL")
+    if _caravan_have_lang "$n"; then printf '%s' "$n"; return; fi
+  fi
+  if [ -n "${LANG:-}" ] && [ "${LANG}" != "C" ] && [ "${LANG}" != "POSIX" ]; then
+    n=$(_caravan_norm_lang "$LANG")
+    if _caravan_have_lang "$n"; then printf '%s' "$n"; return; fi
+  fi
+  printf '%s' en
+}
+CARAVAN_UI_LANG=$(_caravan_ui_lang)
+S_usage_install_role_lead_worker_check() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Uso: install [--role lead|worker] [--check] [--update] [--no-start] [--port PORT] [--name NAME]" ;; *) printf '%s' "Usage: install [--role lead|worker] [--check] [--update] [--no-start] [--port PORT] [--name NAME]" ;; esac; }
+S_arg_needs_a_value() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "${1} necesita un valor" ;; *) printf '%s' "${1} needs a value" ;; esac; }
+S_unknown_option_arg_use_help() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Opción desconocida: ${1}. Usa --help." ;; *) printf '%s' "Unknown option: ${1}. Use --help." ;; esac; }
+S_service_name_must_use_letters_numbers() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "El nombre del servicio debe usar letras, números, _ o -." ;; *) printf '%s' "Service name must use letters, numbers, _ or -." ;; esac; }
+S_service_name_is_too_long() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "El nombre del servicio es demasiado largo." ;; *) printf '%s' "Service name is too long." ;; esac; }
+S_choose_lead_or_worker() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Elige lead o worker." ;; *) printf '%s' "Choose lead or worker." ;; esac; }
+S_port_must_be_1_65535() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "El puerto debe estar entre 1 y 65535." ;; *) printf '%s' "Port must be 1–65535." ;; esac; }
+S_caravan_needs_a_mac_with_apple() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Caravan necesita un Mac con Apple Silicon. No se instaló nada." ;; *) printf '%s' "Caravan needs a Mac with Apple Silicon. Nothing was installed." ;; esac; }
+S_use_apple_silicon_and_a_terminal() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Usa Apple Silicon y una Terminal que no esté corriendo con Rosetta. Los Mac Intel no son compatibles." ;; *) printf '%s' "Use Apple Silicon and a Terminal not running with Rosetta. Intel Macs are not supported." ;; esac; }
+S_run_as_your_normal_mac_user() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Ejecútalo como tu usuario normal de Mac, sin sudo." ;; *) printf '%s' "Run as your normal Mac user, without sudo." ;; esac; }
+S_update_macos_to_14_or_newer() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Actualiza macOS a 14 o posterior (se encontró ${1})." ;; *) printf '%s' "Update macOS to 14 or newer (found ${1})." ;; esac; }
+S_your_home_folder_is_not_writable() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "No se puede escribir en tu carpeta de inicio. Revisa los permisos." ;; *) printf '%s' "Your home folder is not writable. Check its permissions." ;; esac; }
+S_free_at_least_8_gb_on() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Libera al menos 8 GB en este Mac y vuelve a intentarlo. Los modelos necesitan espacio adicional." ;; *) printf '%s' "Free at least 8 GB on this Mac, then retry. Models need additional space." ;; esac; }
+S_this_mac_has_too_little_memory() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Este Mac no tiene suficiente memoria para la instalación. Con más memoria o más Macs puedes correr modelos más grandes." ;; *) printf '%s' "This Mac has too little memory for setup. More memory or additional Macs lets you run bigger models." ;; esac; }
+S_caravan_checks_which_models_fit_more() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Caravan comprueba qué modelos caben. Con más memoria, o al añadir Macs, puedes correr modelos más grandes." ;; *) printf '%s' "Caravan checks which models fit. More memory, or adding Macs, lets you run bigger models." ;; esac; }
+S_mac_checks_passed_macos_os_apple() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Comprobaciones del Mac correctas: macOS ${1}, Apple Silicon. No se necesita contraseña de administrador." ;; *) printf '%s' "Mac checks passed: macOS ${1}, Apple Silicon. No administrator password needed." ;; esac; }
+S_filevault_unlock_and_log_into_this() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "FileVault: desbloquea e inicia sesión en este Mac después de reiniciar; los servicios se ejecutan al iniciar sesión, no en la pantalla de desbloqueo." ;; *) printf '%s' "FileVault: unlock and log into this Mac after reboot; services run at login, not at the unlock screen." ;; esac; }
+S_check_only_nothing_changed_setup_downloads() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Solo comprobación: no cambió nada. La instalación descarga su propio Python; no se necesitan Git, Homebrew ni Xcode." ;; *) printf '%s' "Check only: nothing changed. Setup downloads its own Python; Git, Homebrew and Xcode are not required." ;; esac; }
+S_port_port_is_busy_if_not() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "El puerto ${1} está ocupado. Si no es Caravan, cierra esa app o elige --port NUMBER." ;; *) printf '%s' "Port ${1} is busy. If not Caravan, close that app or choose --port NUMBER." ;; esac; }
+S_an_existing_custom_web_service_is() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Ya hay un servicio web personalizado instalado. Se conserva; sigue las instrucciones de actualización de una instalación desde el código en INSTALL.md. No se cambió nada." ;; *) printf '%s' "An existing custom web service is installed. Keep it; follow the source-install update instructions in INSTALL.md. Nothing was changed." ;; esac; }
+S_setup_stopped_existing_models_settings_were() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se detuvo la instalación. Se conservaron los modelos y ajustes existentes. Revisa tu conexión a internet y el error de arriba, y vuelve a intentarlo." ;; *) printf '%s' "Setup stopped. Existing models/settings were kept. Check your internet connection and the error above, then retry." ;; esac; }
+S_another_setup_is_running_if_none() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Hay otra instalación en curso. Si no hay ninguna, elimina ${1}/install.lock y vuelve a intentarlo." ;; *) printf '%s' "Another setup is running. If none is running, remove ${1}/install.lock and retry." ;; esac; }
+S_setup_stopped_models_settings_kept_inspect() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se detuvo la instalación. Se conservaron los modelos y ajustes; revisa el error de arriba y vuelve a intentarlo." ;; *) printf '%s' "Setup stopped. Models/settings kept; inspect the error above and retry." ;; esac; }
+S_could_not_download_arg_check_wi() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "No se pudo descargar ${1}. Revisa el Wi-Fi, el proxy o firewall y el espacio libre, y vuelve a intentarlo." ;; *) printf '%s' "Could not download ${1}. Check Wi-Fi, proxy/firewall and free space, then retry." ;; esac; }
+S_invalid_package_manifest_nothing_activated() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "El manifiesto del paquete no es válido; no se activó nada." ;; *) printf '%s' "Invalid package manifest; nothing activated." ;; esac; }
+S_invalid_package_checksum_nothing_activated() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "La suma de comprobación del paquete no es válida; no se activó nada." ;; *) printf '%s' "Invalid package checksum; nothing activated." ;; esac; }
+S_caravan_is_already_up_to_date() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Caravan ya está actualizado." ;; *) printf '%s' "Caravan is already up to date." ;; esac; }
+S_an_existing_source_install_lives_here() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Ya hay una instalación desde el código aquí. Se conserva; consulta INSTALL.md para migrar. No se reemplazó nada." ;; *) printf '%s' "An existing source install lives here. Keep it; see INSTALL.md for migration. Nothing was replaced." ;; esac; }
+S_caravan_is_already_installed_run_caravan() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Caravan ya está instalado. Ejecuta ~/.caravan/bin/caravan update para cambiar de versión." ;; *) printf '%s' "Caravan is already installed. Run ~/.caravan/bin/caravan update to change versions." ;; esac; }
+S_package_integrity_list_missing_existing_code() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Falta la lista de integridad del paquete; se conservó el código existente." ;; *) printf '%s' "Package integrity list missing; existing code kept." ;; esac; }
+S_installed_source_has_edits_keep_them() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "El código instalado tiene cambios. Se conservan; usa otra carpeta de código. No se reemplazó ningún archivo." ;; *) printf '%s' "Installed source has edits. Keep them; use a separate source checkout. No files replaced." ;; esac; }
+S_source_checksum_mismatch_nothing_activated_r() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "La suma de comprobación del código no coincide. No se activó nada; inténtalo más tarde." ;; *) printf '%s' "Source checksum mismatch. Nothing activated; retry later." ;; esac; }
+S_package_is_missing_its_installer() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Al paquete le falta su instalador." ;; *) printf '%s' "Package is missing its installer." ;; esac; }
+S_package_is_missing_its_updater_existing() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Al paquete le falta su actualizador. Se conservó el código existente." ;; *) printf '%s' "Package is missing its updater. Existing code kept." ;; esac; }
+S_caravan_python_is_missing_existing_source() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Falta el Python de Caravan; se conservó el código existente. Vuelve a ejecutar el comando de instalación o caravan doctor." ;; *) printf '%s' "Caravan Python is missing; existing source kept. Run the install command again or caravan doctor." ;; esac; }
+S_previous_source_saved_at_backup_models() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "El código anterior se guardó en ${1} (modelos y ajustes sin cambios)." ;; *) printf '%s' "Previous source saved at ${1} (models/settings unchanged)." ;; esac; }
+S_python_installer_checksum_mismatch_nothing_e() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "La suma de comprobación del instalador de Python no coincide. No se ejecutó nada." ;; *) printf '%s' "Python installer checksum mismatch. Nothing executed." ;; esac; }
+S_preparing_private_python_3_12_nothing() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Preparando un Python 3.12 privado. No se modifica el Python del sistema del Mac." ;; *) printf '%s' "Preparing private Python 3.12. Nothing changes the Mac system Python." ;; esac; }
+S_open_a_new_terminal_window_to() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Abre una ventana nueva de Terminal para usar caravan. La próxima vez: caravan status (o doctor, start, stop, update, uninstall, add-mini)." ;; *) printf '%s' "Open a new Terminal window to use caravan. Next time: caravan status (or doctor, start, stop, update, uninstall, add-mini)." ;; esac; }
+S_the_web_page_is_not_ready() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "La página web todavía no está lista. Ejecuta ~/.caravan/bin/caravan doctor y revisa ~/.caravan/logs/web.log." ;; *) printf '%s' "The web page is not ready yet. Run ~/.caravan/bin/caravan doctor and check ~/.caravan/logs/web.log." ;; esac; }
 # <<< caravan strings <<<
 main() {
 say() { printf '[Caravan] %s\n' "$*"; }

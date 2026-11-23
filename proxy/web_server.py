@@ -1153,6 +1153,8 @@ def make_handler(app: App):
                 return self._api_remote()
             if path == "/api/lan":
                 return self._api_lan()
+            if path == "/api/language":
+                return self._api_language()
             if path == "/api/update":
                 return self._api_update()
             if path == "/api/helper-offer":
@@ -1364,6 +1366,8 @@ def make_handler(app: App):
                 return self._api_remote(post=True, body=body)
             if path == "/api/lan":
                 return self._api_lan(post=True, body=body)
+            if path == "/api/language":
+                return self._api_language(post=True, body=body)
             if path == "/api/update":
                 return self._api_update(post=True, body=body)
             return self._json(404, {"error": T("server.web_server.not_found")})
@@ -1425,6 +1429,8 @@ def make_handler(app: App):
                 "uptime_s": round(time.time() - app.started, 1),
                 "page": page_tag(),
                 "version": _installed_version(),
+                "language": I18N.language(),
+                "languages": I18N.picker_languages(),
                 "ports": {"web": DEFAULT_PORT, "lead": app.mgr.lead_port,
                           "packer": (split or {}).get("peer") or app.mgr.packer_peer},
             })
@@ -1920,6 +1926,20 @@ def make_handler(app: App):
                 return self._json(400, {**payload, "error": info.get("message")})
             return self._json(200, payload)
 
+
+
+        def _api_language(self, post=False, body=None):
+            """GET the current language; POST {language} saves it (Settings)."""
+            if post:
+                body = body if isinstance(body, dict) else {}
+                code = body.get("language")
+                if not isinstance(code, str) or not I18N.normalize_language(code):
+                    return self._json(400, {"error": T("server.web_server.send_a_known_language")})
+                I18N.save_language(code)
+            return self._json(200, {
+                "language": I18N.language(),
+                "languages": I18N.picker_languages(),
+            })
 
         def _api_lan(self, post=False, body=None):
             import os as _os

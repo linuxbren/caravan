@@ -77,9 +77,13 @@ class StringsFile(unittest.TestCase):
             self.assertIsInstance(v, str, k)
             self.assertTrue(v.strip(), k)
 
-    def test_english_only_for_now(self):
-        self.assertEqual(sorted(p.name for p in (ROOT / "locales").glob("*.json")), ["en.json"])
-        self.assertEqual(C.available_languages(), ["en"])
+    def test_english_is_always_available(self):
+        names = sorted(p.name for p in (ROOT / "locales").glob("*.json"))
+        self.assertIn("en.json", names)
+        self.assertIn("en", C.available_languages())
+        for name in names:
+            self.assertTrue(name.endswith(".json"))
+            self.assertRegex(name[:-5], r"^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$")
 
     def test_markup_keys_are_named_html(self):
         for k, v in I.en().items():
@@ -150,9 +154,13 @@ class Lookup(unittest.TestCase):
                     self.assertTrue(page.startswith("<b>Okey</b><script>window.CARAVAN_LANG=\"xx\";"))
                     self.assertIn('"web.recommended_tag":"recommended"', page)
 
-    def test_hooks_for_mac_language_and_settings_exist_but_are_off(self):
+    def test_mac_language_is_none_off_macos_and_settings_can_save(self):
+        C.clear_language_cache()
         self.assertIsNone(C.mac_language())
-        self.assertIsNone(C._saved_language())
+        with tempfile.TemporaryDirectory() as d:
+            with mock.patch.dict(os.environ, {"CARAVAN_HOME": d}, clear=False):
+                # No prefs file yet.
+                self.assertIsNone(C._saved_language())
 
     def test_tools_modules_use_the_lookup_not_another_T(self):
         for path in I.CLI_FILES:

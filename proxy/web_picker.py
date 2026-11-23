@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional
 try:
-    from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
+    from caravan_i18n import T, fmt_date  # noqa: E402  (Day 32: user-facing text, tools/caravan_i18n.py)
 except ImportError:  # run without tools/ on the path
     import sys as _sys
     from pathlib import Path as _Path
@@ -189,7 +189,7 @@ def release_month(*timestamps):
     for raw in timestamps:
         ts = _parse_hf_time(raw)
         if ts:
-            return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%B %Y")
+            return fmt_date(datetime.fromtimestamp(ts, tz=timezone.utc), "month_year")
     return None
 
 

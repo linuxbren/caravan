@@ -16,7 +16,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
+from caravan_i18n import T, fmt_date  # noqa: E402  (Day 32: user-facing text)
 
 DEFAULT_PORT = int(os.environ.get("CARAVAN_WEB_PORT", "8190"))
 STATUS_WORDS = {
@@ -42,7 +42,7 @@ def _get(path, port, timeout=10):
 
 
 def _when(t):
-    return time.strftime("%b %d %H:%M:%S", time.localtime(float(t))) if t else "-"
+    return fmt_date(time.localtime(float(t)), "short") if t else "-"
 
 
 def format_list(data) -> str:

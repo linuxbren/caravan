@@ -21,6 +21,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
+from caravan_i18n import fmt_date
 
 try:
     from zoneinfo import ZoneInfo
@@ -270,7 +271,7 @@ def plain_date(iso, tz_name="America/Chicago"):
             dt = dt.astimezone(ZoneInfo(tz_name))
         except Exception:
             dt = dt.astimezone(timezone.utc)
-    return dt.strftime("%B ") + str(dt.day)
+    return fmt_date(dt, "month_day")
 
 
 def is_pin_subject(subject):
