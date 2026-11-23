@@ -181,8 +181,8 @@ runs each), not from this work.
 - **Technical values:** config names and TOML keys, launchd labels,
   command lines, model and family names, protocol tokens, and worker
   output from llama.cpp / MLX (English, passed through as it comes).
-- **Dates and times** use the browser's own formatting already; no custom
-  date strings.
+- **Times** show as 24-hour numbers (`HH:MM:SS.cc` milestone stamps),
+  the same in any language; no month or day names are shown.
 - **CLI text looked up once at start-up:** a few module-level messages
   are read when the command starts. Fine while the language is fixed per
   run.
