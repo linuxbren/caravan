@@ -9,7 +9,7 @@ across K Minis / copy to all, for any number of Macs from the config.
 Unfit options stay visible and disabled with the reason; the default is
 the smallest placement that fits; the choice is saved and honored at
 download and at load. Tests: `tests/test_day32_gguf_placement.py`. Suite
-2,161 OK. The Macs were not updated (Brenden updates them himself).
+2,161 OK. Source `0a9097a`, pin `84d1b2a`, tag v0.9.8. The Macs were not updated (Brenden updates them himself).
 
 ## 2026-11-23: Day 32 — drop unreleased CHANGELOG section until release
 

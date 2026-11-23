@@ -13,7 +13,7 @@ See [DAY32](docs/DAY32.md#gguf-placement-roadmap-9).
   in Day 31). The choice is saved as `caravan-placement.json` and honored
   at download and at load: only the needed files go to the chosen Mini(s),
   and a one-Mini choice is not turned into a split.
-- Tests: `tests/test_day32_gguf_placement.py`. 2,161 tests pass.
+- Source `0a9097a`, pin `84d1b2a`. 2,161 tests pass.
 
 ## Day 32 localization step 1 (v0.9.7) — all text in one English strings file
 

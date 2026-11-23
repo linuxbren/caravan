@@ -250,9 +250,9 @@ in this release's source commit.
 Built on the local branch `day32-localization` (on `7905018`), reviewed
 by Claude (approved 2026-11-23 06:36 CST: full suite 2,161 of 2,161 with
 the review command) and merged to `main` fast-forward only.
-Released as a mid-day release, tag
+Released as a mid-day release: source `0a9097a`, pin `84d1b2a`; tag
 [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8) on the
-wrap commit (source and pin commits are recorded after publishing).
+wrap commit.
 Notes: [release-notes/day32-v0.9.8.md](release-notes/day32-v0.9.8.md).
 
 The Macs were not updated as part of the release; Brenden updates them
