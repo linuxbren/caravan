@@ -322,7 +322,7 @@ class Page(unittest.TestCase):
 import os  # noqa: E402
 import shutil  # noqa: E402
 import subprocess  # noqa: E402
-from test_day32_header_queue import _Mock, _chromium  # noqa: E402
+from test_day32_header_queue import _Mock, _browser_env, _chromium  # noqa: E402
 
 
 class _StopMock(_Mock):
@@ -374,7 +374,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const out = {};
   const dir = fs.mkdtempSync(os.tmpdir() + '/cdps-');
-  const ch = spawn(process.env.CHROMIUM, ['--headless=new', '--remote-debugging-port=' + port, '--user-data-dir=' + dir, 'about:blank'], {stdio: 'ignore'});
+  const ch = spawn(process.env.CHROMIUM, ['--headless=new', '--disable-extensions', '--no-first-run', '--remote-debugging-port=' + port, '--user-data-dir=' + dir, 'about:blank'], {stdio: 'ignore'});
   try {
     let tabs; for (let i = 0; i < 80; i++) { try { tabs = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); break; } catch { await sleep(250); } }
     const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl);
@@ -396,8 +396,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     out.streaming = await ev(`JSON.stringify({stop: !${S}("btnStopReply").hidden, btn: ${S}("btnSend").textContent})`).then(JSON.parse);
     await type('next');
     out.queued = await ev(`[...${S}("queueStrip").children].map(c=>c.title)`);
-    await ev(`${S}("btnStopReply").click()`);
-    out.stoppingLabel = await ev(`${S}("btnStopReply").textContent`);
+    // Click and read the label in one step: "Stopping…" lasts only until the
+    // reply ends, so a second round trip could miss it.
+    out.stoppingLabel = await ev(`(()=>{const b=${S}("btnStopReply"); b.click(); return b.textContent;})()`);
     await until(`document.querySelectorAll("#messages .msg.assistant").length === 2 && (document.querySelectorAll("#messages .msg.assistant .body")[1].textContent||"").includes("next done") && ${S}("btnStopReply").hidden`);
     out.after = await ev(`JSON.stringify({
       bodies: [...document.querySelectorAll("#messages .msg.assistant .body")].map(e=>e.textContent),
@@ -432,7 +433,7 @@ class StopInBrowser(unittest.TestCase):
             f.write(STOP_DRIVER)
             drv = f.name
         s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
-        env = dict(os.environ, CHROMIUM=_chromium())
+        env = _browser_env()
         proc = subprocess.run([shutil.which("node"), drv, url, str(port)], capture_output=True, text=True, timeout=120, env=env)
         os.unlink(drv)
         cls.httpd.shutdown()

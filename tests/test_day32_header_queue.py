@@ -245,7 +245,7 @@ let portSeq = +process.argv[3];
 async function browser(width) {
   const port = portSeq++;
   const dir = fs.mkdtempSync(os.tmpdir() + '/cdpq-');
-  const ch = spawn(process.env.CHROMIUM, ['--headless=new', '--remote-debugging-port=' + port, '--user-data-dir=' + dir, 'about:blank'], {stdio: 'ignore'});
+  const ch = spawn(process.env.CHROMIUM, ['--headless=new', '--disable-extensions', '--no-first-run', '--remote-debugging-port=' + port, '--user-data-dir=' + dir, 'about:blank'], {stdio: 'ignore'});
   let tabs; for (let i = 0; i < 80; i++) { try { tabs = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); break; } catch { await sleep(250); } }
   const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl);
   await new Promise(r => ws.onopen = r);
@@ -319,6 +319,15 @@ def _chromium():
     return None
 
 
+def _browser_env():
+    """Environment for the test browser. Distro launchers (Arch's
+    /usr/bin/chromium) add the user's ~/.config/chromium-flags.conf, which
+    can load extensions and turn on renderer accessibility; that made the
+    page so slow that a CDP read took seconds and timing checks failed on
+    and off. An empty XDG_CONFIG_HOME keeps the test browser plain."""
+    return dict(os.environ, CHROMIUM=_chromium(), XDG_CONFIG_HOME=tempfile.mkdtemp(prefix="caravan-cfg-"))
+
+
 @unittest.skipUnless(shutil.which("node") and _chromium() and os.environ.get("CARAVAN_SKIP_BROWSER") != "1",
                      "node and chromium needed")
 class EndToEndInBrowser(unittest.TestCase):
@@ -337,7 +346,7 @@ class EndToEndInBrowser(unittest.TestCase):
             drv = f.name
         import socket
         s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
-        env = dict(os.environ, CHROMIUM=_chromium())
+        env = _browser_env()
         proc = subprocess.run([shutil.which("node"), drv, url, str(port)], capture_output=True, text=True, timeout=240, env=env)
         os.unlink(drv)
         cls.httpd.shutdown()
