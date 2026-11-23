@@ -79,8 +79,15 @@ def normalize_language(code, available=None):
     avail = set(available if available is not None else available_languages())
     candidates = []
     if lang == "zh":
+        # Explicit script wins over region: zh-Hans-TW is Simplified,
+        # zh-Hant-CN is Traditional. Region-only tags: TW/HK/MO are
+        # Traditional; CN/SG and bare "zh" are Simplified.
         tokens = {p.lower() for p in rest}
-        if tokens & {"hant", "tw", "hk", "mo"}:
+        if "hant" in tokens:
+            candidates += ["zh-Hant", "zh"]
+        elif "hans" in tokens:
+            candidates += ["zh-Hans", "zh"]
+        elif tokens & {"tw", "hk", "mo"}:
             candidates += ["zh-Hant", "zh"]
         else:
             candidates += ["zh-Hans", "zh"]
@@ -199,7 +206,7 @@ def picker_languages(lang=None):
     out = []
     for code in available_languages():
         meta = LANGUAGE_META.get(code, {"beta": code != DEFAULT_LANGUAGE})
-        name_key = "web.language_name_" + code.replace("-", "_")
+        name_key = "web.language_name_" + code.replace("-", "_").lower()
         name = t_in(show_in, name_key)
         if name == name_key:
             name = code

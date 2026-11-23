@@ -6,8 +6,10 @@ _caravan_ui_lang() {
       en|en-*) printf '%s' en ;;
       ja|ja-*) printf '%s' ja ;;
       ru|ru-*) printf '%s' ru ;;
-      zh-hant|zh-tw|zh-hk|zh-mo) printf '%s' zh-Hant ;;
-      zh-hans|zh-cn|zh-sg|zh) printf '%s' zh-Hans ;;
+      zh-hant|zh-hant-*) printf '%s' zh-Hant ;;
+      zh-hans|zh-hans-*) printf '%s' zh-Hans ;;
+      zh-tw|zh-tw-*|zh-hk|zh-hk-*|zh-mo|zh-mo-*) printf '%s' zh-Hant ;;
+      zh-cn|zh-cn-*|zh-sg|zh-sg-*|zh) printf '%s' zh-Hans ;;
       *) printf '%s' "$c" ;;
     esac
   }

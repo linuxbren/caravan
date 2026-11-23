@@ -1431,25 +1431,30 @@
   html[lang="es"] #settingsDrawer .drawer-control,
   html[lang="ru"] #settingsDrawer .drawer-control,
   html[lang="ja"] #settingsDrawer .drawer-control,
+  html[lang="zh-Hans"] #settingsDrawer .drawer-control,
   html[lang="es"] button.primary, html[lang="es"] button.ghost,
   html[lang="ru"] button.primary, html[lang="ru"] button.ghost,
-  html[lang="ja"] button.primary, html[lang="ja"] button.ghost {
+  html[lang="ja"] button.primary, html[lang="ja"] button.ghost,
+  html[lang="zh-Hans"] button.primary, html[lang="zh-Hans"] button.ghost {
     line-height: 1.25;
   }
-  /* Longer Spanish, Russian and Japanese labels in the chat header button stack. */
+  /* Longer labels in the chat header button stack. */
   html[lang="es"] .chathead-actions,
   html[lang="ru"] .chathead-actions,
-  html[lang="ja"] .chathead-actions { width: 168px; }
+  html[lang="ja"] .chathead-actions,
+  html[lang="zh-Hans"] .chathead-actions { width: 168px; }
   html[lang="es"] .chathead-actions button,
   html[lang="ru"] .chathead-actions button,
-  html[lang="ja"] .chathead-actions button {
+  html[lang="ja"] .chathead-actions button,
+  html[lang="zh-Hans"] .chathead-actions button {
     white-space: normal; line-height: 1.2; overflow-wrap: anywhere; letter-spacing: .04em;
   }
   @media (max-width: 420px) {
     .chathead-actions { width: min(168px, 46vw); }
     html[lang="es"] .chathead-actions,
     html[lang="ru"] .chathead-actions,
-    html[lang="ja"] .chathead-actions { width: min(184px, 54vw); }
+    html[lang="ja"] .chathead-actions,
+    html[lang="zh-Hans"] .chathead-actions { width: min(184px, 54vw); }
     .chathead-actions button {
       white-space: normal; line-height: 1.2; padding: 7px 8px; letter-spacing: .03em;
     }
@@ -1468,6 +1473,20 @@
   html[lang="ja"][data-theme="meadow"] {
     --sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Yu Gothic UI", "Yu Gothic", "Meiryo", "Inter", "Nunito", "SF Pro Text", system-ui, sans-serif;
     --mono: "Hiragino Sans", "Noto Sans CJK JP", "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    line-break: strict;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Day 32 Simplified Chinese: CJK line breaking and fonts that cover simplified han. */
+  html[lang="zh-Hans"],
+  html[lang="zh-Hans"][data-theme="amber"],
+  html[lang="zh-Hans"][data-theme="green"],
+  html[lang="zh-Hans"][data-theme="omarchy"],
+  html[lang="zh-Hans"][data-theme="campfire"],
+  html[lang="zh-Hans"][data-theme="meadow"] {
+    --sans: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", "WenQuanYi Micro Hei", "Inter", "Nunito", "SF Pro Text", system-ui, sans-serif;
+    --mono: "PingFang SC", "Noto Sans CJK SC", "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
     line-break: strict;
     word-break: normal;
     overflow-wrap: anywhere;
@@ -2012,6 +2031,7 @@
         <option value="es">{{web.language_name_es}}</option>
         <option value="ru">{{web.language_name_ru}}</option>
         <option value="ja">{{web.language_name_ja}}</option>
+        <option value="zh-Hans">{{web.language_name_zh_hans}}</option>
       </select>
       <span class="hidden" hidden>{{web.language_beta}}</span>
       <small class="lang-help">{{web.language_help}}</small>

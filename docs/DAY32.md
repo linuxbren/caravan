@@ -11,7 +11,7 @@ user-facing text in one English strings file) is another mid-day release,
 [v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9). Russian is another mid-day release,
 [v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10). Japanese is another mid-day release,
 [v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11). Day 32 stays open: Simplified
-Chinese can drop in later.
+Chinese is in progress (uncommitted, pending review).
 
 1. [Status of every Day 32 request](#status-of-every-day-32-request)
 2. [Plan: localization](#plan-localization)
@@ -30,6 +30,7 @@ Chinese can drop in later.
 13. [Spanish (v0.9.9)](#spanish-v099)
 14. [Russian (v0.9.10)](#russian-v0910)
 15. [Japanese (v0.9.11)](#japanese-v0911)
+16. [Simplified Chinese (in progress, pending review)](#simplified-chinese-in-progress-pending-review)
 
 ## Status of every Day 32 request
 
@@ -46,6 +47,7 @@ Chinese can drop in later.
 | Spanish: CLDR plurals, `locales/es.json`, Settings language picker, locale formatting, layout screenshots, beta until native-reviewed | Done, reviewed (Claude: approved 09:05 CST), released in [v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9) (mid-day); Brenden updates the Macs himself ([details](#spanish-v099)) |
 | Russian: `locales/ru.json`, glossary column, picker + installer, formatting, Cyrillic layout, plurals one/few/many/other, beta until native-reviewed | Done, reviewed (Claude: approved 11:05 CST), released in [v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10) (mid-day); Brenden updates the Macs himself ([details](#russian-v0910)) |
 | Japanese: `locales/ja.json`, glossary column, picker + installer, formatting, CJK line breaking, `_other`-only plurals, beta until native-reviewed | Done, reviewed (Claude: approved 12:25 CST), released in [v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11) (mid-day); Brenden updates the Macs himself ([details](#japanese-v0911)) |
+| Simplified Chinese: `locales/zh-Hans.json`, glossary column, picker + installer, formatting, CJK line breaking, `_other`-only plurals, beta until native-reviewed | In progress on `day32-chinese` (uncommitted, pending review). CHANGELOG and VERSION stay at 0.9.11 until the wrap. The Macs are not updated ([details](#simplified-chinese-in-progress-pending-review)) |
 | A confirmation step before every download (ROADMAP Next candidates #9; raised in the step 1 review): GGUF should use the same Step 2 placement chooser as MLX, for every fit color | Done, reviewed (Claude: approved), released in [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8) (mid-day); Brenden updates the Macs himself ([details](#gguf-placement-roadmap-9)) |
 
 ## Plan: localization
@@ -434,6 +436,47 @@ Notes: [release-notes/day32-v0.9.11.md](release-notes/day32-v0.9.11.md).
 
 The Macs were not updated as part of the release; Brenden updates them
 himself with `caravan update`. Day 32 stays open for other languages.
+
+
+## Simplified Chinese (in progress, pending review)
+
+Brenden (2026-11-23, t1131u): start Simplified Chinese, same process as
+Spanish, Russian and Japanese. Work is on the local branch
+`day32-chinese` (from `main` at v0.9.11, `9ad1fbe`). Changes stay
+uncommitted until Claude approves. CHANGELOG and VERSION stay at 0.9.11
+until the wrap. The Macs are not updated (Brenden updates them himself).
+
+What this adds:
+
+- `locales/zh-Hans.json` for every current English key except non-`other`
+  plural forms (natural, idiomatic Simplified Chinese, using 你 rather
+  than formal 您; short button labels). Model names, **Caravan**,
+  **Mini**, **GGUF**, **MLX**, and commands stay in English. Plural keys
+  use `_other` only. Glossary: [docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md)
+  (Simplified Chinese column). Download is 下载; Unload is 卸载.
+- A Settings language picker and installer shell block that include
+  **简体中文 (beta)**. Default order is unchanged (`CARAVAN_LANG`, then
+  the saved Settings choice, then the Mac's language, then English).
+  `zh-Hans`, `zh-CN`, `zh-SG`, `zh` and underscore variants map to
+  Simplified Chinese; `zh-Hant`, `zh-TW` and `zh-HK` do not. Explicit
+  script wins over region (`zh-Hans-TW` is Simplified). Simplified
+  Chinese is marked **beta** until a native speaker reviews it. All
+  picker strings go through `T()`.
+- Locale formatting for Simplified Chinese: dates like 2026年11月13日
+  and 2026年11月, lists with 、 and 和, numbers like 1,234.5, and
+  ordinals like 第1 / 第2.
+- Layout: CJK line breaking (`line-break: strict`, `word-break: normal`,
+  `overflow-wrap: anywhere`) and fonts that cover Simplified Chinese
+  (`PingFang SC`, `Hiragino Sans GB`, `Noto Sans CJK SC`,
+  `Microsoft YaHei`). Each main screen is screenshotted in English and
+  Simplified Chinese with the mock server (1280 and 375 px) and
+  overflows are fixed. Shots live in
+  `~/Projects/caravan-day32-results/chinese/` (not in the repo).
+- Tests: `tests/test_day32_chinese.py` (parity except non-`other`
+  plurals, placeholders, `_html` tags, `_other`-only plural forms in
+  real strings, locale-tag normalization, picker, installer shell).
+  The exact suite result is recorded in the Claude review request after
+  the final repo change.
 
 ## Part A: version label
 

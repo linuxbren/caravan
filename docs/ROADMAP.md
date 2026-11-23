@@ -197,6 +197,18 @@ and the daily logs, not mixed into current setup instructions.
       (2026年11月13日, 、 lists), CJK line breaking, and layout checks at
       1280 and 375 px. Japanese is marked beta until a native speaker
       reviews it. See [DAY32](DAY32.md#japanese-v0911).
+    - **Simplified Chinese (in progress, pending review):** last planned
+      Day 32 language, after Japanese. `locales/zh-Hans.json` for every
+      current key (natural, idiomatic Simplified Chinese, 你 rather than
+      formal 您), `_other` only for plural keys, **简体中文 (beta)** in
+      the Settings picker and the installer shell block, Simplified
+      Chinese number/date formatting (2026年11月13日, 、 and 和 lists),
+      CJK line breaking, and layout checks at 1280 and 375 px. Canonical
+      locale is `zh-Hans` (`zh-CN` / `zh-SG` / `zh` map to it; `zh-Hant`
+      / `zh-TW` / `zh-HK` do not). Work is uncommitted on `day32-chinese`
+      off v0.9.11 (`9ad1fbe`); CHANGELOG and VERSION stay at 0.9.11 until
+      the wrap. Simplified Chinese is marked beta until a native speaker
+      reviews it. See [DAY32](DAY32.md#simplified-chinese-in-progress-pending-review).
   - **GGUF placement ([v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8), done):**
     every GGUF download uses the same Step 2 placement chooser as MLX,
     for every fit color: 1 Mini / split across K Minis / copy to all.
