@@ -2328,6 +2328,7 @@
  "web.language_name_en": "English",
  "web.language_name_es": "Español",
  "web.language_name_ru": "Русский",
+ "web.language_name_ja": "日本語",
  "web.language_beta": "beta",
  "web.language_option_beta": "{name} ({beta})",
  "web.language_help": "Caravan uses this language on this Mac. The page switches as soon as you pick one.",

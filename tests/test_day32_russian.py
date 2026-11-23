@@ -178,7 +178,8 @@ class InstallerLanguage(unittest.TestCase):
         import subprocess
         block = C.shell_block()
         self.assertIn("CARAVAN_UI_LANG", block)
-        self.assertRegex(block, r"en\|es\|ru|en\|ru\|es|ru\|en\|es")
+        # Have-list is available codes, sorted (ja may also be present).
+        self.assertRegex(block, r"en\|es\|(?:ja\|)?ru")
         out_en = subprocess.run(
             ["bash", "-c", "CARAVAN_LANG=en\n" + block + '\nS_update_macos_to_14_or_newer "13.1"; echo'],
             capture_output=True, text=True, timeout=30,

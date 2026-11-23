@@ -1,3 +1,19 @@
+## 2026-11-23: Day 32 — Japanese localization (in progress, pending review)
+
+Local work on `day32-japanese` (from `main` at v0.9.10, `b5eb31f`), not
+committed until Claude approves, not tagged, not pushed. Japanese is the
+next language after Russian: `locales/ja.json` for every current key
+(natural, polite-casual Japanese, です/ます where it suits the UI),
+`_other` only for plural keys, **日本語 (beta)** in the Settings picker
+and the installer shell block, Japanese number and date formatting
+(2026年11月13日, 、 lists), CJK line breaking and fonts, and layout
+screenshots at 1280 and 375 px. Japanese is marked beta in the picker
+until a native speaker reviews it. Glossary:
+[docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md). Tests:
+`tests/test_day32_japanese.py`. Full suite: 2,198 passed, 97 subtests, 83.29 s, with the review command. CHANGELOG stays at v0.9.10 until a wrap
+commit. The Macs were not updated (Brenden updates them himself). Day 32
+stays open.
+
 ## 2026-11-23: Day 32 — Russian localization (v0.9.10)
 
 Mid-day release; Day 32 stays open for other languages. Built on the
