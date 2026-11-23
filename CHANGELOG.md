@@ -22,7 +22,7 @@ See [DAY32](docs/DAY32.md#japanese-v0911).
   `overflow-wrap: anywhere`) and fonts that cover Japanese
   (`Hiragino Sans`, `Noto Sans CJK JP`, and the usual Mac gothic faces).
   Longer Japanese labels wrap with the same rules as Spanish and Russian.
-- Tests: `tests/test_day32_japanese.py`. 2,198 tests pass.
+- Source `ff81dbe`, pin `2e778d8`. 2,198 tests pass.
 
 ## Day 32 — Russian localization (v0.9.10)
 

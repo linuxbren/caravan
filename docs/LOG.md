@@ -11,7 +11,7 @@ number and date formatting (2026年11月13日, 、 lists), CJK line breaking
 and fonts, and layout screenshots at 1280 and 375 px. Japanese is marked
 beta in the picker until a native speaker reviews it. Glossary:
 [docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md). Tests:
-`tests/test_day32_japanese.py`. Suite 2,198 OK. The Macs were not updated
+`tests/test_day32_japanese.py`. Suite 2,198 OK. Source `ff81dbe`, pin `2e778d8`, tag v0.9.11. The Macs were not updated
 (Brenden updates them himself).
 
 ## 2026-11-23: Day 32 — Japanese localization (in progress, pending review)

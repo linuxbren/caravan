@@ -427,9 +427,9 @@ What this adds:
 Built on the local branch `day32-japanese` (on `b5eb31f`), reviewed
 by Claude (approved 2026-11-23 12:25 CST: full suite 2,198 of 2,198 with
 the review command) and merged to `main` fast-forward only.
-Released as a mid-day release, tag
+Released as a mid-day release: source `ff81dbe`, pin `2e778d8`; tag
 [v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11) on the
-wrap commit (source and pin commits are recorded after publishing).
+wrap commit.
 Notes: [release-notes/day32-v0.9.11.md](release-notes/day32-v0.9.11.md).
 
 The Macs were not updated as part of the release; Brenden updates them
