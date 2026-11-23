@@ -14,7 +14,7 @@ breaking and fonts, and layout screenshots at 1280 and 375 px.
 `zh-Hant` / `zh-TW` / `zh-HK` do not. Simplified Chinese is marked beta
 in the picker until a native speaker reviews it. Glossary:
 [docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md). Tests:
-`tests/test_day32_chinese.py`. Suite 2,213 OK. The Macs were not updated
+`tests/test_day32_chinese.py`. Suite 2,213 OK. Source `969581b`, pin `2c070ad`, tag v0.9.12. The Macs were not updated
 (Brenden updates them himself).
 
 ## 2026-11-23: Day 32 — Simplified Chinese localization (in progress, pending review)

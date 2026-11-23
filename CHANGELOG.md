@@ -28,7 +28,7 @@ See [DAY32](docs/DAY32.md#simplified-chinese-v0912).
   (`PingFang SC`, `Hiragino Sans GB`, `Noto Sans CJK SC`,
   `Microsoft YaHei`). Longer Chinese labels wrap with the same rules as
   Spanish, Russian and Japanese.
-- Tests: `tests/test_day32_chinese.py`. 2,213 tests pass.
+- Source `969581b`, pin `2c070ad`. 2,213 tests pass.
 
 ## Day 32 — Japanese localization (v0.9.11)
 

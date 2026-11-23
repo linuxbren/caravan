@@ -490,9 +490,9 @@ What this adds:
 Built on the local branch `day32-chinese` (on `9ad1fbe`), reviewed
 by Claude (approved 2026-11-23 17:02 CST: full suite 2,213 of 2,213 with
 the review command) and merged to `main` fast-forward only.
-Released as a mid-day release, tag
+Released as a mid-day release: source `969581b`, pin `2c070ad`; tag
 [v0.9.12](https://github.com/linuxbren/caravan/releases/tag/v0.9.12) on the
-wrap commit (source and pin commits are recorded after publishing).
+wrap commit.
 Notes: [release-notes/day32-v0.9.12.md](release-notes/day32-v0.9.12.md).
 
 The Macs were not updated as part of the release; Brenden updates them
