@@ -360,12 +360,15 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
         return o
 
     opts = []
-    for n in lead:  # GGUF runs llama-server on the lead; the file lives there
+    # One Mini per online node (same shape as MLX). Lead stays first so
+    # existing default/summary tests keep seeing it as options[0].
+    for n in ordered:
         ok, plan, why, gb = _check([n])
         o = {
-            "id": f"one:{n['id']}", "mode": "one", "node_ids": [n["id"]],
+            "id": f"one:{n['id']}", "mode": "one", "k": 1, "node_ids": [n["id"]],
             "node_labels": [n.get("label") or n["id"]],
             "label": T("server.gguf_split.one_mini_v", v=n.get('label') or n['id']),
+            "full_copy": True,
             "reason": "" if ok or why or plan else
             T("server.gguf_split.needs_need_gb_label_has_gb", need=need, label=n.get('label'), gb=gb),
         }
@@ -376,13 +379,32 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
         labels = [n.get("label") or n["id"] for n in grp]
         o = {
             "id": "split:" + ",".join(n["id"] for n in grp), "mode": "split",
-            "node_ids": [n["id"] for n in grp], "node_labels": labels,
+            "k": k, "node_ids": [n["id"] for n in grp], "node_labels": labels,
             "label": T("server.gguf_split.split_across_k_minis_labels", k=k, labels=' + '.join(labels)),
+            "full_copy": False,
             "reason": "" if ok or why or plan else
             T("server.gguf_split.needs_need_gb_these_minis_have", need=need, gb=gb),
         }
         opts.append(_fill(o, ok, plan, why, gb, k))
-    enabled = [o for o in opts if o["enabled"]]
+    # Copy to all: a full file on every online Mini, like MLX.
+    all_ids = [n["id"] for n in ordered]
+    all_labels = [n.get("label") or n["id"] for n in ordered]
+    ones = [o for o in opts if o.get("mode") == "one"]
+    all_ok = bool(ordered) and all(o.get("enabled") for o in ones)
+    all_reason = ""
+    if not ordered:
+        all_reason = T("server.placement.no_online_nodes")
+    elif not all_ok:
+        all_reason = next((o.get("reason") for o in ones if not o.get("enabled") and o.get("reason")), "") or T("server.placement.model_does_not_fit_as_a")
+    opts.append({
+        "id": "all", "mode": "all", "k": len(ordered),
+        "node_ids": all_ids, "node_labels": all_labels,
+        "label": T("server.placement.copy_to_all_v", v=T.join(all_labels) or T("server.placement.no_online_nodes")),
+        "enabled": bool(all_ok), "fits": bool(all_ok), "reason": all_reason,
+        "full_copy": True,
+    })
+    # Default never uses copy-to-all; smallest one-Mini or split that fits.
+    enabled = [o for o in opts if o["enabled"] and o.get("mode") != "all"]
     default = None
     if any(o.get("ctx") for o in enabled):
         full = [o for o in enabled if o.get("full_window")]
@@ -1375,3 +1397,25 @@ def gguf_schedule(best: dict, losses: list, *, n_slots: int = 1,
                       "challenger": challenger, "skip": skip, "reload": True,
                       "draft_path": draft})
     return items
+
+
+
+def scan_payload() -> list:
+    """Local GGUF trees plus any saved caravan-placement.json (for remote inventory)."""
+    from placement import read_placement
+    from pathlib import Path as _P
+    out = []
+    for g in scan_local():
+        rec = dict(g)
+        rec["placement"] = read_placement(_P(g["path"]).expanduser().parent)
+        out.append(rec)
+    return out
+
+
+if __name__ == "__main__":
+    import json as _json
+    import sys as _sys
+    if _sys.argv[1:] == ["--scan"]:
+        print(_json.dumps(scan_payload()))
+        _sys.exit(0)
+    _sys.exit(2)

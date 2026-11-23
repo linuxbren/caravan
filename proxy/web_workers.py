@@ -474,15 +474,25 @@ class WorkerManager:
             live = {}
         want = [str(x).lower() for x in ((place or {}).get("node_ids") or [])]
         lead = [n for n in nodes if n.get("role") == "lead"][:1]
+        mode = (place or {}).get("mode")
+        def _with_ram(grp):
+            return [dict(n, **{k: v for k, v in (live.get(n.get("id")) or {}).items() if k == "ram"})
+                    for n in grp]
         if not want:
-            return lead
+            return _with_ram(lead)
         picked = [n for n in nodes if str(n.get("id")).lower() in want
                   or str(n.get("label") or "").lower() in want]
+        if mode in ("one", "all"):
+            # Honor the saved one-Mini / copy-all choice. Never add the lead
+            # just to turn a one-Mini load into a split.
+            if mode == "all":
+                prefer = [n for n in picked if n.get("role") == "lead"] or lead
+                return _with_ram(prefer[:1] or picked[:1])
+            return _with_ram(picked)
+        # Split: only the Minis named in the placement, lead first if present.
+        # Do not inject an unchosen lead.
         picked.sort(key=lambda n: 0 if n.get("role") == "lead" else 1)
-        if not picked or picked[0].get("role") != "lead":
-            picked = lead + [n for n in picked if n not in lead]
-        return [dict(n, **{k: v for k, v in (live.get(n.get("id")) or {}).items() if k == "ram"})
-                for n in picked]
+        return _with_ram(picked)
 
     def _load_gguf(self, entry: dict, settings: dict) -> None:
         self._quiet_lead_log = True
@@ -506,9 +516,22 @@ class WorkerManager:
             import web_gguf_shares
             return web_gguf_shares.load(self,entry,settings)
         place = entry.get("placement") or {}
+        if not place and entry.get("lead_path"):
+            try:
+                from placement import read_placement
+                place = read_placement(Path(entry["lead_path"]).expanduser().parent) or {}
+            except Exception:  # noqa: BLE001
+                place = {}
         nodes = self._gguf_nodes(place)
-        peers = [n for n in nodes if not self._node_is_local(n)]
-        mode = "split" if peers else "single"
+        place_mode = (place or {}).get("mode")
+        # Placement mode wins. A one-Mini choice on a remote Mac is still
+        # single (run llama-server there), not a split with the lead.
+        if place_mode in ("one", "all") or len(nodes) <= 1:
+            mode = "single"
+            peers = []
+        else:
+            mode = "split"
+            peers = [n for n in nodes if not self._node_is_local(n)]
         # Day 30: friendly Mac names in load notes (a hostname label used to
         # be scrubbed to nothing: "split across My Mac + ").
         def _friendly(n):
@@ -525,7 +548,13 @@ class WorkerManager:
                   model_name=entry["name"], progress=[], split=bool(peers), backend="llama", gguf=gblock)
         self._note(T("server.web_workers.switching_to_name_gguf_llama_cpp", name=entry['name'], v='split across ' if peers else 'on ', label=label))
         path = Path(entry["lead_path"]).expanduser()
-        if not path.is_file():
+        single_node = nodes[0] if mode == "single" and nodes else None
+        remote_single = bool(single_node and not self._node_is_local(single_node))
+        if remote_single:
+            if not self._remote_gguf_exists(single_node, path):
+                mac = _friendly(single_node)
+                raise FileNotFoundError(T("server.web_workers.gguf_file_missing_on_mac", mac=mac))
+        elif not path.is_file():
             raise FileNotFoundError(T("server.web_workers.gguf_file_missing_on_the_lead", path=path))
         binp = Path(G.LLAMA_BIN).expanduser() / "llama-server"
         if not binp.is_file():
@@ -670,13 +699,20 @@ class WorkerManager:
                 self._note(T("server.web_workers.starting_llama_server_on_the_lead_3"))
             log_path = self._lead_log()
             log_path.write_text("")
-            lf = open(log_path, "ab", buffering=0)
-            self._worker_node = None
-            self._lead_proc = subprocess.Popen(args, stdout=lf, stderr=subprocess.STDOUT,
-                                               start_new_session=True)
-            meta["lead_pid"] = self._lead_proc.pid
+            if remote_single:
+                self._worker_node = single_node
+                pid = self._start_remote_gguf_single(single_node, args, path)
+                self._lead_proc = None
+                meta["lead_pid"] = pid
+                meta["remote_node"] = single_node.get("id") or single_node.get("label")
+            else:
+                lf = open(log_path, "ab", buffering=0)
+                self._worker_node = None
+                self._lead_proc = subprocess.Popen(args, stdout=lf, stderr=subprocess.STDOUT,
+                                                   start_new_session=True)
+                meta["lead_pid"] = self._lead_proc.pid
             self._write_gguf_meta(meta)
-            self._set(lead_pid=self._lead_proc.pid)
+            self._set(lead_pid=meta["lead_pid"])
             self._wait_lead_ready(timeout=1200)
             self._check_cancel()
             # Day 28 tuning fix: "health ok" is not enough. A helper that ran
@@ -1514,6 +1550,83 @@ class WorkerManager:
             "tunnel_pid": tun_pid,
         }))
         return pid
+
+    def _remote_gguf_exists(self, node: dict, path: Path) -> bool:
+        """True when the GGUF (and its numbered parts, if any) exist on node."""
+        remote = str(path)
+        if remote.startswith(str(Path.home())):
+            remote = "~" + remote[len(str(Path.home())):]
+        cmd = "test -f %s" % repr(remote)
+        try:
+            from gguf_sets import members
+            nearby_cmd = "python3 -c %s" % repr(
+                "import json,sys; from pathlib import Path; p=Path(%s).expanduser(); "
+                "print(json.dumps({f.name: f.stat().st_size for f in p.parent.glob('*.gguf') if f.is_file()}))"
+                % repr(remote)
+            )
+        except Exception:
+            nearby_cmd = None
+        try:
+            r = self._ssh_node(node, cmd, timeout=25)
+            if r.returncode != 0:
+                return False
+            if not nearby_cmd:
+                return True
+            r2 = self._ssh_node(node, nearby_cmd, timeout=25)
+            if r2.returncode != 0:
+                return True
+            import json as _json
+            sizes = _json.loads((r2.stdout or "{}").strip() or "{}")
+            parts = members(Path(remote).name, sizes)
+            return all(n in sizes for n in parts)
+        except Exception:  # noqa: BLE001
+            return False
+
+    def _start_remote_gguf_single(self, node: dict, args: list, path: Path) -> int:
+        """Run llama-server on a non-lead Mini and tunnel to it."""
+        repo = (node.get("repo") or "~/.caravan/src/caravan").rstrip("/")
+        remote_args = []
+        for a in args:
+            s = str(a)
+            home = str(Path.home())
+            if s.startswith(home):
+                s = "~" + s[len(home):]
+            remote_args.append(s)
+        quoted = " ".join(shlex.quote(a) for a in remote_args)
+        remote = (
+            "mkdir -p ~/.caravan/web-ui; "
+            "LPM=$(pmset -g 2>/dev/null | awk '/lowpowermode/{print $2}'); "
+            "[[ \"$LPM\" == \"0\" || -z \"$LPM\" ]] || { echo REFUSE_LPM; exit 2; }; "
+            + self._remote_stop_command(repo, "~/.caravan/web-ui/remote-lead.pid", port=self.lead_port) + "; "
+            + "nohup " + quoted + " > ~/.caravan/web-ui/remote-lead.log 2>&1 & echo $! > ~/.caravan/web-ui/remote-lead.pid; "
+            "cat ~/.caravan/web-ui/remote-lead.pid"
+        )
+        r = self._ssh_node(node, remote, timeout=45)
+        if r.returncode != 0:
+            raise RuntimeError(T("server.web_workers.remote_worker_start_failed_v", v=(r.stderr or r.stdout or "")[:400]))
+        pid = None
+        for line in (r.stdout or "").splitlines():
+            line = line.strip()
+            if line.isdigit():
+                pid = int(line)
+        if not pid:
+            raise RuntimeError(T("server.web_workers.remote_worker_did_not_print_a", v=(r.stdout or "")[:200]))
+        self._ensure_tunnel(node)
+        (self.state_dir / "lead.pid").write_text(str(pid))
+        tun_pid = None
+        if self._tunnel_proc is not None and self._tunnel_proc.pid:
+            tun_pid = self._tunnel_proc.pid
+        elif getattr(self, "_adopted_tunnel", None):
+            tun_pid = self._adopted_tunnel[0]
+        (self.state_dir / "remote-worker.json").write_text(json.dumps({
+            "pid": pid, "node": node.get("id") or node.get("label"),
+            "ssh": node.get("ssh") or node.get("host"),
+            "model": str(path), "repo": repo,
+            "backend": "llama",
+            "tunnel_pid": tun_pid,
+        }))
+        return pid
+
 
     def _start_packer(self, entry: dict, packer_path: str) -> Optional[int]:
         k = int(entry["packer_layers"])

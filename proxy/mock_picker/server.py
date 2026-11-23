@@ -56,6 +56,11 @@ class H(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         if u.path in ("/", "/index.html"):
             html = (WEB / "index.html").read_text()
+            try:
+                import caravan_i18n
+                html = caravan_i18n.render_page(html)
+            except Exception:
+                pass
             inject = """
 <script>
 document.addEventListener('DOMContentLoaded', function(){
@@ -119,7 +124,41 @@ document.addEventListener('DOMContentLoaded', function(){
                          "quant": "4bit", "weights_gb": 111.5, "source": "hf-mlx"},
                     ],
                 },
+                {
+                    "base": "Qwen2.5-7B-Instruct-GGUF",
+                    "source": "gguf", "likes": 50,
+                    "quants": [
+                        {"repo_id": "gguf-pub/Qwen2.5-7B-Instruct-GGUF",
+                         "quant": "Q4_K_M", "weights_gb": 4.68, "source": "gguf",
+                         "gguf_file": "Qwen2.5-7B-Instruct-Q4_K_M.gguf"},
+                        {"repo_id": "gguf-pub/Qwen2.5-7B-Instruct-GGUF",
+                         "quant": "Q8_0", "weights_gb": 8.10, "source": "gguf",
+                         "gguf_file": "Qwen2.5-7B-Instruct-Q8_0.gguf"},
+                    ],
+                },
+                {
+                    "base": "Big-Reasoning-GGUF",
+                    "source": "gguf", "likes": 20,
+                    "quants": [
+                        {"repo_id": "gguf-pub/Big-Reasoning-GGUF",
+                         "quant": "Q4_K_M", "weights_gb": 18.5, "source": "gguf",
+                         "gguf_file": "Big-Reasoning-Q4_K_M.gguf"},
+                    ],
+                },
+                {
+                    "base": "Huge-Does-Not-Fit-GGUF",
+                    "source": "gguf", "likes": 5,
+                    "quants": [
+                        {"repo_id": "gguf-pub/Huge-Does-Not-Fit-GGUF",
+                         "quant": "Q8_0", "weights_gb": 111.5, "source": "gguf",
+                         "gguf_file": "Huge-Does-Not-Fit-Q8_0.gguf"},
+                    ],
+                },
             ]
+            src = (qs.get("source") or ["all"])[0]
+            if src and src not in ("all",):
+                groups = [g for g in groups if g.get("source") == src
+                          or any((qq.get("source") == src) for qq in g.get("quants") or [])]
             if q:
                 groups = [g for g in groups if q.lower() in g["base"].lower()
                           or any(q.lower() in (qq.get("repo_id") or "") for qq in g["quants"])]
@@ -145,7 +184,33 @@ document.addEventListener('DOMContentLoaded', function(){
             return self._json(200, {"ok": True, "mock": True})
         self.send_error(404)
 
+    def do_POST(self):
+        u = urlparse(self.path)
+        length = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(length) if length else b"{}"
+        try:
+            body = json.loads(raw.decode() or "{}")
+        except ValueError:
+            body = {}
+        if u.path == "/api/picker/placement":
+            import placement as PL
+            import gguf_split as GS
+            weights = float(body.get("weights_gb") or 0)
+            if body.get("source") == "gguf":
+                out = GS.placement_options(weights, self.nodes)
+            else:
+                fit = web_picker.fit_check(weights_gb=weights, nodes=self.nodes, split_ok=True)
+                out = PL.placement_options(fit=fit, nodes=self.nodes, max_split_stages=2, weights_gb=weights)
+            return self._json(200, out)
+        if u.path == "/api/picker/download":
+            return self._json(200, {"job": {"id": "mock-job", "status": "queued", "repo_id": body.get("repo_id"),
+                                            "placement_id": body.get("placement_id")}})
+        if u.path.startswith("/api/"):
+            return self._json(200, {"ok": True, "mock": True})
+        self.send_error(404)
+
 def main():
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--nodes", type=int, default=1, choices=[1, 2, 3])
     ap.add_argument("--port", type=int, default=8191)

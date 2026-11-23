@@ -24,19 +24,22 @@ class Placement(unittest.TestCase):
     def test_small_model_defaults_to_one_mini(self):
         p = G.placement_options(5, [N("exo1", "lead", 24), N("exo2", "packer", 24, "169.254.1.2")])
         self.assertEqual(p["default_id"], "one:exo1")
-        self.assertEqual([o["mode"] for o in p["options"]], ["one", "split"])
+        self.assertEqual([o["mode"] for o in p["options"]], ["one", "one", "split", "all"])
+        self.assertTrue(any(o["id"] == "all" and o["enabled"] for o in p["options"]))
 
     def test_big_model_defaults_to_smallest_split_any_n(self):
         nodes = [N("a", "lead", 24)] + [N(f"p{i}", "packer", 24, f"169.254.0.{i}") for i in range(1, 4)]
         p = G.placement_options(40, nodes)
         self.assertEqual(p["default_id"], "split:a,p1,p2")
         self.assertFalse(p["options"][0]["enabled"])
-        self.assertEqual(len(p["options"]), 4)  # one + split 2,3,4
+        self.assertEqual(len(p["options"]), 8)  # one per Mini, split 2-4, copy-all
+        self.assertEqual([o["mode"] for o in p["options"]].count("one"), 4)
+        self.assertFalse(next(o for o in p["options"] if o["id"] == "all")["enabled"])
 
     def test_offline_skipped(self):
         n2 = N("exo2", "packer", 24, "169.254.1.2"); n2["offline"] = True
         p = G.placement_options(5, [N("exo1", "lead", 24), n2])
-        self.assertEqual(len(p["options"]), 1)
+        self.assertEqual([o["mode"] for o in p["options"]], ["one", "all"])
 
 
 class Commands(unittest.TestCase):

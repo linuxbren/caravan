@@ -133,6 +133,33 @@ def stop_live_chat(app, *, request_id=None, job_id=None) -> dict:
     return {"stopped": True, "job": entry.get("job")}
 
 
+def gguf_saved_placement_id(place: dict, saved: dict, held_on: list):
+    """Return the option id for a saved placement when those Minis still have the files."""
+    if not isinstance(saved, dict):
+        return None
+    mode = saved.get("mode")
+    ids = list(saved.get("node_ids") or [])
+    if not mode:
+        return None
+    held = {str(x) for x in (held_on or [])}
+    need = set(str(x) for x in ids)
+    if mode == "one" and need and not (need & held):
+        return None
+    if mode == "all" and need and not (need & held):
+        return None
+    if mode == "split" and need and not (need & held):
+        return None
+    for o in (place or {}).get("options") or []:
+        if o.get("mode") != mode:
+            continue
+        if mode == "all":
+            return o.get("id")
+        if list(o.get("node_ids") or []) == ids:
+            return o.get("id")
+        if mode == "one" and set(o.get("node_ids") or []) == set(ids):
+            return o.get("id")
+    return None
+
 class App:
     def __init__(self, mgr: WorkerManager):
         self.mgr = mgr
@@ -796,30 +823,100 @@ class App:
             return loadable_only(rows)
         return loadable_only(rows + self.gguf_entries(live or self.configured_nodes(), current))
 
+    def _scan_remote_gguf(self, node: dict) -> list:
+        """GGUF trees on a sibling Mini, including any saved placement."""
+        repo = (node.get("repo") or "~/.caravan/src/caravan").rstrip("/")
+        py = "~/.caravan/venvs/mlx/bin/python"
+        cmd = (
+            "PYTHONPATH=%s/proxy:%s/tools:%s/agent %s %s/proxy/gguf_split.py --scan"
+            % (repo, repo, repo, py, repo)
+        )
+        r = self._ssh_fn()(node, cmd, timeout=45)
+        if r.returncode != 0:
+            return []
+        import json as _json
+        line = (r.stdout or "").strip().splitlines()
+        blob = line[-1] if line else "[]"
+        data = _json.loads(blob)
+        return data if isinstance(data, list) else []
+
+
     def gguf_entries(self, nodes: list, current=None) -> list:
-        """GGUF files on the lead Mini. llama.cpp RPC ships each peer its share
-        at load, so only the lead needs the file; any online Mini can join."""
+        """GGUF files on every online Mini. The saved download placement is
+        the default when those files are still on the chosen Mini(s)."""
         import gguf_split
+        from placement import read_placement
+        from pathlib import Path as _P
+        import web_nodes
+        found = {}
+
+        def _add(g, nid, local=False):
+            rec = found.setdefault(g["id"], {"held_on": [], "paths": {}, "name": g.get("name"),
+                                             "size_gb": g.get("size_gb"), "id": g["id"]})
+            rec["held_on"].append(nid)
+            rec["paths"][nid] = g["path"]
+            if g.get("placement") and not rec.get("saved"):
+                rec["saved"] = g["placement"]
+            if local:
+                rec["path"] = g["path"]
+                rec["local"] = True
+            elif "path" not in rec:
+                rec["path"] = g["path"]
+            if g.get("size_gb"):
+                rec["size_gb"] = g["size_gb"]
+            if g.get("name"):
+                rec["name"] = g["name"]
+
+        for n in nodes or []:
+            if not isinstance(n, dict) or n.get("offline") or n.get("error"):
+                continue
+            nid = n.get("id") or n.get("label")
+            if web_nodes.is_local(n):
+                for g in gguf_split.scan_local():
+                    saved = read_placement(_P(g["path"]).expanduser().parent)
+                    _add(dict(g, placement=saved), nid, local=True)
+            else:
+                scan = getattr(self, "_scan_remote_gguf", None)
+                if not callable(scan):
+                    continue
+                try:
+                    for g in scan(n) or []:
+                        if isinstance(g, dict) and g.get("id") and g.get("path"):
+                            _add(g, nid, local=False)
+                except Exception:  # noqa: BLE001
+                    continue
+
         out = []
         try:
             page = (self.mgr.snapshot() or {}).get("settings") or {}
         except Exception:  # noqa: BLE001
             page = {}
-        for g in gguf_split.scan_local():
-            # Day 31: count the chat window Auto would give it on each option.
+        local_ids = {n.get("id") or n.get("label") for n in (nodes or [])
+                     if isinstance(n, dict) and web_nodes.is_local(n)}
+        for gid, g in found.items():
+            model_path = g.get("path")
             place = gguf_split.placement_options(
-                g["size_gb"], nodes, model_path=g["path"], settings=page)
+                g.get("size_gb") or 0, nodes, model_path=model_path, settings=page)
+            saved = g.get("saved")
+            default_id = gguf_saved_placement_id(place, saved, g.get("held_on") or []) or place["default_id"]
+            on_lead = any(x in local_ids for x in (g.get("held_on") or []))
+            saved_place = None
+            if saved and saved.get("mode"):
+                saved_place = {"mode": saved.get("mode"), "node_ids": list(saved.get("node_ids") or [])}
             out.append({
-                "id": g["id"], "name": g["name"] + T("server.web_catalog.gguf"), "hf": g["id"],
+                "id": gid, "name": (g.get("name") or gid) + T("server.web_catalog.gguf"), "hf": gid,
                 "source": "gguf", "backend": "llama", "lead_path": g["path"],
-                "size_gb": g["size_gb"], "usable": bool(place["default_id"]),
-                "available_lead": True,
-                "disabled_reason": "" if place["default_id"] else T("server.web_server.wont_fit_on_the_online_minis"),
+                "size_gb": g.get("size_gb"),
+                "usable": bool(default_id),
+                "available_lead": bool(on_lead),
+                "held_on": list(g.get("held_on") or []),
+                "disabled_reason": "" if default_id else T("server.web_server.wont_fit_on_the_online_minis"),
                 "placement_options": place["options"],
-                "default_placement": place["default_id"],
-                "current": g["id"] == current,
+                "default_placement": default_id,
+                "current": gid == current,
                 "note": place.get("summary") or T("server.web_server.downloaded_and_ready_to_load"),
                 "placement_summary": place.get("summary") or "",
+                "placement": saved_place,
             })
         import web_gguf_shares
         return out + web_gguf_shares.entries(nodes,current)
@@ -2218,6 +2315,8 @@ def make_handler(app: App):
             if body.get("source") == "cloud" or repo.startswith("ollama-cloud/"):
                 return self._json(400, {"error": T("server.web_server.cloud_models_are_framework_only_for")})
             gguf_file = None
+            gguf_chosen = None
+            gguf_one_ok = False
             if body.get("source") == "gguf":
                 # Peers can run without the file (RPC ships tensors), but Day 18 copies it to every Mini.
                 gguf_file = (body.get("gguf_file") or "").strip()
@@ -2234,9 +2333,9 @@ def make_handler(app: App):
                 lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
                 if not lead:
                     return self._json(400, {"error": T("server.web_server.no_lead_configured")})
-                body = dict(body, placement_id=None)
                 # Sizes come from the source, never the browser's per-part estimate.
                 from gguf_sets import members
+                from placement import resolve_option as resolve_gguf_option
                 info = web_picker._fetch_repo_blobs(repo)
                 sizes = {f['rfilename']: int(f.get('size') or 0) for f in info.get('gguf_files', [])}
                 try:
@@ -2249,13 +2348,20 @@ def make_handler(app: App):
                 live_nodes = (app.nodes() or {}).get('nodes') or app.configured_nodes()
                 places = self._gguf_source_placement(
                     dict(body, repo_id=repo, gguf_file=gguf_file), body['weights_gb'], live_nodes)
-                chosen = next((o for o in places['options'] if o['id'] == places['default_id']), None)
+                chosen = resolve_gguf_option(places, body=body)
                 if not chosen:
-                    return self._json(400, {'error': T("server.web_server.this_model_will_not_fit_on")})
+                    return self._json(400, {'error': T("server.web_server.this_model_will_not_fit_on"), "options": places})
+                if not chosen.get("enabled"):
+                    return self._json(400, {
+                        "error": chosen.get("reason") or T("server.web_server.placement_disabled"),
+                        "placement": chosen, "options": places,
+                    })
+                gguf_chosen = dict(chosen)
                 # Day 31: a split chosen only for a longer chat window keeps the
                 # whole file on the lead (it can still run on one Mac); the
                 # per-Mac share download is for models that can't run on one.
                 one_ok = any(o.get('mode') == 'one' and o.get('enabled') for o in places['options'])
+                gguf_one_ok = one_ok
                 if chosen['mode'] == 'split' and len(parts) == 1 and not one_ok:
                     try:
                         import web_gguf_shares, web_files
@@ -2331,8 +2437,9 @@ def make_handler(app: App):
                 weights_gb=weights,
             )
             place = resolve_option(opts, body=body)
-            if gguf_file:
-                place = {"enabled": True}
+            if gguf_file and gguf_chosen:
+                place = dict(gguf_chosen)
+                place["full_copy"] = place.get("mode") in ("one", "all") or bool(place.get("full_copy"))
             if not place:
                 return self._json(400, {"error": T("server.web_server.no_placement_option_available"), "options": opts})
             if not place.get("enabled"):
@@ -2341,13 +2448,6 @@ def make_handler(app: App):
                     "placement": place, "options": opts,
                 })
 
-            if gguf_file:
-                lid = lead.get("id") or lead.get("label")
-                # llama.cpp needs the complete lead file; peers fetch tensor ranges
-                # explicitly from the Balance file view, never a full GGUF copy.
-                ids = [lid]
-                place = {"mode": "one", "full_copy": True, "node_ids": ids, "enabled": True,
-                         "label": T.plural("server.web_server.gguf_to_minis_ready", len(ids))}
             if helper:
                 lead = next((n for n in app.configured_nodes() if n.get("role") == "lead"), None)
                 if not lead:
@@ -2356,6 +2456,16 @@ def make_handler(app: App):
             mode = place.get("mode") or "split"
             full_copy = bool(place.get("full_copy"))
             target_ids = list(place.get("node_ids") or [])
+            if gguf_file and mode == "split":
+                # Standard llama.cpp RPC: the complete file lives on the lead
+                # of this placement; peers get tensors at load. Own-share
+                # downloads already returned above when they apply.
+                lid = (lead.get("id") or lead.get("label")) if lead else None
+                if lid and lid in target_ids:
+                    target_ids = [lid]
+                elif target_ids:
+                    target_ids = target_ids[:1]
+                full_copy = True
             target_nodes = []
             for tid in target_ids:
                 n = cfg_by_id.get(tid)

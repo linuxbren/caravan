@@ -77,10 +77,17 @@ def auto_window(weights_gb, n_devices, meta=None, tune=None):
                             meta_fn=lambda _p: meta)["ctx"]
 
 
+def one_split(p):
+    """Lead one-Mini and the first split, ignoring per-node extras and copy-all."""
+    one = next(o for o in p["options"] if o["mode"] == "one")
+    split = next(o for o in p["options"] if o["mode"] == "split")
+    return one, split
+
+
 class GgufPlacement(unittest.TestCase):
     def test_weights_fit_one_mac_but_window_does_not_defaults_to_split(self):
         p = place(16.5)
-        one, split = p["options"]
+        one, split = one_split(p)
         self.assertTrue(one["enabled"])           # the weights fit on one Mac
         self.assertLess(one["ctx"], 131072)       # ...with a shorter window only
         self.assertFalse(one["full_window"])
@@ -102,7 +109,7 @@ class GgufPlacement(unittest.TestCase):
 
     def test_64k_vs_128k_drives_the_default(self):
         p = place(13.0)
-        one, split = p["options"]
+        one, split = one_split(p)
         self.assertEqual(one["ctx"], 65536)
         self.assertEqual(split["ctx"], 131072)
         self.assertEqual(p["default_id"], split["id"])
@@ -114,7 +121,7 @@ class GgufPlacement(unittest.TestCase):
     def test_placement_and_chat_window_auto_agree(self):
         for w in (4.92, 9.0, 13.0, 16.5):
             with self.subTest(weights=w):
-                one, split = place(w)["options"]
+                one, split = one_split(place(w))
                 self.assertEqual(one["ctx"], auto_window(w, 1))
                 self.assertEqual(split["ctx"], auto_window(w, 2))
 
@@ -168,9 +175,16 @@ class GgufPlacement(unittest.TestCase):
 class UnknownCapacity(unittest.TestCase):
     def test_unknown_ram_fails_closed_with_window_math(self):
         p = place(5.0, nodes=[N("exo1", "lead", None), N("exo2", "packer")])
-        self.assertEqual(p["default_id"], None)
-        self.assertTrue(all(not o["enabled"] for o in p["options"]))
-        self.assertIn("memory", p["options"][0]["reason"])
+        # Options that include the unknown Mini fail closed. A one-Mini
+        # choice on a Mac whose memory is known can still be the default.
+        one_lead = next(o for o in p["options"] if o["id"] == "one:exo1")
+        one_peer = next(o for o in p["options"] if o["id"] == "one:exo2")
+        split = next(o for o in p["options"] if o["mode"] == "split")
+        self.assertFalse(one_lead["enabled"])
+        self.assertIn("memory", one_lead["reason"])
+        self.assertFalse(split["enabled"])
+        self.assertTrue(one_peer["enabled"])
+        self.assertEqual(p["default_id"], "one:exo2")
 
     def test_unknown_ram_fails_closed_old_rule(self):
         p = G.placement_options(5, [N("exo1", "lead", None)])
@@ -180,7 +194,7 @@ class UnknownCapacity(unittest.TestCase):
     def test_unknown_peer_blocks_only_the_split(self):
         p = place(4.92, nodes=[N("exo1", "lead"), N("exo2", "packer", None)])
         self.assertEqual(p["default_id"], "one:exo1")
-        self.assertFalse(p["options"][1]["enabled"])
+        self.assertFalse(next(o for o in p["options"] if o["mode"] == "split")["enabled"])
 
     def test_mlx_unknown_capacity_is_red(self):
         f = P.fit_check(weights_gb=4.5, nodes=[], cfg=LLAMA8)
@@ -324,7 +338,7 @@ class Paths(unittest.TestCase):
         self.assertIn("cfg=self._picker_cfg(body)", src)
         self.assertIn("self._picker_cfg(dict(body, repo_id=repo))", src)
         self.assertIn("web_picker.fetch_gguf_header(repo, fname)", src)
-        self.assertIn("model_path=g[\"path\"]", src)
+        self.assertIn("model_path=model_path", src)
         self.assertNotIn("ctx_tokens=int(body.get(\"ctx_tokens\") or web_picker.DEFAULT_CTX)", src)
         # A split picked only for a longer window keeps the whole file on the lead.
         self.assertIn("and not one_ok", src)
@@ -354,7 +368,7 @@ class BalanceAndShares(unittest.TestCase):
 
     def test_split_option_order_is_lead_first(self):
         p = place(16.5, nodes=[N("exo2", "packer"), N("exo1", "lead")])
-        self.assertEqual(p["options"][1]["node_ids"], ["exo1", "exo2"])
+        self.assertEqual(next(o for o in p["options"] if o["mode"] == "split")["node_ids"], ["exo1", "exo2"])
 
 
 def _gguf_bytes(meta, pad_tokens=0):

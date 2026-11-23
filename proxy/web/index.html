@@ -5177,39 +5177,26 @@
     async function pickQuant(q, anchor) {
       if (q.cloud) return loadCloudModel(q, anchor);
       if (q.source === "gguf") {
-        // Plan first; every Mac downloads only its own ranges from the source.
         if (!q.gguf_file) { alert(T("web.pick_one_quant_file_for_this")); return; }
-        if (q.fit && q.fit.color === "red") {
-          try {
-            const place = await api("/api/picker/placement", {method: "POST",
-              body: JSON.stringify({source: "gguf", weights_gb: q.weights_gb || 0, repo_id: q.repo_id, gguf_file: q.gguf_file})});
-            if (!await choosePlacement(place, q, anchor)) return;
-          } catch (e) { $("pickerStatus").textContent = T(`web.could_not_check_your_macs_message`, {message: e.message}); return; }
+      } else {
+        if (q.needs_conversion) {
+          if (!confirm(T(`web.repo_id_needs_mlx_conversion_phase`, {repo_id: q.repo_id}))) return;
+          alert(T("web.conversion_lands_in_phase_3_not"));
+          return;
         }
-        $("pickerStatus").textContent = T("web.preparing_your_model_download");
-        try {
-          const data = await api("/api/picker/download", { method: "POST",
-            body: JSON.stringify({ repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0, filters: q.filters, pipeline_tag: q.pipeline_tag }) });
-          upsertJob(data.job); showJobs();
-          try { const c = jobCardEl(data.job.id); (c || $("pickerJob")).scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {}
-          pollJob(data.job.id, q);
-        } catch (e) { $("pickerStatus").textContent = T(`web.download_failed_error`, {error: plainDownloadError(e.error || e.message || e)}); }
-        return;
+        if (!q.weights_gb) {
+          if (!confirm(T(`web.repo_id_has_unknown_size_not`, {repo_id: q.repo_id}))) return;
+        }
       }
-      if (q.needs_conversion) {
-        if (!confirm(T(`web.repo_id_needs_mlx_conversion_phase`, {repo_id: q.repo_id}))) return;
-        alert(T("web.conversion_lands_in_phase_3_not"));
-        return;
-      }
-      if (!q.weights_gb) {
-        if (!confirm(T(`web.repo_id_has_unknown_size_not`, {repo_id: q.repo_id}))) return;
-      }
-      // Placement choice: 1 Mini / K split / copy-all
+      // Placement choice: 1 Mini / K split / copy-all (MLX and GGUF, any fit color)
       let placeId = null;
       try {
         const place = await api("/api/picker/placement", {
           method: "POST",
-          body: JSON.stringify({ weights_gb: q.weights_gb || 0, repo_id: q.repo_id }),
+          body: JSON.stringify({
+            weights_gb: q.weights_gb || 0, repo_id: q.repo_id,
+            source: q.source, gguf_file: q.gguf_file,
+          }),
         });
         const chosen = await choosePlacement(place, q, anchor);
         if (!chosen) { $("pickerStatus").textContent = T("web.download_cancelled"); return; }
@@ -5217,9 +5204,13 @@
       } catch (e) {
         if (!confirm(T(`web.could_not_load_placement_options_message`, {message: e.message}))) return;
       }
-      $("pickerStatus").textContent = T(`web.downloading_repo_id`, {repo_id: q.repo_id});
+      $("pickerStatus").textContent = q.source === "gguf"
+        ? T("web.preparing_your_model_download")
+        : T(`web.downloading_repo_id`, {repo_id: q.repo_id});
       try {
-        const body = { repo_id: q.repo_id, source: q.source, packer_layers: 24, weights_gb: q.weights_gb || 0, filters: q.filters, pipeline_tag: q.pipeline_tag };
+        const body = q.source === "gguf"
+          ? { repo_id: q.repo_id, source: "gguf", gguf_file: q.gguf_file, weights_gb: q.weights_gb || 0, filters: q.filters, pipeline_tag: q.pipeline_tag }
+          : { repo_id: q.repo_id, source: q.source, packer_layers: 24, weights_gb: q.weights_gb || 0, filters: q.filters, pipeline_tag: q.pipeline_tag };
         if (placeId) body.placement_id = placeId;
         const data = await api("/api/picker/download", {
           method: "POST",
@@ -5248,10 +5239,8 @@
       ++state.searchSeq; clearTimeout(state.searchTimer);
       let keep = null;
       for (;;) {
-        // GGUF keeps automatic placement: expose only its current recommendation.
-        const view = q.source === "gguf" ? {...place,
-          options: (place.options || []).filter(o => o.id === place.default_id)} : place;
-        const chosen = await placementStep(view, q, anchor, keep);
+        // GGUF and MLX use the same Step 2 chooser (1 Mini / K-split / copy-all).
+        const chosen = await placementStep(place, q, anchor, keep);
         if (!chosen || !chosen.addMac) return chosen;
         keep = chosen.keep;
         await new Promise(resolve => {
