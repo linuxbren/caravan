@@ -9,8 +9,9 @@ user-facing text in one English strings file) is another mid-day release,
 [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7). GGUF placement is another mid-day release,
 [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8). Spanish is another mid-day release,
 [v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9). Russian is another mid-day release,
-[v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10). Day 32 stays open: Japanese
-(in progress) and Simplified Chinese can drop in later.
+[v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10). Japanese is another mid-day release,
+[v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11). Day 32 stays open: Simplified
+Chinese can drop in later.
 
 1. [Status of every Day 32 request](#status-of-every-day-32-request)
 2. [Plan: localization](#plan-localization)
@@ -28,7 +29,7 @@ user-facing text in one English strings file) is another mid-day release,
     (release: [v0.9.8](#gguf-placement-release-v098))
 13. [Spanish (v0.9.9)](#spanish-v099)
 14. [Russian (v0.9.10)](#russian-v0910)
-15. [Japanese (in progress, pending review)](#japanese-in-progress-pending-review)
+15. [Japanese (v0.9.11)](#japanese-v0911)
 
 ## Status of every Day 32 request
 
@@ -44,7 +45,7 @@ user-facing text in one English strings file) is another mid-day release,
 | Localization step 1: move all user-facing text into one English strings file keyed by name, English fallback, no other languages yet (Brenden: "start with compartmentalization first with English. Then we'll decide on additional languages.") | Done (fully compartmentalized: page, CLI, installers, server and worker messages), reviewed (Claude: approved), released in [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7) (mid-day); Brenden updates the Macs himself ([details](#localization-step-1-english-strings-file)) |
 | Spanish: CLDR plurals, `locales/es.json`, Settings language picker, locale formatting, layout screenshots, beta until native-reviewed | Done, reviewed (Claude: approved 09:05 CST), released in [v0.9.9](https://github.com/linuxbren/caravan/releases/tag/v0.9.9) (mid-day); Brenden updates the Macs himself ([details](#spanish-v099)) |
 | Russian: `locales/ru.json`, glossary column, picker + installer, formatting, Cyrillic layout, plurals one/few/many/other, beta until native-reviewed | Done, reviewed (Claude: approved 11:05 CST), released in [v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10) (mid-day); Brenden updates the Macs himself ([details](#russian-v0910)) |
-| Japanese: `locales/ja.json`, glossary column, picker + installer, formatting, CJK line breaking, `_other`-only plurals, beta until native-reviewed | In progress on `day32-japanese` (uncommitted, pending review). See [Japanese](#japanese-in-progress-pending-review) |
+| Japanese: `locales/ja.json`, glossary column, picker + installer, formatting, CJK line breaking, `_other`-only plurals, beta until native-reviewed | Done, reviewed (Claude: approved 12:25 CST), released in [v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11) (mid-day); Brenden updates the Macs himself ([details](#japanese-v0911)) |
 | A confirmation step before every download (ROADMAP Next candidates #9; raised in the step 1 review): GGUF should use the same Step 2 placement chooser as MLX, for every fit color | Done, reviewed (Claude: approved), released in [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8) (mid-day); Brenden updates the Macs himself ([details](#gguf-placement-roadmap-9)) |
 
 ## Plan: localization
@@ -383,14 +384,15 @@ Notes: [release-notes/day32-v0.9.10.md](release-notes/day32-v0.9.10.md).
 The Macs were not updated as part of the release; Brenden updates them
 himself with `caravan update`. Day 32 stays open for other languages.
 
-## Japanese (in progress, pending review)
+## Japanese (v0.9.11)
 
 Brenden (2026-11-23): start Japanese, same process as Spanish and Russian.
 
-Work is on the local branch `day32-japanese` (from `main` at v0.9.10,
-`b5eb31f`). **Uncommitted until Claude approves.** No push, no tag, no
-Mac updates. CHANGELOG and VERSION stay at v0.9.10 (no Unreleased
-section).
+**After ([v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11)):** Japanese is
+the next language after Russian. Work was on the local branch
+`day32-japanese` (from `main` at v0.9.10, `b5eb31f`). Claude approved the
+uncommitted tree (12:25 CST). The Macs were not updated (Brenden updates
+them himself).
 
 What this adds:
 
@@ -419,6 +421,19 @@ What this adds:
   `XDG_CONFIG_HOME="" PYTHONPATH=.:proxy:tests uv run --with pytest
   --with spake2==0.9 --with cryptography==46.0.3 python -m pytest tests -q`.
   An overflow check on the English/Japanese screenshots found none.
+
+### Japanese: release (v0.9.11)
+
+Built on the local branch `day32-japanese` (on `b5eb31f`), reviewed
+by Claude (approved 2026-11-23 12:25 CST: full suite 2,198 of 2,198 with
+the review command) and merged to `main` fast-forward only.
+Released as a mid-day release, tag
+[v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11) on the
+wrap commit (source and pin commits are recorded after publishing).
+Notes: [release-notes/day32-v0.9.11.md](release-notes/day32-v0.9.11.md).
+
+The Macs were not updated as part of the release; Brenden updates them
+himself with `caravan update`. Day 32 stays open for other languages.
 
 ## Part A: version label
 

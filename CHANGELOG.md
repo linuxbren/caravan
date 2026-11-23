@@ -1,3 +1,29 @@
+## Day 32 — Japanese localization (v0.9.11)
+
+Released as [v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11), a mid-day
+release. Day 32 continues with other languages (Simplified Chinese can
+drop in later).
+
+See [DAY32](docs/DAY32.md#japanese-v0911).
+
+- Added: Japanese as the next language after Russian. `locales/ja.json`
+  has every current English key except non-`other` plural forms (2,334
+  English keys; natural, polite-casual Japanese, です/ます where it
+  suits the UI). Plural keys use `_other` only. Model names, Caravan,
+  Mini, GGUF, MLX and commands stay in English. Glossary:
+  [docs/i18n/GLOSSARY.md](docs/i18n/GLOSSARY.md).
+- Added: **日本語 (beta)** in the Settings language picker and the
+  installer shell block. Default order is unchanged: `CARAVAN_LANG`,
+  then the saved Settings choice, then the Mac's language, then English.
+  Japanese is marked beta until a native speaker reviews it.
+- Added: Japanese number and date formatting (dates like 2026年11月13日
+  and 2026年11月, lists with 、 and と, numbers like 1,234.5).
+- Changed: CJK line breaking (`line-break: strict`, `word-break: normal`,
+  `overflow-wrap: anywhere`) and fonts that cover Japanese
+  (`Hiragino Sans`, `Noto Sans CJK JP`, and the usual Mac gothic faces).
+  Longer Japanese labels wrap with the same rules as Spanish and Russian.
+- Tests: `tests/test_day32_japanese.py`. 2,198 tests pass.
+
 ## Day 32 — Russian localization (v0.9.10)
 
 Released as [v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10), a mid-day

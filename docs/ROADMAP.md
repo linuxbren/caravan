@@ -189,14 +189,14 @@ and the daily logs, not mixed into current setup instructions.
       separator, decimal comma, "и" lists, genitive months), and Cyrillic
       layout checks at 1280 and 375 px. Russian is marked beta until a
       native speaker reviews it. See [DAY32](DAY32.md#russian-v0910).
-    - **Japanese (in progress, pending review):** next language after
+    - **Japanese ([v0.9.11](https://github.com/linuxbren/caravan/releases/tag/v0.9.11), done):** next language after
       Russian. `locales/ja.json` for every current key (natural,
       polite-casual Japanese, です/ます where it suits the UI), `_other`
       only for plural keys, **日本語 (beta)** in the Settings picker and
       the installer shell block, Japanese number/date formatting
       (2026年11月13日, 、 lists), CJK line breaking, and layout checks at
       1280 and 375 px. Japanese is marked beta until a native speaker
-      reviews it. See [DAY32](DAY32.md#japanese-in-progress-pending-review).
+      reviews it. See [DAY32](DAY32.md#japanese-v0911).
   - **GGUF placement ([v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8), done):**
     every GGUF download uses the same Step 2 placement chooser as MLX,
     for every fit color: 1 Mini / split across K Minis / copy to all.
