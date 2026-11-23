@@ -11,7 +11,7 @@ number and date formatting (space as the thousands separator, decimal
 comma, "и" lists, genitive months), and layout screenshots at 1280 and
 375 px. Russian is marked beta in the picker until a native speaker
 reviews it. Glossary: [docs/i18n/GLOSSARY.md](i18n/GLOSSARY.md). Tests:
-`tests/test_day32_russian.py`. Suite 2,187 OK. The Macs were not updated
+`tests/test_day32_russian.py`. Suite 2,187 OK. Source `6b87dae`, pin `d025be8`, tag v0.9.10. The Macs were not updated
 (Brenden updates them himself).
 
 ## 2026-11-23: Day 32 — Russian localization (in progress, pending review)

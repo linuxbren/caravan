@@ -23,7 +23,7 @@ See [DAY32](docs/DAY32.md#russian-v0910).
   rules as Spanish.
 - Changed: the split-status line `{label}: {count} layers ready` now
   goes through `T.plural`, so English says "1 layer ready".
-- Tests: `tests/test_day32_russian.py`. 2,187 tests pass.
+- Source `6b87dae`, pin `d025be8`. 2,187 tests pass.
 
 ## Day 32 — Spanish localization (v0.9.9)
 

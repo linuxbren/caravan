@@ -370,9 +370,9 @@ What this adds:
 Built on the local branch `day32-russian` (on `bd46a24`), reviewed
 by Claude (approved 2026-11-23 11:05 CST: full suite 2,187 of 2,187 with
 the review command) and merged to `main` fast-forward only.
-Released as a mid-day release, tag
+Released as a mid-day release: source `6b87dae`, pin `d025be8`; tag
 [v0.9.10](https://github.com/linuxbren/caravan/releases/tag/v0.9.10) on the
-wrap commit (source and pin commits are recorded after publishing).
+wrap commit.
 Notes: [release-notes/day32-v0.9.10.md](release-notes/day32-v0.9.10.md).
 
 The Macs were not updated as part of the release; Brenden updates them
