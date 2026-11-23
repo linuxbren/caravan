@@ -4,13 +4,15 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 [v0.9.4](https://github.com/linuxbren/caravan/releases/tag/v0.9.4), its fix as
 [v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5). Part B (header layout, chat
 queue, Ollama Cloud key, Stop a reply) is a mid-day release,
-[v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6). Day 32 stays open:
-localization, its main theme, is in progress. Step 1 (all text in one
-English strings file) is done on a local branch, waiting for review.
+[v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6). Localization step 1 (all
+user-facing text in one English strings file) is another mid-day release,
+[v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7). Day 32 stays open:
+choosing and adding languages, the rest of its main theme, comes next.
 
 1. [Status of every Day 32 request](#status-of-every-day-32-request)
 2. [Plan: localization](#plan-localization)
 3. [Localization step 1: English strings file](#localization-step-1-english-strings-file)
+   (release: [v0.9.7](#localization-step-1-release-v097))
 4. [Part A: version label](#part-a-version-label)
 5. [Part A fix: daily update check (v0.9.5)](#part-a-fix-daily-update-check-v095)
 6. [Part B: header layout (v0.9.6)](#part-b-header-layout-v096)
@@ -31,8 +33,9 @@ English strings file) is done on a local branch, waiting for review.
 | API keys for cloud models: a **Cloud API keys** section in Settings (Ollama Cloud only, the one cloud source Models can search; masked, editable, removable); an inline key prompt when a cloud model's provider has no key; cloud models say **Load**, not Download ([details](#part-b-ollama-cloud-api-key-v096)) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
 | Chatting with Ollama Cloud models (routing `/api/chat` to Ollama Cloud) | Not for Day 32 (Brenden); the key is saved now, cloud chat comes later. On the [ROADMAP](ROADMAP.md) as a future item |
 | Stop a reply while it is written: a **Stop** button under Send/Queue that really stops the model (the request to the model is closed, the split workers stop and are free for the next message), keeps the words so far marked "(stopped)", closes the journal job as stopped (never run again) and still sends queued messages next ([details](#part-b-stop-a-reply-v096)) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
-| Localization step 1: move all user-facing text into one English strings file keyed by name, English fallback, no other languages yet (Brenden: "start with compartmentalization first with English. Then we'll decide on additional languages.") | Done (fully compartmentalized: page, CLI, installers, server and worker messages) on the local `day32-localization` branch; not pushed or released, waiting for review ([details](#localization-step-1-english-strings-file)) |
-| Localization next: other languages and a language setting | Brenden decides which languages after step 1. Day 32 stays open for it |
+| Localization step 1: move all user-facing text into one English strings file keyed by name, English fallback, no other languages yet (Brenden: "start with compartmentalization first with English. Then we'll decide on additional languages.") | Done (fully compartmentalized: page, CLI, installers, server and worker messages), reviewed (Claude: approved), released in [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7) (mid-day); Brenden updates the Macs himself ([details](#localization-step-1-english-strings-file)) |
+| Localization next: other languages and a language setting | Brenden decides which languages. Day 32 stays open for it |
+| A confirmation step before every download (raised in the step 1 review): `pickQuant()` in `proxy/web/index.html` asks to confirm the placement/split only when the fit is red (`q.fit.color === "red"`); green and yellow fits start downloading at once. Brenden wants a confirmation before every download, whatever the fit color | Open, not started; not part of v0.9.7. On the [ROADMAP](ROADMAP.md) |
 
 ## Plan: localization
 
@@ -188,6 +191,26 @@ slowed the page enough that `test_stop_flow` failed on and off, also on
 - **CLI text looked up once at start-up:** a few module-level messages
   are read when the command starts. Fine while the language is fixed per
   run.
+
+### Localization step 1: release (v0.9.7)
+
+Built on the local branch `day32-localization` (on `f809d4f`), reviewed
+by Claude (approved: full suite 2,144 of 2,144 twice, string counts
+checked against this page) and merged to `main` fast-forward only.
+Released as a mid-day release, tag
+[v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7) on the
+wrap commit (source and pin commits are recorded after publishing).
+Notes: [release-notes/day32-v0.9.7.md](release-notes/day32-v0.9.7.md).
+
+Nothing looks or reads differently in English; the update only moves where
+the words live. No other language is added and there is no language
+picker yet. The Macs were not updated as part of the release; Brenden
+updates them himself with `caravan update`.
+
+Still open in Day 32:
+- Choosing and adding languages, then a language setting.
+- A confirmation step before every download (see the status table;
+  found in the step 1 review, not part of this release).
 
 ## Part A: version label
 
@@ -526,8 +549,8 @@ Updating reloads the model once (the MLX worker changed for Stop). The
 Macs were not updated as part of the release; Brenden updates them
 himself with `caravan update`.
 
-Still open in Day 32: localization (step 1 done on a local branch,
-waiting for review; languages not chosen yet).
+Still open in Day 32 after v0.9.6: localization (step 1 since released
+in [v0.9.7](#localization-step-1-release-v097); languages not chosen yet).
 
 ## Superseded: first proposal for cloud API keys
 

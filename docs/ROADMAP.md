@@ -166,8 +166,7 @@ and the daily logs, not mixed into current setup instructions.
     "stopped" so it never runs again, and still sends queued messages.
     See [DAY32](DAY32.md#part-b-stop-a-reply-v096).
   - **Localization (main theme; Day 32 stays open for it).**
-    - **Step 1, English strings file (done on the `day32-localization`
-      branch, not pushed or released yet; waiting for review):** the web
+    - **Step 1, English strings file ([v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7), done):** the web
       page, the `caravan` command, the installers and the server and
       worker messages read their text from one English file,
       `locales/en.json` (2,299 strings keyed by name), with English as the
@@ -204,6 +203,12 @@ and the daily logs, not mixed into current setup instructions.
    a CLOUD model is picked, with a first-chat notice that the message
    leaves your Macs, and keep the key out of logs, the journal and saved
    chats. Other providers come only if Models can search them.
+9. **Confirm before every download.** Models asks to confirm the
+   placement/split only when a quant's fit is red (`pickQuant()` in
+   `proxy/web/index.html` checks `q.fit.color === "red"`); green and
+   yellow fits start downloading at once. Wanted: a confirmation step
+   before every download, whatever the fit color. Raised in the Day 32
+   localization review; not part of v0.9.7.
 
 Earlier development-order items (Days 22–25) are kept in
 [roadmap history](history/ROADMAP-LAB.md) and the daily logs.

@@ -1,3 +1,28 @@
+## Day 32 localization step 1 (v0.9.7) — all text in one English strings file
+
+Released as [v0.9.7](https://github.com/linuxbren/caravan/releases/tag/v0.9.7), a mid-day
+release. Day 32 continues with choosing and adding languages.
+
+See [DAY32](docs/DAY32.md#localization-step-1-english-strings-file).
+
+- Changed: every piece of user-facing text (the web page, the `caravan`
+  command and its tools, the installers, and the web server and worker
+  messages that reach the page or the command line) now comes from one
+  file, `locales/en.json`: 2,299 strings keyed by name, English as the
+  fallback. The English text is unchanged.
+- Changed: the page and server no longer recognise messages by their
+  English words; they use codes (status, problem flag, stage codes).
+  Plurals ("1 Mac" / "2 Macs"), numbers with units, lists and ordinals go
+  through locale helpers; `<html lang>` follows the language.
+- No other language yet, and no language picker.
+- Left as they are on purpose: logs, the request journal, lab and
+  developer tools, benchmark and model prompts, config names, command
+  lines, model names, and worker output from llama.cpp / MLX.
+- Tests: a lint now also covers server and worker messages; the browser
+  tests start a plain headless Chromium (a flaky Stop test is fixed,
+  `176bfe6`).
+- 2,144 tests pass.
+
 ## Day 32 part B (v0.9.6) — Stop a reply, a message queue, a tidier header and the Ollama Cloud key
 
 Released as [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6), a mid-day

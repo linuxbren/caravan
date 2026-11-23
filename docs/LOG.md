@@ -1,3 +1,24 @@
+## 2026-11-22: Day 32 localization step 1 — English strings file (v0.9.7)
+
+Mid-day release; Day 32 stays open for choosing and adding languages.
+Built on the local branch `day32-localization` (on `f809d4f`), reviewed
+(Claude: approved, suite 2,144/2,144 twice, counts checked) and merged
+fast-forward. `locales/en.json` holds 2,299 strings (web 707, cli 351,
+server 800, agent 338, fmt 16, install 87); lookup through
+`tools/caravan_i18n.py` (`T`, plus `T.plural`, `T.num`, `T.unit`,
+`T.join`, `T.and_list`, `T.ordinal`), `/i18n.js` for the page and
+generated `S_*` shell functions for the installers. English-text checks
+became codes (`problem` flag, `stage_ready`, `msg_code`, `stage_code`,
+`notice_code`, `data-status`, `data-bad`, HTTP status). Verified
+unchanged: 7 page states at 1280/375, 42 CLI/installer runs, and a
+pseudo-language pass. Lint `test_server_and_worker_messages` covers
+`proxy/` and `agent/`. Flaky `test_stop_flow` fixed (`176bfe6`): the
+distro Chromium launcher added personal flags and extensions, so the
+test browser now gets an empty `XDG_CONFIG_HOME` and
+`--disable-extensions`. Suite 2,144 OK. Logs, journal, lab tools and
+prompts stay as code. Later (ROADMAP): confirm before every download.
+The Macs were not updated (Brenden updates them).
+
 ## 2026-11-22: Day 32 part B — Stop, queue, header, Ollama Cloud key (v0.9.6)
 
 Mid-day release; Day 32 stays open for localization. Built on the local
