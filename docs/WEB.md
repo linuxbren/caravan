@@ -405,6 +405,12 @@ The page is served by `proxy/web_server.py`; model processes are managed through
 set `CARAVAN_WEB_KEEP_WORKERS=1`. API/configuration keys and legacy fallback
 identities have not been renamed by the public documentation cleanup.
 
+The words on the page come from `locales/en.json` (Day 32 localization,
+step 1): markup uses `{{web.key}}`, filled when the server sends the page,
+and the page scripts call `T("web.key", {values})` from `/i18n.js`. To
+change a label, edit `locales/en.json`, not the page. See
+[DAY32](DAY32.md#localization-step-1-english-strings-file).
+
 Implementation notes, earlier screenshots, bug investigations and measurements
 are preserved in [the web development record](history/WEB-LAB.md).
 

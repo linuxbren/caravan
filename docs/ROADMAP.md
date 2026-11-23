@@ -165,12 +165,18 @@ and the daily logs, not mixed into current setup instructions.
     the words so far marked "(stopped)", closes the journal job as
     "stopped" so it never runs again, and still sends queued messages.
     See [DAY32](DAY32.md#part-b-stop-a-reply-v096).
-  - **Localization (main theme, next; not started; Day 32 stays open
-    for it):** pull every web page, CLI and installer string
-    into one English strings file keyed by name, with lookups that fall
-    back to English for a missing key or language. First languages:
-    Spanish, Simplified Chinese and Japanese, then German to test long
-    words in buttons and narrow layouts.
+  - **Localization (main theme; Day 32 stays open for it).**
+    - **Step 1, English strings file (done on the `day32-localization`
+      branch, not pushed or released yet; waiting for review):** the web
+      page, the `caravan` command and the installers read their text from
+      one English file, `locales/en.json` (1,127 strings keyed by name),
+      with English as the fallback. The English text is unchanged. No
+      other language yet. See [DAY32](DAY32.md#localization-step-1-english-strings-file).
+    - **Next (Brenden decides):** which languages to add, then a language
+      setting (the Mac's language by default, a Settings override). The
+      planned first languages were Spanish, Simplified Chinese and
+      Japanese, then German to test long words in buttons and narrow
+      layouts.
 
 ## Next candidates
 

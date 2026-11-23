@@ -5,18 +5,20 @@ Day 32 runs Nov 22 2026 (America/Chicago). Part A is released as
 [v0.9.5](https://github.com/linuxbren/caravan/releases/tag/v0.9.5). Part B (header layout, chat
 queue, Ollama Cloud key, Stop a reply) is a mid-day release,
 [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6). Day 32 stays open:
-localization, its main theme, is next and not started.
+localization, its main theme, is in progress. Step 1 (all text in one
+English strings file) is done on a local branch, waiting for review.
 
 1. [Status of every Day 32 request](#status-of-every-day-32-request)
 2. [Plan: localization](#plan-localization)
-3. [Part A: version label](#part-a-version-label)
-4. [Part A fix: daily update check (v0.9.5)](#part-a-fix-daily-update-check-v095)
-5. [Part B: header layout (v0.9.6)](#part-b-header-layout-v096)
-6. [Part B: chat message queue (v0.9.6)](#part-b-chat-message-queue-v096)
-7. [Part B: Ollama Cloud API key (v0.9.6)](#part-b-ollama-cloud-api-key-v096)
-8. [Part B: Stop a reply (v0.9.6)](#part-b-stop-a-reply-v096)
-9. [Part B: tests and release (v0.9.6)](#part-b-tests-and-release-v096)
-10. [Superseded: first proposal for cloud API keys](#superseded-first-proposal-for-cloud-api-keys)
+3. [Localization step 1: English strings file](#localization-step-1-english-strings-file)
+4. [Part A: version label](#part-a-version-label)
+5. [Part A fix: daily update check (v0.9.5)](#part-a-fix-daily-update-check-v095)
+6. [Part B: header layout (v0.9.6)](#part-b-header-layout-v096)
+7. [Part B: chat message queue (v0.9.6)](#part-b-chat-message-queue-v096)
+8. [Part B: Ollama Cloud API key (v0.9.6)](#part-b-ollama-cloud-api-key-v096)
+9. [Part B: Stop a reply (v0.9.6)](#part-b-stop-a-reply-v096)
+10. [Part B: tests and release (v0.9.6)](#part-b-tests-and-release-v096)
+11. [Superseded: first proposal for cloud API keys](#superseded-first-proposal-for-cloud-api-keys)
 
 ## Status of every Day 32 request
 
@@ -29,7 +31,8 @@ localization, its main theme, is next and not started.
 | API keys for cloud models: a **Cloud API keys** section in Settings (Ollama Cloud only, the one cloud source Models can search; masked, editable, removable); an inline key prompt when a cloud model's provider has no key; cloud models say **Load**, not Download ([details](#part-b-ollama-cloud-api-key-v096)) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
 | Chatting with Ollama Cloud models (routing `/api/chat` to Ollama Cloud) | Not for Day 32 (Brenden); the key is saved now, cloud chat comes later. On the [ROADMAP](ROADMAP.md) as a future item |
 | Stop a reply while it is written: a **Stop** button under Send/Queue that really stops the model (the request to the model is closed, the split workers stop and are free for the next message), keeps the words so far marked "(stopped)", closes the journal job as stopped (never run again) and still sends queued messages next ([details](#part-b-stop-a-reply-v096)) | Done, released in [v0.9.6](https://github.com/linuxbren/caravan/releases/tag/v0.9.6) (part B); Brenden updates the Macs himself |
-| Localization (main theme): one English strings file keyed by name, English fallback, then Spanish, Simplified Chinese, Japanese, then German | Next; not started. Day 32 stays open for it |
+| Localization step 1: move all user-facing text into one English strings file keyed by name, English fallback, no other languages yet (Brenden: "start with compartmentalization first with English. Then we'll decide on additional languages.") | Done on the local `day32-localization` branch; not pushed or released, waiting for review ([details](#localization-step-1-english-strings-file)) |
+| Localization next: other languages and a language setting | Brenden decides which languages after step 1. Day 32 stays open for it |
 
 ## Plan: localization
 
@@ -39,6 +42,100 @@ localization, its main theme, is next and not started.
   language, so a half-translated language never shows a blank.
 - First languages: Spanish, Simplified Chinese and Japanese. Then German,
   to test long words in buttons and narrow layouts.
+
+## Localization step 1: English strings file
+
+Brenden: "start with compartmentalization first with English. Then we'll
+decide on additional languages."
+
+Every piece of text the web page, the `caravan` command and the installers
+show now comes from one file, `locales/en.json`, keyed by name. The English
+text is the same as before; no other language is added.
+
+**The file.** `locales/en.json` holds 1,127 strings in three groups:
+
+| Group | Strings | Used by |
+| --- | --- | --- |
+| `web.*` | 693 | the page (`index.html`, `pairing.html` and the page scripts) |
+| `cli.<command>.*` | 347 | the `caravan` command and its tools (`tools/caravan*.py`) |
+| `install.*` | 87 | the bootstrap (`install`) and `scripts/install.sh` |
+
+Values with `{name}` take values, filled with Python `str.format` rules
+(`{{` and `}}` are literal braces, only in strings that take values).
+Keys ending in `_html` hold markup and go into the page as-is; all other
+text is escaped.
+
+**How lookup works.**
+
+- **Page:** markup uses `{{web.key}}`, filled by the server when it sends
+  the page (`caravan_i18n.render_page`). The server also puts the page's
+  strings into a small script (`window.CARAVAN_STRINGS`), and
+  `/i18n.js` defines `T("web.key", {values})` for the scripts. A missing
+  key shows English, then the key itself. The function is `T`, not `t`,
+  because many page functions already use `t` as a local name.
+- **CLI:** `from caravan_i18n import T`, then `T("cli.status.x", name=...)`
+  (`tools/caravan_i18n.py`).
+- **Installers:** the bootstrap is downloaded on its own, before the rest
+  of Caravan, so it can't read the strings file. Each installer carries a
+  generated block of small shell functions (`S_name arg...` prints one
+  string) between `# >>> caravan strings` markers. After editing
+  `locales/en.json`, run `python3 tools/caravan_i18n.py --sync-shell`; a
+  test fails if a block is out of date.
+
+**Adding a language later** is adding `locales/<code>.json` with some or
+all of the same keys (missing ones show English) plus choosing it. The
+hooks are in place but off: `CARAVAN_LANG`, a Settings override
+(`_saved_language`, not built) and the Mac's language (`mac_language`,
+returns nothing yet). There is no picker yet.
+
+**Nothing changed visually.** The page was captured before and after in
+seven states (main, Settings, Models, Models with cloud results, Topology,
+a reply being written, a stopped reply) at 1280 and 375 px. The page
+text and markup are the same apart from two blank lines where the strings
+script goes; the screenshots match pixel for pixel apart from a reply
+still being written (one more word had arrived). `caravan --help`, every
+subcommand's `--help`, `caravan doctor`, `caravan status` and the
+installer messages tried on Linux (`--check`, `--help`, bad options, bad
+port, `--dry-run`) print the same text as before.
+
+**Tests.** `tests/test_day32_localization.py` (23 tests): every key used
+exists, no key is unused, values match placeholders, a second language
+falls back to English, installer blocks match the file, and a lint that
+no hard-coded words are left in the page markup, page scripts, CLI
+output or installer messages (a short allowlist gives the reason for
+each exception). Older tests that look for a phrase in the source read
+the English back through `tests/i18n_check.py`. Full suite: 2,143 tests,
+OK.
+
+**Not moved yet, and why:**
+
+- **Server messages:** errors and status text the web server sends to the
+  page (`proxy/*.py`, about 70 `error`/`message` strings plus raised
+  errors) and worker status lines (`agent/*.py`). They reach the page as
+  finished English sentences; moving them is the next step, so the page
+  can show them in the chosen language.
+- **Checks against English text:** a few places recognise English
+  messages instead of a code: saved replies starting "(no reply" or
+  "(error:", download notes starting "can't read", split status
+  "… layers ready", and the Settings note matched by /takes effect when
+  you load/. They keep working in English and need message codes before
+  another language.
+- **English grammar in code:** plurals built by adding "s", "Mac"/"Macs",
+  and sentences split around a bold name ("No model is loaded. Load
+  **name** now?"). Fine for English; other languages need whole-sentence
+  strings with plural forms.
+- **Numbers, units and dates:** "GB", "tok/s", "s" and decimal points are
+  English style; no locale number or date formatting yet.
+- **Logs and developer tools:** server and worker logs, the request
+  journal, `scripts/package.sh`, `scripts/restart-rpc-server.sh`,
+  benchmark prompts and the lab-only tools (`aux_worker.py`,
+  `pairing_smoke.py`, `simulate_mlx_pipeline.py`, `tb_ssh_proxy.py`).
+  Not shown to people using Caravan.
+- **Fixed values:** `<html lang="en">`, the default Mac label written to a
+  new config ("My Mac"), and config names, which stay as they are.
+- **CLI text looked up once at start-up:** a few module-level messages
+  (for example "Caravan is already up to date.") are read when the
+  command starts. Fine while the language is fixed per run.
 
 ## Part A: version label
 
@@ -377,7 +474,8 @@ Updating reloads the model once (the MLX worker changed for Stop). The
 Macs were not updated as part of the release; Brenden updates them
 himself with `caravan update`.
 
-Still open in Day 32: localization (not started).
+Still open in Day 32: localization (step 1 done on a local branch,
+waiting for review; languages not chosen yet).
 
 ## Superseded: first proposal for cloud API keys
 
