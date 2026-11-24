@@ -106,8 +106,8 @@ reviewed the uncommitted work and approved it at 2026-11-23 22:40 CST
 fast-forward only. The Macs were not updated; Brenden updates them
 himself.
 
-Released as [v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14)
-(source and pin commits are recorded after publishing). Notes:
+Released as [v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14):
+source `5249f19`, pin `eaa3710`; tag v0.9.14 on the wrap commit. Notes:
 [release-notes/day33-v0.9.14.md](release-notes/day33-v0.9.14.md).
 
 When Guess-ahead is on, the helper also reads the prompt, so the first

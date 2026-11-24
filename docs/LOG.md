@@ -8,7 +8,7 @@ long-prompt first-token time together with write speed for Guess-ahead
 and Prompt lookup (GGUF and MLX). A helper that delays the first word
 is kept only when generation speed pays back the wait on a whole
 long-prompt reply; missing first-token data keeps the older chat-only
-verdict. VERSION 0.9.14. The Macs were not
+verdict. VERSION 0.9.14. Source `5249f19`, pin `eaa3710`, tag v0.9.14. The Macs were not
 updated (Brenden updates them himself). See [DAY33](DAY33.md).
 
 ## 2026-11-23: Day 33 — First-token timing in Auto-tune (in review for v0.9.14)

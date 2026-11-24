@@ -12,7 +12,7 @@ See [DAY33](docs/DAY33.md).
   generation speed pays back the wait. If first-token time is missing,
   the older chat-only verdict is unchanged. The existing ~2k-token long
   Auto-tune prompt is used; Auto-tune does not run an extra long prompt.
-- Tests: 2,273 tests pass.
+- Source `5249f19`, pin `eaa3710`. 2,273 tests pass.
 
 ## Day 33 — Guess-ahead helper for MLX on one Mac (v0.9.13)
 
