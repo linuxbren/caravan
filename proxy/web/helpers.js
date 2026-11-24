@@ -56,16 +56,20 @@
     return b;
   }
 
-  // What the Helper download button says. GGUF: the helper is already on
-  // this Mac (named), or offer the download; MLX: the split-model offer,
-  // or why a one-Mac MLX model does not use a helper.
+  // What the Helper download button says. GGUF or MLX: the helper is
+  // already on this Mac (named), or offer the download; a Balance split
+  // still does not use a helper.
   function helperButtonText(st) {
     if (st && st.kind === 'gguf') {
       if (st.present) return {say: T(`web.the_guess_ahead_helper_is_already`, {present_name: st.present_name || T('web.a_smaller_model_of_the_same_2')})};
       if (st.known_id) return {ask: T(`web.download_the_known_name_helper_v`, {known_name: st.known_name, v: st.known_size_mb ? T(`web.known_size_mb_mb`, {known_size_mb: st.known_size_mb}) : ''})};
       return {say: T('web.there_is_no_known_guess_ahead')};
     }
-    if (st && st.kind === 'mlx' && !st.split) return {say: T('web.on_one_mac_mlx_models_do')};
+    if (st && st.kind === 'mlx') {
+      if (st.balance) return {say: st.message || T('web.no_missing_compatible_helper_for_the')};
+      if (st.present) return {say: T(`web.the_guess_ahead_helper_is_already`, {present_name: st.present_name || T('web.a_smaller_model_of_the_same_2')})};
+      if (st.known_id) return {ask: T(`web.download_the_known_name_helper_v`, {known_name: st.known_name, v: st.known_size_mb ? T(`web.known_size_mb_mb`, {known_size_mb: st.known_size_mb}) : ''})};
+    }
     return {say: T('web.no_missing_compatible_helper_for_the')};
   }
   async function helperButtonClick() {

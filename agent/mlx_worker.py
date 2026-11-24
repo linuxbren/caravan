@@ -821,60 +821,6 @@ class Engine:
                     total_gb=total_gb, weights_gb=weights_gb, available_gb=avail_gb)
                 self.pipeline_chats = n
                 log(f"auto pipeline: chats={n} ({reason})")
-            no_draft = bool(getattr(args, "no_split_draft", False))
-            draft = getattr(args, "split_draft_model", None)
-            if no_draft:
-                draft = None
-                log("split speculate: --no-split-draft; auto-pair off")
-            dpath = None
-            pairing = None
-            if draft:
-                dpath = Path(draft).expanduser().resolve()
-                if not dpath.is_dir():
-                    raise FileNotFoundError(T("agent.mlx_worker.split_draft_model_not_found_dpath", dpath=dpath))
-                pairing = guess_ahead.find_pairing(self.model_dir)
-                if pairing and pairing.get("skip"):
-                    pairing = None
-            elif not no_draft:
-                pairing = guess_ahead.find_pairing(self.model_dir)
-                if pairing and pairing.get("skip"):
-                    log(f"split speculate: no pairing ({pairing.get('reason')})")
-                    pairing = None
-                elif pairing:
-                    cand = guess_ahead.drafts_dir() / pairing["draft"]["name"]
-                    if cand.is_dir() and (cand / "config.json").is_file():
-                        dpath = cand.resolve()
-                        log(f"split speculate: auto-pair {pairing['id']} -> {dpath.name}")
-                    else:
-                        auto = bool(getattr(args, "split_draft_auto_download", False))
-                        if guess_ahead.ask_download(pairing, auto=auto, model_label=self.model_dir.name):
-                            dpath = guess_ahead.download_draft(pairing).resolve()
-                            log(f"split speculate: downloaded helper {dpath.name}")
-                        else:
-                            log("split speculate: helper download declined; baseline")
-                            pairing = None
-            if dpath is not None:
-                vocab = guess_ahead.build_vocab_maps(self.model_dir, dpath)
-                if not vocab.get("ok"):
-                    log(f"split speculate: vocab mismatch ({vocab.get('reason')}); skipping draft")
-                    dpath = None
-                    pairing = None
-                else:
-                    self.draft_model, self.draft_tokenizer = load(str(dpath))
-                    self.draft_path = dpath
-                    self.draft_remap_d2t = {int(k): int(v) for k, v in (vocab.get("remap_draft_to_target") or {}).items()}
-                    self.draft_remap_t2d = {int(k): int(v) for k, v in (vocab.get("remap_target_to_draft") or {}).items()}
-                    self.guess_pairing = pairing
-                    if pairing and not self._speculate_k_explicit:
-                        self.speculate_k = int(pairing["draft"].get("k") or self.speculate_k)
-                    log(f"split speculate: draft {dpath.name}, k={self.speculate_k}, "
-                        f"vocab={vocab.get('mode')} remap={vocab.get('n_remap', 0)} "
-                        f"(idea 3 guess-ahead)")
-            if self.prompt_lookup_n:
-                log(f"split speculate: prompt-lookup n={self.prompt_lookup_n}, "
-                    f"k={self.speculate_k} (idea 3 draft-free)")
-            if self.prompt_lookup_adaptive and self.prompt_lookup_n:
-                log(f"split speculate: prompt-lookup adaptive on (n={self.prompt_lookup_n})")
         else:
             self._learn_packer_was_explicit = getattr(args, "split_front_layers", None) is not None
             self.model, self.tokenizer = load(str(self.model_dir))
@@ -885,6 +831,7 @@ class Engine:
             except Exception as _e:
                 log(f"rope scaling patch skipped: {_e!r}")
             add_turn_end_stops(self.tokenizer, log=log)
+        self._setup_guess_ahead(args)
         if getattr(args, "native_mtp", False):
             if getattr(args, "kv_bits", None):
                 raise ValueError(T("agent.mlx_worker.native_mtp_experiment_uses_uncompressed_caches"))
@@ -963,6 +910,120 @@ class Engine:
         except Exception as e:
             log(f"active settings: unavailable ({e!r})")
 
+
+
+    def _draft_fits(self, dpath, pairing):
+        """Whether a Guess-ahead helper can be added on this Mac.
+
+        The main model is already loaded, so available memory is what is
+        left. Unknown memory, or not enough free space for the helper
+        weights plus a small reserve, fails closed (skip the helper).
+        """
+        import mlx_split as S
+        try:
+            _total_gb, avail_gb = S.host_memory_gb()
+        except Exception as e:
+            return False, f"memory unknown ({e!r})"
+        if avail_gb is None:
+            return False, "memory unknown"
+        size_mb = None
+        if pairing and isinstance(pairing.get("draft"), dict):
+            try:
+                size_mb = pairing["draft"].get("size_mb")
+            except Exception:
+                size_mb = None
+        if size_mb is None:
+            total = 0
+            try:
+                for f in Path(dpath).rglob("*"):
+                    if f.is_file() and f.suffix in (".safetensors", ".npz", ".bin", ".gguf"):
+                        total += f.stat().st_size
+            except OSError as e:
+                return False, f"could not measure helper ({e!r})"
+            size_mb = total / 1e6 if total else None
+        if size_mb is None:
+            return False, "helper size unknown"
+        need_gb = float(size_mb) / 1024.0 + 0.5
+        if float(avail_gb) < need_gb:
+            return False, f"need {need_gb:.1f} GB free, {float(avail_gb):.1f} GB available"
+        return True, None
+
+    def _setup_guess_ahead(self, args):
+        """Load a Guess-ahead helper for a split lead or a one-Mac MLX worker.
+
+        Missing auto-paired files, a vocab mismatch, or a helper that does
+        not fit skip the draft and leave the main model running. An
+        explicit --split-draft-model path that is not a directory still
+        raises FileNotFoundError. Native MTP skips all conventional draft
+        work (auto-pair, download, and load), including an explicit
+        --split-draft-model, so the unused helper is never loaded beside
+        the MTP head. Settings Guess-ahead = Native MTP emits --native-mtp
+        without --no-split-draft, so this gate has to live here.
+        """
+        no_draft = bool(getattr(args, "no_split_draft", False)) or bool(getattr(args, "native_mtp", False))
+        draft = getattr(args, "split_draft_model", None)
+        if no_draft:
+            draft = None
+            if getattr(args, "native_mtp", False):
+                log("split speculate: native MTP; conventional draft helper off")
+            else:
+                log("split speculate: --no-split-draft; auto-pair off")
+        dpath = None
+        pairing = None
+        if draft:
+            dpath = Path(draft).expanduser().resolve()
+            if not dpath.is_dir():
+                raise FileNotFoundError(T("agent.mlx_worker.split_draft_model_not_found_dpath", dpath=dpath))
+            pairing = guess_ahead.find_pairing(self.model_dir)
+            if pairing and pairing.get("skip"):
+                pairing = None
+        elif not no_draft:
+            pairing = guess_ahead.find_pairing(self.model_dir)
+            if pairing and pairing.get("skip"):
+                log(f"split speculate: no pairing ({pairing.get('reason')})")
+                pairing = None
+            elif pairing:
+                cand = guess_ahead.drafts_dir() / pairing["draft"]["name"]
+                if cand.is_dir() and (cand / "config.json").is_file():
+                    dpath = cand.resolve()
+                    log(f"split speculate: auto-pair {pairing['id']} -> {dpath.name}")
+                else:
+                    auto = bool(getattr(args, "split_draft_auto_download", False))
+                    if guess_ahead.ask_download(pairing, auto=auto, model_label=self.model_dir.name):
+                        dpath = guess_ahead.download_draft(pairing).resolve()
+                        log(f"split speculate: downloaded helper {dpath.name}")
+                    else:
+                        log("split speculate: helper download declined; baseline")
+                        pairing = None
+        if dpath is not None:
+            ok_fit, fit_reason = self._draft_fits(dpath, pairing)
+            if not ok_fit:
+                log(f"split speculate: helper does not fit ({fit_reason}); skipping draft")
+                dpath = None
+                pairing = None
+        if dpath is not None:
+            vocab = guess_ahead.build_vocab_maps(self.model_dir, dpath)
+            if not vocab.get("ok"):
+                log(f"split speculate: vocab mismatch ({vocab.get('reason')}); skipping draft")
+                dpath = None
+                pairing = None
+            else:
+                from mlx_lm import load
+                self.draft_model, self.draft_tokenizer = load(str(dpath))
+                self.draft_path = dpath
+                self.draft_remap_d2t = {int(k): int(v) for k, v in (vocab.get("remap_draft_to_target") or {}).items()}
+                self.draft_remap_t2d = {int(k): int(v) for k, v in (vocab.get("remap_target_to_draft") or {}).items()}
+                self.guess_pairing = pairing
+                if pairing and not self._speculate_k_explicit:
+                    self.speculate_k = int(pairing["draft"].get("k") or self.speculate_k)
+                log(f"split speculate: draft {dpath.name}, k={self.speculate_k}, "
+                    f"vocab={vocab.get('mode')} remap={vocab.get('n_remap', 0)} "
+                    f"(idea 3 guess-ahead)")
+        if self.prompt_lookup_n:
+            log(f"split speculate: prompt-lookup n={self.prompt_lookup_n}, "
+                f"k={self.speculate_k} (idea 3 draft-free)")
+        if self.prompt_lookup_adaptive and self.prompt_lookup_n:
+            log(f"split speculate: prompt-lookup adaptive on (n={self.prompt_lookup_n})")
 
     def _shared_prefix_on(self) -> bool:
         if self._learn_spc_override is not None:
@@ -1090,7 +1151,7 @@ class Engine:
         spec = (info or {}).get("speculate")
         out = {
             "guess_ahead": (bool(spec) if info is not None
-                            else (self.native_mtp is not None or (self.client is not None and self.draft_model is not None
+                            else (self.native_mtp is not None or (self.draft_model is not None
                                   and self._learn_guess_override is not False))),
             "guess_ahead_loaded": self.draft_model is not None or self.native_mtp is not None,
             "native_mtp_available": self.native_mtp is not None,
@@ -1159,7 +1220,7 @@ class Engine:
             return
         settings_used = {
             "pipeline_chats": self.pipeline_chats,
-            "guess_ahead": self._learn_guess_ahead_on() if self.client is not None else None,
+            "guess_ahead": self._learn_guess_ahead_on() if (self.client is not None or self.draft_model is not None) else None,
             "packer_layers": getattr(self.args, "split_front_layers", None),
             "shared_prefix": self._shared_prefix_on() if self.client is not None else None,
         }
@@ -2553,7 +2614,7 @@ class Engine:
             n_from_draft = 0
             n_verify_rounds = 0
             shut = None
-            if self.client is not None and self.draft_model is not None:
+            if self.draft_model is not None:
                 shut = self._chat_shutoffs.get(key)
                 if shut is None:
                     shut = guess_ahead.ChatShutoff(self.break_even_frac)
@@ -2568,7 +2629,7 @@ class Engine:
                 draft_ok = self.draft_model is not None and not (shut and shut.disabled)
             else:
                 draft_ok = self.draft_model is not None and not (shut and shut.disabled)
-            use_spec = ((self.client is not None and draft_ok) or int(self.prompt_lookup_n) > 0)
+            use_spec = (draft_ok or int(self.prompt_lookup_n) > 0)
             if use_spec:
                 # Detokenize ourselves (stream_generate path does this inside mlx_lm).
                 detok = self.tokenizer

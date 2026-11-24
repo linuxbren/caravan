@@ -11,7 +11,10 @@ class MeasuredLabels(unittest.TestCase):
             self.assertIn('slower',options[name]['help'])
         self.assertIn('~70% more combined output',options['pipeline_chats']['help'])
         self.assertIn('no gain on one Mini',options['pipeline_chats']['help'])
-        self.assertIn('~33% faster writing one reply on a split model',options['guess_ahead']['help'])
+        self.assertIn('up to ~33% faster', options['guess_ahead']['help'])
+        self.assertIn('split-model tests', options['guess_ahead']['help'])
+        self.assertIn('one Mac or a split', options['guess_ahead']['help'])
+        self.assertIn('two chats can be slower', options['guess_ahead']['help'])
 
     def test_badge_is_tested_but_not_a_general_speed_claim(self):
         html=english_source(Path(__file__).resolve().parents[1]/'proxy/web/index.html')

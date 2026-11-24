@@ -287,4 +287,4 @@ class SpeedupsSingleMlxTests(unittest.TestCase):
                               sets_args={"run_short": True, "run_edits": False, "run_long": False})
         ga = [r for r in out["rows"] if r["mode"] == "Guess-ahead"]
         self.assertEqual(len(ga), 1)
-        self.assertIn("split models only", ga[0]["reason"])
+        self.assertIn("no helper model on this Mac", ga[0]["reason"])

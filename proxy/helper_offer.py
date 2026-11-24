@@ -8,8 +8,8 @@ downloaded without an explicit yes. "Not now" is remembered per model in
 
 GGUF helpers come from HELPERS below (a GGUF helper for a GGUF model).
 MLX helpers come from agent/guessers.json through web_helpers.offer(),
-which only offers one for a split MLX model (on one Mac an MLX model
-does not use a helper yet). After a yes, Guess-ahead goes to Auto if it
+for a split MLX model or an MLX model on one Mac (a Balance split still
+does not use a helper). After a yes, Guess-ahead goes to Auto if it
 was Off; Auto still decides by measurement (Auto-tune keeps the helper
 only when it is at least 3% faster).
 """
@@ -172,8 +172,8 @@ def helper_status(snapshot: dict, entry: Optional[dict], *, find_draft=None) -> 
     """What the Helper download button says for the loaded (or named) model.
 
     GGUF: whether a helper is already on this Mac (and its name), or which
-    known helper could be downloaded. MLX: whether the model is split
-    (only a split MLX model uses a helper today).
+    known helper could be downloaded. MLX: the same, for a model on one
+    Mac or a split (a Balance split still does not use a helper).
     """
     snap = snapshot or {}
     entry = entry or {}
@@ -187,6 +187,24 @@ def helper_status(snapshot: dict, entry: Optional[dict], *, find_draft=None) -> 
             if web_helpers.balance_split(snap):
                 out["balance"] = True
                 out["message"] = web_helpers.BALANCE_NO_HELPER
+                return out
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            import web_helpers as _WH  # noqa: F401
+            import guess_ahead as G
+            p = G.find_pairing(Path(str(mid).replace("/", "--")))
+            d = (p or {}).get("draft") or {}
+            if p and not p.get("skip") and d.get("vocab") not in ("mismatch", "incompatible"):
+                present = (G.drafts_dir() / d["name"] / "config.json").is_file()
+                out["present"] = present
+                out["present_name"] = d["name"] if present else None
+                out["known_id"] = p["id"]
+                out["known_name"] = d["name"]
+                out["known_size_mb"] = d.get("size_mb")
+                if present:
+                    out["message"] = (T("server.helper_offer.the_guess_ahead_helper_is_already",
+                                        present_name=out["present_name"]))
         except Exception:  # noqa: BLE001
             pass
         return out

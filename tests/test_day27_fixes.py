@@ -173,9 +173,9 @@ class HelperButtonTextTests(unittest.TestCase):
                       "known_name": HELP, "known_size_mb": 531})
         self.assertIn("Download the " + HELP + " helper (531 MB)", t["ask"])
         self.assertIn("no known", self.say({"kind": "gguf", "present": False})["say"])
-        self.assertIn("one Mac", self.say({"kind": "mlx", "split": False})["say"])
-        self.assertIn("split MLX", self.say({"kind": "mlx", "split": True})["say"])
-        self.assertIn("split MLX", self.say(None)["say"])
+        self.assertIn("loaded MLX model", self.say({"kind": "mlx", "split": False})["say"])
+        self.assertIn("loaded MLX model", self.say({"kind": "mlx", "split": True})["say"])
+        self.assertIn("loaded MLX model", self.say(None)["say"])
 
 
 class DnsSdLeftoverTests(unittest.TestCase):

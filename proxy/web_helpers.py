@@ -27,7 +27,7 @@ def balance_split(snapshot) -> bool:
 
 def offer(snapshot):
     model = snapshot.get('model_id') or ''
-    if not model or not snapshot.get('split') or (snapshot.get('settings') or {}).get('guess_ahead') in ('off', 'mtp'):
+    if not model or (snapshot.get('settings') or {}).get('guess_ahead') in ('off', 'mtp'):
         return None
     if balance_split(snapshot):
         # Day 28 tuning fix: a Balance split never loads a helper (see

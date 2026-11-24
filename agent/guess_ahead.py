@@ -1,8 +1,8 @@
 """Idea 3 guess-ahead helpers: pairing table, vocab match/remap, download ask,
 first-load gate, and per-chat shut-off.
 
-Used by mlx_worker on the split lead. When disabled (--no-split-draft) or when
-no pairing matches, behavior is unchanged.
+Used by mlx_worker on a split lead and on a one-Mac MLX worker. When disabled
+(--no-split-draft) or when no pairing matches, behavior is unchanged.
 """
 from __future__ import annotations
 

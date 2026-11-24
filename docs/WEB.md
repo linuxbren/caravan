@@ -218,9 +218,11 @@ replies?", with Download and Not now; Caravan will not download one for
 you without that click, remembers Not now for that model, and hides the
 line when the page is opened from another computer on your network.
 After a download Guess-ahead goes to Auto. Auto-tune tries Guess-ahead
-when a helper is on this Mac and may try Prompt lookup when only one
-chat is in use; it treats a garbled reply as a loss. A reply that used
-guesses ends with "guesses kept N%". See [Day 27](DAY27.md). Fused kernels and GPU keep-warm are hidden, because they do not
+when a helper is on this Mac (GGUF, a split MLX model, or an MLX model
+on one Mac) and may try Prompt lookup when only one chat is in use; it
+treats a garbled reply as a loss. A reply that used guesses ends with
+"guesses kept N%". A Balance split of an MLX model still does not use a
+helper. See [Day 27](DAY27.md) and [Day 33](DAY33.md). Fused kernels and GPU keep-warm are hidden, because they do not
 apply. Self-tuning on a GGUF model learns from real chats, proposes one
 quiet trial, and reloads when you are not mid-reply. The same Before and
 After lines Auto-tune uses are filled. Auto-tune also compares 16-bit

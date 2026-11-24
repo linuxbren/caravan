@@ -220,9 +220,12 @@ and the daily logs, not mixed into current setup instructions.
 
 ## Next candidates
 
-1. **A helper for MLX on one Mac.** Today an MLX model uses a helper only
-   when it is split across Macs; on one Mac GGUF is the faster choice for
-   Qwen2.5 Coder 7B.
+1. **A helper for MLX on one Mac.** Implemented in Day 33 (pending review,
+   to ship as v0.9.13 after approval). An MLX model on one Mac uses the
+   same Guess-ahead helper as a split MLX model and as GGUF: Auto / Off /
+   On, helper matching, a file and memory-fit check before load, "guesses
+   kept", Auto-tune, and the "Download helper for faster replies?" offer.
+   See [DAY33](DAY33.md).
 2. **First token with Guess-ahead.** The helper also reads the prompt, so
    the first word on long prompts comes about 10% later; Auto-tune could
    weigh that.

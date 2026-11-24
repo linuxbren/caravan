@@ -34,12 +34,16 @@ class HelperConsentTests(unittest.TestCase):
         self.assertFalse(H.offer(self.snap)['declined'])
 
     def test_off_single_unknown_and_installed(self):
-        self.assertIsNone(H.offer({**self.snap, 'split':False}))
+        # Day 33: a one-Mac MLX model can also be offered the helper.
+        one = H.offer({**self.snap, 'split': False})
+        self.assertIsNotNone(one)
+        self.assertEqual(one['id'], 'qwen3-30b-a3b')
         self.assertIsNone(H.offer({**self.snap, 'settings':{'guess_ahead':'off'}}))
         self.assertIsNone(H.offer({**self.snap, 'model_id':'gpt-oss'}))
         p = H.G.drafts_dir() / 'Qwen3-0.6B-4bit'
         p.mkdir(parents=True); (p / 'config.json').write_text('{}')
         self.assertIsNone(H.offer(self.snap))
+        self.assertIsNone(H.offer({**self.snap, 'split': False}))
 
     def test_inventory_and_delete_guard(self):
         p = H.G.drafts_dir() / 'Qwen3-0.6B-4bit'

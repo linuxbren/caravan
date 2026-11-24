@@ -61,6 +61,10 @@ prompt sets. Without `--yes` it only explains what it would do.
 On one Mac, an MLX model does not use a helper (that needs a split
 model), so the MLX Guess-ahead row is skipped and says why.
 
+Later: Day 33 added a Guess-ahead helper for MLX on one Mac, so that
+row is measured when a helper is on this Mac. See [DAY33](DAY33.md).
+The Day 27 measurements below are unchanged.
+
 ## Measured: Qwen2.5 Coder 7B GGUF (Q4_K_M), 1st Mac
 
 `caravan bench --speedups --only gguf`, with the small Qwen2.5 Coder
@@ -161,6 +165,8 @@ Settings shows one line under the model:
 - A GGUF model gets a GGUF helper. A split MLX model gets its MLX
   helper. On one Mac an MLX model does not use a helper yet, so no line
   appears for it.
+
+  Later: Day 33 offers the helper on one Mac too; see [DAY33](DAY33.md).
 - **Download** shows its progress in that same line (with Stop), then
   puts Guess-ahead on Auto. Auto still decides by measurement: Auto-tune
   keeps the helper only when replies get faster. A Guess-ahead you set
@@ -207,6 +213,9 @@ this Mac is never used by mistake.
 On one Mac, GGUF can now use a helper and MLX cannot, so for Qwen2.5
 Coder 7B on one Mac the fastest Caravan setup measured tonight is the
 GGUF model with Guess-ahead.
+
+Later: Day 33 added a Guess-ahead helper for MLX on one Mac. See
+[DAY33](DAY33.md). The Day 27 measurements in this note are unchanged.
 
 ## Updating
 

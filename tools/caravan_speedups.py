@@ -189,16 +189,6 @@ def run_side(kind, model_id, *, port, urlopen, status_fn, window_fn,
             continue
         active = st.get("active") or {}
         note = _active_note(active)
-        worker = st.get("worker") if isinstance(st.get("worker"), dict) else {}
-        split = st.get("split") if "split" in st else worker.get("split")
-        single_mlx = kind == "mlx" and (
-            split is False
-            or (isinstance(active, dict) and active
-                and active.get("two_chats_available") is False))
-        if mode == T("cli.speedups.guess_ahead") and single_mlx:
-            rows.append({"mode": mode, "skipped": True, "active": note,
-                         "reason": T("cli.speedups.on_one_mac_an_mlx_model")})
-            continue
         if mode == T("cli.speedups.guess_ahead") and isinstance(active, dict) and active and not active.get("guess_ahead"):
             rows.append({"mode": mode, "skipped": True, "active": note,
                          "reason": T("cli.speedups.no_helper_model_on_this_mac")})

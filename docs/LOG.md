@@ -1,3 +1,11 @@
+## 2026-11-23: Day 33 started — Guess-ahead helper for MLX on one Mac
+
+Day 33 started tonight with ROADMAP #1 (a helper for an MLX model on one
+Mac). The work is uncommitted on `day33-mlx-1mac-helper` pending Claude
+review; VERSION and CHANGELOG stay at 0.9.12 until approval (to ship as
+v0.9.13). ROADMAP #2 (first token with Guess-ahead in Auto-tune) is
+queued next. See [DAY33](DAY33.md).
+
 ## 2026-11-23: Day 32 closed (complete through v0.9.12)
 
 Day 32 ran Nov 22–23 2026 and is complete, released v0.9.4 through
