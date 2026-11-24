@@ -1,3 +1,28 @@
+## Day 33 — Guess-ahead helper for MLX on one Mac (v0.9.13)
+
+Released as [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13).
+Day 33 starts with ROADMAP #1: an MLX model on one Mac can use the same
+Guess-ahead helper as a split MLX model and as GGUF.
+
+See [DAY33](docs/DAY33.md).
+
+- Added: Guess-ahead helper support for MLX models running on one Mac.
+  Auto / Off / On, helper matching (same family / tokenizer), a file and
+  memory-fit check before load, "guesses kept" under replies and in
+  `caravan bench --speedups`, Auto-tune scoring once a helper is loaded,
+  and the "Download helper for faster replies?" offer when a known helper
+  is not on this Mac yet. A missing, incompatible, or too-large helper
+  fails closed (load continues without it; the log says why). A Balance
+  split still does not use a helper.
+- Changed: user-facing copy and all five locales no longer say that MLX
+  only uses a helper when it is split across Macs.
+- Fixed: Native MTP (experimental) does not load a conventional draft
+  helper alongside the MTP head. Claude's review caught that Settings
+  Guess-ahead = Native MTP emits `--native-mtp` without `--no-split-draft`;
+  the worker now skips auto-pair, download, and load of a conventional
+  helper when native MTP is on, including an explicit `--split-draft-model`.
+- Tests: 2,247 tests pass.
+
 ## Day 32 — Simplified Chinese localization (v0.9.12)
 
 Released as [v0.9.12](https://github.com/linuxbren/caravan/releases/tag/v0.9.12), a mid-day

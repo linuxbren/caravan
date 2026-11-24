@@ -1,3 +1,17 @@
+## 2026-11-23: Day 33 — Guess-ahead helper for MLX on one Mac (v0.9.13)
+
+First Day 33 release (ROADMAP #1). Built on the local branch
+`day33-mlx-1mac-helper` (on `ecddb9a`), reviewed by Claude (CHANGES
+NEEDED for a native-MTP collision, then approved 2026-11-23 21:52 CST:
+full suite 2,247 of 2,247 with the review command) and merged to `main`
+fast-forward only. An MLX model on one Mac can use the same Guess-ahead
+helper as a split MLX model and as GGUF (Auto / Off / On, helper
+matching, file and memory-fit check, "guesses kept", Auto-tune, and the
+helper offer). Native MTP (experimental) does not load a conventional
+draft helper alongside the MTP head. VERSION 0.9.13. The Macs were not
+updated (Brenden updates them himself). ROADMAP #2 (first token with
+Guess-ahead in Auto-tune) is next. See [DAY33](DAY33.md).
+
 ## 2026-11-23: Day 33 started — Guess-ahead helper for MLX on one Mac
 
 Day 33 started tonight with ROADMAP #1 (a helper for an MLX model on one

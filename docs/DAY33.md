@@ -1,10 +1,20 @@
 # Day 33 — A Guess-ahead helper for MLX on one Mac
 
 Day 33 started Nov 23 2026 (America/Chicago). This file describes the
-first item (ROADMAP #1). The work is uncommitted on
-`day33-mlx-1mac-helper` pending Claude review. VERSION and CHANGELOG
-stay at 0.9.12 until approval (to ship as v0.9.13). ROADMAP #2 — first
-token with Guess-ahead in Auto-tune — is queued next.
+first item (ROADMAP #1), released as
+[v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13).
+ROADMAP #2 — first token with Guess-ahead in Auto-tune — is next.
+
+Built on the local branch `day33-mlx-1mac-helper` (on `ecddb9a`). Claude
+reviewed the uncommitted work, asked for one change (native MTP must not
+load a conventional draft helper), then approved the fix at 2026-11-23
+21:52 CST (full suite 2,247 of 2,247 with the review command). Merged to
+`main` fast-forward only. The Macs were not updated; Brenden updates them
+himself.
+
+Released as [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13)
+(source and pin commits are recorded after publishing). Notes:
+[release-notes/day33-v0.9.13.md](release-notes/day33-v0.9.13.md).
 
 ## At a glance
 
