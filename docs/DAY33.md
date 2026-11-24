@@ -12,8 +12,8 @@ load a conventional draft helper), then approved the fix at 2026-11-23
 `main` fast-forward only. The Macs were not updated; Brenden updates them
 himself.
 
-Released as [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13)
-(source and pin commits are recorded after publishing). Notes:
+Released as [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13):
+source `baa8056`, pin `8a33cd6`; tag v0.9.13 on the wrap commit. Notes:
 [release-notes/day33-v0.9.13.md](release-notes/day33-v0.9.13.md).
 
 ## At a glance

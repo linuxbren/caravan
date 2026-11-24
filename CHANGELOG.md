@@ -21,7 +21,7 @@ See [DAY33](docs/DAY33.md).
   Guess-ahead = Native MTP emits `--native-mtp` without `--no-split-draft`;
   the worker now skips auto-pair, download, and load of a conventional
   helper when native MTP is on, including an explicit `--split-draft-model`.
-- Tests: 2,247 tests pass.
+- Source `baa8056`, pin `8a33cd6`. 2,247 tests pass.
 
 ## Day 32 — Simplified Chinese localization (v0.9.12)
 
