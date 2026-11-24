@@ -3,10 +3,8 @@
 Day 33 started Nov 23 2026 (America/Chicago). ROADMAP #1 (a Guess-ahead
 helper for MLX on one Mac) shipped as
 [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13).
-ROADMAP #2 — first-token timing in Auto-tune — is in review on the local
-branch `day33-autotune-ttft` (uncommitted, off `5ab8a5de` / v0.9.13) and
-will ship as v0.9.14 after approval. VERSION and CHANGELOG stay at
-0.9.13 until wrap.
+ROADMAP #2 — first-token timing in Auto-tune — shipped as
+[v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14).
 
 Built on the local branch `day33-mlx-1mac-helper` (on `ecddb9a`). Claude
 reviewed the uncommitted work, asked for one change (native MTP must not
@@ -100,10 +98,17 @@ loaded). There is no live MLX on the Linux dev node.
 - Historical Day 27 measurements and mid-page tables stay as they were;
   later notes there point here.
 
-## First-token timing in Auto-tune (ROADMAP #2, in review for v0.9.14)
+## First-token timing in Auto-tune (ROADMAP #2, v0.9.14)
 
-Uncommitted on `day33-autotune-ttft` (off `5ab8a5de`). VERSION and
-CHANGELOG stay at 0.9.13 until Claude approves and the wrap cuts v0.9.14.
+Built on the local branch `day33-autotune-ttft` (on `5ab8a5de`). Claude
+reviewed the uncommitted work and approved it at 2026-11-23 22:40 CST
+(full suite 2,273 of 2,273 with the review command). Merged to `main`
+fast-forward only. The Macs were not updated; Brenden updates them
+himself.
+
+Released as [v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14)
+(source and pin commits are recorded after publishing). Notes:
+[release-notes/day33-v0.9.14.md](release-notes/day33-v0.9.14.md).
 
 When Guess-ahead is on, the helper also reads the prompt, so the first
 word on a long prompt comes about 10% later (Day 27 measured this). Auto-tune

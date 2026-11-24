@@ -219,8 +219,7 @@ and the daily logs, not mixed into current setup instructions.
     at download and at load. See [DAY32](DAY32.md#gguf-placement-roadmap-9).
 
 - **Day 33 (started, released through
-  [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13);
-  #2 in review for v0.9.14):**
+  [v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14)):**
   see [DAY33](DAY33.md).
   - **A helper for MLX on one Mac
     ([v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13), done):**
@@ -230,34 +229,34 @@ and the daily logs, not mixed into current setup instructions.
     "Download helper for faster replies?" offer. Native MTP does not
     load a conventional draft helper alongside the MTP head. See
     [DAY33](DAY33.md).
-  - **First token with Guess-ahead (in review for v0.9.14):** Auto-tune
-    weighs first-token time on the long test prompt together with write
-    speed. A helper that delays the first word is kept only when
-    generation speed pays back the wait on a whole long-prompt reply.
-    Missing first-token data falls back to the older chat-only verdict.
-    See [DAY33](DAY33.md#first-token-timing-in-auto-tune-roadmap-2-in-review-for-v0914).
+  - **First token with Guess-ahead
+    ([v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14), done):**
+    Auto-tune weighs first-token time on the long test prompt together
+    with write speed. A helper that delays the first word is kept only
+    when generation speed pays back the wait on a whole long-prompt
+    reply. Missing first-token data falls back to the older chat-only
+    verdict. See
+    [DAY33](DAY33.md#first-token-timing-in-auto-tune-roadmap-2-v0914).
 
 ## Next candidates
 
-1. **First token with Guess-ahead (in review for v0.9.14).** See Day 33
-   above; not shipped yet.
-2. **A beginner switch for Advanced.** Hide the tuning rows behind one
+1. **A beginner switch for Advanced.** Hide the tuning rows behind one
    simple switch so a new user sees only what they need.
-3. **Vision and voice.** Image input for models that support it, and
+2. **Vision and voice.** Image input for models that support it, and
    listening first, following [VOICE](VOICE.md).
-4. **Terminal UI.** A friendly terminal interface for chat, status and
+3. **Terminal UI.** A friendly terminal interface for chat, status and
    updates.
-5. **Fresh install and FileVault.** Prove a clean account, a fresh install,
+4. **Fresh install and FileVault.** Prove a clean account, a fresh install,
    and a FileVault reboot end to end.
-6. **Security review.** An independent look at pairing, the browser page,
+5. **Security review.** An independent look at pairing, the browser page,
    the Tailscale share and the update path.
-7. **Chat with Ollama Cloud models.** Day 32 saves the Ollama Cloud key
+6. **Chat with Ollama Cloud models.** Day 32 saves the Ollama Cloud key
    (Settings → Cloud API keys) and cloud models say **Load**, but chats
    still only go to the Macs. Next: route `/api/chat` to Ollama Cloud when
    a CLOUD model is picked, with a first-chat notice that the message
    leaves your Macs, and keep the key out of logs, the journal and saved
    chats. Other providers come only if Models can search them.
-8. **Confirm before every download.** Done in
+7. **Confirm before every download.** Done in
    [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8).
    GGUF downloads use the same Step 2 placement chooser as MLX, for every
    fit color. See [DAY32](DAY32.md#gguf-placement-roadmap-9).

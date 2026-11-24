@@ -1,3 +1,19 @@
+## Day 33 — First-token timing in Auto-tune (v0.9.14)
+
+Released as [v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14).
+Day 33 ROADMAP #2: Auto-tune weighs first-token time together with write
+speed when it tries Guess-ahead or Prompt lookup.
+
+See [DAY33](docs/DAY33.md).
+
+- Changed: Auto-tune now compares a whole long-prompt reply (first word
+  plus writing) when it scores Guess-ahead and Prompt lookup, on GGUF
+  and on MLX. A helper that delays the first word is kept only when
+  generation speed pays back the wait. If first-token time is missing,
+  the older chat-only verdict is unchanged. The existing ~2k-token long
+  Auto-tune prompt is used; Auto-tune does not run an extra long prompt.
+- Tests: 2,273 tests pass.
+
 ## Day 33 — Guess-ahead helper for MLX on one Mac (v0.9.13)
 
 Released as [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13).

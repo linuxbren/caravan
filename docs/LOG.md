@@ -1,3 +1,16 @@
+## 2026-11-23: Day 33 — First-token timing in Auto-tune (v0.9.14)
+
+Second Day 33 release (ROADMAP #2). Built on the local branch
+`day33-autotune-ttft` (on `5ab8a5de`), reviewed by Claude (approved
+2026-11-23 22:40 CST: full suite 2,273 of 2,273 with the review
+command) and merged to `main` fast-forward only. Auto-tune weighs
+long-prompt first-token time together with write speed for Guess-ahead
+and Prompt lookup (GGUF and MLX). A helper that delays the first word
+is kept only when generation speed pays back the wait on a whole
+long-prompt reply; missing first-token data keeps the older chat-only
+verdict. VERSION 0.9.14. The Macs were not
+updated (Brenden updates them himself). See [DAY33](DAY33.md).
+
 ## 2026-11-23: Day 33 — First-token timing in Auto-tune (in review for v0.9.14)
 
 ROADMAP #2 is uncommitted on `day33-autotune-ttft` (off `5ab8a5de` /
