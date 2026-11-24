@@ -1160,6 +1160,7 @@
  "server.gguf_tune.code_edits_v_chats_v2": "コード編集 {v:+.0f}%, チャット {v2:+.0f}%",
  "server.gguf_tune.long_prompt_read_lr_c_vs": "長文プロンプト読み込み {lr_c:.0f} vs {lr_i:.0f} tok/s (ガード)",
  "server.gguf_tune.long_prompt_read_lr_c_vs_2": "長文プロンプト読み込み {lr_c:.0f} vs {lr_i:.0f} tok/s、長文返信 {t_c:.1f}秒 vs {t_i:.1f}秒 (ガード)",
+ "server.gguf_tune.long_prompt_first_word_t_c_vs": "長文プロンプトの最初の語 + 返信 {t_c:.1f}秒 vs {t_i:.1f}秒",
  "server.guess_stats.guesses_kept_fmt_pct": "保持された推測数 {fmt_pct}",
  "server.helper_offer.download_helper_for_faster_replies": "高速な返信のためにヘルパーをダウンロードしますか？",
  "server.helper_offer.the_guess_ahead_helper_is_already": "Guess-ahead ヘルパーはこの Mac ({present_name}) に既にあります。Guess-ahead をオンに設定するか、Auto に残して自動調整を実行してください。",

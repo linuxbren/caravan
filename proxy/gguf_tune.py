@@ -156,12 +156,41 @@ def specs_from_response(data: dict) -> dict:
             v = timings.get(fallback)
         if isinstance(v, (int, float)) and v >= 0:
             out[key] = float(v)
+    ttft = ttft_from_payload(data)
+    if ttft is not None:
+        out["ttft_s"] = ttft
+    return out
+
+
+def ttft_from_payload(data: dict, first_chunk_s=None):
+    """Seconds to the first content token, from a worker or llama-server body.
+
+    Prefers ``usage.caravan.ttft_s`` (MLX and the GGUF proxy both report it),
+    then ``timings.prompt_ms`` / ``first_token_ms``, then an optional SSE
+    first-chunk elapsed time. Returns None when nothing usable was reported
+    so callers can skip first-word scoring instead of guessing.
+    """
+    data = data or {}
+    timings = data.get("timings") or {}
+    usage = G.usage_from_timings(data.get("usage"), timings) or {}
+    cv = usage.get("caravan") or {}
     ttft = cv.get("ttft_s")
     if ttft is None and timings.get("prompt_ms") is not None:
         ttft = float(timings["prompt_ms"]) / 1000.0
-    if isinstance(ttft, (int, float)) and ttft >= 0:
-        out["ttft_s"] = float(ttft)
-    return out
+    if ttft is None:
+        ft = cv.get("first_token_ms")
+        if ft is None:
+            ft = timings.get("first_token_ms")
+        if ft is not None:
+            ttft = float(ft) / 1000.0
+    if ttft is None and first_chunk_s is not None:
+        try:
+            ttft = float(first_chunk_s)
+        except (TypeError, ValueError):
+            ttft = None
+    if isinstance(ttft, (int, float)) and ttft > 0:
+        return float(ttft)
+    return None
 
 
 def as_specs(measure) -> dict:
@@ -170,7 +199,8 @@ def as_specs(measure) -> dict:
         out = {k: float(v) for k, v in measure.items()
                if k in ("write_tok_s", "read_tok_s", "long_read_tok_s",
                         "ttft_s", "total_s", "short_write_tok_s",
-                        "short_total_s", "edit_write_tok_s")
+                        "short_total_s", "edit_write_tok_s",
+                        "long_ttft_s", "long_total_s", "long_prompt_tokens")
                and isinstance(v, (int, float))}
         if measure.get("garbled"):
             out["garbled"] = True
@@ -248,28 +278,83 @@ def chat_score(specs: dict) -> float:
     return prod ** (1.0 / len(parts))
 
 
+def long_reply_s(specs: dict):
+    """Seconds for one long-prompt Auto-tune reply: first word plus writing.
+
+    Prefers a measured long-prompt total when present, then measured
+    long-prompt first-token time plus write time for REPLY_TOKENS, then
+    an estimate from long-read speed. Returns None when there is not
+    enough to compare, so older saved results without these fields keep
+    their previous verdict.
+    """
+    s = specs or {}
+    total = s.get("long_total_s")
+    if isinstance(total, (int, float)) and total > 0:
+        return float(total)
+    w = s.get("short_write_tok_s") or s.get("write_tok_s")
+    write_s = (REPLY_TOKENS / float(w)) if w and w > 0 else None
+    ttft = s.get("long_ttft_s")
+    if isinstance(ttft, (int, float)) and ttft > 0 and write_s is not None:
+        return float(ttft) + write_s
+    lr = s.get("long_read_tok_s")
+    n = s.get("long_prompt_tokens") or P.AUTOTUNE_LONG_TOKENS
+    if lr and lr > 0 and write_s is not None and n and n > 0:
+        return float(n) / float(lr) + write_s
+    return None
+
+
+def long_reply_pair(challenger, incumbent):
+    """Comparable long-reply times for two arms, or (None, None).
+
+    Both arms must expose the same kind of evidence (measured total,
+    measured first-token time, or long-read estimate) so a new field on
+    only one side cannot tilt the comparison.
+    """
+    ch, inc = challenger or {}, incumbent or {}
+    def _pos(s, key):
+        v = (s or {}).get(key)
+        return float(v) if isinstance(v, (int, float)) and v > 0 else None
+    if _pos(ch, "long_total_s") and _pos(inc, "long_total_s"):
+        return _pos(ch, "long_total_s"), _pos(inc, "long_total_s")
+    ch2, inc2 = dict(ch), dict(inc)
+    ch2.pop("long_total_s", None)
+    inc2.pop("long_total_s", None)
+    if _pos(ch2, "long_ttft_s") and _pos(inc2, "long_ttft_s"):
+        return long_reply_s(ch2), long_reply_s(inc2)
+    ch2.pop("long_ttft_s", None)
+    inc2.pop("long_ttft_s", None)
+    if _pos(ch2, "long_read_tok_s") and _pos(inc2, "long_read_tok_s"):
+        return long_reply_s(ch2), long_reply_s(inc2)
+    return None, None
+
+
 def spec_verdict(challenger, incumbent, margin: float = MARGIN) -> dict:
-    """{"won": bool, "why": str} for a Guess-ahead / Prompt lookup trial."""
+    """{"won": bool, "why": str} for a Guess-ahead / Prompt lookup trial.
+
+    Day 28 already rejected a helper whose long-prompt *read* dropped more
+    than 15% unless a whole long-prompt reply still paid back, and always
+    rejected a drop past 35%. A typical Guess-ahead first-word delay is
+    about 10%, which sat under that guard, so a tiny write-speed win could
+    still be kept even when the long-prompt reply (first word + writing)
+    was slower. Day 33 always weighs that end-to-end long-prompt time when
+    first-token or long-read evidence is present; if it is missing, the
+    older chat-only verdict is unchanged.
+    """
     ch, inc = as_specs(challenger), as_specs(incumbent)
     lr_c, lr_i = ch.get("long_read_tok_s"), inc.get("long_read_tok_s")
-    if lr_c and lr_i and lr_c < lr_i * (1 - LONG_READ_GUARD):
-        # Day 28 tuning fix 3: a helper on a 2-Mac split read the long prompt
-        # 16% slower but wrote 17% faster, and the hard 15% cut threw that
-        # win away while Self-tuning had already kept it. Past 15% the pick
-        # must still make a whole long-prompt reply (read the prompt, then
-        # write a reply) no slower; past LONG_READ_HARD it is always out.
-        hard = lr_c < lr_i * (1 - LONG_READ_HARD)
-        w_c = ch.get("short_write_tok_s") or ch.get("write_tok_s")
-        w_i = inc.get("short_write_tok_s") or inc.get("write_tok_s")
-        if not hard and w_c and w_i:
-            t_c = P.AUTOTUNE_LONG_TOKENS / lr_c + REPLY_TOKENS / w_c
-            t_i = P.AUTOTUNE_LONG_TOKENS / lr_i + REPLY_TOKENS / w_i
-            if t_c <= t_i * (1 + CHAT_TOLERANCE):
-                pass  # a long-prompt reply is not slower: judge on chats below
-            else:
-                return {"won": False, "why": T("server.gguf_tune.long_prompt_read_lr_c_vs_2", lr_c=lr_c, lr_i=lr_i, t_c=t_c, t_i=t_i)}
-        else:
-            return {"won": False, "why": T("server.gguf_tune.long_prompt_read_lr_c_vs", lr_c=lr_c, lr_i=lr_i)}
+    if lr_c and lr_i and lr_c < lr_i * (1 - LONG_READ_HARD):
+        return {"won": False, "why": T("server.gguf_tune.long_prompt_read_lr_c_vs", lr_c=lr_c, lr_i=lr_i)}
+    t_c, t_i = long_reply_pair(ch, inc)
+    can_time = t_c is not None and t_i is not None and t_i > 0
+    past_read_guard = bool(lr_c and lr_i and lr_c < lr_i * (1 - LONG_READ_GUARD))
+    if can_time and t_c > t_i * (1 + CHAT_TOLERANCE):
+        if past_read_guard:
+            return {"won": False, "why": T("server.gguf_tune.long_prompt_read_lr_c_vs_2", lr_c=lr_c, lr_i=lr_i, t_c=t_c, t_i=t_i)}
+        return {"won": False, "why": T("server.gguf_tune.long_prompt_first_word_t_c_vs", t_c=t_c, t_i=t_i)}
+    if past_read_guard and not can_time:
+        # Day 28 fail-closed: a >15% long-read drop without a comparable
+        # end-to-end time is not a win.
+        return {"won": False, "why": T("server.gguf_tune.long_prompt_read_lr_c_vs", lr_c=lr_c, lr_i=lr_i)}
     cs_c, cs_i = chat_score(ch), chat_score(inc)
     if cs_i <= 0 or cs_c <= 0:
         return {"won": False, "why": T("server.gguf_tune.no_chat_measurement")}
@@ -324,8 +409,9 @@ def measure_http_specs(port: int, *, prompts=None, max_tokens: int = 192,
 
     Default is the five short prompts plus one ~2k-token long prompt when
     it fits the chat window. `long_read_tok_s` is the median read speed
-    of the long prompt(s) only. `on_prompt(index, total, kind)` is called
-    just before each prompt (index is 1-based within that kind).
+    of the long prompt(s) only; `long_ttft_s` / `long_total_s` are the
+    median first-token and total times of those long prompts. `on_prompt`
+    is called just before each prompt (index is 1-based within that kind).
     """
     import urllib.request
     urlopen = urlopen or urllib.request.urlopen
@@ -369,9 +455,12 @@ def measure_http_specs(port: int, *, prompts=None, max_tokens: int = 192,
             raise
         dt = time.time() - t0
         specs = specs_from_response(d)
+        usage = (d or {}).get("usage") or {}
+        cv = usage.get("caravan") or {}
+        if isinstance(cv.get("total_s"), (int, float)) and cv["total_s"] > 0:
+            specs["total_s"] = float(cv["total_s"])
         if "total_s" not in specs and dt > 0:
             specs["total_s"] = dt
-        usage = (d or {}).get("usage") or {}
         for k in ("prompt_tokens", "completion_tokens"):
             if k not in specs and isinstance(usage.get(k), (int, float)):
                 specs[k] = usage[k]
@@ -420,6 +509,13 @@ def measure_http_specs(port: int, *, prompts=None, max_tokens: int = 192,
         med = _median(long_reads)
         if med is not None:
             out["long_read_tok_s"] = round(med, 4)
+    for kind, key, src in (("long", "long_ttft_s", "ttft_s"),
+                           ("long", "long_total_s", "total_s"),
+                           ("long", "long_prompt_tokens", "prompt_tokens")):
+        vals = [s[src] for s, k in zip(samples, kinds) if k == kind and src in s]
+        med = _median(vals)
+        if med is not None:
+            out[key] = round(med, 4) if key != "long_prompt_tokens" else med
     if any(s.get("garbled") for s in samples):
         out["garbled"] = True
     return out

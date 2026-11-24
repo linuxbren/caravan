@@ -1160,6 +1160,7 @@
   "server.gguf_tune.code_edits_v_chats_v2": "edición de código {v:+.0f}%, chats {v2:+.0f}%",
   "server.gguf_tune.long_prompt_read_lr_c_vs": "lectura de prompt largo {lr_c:.0f} vs {lr_i:.0f} tok/s (guard)",
   "server.gguf_tune.long_prompt_read_lr_c_vs_2": "lectura de prompt largo {lr_c:.0f} vs {lr_i:.0f} tok/s, respuesta larga {t_c:.1f}s vs {t_i:.1f}s (guard)",
+ "server.gguf_tune.long_prompt_first_word_t_c_vs": "primera palabra + respuesta en el prompt largo {t_c:.1f}s vs {t_i:.1f}s",
   "server.guess_stats.guesses_kept_fmt_pct": "adivinanzas conservadas {fmt_pct}",
   "server.helper_offer.download_helper_for_faster_replies": "¿Descargar ayudante para respuestas más rápidas?",
   "server.helper_offer.the_guess_ahead_helper_is_already": "El ayudante Guess-ahead ya está en este Mac ({present_name}). Activa Guess-ahead, déjalo en Auto y ejecuta Autoajuste.",

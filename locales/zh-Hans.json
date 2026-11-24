@@ -1160,6 +1160,7 @@
  "server.gguf_tune.code_edits_v_chats_v2": "代码编辑 {v:+.0f}%，聊天 {v2:+.0f}%",
  "server.gguf_tune.long_prompt_read_lr_c_vs": "长提示读取速度：{lr_c:.0f} vs {lr_i:.0f} tok/s（保护模式）",
  "server.gguf_tune.long_prompt_read_lr_c_vs_2": "长提示读取速度：{lr_c:.0f} vs {lr_i:.0f} tok/s，长回复时间：{t_c:.1f}s vs {t_i:.1f}s（保护模式）",
+ "server.gguf_tune.long_prompt_first_word_t_c_vs": "长提示的首词加回复：{t_c:.1f}s vs {t_i:.1f}s",
  "server.guess_stats.guesses_kept_fmt_pct": "保留的猜测次数 {fmt_pct}",
  "server.helper_offer.download_helper_for_faster_replies": "下载助手以加快回复速度？",
  "server.helper_offer.the_guess_ahead_helper_is_already": "Guess-ahead 助手已在这台 Mac 上 ({present_name})。请将 Guess-ahead 设为开，或保留为自动并运行自动调优。",

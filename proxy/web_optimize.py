@@ -113,6 +113,28 @@ def decide_ab_winner(inc, ch, inc_scores, ch_scores, pick):
     return inc, ch, None
 
 
+def _uses_spec_verdict(name):
+    """Guess-ahead and Prompt lookup weigh first-token time on the long prompt."""
+    import gguf_tune as GT
+    return name in GT.SPEC_KNOBS or name == "adaptive_lookup"
+
+
+def decide_tune_winner(name, inc, ch, inc_scores, ch_scores, pick):
+    """Quality first, then the Guess-ahead / Prompt lookup first-word verdict."""
+    winner, lost, why = decide_ab_winner(inc, ch, inc_scores, ch_scores, pick)
+    if why or not _uses_spec_verdict(name):
+        return winner, lost, why
+    inc_specs = getattr(inc_scores, "specs", None) or {}
+    ch_specs = getattr(ch_scores, "specs", None) or {}
+    if not inc_specs or not ch_specs:
+        return winner, lost, why
+    import gguf_tune as GT
+    v = GT.spec_verdict(ch_specs, inc_specs)
+    if v["won"]:
+        return ch, inc, v["why"]
+    return inc, ch, v["why"]
+
+
 
 class Canceled(Exception):
     pass
@@ -289,6 +311,7 @@ class Optimizer:
                 web_tune_errors.http_body(exc)
             raise
         elapsed = time.monotonic() - t0
+        timings = (body.get("timings") or {}) if isinstance(body, dict) else {}
         detail = usage.get("caravan") or {}
         content = ""
         try:
@@ -304,9 +327,20 @@ class Optimizer:
             garbled = is_garbled(content)
         except Exception:
             garbled = False
-        return dict(elapsed=elapsed, ttft=detail.get("ttft_s"),
+        import gguf_tune as GT
+        ttft = GT.ttft_from_payload(body if isinstance(body, dict) else {})
+        write = detail.get("write_tok_s")
+        if write is None:
+            write = timings.get("predicted_per_second")
+        read = detail.get("read_tok_s")
+        if read is None:
+            read = timings.get("prompt_per_second")
+        total = detail.get("total_s", elapsed)
+        return dict(elapsed=elapsed, ttft=ttft,
                     completion_tokens=usage.get("completion_tokens"),
-                    total_s=detail.get("total_s", elapsed), prefill_s=detail.get("prefill_s", 0),
+                    prompt_tokens=usage.get("prompt_tokens"),
+                    total_s=total, prefill_s=detail.get("prefill_s", 0),
+                    write_tok_s=write, read_tok_s=read,
                     content=content, garbled=garbled)
 
     def _one(self, messages):
@@ -365,6 +399,18 @@ class Optimizer:
                 med = GT._median(long_reads)
                 if med is not None:
                     out["long_read_tok_s"] = med
+            for kind, key, src in (("short", "short_write_tok_s", "write_tok_s"),
+                                   ("short", "short_total_s", "total_s"),
+                                   ("long", "long_ttft_s", "ttft_s"),
+                                   ("long", "long_total_s", "total_s"),
+                                   ("long", "long_prompt_tokens", "prompt_tokens")):
+                vals = [
+                    s[src] for s, k in zip(samples, kinds)
+                    if k == kind and isinstance(s, dict) and s.get(src) is not None
+                ]
+                med = GT._median(vals) if vals else None
+                if med is not None:
+                    out[key] = med
         return out
 
     def _arm_value(self, name, arm):
@@ -462,6 +508,7 @@ class Optimizer:
         if score <= 0:
             raise ValueError(T("server.web_optimize.reply_missing_token_counts"))
         scores.append(score)
+        scores.specs = specs
         if scores_garbled:
             try:
                 scores.garbled = True
@@ -478,10 +525,10 @@ class Optimizer:
         prompt = result.get("prompt_tokens")
         total = result.get("total_s", result.get("elapsed"))
         prefill = result.get("prefill_s") or 0
-        write = None
+        write = result.get("write_tok_s")
         read = result.get("read_tok_s")
         try:
-            if tokens and total is not None:
+            if not write and tokens and total is not None:
                 decode = max(float(total) - float(prefill or 0), 0.001)
                 write = float(tokens) / decode
         except (TypeError, ValueError):
@@ -644,7 +691,7 @@ class Optimizer:
                 self._apply(name, ch)
                 b = self._measure_or_quality_fail(name, "challenger")
                 self._boundary()  # Cancel during the last reply must not commit.
-                winner, lost, why = decide_ab_winner(inc, ch, a, b, AB.pick)
+                winner, lost, why = decide_tune_winner(name, inc, ch, a, b, AB.pick)
                 if why:
                     self._log(f"{name}: {why}; kept {winner}")
                 result = dict(name=name, incumbent=inc, challenger=ch,

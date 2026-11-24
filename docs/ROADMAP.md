@@ -219,7 +219,8 @@ and the daily logs, not mixed into current setup instructions.
     at download and at load. See [DAY32](DAY32.md#gguf-placement-roadmap-9).
 
 - **Day 33 (started, released through
-  [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13)):**
+  [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13);
+  #2 in review for v0.9.14):**
   see [DAY33](DAY33.md).
   - **A helper for MLX on one Mac
     ([v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13), done):**
@@ -229,12 +230,17 @@ and the daily logs, not mixed into current setup instructions.
     "Download helper for faster replies?" offer. Native MTP does not
     load a conventional draft helper alongside the MTP head. See
     [DAY33](DAY33.md).
+  - **First token with Guess-ahead (in review for v0.9.14):** Auto-tune
+    weighs first-token time on the long test prompt together with write
+    speed. A helper that delays the first word is kept only when
+    generation speed pays back the wait on a whole long-prompt reply.
+    Missing first-token data falls back to the older chat-only verdict.
+    See [DAY33](DAY33.md#first-token-timing-in-auto-tune-roadmap-2-in-review-for-v0914).
 
 ## Next candidates
 
-1. **First token with Guess-ahead.** The helper also reads the prompt, so
-   the first word on long prompts comes about 10% later; Auto-tune could
-   weigh that.
+1. **First token with Guess-ahead (in review for v0.9.14).** See Day 33
+   above; not shipped yet.
 2. **A beginner switch for Advanced.** Hide the tuning rows behind one
    simple switch so a new user sees only what they need.
 3. **Vision and voice.** Image input for models that support it, and

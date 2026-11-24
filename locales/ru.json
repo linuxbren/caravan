@@ -1160,6 +1160,7 @@
   "server.gguf_tune.code_edits_v_chats_v2": "редактуры кода {v:+.0f}%, чаты {v2:+.0f}%",
   "server.gguf_tune.long_prompt_read_lr_c_vs": "чтение длинного промпта {lr_c:.0f} vs {lr_i:.0f} ток/с (защита)",
   "server.gguf_tune.long_prompt_read_lr_c_vs_2": "чтение длинного промпта {lr_c:.0f} vs {lr_i:.0f} ток/с, длинный ответ {t_c:.1f}с vs {t_i:.1f}с (защита)",
+ "server.gguf_tune.long_prompt_first_word_t_c_vs": "первое слово и ответ на длинном промпте {t_c:.1f}с vs {t_i:.1f}с",
   "server.guess_stats.guesses_kept_fmt_pct": "предсказания сохранены {fmt_pct}",
   "server.helper_offer.download_helper_for_faster_replies": "Скачать помощник для более быстрых ответов?",
   "server.helper_offer.the_guess_ahead_helper_is_already": "Помощник Guess-ahead уже включён на этом Mac ({present_name}). Включи Guess-ahead, оставь его в Авто и запусти Автонастройку.",

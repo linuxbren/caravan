@@ -1,3 +1,14 @@
+## 2026-11-23: Day 33 — First-token timing in Auto-tune (in review for v0.9.14)
+
+ROADMAP #2 is uncommitted on `day33-autotune-ttft` (off `5ab8a5de` /
+v0.9.13), pending Claude review. Auto-tune now weighs long-prompt
+first-token time together with write speed for Guess-ahead and Prompt
+lookup (GGUF and MLX). A helper that delays the first word is kept only
+when generation speed pays back the wait on a whole long-prompt reply;
+missing first-token data keeps the older chat-only verdict. VERSION and
+CHANGELOG stay at 0.9.13 until approval (to ship as v0.9.14). See
+[DAY33](DAY33.md).
+
 ## 2026-11-23: Day 33 — Guess-ahead helper for MLX on one Mac (v0.9.13)
 
 First Day 33 release (ROADMAP #1). Built on the local branch

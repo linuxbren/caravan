@@ -1,9 +1,12 @@
 # Day 33 — A Guess-ahead helper for MLX on one Mac
 
-Day 33 started Nov 23 2026 (America/Chicago). This file describes the
-first item (ROADMAP #1), released as
+Day 33 started Nov 23 2026 (America/Chicago). ROADMAP #1 (a Guess-ahead
+helper for MLX on one Mac) shipped as
 [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13).
-ROADMAP #2 — first token with Guess-ahead in Auto-tune — is next.
+ROADMAP #2 — first-token timing in Auto-tune — is in review on the local
+branch `day33-autotune-ttft` (uncommitted, off `5ab8a5de` / v0.9.13) and
+will ship as v0.9.14 after approval. VERSION and CHANGELOG stay at
+0.9.13 until wrap.
 
 Built on the local branch `day33-mlx-1mac-helper` (on `ecddb9a`). Claude
 reviewed the uncommitted work, asked for one change (native MTP must not
@@ -96,4 +99,50 @@ loaded). There is no live MLX on the Linux dev node.
   on the other Mac).
 - Historical Day 27 measurements and mid-page tables stay as they were;
   later notes there point here.
-- ROADMAP #2 (first-token timing in Auto-tune) is not in this tree.
+
+## First-token timing in Auto-tune (ROADMAP #2, in review for v0.9.14)
+
+Uncommitted on `day33-autotune-ttft` (off `5ab8a5de`). VERSION and
+CHANGELOG stay at 0.9.13 until Claude approves and the wrap cuts v0.9.14.
+
+When Guess-ahead is on, the helper also reads the prompt, so the first
+word on a long prompt comes about 10% later (Day 27 measured this). Auto-tune
+already recorded first-token time from the worker (`usage.caravan.ttft_s`,
+or llama-server `timings.prompt_ms`) and already ran a ~2k-token long
+prompt, but the Guess-ahead pick did not always use that first-word wait.
+
+- GGUF Auto-tune (`spec_verdict`) only compared a whole long-prompt reply
+  when long-prompt *read* dropped more than 15%. A typical 10% first-word
+  delay sat under that guard, so a tiny write-speed win could still be
+  kept even when the long-prompt reply felt slower.
+- MLX Auto-tune scored Guess-ahead with `combined_score` (write, long
+  read, and 1/total), which can bury a real write win or ignore a first-word
+  delay on the long prompt.
+
+The rule is now the same for GGUF and MLX Guess-ahead and Prompt lookup
+(including MLX adaptive prompt lookup):
+
+1. Always reject a long-prompt read drop past 35% (Day 28 hard guard).
+2. When both arms have comparable evidence, compare **end-to-end long-prompt
+   reply time**: measured long-prompt total if both have it, else measured
+   long-prompt first-token time plus writing 192 tokens, else an estimate
+   from long-read speed (`prompt tokens / long_read + 192 / write`). Prefer
+   the actual long-prompt first-token median (`long_ttft_s`) from the existing
+   ~2k Auto-tune prompt — no extra long prompt is added, so Auto-tune does
+   not get slower.
+3. If that long-prompt reply is more than 2% slower, the helper loses,
+   even when short-chat write is a little faster. A real write-speed gain
+   (about +40–60%) that pays back the extra first-word wait can still win.
+4. If first-token and long-read evidence is missing or zero (older saved
+   Auto-tune profiles, a mock, or a worker that does not report it), the
+   older chat-only verdict is unchanged — no crash, no made-up time.
+5. Other knobs (KV cache, flash, ubatch, Native MTP, Balance, prefix
+   reuse) keep their existing scores. Native MTP is not a Guess-ahead
+   Auto-tune trial; a quality or garbled arm still loses before speed is
+   considered. One-Mac and two-Mac, MLX and GGUF, all use the same verdict.
+
+The Before/After line already shows first-token time. When Auto-tune
+rejects a helper because the long-prompt reply was slower, the why line
+is "long-prompt first word + reply Xs vs Ys" (all five locales).
+
+Tests: `tests/test_day33_autotune_ttft.py`.

@@ -1160,6 +1160,7 @@
  "server.gguf_tune.code_edits_v_chats_v2": "code edits {v:+.0f}%, chats {v2:+.0f}%",
  "server.gguf_tune.long_prompt_read_lr_c_vs": "long-prompt read {lr_c:.0f} vs {lr_i:.0f} tok/s (guard)",
  "server.gguf_tune.long_prompt_read_lr_c_vs_2": "long-prompt read {lr_c:.0f} vs {lr_i:.0f} tok/s, long reply {t_c:.1f}s vs {t_i:.1f}s (guard)",
+ "server.gguf_tune.long_prompt_first_word_t_c_vs": "long-prompt first word + reply {t_c:.1f}s vs {t_i:.1f}s",
  "server.guess_stats.guesses_kept_fmt_pct": "guesses kept {fmt_pct}",
  "server.helper_offer.download_helper_for_faster_replies": "Download helper for faster replies?",
  "server.helper_offer.the_guess_ahead_helper_is_already": "The Guess-ahead helper is already on this Mac ({present_name}). Set Guess-ahead to On, or leave it on Auto and run Auto-tune.",
