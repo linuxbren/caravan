@@ -1,3 +1,30 @@
+## Day 33 — Prefer a shipped guesser, else the helper (v0.9.15)
+
+Released as [v0.9.15](https://github.com/linuxbren/caravan/releases/tag/v0.9.15).
+When a model ships its own guesser, Guess-ahead uses that first and
+falls back to the paired helper only when it can't.
+
+See [DAY33](docs/DAY33.md#prefer-a-shipped-guesser-else-the-helper-v0915).
+
+- Changed: Guess-ahead Auto and On on an MLX model use the model's own
+  native MTP head first when one is installed and can run here (one Mac,
+  16-bit chat memory, Prompt lookup off, head matches the model). It is
+  kept only when a saved Auto-tune verdict or a one-time first-load
+  quality and speed check says it wins; otherwise Caravan's paired helper
+  is used, as before (ask before download, fit check). The head and a
+  helper are never loaded together. Any split never uses the head, and a
+  Balance split still uses no helper. Settings Native MTP (test) is
+  unchanged.
+- Changed: a reply that is not greedy (temperature or repetition penalty)
+  on an automatically picked head runs the normal path instead of failing.
+- Changed: on GGUF, Caravan's paired helper is picked over another,
+  slightly smaller same-family file on this Mac.
+- Added: the worker log, `active.guesser`, the Guess-ahead chip ("built-in
+  guesser", with the reason in its hint), the GGUF load notes and the
+  Helper button say which guesser is in use and why. No helper download
+  is offered while a model uses its own head. All five locales.
+- Tests: 2,313 tests pass.
+
 ## Day 33 — First-token timing in Auto-tune (v0.9.14)
 
 Released as [v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14).

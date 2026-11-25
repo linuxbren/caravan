@@ -1,3 +1,17 @@
+## 2026-11-24: Day 33 — Prefer a shipped guesser, else the helper (v0.9.15)
+
+Third Day 33 release. Built on the local branch `day33-shipped-guesser`
+(on `d686067`), reviewed by Claude (approved 2026-11-24 with no issues
+found: full suite 2,313 of 2,313 with the review command) and merged to
+`main` fast-forward only. When an MLX model has its own native MTP head
+that can run here, Guess-ahead Auto and On use it first and keep it only
+when a first-load check or a saved Auto-tune verdict says it wins;
+otherwise Caravan's paired helper is used. On GGUF, Caravan's paired
+helper wins over another same-family file. The log, `active.guesser`,
+the Guess-ahead chip and the helper offer say which guesser is in use
+and why. VERSION 0.9.15. The Macs were not
+updated (Brenden updates them himself). See [DAY33](DAY33.md).
+
 ## 2026-11-24: Day 33 — Prefer a shipped guesser, else the helper (in review for v0.9.15)
 
 Uncommitted on `day33-shipped-guesser` (off `d686067` / v0.9.14),

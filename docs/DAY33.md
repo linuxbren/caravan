@@ -5,8 +5,9 @@ helper for MLX on one Mac) shipped as
 [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13).
 ROADMAP #2 — first-token timing in Auto-tune — shipped as
 [v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14).
-"Prefer a shipped guesser, else the helper" is in review for v0.9.15
-([below](#prefer-a-shipped-guesser-else-the-helper-in-review-for-v0915)).
+"Prefer a shipped guesser, else the helper" shipped as
+[v0.9.15](https://github.com/linuxbren/caravan/releases/tag/v0.9.15)
+([below](#prefer-a-shipped-guesser-else-the-helper-v0915)).
 
 Built on the local branch `day33-mlx-1mac-helper` (on `ecddb9a`). Claude
 reviewed the uncommitted work, asked for one change (native MTP must not
@@ -154,11 +155,17 @@ is "long-prompt first word + reply Xs vs Ys" (all five locales).
 
 Tests: `tests/test_day33_autotune_ttft.py`.
 
-## Prefer a shipped guesser, else the helper (in review for v0.9.15)
+## Prefer a shipped guesser, else the helper (v0.9.15)
 
-Uncommitted on the local branch `day33-shipped-guesser` (off `d686067` /
-v0.9.14), pending Claude's review. VERSION and CHANGELOG stay at 0.9.14
-until approval.
+Built on the local branch `day33-shipped-guesser` (on `d686067`). Claude
+reviewed the uncommitted work and approved it on 2026-11-24 with no
+issues found (full suite 2,313 of 2,313 with the review command). Merged
+to `main` fast-forward only. The Macs were not updated; Brenden updates
+them himself.
+
+Released as [v0.9.15](https://github.com/linuxbren/caravan/releases/tag/v0.9.15)
+(source and pin commits are recorded after publishing). Notes:
+[release-notes/day33-v0.9.15.md](release-notes/day33-v0.9.15.md).
 
 **What "shipped guesser" covers, from the code.** A guesser made for
 this exact model. Today the only one Caravan can run is a native MTP head
@@ -217,7 +224,7 @@ uses its own head, the "Download helper for faster replies?" line is not
 shown and the Helper button says the model uses its built-in guesser.
 All new words are in the five locale files.
 
-**Known limits, for review.**
+**Known limits.**
 
 - The head path keeps no chat memory between turns (Day 17 design), so in
   a long multi-turn chat each reply reads the whole chat again. The

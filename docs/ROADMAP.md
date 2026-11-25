@@ -219,7 +219,7 @@ and the daily logs, not mixed into current setup instructions.
     at download and at load. See [DAY32](DAY32.md#gguf-placement-roadmap-9).
 
 - **Day 33 (started, released through
-  [v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14)):**
+  [v0.9.15](https://github.com/linuxbren/caravan/releases/tag/v0.9.15)):**
   see [DAY33](DAY33.md).
   - **A helper for MLX on one Mac
     ([v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13), done):**
@@ -237,14 +237,15 @@ and the daily logs, not mixed into current setup instructions.
     reply. Missing first-token data falls back to the older chat-only
     verdict. See
     [DAY33](DAY33.md#first-token-timing-in-auto-tune-roadmap-2-v0914).
-  - **Prefer a shipped guesser, else the helper (in review for v0.9.15):**
+  - **Prefer a shipped guesser, else the helper
+    ([v0.9.15](https://github.com/linuxbren/caravan/releases/tag/v0.9.15), done):**
     when a model has its own native MTP head that can run here (one Mac,
     16-bit, Prompt lookup off), Auto and On use it first, keep it only if
     the first-load check or a saved Auto-tune verdict says it wins, and
     otherwise fall back to Caravan's paired helper. On GGUF, Caravan's
     paired helper wins over another same-family file. The log and the
     Guess-ahead chip say which guesser and why. See
-    [DAY33](DAY33.md#prefer-a-shipped-guesser-else-the-helper-in-review-for-v0915).
+    [DAY33](DAY33.md#prefer-a-shipped-guesser-else-the-helper-v0915).
 
 ## Next candidates
 
