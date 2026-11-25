@@ -1,3 +1,33 @@
+## Day 33 — Chat with Ollama Cloud models (v0.9.16)
+
+Released as [v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16).
+Load a CLOUD model in Models and your chats go to it on Ollama Cloud,
+with the same page, streaming, Stop and queue.
+
+See [DAY33](docs/DAY33.md#chat-with-ollama-cloud-models-v0916).
+
+- Added: **Load** on a CLOUD model sends chats to Ollama Cloud's
+  documented `/api/chat` with your saved key. Models → Cloud lists the
+  live model names from Ollama. The status pill and each reply say CLOUD,
+  the first cloud message asks once before it leaves your Macs, and the
+  speed line shows Ollama's numbers without changing your Macs' average.
+  **Unload**, or loading a model on your Macs, sends chats back to the
+  Macs.
+- Added: the cloud pick is saved (never the key), so a restart comes back
+  to cloud or to your Macs as it was. If the key is missing or wrong, the
+  pill and the reply say so; Caravan does not quietly switch to the Macs.
+- Added: from the local network, cloud chats need an explicit OK to a
+  warning: anyone on the same Wi-Fi or network who can open the page can
+  chat through your Ollama Cloud account and use up your plan, and what
+  they type goes to Ollama's servers. Tailscale is the safer way. Turning
+  local network access off takes the OK back.
+- Security: the key is only sent to Ollama. It is never logged, shown,
+  put in an error, the request journal or a saved chat.
+- Plain errors for no key, a rejected key, an unknown model, rate or
+  usage limits, Ollama being down, no internet, and a reply cut short.
+  All five locales.
+- Tests: 2,359 tests pass.
+
 ## Day 33 — Prefer a shipped guesser, else the helper (v0.9.15)
 
 Released as [v0.9.15](https://github.com/linuxbren/caravan/releases/tag/v0.9.15).

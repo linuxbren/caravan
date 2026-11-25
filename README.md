@@ -1,6 +1,6 @@
 # Caravan
 
-Run a big AI model across your Macs at home. Your chats run on your own Macs, not a cloud AI service.
+Run a big AI model across your Macs at home. Your chats run on your own Macs, not a cloud AI service, unless you pick an Ollama Cloud model yourself.
 
 **For the simple version:** see [How to install Caravan](INSTALL.md) — a few easy steps, no tech know-how needed.
 
@@ -88,7 +88,7 @@ link it picked.
 
 ## For developers / details
 
-[What's new (Day 33, v0.9.15)](docs/DAY33.md) · [Developer setup](docs/DEVELOPMENT.md) · [Clean-install fixes and verification](docs/DAY23.md) · [Package status](docs/PACKAGING.md) · [Documentation index](docs/README.md) · [Changelog](CHANGELOG.md).
+[What's new (Day 33, v0.9.16)](docs/DAY33.md) · [Developer setup](docs/DEVELOPMENT.md) · [Clean-install fixes and verification](docs/DAY23.md) · [Package status](docs/PACKAGING.md) · [Documentation index](docs/README.md) · [Changelog](CHANGELOG.md).
 
 The browser page is for your own Mac. Do not expose it to the public internet.
 

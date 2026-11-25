@@ -219,7 +219,7 @@ and the daily logs, not mixed into current setup instructions.
     at download and at load. See [DAY32](DAY32.md#gguf-placement-roadmap-9).
 
 - **Day 33 (started, released through
-  [v0.9.15](https://github.com/linuxbren/caravan/releases/tag/v0.9.15)):**
+  [v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16)):**
   see [DAY33](DAY33.md).
   - **A helper for MLX on one Mac
     ([v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13), done):**
@@ -246,6 +246,13 @@ and the daily logs, not mixed into current setup instructions.
     paired helper wins over another same-family file. The log and the
     Guess-ahead chip say which guesser and why. See
     [DAY33](DAY33.md#prefer-a-shipped-guesser-else-the-helper-v0915).
+  - **Chat with Ollama Cloud models
+    ([v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16), done):**
+    **Load** on a CLOUD model sends chats to Ollama Cloud with the same
+    page, streaming, Stop and queue, clearly labeled CLOUD; the key never
+    shows. A restart comes back to cloud or Macs as it was. The local
+    network gets cloud only after a warning and an explicit OK. See
+    [DAY33](DAY33.md#chat-with-ollama-cloud-models-v0916).
 
 ## Next candidates
 
@@ -259,12 +266,15 @@ and the daily logs, not mixed into current setup instructions.
    and a FileVault reboot end to end.
 5. **Security review.** An independent look at pairing, the browser page,
    the Tailscale share and the update path.
-6. **Chat with Ollama Cloud models.** Day 32 saves the Ollama Cloud key
-   (Settings → Cloud API keys) and cloud models say **Load**, but chats
-   still only go to the Macs. Next: route `/api/chat` to Ollama Cloud when
-   a CLOUD model is picked, with a first-chat notice that the message
-   leaves your Macs, and keep the key out of logs, the journal and saved
-   chats. Other providers come only if Models can search them.
+6. **Chat with Ollama Cloud models.** Done in
+   [v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16):
+   **Load** on a CLOUD model sends `/api/chat` to
+   Ollama Cloud's documented API, with a first-chat notice that the
+   message leaves your Macs. The key stays out of logs, the journal and
+   saved chats. The pick survives a restart, and the local network gets
+   cloud only after a warning and an explicit OK. Still to do: a live chat with a real key on the Macs. Other
+   providers come only if Models can search them. See
+   [DAY33](DAY33.md#chat-with-ollama-cloud-models-v0916).
 7. **Confirm before every download.** Done in
    [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8).
    GGUF downloads use the same Step 2 placement chooser as MLX, for every

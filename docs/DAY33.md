@@ -8,6 +8,9 @@ ROADMAP #2 — first-token timing in Auto-tune — shipped as
 "Prefer a shipped guesser, else the helper" shipped as
 [v0.9.15](https://github.com/linuxbren/caravan/releases/tag/v0.9.15)
 ([below](#prefer-a-shipped-guesser-else-the-helper-v0915)).
+Chat with Ollama Cloud models shipped as
+[v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16)
+([below](#chat-with-ollama-cloud-models-v0916)).
 
 Built on the local branch `day33-mlx-1mac-helper` (on `ecddb9a`). Claude
 reviewed the uncommitted work, asked for one change (native MTP must not
@@ -236,3 +239,150 @@ All new words are in the five locale files.
 - Nothing here was run on a Mac: the Linux dev node has no Apple Silicon.
 
 Tests: `tests/test_day33_shipped_guesser.py`.
+
+## Chat with Ollama Cloud models (v0.9.16)
+
+Built on the local branch `day33-cloud` (a worktree, started off
+`d686067` / v0.9.14 and rebased onto the v0.9.15 wrap `8bc9512`). Claude
+reviewed the uncommitted work and approved it on 2026-11-24 with no
+issues found (full suite 2,359 of 2,359 with the review command). Merged
+to `main` fast-forward only. The Macs were not updated; Brenden updates
+them himself.
+
+Released as [v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16)
+(source and pin commits are recorded after publishing). Notes:
+[release-notes/day33-v0.9.16.md](release-notes/day33-v0.9.16.md).
+
+Day 32 saved the Ollama Cloud key and made cloud rows say **Load**, but
+chats still only went to the Macs. Now **Load** on a CLOUD model in
+Models sends the chat to that model on Ollama Cloud.
+
+**Ollama's API.** Checked against Ollama's docs on 2026-11-24
+(`docs.ollama.com/cloud/api`, `/api/authentication`, `/api/chat`,
+`/api/streaming`, `/api/errors`, `/cloud/models`):
+
+- `POST https://ollama.com/api/chat` with `Authorization: Bearer <key>`.
+  It streams newline-delimited JSON. Each line has `message.content`, plus
+  `message.thinking` when thinking is on. The last line has `done: true`,
+  `done_reason`, the token counts and the durations in nanoseconds. An error
+  in the middle of a stream comes as a line with `error`.
+- `GET https://ollama.com/api/tags` lists the names that direct requests
+  use, such as `gpt-oss:120b`. The `-cloud` and `:cloud` names are only for
+  a signed-in local Ollama. Day 32's static list used those names
+  (`gpt-oss:120b-cloud`) and listed models that are no longer on the list,
+  so Models → Cloud now reads `/api/tags`, which needs no key. If that list
+  can't be read, Models shows a short fallback (`gpt-oss:120b`,
+  `gpt-oss:20b`, `gemma4:31b`, all on the list on 2026-11-24). Older
+  `…-cloud` ids still map to the direct name.
+- Errors are JSON `{"error": "…"}` with the status codes 400, 401/403,
+  404, 429, 500 and 502.
+
+**How it works.**
+
+- `proxy/cloud_chat.py` (new) turns the page's chat body into Ollama's
+  `/api/chat` body. It keeps the messages, maps `temperature` and
+  `max_tokens` to `options.num_predict`, and sends the Thinking button as
+  `think`: `low`/`medium`/`high` for gpt-oss, `true` or `false` for others.
+  If a model answers 400 saying it does not support thinking, Caravan asks
+  once more without `think`. Each NDJSON line becomes an OpenAI-shaped
+  stream chunk, so the page reads a cloud reply exactly like a Mac reply.
+  The reply ends with the usual `caravan.meta` event, which now carries a
+  `cloud` block.
+- `POST /api/cloud/use {provider, model}` picks the cloud model.
+  `POST /api/cloud/stop` goes back to the Macs. `/api/status` has
+  `cloud` (model, label, CLOUD). The choice is saved in
+  `<state_dir>/cloud-choice.json` (0600, provider and model only, never the
+  key), next to `last-model.json`, so a restart comes back the way it was
+  (Brenden: "If it was cloud, it should be cloud"). Unload and loading a
+  model on the Macs clear it. The start-up restore of the last Mac model
+  (`/api/models/load` with `_restore_token`) leaves it alone. If the key is
+  missing or rejected after a restart, the pick stays cloud and the status
+  pill and the reply show the plain error; Caravan does not fall back to the
+  Macs, the same way `web_restore` never swaps in a different model.
+- When a cloud model is picked, `/api/chat` and `/v1/chat/completions`
+  go to Ollama Cloud even with no model loaded on the Macs. They are not
+  counted as Mac work for Auto-tune. **Stop** uses the same request id and
+  closes the HTTPS connection, which ends the reply at Ollama and keeps the
+  words so far. The queue needs no changes: the page sends the next message
+  when a reply ends, as before.
+- Cloud chats are **not** written to the request journal, because a replay
+  after a restore would send them to the Macs.
+
+**Labels.** The status pill reads "ready · gpt-oss:120b · CLOUD (Ollama
+Cloud)" with a blue dot. Each cloud reply's name line carries a
+"CLOUD · Ollama Cloud · model" tag. The first cloud message on a browser
+asks once: "This message leaves your Macs. It goes over the internet to …
+on Ollama Cloud, and so does the rest of this chat. Send it?" If you
+answer no, a queued message goes back to the front of the queue and the
+queue waits until you send again. The speed line under a cloud reply
+uses Ollama's token counts and its own write time (`eval_duration`), plus
+the first-word and total time measured at Caravan. It is not added to the
+Macs' speed average. **Unload** on a cloud model goes back to the Macs.
+
+**The key.** `cloud_keys.resolve` (environment first, then the 0600
+file). Caravan puts the key only in the `Authorization` header to
+Ollama. It is never logged, never in an error (any echo is scrubbed),
+never sent to the page, and never in the journal or a saved chat.
+Picking a cloud model and cloud chats always work from this Mac and over
+Tailscale. **Local network (Brenden: "Some people may not have tail
+scale").** They work there too, but only after a warning and an explicit
+OK. The warning names the real risk: anyone on the same Wi-Fi or local
+network who can open the page can chat through your Ollama Cloud account,
+using up your plan and its limits, and what they type goes to Ollama's
+servers; Tailscale is safer if you have it. Without the OK the server
+answers 403 `cloud_lan_needs_ok` with the warning, and `/api/status` tells
+a local-network viewer `lan_needs_ok`. The page shows the warning when
+local network access is turned on while a cloud key or pick exists, and
+on a local-network viewer's first cloud pick or chat. OK posts
+`/api/lan {"cloud_ok": true}`, saved as `[lan] cloud_ok = true` in
+`~/.caravan/config.toml` beside `enabled` (commit 9137fd8's setting).
+Turning local network access off clears it. The key itself stays hidden
+from the local network (`/api/cloud-keys` still answers `show: false`).
+
+**Plain errors.**
+
+| Case | Caravan answers |
+| --- | --- |
+| No key | 400 "Add your Ollama Cloud API key in Settings → Cloud API keys first." |
+| Bad key (401/403) | 401 "Ollama Cloud didn't accept the API key. Check it in Settings → Cloud API keys." |
+| Unknown model (404) | 404 "Ollama Cloud has no model named …" |
+| Rate or usage limit (429) | 429 "…too many requests, or your usage limit is reached…" |
+| Ollama down (5xx) | 502 "Ollama Cloud couldn't answer right now (HTTP n)…" |
+| No internet / timeout | 502 / 504 "Couldn't reach Ollama Cloud…" / "didn't answer in time…" |
+| Error mid-reply | Words so far kept, plus "Ollama Cloud stopped mid-reply: …" |
+
+All new text is in all five locales (en, es, ru, ja, zh-Hans). Five Day 32
+strings it replaced are gone: the "isn't built yet" and "framework only"
+texts, and the "ends in" text that only they used.
+
+**Tests.** `tests/test_day33_cloud_chat.py` has 46 tests against a local
+mock of Ollama's API. No test reaches the network or uses a real key;
+`tests/conftest.py` keeps the Models → Cloud list offline unless a test
+points it at the mock. The tests cover the body mapping (thinking effort,
+on and off), legacy names, scrubbing the key, missing numbers staying
+missing, picking and clearing, Mac load clearing the pick, a restart keeping cloud
+or Macs as it was (file 0600 with no key; missing or bad key after a
+restart shows the error and does not fall back; broken files ignored), the
+local network refused until the OK with the plain risk warning, the OK
+saved and then working with the key still hidden, `lan_needs_ok` in
+status, turning the local network off taking back the OK, a streamed reply (text, thinking, CLOUD meta, Ollama's
+token counts, the `Authorization` header), chat with no Mac model, a
+non-streamed reply, the retry without thinking, 401, 404, 429, 500, the
+network being down, the key being removed after picking, an error
+mid-stream, a cut stream, Stop mid-reply, two chats in a row, the live
+list, the fallback list, the download route refusing cloud, and the page
+contract. One older guard check (`test_web_server`) now expects
+`!chatOk` instead of `st !== "ready"`.
+
+**Checked live.** From the dev node on 2026-11-24, without a real key:
+`GET https://ollama.com/api/tags` returned 25 models, with
+`gpt-oss:120b`, `gpt-oss:20b` and `gemma4:31b` sorted first. A
+`POST /api/chat` with a made-up key returned 401, which Caravan shows as
+"didn't accept the API key". The made-up key did not appear in the
+message.
+
+**Still needs a live test by Brenden (real key, on the Macs).** No Ollama
+key is saved on the dev node, so no real cloud chat was sent. Still to
+try: a streamed cloud reply in the browser, Stop in the middle of a cloud
+reply over HTTPS, Thinking on and off (and gpt-oss effort), and a real
+usage-limit 429 if one comes up.

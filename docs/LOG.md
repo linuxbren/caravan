@@ -1,3 +1,35 @@
+## 2026-11-24: Day 33 — Chat with Ollama Cloud models (v0.9.16)
+
+Fourth Day 33 release. Built on the local branch `day33-cloud` (rebased
+onto the v0.9.15 wrap `8bc9512`), reviewed by Claude (approved 2026-11-24
+with no issues found: full suite 2,359 of 2,359 with the review command)
+and merged to `main` fast-forward only. **Load** on a CLOUD model sends
+chats to Ollama Cloud's `/api/chat` with the same page, streaming, Stop
+and queue, labeled CLOUD; the key is never logged or shown. A restart
+comes back to cloud or Macs as it was, and a missing or bad key says so
+instead of falling back. The local network gets cloud only after a
+warning that names the risk and an explicit OK. VERSION 0.9.16. The Macs
+were not updated (Brenden updates them himself). See [DAY33](DAY33.md).
+
+## 2026-11-24: Day 33 — Chat with Ollama Cloud models (in review for v0.9.16)
+
+Uncommitted on `day33-cloud` (a worktree, rebased onto the v0.9.15 wrap
+`8bc9512`), waiting on Claude's review, to land as v0.9.16. **Load** on a
+CLOUD model sends chats to Ollama Cloud's documented `/api/chat` (Bearer
+key, NDJSON stream) with the same page, streaming, Stop and queue. Models →
+Cloud reads `GET /api/tags`. Cloud chats are labeled CLOUD, ask once before
+the first message leaves your Macs, and never log or show the key. Cloud
+chats are not journaled. The pick is saved (`cloud-choice.json`, never the
+key), so a restart comes back to cloud or Macs as it was; a missing or bad
+key after a restart shows the plain error instead of falling back. From the
+local network, cloud works only after a warning that names the risk (anyone
+on the same Wi-Fi can chat through your Ollama Cloud account and use up your
+plan; what they type goes to Ollama's servers; Tailscale is safer) and an
+explicit OK, saved as `[lan] cloud_ok`. 46 new tests against a mock;
+full suite 2,359 passed after the rebase. A live chat with a real
+key still needs Brenden. VERSION and CHANGELOG are unchanged. See
+[DAY33](DAY33.md).
+
 ## 2026-11-24: Day 33 — Prefer a shipped guesser, else the helper (v0.9.15)
 
 Third Day 33 release. Built on the local branch `day33-shipped-guesser`

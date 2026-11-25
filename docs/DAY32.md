@@ -731,6 +731,8 @@ Macs; it is listed on the [ROADMAP](ROADMAP.md) under Next candidates.
 Until then, after the key is
 saved the picker says so plainly: "Ollama Cloud key ready (ends in abcd).
 Chatting with cloud models isn't built yet, so … can't load in chat yet."
+(Day 33 builds cloud chat; see
+[DAY33](DAY33.md#chat-with-ollama-cloud-models-v0916).)
 
 Code: `proxy/cloud_keys.py` (new), `GET/POST /api/cloud-keys` in
 `proxy/web_server.py`, the key flag in `proxy/web_picker.py`, and the
