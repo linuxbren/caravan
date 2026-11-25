@@ -1,3 +1,14 @@
+## 2026-11-24: Day 33 — Prefer a shipped guesser, else the helper (in review for v0.9.15)
+
+Uncommitted on `day33-shipped-guesser` (off `d686067` / v0.9.14),
+pending Claude review. When a model has its own native MTP head that can
+run here, Auto and On use it first (checked once on load, or by a saved
+Auto-tune verdict) and fall back to Caravan's paired helper; on GGUF,
+Caravan's paired helper wins over another same-family file. The worker
+log, `active.guesser`, the Guess-ahead chip and the helper offer say
+which guesser is in use and why. VERSION and CHANGELOG stay at 0.9.14
+until approval (to ship as v0.9.15). See [DAY33](DAY33.md).
+
 ## 2026-11-23: Day 33 — First-token timing in Auto-tune (v0.9.14)
 
 Second Day 33 release (ROADMAP #2). Built on the local branch

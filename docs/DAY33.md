@@ -5,6 +5,8 @@ helper for MLX on one Mac) shipped as
 [v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13).
 ROADMAP #2 — first-token timing in Auto-tune — shipped as
 [v0.9.14](https://github.com/linuxbren/caravan/releases/tag/v0.9.14).
+"Prefer a shipped guesser, else the helper" is in review for v0.9.15
+([below](#prefer-a-shipped-guesser-else-the-helper-in-review-for-v0915)).
 
 Built on the local branch `day33-mlx-1mac-helper` (on `ecddb9a`). Claude
 reviewed the uncommitted work, asked for one change (native MTP must not
@@ -151,3 +153,79 @@ rejects a helper because the long-prompt reply was slower, the why line
 is "long-prompt first word + reply Xs vs Ys" (all five locales).
 
 Tests: `tests/test_day33_autotune_ttft.py`.
+
+## Prefer a shipped guesser, else the helper (in review for v0.9.15)
+
+Uncommitted on the local branch `day33-shipped-guesser` (off `d686067` /
+v0.9.14), pending Claude's review. VERSION and CHANGELOG stay at 0.9.14
+until approval.
+
+**What "shipped guesser" covers, from the code.** A guesser made for
+this exact model. Today the only one Caravan can run is a native MTP head
+installed beside an MLX model (`caravan-mtp/`, Day 17), checked against
+the model by `native_mtp.validate_pair` (dense Qwen3.5 with one MTP layer,
+same sizes, and the exact target the head was extracted for; Day 17
+measured Orvena 4B at 36.95 → 54.13 write tok/s). No GGUF path runs a
+shipped guesser: llama.cpp MTP was listed as an idea on Day 23 but was
+never measured here, so it is not used. The fallback is Caravan's paired
+Guess-ahead helper: `agent/guessers.json` for MLX and
+`proxy/helper_offer.py` `HELPERS` for GGUF. On GGUF only, any other
+smaller same-family file found on this Mac comes last.
+
+**MLX order** (`agent/guesser_choice.py`, first match wins):
+
+1. Guess-ahead Off: no guesser.
+2. Settings Guess-ahead = Native MTP (test): the head, with the old strict
+   rules (one Mac, 16-bit, greedy replies only, no learning).
+3. An explicit `--split-draft-model`: that helper.
+4. Auto or On, with a head that can run here (one Mac, 16-bit chat memory,
+   Prompt lookup off, head matches this model):
+   - inside an Auto-tune reload, the head is left to Auto-tune's own
+     Native MTP trial, so the other arm really is the helper;
+   - a saved Auto-tune verdict for Native MTP decides first;
+   - then the cached first-load check for this model and head;
+   - otherwise the head is loaded and checked once after warm-up with
+     the same quality probes and the same 5% speed bar as a helper's
+     first-load check. If it loses, the head is unloaded and the paired
+     helper is set up instead (its own first-load check still runs).
+5. Otherwise the paired helper, as before (ask before download, fit check,
+   vocab check).
+
+The head and a conventional helper are never loaded together (the
+v0.9.13 rule). A split never uses the head, and a Balance split of an
+MLX model still uses no helper. A head picked by Auto or On
+serves greedy replies (temperature 0, no repetition penalty, which is what
+the page sends). Any other reply runs the normal path with no guesser
+instead of failing, as the Settings test mode still does. Learning is not
+fed by head replies (the head path never called it).
+
+**GGUF order.** `find_gguf_draft` now returns Caravan's paired helper for
+the model when it is on this Mac, even if another same-family file is a
+little smaller (for example a Qwen2.5 Coder model with both the Coder
+0.5B helper and the plain Qwen2.5 0.5B file). Otherwise the smallest
+qualifying file wins, as before. The result says `source: "paired"` or
+`"found"`. Nothing downloads without the existing Download click.
+
+**Which guesser and why.** The MLX worker logs one `guesser: <kind>
+(<source>, <reason>)` line (and again if the first-load check changes it),
+and `/caravan/settings` `active.guesser` carries kind, source, reason and
+the plain why. The Guess-ahead chip says "built-in guesser" when the head
+was picked automatically ("native MTP · experimental" stays for the
+Settings test mode), and its hint is the why. GGUF `active.guesser` says
+paired helper or found file, and the load notes name it. While a model
+uses its own head, the "Download helper for faster replies?" line is not
+shown and the Helper button says the model uses its built-in guesser.
+All new words are in the five locale files.
+
+**Known limits, for review.**
+
+- The head path keeps no chat memory between turns (Day 17 design), so in
+  a long multi-turn chat each reply reads the whole chat again. The
+  first-load check and Auto-tune's long prompt are single-turn, so they do
+  not measure that cost.
+- When Auto-tune keeps Native MTP, it reloads in the Settings test mode
+  until the next load (existing Day 18 behavior); the next normal load
+  reads the saved verdict and uses the head through Auto.
+- Nothing here was run on a Mac: the Linux dev node has no Apple Silicon.
+
+Tests: `tests/test_day33_shipped_guesser.py`.

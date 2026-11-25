@@ -222,7 +222,12 @@ when a helper is on this Mac (GGUF, a split MLX model, or an MLX model
 on one Mac) and may try Prompt lookup when only one chat is in use; it
 treats a garbled reply as a loss. A reply that used guesses ends with
 "guesses kept N%". A Balance split of an MLX model still does not use a
-helper. See [Day 27](DAY27.md) and [Day 33](DAY33.md). Fused kernels and GPU keep-warm are hidden, because they do not
+helper. When an MLX model has its own native MTP head that can run on
+this Mac, Guess-ahead Auto and On use that built-in guesser first and fall
+back to the helper; the Guess-ahead chip says "built-in guesser" and its
+hint says why, and no helper download is offered while the head is in
+use. On GGUF, Caravan's paired helper is picked over another same-family
+file. See [Day 27](DAY27.md) and [Day 33](DAY33.md). Fused kernels and GPU keep-warm are hidden, because they do not
 apply. Self-tuning on a GGUF model learns from real chats, proposes one
 quiet trial, and reloads when you are not mid-reply. The same Before and
 After lines Auto-tune uses are filled. Auto-tune also compares 16-bit

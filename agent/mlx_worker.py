@@ -64,6 +64,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import guess_ahead
+import guesser_choice
 import adaptive_pl
 import shared_prefix
 from typing import Optional
@@ -648,6 +649,11 @@ class Engine:
         else:
             self.pipeline_chats = max(1, int(raw_pipe))
         self.native_mtp = None
+        # Day 33 (v0.9.15): which guesser is in use and why (guesser_choice).
+        self.guesser = None
+        self._native_mtp_auto = False
+        self._shipped_head_path = None
+        self._shipped_gate_pending = False
         self.draft_model = None
         self.draft_tokenizer = None
         self.speculate_k = int(getattr(args, "split_speculate_k", 4) or 4)
@@ -831,15 +837,7 @@ class Engine:
             except Exception as _e:
                 log(f"rope scaling patch skipped: {_e!r}")
             add_turn_end_stops(self.tokenizer, log=log)
-        self._setup_guess_ahead(args)
-        if getattr(args, "native_mtp", False):
-            if getattr(args, "kv_bits", None):
-                raise ValueError(T("agent.mlx_worker.native_mtp_experiment_uses_uncompressed_caches"))
-            if self.client is not None:
-                raise ValueError(T("agent.mlx_worker.native_mtp_experiment_is_single_mini"))
-            from native_mtp import load_head
-            self.native_mtp = load_head(self.model_dir, self.model)
-            log("native MTP: matching Qwen3.5 head loaded (experimental, greedy only)")
+        self._setup_guesser(args)
         cfg = json.loads((self.model_dir / "config.json").read_text())
         self.model_type = cfg.get("model_type", "")
         self.wired_mode = getattr(args, "wired_limit", "startup")
@@ -892,9 +890,28 @@ class Engine:
             self.model.end_scratch()
         self.warmup_s = time.time() - tw
         log(f"warm-up {self.warmup_s:.2f}s")
+        if (getattr(self, "_shipped_gate_pending", False) and self.native_mtp is not None
+                and not bool(getattr(args, "split_draft_skip_first_load", False))):
+            # Day 33 (v0.9.15): a shipped head chosen by Auto/On is kept only
+            # if it passes the same quality + speed check as a helper.
+            self._shipped_gate_pending = False
+            if self._shipped_first_load_gate(self._shipped_head_path):
+                self.guesser = guesser_choice.choice(
+                    guesser_choice.NATIVE, "shipped", "shipped_won_first_load")
+            else:
+                self._drop_shipped_head()
+                self._setup_guess_ahead(args)
+                self.guesser = guesser_choice.helper_outcome(
+                    guesser_choice.choice(guesser_choice.HELPER, "paired", "helper_won_first_load"),
+                    loaded=self.draft_model is not None)
+            log(self._guesser_log_line())
         if (self.draft_model is not None and self.draft_path is not None
                 and not bool(getattr(args, "split_draft_skip_first_load", False))):
             self._first_load_gate(self.draft_path, self.guess_pairing)
+            if self.draft_model is None and (self.guesser or {}).get("kind") == guesser_choice.HELPER:
+                self.guesser = dict(guesser_choice.choice(guesser_choice.NONE, "none", "no_guesser"),
+                                    helper_gate="lost")
+                log(self._guesser_log_line())
         log(f"loaded {self.model_dir.name} ({self.model_type}) in {time.time() - t0:.1f}s; "
             f"sessions<= {self.store.max_sessions}, bytes<= {args.prompt_cache_bytes}, "
             f"prefill step {self.prefill_step}, kv bits {args.kv_bits or 16}, persist="
@@ -911,6 +928,159 @@ class Engine:
             log(f"active settings: unavailable ({e!r})")
 
 
+
+    # -- Day 33 (v0.9.15): prefer a shipped guesser, else the helper -------
+    def _shipped_head_state(self):
+        """(present, error, path) for a native MTP head shipped for this model.
+
+        Reads only the two config files (no weights). ``error`` is the
+        reason the head does not match this model, or None.
+        """
+        try:
+            import native_mtp as NM
+            hp = NM.head_path(self.model_dir)
+        except Exception as e:  # noqa: BLE001
+            return False, None, None
+        if hp is None:
+            return False, None, None
+        try:
+            cfg = json.loads((Path(self.model_dir) / "config.json").read_text())
+            hc = json.loads((hp / "config.json").read_text())
+            NM.validate_pair(cfg, hc)
+        except Exception as e:  # noqa: BLE001
+            return True, str(e) or type(e).__name__, hp
+        return True, None, hp
+
+    def _autotune_native_verdict(self):
+        """Saved Auto-tune winner for Native MTP on this model + hardware."""
+        try:
+            import tuned_settings as TS
+            raw = getattr(self, "_learn_path", None)
+            path = Path(raw).expanduser() if raw else None
+            store = TS.load_store(path)
+            key = TS.entry_key(self.model_dir, spanned=self.client is not None)
+            v = (((store.get("models") or {}).get(key) or {}).get("winner") or {}).get("native_mtp")
+        except Exception:  # noqa: BLE001
+            return None
+        return v if isinstance(v, bool) else None
+
+    def _guesser_log_line(self) -> str:
+        g = getattr(self, "guesser", None) or {}
+        extra = ""
+        if g.get("passed_over"):
+            extra = f"; built-in guesser passed over: {g['passed_over']}"
+        return (f"guesser: {g.get('kind')} ({g.get('source')}, {g.get('reason')}){extra}")
+
+    def _drop_shipped_head(self):
+        self.native_mtp = None
+        self._native_mtp_auto = False
+        try:
+            self.mx.clear_cache()
+        except Exception:  # noqa: BLE001
+            pass
+
+    def _setup_guesser(self, args):
+        """Pick the guesser: a shipped one for this model first, else the helper.
+
+        See agent/guesser_choice.py for the order. Settings Guess-ahead =
+        Native MTP (test) keeps its old strict path (one Mac, 16-bit, greedy
+        replies only). A shipped head picked by Auto/On is used for greedy
+        replies; any other reply runs the normal path, and the head is
+        never loaded beside a conventional helper.
+        """
+        GC = guesser_choice
+        native_flag = bool(getattr(args, "native_mtp", False))
+        off = bool(getattr(args, "no_split_draft", False))
+        explicit = bool(getattr(args, "split_draft_model", None)) and not off and not native_flag
+        self._native_mtp_auto = False
+        self._shipped_head_path = None
+        self._shipped_gate_pending = False
+        present, err, hp = False, None, None
+        if not (off or native_flag or explicit):
+            present, err, hp = self._shipped_head_state()
+        verdict = first = None
+        if present and not err:
+            verdict = self._autotune_native_verdict()
+            try:
+                first = guess_ahead.get_first_load(self.model_dir, hp)
+            except Exception:  # noqa: BLE001
+                first = None
+        ch = GC.mlx_choice(
+            off=off, native_mtp_flag=native_flag, explicit_draft=explicit,
+            head_present=present, head_error=err, split=self.client is not None,
+            kv_bits=getattr(args, "kv_bits", None), prompt_lookup=bool(self.prompt_lookup_n),
+            sweep_paused=bool(getattr(args, "sweep_paused", False)),
+            autotune_verdict=verdict, first_load=first)
+        if err:
+            log(f"guesser: built-in MTP head found but not used ({err})")
+        if native_flag:
+            self._setup_guess_ahead(args)
+            if getattr(args, "kv_bits", None):
+                raise ValueError(T("agent.mlx_worker.native_mtp_experiment_uses_uncompressed_caches"))
+            if self.client is not None:
+                raise ValueError(T("agent.mlx_worker.native_mtp_experiment_is_single_mini"))
+            from native_mtp import load_head
+            self.native_mtp = load_head(self.model_dir, self.model)
+            log("native MTP: matching Qwen3.5 head loaded (experimental, greedy only)")
+        elif ch["kind"] == GC.NATIVE:
+            try:
+                from native_mtp import load_head
+                self.native_mtp = load_head(self.model_dir, self.model)
+                self._native_mtp_auto = True
+                self._shipped_head_path = hp
+                self._shipped_gate_pending = bool(ch.get("gate"))
+                log("guesser: built-in MTP head loaded for this model; "
+                    "conventional helper not loaded (greedy replies use the head)")
+            except Exception as e:  # noqa: BLE001
+                log(f"guesser: built-in MTP head did not load ({e!r}); trying the paired helper")
+                self._drop_shipped_head()
+                ch = GC.choice(GC.HELPER, "paired", "shipped_load_failed")
+        if self.native_mtp is None:
+            if not native_flag:
+                self._setup_guess_ahead(args)
+            ch = GC.helper_outcome(ch, loaded=self.draft_model is not None)
+        self.guesser = ch
+        log(self._guesser_log_line())
+
+    def _shipped_first_load_gate(self, head_path):
+        """Quality + short speed check for a shipped head (cached per model+head).
+
+        Same probes and the same 5% bar as the helper's first-load gate.
+        Baseline is the normal path with no guesser. Returns keep.
+        """
+        log("guesser: running first-load quality + speed check for the built-in guesser...")
+        quality, q_ok = [], 0
+        for q, expect in guess_ahead.QUALITY_PROBES:
+            try:
+                text_out = self._gate_complete(q, max_tokens=256, use_draft=True)
+            except Exception as e:  # noqa: BLE001
+                text_out = f"<err:{e}>"
+            ok = guess_ahead.answer_ok(text_out, expect)
+            quality.append({"q": q, "out": (text_out or "")[:400], "ok": ok})
+            q_ok += 1 if ok else 0
+        result = {"kind": "native_mtp", "quality": quality, "ts": time.time()}
+        if q_ok < len(guess_ahead.QUALITY_PROBES):
+            result.update(keep=False, reason=T("agent.mlx_worker.quality_q_ok_quality_probes",
+                                               q_ok=q_ok, quality_probes=len(guess_ahead.QUALITY_PROBES)))
+            guess_ahead.set_first_load(self.model_dir, head_path, result)
+            log(f"guesser: built-in guesser first-load quality fail {q_ok}/{len(guess_ahead.QUALITY_PROBES)}")
+            return False
+        prompt = "Count from 1 to 30, numbers only, space-separated."
+        try:
+            off = self._gate_timed(prompt, max_tokens=40, use_draft=False)
+            on = self._gate_timed(prompt, max_tokens=40, use_draft=True)
+        except Exception as e:  # noqa: BLE001
+            result.update(keep=False, reason=T("agent.mlx_worker.speed_err_e", e=e))
+            guess_ahead.set_first_load(self.model_dir, head_path, result)
+            log(f"guesser: built-in guesser first-load speed err ({e})")
+            return False
+        faster = on["tps"] > off["tps"] * 1.05
+        result.update(keep=bool(faster), baseline_tps=round(off["tps"], 2),
+                      spec_tps=round(on["tps"], 2), accepted_frac=on.get("accepted_frac"))
+        guess_ahead.set_first_load(self.model_dir, head_path, result)
+        log(f"guesser: built-in guesser first-load {'keep' if faster else 'not faster'} "
+            f"baseline={result['baseline_tps']} spec={result['spec_tps']}")
+        return bool(faster)
 
     def _draft_fits(self, dpath, pairing):
         """Whether a Guess-ahead helper can be added on this Mac.
@@ -1155,7 +1325,11 @@ class Engine:
                                   and self._learn_guess_override is not False))),
             "guess_ahead_loaded": self.draft_model is not None or self.native_mtp is not None,
             "native_mtp_available": self.native_mtp is not None,
-            "guess_ahead_mode": "native_mtp" if self.native_mtp is not None else "helper",
+            "guess_ahead_mode": ("native_mtp" if self.native_mtp is not None and (
+                info is None or str((info or {}).get("how") or "").startswith("native-mtp"))
+                else "helper"),
+            # Day 33 (v0.9.15): which guesser is in use and why.
+            "guesser": {k: v for k, v in (getattr(self, "guesser", None) or {}).items() if k != "gate"} or None,
             "prompt_lookup": {"enabled": bool(self.prompt_lookup_n),
                               "adaptive": bool(self.prompt_lookup_adaptive), "overlap_on": 0.50},
             "multi_token_verify": T("agent.mlx_worker.experimental_split_draft_blocks_qwen_n2"),
@@ -2131,8 +2305,10 @@ class Engine:
     def _gate_complete(self, user_text, max_tokens=24, use_draft=True):
         """One-shot non-stream completion for the first-load gate."""
         saved = self.draft_model
+        saved_mtp = getattr(self, "native_mtp", None)
         if not use_draft:
             self.draft_model = None
+            self.native_mtp = None
         try:
             msgs = self._gate_messages(user_text)
             if hasattr(self.tokenizer, "apply_chat_template"):
@@ -2153,6 +2329,7 @@ class Engine:
             return "".join(pieces)
         finally:
             self.draft_model = saved
+            self.native_mtp = saved_mtp
 
     def _gate_timed(self, user_text, max_tokens=40, use_draft=True):
         t0 = time.time()
@@ -2542,6 +2719,7 @@ class Engine:
             info["speculate"] = stats
         info["active"] = self.active_settings(info)
         info["active"]["guess_ahead_mode"] = "native_mtp" if enabled else "off"
+        self._last_run_info = info
         yield ("done", info)
 
     def _run(self, key, prompt, body, cancel):
@@ -2563,10 +2741,21 @@ class Engine:
         finally:
             self.prompt_lookup_n, self.prompt_lookup_adaptive, self._adaptive_pl_gate = saved
 
+    @staticmethod
+    def _greedy(body) -> bool:
+        try:
+            return float((body or {}).get("temperature", 0) or 0) == 0 and not (body or {}).get("repetition_penalty")
+        except (TypeError, ValueError):
+            return False
+
     def _run_impl(self, key, prompt, body, cancel):
         if getattr(self, "native_mtp", None) is not None:
-            yield from self._run_native_mtp(key, prompt, body, cancel)
-            return
+            # Day 33 (v0.9.15): a shipped head picked by Auto/On serves greedy
+            # replies; other replies use the normal path (no guesser) instead
+            # of failing. Settings Native MTP (test) stays greedy-only.
+            if not (getattr(self, "_native_mtp_auto", False) and not self._greedy(body)):
+                yield from self._run_native_mtp(key, prompt, body, cancel)
+                return
         mx, G = self.mx, self.G
         t0 = time.time()
         if self.client is not None:

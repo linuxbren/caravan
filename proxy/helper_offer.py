@@ -9,7 +9,8 @@ downloaded without an explicit yes. "Not now" is remembered per model in
 GGUF helpers come from HELPERS below (a GGUF helper for a GGUF model).
 MLX helpers come from agent/guessers.json through web_helpers.offer(),
 for a split MLX model or an MLX model on one Mac (a Balance split still
-does not use a helper). After a yes, Guess-ahead goes to Auto if it
+does not use a helper). Day 33 (v0.9.15): no helper is offered while the
+model uses its own shipped guesser. After a yes, Guess-ahead goes to Auto if it
 was Off; Auto still decides by measurement (Auto-tune keeps the helper
 only when it is at least 3% faster).
 """
@@ -125,8 +126,19 @@ def gguf_offer(model_id: str, lead_path, *, find_draft=None, jobs=None,
             "message": LINE}
 
 
-def mlx_offer(snapshot: dict, store_path=None) -> Optional[dict]:
-    """Offer for a split MLX model (existing pairing table), or None."""
+def uses_shipped_guesser(active: Optional[dict]) -> bool:
+    """True when the running worker uses a guesser shipped for this model
+    (Day 33, v0.9.15). A helper is then not needed, so it is not offered."""
+    g = (active or {}).get("guesser") or {}
+    return g.get("kind") == "native_mtp"
+
+
+def mlx_offer(snapshot: dict, store_path=None, active=None) -> Optional[dict]:
+    """Offer for an MLX model (existing pairing table), or None.
+
+    None while the model uses its own shipped guesser (Day 33, v0.9.15)."""
+    if uses_shipped_guesser(active):
+        return None
     try:
         import web_helpers
         o = web_helpers.offer(snapshot or {})
@@ -154,7 +166,7 @@ def _is_gguf(snap: dict, entry: dict) -> bool:
 
 
 def offer_for(snapshot: dict, entry: Optional[dict], *, jobs=None, store_path=None,
-              find_draft=None, ignore_declined=False) -> Optional[dict]:
+              find_draft=None, ignore_declined=False, active=None) -> Optional[dict]:
     """The one offer for the loaded (or named) model, or None."""
     snap = snapshot or {}
     entry = entry or {}
@@ -164,11 +176,12 @@ def offer_for(snapshot: dict, entry: Optional[dict], *, jobs=None, store_path=No
                           jobs=jobs, store_path=store_path,
                           ignore_declined=ignore_declined)
     if snap.get("model_id") == mid:
-        return mlx_offer(snap, store_path=store_path)
+        return mlx_offer(snap, store_path=store_path, active=active)
     return None
 
 
-def helper_status(snapshot: dict, entry: Optional[dict], *, find_draft=None) -> dict:
+def helper_status(snapshot: dict, entry: Optional[dict], *, find_draft=None,
+                  active=None) -> dict:
     """What the Helper download button says for the loaded (or named) model.
 
     GGUF: whether a helper is already on this Mac (and its name), or which
@@ -182,6 +195,11 @@ def helper_status(snapshot: dict, entry: Optional[dict], *, find_draft=None) -> 
         return {"kind": None, "model": None}
     if not _is_gguf(snap, entry):
         out = {"kind": "mlx", "model": mid, "split": bool(snap.get("split"))}
+        if snap.get("model_id") == mid and uses_shipped_guesser(active):
+            # Day 33 (v0.9.15): the model's own guesser is in use.
+            out["shipped"] = True
+            out["message"] = T("server.helper_offer.this_model_uses_its_built_in")
+            return out
         try:
             import web_helpers
             if web_helpers.balance_split(snap):

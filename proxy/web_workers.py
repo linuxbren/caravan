@@ -674,6 +674,15 @@ class WorkerManager:
                     self._note(T("server.web_workers.kept_the_full_context_of_ctx", ctx=str(launch["ctx"]), v=T.join(words.get(k, k) for k in lighter)))
                 tune = dict(tune, ctx=launch["ctx"], n_slots=launch["n_slots"],
                             ctx_auto=bool(launch.get("ctx_auto")), **lighter)
+            if attempt == 1 and tune.get("guess_ahead") == "on" and tune.get("draft_path"):
+                # Day 33 (v0.9.15): say which helper is in use and why.
+                try:
+                    import guesser_choice as GC
+                    g = GC.gguf_source(tune.get("draft_path"), main_name=Path(str(path)).name)
+                    if g:
+                        self._note(g["why"])
+                except Exception:  # noqa: BLE001  (a label never blocks a load)
+                    pass
             # Day 30: report the chat memory llama-server really got. A boot
             # restore's saved tune has no cache_type, so the Settings chip
             # showed no Memory compression after a power-loss restore.
@@ -2021,6 +2030,7 @@ class WorkerManager:
                     entry.get("_loaded_tune"),
                     snap.get("page_settings") or snap.get("settings"),
                     launch=entry.get("_launch"),
+                    model_path=entry.get("lead_path"),
                 )
             except Exception:
                 return None

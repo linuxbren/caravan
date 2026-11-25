@@ -67,6 +67,7 @@
     }
     if (st && st.kind === 'mlx') {
       if (st.balance) return {say: st.message || T('web.no_missing_compatible_helper_for_the')};
+      if (st.shipped) return {say: st.message || T('web.this_model_uses_its_built_in')};
       if (st.present) return {say: T(`web.the_guess_ahead_helper_is_already`, {present_name: st.present_name || T('web.a_smaller_model_of_the_same_2')})};
       if (st.known_id) return {ask: T(`web.download_the_known_name_helper_v`, {known_name: st.known_name, v: st.known_size_mb ? T(`web.known_size_mb_mb`, {known_size_mb: st.known_size_mb}) : ''})};
     }

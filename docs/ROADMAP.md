@@ -237,6 +237,14 @@ and the daily logs, not mixed into current setup instructions.
     reply. Missing first-token data falls back to the older chat-only
     verdict. See
     [DAY33](DAY33.md#first-token-timing-in-auto-tune-roadmap-2-v0914).
+  - **Prefer a shipped guesser, else the helper (in review for v0.9.15):**
+    when a model has its own native MTP head that can run here (one Mac,
+    16-bit, Prompt lookup off), Auto and On use it first, keep it only if
+    the first-load check or a saved Auto-tune verdict says it wins, and
+    otherwise fall back to Caravan's paired helper. On GGUF, Caravan's
+    paired helper wins over another same-family file. The log and the
+    Guess-ahead chip say which guesser and why. See
+    [DAY33](DAY33.md#prefer-a-shipped-guesser-else-the-helper-in-review-for-v0915).
 
 ## Next candidates
 

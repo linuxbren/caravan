@@ -3121,7 +3121,7 @@
       ? (!a.two_chats_available ? T("web.on_split_only_not_running")
          : !a.guess_ahead_loaded ? T("web.on_no_helper_on_disk_not") : T("web.on_not_running")) : null;
     const items = {};
-    items.guess_ahead = {id:"guess_ahead", text:T(`web.guess_ahead_v_v2_p`, {v: a.guess_ahead_mode === "native_mtp" ? T("web.native_mtp_experimental") : (a.guess_ahead ? T("web.on_2") : (gaWhy || T("web.off_2"))), v2: a.guess_ahead_from_draft != null ? T(`web.guess_ahead_from_draft_from_helper`, {guess_ahead_from_draft: a.guess_ahead_from_draft}) : "", p: p("guess_ahead")}), on:!!a.guess_ahead, hint:CHIP_HINTS.guess_ahead};
+    items.guess_ahead = {id:"guess_ahead", text:T(`web.guess_ahead_v_v2_p`, {v: a.guess_ahead_mode === "native_mtp" ? (a.guesser && a.guesser.source === "shipped" ? T("web.built_in_guesser") : T("web.native_mtp_experimental")) : (a.guess_ahead ? T("web.on_2") : (gaWhy || T("web.off_2"))), v2: a.guess_ahead_from_draft != null ? T(`web.guess_ahead_from_draft_from_helper`, {guess_ahead_from_draft: a.guess_ahead_from_draft}) : "", p: p("guess_ahead")}), on:!!a.guess_ahead, hint:(a.guesser && a.guesser.why) ? a.guesser.why : CHIP_HINTS.guess_ahead};
     items.self_tune = {id:"self_tune", text:T(`web.self_tuning_v`, {v: a.self_tune ? T("web.on_2") : T("web.off_2")}), on:!!a.self_tune, hint:CHIP_HINTS.self_tune};
     items.shared_start = {id:"shared_start", text:T(`web.shared_start_v_p`, {v: a.shared_start ? T("web.on_2") : T("web.off_2"), p: p("shared_prefix")}), on:!!a.shared_start, hint:CHIP_HINTS.shared_start};
     if (a.pipeline_chats != null) {

@@ -1055,7 +1055,9 @@ def find_gguf_draft(main_path, *, inventory=None) -> Optional[dict]:
     Never downloads. The helper must be a real file, the same family as
     the main model, and clearly smaller (fewer parameters when the names
     say so, otherwise a smaller file, at most half the main model's size).
-    The main model itself is never picked.
+    The main model itself is never picked. Day 33 (v0.9.15): when several
+    files qualify, Caravan's paired helper for this model wins (source
+    "paired"); otherwise the smallest one (source "found").
     """
     main = Path(str(main_path)).expanduser()
     try:
@@ -1084,6 +1086,16 @@ def find_gguf_draft(main_path, *, inventory=None) -> Optional[dict]:
             pass
     best = None
     best_size = None
+    # Day 33 (v0.9.15): Caravan's paired helper for this model (the one
+    # helper_offer.HELPERS names) wins over any other smaller same-family
+    # file, even a slightly smaller one. Otherwise the smallest file wins.
+    paired = None
+    try:
+        import guesser_choice as GC
+    except ImportError:
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "agent"))
+        import guesser_choice as GC
     for item in cands:
         if not isinstance(item, dict):
             continue
@@ -1115,14 +1127,19 @@ def find_gguf_draft(main_path, *, inventory=None) -> Optional[dict]:
             # Name does not say the size; only accept a clearly smaller file.
             if not main_size or size >= main_size * 0.35:
                 continue
+        found = {
+            "path": path,
+            "name": p.stem,
+            "family": main_fam,
+            "size_gb": round(size / 1e9, 2),
+        }
+        if paired is None and GC.is_paired_gguf(p.name, main.name):
+            paired = dict(found, source="paired")
         if best is None or size < best_size:
-            best = {
-                "path": path,
-                "name": p.stem,
-                "family": main_fam,
-                "size_gb": round(size / 1e9, 2),
-            }
+            best = dict(found, source="found")
             best_size = size
+    if paired is not None:
+        return paired
     return best
 
 

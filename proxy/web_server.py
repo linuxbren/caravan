@@ -2062,10 +2062,19 @@ def make_handler(app: App):
             action = (body or {}).get("action") if post else None
             # A Download click (line or Helper download button) is an explicit
             # yes, so an earlier Not now does not block it.
-            offer = HO.offer_for(snap, entry, jobs=jobs, ignore_declined=(action == "download"))
+            active = None
+            if snap.get("backend") != "llama" and snap.get("status") == "ready":
+                # Day 33 (v0.9.15): no helper offer while the model uses its
+                # own shipped guesser.
+                try:
+                    active = app.mgr.lead_active_settings()
+                except Exception:  # noqa: BLE001
+                    active = None
+            offer = HO.offer_for(snap, entry, jobs=jobs, ignore_declined=(action == "download"),
+                                 active=active)
             if not post:
                 try:
-                    status = HO.helper_status(snap, entry)
+                    status = HO.helper_status(snap, entry, active=active)
                 except Exception:
                     status = None
                 return self._json(200, {"offer": offer, "show": bool(offer), "helper": status})

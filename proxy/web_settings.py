@@ -492,8 +492,12 @@ def apply_gguf_settings(tune: dict, settings, *, model_path=None) -> dict:
     return out
 
 
-def gguf_active_settings(tune=None, settings=None, *, launch=None) -> dict:
-    """Chip-facing 'active' dict for a loaded GGUF model (no /caravan/settings)."""
+def gguf_active_settings(tune=None, settings=None, *, launch=None, model_path=None) -> dict:
+    """Chip-facing 'active' dict for a loaded GGUF model (no /caravan/settings).
+
+    Day 33 (v0.9.15): "guesser" says which helper is in use and why
+    (Caravan's paired helper, or another same-family file on this Mac).
+    """
     tune = dict(tune or {})
     try:
         s = normalize(settings or {})
@@ -509,8 +513,25 @@ def gguf_active_settings(tune=None, settings=None, *, launch=None) -> dict:
         kv = 8
     else:
         kv = None
+    on = tune.get("guess_ahead") == "on" and bool(tune.get("draft_path"))
+    guesser = None
+    try:
+        try:
+            import guesser_choice as GC
+        except ImportError:
+            import sys as _sys
+            _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "agent"))
+            import guesser_choice as GC
+        if on:
+            guesser = GC.gguf_source(tune.get("draft_path"),
+                                     main_name=Path(str(model_path)).name if model_path else "")
+        elif s.get("guess_ahead") == "off":
+            guesser = GC.choice(GC.NONE, "off", "off")
+    except Exception:  # noqa: BLE001  (a label never breaks the chips)
+        guesser = None
     return {
         "backend": "llama",
+        "guesser": guesser,
         "self_tune": s.get("self_tune") != "off",
         "guess_ahead": tune.get("guess_ahead") == "on" and bool(tune.get("draft_path")),
         "guess_ahead_loaded": tune.get("guess_ahead") == "on" and bool(tune.get("draft_path")),
