@@ -249,8 +249,8 @@ issues found (full suite 2,359 of 2,359 with the review command). Merged
 to `main` fast-forward only. The Macs were not updated; Brenden updates
 them himself.
 
-Released as [v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16)
-(source and pin commits are recorded after publishing). Notes:
+Released as [v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16):
+source `269d58d`, pin `963798d`; tag v0.9.16 on the wrap commit. Notes:
 [release-notes/day33-v0.9.16.md](release-notes/day33-v0.9.16.md).
 
 Day 32 saved the Ollama Cloud key and made cloud rows say **Load**, but

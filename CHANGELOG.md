@@ -26,7 +26,7 @@ See [DAY33](docs/DAY33.md#chat-with-ollama-cloud-models-v0916).
 - Plain errors for no key, a rejected key, an unknown model, rate or
   usage limits, Ollama being down, no internet, and a reply cut short.
   All five locales.
-- Tests: 2,359 tests pass.
+- Source `269d58d`, pin `963798d`. 2,359 tests pass.
 
 ## Day 33 — Prefer a shipped guesser, else the helper (v0.9.15)
 

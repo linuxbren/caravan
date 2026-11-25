@@ -8,7 +8,7 @@ chats to Ollama Cloud's `/api/chat` with the same page, streaming, Stop
 and queue, labeled CLOUD; the key is never logged or shown. A restart
 comes back to cloud or Macs as it was, and a missing or bad key says so
 instead of falling back. The local network gets cloud only after a
-warning that names the risk and an explicit OK. VERSION 0.9.16. The Macs
+warning that names the risk and an explicit OK. VERSION 0.9.16. Source `269d58d`, pin `963798d`, tag v0.9.16. The Macs
 were not updated (Brenden updates them himself). See [DAY33](DAY33.md).
 
 ## 2026-11-24: Day 33 — Chat with Ollama Cloud models (in review for v0.9.16)
