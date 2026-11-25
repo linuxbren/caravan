@@ -23,6 +23,9 @@ WARNING = T("cli.lan.anyone_on_the_same_network_can")
 QUESTION = T("cli.lan.open_caravan_on_your_local_network")
 OFF_MESSAGE = T("cli.lan.open_on_the_local_network_is_4")
 ON_PREFIX = T("cli.lan.open_on_the_local_network_at")
+# Day 33 (CAR-8): cloud chats from the local network spend the owner's
+# Ollama Cloud usage, so they need an explicit OK, saved as [lan] cloud_ok.
+CLOUD_WARNING = T("cli.lan.people_on_your_local_network_can")
 
 
 class LanError(Exception):
@@ -45,6 +48,33 @@ def web_port(home=None, name="web", default=8190):
         return default
 
 
+def _lan_flag(name, path=None):
+    """True only when [lan] <name> = true in config.toml."""
+    path = Path(path) if path else config_path()
+    if not path.is_file():
+        return False
+    try:
+        import tomllib
+        raw = tomllib.loads(path.read_text())
+    except (OSError, ValueError, ImportError):
+        try:
+            text = path.read_text()
+        except OSError:
+            return False
+        return bool(re.search(r'(?ms)^\[lan\][^\n]*\n(?:(?!\[).)*^' + re.escape(name) + r'\s*=\s*true\b', text))
+    lan = raw.get("lan") if isinstance(raw, dict) else None
+    return bool(isinstance(lan, dict) and lan.get(name) is True)
+
+
+def cloud_ok_in_config(path=None):
+    """Day 33 (CAR-8): the owner said OK to cloud chats from the local network."""
+    return _lan_flag("cloud_ok", path)
+
+
+def set_cloud_ok(ok, path=None):
+    return _set_lan_key("cloud_ok", bool(ok), path)
+
+
 def enabled_in_config(path=None):
     path = Path(path) if path else config_path()
     if not path.is_file():
@@ -63,20 +93,25 @@ def enabled_in_config(path=None):
 
 
 def set_enabled(enabled, path=None):
+    return _set_lan_key("enabled", bool(enabled), path)
+
+
+def _set_lan_key(name, flag, path=None):
     path = Path(path) if path else config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_symlink():
         raise LanError(T("cli.lan.settings_file_is_a_link_inspect"))
     text = path.read_text() if path.is_file() else ""
-    value = "true" if enabled else "false"
+    value = "true" if flag else "false"
     pattern = re.compile(r'(?ms)^(\[lan\][^\n]*\n)(.*?)(?=^\[|\Z)')
 
     def repl(match):
         body = match.group(2)
-        if re.search(r'(?m)^enabled\s*=', body):
-            body = re.sub(r'(?m)^enabled\s*=\s*.*$', f"enabled = {value}", body, count=1)
+        key = re.escape(name)
+        if re.search(r'(?m)^' + key + r'\s*=', body):
+            body = re.sub(r'(?m)^' + key + r'\s*=\s*.*$', f"{name} = {value}", body, count=1)
         else:
-            body = f"enabled = {value}\n" + body
+            body = f"{name} = {value}\n" + body
         return match.group(1) + body
 
     if pattern.search(text):
@@ -87,7 +122,7 @@ def set_enabled(enabled, path=None):
             new += "\n"
         if new:
             new += "\n"
-        new += f"[lan]\nenabled = {value}\n"
+        new += f"[lan]\n{name} = {value}\n"
     if new != text:
         tmp = path.with_name(path.name + ".tmp")
         tmp.write_text(new)
@@ -267,6 +302,8 @@ def inspect(*, port=None, home=None, path=None):
         "port": port,
         "bind": listen_host(path=path),
         "binds": binds,
+        "cloud_ok": cloud_ok_in_config(path),
+        "cloud_warning": CLOUD_WARNING,
     }
 
 
@@ -282,6 +319,10 @@ def turn_off(*, port=None, home=None, path=None, missing_ok=True):
     port = int(port or web_port(home))
     try:
         set_enabled(False, path)
+        # Day 33 (CAR-8): turning the local network off also takes back the
+        # cloud OK, so turning it on again asks again.
+        if cloud_ok_in_config(path):
+            set_cloud_ok(False, path)
     except (OSError, LanError):
         if not missing_ok:
             raise

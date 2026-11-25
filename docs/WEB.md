@@ -10,8 +10,34 @@ operating system for the dev machine, or personal SSH alias is required.
 Cloud models (labeled CLOUD; today the Ollama Cloud list under Models →
 Cloud) run at the provider, so they say **Load**, not Download. The first
 time, Caravan asks for your Ollama Cloud API key right in that row and
-saves it. Keys live in Settings → **Cloud API keys**. Chatting with cloud
-models comes in a later update; for now the key is saved and ready.
+saves it. Keys live in Settings → **Cloud API keys**.
+
+**Chat with a cloud model.** Press **Load** on a cloud model and your chats
+go to it on Ollama Cloud instead of your Macs. The model on your Macs stays
+loaded. The status pill says CLOUD and each reply is tagged
+"CLOUD · Ollama Cloud · model name". Your first cloud message asks once
+whether it may leave your Macs. Streaming, **Stop** and the message queue
+work as usual. The speed line under a cloud reply shows Ollama's numbers
+and is not added to your Macs' speed average. Press **Unload**, or load a
+model on your Macs, to send chats back to the Macs. A restart comes back
+the way you left it: if chats went to a cloud model, they still do; if
+they went to your Macs, they still do. If the key is missing or wrong
+after a restart, the status pill and the reply say so; Caravan does not
+quietly switch to your Macs.
+
+The key stays on this Mac. Caravan sends it only to Ollama Cloud, and
+never shows it, logs it, or puts it in a saved chat. Picking a cloud model
+and cloud chats always work from this Mac or over Tailscale. From the
+local network they wait for a warning and your OK: anyone on the same
+Wi-Fi or network who can open Caravan's page can chat through your
+Ollama Cloud account, use up your plan and its limits, and what they type
+goes to Ollama's servers. They still never see the key. Tailscale is the
+safer way if you have it. The OK is saved as `[lan] cloud_ok` in
+`~/.caravan/config.toml`; turning local network access off takes it back,
+so turning it on again asks again. Cloud chats are not saved in the request journal, because a replay
+after a restart would go to your Macs. If the key is missing or wrong, the
+model name is unknown, Ollama is busy, or the internet is down, the reply
+says so in plain words.
 
 Open **Models**, search for a model, and check its fit and download location.
 More memory or adding Macs lets larger models fit; Caravan checks each Mac's

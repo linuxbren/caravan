@@ -1110,6 +1110,9 @@
   .p-title { flex: 1; color: var(--amber2); font-weight: 600; }
   .p-meta { color: var(--muted); font-size: .62rem; }
   .p-cloud { color: #7ec8ff; border: 1px solid #7ec8ff55; padding: 0 5px; border-radius: 3px; font-size: .58rem; }
+  /* Day 33 (CAR-8): cloud replies and the pill say CLOUD, local ones don't. */
+  .cloud-tag { color: #7ec8ff; border: 1px solid #7ec8ff55; padding: 0 5px; border-radius: 3px; font-size: .62rem; margin-left: 6px; letter-spacing: .04em; text-transform: none; }
+  .dot.cloud { background: #7ec8ff; box-shadow: 0 0 10px #7ec8ff99; }
   .p-quants { display: none; border-top: 1px solid color-mix(in srgb, var(--accent) 14%, transparent); padding: 4px 0; }
   .p-row.open .p-quants { display: block; }
   .p-quant {
@@ -1982,7 +1985,7 @@
     <!-- Day 32: keys for cloud models. Never shown back in full. -->
     <div class="optcard drawer-section cloud-keys-card" id="cloudKeysCard" hidden>
       <h2 class="drawer-section-title"><span class="tip" title="{{web.saved_only_on_this_mac_in}}">{{web.cloud_api_keys}}</span></h2>
-      <div class="help">{{web.for_cloud_models_labeled_cloud_the}}</div>
+      <div class="help">{{web.for_cloud_models_labeled_cloud_load}}</div>
       <div id="cloudKeyRows"></div>
       <div class="help" id="cloudKeysStatus" role="status" aria-live="polite"></div>
     </div>
@@ -2293,7 +2296,19 @@
     });
     refreshRemoteAccess();
   }
+  // Day 33 (CAR-8): cloud chats from the local network need an OK to a warning.
+  let _lanInfo = null;
+  function lanCloudLine(j) {
+    if (!j || !j.enabled) return "";
+    return j.cloud_ok ? T("web.cloud_chats_are_allowed_on_the") : T("web.cloud_chats_stay_on_this_mac");
+  }
+  function cloudMayBeUsed() {
+    const k = window.caravanCloudKeys && window.caravanCloudKeys.current();
+    const keySet = !!(k && (k.providers || []).some((p) => p.set));
+    return keySet || !!(window.caravanCloudInUse && window.caravanCloudInUse());
+  }
   function renderLanAccess(j) {
+    _lanInfo = j || null;
     const on = !!j.enabled;
     document.querySelectorAll("#lanAccessSwitch button").forEach((b) => {
       b.classList.toggle("on", (b.dataset.lan === "on") === on);
@@ -2317,9 +2332,10 @@
         box.appendChild(a);
       });
       box.append(T("web.from_a_device_on_the_same"));
+      box.append(lanCloudLine(j));
       return;
     }
-    box.textContent = j.message || T("web.off_the_page_is_not_open");
+    box.textContent = (j.message || T("web.off_the_page_is_not_open")) + lanCloudLine(j);
   }
   async function refreshLanAccess() {
     try { renderLanAccess(await api("/api/lan")); }
@@ -2330,9 +2346,16 @@
       const b = e.target.closest("button[data-lan]");
       if (!b || b.disabled) return;
       const enable = b.dataset.lan === "on";
+      const req = { enabled: enable };
+      // Day 33 (CAR-8): turning the local network on with cloud in use asks
+      // first whether cloud chats may go out from there too.
+      if (enable && cloudMayBeUsed() && !(_lanInfo && _lanInfo.cloud_ok)) {
+        const warning = (_lanInfo && _lanInfo.cloud_warning) || "";
+        req.cloud_ok = window.confirm(warning + "\n\n" + T("web.allow_cloud_chats_from_the_local"));
+      }
       $("lanAccessStatus").textContent = enable ? T("web.turning_on") : T("web.turning_off");
       try {
-        renderLanAccess(await api("/api/lan", { method: "POST", body: JSON.stringify({ enabled: enable }) }));
+        renderLanAccess(await api("/api/lan", { method: "POST", body: JSON.stringify(req) }));
       } catch (err) {
         $("lanAccessStatus").textContent = (err && (err.error || err.message)) || T("web.could_not_change_this_setting");
       }
@@ -3678,21 +3701,30 @@
       : `<strong>${T("web.ready_when_you_are")}</strong> ${T("web.pick_a_model_thats_already_on")}`;
   }
   function escHtml(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
-  function setStatus(snap) {
+  function setStatus(snap, cloud) {
     state.workerSplit = snap?.split;
     try { paintIntro(snap); } catch (e) {}
     const st = (snap && snap.status) || "idle";
-    state.loadedModel = (snap && (snap.model_id || snap.model_name)) || "";
+    // Day 33 (CAR-8): a picked Ollama Cloud model takes the chat; the Macs keep their own state.
+    state.cloud = (cloud && cloud.model) ? cloud : null;
+    if (!state.cloud && state.cloudNoticeHold) { state.cloudNoticeHold = false; state.queuePaused = false; }
+    state.loadedModel = state.cloud ? (state.cloud.model_id || state.cloud.model) : ((snap && (snap.model_id || snap.model_name)) || "");
     renderThink();
     const dot = $("statusDot");
     const text = $("statusText");
     dot.className = "dot";
-    if (st === "ready") { dot.classList.add("ok"); text.textContent = T(`web.ready_model_name_2`, {model_name: snap.model_name || ""}); }
+    if (state.cloud && state.cloud.problem) {
+      // Day 33 (CAR-8): still the cloud pick (a restart keeps it), but it can't chat yet: say why.
+      dot.classList.add("err", "cloud"); text.textContent = T(`web.name_cloud_label_problem`, {name: state.cloud.model, label: state.cloud.label || "", problem: state.cloud.problem});
+    }
+    else if (state.cloud) { dot.classList.add("ok", "cloud"); text.textContent = T(`web.ready_name_cloud_label`, {name: state.cloud.model, label: state.cloud.label || ""}); }
+    else if (st === "ready") { dot.classList.add("ok"); text.textContent = T(`web.ready_model_name_2`, {model_name: snap.model_name || ""}); }
     else if (st === "error") { dot.classList.add("err"); text.textContent = T(`web.error_error`, {error: snap.error || ""}); }
     else if (st === "idle") { text.textContent = snap.error ? T(`web.idle_error`, {error: snap.error}) : T("web.idle_pick_a_model"); }
     else { dot.classList.add("busy"); text.textContent = T.has(`web.status_${st}`) ? T(`web.status_${st}`) : st.replaceAll("_", " "); }
     // Day 32: what the pill shows is looked up; code checks the status itself.
-    text.dataset.status = st;
+    text.dataset.status = state.cloud ? "ready" : st;
+    text.dataset.cloud = state.cloud ? "1" : "";
     // Day 32: the pill is one line; the full text (a long model name) on hover.
     $("statusPill").title = text.textContent;
 
@@ -3714,11 +3746,12 @@
     if (_applyWaiting) { $("btnLoad").disabled = true; $("btnApply").disabled = true; }
     if (["starting_lead","starting_packer","stopping"].includes(st)) setApplyBusy(T("web.applying"));
     else if ($("btnApply").classList.contains("is-busy") && !_tuneCancelling && !_applyWaiting) setApplyBusy("");
-    $("btnSend").disabled = st !== "ready" || !!window.caravanBalanceReloading;
+    const chatOk = st === "ready" || !!state.cloud;
+    $("btnSend").disabled = !chatOk || !!window.caravanBalanceReloading;
     repaintSend();
     // Day 32: a queue waiting for the model (after Unload or a switch) goes on once it is ready.
-    if (st === "ready" && !state.streaming && state.queue.length) setTimeout(drainQueue, 0);
-    $("input").disabled = st !== "ready" || !!window.caravanBalanceReloading;
+    if (chatOk && !state.streaming && state.queue.length) setTimeout(drainQueue, 0);
+    $("input").disabled = !chatOk || !!window.caravanBalanceReloading;
   }
 
   async function refreshStatus() {
@@ -3738,7 +3771,7 @@
       state.qualityNotice = qmsg;
       if (qn) { qn.hidden = !qmsg; qn.textContent = qmsg; }
       if (qmsg && state.opts) renderOpts();
-      setStatus(j.worker);
+      setStatus(j.worker, j.cloud);
       window.caravanWorkerSnapshot = j;
       window.dispatchEvent(new CustomEvent('caravan-worker-status', {detail: j}));
       state.active = j.active || null;
@@ -3932,6 +3965,14 @@
     el.className = `msg ${role}`;
     el.innerHTML = `<div class="who">${role === "user" ? T("web.you") : T("web.caravan")}</div><div class="body"></div>`;
     el.querySelector(".body").textContent = text;
+    if (role !== "user" && state.cloud) {
+      // Day 33 (CAR-8): this reply comes from Ollama Cloud, not the Macs.
+      const tag = document.createElement("span");
+      tag.className = "cloud-tag";
+      tag.textContent = T(`web.cloud_label_model`, {label: state.cloud.label || "", model: state.cloud.model});
+      el.querySelector(".who").appendChild(tag);
+      el.dataset.cloud = "1";
+    }
     $("messages").appendChild(el);
     // Your own new message always jumps to the bottom and resumes following.
     if (role === "user") state.followChat = true;
@@ -4057,6 +4098,35 @@
     state.history = [];
     try { localStorage.removeItem(LS_HIST); } catch (_) {}
   }
+  // Day 33 (CAR-8): cloud chats. The key never reaches the page; the server
+  // keeps it and sends it to Ollama Cloud.
+  const LS_CLOUD_NOTICE = "caravan.cloudNotice";
+  function cloudNoticeSeen() { try { return localStorage.getItem(LS_CLOUD_NOTICE) === "1"; } catch (_) { return false; } }
+  function markCloudNoticeSeen() { try { localStorage.setItem(LS_CLOUD_NOTICE, "1"); } catch (_) {} }
+  // Day 33 (CAR-8): from the local network, cloud needs an explicit OK to
+  // the warning (saved on the Mac; turning the local network off takes it back).
+  async function askLanCloudOk(warning) {
+    if (!window.confirm((warning || "") + "\n\n" + T("web.allow_cloud_chats_from_the_local"))) return false;
+    try { await api("/api/lan", { method: "POST", body: JSON.stringify({ cloud_ok: true }) }); return true; }
+    catch (e) { alert((e && (e.error || e.message)) || String(e)); return false; }
+  }
+  window.caravanCloudInUse = () => !!state.cloud;
+  async function useCloudModel(q) {
+    const body = JSON.stringify({ provider: q.provider || "ollama", model: q.cloud_model || q.repo_id });
+    let j;
+    try { j = await api("/api/cloud/use", { method: "POST", body }); }
+    catch (e) {
+      if (!(e && e.code === "cloud_lan_needs_ok" && await askLanCloudOk(e.warning))) throw e;
+      j = await api("/api/cloud/use", { method: "POST", body });
+    }
+    cancelChat();
+    state.session = null; // new model → new sessions
+    resetHistory();
+    saveChat();
+    await refreshStatus();
+    return j && j.cloud;
+  }
+  window.caravanUseCloud = useCloudModel;
   try {
     state.session = localStorage.getItem(LS_SID) || null;
     const saved = localStorage.getItem(LS_MSGS);
@@ -4088,6 +4158,7 @@
 
   async function sendChat(queuedText) {
     const fromQueue = typeof queuedText === "string";
+    if (!fromQueue && state.cloudNoticeHold) { state.cloudNoticeHold = false; state.queuePaused = false; }
     if (!fromQueue && (state.streaming || state.queue.length)) {
       // Day 32: typed while a reply streams (or others wait): queue it.
       const typed = $("input").value.trim();
@@ -4104,6 +4175,24 @@
     if ($("statusText").dataset.status !== "ready") {
       markBad(addMsg("assistant", T("web.error_model_not_ready_wait_for")));
       return;
+    }
+    // Day 33 (CAR-8): from the local network, cloud chats wait for an OK.
+    if (state.cloud && state.cloud.lan_needs_ok) {
+      if (!await askLanCloudOk(state.cloud.lan_warning)) {
+        if (fromQueue) { state.queue.unshift({ id: ++state.queueSeq, text }); state.queuePaused = true; state.cloudNoticeHold = true; renderQueue(); }
+        return;
+      }
+      state.cloud.lan_needs_ok = false;
+    }
+    // Day 33 (CAR-8): the first chat with a cloud model says where it goes.
+    if (state.cloud && !cloudNoticeSeen()) {
+      if (!window.confirm(T(`web.this_message_leaves_your_macs`, {label: state.cloud.label || "", model: state.cloud.model}))) {
+        // Not now: a queued message goes back to the front and the queue
+        // waits until you send again (no repeat prompts).
+        if (fromQueue) { state.queue.unshift({ id: ++state.queueSeq, text }); state.queuePaused = true; state.cloudNoticeHold = true; renderQueue(); }
+        return;
+      }
+      markCloudNoticeSeen();
     }
     if (!fromQueue) $("input").value = "";
     addMsg("user", text);
@@ -4244,7 +4333,8 @@
       if (stopped) {
         markStopped(asst, bodyEl, full);
       } else if (meta) {
-        showStats(meta.stats || {}, meta.timestamps || {});
+        // Day 33 (CAR-8): a cloud reply's speed is Ollama's, not the Macs'.
+        if (!meta.cloud) showStats(meta.stats || {}, meta.timestamps || {});
         const tdiv = document.createElement("div");
         tdiv.className = "timing";
         const st = meta.stats || {};
@@ -4518,11 +4608,22 @@
     refreshOptimize();
   };
   refreshOptimize();
+  async function stopCloudChats() {
+    try { await api("/api/cloud/stop", { method: "POST", body: "{}" }); }
+    catch (e) { alert(e.error || e.message || String(e)); }
+    state.queuePaused = false;
+    state.session = null;
+    resetHistory();
+    saveChat();
+    refreshStatus();
+  }
   $("btnStop").onclick = async () => {
     // Day 32: queued messages wait (they are not sent to a model being
     // unloaded) and go once a model is ready again, or can be cancelled.
     state.queuePaused = true;
     cancelChat();
+    // Day 33 (CAR-8): Unload on a cloud model stops sending chats there.
+    if (state.cloud) return stopCloudChats();
     const b = $("btnStop");
     b.disabled = true; b.classList.add("is-busy"); b.textContent = T("web.unloading");
     try {
@@ -5254,7 +5355,9 @@
       let keys = null;
       try { keys = await window.caravanCloudKeys.refresh(); } catch (_) {}
       if (!keys || keys.show === false) {
-        $("pickerStatus").textContent = T("web.open_caravan_on_this_mac_or");
+        // Day 33 (CAR-8): a local-network viewer never sees keys. The server
+        // checks the key and asks for the local-network OK if needed.
+        continueCloudLoad(q, { id: provider, label: q.note || provider });
         return;
       }
       const p = (keys.providers || []).find((x) => x.id === provider);
@@ -5292,10 +5395,15 @@
       }
       continueCloudLoad(q, p);
     }
-    function continueCloudLoad(q, p) {
-      // Sending chats to a cloud provider is not built yet (Day 32: keys
-      // first). Say so plainly instead of pretending it loaded.
-      $("pickerStatus").textContent = T(`web.label_key_ready_v_chatting_with`, {label: (p.label), v: p.last4 ? T(`web.ends_in_last4_2`, {last4: p.last4}) : "", name: q.name || q.repo_id});
+    async function continueCloudLoad(q, p) {
+      // Day 33 (CAR-8): chats now go to this Ollama Cloud model.
+      $("pickerStatus").textContent = T(`web.switching_chats_to_name`, {name: q.name || q.repo_id});
+      try {
+        const c = await window.caravanUseCloud(q);
+        $("pickerStatus").textContent = T(`web.chats_now_go_to_name_on`, {name: (c && c.model) || q.name || q.repo_id, label: p.label});
+      } catch (e) {
+        $("pickerStatus").textContent = (e && (e.error || e.message)) || T("web.could_not_switch_to_the_cloud");
+      }
     }
 
     function escapeHtml(s) {

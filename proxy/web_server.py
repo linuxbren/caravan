@@ -168,6 +168,12 @@ class App:
         # server (and the model) by its request id or journal job id.
         self.live_chats = {}
         self.live_chats_lock = threading.Lock()
+        # Day 33 (CAR-8): the Ollama Cloud model chats go to, if one was
+        # picked. Saved beside last-model.json, so a restart goes back to
+        # cloud if it was cloud (only the provider and model, never the key).
+        import cloud_chat
+        self.cloud = cloud_chat.Choice(Path(mgr.state_dir) / cloud_chat.CHOICE_FILE
+                                       if getattr(mgr, "state_dir", None) else None)
         self._shutdown = threading.Event()
         self.httpd = None
         import thunderbolt_discovery
@@ -1006,6 +1012,31 @@ def page_tag(path=None, package=None):
         return None
 
 
+def _cloud_choice(app):
+    """Day 33 (CAR-8): the picked cloud model, or None."""
+    c = getattr(app, "cloud", None)
+    return c.get() if c is not None else None
+
+
+def _cloud_status(app):
+    """What /api/status shows for the cloud pick: the choice, whether it was
+    brought back by a restart, and a plain problem when the key is missing
+    (a bad key shows on the first chat). Never the key."""
+    cur = _cloud_choice(app)
+    if not cur:
+        return None
+    import cloud_keys as CK
+    out = dict(cur)
+    out["restored"] = bool(getattr(app.cloud, "restored", False))
+    try:
+        has_key = bool(CK.resolve(cur.get("provider") or "ollama", home=getattr(app, "cloud_keys_home", None)))
+    except Exception:  # noqa: BLE001
+        has_key = False
+    out["key_set"] = has_key
+    out["problem"] = None if has_key else T("server.cloud_chat.add_your_ollama_cloud_key_in")
+    return out
+
+
 def make_handler(app: App):
     class H(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
@@ -1293,6 +1324,12 @@ def make_handler(app: App):
                     return self._json(400, {"error": T("server.web_server.send_the_replys_request_or_job")})
                 out = stop_live_chat(app, request_id=rid, job_id=jid)
                 return self._json(200 if out["stopped"] else 404, out)
+            if path in ("/api/cloud/use", "/api/cloud/stop"):
+                return self._api_cloud_use(body=body, stop=(path == "/api/cloud/stop"))
+            if path in ("/api/chat", "/v1/chat/completions") and _cloud_choice(app):
+                # Day 33 (CAR-8): a cloud model is picked, so the chat goes to
+                # Ollama Cloud, not the Macs (no Mac in-flight count).
+                return self._api_chat_cloud(body=body, choice=_cloud_choice(app))
             if path in ("/api/chat", "/v1/chat/completions"):
                 # /v1 path too so tools can hit the UI port.
                 app.chat_begin()
@@ -1426,6 +1463,8 @@ def make_handler(app: App):
                 "lead_healthy": healthy,
                 "split": split,
                 "active": active,
+                # Day 33 (CAR-8): chats go to this Ollama Cloud model (never the key).
+                "cloud": self._cloud_status_for_viewer(),
                 "uptime_s": round(time.time() - app.started, 1),
                 "page": page_tag(),
                 "version": _installed_version(),
@@ -1846,6 +1885,274 @@ def make_handler(app: App):
             out["show"] = True
             return self._json(200, out)
 
+        def _cloud_gate(self):
+            """Day 33 (CAR-8): picking a cloud model and cloud chats spend the
+            owner's Ollama Cloud usage. This Mac and Tailscale may always; the
+            local network only after an explicit OK to the warning, saved as
+            [lan] cloud_ok in config.toml. The key never reaches any viewer."""
+            import sys as _sys
+            from pathlib import Path as _Path
+            tools = str(_Path(__file__).resolve().parents[1] / "tools")
+            if tools not in _sys.path:
+                _sys.path.insert(0, tools)
+            import caravan_update_check as UC
+            import caravan_lan as lan
+            if UC.is_local_owner(self):
+                return True
+            try:
+                if lan.cloud_ok_in_config():  # cheap file read before the Tailscale check
+                    return True
+            except Exception:  # noqa: BLE001
+                pass
+            return bool(UC.can_apply_from(self, inspect_info=self._update_inspect())[0])
+
+        def _cloud_status_for_viewer(self):
+            """The cloud pick for this viewer: a local-network viewer that
+            still needs the OK gets the warning to show before sending."""
+            out = _cloud_status(app)
+            if out is not None:
+                try:
+                    ok = self._cloud_gate()
+                except Exception:  # noqa: BLE001
+                    ok = False
+                out["lan_needs_ok"] = not ok
+                if not ok:
+                    import caravan_lan as lan
+                    out["lan_warning"] = lan.CLOUD_WARNING
+            return out
+
+        def _cloud_lan_refusal(self, extra=None):
+            import caravan_lan as lan  # tools/ is on the path after _cloud_gate
+            out = {"error": T("server.cloud_chat.cloud_chats_from_the_local_network"),
+                   "code": "cloud_lan_needs_ok", "warning": lan.CLOUD_WARNING}
+            out.update(extra or {})
+            return self._json(403, out)
+
+        def _api_cloud_use(self, body=None, stop=False):
+            """POST /api/cloud/use {provider, model}: send chats to that Ollama
+            Cloud model. POST /api/cloud/stop: back to the Macs."""
+            import cloud_chat as CC
+            import cloud_keys as CK
+            if stop:
+                try:
+                    had = app.cloud.clear()
+                except OSError:
+                    return self._json(500, {"error": T("server.cloud_chat.could_not_save_the_cloud_choice")})
+                return self._json(200, {"cloud": None, "stopped": had})
+            if not self._cloud_gate():
+                return self._cloud_lan_refusal()
+            b = body if isinstance(body, dict) else {}
+            provider = str(b.get("provider") or CC.PROVIDER).strip().lower()
+            if provider not in CK.PROVIDERS:
+                return self._json(400, {"error": T("server.cloud_keys.unknown_provider")})
+            model = CC.direct_name(str(b.get("model") or b.get("repo_id") or ""))
+            if not CC.valid_name(model):
+                return self._json(400, {"error": T("server.cloud_chat.that_cloud_model_name_doesnt_look"), "code": "cloud_bad_model"})
+            if not CK.resolve(provider, home=getattr(app, "cloud_keys_home", None)):
+                return self._json(400, {"error": T("server.cloud_chat.add_your_ollama_cloud_key_in"), "code": "cloud_key_missing"})
+            try:
+                cur = app.cloud.set(model, CK.PROVIDERS[provider]["label"])
+            except OSError:
+                return self._json(500, {"error": T("server.cloud_chat.could_not_save_the_cloud_choice")})
+            return self._json(200, {"cloud": cur})
+
+        def _api_chat_cloud(self, body=None, choice=None):
+            """Day 33 (CAR-8): one chat with an Ollama Cloud model. Same page
+            contract as a Mac reply: OpenAI-shaped SSE, a caravan-meta event
+            at the end, Stop by request id. Not journaled (a replay after
+            restore would go to the Macs). Never logs or returns the key."""
+            import cloud_chat as CC
+            import cloud_keys as CK
+            if not isinstance(body, dict):
+                return self._json(400, {"error": T("server.web_server.bad_json")})
+            if not self._cloud_gate():
+                return self._cloud_lan_refusal({"cloud": True})
+            model = choice["model"]
+            key = CK.resolve(choice.get("provider") or CC.PROVIDER, home=getattr(app, "cloud_keys_home", None))
+            if not key:
+                return self._json(400, {"error": T("server.cloud_chat.add_your_ollama_cloud_key_in"), "code": "cloud_key_missing", "cloud": True})
+            t_received = time.time()
+            try:
+                sent_browser = float(self.headers.get("X-Caravan-Sent") or "")
+            except ValueError:
+                sent_browser = None
+            session = self.headers.get("X-Caravan-Session") or uuid.uuid4().hex[:16]
+            stream = body.get("stream", True) is not False
+            cloud_pub = {"provider": choice.get("provider"), "label": choice.get("label"),
+                         "model": model, "cloud_label": "CLOUD"}
+            live = {"stop": threading.Event(), "upstream": None, "job": None}
+            rid_hdr = str(self.headers.get("X-Caravan-Request") or "")
+            rid = rid_hdr if _STOP_ID_OK.match(rid_hdr) else None
+            if rid:
+                with app.live_chats_lock:
+                    app.live_chats[rid] = live
+            try:
+                try:
+                    upstream = CC.open_chat(body, model, key, stream=stream)
+                except CC.CloudError as e:
+                    return self._json(e.status, {"error": CC.scrub(e.message, key), "code": e.code, "cloud": cloud_pub})
+                live["upstream"] = upstream
+                if live["stop"].is_set():
+                    _hard_close(upstream)
+                return self._cloud_reply(upstream, key, model, stream, live, cloud_pub,
+                                         session, t_received, sent_browser)
+            finally:
+                if rid:
+                    with app.live_chats_lock:
+                        if app.live_chats.get(rid) is live:
+                            del app.live_chats[rid]
+
+        def _cloud_reply(self, upstream, key, model, stream, live, cloud_pub,
+                         session, t_received, sent_browser):
+            import cloud_chat as CC
+            rid = "cloud-" + uuid.uuid4().hex[:12]
+            if not stream:
+                try:
+                    data = json.loads(upstream.read().decode("utf-8", errors="replace") or "{}")
+                except (OSError, ValueError, AttributeError, http.client.HTTPException) as e:
+                    if live["stop"].is_set():
+                        return self._json(200, {
+                            "object": "chat.completion", "model": model,
+                            "choices": [{"index": 0, "finish_reason": "stopped",
+                                         "message": {"role": "assistant", "content": ""}}],
+                            "caravan_web": {"stopped": True, "session": session, "cloud": cloud_pub},
+                        })
+                    err = CC.network_error(e)
+                    return self._json(err.status, {"error": err.message, "code": err.code, "cloud": cloud_pub})
+                finally:
+                    try:
+                        upstream.close()
+                    except Exception:  # noqa: BLE001
+                        pass
+                if not isinstance(data, dict) or data.get("error"):
+                    said = CC.scrub(str((data or {}).get("error") or "")[:200], key) if isinstance(data, dict) else ""
+                    return self._json(502, {"error": T("server.cloud_chat.ollama_cloud_stopped_mid_reply_said", said=said or "?"),
+                                            "code": "cloud_reply_error", "cloud": cloud_pub})
+                t_done = time.time()
+                out = CC.to_completion(data, model, rid)
+                usage = CC.usage_from_done(data, total_s=t_done - t_received)
+                out["usage"] = {k: v for k, v in usage.items() if k != "caravan"}
+                stats = timing.reply_stats(usage, wall_s=t_done - t_received)
+                out["caravan_web"] = {
+                    "timestamps": {"sent_browser": sent_browser, "received_mini": t_received, "done_mini": t_done},
+                    "stats": stats, "session": session, "job": None, "cloud": cloud_pub,
+                }
+                return self._json(200, out)
+
+            self.close_connection = True
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.send_header("Transfer-Encoding", "chunked")
+            self.send_header("X-Caravan-Cloud", cloud_pub.get("provider") or "ollama")
+            self._cors()
+            self.end_headers()
+
+            def send_chunk(payload: bytes):
+                self.wfile.write(b"%x\r\n%s\r\n" % (len(payload), payload))
+                self.wfile.flush()
+
+            def send_obj(obj):
+                send_chunk(b"data: " + json.dumps(obj, ensure_ascii=False).encode() + b"\n\n")
+
+            def finish_stream():
+                send_chunk(b"data: [DONE]\n\n")
+                self.wfile.write(b"0\r\n\r\n")
+                self.wfile.flush()
+
+            t_first = None
+            done_evt = None
+            cloud_err = None
+            read_err = None
+            got_any = False
+
+            def lines():
+                nonlocal read_err
+                while True:
+                    try:
+                        line = upstream.readline()
+                    except (OSError, http.client.HTTPException) as e:
+                        read_err = e
+                        return
+                    except (ValueError, AttributeError) as e:
+                        if not live["stop"].is_set():
+                            read_err = e
+                        return
+                    if not line:
+                        return
+                    yield line
+
+            try:
+                try:
+                    send_obj(CC.chunk(model, rid, {"role": "assistant", "content": ""}))
+                    for ev in CC.iter_events(lines()):
+                        if ev.get("error"):
+                            cloud_err = CC.scrub(str(ev.get("error"))[:200], key)
+                            break
+                        msg = ev.get("message") if isinstance(ev.get("message"), dict) else {}
+                        delta = {}
+                        if isinstance(msg.get("thinking"), str) and msg["thinking"]:
+                            delta["reasoning_content"] = msg["thinking"]
+                        if isinstance(msg.get("content"), str) and msg["content"]:
+                            delta["content"] = msg["content"]
+                        if delta:
+                            got_any = True
+                            if t_first is None:
+                                t_first = time.time()
+                            send_obj(CC.chunk(model, rid, delta))
+                        if ev.get("done"):
+                            done_evt = ev
+                            break
+                except (BrokenPipeError, ConnectionResetError):
+                    return  # the page went away; closing upstream ends it at Ollama
+            finally:
+                try:
+                    upstream.close()
+                except Exception:  # noqa: BLE001
+                    pass
+
+            t_done = time.time()
+            try:
+                if live["stop"].is_set() and done_evt is None:
+                    send_obj({"id": "caravan-meta", "object": "caravan.meta", "stopped": True,
+                              "finish_reason": "stopped",
+                              "timestamps": {"sent_browser": sent_browser, "received_mini": round(t_received, 6),
+                                             "done_mini": round(t_done, 6)},
+                              "stats": {}, "session": session, "job": None, "cloud": cloud_pub})
+                    finish_stream()
+                    return
+                if done_evt is None:
+                    if cloud_err:
+                        msg = T("server.cloud_chat.ollama_cloud_stopped_mid_reply_said", said=cloud_err)
+                    elif read_err is not None:
+                        msg = CC.network_error(read_err).message
+                    else:
+                        msg = T("server.cloud_chat.ollama_cloud_ended_the_reply_early")
+                    send_obj({"error": {"message": msg, "type": "caravan_cloud"}, "cloud": cloud_pub,
+                              "partial": got_any})
+                    self.wfile.write(b"0\r\n\r\n")
+                    self.wfile.flush()
+                    return
+                ttft = (t_first - t_received) if t_first is not None else None
+                usage = CC.usage_from_done(done_evt, ttft_s=ttft, total_s=t_done - t_received)
+                finish = done_evt.get("done_reason") or "stop"
+                send_obj(CC.chunk(model, rid, {}, finish=finish,
+                                  usage={k: v for k, v in usage.items() if k != "caravan"}))
+                stats = timing.reply_stats(usage, wall_s=t_done - t_received)
+                first = t_first if t_first is not None else t_done
+                send_obj({
+                    "id": "caravan-meta", "object": "caravan.meta",
+                    "timestamps": {"sent_browser": sent_browser, "received_mini": round(t_received, 6),
+                                   "first_word_mini": round(first, 6), "first_word_proxy": round(first, 6),
+                                   "done_mini": round(t_done, 6)},
+                    "stats": stats, "memory_guard": None, "settings": None,
+                    "session": session, "job": None, "cloud": cloud_pub,
+                })
+                finish_stream()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+
         def _api_hf_token_get(self):
             try:
                 from hf_auth import validated_token_status
@@ -1956,6 +2263,13 @@ def make_handler(app: App):
                     enabled = body.get("enabled")
                     if enabled is None and body.get("action") in ("on", "off"):
                         enabled = body["action"] == "on"
+                    # Day 33 (CAR-8): the OK for cloud chats from the local
+                    # network (after the warning). Alone, or with enabled.
+                    cloud_ok = body.get("cloud_ok")
+                    if isinstance(cloud_ok, bool) and enabled is not False:
+                        lan.set_cloud_ok(cloud_ok)
+                        if enabled is None:
+                            return self._json(200, dict(lan.inspect(port=port), restarting=False))
                     if enabled is True:
                         info = lan.turn_on(port=port)
                     elif enabled is False:
@@ -2334,13 +2648,15 @@ def make_handler(app: App):
             repo = (body.get("repo_id") or body.get("id") or "").strip()
             if not repo:
                 return self._json(400, {"error": T("server.web_server.repo_id_required")})
+            # Day 33 (CAR-8): checked first, since a cloud name (gpt-oss:120b)
+            # is not a Hugging Face repo name.
+            if body.get("source") == "cloud" or repo.startswith("ollama-cloud/"):
+                return self._json(400, {"error": T("server.web_server.cloud_models_are_not_downloaded_press")})
             try:
                 from model_files import repo_name
                 repo_name(repo)
             except ValueError as e:
                 return self._json(400, {'error': str(e)})
-            if body.get("source") == "cloud" or repo.startswith("ollama-cloud/"):
-                return self._json(400, {"error": T("server.web_server.cloud_models_are_framework_only_for")})
             gguf_file = None
             gguf_chosen = None
             gguf_one_ok = False
@@ -2925,6 +3241,11 @@ def make_handler(app: App):
                 except Exception:  # noqa: BLE001
                     pass
                 snap = dict(snap, balance_note=balanced_msg)
+            # Day 33 (CAR-8): loading a model on the Macs ends cloud chats.
+            # The start-up restore of the Macs' last model does not: a
+            # restart goes back to how it was, cloud included.
+            if getattr(app, "cloud", None) is not None and not body.get("_restore_token"):
+                app.cloud.clear()
             return self._json(200, snap)
 
         def _api_jobs(self, path):

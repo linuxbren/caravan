@@ -405,7 +405,9 @@ class IndexHtmlContractTest(unittest.TestCase):
         self.assertIn("chatAbort", html)
         # Day 32: Send stays usable while a reply streams (it reads Queue
         # and queues the message); sendChat itself still guards streaming.
-        self.assertIn('st !== "ready" || !!window.caravanBalanceReloading', html)
+        # Day 33 (CAR-8): "ready" also counts a picked Ollama Cloud model.
+        self.assertIn('const chatOk = st === "ready" || !!state.cloud;', html)
+        self.assertIn('!chatOk || !!window.caravanBalanceReloading', html)
         self.assertIn("if (state.streaming || window.caravanBalanceReloading || $(\"input\").disabled) return;", html)
 
 if __name__ == "__main__":

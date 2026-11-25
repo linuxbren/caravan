@@ -4,7 +4,7 @@ Sources:
   * Hugging Face MLX (mlx-community and convertible HF repos)
   * Ollama (= llama.cpp / GGUF) via HF GGUF publishers (bartowski, unsloth,
     lmstudio-community) — one Mini for now; split hook left for later
-  * Ollama Cloud — framework only (OLLAMA_API_KEY); labeled CLOUD
+  * Ollama Cloud — labeled CLOUD; Load sends chats there (Day 33, cloud_chat.py)
 
 Fit uses unload capacity (available + loaded worker footprint, or total minus
 an OS baseline) + disk free checked separately. Color: green / yellow / red / gray.
@@ -429,15 +429,46 @@ def _cloud_key_set(provider):
         return bool(OLLAMA_API_KEY) if provider == "ollama" else False
 
 
-# Static Ollama Cloud catalog (labeled CLOUD; framework only until phase 5).
-_OLLAMA_CLOUD = [
-    {"id": "gpt-oss:120b-cloud", "name": "gpt-oss 120B Cloud", "note": "Ollama Cloud"},
-    {"id": "deepseek-v3.1:671b-cloud", "name": "DeepSeek V3.1 671B Cloud", "note": "Ollama Cloud"},
-    {"id": "qwen3-coder:480b-cloud", "name": "Qwen3 Coder 480B Cloud", "note": "Ollama Cloud · coding"},
-    {"id": "kimi-k2:1t-cloud", "name": "Kimi K2 1T Cloud", "note": "Ollama Cloud"},
-    {"id": "glm-4.6:cloud", "name": "GLM-4.6 Cloud", "note": "Ollama Cloud"},
-    {"id": "minimax-m2:cloud", "name": "MiniMax M2 Cloud", "note": "Ollama Cloud"},
-]
+def _ollama_cloud_rows():
+    """Day 33 (CAR-8): Ollama Cloud models for Models -> Cloud. The live list
+    (GET https://ollama.com/api/tags, the names the direct API wants) when it
+    can be read; a short fallback list otherwise. Labeled CLOUD; Load sends
+    chats to Ollama Cloud instead of the Macs."""
+    import cloud_chat
+    rows, _live = cloud_chat.catalog()
+    out = []
+    key_set = _cloud_key_set("ollama")
+    label = T("server.cloud_keys.ollama_cloud")
+    for c in rows:
+        caps = set(c.get("capabilities") or [])
+        filters = ["cloud", "chat"]
+        for cap in ("thinking", "tools", "vision"):
+            if cap in caps:
+                filters.append(cap)
+        if "code" in c["name"].lower():
+            filters.append("coding")
+        out.append({
+            "repo_id": cloud_chat.PREFIX + c["name"],
+            "name": c["name"],
+            "base": c["name"],
+            "source": "cloud",
+            "quant": None,
+            "pipeline_tag": "text-generation",
+            "tags": ["cloud", "ollama-cloud"],
+            "filters": filters,
+            "likes": 0,
+            "downloads": 0,
+            "weights_gb": None,
+            "needs_conversion": False,
+            "cloud": True,
+            "cloud_label": "CLOUD",
+            "cloud_model": c["name"],
+            "api_key_configured": key_set,
+            "provider": "ollama",
+            "note": label,
+        })
+    return out
+
 
 _cache_lock = threading.Lock()
 _cache: dict = {}  # key -> {t, data}
@@ -1334,32 +1365,11 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
 
     # Cloud chip / cloud source — static labeled list.
     if source == "cloud" or filt_key == "cloud":
-        for c in _OLLAMA_CLOUD:
-            filters = ["cloud"]
-            note = (c.get("note") or "").lower()
-            if "coding" in note:
-                filters.append("coding")
-            else:
-                filters.append("chat")
-            rows.append({
-                "repo_id": f"ollama-cloud/{c['id']}",
-                "name": c["name"],
-                "base": c["name"],
-                "source": "cloud",
-                "quant": None,
-                "pipeline_tag": "text-generation",
-                "tags": ["cloud", "ollama-cloud"],
-                "filters": filters,
-                "likes": 0,
-                "downloads": 0,
-                "weights_gb": None,
-                "needs_conversion": False,
-                "cloud": True,
-                "cloud_label": "CLOUD",
-                "api_key_configured": _cloud_key_set("ollama"),
-                "provider": "ollama",
-                "note": c.get("note") or T("server.web_picker.ollama_cloud_framework_only"),
-            })
+        q_l = q.lower()
+        for row in _ollama_cloud_rows():
+            if q_l and q_l not in row["name"].lower():
+                continue
+            rows.append(row)
         # cloud-only short-circuit
         source = "cloud"
 
@@ -1411,26 +1421,8 @@ def search_catalog(query: str = "", *, source: str = "all", limit: int = 30,
                                  limit=max(8, limit // 3))
                 _ingest(raw, "gguf", extra_filters=["chat"])
         if source in ("all", "cloud") and not filt_key:
-            for c in _OLLAMA_CLOUD[:3]:
-                rows.append({
-                    "repo_id": f"ollama-cloud/{c['id']}",
-                    "name": c["name"],
-                    "base": c["name"],
-                    "source": "cloud",
-                    "quant": None,
-                    "pipeline_tag": "text-generation",
-                    "tags": ["cloud", "ollama-cloud"],
-                    "filters": ["cloud", "chat"],
-                    "likes": 0,
-                    "downloads": 0,
-                    "weights_gb": None,
-                    "needs_conversion": False,
-                    "cloud": True,
-                    "cloud_label": "CLOUD",
-                    "api_key_configured": _cloud_key_set("ollama"),
-                    "provider": "ollama",
-                    "note": c.get("note") or T("server.web_picker.ollama_cloud_framework_only"),
-                })
+            for row in _ollama_cloud_rows()[:3]:
+                rows.append(row)
 
     # Real sizes (blobs=true, index total_size fallback). No 4 GB guess.
     rows = _enrich_sizes(rows)
