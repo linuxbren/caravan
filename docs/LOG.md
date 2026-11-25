@@ -9,7 +9,7 @@ when a first-load check or a saved Auto-tune verdict says it wins;
 otherwise Caravan's paired helper is used. On GGUF, Caravan's paired
 helper wins over another same-family file. The log, `active.guesser`,
 the Guess-ahead chip and the helper offer say which guesser is in use
-and why. VERSION 0.9.15. The Macs were not
+and why. VERSION 0.9.15. Source `90528a7`, pin `860e177`, tag v0.9.15. The Macs were not
 updated (Brenden updates them himself). See [DAY33](DAY33.md).
 
 ## 2026-11-24: Day 33 — Prefer a shipped guesser, else the helper (in review for v0.9.15)

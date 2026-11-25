@@ -163,8 +163,8 @@ issues found (full suite 2,313 of 2,313 with the review command). Merged
 to `main` fast-forward only. The Macs were not updated; Brenden updates
 them himself.
 
-Released as [v0.9.15](https://github.com/linuxbren/caravan/releases/tag/v0.9.15)
-(source and pin commits are recorded after publishing). Notes:
+Released as [v0.9.15](https://github.com/linuxbren/caravan/releases/tag/v0.9.15):
+source `90528a7`, pin `860e177`; tag v0.9.15 on the wrap commit. Notes:
 [release-notes/day33-v0.9.15.md](release-notes/day33-v0.9.15.md).
 
 **What "shipped guesser" covers, from the code.** A guesser made for

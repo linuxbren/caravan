@@ -23,7 +23,7 @@ See [DAY33](docs/DAY33.md#prefer-a-shipped-guesser-else-the-helper-v0915).
   guesser", with the reason in its hint), the GGUF load notes and the
   Helper button say which guesser is in use and why. No helper download
   is offered while a model uses its own head. All five locales.
-- Tests: 2,313 tests pass.
+- Source `90528a7`, pin `860e177`. 2,313 tests pass.
 
 ## Day 33 — First-token timing in Auto-tune (v0.9.14)
 
