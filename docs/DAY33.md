@@ -11,6 +11,9 @@ ROADMAP #2 — first-token timing in Auto-tune — shipped as
 Chat with Ollama Cloud models shipped as
 [v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16)
 ([below](#chat-with-ollama-cloud-models-v0916)).
+CAR-9 — a GGUF split pick downloads each Mac's part — shipped as
+[v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17)
+([below](#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917)).
 
 Built on the local branch `day33-mlx-1mac-helper` (on `ecddb9a`). Claude
 reviewed the uncommitted work, asked for one change (native MTP must not
@@ -386,3 +389,184 @@ key is saved on the dev node, so no real cloud chat was sent. Still to
 try: a streamed cloud reply in the browser, Stop in the middle of a cloud
 reply over HTTPS, Thinking on and off (and gpt-oss effort), and a real
 usage-limit 429 if one comes up.
+
+## A GGUF split pick downloads each Mac's part (CAR-9, v0.9.17)
+
+Built on the local branch `day33-gguf-split-pick` (from the v0.9.16 wrap
+`cff7e2c`). Logged by Claude as CAR-9 on 2026-11-24 from Brenden's report.
+Reworked the same night after Brenden's rule (below); the first cut (whole
+file on every Mac in a split) was replaced before anything was committed.
+Claude reviewed the reworked, uncommitted work and approved it on
+2026-11-25 with no issues found (full suite 2,403 of 2,403 with the review
+command). Merged to `main` fast-forward only. The Macs were not updated;
+Brenden updates them himself.
+
+Released as [v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17)
+(source and pin commits are recorded after publishing). Notes:
+[release-notes/day33-v0.9.17.md](release-notes/day33-v0.9.17.md).
+
+**Next (CAR-10).** Brenden, 2026-11-25: a split pick must split in the
+download, not download everything and split later, because without
+Thunderbolt that can take a long time. So for single-file `llama`/`qwen2`
+GGUFs, a missing build toolchain should no longer push a split pick to the
+cable split: the installer and `caravan update` should put the own-part
+engine on every configured Mac. Several-file GGUFs and other architectures
+need engine work first; that's on the roadmap further out.
+
+**The bug.** A GGUF that fits on one Mac. Step 2 recommended a split across
+2 Macs, because only the split holds the model's full trained chat window
+(Day 31 placement). Brenden accepted the recommendation, and only the 1st
+Mac downloaded anything. He won't re-split a model after it's downloaded,
+so the split has to happen at download time.
+
+**Root cause (v0.9.16, `proxy/web_server.py`, `_api_picker_download`).**
+The own-part download (`web_gguf_shares`) ran only when the pick was a
+split **and** the model did not fit on one Mac (`... and not one_ok`). A
+split chosen for the full window is exactly the case where the model *does*
+fit on one Mac with a shorter window, so it skipped the own-part path. The
+targets were then cut to the 1st Mac, and the whole file went there only.
+An unsupported layout (`UnsupportedLayout`) or a missing own-part engine
+(`gguf_runtime.current()` raising `FileNotFoundError`) fell through to the
+same 1st-Mac-only download, without a word.
+
+**Brenden's rule.** If you pick a split, it is split: each Mac downloads
+only its own part, and the model runs only as that split. If you pick one
+Mac, that Mac downloads the whole file and it isn't a split. If per-Mac
+parts can't happen, Caravan says so before downloading and gives the real
+options. It never quietly does something else.
+
+**What it does now.**
+
+- **Split across N Macs (GGUF):** always the own-part download, whether or
+  not the model also fits on one Mac. Each Mac downloads only its layers
+  (`web_gguf_shares.preview` with that split's Macs, then
+  `web_files.start`). The model is registered as `gguf-shards/<repo>/<file>`
+  with a single placement, that split, so Settings shows it as
+  "Split-only: each of the N Macs keeps only its part". This also covers 3
+  or more Macs, and a GGUF split never reaches the MLX N-stage planner.
+- **Before any byte moves,** every picked Mac is asked whether it has the
+  own-part engine, or the tools to build it (below). If a Mac can't, or
+  can't be reached, the download stops with a 409 that names the Mac and
+  what it needs: "Nothing was downloaded."
+- **One Mac:** unchanged. Only that Mac downloads the whole file. Not a
+  split.
+- **Copy to all:** unchanged. Every online Mac downloads the whole file.
+- **When per-Mac parts can't work for this file** (the model comes in
+  several files, its architecture isn't one the own-part engine reads, or
+  this Mac has neither the engine nor the tools to build it), Step 2 says
+  so: the own-part split is greyed out with the reason, and a separate,
+  labeled choice appears: "Split across N Macs over the cable". That one
+  downloads the whole file to the 1st Mac only, and the other Macs get
+  their part over the cable at each load (standard llama.cpp RPC, what the
+  official engine does). Step 2 picks it as the default only where the
+  greyed split would have been the default, and the warning above the
+  choices also points to one Mac. Picking the greyed split anyway is
+  refused (400).
+- **Older saved splits** (whole file on the 1st Mac, from before this
+  change) still load as before: `gguf_saved_placement_id` and the worker
+  launch are unchanged.
+
+**The own-part engine (what Brenden needs to know).**
+
+- It is a separate llama.cpp build, not the official engine. It is pinned
+  to llama.cpp `76a67730…` plus Caravan's patch
+  (`runtime/gguf-shards/apply.py`), and built from source on each Mac by
+  `gguf_runtime.ensure()`: git fetch, patch, then cmake with
+  `GGML_RPC=ON` (build timeout 1800 s). It needs Apple's Command Line
+  Tools, git and cmake on every Mac. It lives in
+  `~/.caravan/runtimes/gguf-shards/<pin>/`.
+- The first own-part download on a Mac builds it there
+  (`gguf_share_download._fetch_locked` calls `ensure()`), the way Day 22
+  ran it. When this Mac doesn't have it yet, Step 2 adds "The first split
+  download also builds the own-part engine on each Mac, which takes a
+  while."
+- It reads single-file GGUFs with the `llama` or `qwen2` architecture and
+  standard tensor names only. Anything else (for example the `qwen3` or
+  `gpt-oss` architectures) gets the cable split or one Mac. Inkling 2
+  Mini's architecture wasn't checked here.
+- The installer and `caravan update` don't install it. Day 23 chose a
+  prebuilt official llama.cpp (b12283) with no toolchain build on a clean
+  install, and `scripts/install.sh` doesn't install cmake. To make per-Mac
+  parts the norm, the installer/update would have to install cmake and run
+  `gguf_runtime.ensure()` on each Mac, or Caravan would have to ship a
+  pinned prebuilt own-part engine. Neither is in this change. Brenden
+  chose to reverse Day 23 here; that is CAR-10 (above).
+- Day 22 is the only live run of the own-part path (Qwen2.5-3B-Instruct
+  Q5_K_M, shares 1:1): the 1st node fetched 1,248,806,912 assigned bytes in
+  457.572 s, the 2nd node 1,183,977,472 bytes in 303.464 s (including its
+  first-use native prep), and it served at 35.8 tok/s. See
+  [DAY22](DAY22.md).
+
+**Full context.** Day 31 sums each picked Mac's memory budget for a split,
+and the default is the smallest placement that holds the model's full
+trained window. With per-Mac parts, each Mac holds only its layers, so the
+memory a split frees on each Mac goes to the chat window, and the window
+the recommendation promised is there on the first load, with no re-split.
+The Day 31 table shows the pattern: Llama 3.1 8B 4-bit (MLX) gets 64K on
+one Mac and the full 128K on two; Qwen3 30B-A3B Q4_K_M (GGUF) doesn't fit
+on one Mac and gets the full 32K on two
+([DAY31](DAY31.md#check-against-real-models-before-publishing)). That Qwen3
+model is a `qwen3` GGUF, so today it would get the cable split, not
+per-Mac parts.
+
+**What you see.**
+
+- **Step 2:** one line under each choice says where the download goes:
+  "This Mac downloads the whole file and runs it on its own, not split.",
+  "Each Mac downloads only its own part. The model then runs only as this
+  split, on these Macs.", "Every Mac downloads the whole file." The cable
+  choice says "Only the 1st Mac downloads the whole file. At every load,
+  the other Macs get their part over the cable. Not a split download." When per-Mac parts can't
+  work, a warning above the choices says why, before you start.
+- **Download card:** one row per Mac. Own-part rows say "Only its part:
+  layers 0–16, 2.1 GB" (layers and size from the plan). A cable split says
+  "Whole file · the other Macs get their part over the cable at each
+  load".
+- **Topology → On disk:** split-only models are listed (where each part is
+  held) and can be deleted. Delete removes each Mac's part
+  (`~/.caravan/gguf-shares/...` only, never a symlink) and then the
+  registry record; if a Mac is off, the record stays and the page names
+  the Mac that still has its part. A loaded model or an older own-part
+  tree outside `gguf-shares` is refused. A plain GGUF is deleted on every
+  Mac that has a copy (`gguf_split.py --delete`), with the same warning.
+
+### Files
+
+`proxy/gguf_split.py` (download notes, own-part status, the engine check
+script, the cable option, `delete_local` and `--delete`),
+`proxy/web_server.py` (the download fix, the engine check on every Mac,
+On disk rows, delete routes), `proxy/web_gguf_shares.py` (split-only note,
+`disk_rows`, `delete_deployment`), `proxy/web_files.py` and
+`proxy/web_picker.py` (per-Mac row text, GGUF delete on every Mac),
+`proxy/web/index.html`, `locales/*.json` (18 new strings in en, es, ru, ja
+and zh-Hans; the first cut's strings removed).
+
+### Tests
+
+`tests/test_day33_gguf_split_pick.py`, 44 tests, all mocked (no network,
+no Macs). The regression is first: a GGUF that fits on one Mac, Step 2
+recommends 2 Macs for the full window, the recommendation is accepted,
+and each Mac downloads only its part (the own-part planner gets both Macs,
+the whole-file download is never called, and the result is saved
+split-only). Also: one Mac and copy to all unchanged; 3 Macs; missing
+engine or tools, a Mac that can't be reached, an unsupported layout or not
+enough memory all refuse before anything downloads; the greyed split and
+the cable choice; download notes; per-Mac rows; Settings split-only;
+older splits; own-part and GGUF delete; strings in all 5 languages.
+`test_day22_share_download`, `test_day23_clean_install` and
+`test_day31_context_fit` were updated for the rule (no silent fallback; the
+old `and not one_ok` check is asserted gone). Full suite: 2,403 passed
+(v0.9.16: 2,359).
+
+### Still needs a real run on the Macs
+
+1. Brenden's case: a GGUF that fits on one Mac, accept the 2-Mac split for
+   the full window, and check that each Mac downloads only its part, that
+   Settings shows it split-only, and that it loads with the full window.
+2. The first own-part download on a Mac without the engine: the build
+   (CLT, git, cmake present), its time, and how the card shows it.
+3. A Mac without cmake: Step 2 and the 409 message name it.
+4. A `qwen3` or `gpt-oss` GGUF: the greyed split, the cable choice, and a
+   cable download.
+5. Delete of a split-only model with both Macs on, and with one off.
+6. An older lead-only split still loads.

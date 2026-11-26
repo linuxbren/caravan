@@ -1,3 +1,34 @@
+## 2026-11-25: Day 33 — A GGUF split pick downloads each Mac's part (v0.9.17)
+
+Fifth Day 33 release (CAR-9). Built on the local branch
+`day33-gguf-split-pick` (from the v0.9.16 wrap `cff7e2c`), reviewed by
+Claude (the reworked version approved 2026-11-25 with no issues found:
+full suite 2,403 of 2,403 with the review command) and merged to `main`
+fast-forward only. A GGUF split pick now always downloads only each Mac's
+part, even when the model also fits on one Mac (the context-driven split
+that used to download to the 1st Mac only), and the model is split-only.
+One Mac downloads the whole file. When per-Mac parts can't work, Step 2
+says so before downloading and offers the cable split or one Mac; nothing
+falls back silently. Split-only models can be deleted from On disk. Next:
+CAR-10, the installer and update set up the own-part engine. VERSION
+0.9.17. The Macs were not updated (Brenden updates them himself). See
+[DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917).
+
+## 2026-11-24: Day 33 — A GGUF split pick downloads each Mac's part (CAR-9, in review)
+
+Uncommitted on `day33-gguf-split-pick` (from the v0.9.16 wrap `cff7e2c`),
+waiting on Claude's review. Brenden's bug: a GGUF that fits on one Mac,
+Step 2 recommended 2 Macs for the full window, he accepted, and only the
+1st Mac downloaded. The own-part download ran only when the model didn't
+fit on one Mac, and a missing engine or unsupported layout fell back to the
+1st Mac silently. Now a split pick always downloads only each Mac's part
+and the model is split-only; one Mac downloads the whole file; when per-Mac
+parts can't work, Step 2 says so first and offers the cable split or one
+Mac. Split-only models can be deleted from On disk. Older splits still
+load. 44 new tests; full suite 2,403 passed. Not run on the Macs yet.
+VERSION and CHANGELOG are unchanged. See
+[DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917).
+
 ## 2026-11-24: Day 33 — Chat with Ollama Cloud models (v0.9.16)
 
 Fourth Day 33 release. Built on the local branch `day33-cloud` (rebased

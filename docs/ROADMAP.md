@@ -219,7 +219,7 @@ and the daily logs, not mixed into current setup instructions.
     at download and at load. See [DAY32](DAY32.md#gguf-placement-roadmap-9).
 
 - **Day 33 (started, released through
-  [v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16)):**
+  [v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17)):**
   see [DAY33](DAY33.md).
   - **A helper for MLX on one Mac
     ([v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13), done):**
@@ -253,6 +253,13 @@ and the daily logs, not mixed into current setup instructions.
     shows. A restart comes back to cloud or Macs as it was. The local
     network gets cloud only after a warning and an explicit OK. See
     [DAY33](DAY33.md#chat-with-ollama-cloud-models-v0916).
+  - **A GGUF split pick downloads each Mac's part
+    ([v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17), done, CAR-9):**
+    a split across N Macs downloads only each Mac's part, even when the
+    model also fits on one Mac, and the model is then split-only. One Mac
+    downloads the whole file and isn't a split. When per-Mac parts can't
+    work, Step 2 says so before downloading and offers the cable split or
+    one Mac. See [DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917).
 
 ## Next candidates
 
@@ -275,7 +282,23 @@ and the daily logs, not mixed into current setup instructions.
    cloud only after a warning and an explicit OK. Still to do: a live chat with a real key on the Macs. Other
    providers come only if Models can search them. See
    [DAY33](DAY33.md#chat-with-ollama-cloud-models-v0916).
-7. **Confirm before every download.** Done in
+7. **A GGUF split pick downloads each Mac's part (CAR-9).** Done in
+   [v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17):
+   a split across N Macs downloads only each Mac's part, even when the
+   model also fits on one Mac, and the model is split-only. When that
+   can't work, Step 2 says so first and offers the cable split or one Mac.
+   Still to do: a real run on the Macs. See
+   [DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917).
+8. **The installer and update set up the own-part engine (CAR-10).**
+   Next. A split pick should split in the download, not download
+   everything to the 1st Mac and split at each load: without Thunderbolt
+   that can take a long time. For single-file `llama`/`qwen2` GGUFs, a Mac
+   missing the build tools shouldn't push a split to the cable split, so
+   the installer and `caravan update` should put the own-part engine on
+   every configured Mac (cmake plus `gguf_runtime.ensure()`, or a pinned
+   prebuilt). This reverses Day 23's no-toolchain install. See
+   [DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917).
+9. **Confirm before every download.** Done in
    [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8).
    GGUF downloads use the same Step 2 placement chooser as MLX, for every
    fit color. See [DAY32](DAY32.md#gguf-placement-roadmap-9).
@@ -316,6 +339,11 @@ correctness or safety problem needs attention.
   interface. No particular personal terminal app or development OS is required.
 - Tensor parallelism, fused kernels, automatic pruning and deeper platform
   integrations remain research/parked work, not installation prerequisites.
+- Per-Mac parts for more GGUFs (further out, no target version): the
+  own-part engine reads only single-file `llama`/`qwen2` GGUFs today, so
+  other architectures (for example `qwen3`, `gpt-oss`) and models published
+  as several files get the cable split or one Mac. Teaching it more is
+  engine work, separate from and bigger than CAR-10.
 
 Release tags are immutable checkpoints. Later fixes and the development install
 channel may be newer than a published tag. See [CHANGELOG](../CHANGELOG.md)

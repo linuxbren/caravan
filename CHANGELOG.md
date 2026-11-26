@@ -1,3 +1,32 @@
+## Day 33 — A GGUF split pick downloads each Mac's part (v0.9.17)
+
+Released as [v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17).
+Pick a split across your Macs for a GGUF model and each Mac downloads only
+its own part. Pick one Mac and that Mac downloads the whole file.
+
+See [DAY33](docs/DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917).
+
+- Fixed: a GGUF that fits on one Mac, where Step 2 recommended a split
+  across 2 Macs for the full chat window, downloaded to the 1st Mac only
+  when you accepted the split. A split pick now always downloads each
+  Mac's own part, and the model is then split-only (CAR-9).
+- Fixed: a missing own-part engine or a file it can't read no longer
+  falls back quietly to a whole-file download on the 1st Mac. Before
+  anything downloads, every picked Mac is checked; if a Mac can't take
+  its part, the page names the Mac and what it needs, and nothing is
+  downloaded.
+- Added: when per-Mac parts can't work for a file (several files, an
+  architecture other than Llama or Qwen2, or no engine and no build tools),
+  Step 2 says so and offers a labeled "Split across N Macs over the cable"
+  (whole file on the 1st Mac only) or one Mac.
+- Added: each Step 2 choice says where the download goes, and the
+  download card shows what each Mac is getting ("Only its part: layers
+  …"). Split-only models are listed in Topology → On disk, and Delete
+  removes each Mac's part. Deleting a GGUF now reaches every Mac that has
+  a copy. All five locales.
+- Unchanged: one Mac, Copy to all, and splits saved before this change.
+- Tests: 2,403 tests pass.
+
 ## Day 33 — Chat with Ollama Cloud models (v0.9.16)
 
 Released as [v0.9.16](https://github.com/linuxbren/caravan/releases/tag/v0.9.16).
