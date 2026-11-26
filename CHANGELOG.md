@@ -25,7 +25,7 @@ See [DAY33](docs/DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917
   removes each Mac's part. Deleting a GGUF now reaches every Mac that has
   a copy. All five locales.
 - Unchanged: one Mac, Copy to all, and splits saved before this change.
-- Tests: 2,403 tests pass.
+- Source `2dfb65d`, pin `94559e5`. 2,403 tests pass.
 
 ## Day 33 — Chat with Ollama Cloud models (v0.9.16)
 

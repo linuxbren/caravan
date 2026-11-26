@@ -401,8 +401,8 @@ Claude reviewed the reworked, uncommitted work and approved it on
 command). Merged to `main` fast-forward only. The Macs were not updated;
 Brenden updates them himself.
 
-Released as [v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17)
-(source and pin commits are recorded after publishing). Notes:
+Released as [v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17):
+source `2dfb65d`, pin `94559e5`; tag v0.9.17 on the wrap commit. Notes:
 [release-notes/day33-v0.9.17.md](release-notes/day33-v0.9.17.md).
 
 **Next (CAR-10).** Brenden, 2026-11-25: a split pick must split in the

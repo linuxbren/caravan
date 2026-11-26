@@ -11,7 +11,7 @@ One Mac downloads the whole file. When per-Mac parts can't work, Step 2
 says so before downloading and offers the cable split or one Mac; nothing
 falls back silently. Split-only models can be deleted from On disk. Next:
 CAR-10, the installer and update set up the own-part engine. VERSION
-0.9.17. The Macs were not updated (Brenden updates them himself). See
+0.9.17. Source `2dfb65d`, pin `94559e5`, tag v0.9.17. The Macs were not updated (Brenden updates them himself). See
 [DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917).
 
 ## 2026-11-24: Day 33 — A GGUF split pick downloads each Mac's part (CAR-9, in review)
