@@ -157,6 +157,8 @@ class AutomaticPickerTests(unittest.TestCase):
         self.root=Path(self.tmp.name)
         self.root_patch=patch.object(G,'GGUF_ROOTS',[self.root]);self.root_patch.start();self.addCleanup(self.root_patch.stop)
         self.body=dict(repo_id='test/model',source='gguf',gguf_file='a.gguf')
+        # Day 33: Step 2 asks this Mac whether the own-part engine can run; pin the answer.
+        self.eng_patch=patch.object(G,'engine_status',return_value=dict(ready=True,missing=[]));self.eng_patch.start();self.addCleanup(self.eng_patch.stop)
 
     def download(self,files,**kwargs):
         self.start=Mock(return_value=dict(id='job'))
@@ -168,16 +170,20 @@ class AutomaticPickerTests(unittest.TestCase):
             status,out=self.download([dict(rfilename='a.gguf',size=1_000_000_000)])
         self.assertEqual(status,200);self.assertEqual(out['stages'],1);self.assertEqual(out['job']['load_id'],'gguf/a')
 
-    def test_unsupported_architecture_automatically_downloads_whole(self):
+    # Day 33 (CAR-9, Brenden): a split pick never silently becomes a
+    # whole-file download on the 1st Mac. These two used to expect that.
+    def test_unsupported_architecture_says_so_and_downloads_nothing(self):
         import gguf_share_download as D
-        with patch('web_gguf_shares.preview',side_effect=D.UnsupportedLayout('whole file')):
+        with patch.object(self.h,'_own_part_engine_blockers',return_value=[]),\
+                patch('web_gguf_shares.preview',side_effect=D.UnsupportedLayout('not llama or qwen2')):
             status,out=self.download([dict(rfilename='a.gguf',size=20_000_000_000)])
-        self.assertEqual(status,200);self.assertEqual(out['stages'],1);self.start.assert_called_once()
+        self.assertEqual(status,409);self.assertIn('not llama or qwen2',out['error']);self.start.assert_not_called()
 
-    def test_no_custom_engine_automatically_uses_standard_engine(self):
-        with patch('web_gguf_shares.preview',return_value=dict(safe=True)),patch('gguf_runtime.current',side_effect=FileNotFoundError):
+    def test_no_custom_engine_says_so_and_downloads_nothing(self):
+        with patch.object(self.h,'_own_part_engine_blockers',return_value=['2nd node needs cmake to build the own-part engine']),\
+                patch('web_gguf_shares.preview',side_effect=AssertionError('checked first')):
             status,out=self.download([dict(rfilename='a.gguf',size=20_000_000_000)])
-        self.assertEqual(status,200);self.assertEqual(out['stages'],1)
+        self.assertEqual(status,409);self.assertIn('needs cmake',out['error']);self.start.assert_not_called()
 
     def test_multipart_skips_share_planner_and_loads_first(self):
         self.body['gguf_file']='a-00002-of-00002.gguf'

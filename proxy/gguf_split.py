@@ -371,6 +371,9 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
             "full_copy": True,
             "reason": "" if ok or why or plan else
             T("server.gguf_split.needs_need_gb_label_has_gb", need=need, label=n.get('label'), gb=gb),
+            # Day 33 (CAR-9): say where the download goes, before it starts.
+            "download_note": T("server.gguf_split.this_mac_downloads_the_whole_file"),
+            "downloads_on": [n["id"]],
         }
         opts.append(_fill(o, ok, plan, why, gb, 1))
     for k in range(2, len(ordered) + 1):
@@ -384,6 +387,11 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
             "full_copy": False,
             "reason": "" if ok or why or plan else
             T("server.gguf_split.needs_need_gb_these_minis_have", need=need, gb=gb),
+            # Day 33 (CAR-9): a split pick downloads each Mac's own part
+            # (apply_split_rule fills in the note, or why it can't).
+            "download_note": T("server.gguf_split.each_mac_downloads_only_its_part"),
+            "storage": "own-parts", "split_only": True,
+            "downloads_on": [n["id"] for n in grp],
         }
         opts.append(_fill(o, ok, plan, why, gb, k))
     # Copy to all: a full file on every online Mini, like MLX.
@@ -402,6 +410,8 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
         "label": T("server.placement.copy_to_all_v", v=T.join(all_labels) or T("server.placement.no_online_nodes")),
         "enabled": bool(all_ok), "fits": bool(all_ok), "reason": all_reason,
         "full_copy": True,
+        "download_note": T("server.gguf_split.every_mac_downloads_the_whole_file"),
+        "downloads_on": list(all_ids),
     })
     # Default never uses copy-to-all; smallest one-Mini or split that fits.
     enabled = [o for o in opts if o["enabled"] and o.get("mode") != "all"]
@@ -419,6 +429,128 @@ def placement_options(weights_gb: float, nodes: list, *, model_path=None,
     summary = placement_summary(opts, default)
     if summary:
         out["summary"] = summary
+    return out
+
+
+# Day 33 (CAR-9): what the own-part engine needs, checked before a split
+# download starts. Same layouts gguf_share_download.parse accepts.
+OWN_PART_ARCHS = ("llama", "qwen2")
+
+# Runs on any Mac with plain python3 (no Caravan import), so an older
+# Caravan on another Mac still answers. Prints one JSON line.
+ENGINE_CHECK_CODE = r"""
+import json, os, shutil, subprocess, sys
+from pathlib import Path
+h = Path.home(); pin = PIN; m = 'catalog-v1/' + pin
+ready = False
+for d in (h/'.caravan/runtimes/gguf-shards'/pin, h/'.caravan/day22-runtime'):
+    try:
+        ready = ready or ((d/'caravan-shards-version').read_text().strip() == m and
+                          all((d/'build/bin'/n).is_file() for n in ('llama-server', 'ggml-rpc-server')))
+    except OSError:
+        pass
+missing = []
+if not ready:
+    path = os.pathsep.join([os.environ.get('PATH', ''), '/opt/homebrew/bin', '/usr/local/bin'])
+    if sys.platform == 'darwin':
+        try:
+            clt = subprocess.run(['xcode-select', '-p'], capture_output=True, timeout=20).returncode == 0
+        except Exception:
+            clt = False
+        if not clt:
+            missing.append('Apple Command Line Tools')
+    missing += [t for t in ('git', 'cmake') if not shutil.which(t, path=path)]
+print(json.dumps({'ready': ready, 'missing': missing}))
+"""
+
+
+def _engine_pin():
+    try:
+        from gguf_runtime import PIN
+        return PIN
+    except Exception:  # noqa: BLE001
+        return "76a67730ffc7d650dffa4db04d96be84a59e7ef3"
+
+
+def engine_check_code() -> str:
+    return ENGINE_CHECK_CODE.replace("PIN", repr(_engine_pin()), 1)
+
+
+def engine_status() -> dict:
+    """This Mac: {"ready": engine built, "missing": tools a first build needs}."""
+    import contextlib
+    import io
+    import json
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            exec(engine_check_code(), {"__name__": "engine_check"})  # noqa: S102 - our constant
+        return json.loads(buf.getvalue().strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        return {"ready": False, "missing": ["?"]}
+
+
+def own_part_status(meta=None, *, single_file=True, engine=None) -> dict:
+    """Can a split be downloaded as each Mac's own part? Before any byte.
+
+    {"ok", "code" (multipart|layout|engine|""), "reason", "build"}. An
+    unread header (meta None) is not refused here; the download's own
+    layout check still says so plainly before any weights move."""
+    if not single_file:
+        return {"ok": False, "code": "multipart", "build": False,
+                "reason": T("server.gguf_split.this_model_comes_in_several_files")}
+    arch = (meta or {}).get("general.architecture") if meta else None
+    if meta and arch not in OWN_PART_ARCHS:
+        return {"ok": False, "code": "layout", "build": False,
+                "reason": T("server.gguf_split.own_parts_dont_support_arch", arch=arch or "?")}
+    eng = engine if engine is not None else engine_status()
+    if not eng.get("ready") and eng.get("missing"):
+        return {"ok": False, "code": "engine", "build": False,
+                "reason": T("server.gguf_split.splitting_needs_the_own_part_engine",
+                            tools=T.join(eng["missing"]))}
+    return {"ok": True, "code": "", "build": not eng.get("ready"), "reason": ""}
+
+
+def apply_split_rule(out: dict, status: dict) -> dict:
+    """Day 33 (CAR-9, Brenden): a split pick splits the download.
+
+    Each split choice downloads only each Mac's own part and is then
+    split-only. When that can't run (several files, a layout the own-part
+    engine doesn't read, or no engine and no tools to build it), the split
+    choice is greyed with the reason, and an explicit "over the cable"
+    split is offered next to it: the whole file on the 1st Mac only, the
+    other Macs get their part over the cable at each load. Nothing falls
+    back silently: the Step 2 line says which, before any download."""
+    opts = (out or {}).get("options") or []
+    new = []
+    for o in opts:
+        new.append(o)
+        if o.get("mode") != "split" or o.get("storage") != "own-parts":
+            continue
+        k = int(o.get("k") or len(o.get("node_ids") or []))
+        if status.get("ok"):
+            o["download_note"] = T("server.gguf_split.each_mac_downloads_only_its_part")
+            if status.get("build"):
+                o["download_note"] += " " + T("server.gguf_split.the_first_split_download_builds_the")
+            continue
+        cable = dict(o, id="split-cable:" + ",".join(o.get("node_ids") or []), storage="cable",
+                     split_only=False, downloads_on=list(o.get("node_ids") or [])[:1],
+                     label=T("server.gguf_split.split_across_k_macs_over_the", k=k,
+                             labels=" + ".join(o.get("node_labels") or [])),
+                     download_note=T("server.gguf_split.only_the_1st_mac_downloads_the"))
+        if o.get("enabled"):
+            o["enabled"] = False
+            o["reason"] = status.get("reason") or ""
+        if out.get("default_id") == o.get("id"):
+            out["default_id"] = cable["id"] if cable.get("enabled") else None
+        new.append(cable)
+    if not status.get("ok") and any(o.get("mode") == "split" for o in opts):
+        out["split_warning"] = (status.get("reason") or "") + " " + T("server.gguf_split.you_can_split_it_over_the")
+    out["options"] = new
+    if out.get("default_id") is None:
+        first = next((o for o in new if o.get("enabled") and o.get("mode") != "all"), None)
+        out["default_id"] = first["id"] if first else None
+    out["own_parts"] = dict(status)
     return out
 
 
@@ -1429,10 +1561,53 @@ def scan_payload() -> list:
     return out
 
 
+def delete_local(rid: str, roots=None) -> dict:
+    """Delete one GGUF model (every part) from THIS Mac.
+
+    Day 31 part C rules, moved here in Day 33 (CAR-9) so the other Macs can
+    run the same code: a split pick now keeps the file on every Mac in it,
+    so Delete has to reach them too. Only a file the scan lists (complete,
+    not still downloading) can go, only inside Caravan's GGUF folder, never
+    through a link. The caller refuses the loaded model."""
+    import shutil
+    from gguf_sets import members
+    roots = list(roots or GGUF_ROOTS)
+    hit = next((g for g in scan_local(roots) if g["id"] == rid), None)
+    if not hit:
+        return {"ok": False, "missing": True, "error": T("server.web_picker.not_found_on_disk"), "removed": []}
+    p = Path(hit["path"])
+    real = [r.resolve() for r in roots]
+    if p.is_symlink() or not any(p.resolve().is_relative_to(r) and p.resolve() != r for r in real):
+        return {"ok": False, "error": T("server.web_picker.refuse_not_in_caravans_gguf_folder"), "removed": []}
+    folder = p.parent
+    nearby = {f.name: f.stat().st_size for f in folder.glob("*.gguf")}
+    removed = []
+    for name in members(p.name, nearby):
+        (folder / name).unlink()
+        removed.append(str(folder / name))
+    if not any(folder.glob("*.gguf")) and folder.resolve() not in real:
+        for extra in ("caravan-gguf-source.json", "caravan-placement.json"):
+            if (folder / extra).is_file():
+                (folder / extra).unlink()
+        shutil.rmtree(folder / ".cache", ignore_errors=True)
+        try:
+            folder.rmdir()
+        except OSError:
+            pass  # something else lives here; leave it
+    return {"ok": True, "removed": removed}
+
+
 if __name__ == "__main__":
     import json as _json
     import sys as _sys
     if _sys.argv[1:] == ["--scan"]:
         print(_json.dumps(scan_payload()))
+        _sys.exit(0)
+    # Day 33 (CAR-9): Delete on another Mac. Prints one JSON line; the
+    # reply names how many files went, never their paths.
+    if len(_sys.argv) == 3 and _sys.argv[1] == "--delete" and _sys.argv[2].startswith("gguf/"):
+        out = delete_local(_sys.argv[2])
+        print(_json.dumps({"ok": out.get("ok"), "missing": bool(out.get("missing")),
+                           "removed": len(out.get("removed") or []), "error": out.get("error") or ""}))
         _sys.exit(0)
     _sys.exit(2)

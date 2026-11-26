@@ -1756,6 +1756,11 @@ def make_handler(app: App):
             except Exception:
                 pass
 
+            try:  # Day 33 (CAR-9): own-part (split-only) models, deletable too
+                import web_gguf_shares
+                models.extend(web_gguf_shares.disk_rows(app))
+            except Exception:  # noqa: BLE001 - the list must still answer
+                pass
             return self._json(200, {
                 "models": sorted(models, key=lambda x: x["name"].lower()),
                 "cleanup": cleanup,
@@ -1817,6 +1822,12 @@ def make_handler(app: App):
                 ok = any(r.get("ok") for r in results)
                 return self._json(200 if ok else 400, {"ok": ok, "kind": k, "nodes": results})
 
+            if str(rid).startswith("gguf-shards/"):
+                # Day 33 (CAR-9): an own-part split, one part on each Mac.
+                import web_gguf_shares
+                out = web_gguf_shares.delete_deployment(app, rid, current)
+                return self._json(200 if out.get("ok") else 400, out)
+
             # Stop any running fetch for this model BEFORE deleting folders.
             stopped = web_picker.stop_jobs_for_repo(rid, kill_procs=app.picker_kill_all)
 
@@ -1842,9 +1853,42 @@ def make_handler(app: App):
                 return {"removed": any(o.get("removed") for o in outs), "nodes": outs,
                         "rc": 0 if any(o.get("removed") for o in outs) else 1}
 
+            def gguf_remote_delete(gid):
+                # Day 33 (CAR-9): a split pick keeps the whole GGUF on every
+                # Mac in it, so Delete runs the same checked delete on each
+                # other Mac (only files its own scan lists, only in its GGUF
+                # folder). A Mac still on an older Caravan says it can't.
+                import shlex
+                outs = []
+                for n in cfg_nodes:
+                    if web_nodes.is_local(n):
+                        continue
+                    repo = (n.get("repo") or "~/.caravan/src/caravan").rstrip("/")
+                    cmd = ("PYTHONPATH=%s/proxy:%s/tools:%s/agent ~/.caravan/venvs/mlx/bin/python "
+                           "%s/proxy/gguf_split.py --delete %s" % (repo, repo, repo, repo, shlex.quote(gid)))
+                    who = web_nodes.friendly_mac_label(n, inventory=cfg_nodes)
+                    try:
+                        r = app._ssh_fn()(n, cmd, timeout=120)
+                        blob = json.loads((r.stdout or "").strip().splitlines()[-1])
+                    except Exception:  # noqa: BLE001 - offline / older Mac
+                        blob = {"ok": False, "removed": 0,
+                                "error": T("server.web_server.could_not_delete_it_on_mac", mac=who)}
+                    outs.append({"node": n.get("id"), "label": who,
+                                 "removed": bool(blob.get("ok")) and int(blob.get("removed") or 0) > 0,
+                                 "files": int(blob.get("removed") or 0),
+                                 "missing": bool(blob.get("missing")),
+                                 "error": "" if blob.get("ok") or blob.get("missing") else (blob.get("error") or "")})
+                return {"removed": any(o["removed"] for o in outs), "nodes": outs}
+
             out = web_picker.delete_model(
                 rid, current_model_id=current, ssh_delete=ssh_delete,
+                gguf_remote_delete=gguf_remote_delete,
             )
+            remote = out.get("remote") if str(rid).startswith("gguf/") else None
+            left = [o for o in ((remote or {}).get("nodes") or []) if o.get("error")]
+            if left:
+                out["warning"] = T("server.web_server.deleted_here_but_not_on_macs",
+                                   macs=T.join([o["label"] for o in left]))
             out["stopped_jobs"] = stopped
             return self._json(200 if out.get("ok") else 400, out)
 
@@ -2623,10 +2667,15 @@ def make_handler(app: App):
             except Exception:  # noqa: BLE001
                 page = {}
             if not meta:
-                return gguf_split.placement_options(weights, nodes)
-            return gguf_split.placement_options(
-                weights, nodes, model_path=f"{repo}/{fname}", meta_fn=lambda _p, _m=meta: _m,
-                weights_bytes=int(float(weights or 0) * 1e9) or None, settings=page)
+                out = gguf_split.placement_options(weights, nodes)
+            else:
+                out = gguf_split.placement_options(
+                    weights, nodes, model_path=f"{repo}/{fname}", meta_fn=lambda _p, _m=meta: _m,
+                    weights_bytes=int(float(weights or 0) * 1e9) or None, settings=page)
+            # Day 33 (CAR-9): a split pick downloads each Mac's own part;
+            # Step 2 says before any download when that can't happen here.
+            return gguf_split.apply_split_rule(out, gguf_split.own_part_status(
+                meta, single_file="-of-" not in fname))
 
         def _api_picker_fit(self, body=None):
             body = body or {}
@@ -2642,6 +2691,34 @@ def make_handler(app: App):
                 max_split_stages=web_nodes.stage_limit(app.configured_nodes()),
             )
             return self._json(200, fit)
+
+        def _own_part_engine_blockers(self, node_ids):
+            """Day 33 (CAR-9): every Mac in a split must have the own-part
+            engine, or the tools for its first build (the share download
+            builds it on each Mac, Day 22). Checked before any byte moves;
+            one plain line per Mac that can't, never a hostname."""
+            import gguf_split
+            cfg = app.configured_nodes()
+            by_id = {n.get("id"): n for n in cfg}
+            out = []
+            for nid in node_ids or []:
+                n = by_id.get(nid)
+                who = web_nodes.friendly_mac_label(n or {}, node_id=nid, inventory=cfg)
+                if not n:
+                    out.append(T("server.web_server.mac_isnt_set_up_here", mac=who))
+                    continue
+                if web_nodes.is_local(n):
+                    st = gguf_split.engine_status()
+                else:
+                    try:
+                        r = app._ssh_fn()(n, "python3 -c " + shlex.quote(gguf_split.engine_check_code()), timeout=45)
+                        st = json.loads((r.stdout or "").strip().splitlines()[-1])
+                    except Exception:  # noqa: BLE001 - off, or no answer
+                        out.append(T("server.web_server.couldnt_check_mac", mac=who))
+                        continue
+                if not st.get("ready") and st.get("missing"):
+                    out.append(T("server.web_server.mac_needs_tools", mac=who, tools=T.join(st["missing"])))
+            return out
 
         def _api_picker_download(self, body=None):
             body = body or {}
@@ -2700,28 +2777,45 @@ def make_handler(app: App):
                         "placement": chosen, "options": places,
                     })
                 gguf_chosen = dict(chosen)
-                # Day 31: a split chosen only for a longer chat window keeps the
-                # whole file on the lead (it can still run on one Mac); the
-                # per-Mac share download is for models that can't run on one.
-                one_ok = any(o.get('mode') == 'one' and o.get('enabled') for o in places['options'])
-                gguf_one_ok = one_ok
-                if chosen['mode'] == 'split' and len(parts) == 1 and not one_ok:
+                # Day 33 (CAR-9, Brenden): a split pick splits the download.
+                # Before, this ran only when the model did not fit on one Mac: a model that also
+                # fits on one Mac, where Step 2 recommended 2 Macs for the full
+                # chat window and the user accepted, fell through to the whole
+                # file on the 1st Mac only. A missing engine or an unsupported
+                # layout fell through the same way, silently. Now every own-part
+                # split downloads each Mac's part here, or says why not before
+                # any byte moves. "Over the cable" (storage "cable") is the
+                # explicit, labeled whole-file-on-the-1st-Mac split.
+                gguf_one_ok = any(o.get('mode') == 'one' and o.get('enabled') for o in places['options'])
+                if chosen['mode'] == 'split' and chosen.get('storage') != 'cable':
+                    import web_gguf_shares, web_files
+                    if len(parts) != 1:
+                        return self._json(409, {'error': T("server.gguf_split.this_model_comes_in_several_files"),
+                                                'options': places, 'own_parts': False})
+                    blocked = self._own_part_engine_blockers(chosen['node_ids'])
+                    if blocked:
+                        return self._json(409, {'error': T("server.web_server.cant_split_this_download_yet_macs",
+                                                           v=T.join(blocked, "clause")),
+                                                'options': places, 'own_parts': False})
                     try:
-                        import web_gguf_shares, web_files
                         plan = web_gguf_shares.preview(app, dict(body, repo_id=repo, node_ids=chosen['node_ids']), fresh=True)
-                        if not plan['safe']:
-                            return self._json(409, {'error': T("server.web_server.there_is_not_enough_free_memory")})
-                        # The specialized share engine is developer-built, not the
-                        # official release. Clean installs use standard RPC instead.
-                        from gguf_runtime import current
-                        current()
-                        return self._json(200, {'job': self._friendly_job(web_files.start(app, plan)), 'note': T("server.web_server.downloading_this_model_across_your_macs")})
-                    except web_gguf_shares.D.UnsupportedLayout:
-                        pass
-                    except FileNotFoundError:
-                        pass
+                    except web_gguf_shares.D.UnsupportedLayout as e:
+                        return self._json(409, {'error': T("server.web_server.this_file_cant_be_split_into", v=str(e)),
+                                                'options': places, 'own_parts': False})
                     except (ValueError, OSError, KeyError, RuntimeError) as e:
                         return self._json(400, error_payload(e))
+                    if not plan['safe']:
+                        return self._json(409, {'error': T("server.web_server.there_is_not_enough_free_memory")})
+                    try:
+                        job = web_files.start(app, plan)
+                    except (ValueError, OSError, KeyError, RuntimeError) as e:
+                        return self._json(400, error_payload(e))
+                    return self._json(200, {
+                        'job': self._friendly_job(job),
+                        'note': T("server.web_server.downloading_this_model_across_your_macs"),
+                        'stages': len(plan.get('stages') or []),
+                        'placement': dict(chosen, storage='own-parts', split_only=True),
+                    })
             import web_helpers
             helper = web_helpers.pairing(body.get("helper_id")) if body.get("helper_id") else None
             if body.get("helper_id") and (not helper or repo != helper["draft"]["hf_repo"]):
@@ -2800,15 +2894,18 @@ def make_handler(app: App):
             full_copy = bool(place.get("full_copy"))
             target_ids = list(place.get("node_ids") or [])
             if gguf_file and mode == "split":
-                # Standard llama.cpp RPC: the complete file lives on the lead
-                # of this placement; peers get tensors at load. Own-share
-                # downloads already returned above when they apply.
+                # Only the explicit "over the cable" split gets here (own-part
+                # splits returned above): standard llama.cpp RPC keeps the
+                # complete file on the 1st Mac; the others get their part over
+                # the cable at each load. Saved as such, so it's never mistaken
+                # for a split download.
                 lid = (lead.get("id") or lead.get("label")) if lead else None
                 if lid and lid in target_ids:
                     target_ids = [lid]
                 elif target_ids:
                     target_ids = target_ids[:1]
                 full_copy = True
+                place = dict(place, storage="cable", split_only=False)
             target_nodes = []
             for tid in target_ids:
                 n = cfg_by_id.get(tid)
@@ -2816,7 +2913,7 @@ def make_handler(app: App):
                     target_nodes.append(n)
             if not target_nodes:
                 return self._json(400, {"error": T("server.web_server.placement_nodes_not_found"), "placement": place})
-            if mode == 'split' and (len(target_nodes) > 2 or any(n.get('model_root') for n in target_nodes)):
+            if mode == 'split' and not gguf_file and (len(target_nodes) > 2 or any(n.get('model_root') for n in target_nodes)):
                 try:
                     import web_files
                     if pk_explicit and body.get('counts') is None:
@@ -2847,7 +2944,7 @@ def make_handler(app: App):
 
             n_stages = len(target_nodes) if mode == "split" else 1
             note = place.get("label") or ""
-            if mode == "split" and len(target_nodes) > web_nodes.MAX_SPLIT_STAGES:
+            if mode == "split" and not gguf_file and len(target_nodes) > web_nodes.MAX_SPLIT_STAGES:
                 note = (
                     T("server.web_server.target_nodes_mini_split_coming_later", target_nodes=len(target_nodes), max_split_stages=web_nodes.MAX_SPLIT_STAGES)
                 )
@@ -3057,6 +3154,10 @@ def make_handler(app: App):
                     "save_placement": save_placement,
                 })
 
+            if gguf_file and mode == "split" and runners:
+                # Day 33 (CAR-9): the card says the other Macs get their part
+                # over the cable, so a 1-row split card isn't a surprise.
+                runners[0]["share"] = T("server.web_server.whole_file_the_other_macs_get")
             job = web_picker.start_download(
                 repo,
                 packer_layers=packer_layers,
@@ -3098,7 +3199,8 @@ def make_handler(app: App):
                 "max_split_stages": web_nodes.stage_limit(app.configured_nodes()),
                 "note": note,
                 "placement": place,
-                "nodes": [{"id": r["id"], "label": r["label"], "role": r["role"]} for r in (job.get("runners") or runners)],
+                "nodes": [{"id": r["id"], "label": r["label"], "role": r["role"], "share": r.get("share") or ""}
+                          for r in (job.get("runners") or runners)],
             })
 
 

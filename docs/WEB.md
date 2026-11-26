@@ -51,6 +51,14 @@ the model's full trained context; see [fit](MODEL_PICKER.md#sources-and-fit).
 
 A one-Mac placement uses only the selected Mac. A split placement runs different
 parts on participating Macs. A copy on every Mac is not the same as a split.
+Each choice also says where the download goes. For a GGUF model, a split
+across N Macs downloads only each Mac's own part, and the model then runs
+only as that split; one Mac downloads the whole file and isn't a split.
+When per-Mac parts can't work for a file (several files, an architecture
+the own-part engine doesn't read, or no engine and no tools to build it),
+Step 2 says so before downloading and offers "Split across N Macs over the
+cable" (whole file on the 1st Mac only) or one Mac. The download card
+shows one line per Mac with what it is getting.
 Only select Macs you configured and trust. See [models/downloads](MODEL_PICKER.md)
 and [file placement](FILES.md).
 
@@ -156,7 +164,9 @@ the reason. Deleting a model removes it from the list right away.
 Topology's On disk list shows the same models plus any that are on disk
 but can't be loaded yet (for example a partial download), marked "Not in
 Settings: files incomplete", so you can delete them. GGUF models can be
-deleted there too; they live only on the 1st Mac.
+deleted there too. Delete removes the file from every Mac that has a copy,
+and a split-only model's part from each Mac; if another Mac is off or on
+an older Caravan, the page says which Mac still has it.
 
 **Self-tuning** stays visible in Settings and is on by default: Caravan learns
 from your chats and remembers faster settings for each model; pinned choices

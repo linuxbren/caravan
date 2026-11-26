@@ -340,8 +340,9 @@ class Paths(unittest.TestCase):
         self.assertIn("web_picker.fetch_gguf_header(repo, fname)", src)
         self.assertIn("model_path=model_path", src)
         self.assertNotIn("ctx_tokens=int(body.get(\"ctx_tokens\") or web_picker.DEFAULT_CTX)", src)
-        # A split picked only for a longer window keeps the whole file on the lead.
-        self.assertIn("and not one_ok", src)
+        # Day 33 (CAR-9): a split picked for a longer window is no longer
+        # cut to the 1st Mac when the model also fits on one Mac.
+        self.assertNotIn("and not one_ok", src)
 
     def test_page_shows_window_and_sends_gguf_file(self):
         html = english_source(ROOT / "proxy" / "web" / "index.html")

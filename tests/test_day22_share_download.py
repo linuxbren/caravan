@@ -190,6 +190,10 @@ class WebShareTests(unittest.TestCase):
         import web_picker, gguf_runtime
         self.blobs=patch.object(web_picker,'_fetch_repo_blobs',return_value=dict(gguf_files=[dict(rfilename='model.gguf',size=15_000_000_000)]));self.blobs.start();self.addCleanup(self.blobs.stop)
         self.runtime=patch.object(gguf_runtime,'current',return_value=Path('/custom/bin'));self.runtime.start();self.addCleanup(self.runtime.stop)
+        # Day 33 (CAR-9): a split checks the own-part engine on every picked Mac first; both answer ready.
+        import gguf_split
+        self.engine=patch.object(gguf_split,'engine_status',return_value=dict(ready=True,missing=[]));self.engine.start();self.addCleanup(self.engine.stop)
+        self.app._ssh_fn=lambda:(lambda n,cmd,timeout=60:SimpleNamespace(returncode=0,stdout='{"ready": true, "missing": []}',stderr=''))
     def tearDown(self):self.reg.stop();self.tmp.cleanup()
     def handler(self):
         import web_server

@@ -217,9 +217,15 @@ print(json.dumps({'exit':e.read_text() if e.exists() else None,'alive':alive,'pi
             inv = inspect_node(app, node, request['dest'])
             have = sum(max(inv['files'].get(f, 0), inv['files'].get('.cache/huggingface/download/'+f+'.incomplete', 0)) for f in request['required_files'])
             return {'have_bytes': have, 'disk_have': have, 'source': 'disk'}
+        share = ''
+        if request.get('format') == 'gguf-shards' and stage.get('range') and stage.get('required_bytes') is not None:
+            # Day 33 (CAR-9): each Mac's row says which part it gets.
+            share = T("server.web_files.only_its_part_layers_first_last", first=stage['range'][0],
+                      last=max(stage['range'][0], stage['range'][1]-1), gb=round(stage['required_bytes']/1e9, 2))
         runners.append({'id': stage['id'], 'label': stage['label'], 'role': node.get('role'),
                         'dest': request.get('dest') or '~/.caravan/transfers', 'run': run,
-                        'measure': measure, 'total_bytes': stage.get('required_bytes'), 'save_placement': save})
+                        'measure': measure, 'total_bytes': stage.get('required_bytes'), 'save_placement': save,
+                        'share': share})
     if not runners: raise ValueError(T("server.web_files.no_peer_files_to_fetch"))
     job = web_picker.start_download(repo, runners=runners, placement=placement, note=T("server.web_files.own_files_only_retained_files_are"))
     web_picker._job_set(job['id'], file_mode=True, file_transfers=transfers, load_id=plan['model_id'],

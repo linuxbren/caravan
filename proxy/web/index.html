@@ -5519,12 +5519,15 @@
         const addMac = `<button type="button" id="btnPlaceAddMac" class="${wontFit ? "primary" : "ghost"}">${T("web.add_a_mac")}</button>`;
         // Day 31: one plain line on where it goes and the chat window it gets.
         if (place && place.summary) html += `<div class="step-sub place-summary">${escapeHtml(place.summary)}</div>`;
+        // Day 33 (CAR-9): when a split can't download as each Mac's own part
+        // here, say so before anything downloads, with the real options.
+        if (place && place.split_warning) html += `<div class="step-sub split-warning">${escapeHtml(place.split_warning)}</div>`;
         html += `<div class="step-sub">${wontFit ? T("web.this_model_needs_more_memory_add") : T("web.have_another_mac_add_it_before")}</div>` + addMac;
         for (const o of opts) {
           const dis = !o.enabled;
           html += `<label class="${dis ? "disabled" : ""}">
             <input type="radio" name="placement" value="${escapeHtml(o.id)}" ${o.id===def && !dis ? "checked" : ""} ${dis ? "disabled" : ""} />
-            <span><b>${escapeHtml(o.label)}</b>${o.id===def && !dis ? `<span class="rec">${T("web.recommended_tag")}</span>` : ""}${!dis && o.window_note ? `<div class="why">${escapeHtml(o.window_note)}</div>` : ""}${dis && o.reason ? `<div class="why">${escapeHtml(o.reason)}</div>` : ""}</span>
+            <span><b>${escapeHtml(o.label)}</b>${o.id===def && !dis ? `<span class="rec">${T("web.recommended_tag")}</span>` : ""}${!dis && o.window_note ? `<div class="why">${escapeHtml(o.window_note)}</div>` : ""}${!dis && o.download_note ? `<div class="why dl-where">${escapeHtml(o.download_note)}</div>` : ""}${dis && o.reason ? `<div class="why">${escapeHtml(o.reason)}</div>` : ""}</span>
           </label>`;
         }
         html += `<div class="step-actions">
@@ -5690,6 +5693,7 @@
         const mac = friendlyMacName(r, p);
         rowsHtml += `<div class="j-node ${p.stalled ? "stalled" : ""} ${starting ? "starting" : ""}">
           <div class="j-line"><b>${escapeHtml(mac)}</b><span>${starting ? T("web.starting") : pct + "%"}</span></div>
+          ${r.share ? `<div class="j-sub j-share">${escapeHtml(r.share)}</div>` : ""}
           <div class="bar"><i style="width:${pct}%"></i></div>
           <div class="j-line j-sub"><span>${fmtBytes(have)}${tot ? " / " + fmtBytes(tot) : ""}</span><span>${st === "running" ? [speed, eta].filter(Boolean).join(" · ") : ""}</span></div>
           ${note ? `<div class="j-sub">${escapeHtml(note)}</div>` : ""}
@@ -5944,7 +5948,9 @@
             onDelete: async () => {
               if (!confirm(T(`web.stop_any_download_and_delete_id`, {id: m.id}))) return;
               try {
-                await api("/api/picker/delete", { method: "POST", body: JSON.stringify({ id: m.id, confirm: true }) });
+                const del = await api("/api/picker/delete", { method: "POST", body: JSON.stringify({ id: m.id, confirm: true }) });
+                // Day 33 (CAR-9): say so when another Mac kept its copy.
+                if (del && del.warning) alert(del.warning);
                 refreshDisk();
                 // Day 31: the Settings load list drops the deleted model right away.
                 if (window.refreshCaravanModels) window.refreshCaravanModels();

@@ -74,6 +74,10 @@ that placement's memory budget.
 - **GGUF download:** a split chosen only for a longer window still
   downloads the whole file to the 1st Mac, since the model can also run on
   one Mac. Per-Mac share downloads stay for models that cannot run on one.
+  *Changed in Day 33 (CAR-9, planned v0.9.17):* a split pick now downloads
+  only each Mac's part, even when the model also fits on one Mac, and the
+  model is then split-only. See
+  [DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-planned-v0917).
 - **MLX uses the real config** in the download step, the fit check, the
   download itself and the Settings list (the downloaded `config.json`).
   Search results use a config only when one was already fetched, so search

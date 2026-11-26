@@ -110,8 +110,11 @@ simulates ownership/chain behavior, not another GPU or a speedup.
 
 **Stock llama.cpp still needs the complete GGUF on the lead.** It parses/reads
 that file to load the model and obtain hashes; this Caravan change does not
-pretend a partial GGUF can replace it. The picker now fetches the complete file
-**only on the lead**, instead of copying it to every online Mini.
+pretend a partial GGUF can replace it. The picker fetches the complete file
+on the lead for a one-Mac pick and for the labeled "over the cable" split.
+Since Day 33 (CAR-9) a **split pick** fetches only each Mac's part (the
+own-part engine, `web_gguf_shares`), even when the model also fits on one
+Mac; when that can't work for a file, Step 2 says so before downloading. See [DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-planned-v0917).
 
 For peers, the Balance file view supports experimental direct-source tensor
 cache population for any number of physical RPC Minis:

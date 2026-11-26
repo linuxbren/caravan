@@ -92,7 +92,7 @@ def entries(nodes,current=None):
         try:
             r=json.loads(file.read_text());p=r['source'];ready=set(r['node_ids'])<=ids and (Path(r['roots'][0]).expanduser()/'manifest.json').is_file()
             opt=dict(id='own-parts',mode='split' if len(r['node_ids'])>1 else 'one',node_ids=r['node_ids'],enabled=ready,label='Split across your Macs: each keeps only its part',reason='' if ready else T("server.web_gguf_shares.a_required_node_or_its_share"))
-            out.append(dict(id=r['model_id'],name=Path(p['filename']).stem+' (GGUF)',hf=p['repo_id'],source='gguf',backend='llama',lead_path=str(Path(r['roots'][0]).expanduser()/'model.cvgg'),size_gb=p['source_bytes']/1e9,usable=ready,available_lead=True,disabled_reason=opt['reason'],placement_options=[opt],default_placement=opt['id'],placement=dict(mode=opt['mode'],node_ids=r['node_ids']),current=current==r['model_id'],sharded=True,gguf_deployment=r,gguf_shares=r['shares'],gguf_peer_files_ready=True,note=opt['label'],run_mode='split' if len(r['node_ids'])>1 else 'single'))
+            out.append(dict(id=r['model_id'],name=Path(p['filename']).stem+' (GGUF)',hf=p['repo_id'],source='gguf',backend='llama',lead_path=str(Path(r['roots'][0]).expanduser()/'model.cvgg'),size_gb=p['source_bytes']/1e9,usable=ready,available_lead=True,disabled_reason=opt['reason'],placement_options=[opt],default_placement=opt['id'],placement=dict(mode=opt['mode'],node_ids=r['node_ids']),current=current==r['model_id'],sharded=True,split_only=True,gguf_deployment=r,gguf_shares=r['shares'],gguf_peer_files_ready=True,note=T("server.web_gguf_shares.split_only_each_mac_keeps_only",k=len(r['node_ids'])),run_mode='split' if len(r['node_ids'])>1 else 'single'))
         except (OSError,ValueError,KeyError,TypeError):continue
     return out
 
@@ -270,3 +270,94 @@ def load(mgr,entry,settings):
     t=time.monotonic();mgr._wait_lead_ready(timeout=300);mgr._check_cancel();mgr._loaded_entry=dict(entry)
     save_deployment(json.loads((Path(roots[0]).expanduser()/'source-plan.json').read_text()),roots)
     mgr._set(status='ready',split=len(nodes)>1);mgr._note(T("server.web_gguf_shares.own_parts_ready_in_v_s", v=time.monotonic()-t));mgr._start_gguf_watch(meta)
+
+
+# Day 33 (CAR-9): a split pick now downloads own parts, so these need the
+# same Delete as any other model: on every Mac that holds a part.
+_DELETE_PART_CODE = r"""
+import json, shutil, sys
+from pathlib import Path
+base = Path.home()/'.caravan/gguf-shares'
+root = Path(sys.argv[1]).expanduser()
+if any(p.is_symlink() for p in [root, *root.parents]):
+    out = {'ok': False, 'error': 'link'}
+elif not root.exists():
+    out = {'ok': True, 'missing': True}
+elif root.resolve() == base.resolve() or not root.resolve().is_relative_to(base.resolve()):
+    out = {'ok': False, 'error': 'outside'}
+else:
+    shutil.rmtree(root)
+    p = root.parent
+    while p.resolve() != base.resolve() and p.resolve().is_relative_to(base.resolve()):
+        try:
+            p.rmdir()
+        except OSError:
+            break
+        p = p.parent
+    out = {'ok': True}
+print(json.dumps(out))
+"""
+
+
+def _record_path(model):
+    return REGISTRY/(hashlib.sha256(model.encode()).hexdigest()+'.json')
+
+
+def disk_rows(app):
+    """Own-part models for Topology's On disk list (split-only)."""
+    cfg = app.configured_nodes()
+    by_id = {n.get('id'): n for n in cfg}
+    rows = []
+    for file in sorted(REGISTRY.glob('*.json')) if REGISTRY.is_dir() else []:
+        if file.is_symlink():
+            continue
+        try:
+            r = json.loads(file.read_text())
+            labels = [web_nodes.friendly_mac_label(by_id.get(i) or {}, node_id=i, inventory=cfg) for i in r['node_ids']]
+            rows.append(dict(id=r['model_id'], name=Path(r['source']['filename']).stem+' (GGUF)', source='gguf-shards',
+                             size_gb={}, size_by_label={}, held_on=labels, split_only=True,
+                             placement=dict(mode='split', node_ids=list(r['node_ids']), node_labels=labels),
+                             note=T("server.web_gguf_shares.split_only_each_mac_keeps_only", k=len(r['node_ids']))))
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return rows
+
+
+def delete_deployment(app, model, current_model_id=None):
+    """Delete an own-part model's part on every Mac, then its record.
+
+    Only roots under ~/.caravan/gguf-shares (what a download creates); an
+    imported Day 22 tree is left alone. A Mac that can't be reached keeps
+    the record, so Delete can be tried again; the reply names that Mac."""
+    if current_model_id and str(current_model_id) == model:
+        return {'ok': False, 'error': T("server.web_picker.refuse_model_is_currently_loaded")}
+    path = _record_path(model)
+    if path.is_symlink() or not path.is_file():
+        return {'ok': False, 'error': T("server.web_picker.not_found_on_disk")}
+    r = json.loads(path.read_text())
+    if r.get('model_id') != model:
+        return {'ok': False, 'error': T("server.web_picker.not_found_on_disk")}
+    if any(not str(root).startswith('~/.caravan/gguf-shares/') or '..' in str(root) for root in r['roots']):
+        return {'ok': False, 'error': T("server.web_gguf_shares.an_older_own_part_tree_isnt")}
+    cfg = app.configured_nodes()
+    by_id = {n.get('id'): n for n in cfg}
+    nodes, left = [], []
+    for nid, root in zip(r['node_ids'], r['roots']):
+        n = by_id.get(nid)
+        who = web_nodes.friendly_mac_label(n or {}, node_id=nid, inventory=cfg)
+        ok = False
+        if n:
+            try:
+                res = web_files.shell(app, n, 'python3 -c '+shlex.quote(_DELETE_PART_CODE)+' '+shlex.quote(root), timeout=120)
+                ok = bool(json.loads((res.stdout or '').strip().splitlines()[-1]).get('ok'))
+            except Exception:  # noqa: BLE001 - off or no answer
+                ok = False
+        nodes.append({'node': nid, 'label': who, 'removed': ok})
+        if not ok:
+            left.append(who)
+    if left:
+        return {'ok': any(x['removed'] for x in nodes), 'nodes': nodes,
+                'warning': T("server.web_server.deleted_here_but_not_on_macs", macs=T.join(left)),
+                'error': '' if any(x['removed'] for x in nodes) else T("server.web_server.deleted_here_but_not_on_macs", macs=T.join(left))}
+    path.unlink()
+    return {'ok': True, 'nodes': nodes}

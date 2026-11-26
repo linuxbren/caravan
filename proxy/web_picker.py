@@ -1634,7 +1634,8 @@ def list_installed(*, packer_sizes: Optional[dict] = None) -> list:
 
 
 def delete_model(repo_or_path: str, *, current_model_id: Optional[str],
-                 ssh_delete: Optional[callable] = None) -> dict:
+                 ssh_delete: Optional[callable] = None,
+                 gguf_remote_delete: Optional[callable] = None) -> dict:
     """Delete from ALL Minis. Refuses if currently loaded."""
     rid = (repo_or_path or "").strip()
     if not rid:
@@ -1644,7 +1645,7 @@ def delete_model(repo_or_path: str, *, current_model_id: Optional[str],
     if cur and (cur == rid.lower() or cur in rid.lower() or folder.lower() in cur):
         return {"ok": False, "error": T("server.web_picker.refuse_model_is_currently_loaded")}
     if rid.startswith("gguf/"):
-        return delete_gguf(rid)
+        return delete_gguf(rid, remote_delete=gguf_remote_delete)
     removed = []
     for root in MLX_MODEL_ROOTS:
         p = root / folder
@@ -1668,37 +1669,31 @@ def delete_model(repo_or_path: str, *, current_model_id: Optional[str],
 
 
 
-def delete_gguf(rid: str) -> dict:
-    """Day 31 part C: delete one GGUF model (every part) from this Mac.
+def delete_gguf(rid: str, remote_delete: Optional[callable] = None) -> dict:
+    """Delete one GGUF model (every part) from this Mac and, since Day 33
+    (CAR-9), from the other Macs too.
 
-    GGUF files live only on the 1st Mac; llama.cpp sends each Mac its share
-    at load. Only files the Settings scan lists can be deleted, and only
-    inside Caravan's GGUF folder. The caller refuses the loaded model."""
+    A split pick now downloads the whole file to every Mac in it (and Copy
+    to all always did), so deleting only this Mac's copy left the others
+    behind. `remote_delete(rid)` runs the same checks on each other Mac
+    (gguf_split.delete_local over SSH) and returns {"removed", "nodes"}.
+    The caller refuses the loaded model."""
     import gguf_split
-    from gguf_sets import members
-    hit = next((g for g in gguf_split.scan_local() if g["id"] == rid), None)
-    if not hit:
-        return {"ok": False, "error": T("server.web_picker.not_found_on_disk")}
-    p = Path(hit["path"])
-    roots = [r.resolve() for r in gguf_split.GGUF_ROOTS]
-    if not any(p.resolve().is_relative_to(r) and p.resolve() != r for r in roots) or p.is_symlink():
-        return {"ok": False, "error": T("server.web_picker.refuse_not_in_caravans_gguf_folder")}
-    folder = p.parent
-    nearby = {f.name: f.stat().st_size for f in folder.glob("*.gguf")}
-    removed = []
-    for name in members(p.name, nearby):
-        (folder / name).unlink()
-        removed.append(str(folder / name))
-    if not any(folder.glob("*.gguf")) and folder.resolve() not in roots:
-        for extra in ("caravan-gguf-source.json", "caravan-placement.json"):
-            if (folder / extra).is_file():
-                (folder / extra).unlink()
-        shutil.rmtree(folder / ".cache", ignore_errors=True)
+    local = gguf_split.delete_local(rid)
+    remote = None
+    if remote_delete:
         try:
-            folder.rmdir()
-        except OSError:
-            pass  # something else lives here; leave it
-    return {"ok": True, "removed": removed, "remote": None}
+            remote = remote_delete(rid)
+        except Exception as e:  # noqa: BLE001
+            remote = {"removed": False, "error": str(e), "nodes": []}
+    if local.get("ok"):
+        return {"ok": True, "removed": local["removed"], "remote": remote}
+    if isinstance(remote, dict) and remote.get("removed"):
+        return {"ok": True, "removed": [], "remote": remote}
+    out = {"ok": False, "error": local.get("error") or T("server.web_picker.not_found_on_disk")}
+    if remote is not None:
+        out["remote"] = remote
+    return out
 
 
 def _path_size_gb(path: Path) -> float:
@@ -2103,7 +2098,7 @@ def start_download(repo_id: str, *, role_plan: Optional[dict] = None,
 
     _job_set(jid, status="queued", repo_id=repo_id, progress=progress,
              runners=[{"id": r.get("id"), "label": r.get("label"), "role": r.get("role"),
-                       "dest": r.get("dest")} for r in runners],
+                       "dest": r.get("dest"), "share": r.get("share") or ""} for r in runners],
              packer_layers=packer_layers, note=note or "",
              placement=placement or {},
              dest_lead=next((r["dest"] for r in runners if r.get("role") == "lead"), None),
