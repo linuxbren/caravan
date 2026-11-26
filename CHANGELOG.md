@@ -18,7 +18,7 @@ See [DAY33](docs/DAY33.md#the-installer-and-update-set-up-the-own-part-engine-ca
 - Unchanged: several-file GGUFs and model types other than Llama and
   Qwen2 still get the cable split or one Mac. The official llama.cpp
   engine is unchanged.
-- Tests: 2,426 tests pass.
+- Source `c512ec7`, pin `d341fcf`. 2,426 tests pass.
 
 ## Day 33 — A GGUF split pick downloads each Mac's part (v0.9.17)
 

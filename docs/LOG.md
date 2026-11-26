@@ -10,7 +10,7 @@ The preferred path is a pinned prebuilt with a checksum; this release
 leaves that pin empty, and a ready-made copy can be published later. Until
 then, a Mac with the tools builds from source, and a Mac without them
 fails soft so a fresh install and `caravan update` still finish. VERSION
-0.9.18. The Macs were not updated (Brenden updates them himself). See
+0.9.18. Source `c512ec7`, pin `d341fcf`, tag v0.9.18. The Macs were not updated (Brenden updates them himself). See
 [DAY33](DAY33.md#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918).
 
 ## 2026-11-25: Day 33 — The installer and update set up the own-part engine (CAR-10, in review)

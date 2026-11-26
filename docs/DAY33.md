@@ -585,7 +585,7 @@ command). Merged to `main` fast-forward only. The Macs were not updated;
 Brenden updates them himself.
 
 Released as [v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18)
-(source and pin commits are recorded after publishing). Notes:
+source `c512ec7`, pin `d341fcf`; tag v0.9.18 on the wrap commit. Notes:
 [release-notes/day33-v0.9.18.md](release-notes/day33-v0.9.18.md).
 
 For single-file `llama`/`qwen2` GGUFs, a missing cmake, git or Apple
