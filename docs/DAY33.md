@@ -14,6 +14,9 @@ Chat with Ollama Cloud models shipped as
 CAR-9 — a GGUF split pick downloads each Mac's part — shipped as
 [v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17)
 ([below](#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917)).
+CAR-10 — the installer and update set up the own-part engine — shipped as
+[v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18)
+([below](#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918)).
 
 Built on the local branch `day33-mlx-1mac-helper` (on `ecddb9a`). Claude
 reviewed the uncommitted work, asked for one change (native MTP must not
@@ -405,13 +408,11 @@ Released as [v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17)
 source `2dfb65d`, pin `94559e5`; tag v0.9.17 on the wrap commit. Notes:
 [release-notes/day33-v0.9.17.md](release-notes/day33-v0.9.17.md).
 
-**Next (CAR-10).** Brenden, 2026-11-25: a split pick must split in the
-download, not download everything and split later, because without
-Thunderbolt that can take a long time. So for single-file `llama`/`qwen2`
-GGUFs, a missing build toolchain should no longer push a split pick to the
-cable split: the installer and `caravan update` should put the own-part
-engine on every configured Mac. Several-file GGUFs and other architectures
-need engine work first; that's on the roadmap further out.
+**Next (CAR-10).** Shipped as
+[v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18): see
+[The installer and update set up the own-part engine](#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918).
+Several-file GGUFs and other architectures still need engine work first;
+that's on the roadmap further out.
 
 **The bug.** A GGUF that fits on one Mac. Step 2 recommended a split across
 2 Macs, because only the split holds the model's full trained chat window
@@ -570,3 +571,111 @@ old `and not one_ok` check is asserted gone). Full suite: 2,403 passed
    cable download.
 5. Delete of a split-only model with both Macs on, and with one off.
 6. An older lead-only split still loads.
+
+## The installer and update set up the own-part engine (CAR-10, v0.9.18)
+
+Built on the local branch `day33-own-part-engine` (from the v0.9.17 wrap
+`d472018`). Logged by Claude as CAR-10 on 2026-11-25 from Brenden's
+follow-up: a split pick must split in the download, because without
+Thunderbolt a whole-file-then-split can take a long time. Claude reviewed
+the uncommitted work, asked for a fail-soft when the engine can't be set
+up yet, then approved the fix and the "Hey, I'm sorry…" not-ready wording
+on 2026-11-26 08:10 CST (full suite 2,426 of 2,426 with the review
+command). Merged to `main` fast-forward only. The Macs were not updated;
+Brenden updates them himself.
+
+Released as [v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18)
+(source and pin commits are recorded after publishing). Notes:
+[release-notes/day33-v0.9.18.md](release-notes/day33-v0.9.18.md).
+
+For single-file `llama`/`qwen2` GGUFs, a missing cmake, git or Apple
+Command Line Tools should no longer push a split pick to the cable
+split. The installer and `caravan update` now call `gguf_runtime.ensure()`
+on every configured Mac, the same way they already prepare the official
+llama.cpp engine.
+
+**Approach: a pinned prebuilt with a checksum**, with a source build as
+the fallback. A prebuilt needs the least from a beginner (no Command Line
+Tools, git or cmake, and a short download instead of a long compile) and
+matches Day 23's official-engine pattern. It also fits the 10-minute
+timeout that `caravan update` uses when it updates another Mac over SSH
+(a source build can take up to 30 minutes and would miss that window).
+The tradeoff is that someone has to build that archive once on an Apple
+Silicon Mac, publish it at an https URL, and write the URL and sha256
+into `runtime/gguf-shards-release.json`. `scripts/package-gguf-shards.py`
+packs a ready engine tree and prints the sha256; it does not upload or
+edit the pin file. This release leaves `url` and `sha256` empty; a
+ready-made copy can be published later. No checksum is invented.
+
+Until a prebuilt is pinned, `ensure()` builds from source when Command
+Line Tools, git and cmake are present (if Command Line Tools are missing
+it starts Apple's installer and tells you to finish it, then retry). If
+those tools aren't there, or a checksum/unsafe-archive check refuses the
+download, the install step fails soft: it prints a short "Hey, I'm
+sorry…" note (with the technical reason for whoever helps you) and exits
+0, so a fresh install and `caravan update` still finish. The beginner
+promise in [INSTALL](../INSTALL.md) (no developer tools) holds. In the
+source-build fallback, the peer-update timeout stretches to 40 minutes.
+
+Out of scope, unchanged: models published as several files, and
+architectures other than `llama` and `qwen2`. Those still get the cable
+split or one Mac.
+
+**What it does.**
+
+- `gguf_runtime.ensure()` first reuses a ready engine (including an older
+  Day 22 tree). If a prebuilt pin is present (https URL and a 64-character
+  sha256), it downloads, checks the sha256 before extraction, refuses an
+  unsafe archive, and installs into `~/.caravan/runtimes/gguf-shards/<pin>/`
+  with the same marker and `build/bin` layout `current()` already looks
+  for. A checksum mismatch or an incomplete folder is left as is, not
+  replaced. If no prebuilt is pinned, it builds the existing isolated
+  source path (pin `76a67730…` plus `runtime/gguf-shards/apply.py`).
+- `scripts/install.sh` runs that after the official engine, with a
+  progress line, on every role. If the engine can't be set up yet (no
+  prebuilt pinned and no Command Line Tools, git or cmake; or a
+  checksum/unsafe-archive refusal), the step prints the "Hey, I'm
+  sorry…" note and exits 0, so a fresh install and `caravan update`
+  still finish. `caravan update` reuses the installer, so every
+  configured Mac gets the same step, including a Mac added later. A
+  missing engine is not a failed update on that Mac.
+- `caravan doctor` reports whether the own-part engine is ready, next to
+  the official engine. Rerun setup or `caravan update` if it is missing.
+
+### Files
+
+`agent/gguf_runtime.py`, `runtime/gguf-shards-release.json`,
+`scripts/package-gguf-shards.py`, `scripts/install.sh`,
+`tools/caravan_doctor.py`, `tools/caravan_update_peers.py`,
+`locales/{en,es,ru,ja,zh-Hans}.json`,
+`tests/test_day33_own_part_engine.py`.
+
+### Tests
+
+`tests/test_day33_own_part_engine.py`, all mocked (no network, no Macs,
+no compile): checksum rejection, idempotent install, unsafe or incomplete
+archives, a pack-script archive that then installs, source fallback that
+names missing tools and does not fetch, a Command Line Tools prompt on
+macOS, the installer hook order, doctor, and the short vs long peer-update
+timeout. A missing toolchain (or a checksum refusal) makes the
+install-time script exit 0 with a "not ready yet" note, and the rest of
+setup keeps going; a remote `caravan update` still succeeds. The
+first-build Step 2 note in `test_day33_gguf_split_pick.py` was updated.
+Full suite: 2,426 passed, 97 subtests, in 114.39s (v0.9.17: 2,403).
+
+### Still needs a real run on the Macs
+
+1. After a prebuilt is published and pinned: a fresh install and a
+   `caravan update` on a Mac that does not have the engine, with no
+   developer tools, end with the engine ready (`caravan doctor` is OK)
+   and a llama/qwen2 split pick stays on the own-part path, not cable.
+2. The first source-build fallback on a Mac that has Command Line Tools,
+   git and cmake, when no prebuilt is pinned: progress, how long it
+   takes, and that a later update is a no-op.
+3. A Mac without Command Line Tools and no prebuilt: the message and
+   Apple's installer prompt, then retry after they are installed.
+4. `caravan update` from the 1st Mac still updates the other Macs (engine
+   included) within the timeout.
+5. The v0.9.17 cases still matter: Brenden's context-driven 2-Mac split,
+   a `qwen3`/`gpt-oss` GGUF (greyed split, cable choice), Delete, and an
+   older lead-only split still loading.

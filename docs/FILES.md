@@ -119,7 +119,7 @@ Install and `caravan update` now set up that own-part engine on every
 configured Mac (CAR-10, in review). See
 [DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917)
 and
-[CAR-10](DAY33.md#the-installer-and-update-set-up-the-own-part-engine-car-10-planned-v0918).
+[CAR-10](DAY33.md#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918).
 
 For peers, the Balance file view supports experimental direct-source tensor
 cache population for any number of physical RPC Minis:

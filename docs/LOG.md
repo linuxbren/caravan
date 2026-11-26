@@ -1,3 +1,33 @@
+## 2026-11-26: Day 33 — The installer and update set up the own-part engine (v0.9.18)
+
+Sixth Day 33 release (CAR-10). Built on the local branch
+`day33-own-part-engine` (from the v0.9.17 wrap `d472018`), reviewed by
+Claude (approved 2026-11-26 08:10 CST, including the fail-soft fix and
+the "Hey, I'm sorry…" not-ready wording: full suite 2,426 of 2,426 with
+the review command) and merged to `main` fast-forward only. Install and
+`caravan update` now set up the own-part engine on every configured Mac.
+The preferred path is a pinned prebuilt with a checksum; this release
+leaves that pin empty, and a ready-made copy can be published later. Until
+then, a Mac with the tools builds from source, and a Mac without them
+fails soft so a fresh install and `caravan update` still finish. VERSION
+0.9.18. The Macs were not updated (Brenden updates them himself). See
+[DAY33](DAY33.md#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918).
+
+## 2026-11-25: Day 33 — The installer and update set up the own-part engine (CAR-10, in review)
+
+Uncommitted on `day33-own-part-engine` (from the v0.9.17 wrap `d472018`),
+waiting on Claude's review. For single-file `llama`/`qwen2` GGUFs, install
+and `caravan update` now run `gguf_runtime.ensure()` on every configured
+Mac so a missing toolchain no longer pushes a split pick to the cable
+option. The preferred path is a pinned prebuilt with a checksum (least
+for a beginner, and it fits the 10-minute peer-update timeout). Until
+`runtime/gguf-shards-release.json` has a published URL and sha256,
+`ensure()` builds from source (Command Line Tools, git, cmake) and the
+peer-update timeout stretches to 40 minutes. `scripts/package-gguf-shards.py`
+packs a Mac-built tree and prints the sha256; nothing is invented. VERSION
+and CHANGELOG are unchanged. See
+[DAY33](DAY33.md#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918).
+
 ## 2026-11-25: Day 33 — A GGUF split pick downloads each Mac's part (v0.9.17)
 
 Fifth Day 33 release (CAR-9). Built on the local branch

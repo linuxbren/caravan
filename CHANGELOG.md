@@ -1,3 +1,25 @@
+## Day 33 — The installer and update set up the own-part engine (v0.9.18)
+
+Released as [v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18).
+Install and `caravan update` now set up the own-part engine on every
+configured Mac, so a missing toolchain no longer pushes a llama or Qwen2
+split pick to the cable option.
+
+See [DAY33](docs/DAY33.md#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918).
+
+- Added: the installer and `caravan update` run `gguf_runtime.ensure()`
+  on every Mac, after the official model engine. The preferred path is a
+  pinned prebuilt with a checksum (no developer tools). This release
+  leaves that pin empty; a ready-made copy can be published later. Until
+  then, a Mac with the tools builds the engine from source, and a Mac
+  without them fails soft: the step prints a plain "Hey, I'm sorry…"
+  note and the rest of setup still finishes. `caravan doctor` reports
+  whether the engine is ready. All five locales.
+- Unchanged: several-file GGUFs and model types other than Llama and
+  Qwen2 still get the cable split or one Mac. The official llama.cpp
+  engine is unchanged.
+- Tests: 2,426 tests pass.
+
 ## Day 33 — A GGUF split pick downloads each Mac's part (v0.9.17)
 
 Released as [v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17).

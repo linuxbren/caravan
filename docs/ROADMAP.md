@@ -219,7 +219,7 @@ and the daily logs, not mixed into current setup instructions.
     at download and at load. See [DAY32](DAY32.md#gguf-placement-roadmap-9).
 
 - **Day 33 (started, released through
-  [v0.9.17](https://github.com/linuxbren/caravan/releases/tag/v0.9.17)):**
+  [v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18)):**
   see [DAY33](DAY33.md).
   - **A helper for MLX on one Mac
     ([v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13), done):**
@@ -260,6 +260,15 @@ and the daily logs, not mixed into current setup instructions.
     downloads the whole file and isn't a split. When per-Mac parts can't
     work, Step 2 says so before downloading and offers the cable split or
     one Mac. See [DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917).
+  - **The installer and update set up the own-part engine
+    ([v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18), done, CAR-10):**
+    install and `caravan update` put the own-part engine on every
+    configured Mac. The preferred path is a pinned prebuilt with a
+    checksum (no developer tools). This release leaves that pin empty;
+    a ready-made copy can be published later. Until then, a Mac with the
+    tools builds from source, and a Mac without them fails soft so setup
+    still finishes. See
+    [DAY33](DAY33.md#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918).
 
 ## Next candidates
 
@@ -290,14 +299,16 @@ and the daily logs, not mixed into current setup instructions.
    Still to do: a real run on the Macs. See
    [DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917).
 8. **The installer and update set up the own-part engine (CAR-10).**
-   Next. A split pick should split in the download, not download
-   everything to the 1st Mac and split at each load: without Thunderbolt
-   that can take a long time. For single-file `llama`/`qwen2` GGUFs, a Mac
-   missing the build tools shouldn't push a split to the cable split, so
-   the installer and `caravan update` should put the own-part engine on
-   every configured Mac (cmake plus `gguf_runtime.ensure()`, or a pinned
-   prebuilt). This reverses Day 23's no-toolchain install. See
-   [DAY33](DAY33.md#a-gguf-split-pick-downloads-each-macs-part-car-9-v0917).
+   Done in
+   [v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18):
+   install and `caravan update` put the own-part engine on every
+   configured Mac, preferring a pinned prebuilt with a checksum and
+   building from source only when that pin is empty. This release leaves
+   the pin empty; a ready-made copy can be published later. A missing
+   toolchain fails soft, so a fresh install still finishes. Still to do:
+   a real run on the Macs, and publishing a prepared engine when one is
+   built. See
+   [DAY33](DAY33.md#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918).
 9. **Confirm before every download.** Done in
    [v0.9.8](https://github.com/linuxbren/caravan/releases/tag/v0.9.8).
    GGUF downloads use the same Step 2 placement chooser as MLX, for every
