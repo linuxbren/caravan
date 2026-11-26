@@ -264,7 +264,7 @@ class StepTwoSaysSoFirst(unittest.TestCase):
         h = Handler(meta=llama_meta())
         place = h.placement(16.5, engine={"ready": False, "missing": []})
         split = next(o for o in place["options"] if o["id"] == "split:lead,peer")
-        self.assertIn("builds the own-part engine", split["download_note"])
+        self.assertIn("will set it up", split["download_note"])
         self.assertTrue(split["enabled"])
 
     def check_cannot(self, place, why):

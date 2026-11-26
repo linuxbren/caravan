@@ -120,6 +120,7 @@ Worker plan: --model PATH [--counts K,K,... --stage-index I --listen HOST:PORT]
              [--upstream HOST:PORT | --peer HOST:PORT] [--name ID] [--port PORT]
 Each Mac gets its browser page; a fixed-model worker is a developer option." ;; esac; }
 S_would_run() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Se ejecutaría: " ;; ja) printf '%s' "実行します： " ;; ru) printf '%s' "Запустить бы: " ;; zh-Hans) printf '%s' "将运行：" ;; *) printf '%s' "Would run: " ;; esac; }
+S_preparing_the_own_part_engine() { case "${CARAVAN_UI_LANG}" in es) printf '%s' "Preparando el motor GGUF de partes propias en este Mac (necesario para dividir una descarga entre Macs)." ;; ja) printf '%s' "この Mac に分担ダウンロード用の GGUF エンジンを準備しています（モデルを複数の Mac に分けてダウンロードするために必要です）。" ;; ru) printf '%s' "Подготовка собственного движка GGUF на этом Mac (нужен, чтобы разделить загрузку между Mac)." ;; zh-Hans) printf '%s' "正在此 Mac 上准备分片 GGUF 引擎（在多台 Mac 之间拆分下载时需要）。" ;; *) printf '%s' "Preparing the own-part GGUF engine on this Mac (needed to split a download across Macs)." ;; esac; }
 # <<< caravan strings <<<
 say() { printf '[Caravan] %s\n' "$*"; }
 trap 'code=$?; say "$(S_setup_stopped_models_and_existing_settings)" >&2; exit "$code"' ERR
@@ -268,6 +269,8 @@ fi
 run "$VENV/bin/python" -m pip check
 run "$VENV/bin/python" -c 'import mlx.core, mlx_lm, huggingface_hub, spake2, cryptography;print("Mac environment imports OK")'
 run "$VENV/bin/python" "$REPO/agent/llama_runtime.py"
+say "$(S_preparing_the_own_part_engine)"
+run "$VENV/bin/python" "$REPO/agent/gguf_runtime.py"
 run "$VENV/bin/python" "$REPO/tools/caravan_path.py" install
 # Every fresh browser install gets a single-local-node config. Never replace existing settings.
 CONFIG="$HOME/.caravan/config.toml"

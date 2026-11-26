@@ -58,6 +58,14 @@ def checks(home=None, port=8190):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "agent"))
     from llama_runtime import ready, location, PIN
     add("OK" if ready(home) else "ERROR", T("cli.doctor.model_engine_version_v", version=PIN['version'], v=str(location(home)) if ready(home) else "not installed or incomplete. Rerun setup (or caravan update)."))
+    import gguf_runtime as shards
+    add(
+        "OK" if shards.ready(home) else "ERROR",
+        T(
+            "cli.doctor.own_part_engine_v",
+            v=str(shards.location(home)) if shards.ready(home) else "not installed or incomplete. Rerun setup (or caravan update).",
+        ),
+    )
     try:
         import caravan_service
         from contextlib import redirect_stdout

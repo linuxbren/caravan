@@ -20,7 +20,24 @@ from caravan_i18n import T  # noqa: E402  (Day 32: user-facing text)
 # Short connect; the update itself may take several minutes (download + swap).
 CONNECT_TIMEOUT = 10
 UPDATE_TIMEOUT = 600
+# First source build of the own-part engine can take up to the cmake timeout
+# (1800 s) plus install work. Used only when no checksummed prebuilt is pinned.
+SOURCE_BUILD_UPDATE_TIMEOUT = 2400
 CHECK_TIMEOUT = 20
+
+
+def peer_update_timeout():
+    """10 minutes when a prebuilt engine can be downloaded; longer for a first source build."""
+    try:
+        root = Path(__file__).resolve().parents[1]
+        import sys
+        sys.path.insert(0, str(root / "agent"))
+        from gguf_runtime import prebuilt_configured
+        if prebuilt_configured():
+            return UPDATE_TIMEOUT
+    except Exception:  # noqa: BLE001 - never block an update on the pin file
+        pass
+    return SOURCE_BUILD_UPDATE_TIMEOUT
 
 DEFAULT_REPO = "~/.caravan/src/caravan"
 DEFAULT_COMMAND = "~/.caravan/bin/caravan"
@@ -357,8 +374,10 @@ def any_behind(peer_rows):
     return any(r.get("behind") or r.get("phase") == "behind" for r in (peer_rows or []))
 
 
-def update_peer(node, *, expected=None, runner=None, timeout=UPDATE_TIMEOUT):
+def update_peer(node, *, expected=None, runner=None, timeout=None):
     """Run caravan update on one already-paired Mac. Never raises."""
+    if timeout is None:
+        timeout = peer_update_timeout()
     label = node.get("label") or T("cli.update_peers.mac")
     probe = ssh_run(node, "true", runner=runner, timeout=CONNECT_TIMEOUT + 5)
     if probe is None or getattr(probe, "returncode", 1) != 0:
@@ -421,7 +440,7 @@ def update_other_macs(
     runner=None,
     on_progress=None,
     out=None,
-    timeout=UPDATE_TIMEOUT,
+    timeout=None,
 ):
     """Update every known other Mac. Returns the per-Mac rows.
 
@@ -430,6 +449,8 @@ def update_other_macs(
     home = Path(home)
     if peers is None:
         peers = load_nodes(home)
+    if timeout is None:
+        timeout = peer_update_timeout()
     rows = []
     for node in peers or []:
         label = node.get("label") or T("cli.update_peers.mac")

@@ -55,10 +55,12 @@ Each choice also says where the download goes. For a GGUF model, a split
 across N Macs downloads only each Mac's own part, and the model then runs
 only as that split; one Mac downloads the whole file and isn't a split.
 When per-Mac parts can't work for a file (several files, an architecture
-the own-part engine doesn't read, or no engine and no tools to build it),
+the own-part engine doesn't read, or the engine isn't on a Mac yet),
 Step 2 says so before downloading and offers "Split across N Macs over the
-cable" (whole file on the 1st Mac only) or one Mac. The download card
-shows one line per Mac with what it is getting.
+cable" (whole file on the 1st Mac only) or one Mac. Install and
+`caravan update` are what put that engine on each Mac
+([CAR-10](DAY33.md#the-installer-and-update-set-up-the-own-part-engine-car-10-planned-v0918)).
+The download card shows one line per Mac with what it is getting.
 Only select Macs you configured and trust. See [models/downloads](MODEL_PICKER.md)
 and [file placement](FILES.md).
 

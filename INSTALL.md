@@ -14,7 +14,8 @@ Macs, lets you run bigger models. Caravan checks what fits.
 ```
 
 3. Wait for the browser to open. Setup gets everything Caravan needs. No Git,
-   Homebrew, developer tools, or administrator password needed.
+   Homebrew, developer tools, or administrator password needed. Setup also
+   prepares the engine that splits a GGUF download across your Macs.
 4. Open **Models** and click **Download** on a small model that fits. If a model
    has several parts, Caravan downloads all of them. Choose **Load** when asked,
    then chat. No model comes included. Some publishers require you to accept
