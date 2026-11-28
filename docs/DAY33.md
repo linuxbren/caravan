@@ -696,8 +696,9 @@ with the review command; Claude also ran the new tests against v0.9.18
 and 16 failed, as they should). Merged to `main` fast-forward only. The
 Macs were not updated; Brenden updates them himself.
 
-Released as [v0.9.19](https://github.com/linuxbren/caravan/releases/tag/v0.9.19);
-the source and pin commits are in the wrap below. Notes:
+Released as [v0.9.19](https://github.com/linuxbren/caravan/releases/tag/v0.9.19),
+work `6c25e4a`, source `00644cf`, pin `db50e88`; tag v0.9.19 on the wrap
+commit. Notes:
 [release-notes/day33-v0.9.19.md](release-notes/day33-v0.9.19.md).
 
 **What was wrong.** `caravan update` swaps in the new source, runs the

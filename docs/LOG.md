@@ -10,7 +10,7 @@ gets 2 minutes (5 with a saved model) to come back instead of 30 seconds, a
 failing or timed-out git, patch or cmake step in the own-part engine setup
 no longer fails the install (a gap in v0.9.18), and a failed update now says
 why. The real error from his Macs was never captured, so this is not
-confirmed on them. VERSION 0.9.19. The Macs were not updated (Brenden
+confirmed on them. VERSION 0.9.19. Work `6c25e4a`, source `00644cf`, pin `db50e88`, tag v0.9.19. The Macs were not updated (Brenden
 updates them himself). See
 [DAY33](DAY33.md#failed-updates-say-why-car-13-v0919).
 

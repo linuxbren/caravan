@@ -19,7 +19,7 @@ See [DAY33](docs/DAY33.md#failed-updates-say-why-car-13-v0919).
   Settings. The rollback now logs to `update-rollback.log`, so
   `update.log` keeps the failed attempt. All five locales.
 - Not confirmed on the Macs: the original error text was never captured.
-- Tests: 2,454 tests pass.
+- Work `6c25e4a`, source `00644cf`, pin `db50e88`. 2,454 tests pass.
 
 ## Day 33 — The installer and update set up the own-part engine (v0.9.18)
 
