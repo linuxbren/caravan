@@ -179,9 +179,15 @@ the service handling:
 - On failure after services were stopped, `~/.caravan/src/caravan-backup-<ts>`
   is moved back, the previous `scripts/install.sh` is rerun with
   `--no-start` to restore the previous venv, and the previous services
-  are started. Installer output is kept in `~/.caravan/logs/update.log`.
-  The user sees one line: the update failed, the previous version is
-  running, and they should check the connection and try again.
+  are started. Installer output is kept in `~/.caravan/logs/update.log`
+  (the rollback's own install goes to `update-rollback.log`, so it does
+  not overwrite the failed attempt). The user sees one line: the update
+  failed, the previous version is running, and they should check the
+  connection and try again. Since v0.9.19, a line before it says why
+  ("Why the update failed: …", up to 300 characters), the same reason is
+  in `~/.caravan/logs/update-failure.log` and on that Mac's line in
+  Settings, and the page gets 2 minutes (5 minutes with a saved model) to
+  come back before the update is rolled back.
 - The previous `caravan update` always passed `--no-start` and refused a
   loaded web job. The new bootstrap ignores that refusal. If the page was
   running, it is started again even when `--no-start` is passed (the

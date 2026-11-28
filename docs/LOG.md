@@ -1,3 +1,19 @@
+## 2026-11-27: Day 33 — Failed updates say why (CAR-13, v0.9.19)
+
+Seventh Day 33 release. Built on the local branch
+`day33-update-failure-fix` (from the v0.9.18 wrap `e65f9d8`), reviewed by
+Claude (approved 2026-11-27 20:05 CST: full suite 2,460 of 2,460 with the
+review command; the 16 new tests fail on v0.9.18) and merged to `main`
+fast-forward only. Brenden's `caravan update` kept failing on his Macs and
+only said "The update failed." Fixes a silent update rollback: the page now
+gets 2 minutes (5 with a saved model) to come back instead of 30 seconds, a
+failing or timed-out git, patch or cmake step in the own-part engine setup
+no longer fails the install (a gap in v0.9.18), and a failed update now says
+why. The real error from his Macs was never captured, so this is not
+confirmed on them. VERSION 0.9.19. The Macs were not updated (Brenden
+updates them himself). See
+[DAY33](DAY33.md#failed-updates-say-why-car-13-v0919).
+
 ## 2026-11-26: Day 33 — The installer and update set up the own-part engine (v0.9.18)
 
 Sixth Day 33 release (CAR-10). Built on the local branch

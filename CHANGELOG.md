@@ -1,3 +1,26 @@
+## Day 33 — Failed updates say why (v0.9.19)
+
+Released as [v0.9.19](https://github.com/linuxbren/caravan/releases/tag/v0.9.19).
+Fixes a silent update rollback (CAR-13): an update that finished installing
+could be undone because the page was slow to come back, and you only saw
+"The update failed."
+
+See [DAY33](docs/DAY33.md#failed-updates-say-why-car-13-v0919).
+
+- Fixed: the update waits for the page 2 minutes (5 minutes when a saved
+  model is coming back), up from 30 seconds. These are generous limits, not
+  measured times.
+- Fixed: a failed or timed-out git, patch or cmake step while preparing the
+  own-part engine (from v0.9.18) no longer fails the install and rolls back
+  the update. It prints the "Hey, I'm sorry…" note with a plain reason and
+  setup finishes.
+- Added: a failed update says why, in one line before the failure message,
+  in `~/.caravan/logs/update-failure.log` and on that Mac's line in
+  Settings. The rollback now logs to `update-rollback.log`, so
+  `update.log` keeps the failed attempt. All five locales.
+- Not confirmed on the Macs: the original error text was never captured.
+- Tests: 2,454 tests pass.
+
 ## Day 33 — The installer and update set up the own-part engine (v0.9.18)
 
 Released as [v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18).

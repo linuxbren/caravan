@@ -17,6 +17,10 @@ CAR-9 — a GGUF split pick downloads each Mac's part — shipped as
 CAR-10 — the installer and update set up the own-part engine — shipped as
 [v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18)
 ([below](#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918)).
+CAR-13 — failed updates say why, and a silent update rollback is fixed —
+shipped as
+[v0.9.19](https://github.com/linuxbren/caravan/releases/tag/v0.9.19)
+([below](#failed-updates-say-why-car-13-v0919)).
 
 Built on the local branch `day33-mlx-1mac-helper` (on `ecddb9a`). Claude
 reviewed the uncommitted work, asked for one change (native MTP must not
@@ -679,3 +683,99 @@ Full suite: 2,426 passed, 97 subtests, in 114.39s (v0.9.17: 2,403).
 5. The v0.9.17 cases still matter: Brenden's context-driven 2-Mac split,
    a `qwen3`/`gpt-oss` GGUF (greyed split, cable choice), Delete, and an
    older lead-only split still loading.
+
+## Failed updates say why (CAR-13, v0.9.19)
+
+Built on the local branch `day33-update-failure-fix` (from the v0.9.18
+wrap `e65f9d8`). Brenden reported that `caravan update` kept failing on his
+Macs (2026-11-27). Both Macs were still on v0.9.16's source, and the only
+thing anyone saw was "The update failed. Caravan is back on the previous
+version." Claude traced the update path the same evening; the fix was
+reviewed and approved on 2026-11-27 20:05 CST (full suite 2,460 of 2,460
+with the review command; Claude also ran the new tests against v0.9.18
+and 16 failed, as they should). Merged to `main` fast-forward only. The
+Macs were not updated; Brenden updates them himself.
+
+Released as [v0.9.19](https://github.com/linuxbren/caravan/releases/tag/v0.9.19);
+the source and pin commits are in the wrap below. Notes:
+[release-notes/day33-v0.9.19.md](release-notes/day33-v0.9.19.md).
+
+**What was wrong.** `caravan update` swaps in the new source, runs the
+installer, starts the services and waits for the page. If any step fails it
+puts the old version back and installs it again. Three things made that
+hard to see:
+
+- The page got 30 seconds to come back. It does not wait for a model (the
+  status answer has a worker block even with nothing loaded), but a cold
+  start of freshly unpacked code, or a Mac busy bringing a saved model
+  back, can be slow, and a slow page undid a good update.
+- The real reason was never kept. The rollback's reinstall wrote over
+  `update.log`, so the log always looked like a clean install, and only the
+  generic line reached the screen.
+- A gap from v0.9.18 (CAR-10): the own-part engine step only soft-failed on
+  missing tools. A failing git fetch, a patch that didn't apply, a cmake
+  error or a build timeout exited the installer with an error, and the
+  update rolled back. With git and cmake installed and no prepared engine
+  pinned (the pin is still empty), a Mac takes this path on every update.
+  Reproduced here with a git that always fails.
+
+**What it does now.**
+
+- The page gets 120 seconds to come back, or 300 seconds when a saved model
+  will be restored. Both are generous limits, not measured times, and a
+  healthy page still returns as soon as it answers. The health signal is
+  unchanged: Caravan's page is up (a loaded model is not required).
+- On any failure the reason (one line, up to 300 characters) is printed
+  just before the failure line, saved to `~/.caravan/logs/update-failure.log`
+  (cleared at the start of every update), and put in `update-progress.json`
+  as `detail` and on that Mac's line in Settings. A Mac updated from the 1st
+  Mac already shows the last lines of its output, which now include the
+  reason.
+- The rollback's reinstall logs to `update-rollback.log`, so `update.log`
+  keeps the failed attempt.
+- A failed or timed-out git, patch or cmake step prints the "Hey, I'm
+  sorry…" note with a plain reason (for example "the git fetch step failed
+  (exit code 128)"; no paths or command lines) and setup finishes.
+- `apply_update` runs from the new source being installed, so these changes
+  take effect on the first update to this version, even from a Mac still on
+  an older one.
+
+Checked before release: when the update runs as a child of the web page's
+Update now, the reason written by the child is read back (both the normal
+failed-exit path and the exception path), and an old reason is never shown
+for a new run.
+
+Left as is, on purpose: the own-part engine build still runs inside the
+update while that Mac's services are stopped (up to about 30 minutes when
+it builds). Deferring it until the page and model are back, or publishing
+the prepared engine so no Mac builds, is a separate change.
+
+### Files
+
+`tools/caravan_update.py`, `tools/caravan_update_check.py`,
+`tools/caravan_update_peers.py`, `agent/gguf_runtime.py`,
+`locales/{en,es,ru,ja,zh-Hans}.json` (four new strings),
+`tests/test_day33_update_failure.py`.
+
+### Tests
+
+`tests/test_day33_update_failure.py` (28 tests: 20 new, plus 8 existing
+update tests it reruns with the new checks in place): a page that comes up after 40 seconds is accepted, an
+idle page counts as up, the saved-model wait, the error names the last
+problem, the reason is kept for a failed install and a failed page start,
+the rollback does not overwrite the failed install's log, a success clears
+an old reason, the reason reaches the progress file (in-process, from a child
+process, and on the exception path), and the engine step soft-fails on a
+failed git, a failed cmake build and a timeout (also with a real failing
+`git` in a scratch home). Full suite: 2,454 passed, 97 subtests.
+
+### Still needs a real run on the Macs
+
+1. One `caravan update` on a Mac still on v0.9.16, with the page open, to
+   see whether it now gets through, or to read the reason line and
+   `update-failure.log` if it doesn't. The original error text was never
+   captured, so this release is not proven to fix Brenden's failure.
+2. A Mac with git and cmake and no prepared engine: the source build
+   during an update, how long it takes, and that the update still finishes
+   if it fails.
+3. The v0.9.18 cases in the section above still apply.

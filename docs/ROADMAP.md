@@ -219,7 +219,7 @@ and the daily logs, not mixed into current setup instructions.
     at download and at load. See [DAY32](DAY32.md#gguf-placement-roadmap-9).
 
 - **Day 33 (started, released through
-  [v0.9.18](https://github.com/linuxbren/caravan/releases/tag/v0.9.18)):**
+  [v0.9.19](https://github.com/linuxbren/caravan/releases/tag/v0.9.19)):**
   see [DAY33](DAY33.md).
   - **A helper for MLX on one Mac
     ([v0.9.13](https://github.com/linuxbren/caravan/releases/tag/v0.9.13), done):**
@@ -269,6 +269,13 @@ and the daily logs, not mixed into current setup instructions.
     tools builds from source, and a Mac without them fails soft so setup
     still finishes. See
     [DAY33](DAY33.md#the-installer-and-update-set-up-the-own-part-engine-car-10-v0918).
+  - **Failed updates say why
+    ([v0.9.19](https://github.com/linuxbren/caravan/releases/tag/v0.9.19), done, CAR-13):**
+    fixes a silent update rollback. The page gets 2 minutes (5 with a
+    saved model) to come back, a failing engine build step no longer
+    fails the update, and a failure now says why. Still to do: one real
+    update on the Macs to confirm. See
+    [DAY33](DAY33.md#failed-updates-say-why-car-13-v0919).
 
 ## Next candidates
 
