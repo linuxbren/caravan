@@ -2408,5 +2408,9 @@
   "agent.gguf_runtime.apple_command_line_tools_are_needed": "Se necesitan las herramientas de línea de comandos de Apple para compilar el motor de partes propias. Instálalas (xcode-select --install), termina ese instalador y vuelve a intentarlo.",
   "cli.doctor.own_part_engine_v": "Motor de partes propias: {v}",
   "agent.gguf_runtime.own_part_engine_ready": "Motor de partes propias listo:",
-  "agent.gguf_runtime.own_part_engine_not_ready_yet": "Oye, lo siento. Esta Mac no tiene las herramientas que necesita para dividir una descarga grande entre tus Macs, así que esa parte todavía no está lista. Todo lo demás en Caravan funciona bien. ¿Quieres descargar esas herramientas? (Para quien te ayude: {reason})"
+  "agent.gguf_runtime.own_part_engine_not_ready_yet": "Oye, lo siento. Esta Mac no tiene las herramientas que necesita para dividir una descarga grande entre tus Macs, así que esa parte todavía no está lista. Todo lo demás en Caravan funciona bien. ¿Quieres descargar esas herramientas? (Para quien te ayude: {reason})",
+  "cli.update.it_answered_but_not_as_caravan": "respondió, pero no como la página de Caravan",
+  "cli.update.why_the_update_failed": "Por qué falló la actualización: {reason}",
+  "agent.gguf_runtime.the_step_failed_exit_code": "el paso {step} falló (código de salida {code})",
+  "agent.gguf_runtime.the_step_took_too_long": "el paso {step} tardó demasiado"
 }

@@ -335,9 +335,9 @@ def _row(node, *, phase, kind=None, status=None, message=None, can_retry=None, d
     }
 
 
-def local_row(*, phase="waiting", label=T("cli.update_check.1st_mac"), message=None, kind=None):
+def local_row(*, phase="waiting", label=T("cli.update_check.1st_mac"), message=None, kind=None, detail=None):
     node = {"id": "local", "label": label}
-    row = _row(node, phase=phase, kind=kind, message=message, can_retry=False)
+    row = _row(node, phase=phase, kind=kind, message=message, can_retry=False, detail=detail)
     row["mine"] = True
     row["id"] = "local"
     return row

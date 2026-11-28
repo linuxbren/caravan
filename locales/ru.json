@@ -2450,5 +2450,9 @@
   "agent.gguf_runtime.apple_command_line_tools_are_needed": "Для сборки собственного движка нужны Apple Command Line Tools. Установи их (xcode-select --install), заверши установку и попробуй снова.",
   "cli.doctor.own_part_engine_v": "Собственный движок: {v}",
   "agent.gguf_runtime.own_part_engine_ready": "Собственный движок готов:",
-  "agent.gguf_runtime.own_part_engine_not_ready_yet": "Слушай, извини. На этом Mac нет инструментов, нужных, чтобы разделить большую загрузку между твоими Mac, поэтому эта часть пока не настроена. Всё остальное в Caravan работает. Хочешь скачать эти инструменты? (Для того, кто тебе помогает: {reason})"
+  "agent.gguf_runtime.own_part_engine_not_ready_yet": "Слушай, извини. На этом Mac нет инструментов, нужных, чтобы разделить большую загрузку между твоими Mac, поэтому эта часть пока не настроена. Всё остальное в Caravan работает. Хочешь скачать эти инструменты? (Для того, кто тебе помогает: {reason})",
+  "cli.update.it_answered_but_not_as_caravan": "она ответила, но не как страница Caravan",
+  "cli.update.why_the_update_failed": "Почему обновление не удалось: {reason}",
+  "agent.gguf_runtime.the_step_failed_exit_code": "шаг {step} завершился ошибкой (код выхода {code})",
+  "agent.gguf_runtime.the_step_took_too_long": "шаг {step} занял слишком много времени"
 }

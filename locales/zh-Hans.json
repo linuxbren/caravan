@@ -2390,5 +2390,9 @@
  "agent.gguf_runtime.apple_command_line_tools_are_needed": "构建分片引擎需要 Apple 命令行工具。请先安装（xcode-select --install），完成后再重试。",
  "cli.doctor.own_part_engine_v": "分片引擎：{v}",
  "agent.gguf_runtime.own_part_engine_ready": "分片引擎已就绪：",
- "agent.gguf_runtime.own_part_engine_not_ready_yet": "抱歉。这台 Mac 还没有把大文件分到你几台 Mac 上下载所需的工具，所以这部分暂时还没准备好。Caravan 的其他功能都能正常使用。要下载这些工具吗？（给帮你的人看：{reason}）"
+ "agent.gguf_runtime.own_part_engine_not_ready_yet": "抱歉。这台 Mac 还没有把大文件分到你几台 Mac 上下载所需的工具，所以这部分暂时还没准备好。Caravan 的其他功能都能正常使用。要下载这些工具吗？（给帮你的人看：{reason}）",
+ "cli.update.it_answered_but_not_as_caravan": "它有响应，但不是 Caravan 的页面",
+ "cli.update.why_the_update_failed": "更新失败的原因：{reason}",
+ "agent.gguf_runtime.the_step_failed_exit_code": "{step} 步骤失败（退出码 {code}）",
+ "agent.gguf_runtime.the_step_took_too_long": "{step} 步骤耗时过长"
 }

@@ -27,6 +27,18 @@ FAILED = (
     T("cli.update_check.the_update_failed_caravan_is_back")
 )
 
+# How long the new page gets to answer after the services restart. The page
+# only has to answer /api/status (the model does not have to be loaded), but a
+# cold start of freshly extracted code, or a Mac that is busy bringing a saved
+# model back, can be slow. These are generous limits, not measured times; a
+# healthy page returns as soon as it answers.
+WEB_WAIT_SECONDS = 120
+WEB_WAIT_SAVED_MODEL_SECONDS = 300
+# The real reason an update failed (kept short; the rollback must not erase it).
+FAILURE_NAME = "update-failure.log"
+ROLLBACK_LOG_NAME = "update-rollback.log"
+REASON_LIMIT = 300
+
 # Hash changes under these paths mean the running model must be stopped and
 # restored with the new code. agent/ is the model process (mlx_worker,
 # llama runtime, split, the service agent). runtime/ is the llama.cpp pin
@@ -541,7 +553,18 @@ def run_installer(repo, *, home, python, role, name, port, log=None, runner=None
     return result
 
 
-def wait_for_web(port, *, timeout=30, opener=None, pause=time.sleep):
+def web_wait_timeout(home):
+    """Seconds to wait for the page: longer when a saved model will come back."""
+    return WEB_WAIT_SAVED_MODEL_SECONDS if has_saved_model(home) else WEB_WAIT_SECONDS
+
+
+def wait_for_web(port, *, timeout=WEB_WAIT_SECONDS, opener=None, pause=time.sleep):
+    """Wait until Caravan's page answers /api/status.
+
+    The health signal is "the page is up and is Caravan's page" (the status
+    JSON carries a worker block even when no model is loaded). It does not
+    wait for a model to be warm: a slow reload must not discard a good update.
+    """
     opener = opener or urllib.request.urlopen
     deadline = time.monotonic() + timeout
     last = None
@@ -552,10 +575,47 @@ def wait_for_web(port, *, timeout=30, opener=None, pause=time.sleep):
                 data = json.load(response)
             if isinstance(data, dict) and isinstance(data.get("worker"), dict):
                 return True
+            last = ValueError(T("cli.update.it_answered_but_not_as_caravan"))
         except (OSError, urllib.error.URLError, ValueError) as error:
             last = error
         pause(0.25)
     raise ValueError(T("cli.update.the_page_did_not_come_back", v=': ' + str(last) if last else ''))
+
+
+def failure_reason(error):
+    """One short plain line for why an update step failed."""
+    text = " ".join(str(error).split())
+    if not text:
+        text = error.__class__.__name__
+    return text[:REASON_LIMIT]
+
+
+def failure_path(home):
+    return Path(home) / ".caravan" / "logs" / FAILURE_NAME
+
+
+def clear_failure(home):
+    try:
+        failure_path(home).unlink()
+    except OSError:
+        pass
+
+
+def save_failure(home, reason):
+    """Keep the real reason where the rollback's own install cannot overwrite it."""
+    try:
+        path = failure_path(home)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(reason + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def read_failure(home):
+    try:
+        return failure_path(home).read_text(encoding="utf-8").strip()[:REASON_LIMIT]
+    except OSError:
+        return ""
 
 
 def print_status(home, name="web", *, opener=None, file=None):
@@ -634,6 +694,8 @@ def apply_update(
     new_source = Path(new_source)
     python = python or (home / ".caravan" / "venvs" / "mlx" / "bin" / "python")
     log = Path(log) if log else home / ".caravan" / "logs" / "update.log"
+    rollback_log = log.parent / ROLLBACK_LOG_NAME
+    clear_failure(home)
     old_files = load_hashes(repo / ".caravan-package-files")
     new_files = load_hashes(new_source / ".caravan-package-files")
     plan = plan_update(old_files, new_files)
@@ -657,8 +719,10 @@ def apply_update(
     moved = False
     finished = False
 
-    def rollback():
+    def rollback(reason=""):
         nonlocal moved
+        if reason:
+            save_failure(home, reason)
         if moved and backup is not None:
             try:
                 restore_source(repo, backup)
@@ -666,9 +730,10 @@ def apply_update(
             except (OSError, ValueError):
                 pass
             try:
+                # Own log: the failed install's output stays in update.log.
                 (installer or run_installer)(
                     repo, home=home, python=python, role=role,
-                    name=name, port=port, log=log,
+                    name=name, port=port, log=rollback_log,
                 )
             except (OSError, ValueError):
                 pass
@@ -678,6 +743,8 @@ def apply_update(
                     start_service(home, svc, run=run)
                 except (OSError, ValueError):
                     pass
+        if reason:
+            print(T("cli.update.why_the_update_failed", reason=reason), file=out, flush=True)
         print(FAILED, file=out, flush=True)
 
     try:
@@ -713,12 +780,12 @@ def apply_update(
             if svc in should_start:
                 start_service(home, svc, run=run)
         if name in should_start:
-            wait(port)
+            wait(port, timeout=web_wait_timeout(home))
         finished = True
         return status(home, name, file=out)
-    except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError):
+    except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError) as error:
         if not finished:
-            rollback()
+            rollback(failure_reason(error))
             return 1
         raise
 

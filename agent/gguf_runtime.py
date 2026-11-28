@@ -245,12 +245,34 @@ def ensure(home=None, retrieve=urllib.request.urlretrieve, pin=None):
         return _build_from_source(home, env)
 
 
+def _step_name(cmd):
+    """Short name of a build step, without paths."""
+    parts = [str(c) for c in (cmd if isinstance(cmd, (list, tuple)) else [cmd])]
+    tool = Path(parts[0]).name if parts else "build"
+    if tool == "git":
+        verb = next((p for p in parts if p in ("init", "fetch")), "")
+        return ("git " + verb).strip()
+    if tool == "cmake":
+        return "cmake build" if "--build" in parts else "cmake configure"
+    if tool.startswith("python"):
+        return "patch"
+    return tool
+
+
+def _step_reason(error):
+    """Plain reason for a failed or timed-out build step (never a full command line)."""
+    step = _step_name(getattr(error, "cmd", ""))
+    if isinstance(error, subprocess.TimeoutExpired):
+        return T("agent.gguf_runtime.the_step_took_too_long", step=step)
+    return T("agent.gguf_runtime.the_step_failed_exit_code", step=step, code=getattr(error, "returncode", "?"))
+
+
 def main(home=None, retrieve=urllib.request.urlretrieve, pin=None, out=None):
     """Install-time entry: try to set up the engine, but never fail the install.
 
     Missing tools, a missing prebuilt, a checksum mismatch or an unsafe
     archive are printed plainly and return 0 so install.sh and
-    `caravan update` can finish. Genuine unexpected errors still propagate.
+    `caravan update` can finish. A failed or timed-out build step is soft too. Genuine unexpected errors still propagate.
     Doctor reports the engine missing unless current() would succeed.
     """
     out = sys.stdout if out is None else out
@@ -261,6 +283,16 @@ def main(home=None, retrieve=urllib.request.urlretrieve, pin=None, out=None):
     except (FileNotFoundError, ValueError, OSError) as e:
         print(
             T("agent.gguf_runtime.own_part_engine_not_ready_yet", reason=str(e)),
+            file=out,
+            flush=True,
+        )
+        return 0
+    except subprocess.SubprocessError as e:
+        # A failed or timed-out git/cmake/patch step (CalledProcessError and
+        # TimeoutExpired are not OSError). Same soft-fail: the update must
+        # not roll back because the optional engine could not be built.
+        print(
+            T("agent.gguf_runtime.own_part_engine_not_ready_yet", reason=_step_reason(e)),
             file=out,
             flush=True,
         )

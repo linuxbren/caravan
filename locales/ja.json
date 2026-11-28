@@ -2390,5 +2390,9 @@
  "agent.gguf_runtime.apple_command_line_tools_are_needed": "分担エンジンのビルドには Apple Command Line Tools が必要です。インストールし (xcode-select --install)、完了してから再試行してください。",
  "cli.doctor.own_part_engine_v": "分担エンジン: {v}",
  "agent.gguf_runtime.own_part_engine_ready": "分担エンジンの準備ができました:",
- "agent.gguf_runtime.own_part_engine_not_ready_yet": "ごめんなさい。この Mac には、大きなダウンロードを複数の Mac に分けるための道具がまだないので、その部分はまだ準備できていません。Caravan のほかの機能はちゃんと使えます。その道具をダウンロードしますか？（手伝ってくれる人向け: {reason}）"
+ "agent.gguf_runtime.own_part_engine_not_ready_yet": "ごめんなさい。この Mac には、大きなダウンロードを複数の Mac に分けるための道具がまだないので、その部分はまだ準備できていません。Caravan のほかの機能はちゃんと使えます。その道具をダウンロードしますか？（手伝ってくれる人向け: {reason}）",
+ "cli.update.it_answered_but_not_as_caravan": "応答はありましたが、Caravan のページではありませんでした",
+ "cli.update.why_the_update_failed": "アップデートが失敗した理由: {reason}",
+ "agent.gguf_runtime.the_step_failed_exit_code": "{step} の手順が失敗しました（終了コード {code}）",
+ "agent.gguf_runtime.the_step_took_too_long": "{step} の手順に時間がかかりすぎました"
 }

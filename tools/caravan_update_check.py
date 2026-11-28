@@ -1136,6 +1136,23 @@ def _run_cli_update(repo, *, name="web", local_only=True):
             cli.ROOT = previous
 
 
+def _failure_reason(home):
+    """The real reason the last `caravan update` gave for failing (or empty)."""
+    try:
+        import caravan_update as CU
+        return CU.read_failure(home)
+    except Exception:  # noqa: BLE001 - never let a note hide the failure itself
+        return ""
+
+
+def _clear_failure_reason(home):
+    try:
+        import caravan_update as CU
+        CU.clear_failure(home)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None):
     """Foreground job: update every other Mac first, then this Mac.
 
@@ -1169,9 +1186,9 @@ def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None
     def set_step(text):
         progress["step"] = {"text": text, "since": time.time()}
 
-    def set_local(phase, message=None, kind=None):
+    def set_local(phase, message=None, kind=None, detail=None):
         nonlocal macs
-        row = P.local_row(phase=phase, label=local_label, message=message, kind=kind)
+        row = P.local_row(phase=phase, label=local_label, message=message, kind=kind, detail=detail)
         macs = P.replace_mac(macs, "local", row)
         if message:
             progress["message"] = message
@@ -1193,12 +1210,15 @@ def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None
         )
 
     set_local("updating", OPENING)
+    _clear_failure_reason(home)
     try:
         code = _run_cli_update(repo, name=name, local_only=True)
     except Exception as error:
-        set_local("failed", FAILED)
+        detail = _failure_reason(home) or str(error)[:300]
+        set_local("failed", FAILED, detail=detail)
         progress["phase"] = "failed"
         progress["message"] = FAILED
+        progress["detail"] = detail
         progress["error"] = str(error)[:300]
         progress["finished_at"] = time.time()
         persist()
@@ -1239,9 +1259,11 @@ def apply_job(home, repo, *, name="web", peers=None, runner=None, status_fn=None
         progress["finished_at"] = time.time()
         persist()
         return 0
-    set_local("failed", FAILED)
+    detail = _failure_reason(home)
+    set_local("failed", FAILED, detail=detail)
     progress["phase"] = "failed"
     progress["message"] = FAILED
+    progress["detail"] = detail
     progress["finished_at"] = time.time()
     persist()
     return code or 1
